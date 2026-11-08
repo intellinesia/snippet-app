@@ -737,7 +737,8 @@ class SidebarState extends State<Sidebar> {
                   turns: open ? 0.25 : 0,
                   duration: Motion.base,
                   curve: Curves.easeOutCubic,
-                  child: AppIcon('chevron-right', size: 13, color: AppColors.fg3),
+                  child:
+                      AppIcon('chevron-right', size: 13, color: AppColors.fg3),
                 ),
               ]),
             ),
@@ -973,153 +974,150 @@ class SidebarState extends State<Sidebar> {
     final mcBusy = mc != null &&
         (sessionIsActive(mc.status) || mc.status == 'waiting_for_input');
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (hasClient || _crew.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-            child: HoverSurface(
-              selected: mcSelected,
-              radius: 8,
-              onTap: hasClient ? widget.onOpenMissionControl : null,
-              child: Container(
-                height: 46,
-                padding: const EdgeInsets.only(left: 6, right: 2),
-                child: Row(children: [
-                  MochiIcon(color: AppColors.accent, size: 22),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Mission Control',
-                            style: sans(13,
-                                weight: W.label,
-                                color: mcSelected
-                                    ? AppColors.fg1
-                                    : AppColors.fg2)),
-                        Row(children: [
-                          if (mcBusy && !mcWaiting) ...[
-                            SessionStateIcon(
-                              status: 'running',
-                              icon: 'activity',
-                              size: 11,
-                              activeColor: AppColors.accent,
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                          Expanded(
-                            child: Text(
-                                mcWaiting
-                                    ? 'Waiting on you'
-                                    : mcBusy
-                                        ? 'Working'
-                                        : crewLine,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: sans(12,
-                                    color: mcWaiting
-                                        ? AppColors.run
-                                        : mcBusy
-                                            ? AppColors.fg1
-                                            : AppColors.fg4)),
+      if (hasClient || _crew.isNotEmpty) ...[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+          child: HoverSurface(
+            selected: mcSelected,
+            radius: 8,
+            onTap: hasClient ? widget.onOpenMissionControl : null,
+            child: Container(
+              height: 46,
+              padding: const EdgeInsets.only(left: 6, right: 2),
+              child: Row(children: [
+                MochiIcon(color: AppColors.accent, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Mission Control',
+                          style: sans(13,
+                              weight: W.label,
+                              color:
+                                  mcSelected ? AppColors.fg1 : AppColors.fg2)),
+                      Row(children: [
+                        if (mcBusy && !mcWaiting) ...[
+                          SessionStateIcon(
+                            status: 'running',
+                            icon: 'activity',
+                            size: 11,
+                            activeColor: AppColors.accent,
                           ),
-                        ]),
-                      ],
-                    ),
+                          const SizedBox(width: 4),
+                        ],
+                        Expanded(
+                          child: Text(
+                              mcWaiting
+                                  ? 'Waiting on you'
+                                  : mcBusy
+                                      ? 'Working'
+                                      : crewLine,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(12,
+                                  color: mcWaiting
+                                      ? AppColors.run
+                                      : mcBusy
+                                          ? AppColors.fg1
+                                          : AppColors.fg4)),
+                        ),
+                      ]),
+                    ],
                   ),
-                  if (_crew.isNotEmpty)
-                    CrewStack(
-                      entries: deriveCrew(
-                          _crew, widget.sessions ?? const <SessionInfo>[]),
-                      onOpen: (a) => widget.onOpenAgent?.call(a),
-                      onMenu: (ctx, agent, point) async {
-                        final c = widget.client;
-                        if (c == null) return;
-                        await showCrewAgentMenu(ctx,
-                            client: c,
-                            agent: agent,
-                            point: point, onDeleted: () {
-                          _crewAt = null;
-                          _loadCrew();
-                        });
-                      },
-                      onNew: () async {
-                        await _openCreateAgent(context);
+                ),
+                if (_crew.isNotEmpty)
+                  CrewStack(
+                    entries: deriveCrew(
+                        _crew, widget.sessions ?? const <SessionInfo>[]),
+                    onOpen: (a) => widget.onOpenAgent?.call(a),
+                    onMenu: (ctx, agent, point) async {
+                      final c = widget.client;
+                      if (c == null) return;
+                      await showCrewAgentMenu(ctx,
+                          client: c, agent: agent, point: point, onDeleted: () {
                         _crewAt = null;
                         _loadCrew();
-                      },
-                    )
-                  else
-                    const SizedBox(width: 6),
-                ]),
-              ),
+                      });
+                    },
+                    onNew: () async {
+                      await _openCreateAgent(context);
+                      _crewAt = null;
+                      _loadCrew();
+                    },
+                  )
+                else
+                  const SizedBox(width: 6),
+              ]),
             ),
           ),
-          if (widget.onOpenPalette == null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
-              child: Container(
-                height: 32,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.surface1,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.line),
-                ),
-                child: Row(children: [
-                  AppIcon('search', size: 14, color: AppColors.fg4),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: _desktopChatsSearchCtl,
-                      focusNode: _desktopChatsSearchFocus,
-                      onChanged: (v) => setState(() => _filterQuery = v),
-                      style: sans(13, color: AppColors.fg1),
-                      decoration: InputDecoration(
-                        isCollapsed: true,
-                        border: InputBorder.none,
-                        hintText: 'Search chats',
-                        hintStyle: sans(13, color: AppColors.fg4),
-                      ),
+        ),
+        if (widget.onOpenPalette == null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
+            child: Container(
+              height: 32,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: AppColors.surface1,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.line),
+              ),
+              child: Row(children: [
+                AppIcon('search', size: 14, color: AppColors.fg4),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _desktopChatsSearchCtl,
+                    focusNode: _desktopChatsSearchFocus,
+                    onChanged: (v) => setState(() => _filterQuery = v),
+                    style: sans(13, color: AppColors.fg1),
+                    decoration: InputDecoration(
+                      isCollapsed: true,
+                      border: InputBorder.none,
+                      hintText: 'Search chats',
+                      hintStyle: sans(13, color: AppColors.fg4),
                     ),
                   ),
-                  if (_desktopChatsSearchCtl.text.isNotEmpty)
-                    IconBtn('x', size: 20, iconSize: 10, tooltip: 'Clear',
-                        onTap: () {
-                      _desktopChatsSearchCtl.clear();
-                      setState(() => _filterQuery = '');
-                    }),
-                ]),
-              ),
-            ),
-        ],
-        Expanded(
-          child: PullToRefresh(
-            onRefresh: () async => widget.onRefreshSessions(),
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
-              children: [
-                if (!hasClient)
-                  const SidebarEmpty('Add a machine to begin.')
-                else if (list.isEmpty && settledRows.isEmpty)
-                  _emptySessions(searching: _filterQuery.trim().isNotEmpty)
-                else ...[
-                  ...rows,
-                  ..._settledSection(settledRows),
-                ],
-              ],
+                ),
+                if (_desktopChatsSearchCtl.text.isNotEmpty)
+                  IconBtn('x', size: 20, iconSize: 10, tooltip: 'Clear',
+                      onTap: () {
+                    _desktopChatsSearchCtl.clear();
+                    setState(() => _filterQuery = '');
+                  }),
+              ]),
             ),
           ),
+      ],
+      Expanded(
+        child: PullToRefresh(
+          onRefresh: () async => widget.onRefreshSessions(),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
+            children: [
+              if (!hasClient)
+                const SidebarEmpty('Add a machine to begin.')
+              else if (list.isEmpty && settledRows.isEmpty)
+                _emptySessions(searching: _filterQuery.trim().isNotEmpty)
+              else ...[
+                ...rows,
+                ..._settledSection(settledRows),
+              ],
+            ],
+          ),
         ),
-        Container(
-          decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.line))),
-          child: Column(children: [
-            if (widget.desktopFooter != null) widget.desktopFooter!,
-          ]),
-        ),
-      ]);
+      ),
+      Container(
+        decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: AppColors.line))),
+        child: Column(children: [
+          if (widget.desktopFooter != null) widget.desktopFooter!,
+        ]),
+      ),
+    ]);
   }
 
   // Long-press / right-click a session → rename or delete.
@@ -1155,31 +1153,33 @@ class SidebarState extends State<Sidebar> {
       }
       return;
     }
+    final project = lastPathSegment(s.folder);
     showAppSheet(context,
         title: s.title.isEmpty ? '(untitled)' : s.title,
+        subtitle: project.isEmpty ? 'Chat' : project,
         child: SheetActions([
-          SheetAction('check', 'Select', () {
-            Navigator.pop(context);
-            _enterSelect(seed: s.id);
-          }),
           SheetAction('edit', 'Rename', () {
             Navigator.pop(context);
             _beginRename(s);
-          }),
+          }, tile: true),
+          SheetAction('check', 'Select', () {
+            Navigator.pop(context);
+            _enterSelect(seed: s.id);
+          }, tile: true),
           if (s.settled)
             SheetAction('play', 'Wake', () {
               Navigator.pop(context);
               _setSettled(s, false);
-            })
+            }, tile: true)
           else if (!sessionIsActive(s.status))
-            SheetAction('archive', 'Settle now', () {
+            SheetAction('archive', 'Settle', () {
               Navigator.pop(context);
               _setSettled(s, true);
-            }),
+            }, tile: true),
           SheetAction('trash', 'Delete', () {
             Navigator.pop(context);
             _confirmDeleteSessions([s]);
-          }, danger: true),
+          }, danger: true, detail: 'Remove this chat and its history'),
         ]));
   }
 

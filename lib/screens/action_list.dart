@@ -6,10 +6,12 @@ import '../widgets.dart';
 
 /// A titled block of action rows, as in a session's or an agent's Actions.
 class ActionGroup extends StatelessWidget {
-  const ActionGroup({super.key, required this.label, required this.rows});
+  const ActionGroup(
+      {super.key, required this.label, required this.rows, this.top});
 
   final String label;
   final List<Widget> rows;
+  final double? top;
 
   @override
   Widget build(BuildContext context) {
@@ -18,10 +20,13 @@ class ActionGroup extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, S.s24, 4, S.s2),
-            child: Text(label.toUpperCase(), style: TS.overline()),
-          ),
+          if (label.isEmpty)
+            SizedBox(height: top ?? S.s16)
+          else
+            Padding(
+              padding: EdgeInsets.fromLTRB(4, top ?? S.s24, 4, S.s2),
+              child: Text(label.toUpperCase(), style: TS.overline()),
+            ),
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0)
               Container(

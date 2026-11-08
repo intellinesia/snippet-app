@@ -76,8 +76,7 @@ class _AgentCardState extends State<AgentCard> {
               _setProfile(null);
             }),
             for (final p in cfg.profiles)
-              SheetAction(
-                  'provider:${p.provider}',
+              SheetAction('provider:${p.provider}',
                   p.name == current ? '${p.name}  (current)' : p.name, () {
                 Navigator.pop(context);
                 _setProfile(p.name);
@@ -117,7 +116,8 @@ class _AgentCardState extends State<AgentCard> {
 
   Future<void> _editNickname({Offset? point}) async {
     final agent = widget.agent;
-    final full = agent.fullName.trim().isEmpty ? agent.id : agent.fullName.trim();
+    final full =
+        agent.fullName.trim().isEmpty ? agent.id : agent.fullName.trim();
     final next = await promptText(context,
         title: 'Nickname for $full',
         initial: agent.nickname ?? '',
@@ -126,21 +126,22 @@ class _AgentCardState extends State<AgentCard> {
         point: point);
     if (next == null || next == (agent.nickname ?? '') || !mounted) return;
     try {
-      await widget.client.setAgentNickname(agent.id, next.isEmpty ? null : next);
+      await widget.client
+          .setAgentNickname(agent.id, next.isEmpty ? null : next);
       widget.onChanged?.call();
     } catch (e) {
       if (mounted) toast(context, '$e', danger: true);
     }
   }
 
-  Future<void> _openWakes(String name, Offset? point) => showAgentWakeSettings(
-      context,
-      client: widget.client,
-      owner: widget.agent.id,
-      name: name,
-      agent: widget.agent,
-      point: point,
-      onChanged: widget.onChanged);
+  Future<void> _openWakes(String name, Offset? point) =>
+      showAgentWakeSettings(context,
+          client: widget.client,
+          owner: widget.agent.id,
+          name: name,
+          agent: widget.agent,
+          point: point,
+          onChanged: widget.onChanged);
 
   Future<void> _actions(Offset? point) async {
     final name = widget.agent.displayName.trim().isEmpty
@@ -149,31 +150,35 @@ class _AgentCardState extends State<AgentCard> {
     if (kMobile) {
       showAppSheet(context,
           title: name,
+          subtitle: 'Agent',
           child: SheetActions([
             if (!widget.agent.isMissionControl)
               SheetAction('edit', _nicknameLabel, () {
                 Navigator.pop(context);
                 _editNickname();
-              }),
+              }, tile: true),
             SheetAction('sparkles', 'Change colour', () {
               Navigator.pop(context);
-              showMochiColorPicker(context, widget.client, widget.agent.id, name);
-            }),
+              showMochiColorPicker(
+                  context, widget.client, widget.agent.id, name);
+            }, tile: true),
             if (!widget.agent.isMissionControl)
               SheetAction('calendar-clock', 'Wakes and reporting', () {
                 Navigator.pop(context);
                 _openWakes(name, null);
-              }),
+              }, detail: 'When it wakes and where it reports'),
             if (!widget.agent.isMissionControl)
               SheetAction('cpu', 'Change inference profile', () {
                 Navigator.pop(context);
                 _pickProfile(name);
-              }),
+              }, detail: 'The model it runs on'),
             if (widget.onDelete != null)
               SheetAction('trash', 'Delete agent', () {
                 Navigator.pop(context);
                 widget.onDelete?.call();
-              }, danger: true),
+              },
+                  danger: true,
+                  detail: 'Remove the agent, its identity and notes'),
           ]));
       return;
     }
@@ -186,13 +191,19 @@ class _AgentCardState extends State<AgentCard> {
           appMenuItem(value: 'nickname', icon: 'edit', label: _nicknameLabel),
         appMenuItem(value: 'color', icon: 'sparkles', label: 'Change colour'),
         if (!widget.agent.isMissionControl)
-          appMenuItem(value: 'model', icon: 'cpu', label: 'Change inference profile'),
+          appMenuItem(
+              value: 'model', icon: 'cpu', label: 'Change inference profile'),
         if (!widget.agent.isMissionControl)
           appMenuItem(
-              value: 'wakes', icon: 'calendar-clock', label: 'Wakes and reporting'),
+              value: 'wakes',
+              icon: 'calendar-clock',
+              label: 'Wakes and reporting'),
         if (widget.onDelete != null)
           appMenuItem(
-              value: 'delete', icon: 'trash', label: 'Delete agent', danger: true),
+              value: 'delete',
+              icon: 'trash',
+              label: 'Delete agent',
+              danger: true),
       ],
     );
     if (picked == 'delete') widget.onDelete?.call();
@@ -287,8 +298,7 @@ class _AgentCardState extends State<AgentCard> {
                   Expanded(
                     flex: segments[j].$1,
                     child: ColoredBox(
-                        color: segments[j].$2,
-                        child: const SizedBox.expand()),
+                        color: segments[j].$2, child: const SizedBox.expand()),
                   ),
                 ],
               ]),
@@ -354,9 +364,8 @@ class _AgentCardState extends State<AgentCard> {
                       Text(name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TS.rowTitle(agent.available
-                              ? AppColors.fg1
-                              : AppColors.fg3)),
+                          style: TS.rowTitle(
+                              agent.available ? AppColors.fg1 : AppColors.fg3)),
                       const SizedBox(height: 2),
                       Text(role.isEmpty ? status : role,
                           maxLines: 1,
@@ -369,8 +378,8 @@ class _AgentCardState extends State<AgentCard> {
               if (summary != null) ...[
                 const SizedBox(width: 12),
                 SwapText(summary.$1,
-                    style: TS.meta(summary.$2)
-                        .copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
+                    style: TS.meta(summary.$2).copyWith(
+                        fontFeatures: const [FontFeature.tabularFigures()])),
               ],
               const SizedBox(width: M.gutter),
             ],

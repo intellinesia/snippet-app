@@ -239,15 +239,20 @@ class _FileExplorerState extends State<FileExplorer> {
     showAppSheet(
       context,
       title: 'Folder actions',
+      subtitle: lastPathSegment(cwd),
       child: SheetActions([
         if (widget.onNewChat != null)
           SheetAction(
-              'plus', 'New chat here', () => run(() => widget.onNewChat!(cwd))),
-        SheetAction('git-branch', 'Git', () => run(() => _openGit(cwd))),
-        SheetAction('upload', 'Upload files',
-            _busy == null ? () => run(() => _upload(cwd)) : null),
+              'plus', 'New chat', () => run(() => widget.onNewChat!(cwd)),
+              tile: true),
+        SheetAction('git-branch', 'Git', () => run(() => _openGit(cwd)),
+            tile: true),
+        SheetAction('upload', 'Upload',
+            _busy == null ? () => run(() => _upload(cwd)) : null,
+            tile: true),
         SheetAction('folder-plus', 'New folder',
-            _busy == null ? () => run(() => _newFolder(cwd)) : null),
+            _busy == null ? () => run(() => _newFolder(cwd)) : null,
+            tile: true),
       ]),
     );
   }

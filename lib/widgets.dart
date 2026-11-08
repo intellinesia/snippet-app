@@ -233,7 +233,8 @@ void openMarkdownLink(String? href, [BuildContext? context, String? text]) {
 }
 
 void _openFileLink(BuildContext context, Uri uri) {
-  final raw = uri.scheme == 'file' ? uri.toFilePath() : Uri.decodeComponent(uri.path);
+  final raw =
+      uri.scheme == 'file' ? uri.toFilePath() : Uri.decodeComponent(uri.path);
   if (raw.isEmpty) return;
   final client = DaemonScope.maybeOf(context) ?? DaemonScope.current;
   if (client == null) {
@@ -246,7 +247,9 @@ void _openFileLink(BuildContext context, Uri uri) {
       ? raw
       : '${ws.endsWith('/') ? ws : '$ws/'}$raw';
   final name = raw.split('/').last;
-  if (openFileForViewing(context, client: client, path: path, name: name)) return;
+  if (openFileForViewing(context, client: client, path: path, name: name)) {
+    return;
+  }
   final open = scope?.onOpenFile;
   if (open != null) {
     open(path, name);
@@ -462,8 +465,7 @@ class AppIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (name.startsWith('provider:')) {
-      return ProviderLogo(name.substring(9),
-          size: size * visualScale);
+      return ProviderLogo(name.substring(9), size: size * visualScale);
     }
     final line = _lucide[name];
     if (line != null) {
@@ -1421,12 +1423,13 @@ class _AudioTranscriptCardState extends State<AudioTranscriptCard> {
 void _messageActions(BuildContext context, String text) {
   showAppSheet(context,
       title: 'Message',
+      subtitle: '',
       child: SheetActions([
-        SheetAction('clipboard', 'Copy message', () {
+        SheetAction('clipboard', 'Copy', () {
           Navigator.pop(context);
           Clipboard.setData(ClipboardData(text: text));
           toast(context, 'Copied');
-        }),
+        }, tile: true),
         SheetAction('edit', 'Select text', () {
           Navigator.pop(context);
           showAppSheet(context,
@@ -1442,7 +1445,7 @@ void _messageActions(BuildContext context, String text) {
                   ),
                 ),
               ));
-        }),
+        }, tile: true),
       ]));
 }
 
@@ -1717,8 +1720,8 @@ class NoteLine extends StatelessWidget {
             ? Text(text,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: sans(kMobile ? 13 : 13,
-                    height: 1.4, color: AppColors.fg3))
+                style:
+                    sans(kMobile ? 13 : 13, height: 1.4, color: AppColors.fg3))
             : Row(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2433,7 +2436,9 @@ class ProviderLogo extends StatelessWidget {
         child: Center(
           child: asset.endsWith('.png')
               ? Image.asset(asset,
-                  width: inner, height: inner, filterQuality: FilterQuality.high)
+                  width: inner,
+                  height: inner,
+                  filterQuality: FilterQuality.high)
               : SvgPicture.asset(asset, width: inner, height: inner),
         ),
       );

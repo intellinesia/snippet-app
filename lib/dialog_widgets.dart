@@ -552,6 +552,7 @@ class _TextPromptSheetState extends State<_TextPromptSheet> {
 
 Future<T?> showAppSheet<T>(BuildContext context,
     {required String title,
+    String? subtitle,
     required Widget child,
     // Per-caller sizing. A dialog has room for a wider sheet than the 340px
     // default, which is what the agent picker uses to fit names and roles.
@@ -600,7 +601,28 @@ Future<T?> showAppSheet<T>(BuildContext context,
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxHeight: limit),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  if (title.isNotEmpty && !ShellPanelRoot.inPanel(sheetContext))
+                  if (subtitle != null &&
+                      title.isNotEmpty &&
+                      !ShellPanelRoot.inPanel(sheetContext))
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                          M.gutter, S.s4, M.gutter, S.s4),
+                      child: Column(children: [
+                        Text(title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TS.rowTitle()),
+                        if (subtitle.isNotEmpty)
+                          Text(subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: TS.meta()),
+                      ]),
+                    )
+                  else if (title.isNotEmpty &&
+                      !ShellPanelRoot.inPanel(sheetContext))
                     Padding(
                       padding: const EdgeInsets.fromLTRB(
                           M.gutter, S.s4, M.gutter, S.s8),

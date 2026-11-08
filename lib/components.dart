@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'platform.dart';
 import 'theme.dart';
+import 'screens/action_list.dart' show ActionGroup, ActionRow;
 import 'widgets.dart' show AppIcon, ShellPanelRoot, StatusDot;
 
 enum Tone { neutral, accent, ok, run, danger }
@@ -210,74 +211,82 @@ class SheetHeader extends StatelessWidget {
   Widget build(BuildContext context) => ShellPanelRoot.inPanel(context)
       ? const SizedBox.shrink()
       : Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: S.s8),
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.lineStrong,
-                borderRadius: BorderRadius.circular(R.pill),
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: S.s8),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.lineStrong,
+                  borderRadius: BorderRadius.circular(R.pill),
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: kMobile
-                ? const EdgeInsets.fromLTRB(20, 10, 8, 6)
-                : const EdgeInsets.fromLTRB(S.s16, S.s4, S.s6, S.s2),
-            child: Row(children: [
-              Expanded(
-                child: Text(title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: kMobile
-                        ? sans(20,
-                            weight: FontWeight.w700,
-                            spacing: -0.4,
-                            height: 26 / 20,
-                            color: AppColors.fg1)
-                        : TS
-                            .rowTitle(AppColors.fg1)
-                            .copyWith(fontWeight: weightFor(FontWeight.w600))),
-              ),
-              Tooltip(
-                message: 'Close',
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onClose,
-                  child: SizedBox.square(
-                    dimension: 40,
-                    child: Center(
-                      child: Container(
-                        width: 26,
-                        height: 26,
-                        decoration: BoxDecoration(
-                          color: AppColors.overlay,
-                          shape: BoxShape.circle,
+            Padding(
+              padding: kMobile
+                  ? const EdgeInsets.fromLTRB(20, 10, 8, 6)
+                  : const EdgeInsets.fromLTRB(S.s16, S.s4, S.s6, S.s2),
+              child: Row(children: [
+                Expanded(
+                  child: Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: kMobile
+                          ? sans(20,
+                              weight: FontWeight.w700,
+                              spacing: -0.4,
+                              height: 26 / 20,
+                              color: AppColors.fg1)
+                          : TS.rowTitle(AppColors.fg1).copyWith(
+                              fontWeight: weightFor(FontWeight.w600))),
+                ),
+                Tooltip(
+                  message: 'Close',
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onClose,
+                    child: SizedBox.square(
+                      dimension: 40,
+                      child: Center(
+                        child: Container(
+                          width: 26,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            color: AppColors.overlay,
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: AppIcon('x', size: 13, color: AppColors.fg3),
                         ),
-                        alignment: Alignment.center,
-                        child: AppIcon('x', size: 13, color: AppColors.fg3),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ]),
-          ),
-        ],
-      );
+              ]),
+            ),
+          ],
+        );
 }
 
 class SheetAction {
-  const SheetAction(this.icon, this.label, this.onTap, {this.danger = false});
+  const SheetAction(this.icon, this.label, this.onTap,
+      {this.danger = false, this.detail, this.section = '', this.tile = false});
 
   final String icon;
   final String label;
   final VoidCallback? onTap;
   final bool danger;
+  final String? detail;
+
+  /// Consecutive actions with the same section share a group; on phone a
+  /// non-empty section is shown as the group's label.
+  final String section;
+
+  /// On phone, shown as a square in the grid above the list.
+  final bool tile;
 }
 
 class SheetActions extends StatelessWidget {
@@ -286,7 +295,63 @@ class SheetActions extends StatelessWidget {
   final List<SheetAction> actions;
 
   @override
-  Widget build(BuildContext context) => ListGroup(children: [
+  Widget build(BuildContext context) {
+    if (kMobile) return _phone();
+    return _desktop();
+  }
+
+  Widget _phone() {
+    final tiles = [
+      for (final a in actions)
+        if (a.tile) a
+    ];
+    final groups = <List<SheetAction>>[];
+    for (final a in actions.where((a) => !a.tile)) {
+      final last = groups.isEmpty ? null : groups.last.first;
+      if (last == null ||
+          last.section != a.section ||
+          last.danger != a.danger) {
+        groups.add([a]);
+      } else {
+        groups.last.add(a);
+      }
+    }
+    final cols = tiles.length < 4 ? tiles.length : 4;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      for (var i = 0; i < tiles.length; i += cols)
+        Padding(
+          padding: const EdgeInsets.only(top: S.s8),
+          child: Row(children: [
+            for (var j = i; j < i + cols; j++) ...[
+              if (j > i) const SizedBox(width: S.s8),
+              Expanded(
+                  child: j < tiles.length
+                      ? _ActionTile(tiles[j])
+                      : const SizedBox.shrink()),
+            ],
+          ]),
+        ),
+      for (var g = 0; g < groups.length; g++)
+        ActionGroup(
+          label: groups[g].first.danger ? '' : groups[g].first.section,
+          top: g == 0 && tiles.isEmpty
+              ? (groups[g].first.section.isEmpty ? 0 : S.s8)
+              : null,
+          rows: [
+            for (final a in groups[g])
+              ActionRow(
+                  icon: a.icon,
+                  label: a.label,
+                  detail: a.detail,
+                  danger: a.danger,
+                  trailing: const SizedBox.shrink(),
+                  onTap: a.onTap),
+          ],
+        ),
+    ]);
+  }
+
+  Widget _desktop() => ListGroup(children: [
         for (final a in actions)
           InkWell(
             onTap: a.onTap,
@@ -321,6 +386,49 @@ class SheetActions extends StatelessWidget {
             ),
           ),
       ]);
+}
+
+class _ActionTile extends StatelessWidget {
+  const _ActionTile(this.a);
+  final SheetAction a;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = a.onTap == null
+        ? AppColors.fg4
+        : a.danger
+            ? AppColors.danger
+            : AppColors.fg1;
+    return Semantics(
+      button: true,
+      label: a.label,
+      child: Material(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(R.md),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: a.onTap,
+          child: SizedBox(
+            height: 76,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AppIcon(a.icon, size: 22, color: color),
+                const SizedBox(height: S.s8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: S.s4),
+                  child: Text(a.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TS.label(color)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// A pane section's label: the quiet mono line the transcript's cards use.
@@ -555,8 +663,7 @@ class IconTile extends StatelessWidget {
         height: 24,
         child: Center(
             child: AppIcon(icon,
-                size: 19,
-                color: tone == Tone.neutral ? AppColors.fg3 : fg)),
+                size: 19, color: tone == Tone.neutral ? AppColors.fg3 : fg)),
       );
     }
     final size = this.size;
