@@ -358,6 +358,7 @@ class _CrewCardState extends State<_CrewCard> {
     final e = widget.entry;
     final needs = e.state == CrewState.needsYou;
     final profile = e.agent.profile;
+    final idle = e.state == CrewState.standingBy && e.lead == null;
     return Material(
       color: AppColors.surface1,
       shape: RoundedRectangleBorder(
@@ -410,13 +411,15 @@ class _CrewCardState extends State<_CrewCard> {
                           onDeleted: widget.onDeleted)),
                 ),
               ]),
-              const SizedBox(height: 10),
-              Text(e.line,
-                  maxLines: needs ? 4 : 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(13,
-                      height: 1.4,
-                      color: needs ? AppColors.run : AppColors.fg2)),
+              if (!idle) ...[
+                const SizedBox(height: 10),
+                Text(e.line,
+                    maxLines: needs ? 4 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13,
+                        height: 1.4,
+                        color: needs ? AppColors.run : AppColors.fg2)),
+              ],
               if (needs) ...[
                 const SizedBox(height: 10),
                 Wrap(spacing: S.s8, runSpacing: S.s8, children: [
@@ -445,14 +448,17 @@ class _CrewCardState extends State<_CrewCard> {
                         style: sans(12, color: AppColors.danger)),
                   ),
               ],
-              const SizedBox(height: 10),
-              Row(children: [
-                Text(
-                    '${e.sessions.length} session${e.sessions.length == 1 ? '' : 's'}',
-                    style: sans(12, color: AppColors.fg4)),
-                const Spacer(),
-                if (profile != null) _Chip(profile),
-              ]),
+              if (e.sessions.isNotEmpty || profile != null) ...[
+                const SizedBox(height: 10),
+                Row(children: [
+                  if (e.sessions.isNotEmpty)
+                    Text(
+                        '${e.sessions.length} session${e.sessions.length == 1 ? '' : 's'}',
+                        style: sans(12, color: AppColors.fg3)),
+                  const Spacer(),
+                  if (profile != null) _Chip(profile),
+                ]),
+              ],
             ],
           ),
         ),

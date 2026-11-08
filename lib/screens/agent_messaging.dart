@@ -348,6 +348,36 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     }
   }
 
+  String? _fetchedLine;
+
+  void _loadLine() {
+    widget.client.coordinationAgents().then((all) {
+      final a = all.where((x) => x.id == widget.agentId).firstOrNull;
+      if (a == null || !mounted) return;
+      final role = a.role.trim();
+      final line = [
+        if (!a.available) 'Paused',
+        if (role.isNotEmpty) role,
+        if (a.profile != null) a.profile!,
+      ].join(' \u00b7 ');
+      setState(() => _fetchedLine = line);
+    }).catchError((_) {});
+  }
+
+  void _openMenu(BuildContext anchor) => kMobile
+      ? _openActions()
+      : openAgentMenu(anchor,
+          client: widget.client,
+          agentId: widget.agentId,
+          agentName: widget.agentName,
+          onDeleted: _closePage);
+
+  void _openRecords(bool board) => openAgentRecords(context,
+      client: widget.client,
+      agentId: widget.agentId,
+      agentName: widget.agentName,
+      board: board);
+
   void _openActions() => openAgentActions(context,
       client: widget.client,
       agentId: widget.agentId,
@@ -407,6 +437,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   @override
   void initState() {
     super.initState();
+    _loadLine();
     _thread = Swr<List<CoordinationEvent>>(
       client: widget.client,
       key: 'agent-thread:${widget.agentId}',
@@ -769,25 +800,19 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       await _pickFiles();
       return;
     }
-    final choice = await showModalBottomSheet<String>(
-      sheetAnimationStyle: sheetMotion,
-      context: context,
-      backgroundColor: AppColors.surface1,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-          child: Row(
-            children: [
-              _attachOption('camera', 'Camera', 'camera'),
-              const SizedBox(width: 10),
-              _attachOption('image', 'Photos', 'photos'),
-              const SizedBox(width: 10),
-              _attachOption('file', 'Files', 'files'),
-            ],
-          ),
+    final choice = await showAppSheet<String>(
+      context,
+      title: 'Attach',
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          children: [
+            _attachOption('camera', 'Camera', 'camera'),
+            const SizedBox(width: 10),
+            _attachOption('image', 'Photos', 'photos'),
+            const SizedBox(width: 10),
+            _attachOption('file', 'Files', 'files'),
+          ],
         ),
       ),
     );
@@ -983,20 +1008,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         bottom: false,
         child: Column(
           children: [
-            if (!hideChrome) ...[
-              _header(),
-              if (!kMobile) Divider(height: 1, color: AppColors.border),
-            ] else
-              Container(
-                height: 30,
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: IconBtn('more-horizontal',
-                    size: 26,
-                    iconSize: 15,
-                    tooltip: 'Actions',
-                    onTap: _openActions),
-              ),
+            if (!hideChrome || !kMobile) _header(),
             Expanded(child: _body()),
             _composer(),
           ],
@@ -1006,7 +1018,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   Widget _header() {
-    final subtitle = widget.subtitle?.trim() ?? '';
+    final subtitle = (widget.subtitle ?? _fetchedLine ?? '').trim();
     if (kMobile) {
       return MobileBackBar(
         title: widget.agentName,
@@ -1014,42 +1026,65 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         leading: AgentMochi(widget.agentId, size: 24),
         onBack: widget.showBack ? _closePage : null,
         onTitleTap: _openActions,
+        trailing: [
+          IconBtn('more-horizontal',
+              size: M.minTarget,
+              iconSize: 20,
+              tooltip: 'Actions',
+              onTap: _openActions),
+        ],
       );
     }
-    final canGoBack = widget.showBack &&
+    final canGoBack = !widget.embedded &&
+        widget.showBack &&
         (widget.onClose != null || Navigator.of(context).canPop());
+    Widget recordBtn(String icon, String label, bool board) => Tooltip(
+          message: label,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(R.md),
+            onTap: () => _openRecords(board),
+            child: Container(
+              height: 28,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              alignment: Alignment.center,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                AppIcon(icon, size: 14, color: AppColors.fg3),
+                const SizedBox(width: 6),
+                Text(label, style: TS.label(AppColors.fg2)),
+              ]),
+            ),
+          ),
+        );
     return Container(
-      height: M.appBarHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      color: AppColors.bg,
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppColors.bg,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
       child: Row(
         children: [
           if (canGoBack)
             IconBtn(
               'chevron-left',
-              size: M.minTarget,
-              iconSize: 20,
+              size: 28,
+              iconSize: 16,
               tooltip: 'Back',
-              onTap: () {
-                if (widget.onClose != null) {
-                  widget.onClose!();
-                } else {
-                  Navigator.of(context).maybePop();
-                }
-              },
+              onTap: _closePage,
             ),
-          SizedBox(width: canGoBack ? 4 : 10),
+          const SizedBox(width: 4),
           Tooltip(
             message: 'Change colour',
-            child: Builder(builder: (anchor) => InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () => showMochiColorPicker(
-                  anchor, widget.client, widget.agentId, widget.agentName),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: AgentMochi(widget.agentId, size: kMobile ? 28 : 24),
-              ),
-            )),
+            child: Builder(
+                builder: (anchor) => InkWell(
+                      borderRadius: BorderRadius.circular(R.md),
+                      onTap: () => showMochiColorPicker(anchor, widget.client,
+                          widget.agentId, widget.agentName),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: AgentMochi(widget.agentId, size: 28),
+                      ),
+                    )),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -1057,42 +1092,38 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.agentName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(kMobile ? M.sectionTitle : 15,
-                      weight: W.label, color: AppColors.fg1),
-                ),
-                if (!kMobile && subtitle.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
+                Text(widget.agentName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: mono(M.monoMeta, color: AppColors.fg3),
-                  ),
-                ],
+                    style: TS.rowTitle(AppColors.fg1)),
+                if (subtitle.isNotEmpty)
+                  Text(subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TS.meta(AppColors.fg3)),
               ],
             ),
           ),
-          IconBtn(
-            'more-horizontal',
-            size: M.minTarget,
-            iconSize: 18,
-            tooltip: 'Actions',
-            onTap: _openActions,
-          ),
-          if (!kMobile && widget.onClose != null) ...[
-            const SizedBox(width: 4),
+          recordBtn('inbox', 'Inbox', false),
+          const SizedBox(width: 2),
+          recordBtn('clipboard', 'Board', true),
+          const SizedBox(width: 4),
+          Builder(
+              builder: (anchor) => IconBtn(
+                    'more-horizontal',
+                    size: 32,
+                    iconSize: 16,
+                    tooltip: 'Actions',
+                    onTap: () => _openMenu(anchor),
+                  )),
+          if (!widget.embedded && widget.onClose != null)
             IconBtn(
               'x',
-              size: M.minTarget,
+              size: 28,
               iconSize: 16,
               tooltip: 'Close',
               onTap: widget.onClose!,
             ),
-          ],
         ],
       ),
     );

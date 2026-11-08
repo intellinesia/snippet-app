@@ -9,6 +9,7 @@ import '../models.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../pull_refresh.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'action_list.dart';
@@ -62,6 +63,85 @@ String _plain(String text) => text
 String _folder(String path) {
   final parts = path.split('/').where((p) => p.isNotEmpty).toList();
   return parts.length <= 2 ? parts.join('/') : parts.sublist(parts.length - 2).join('/');
+}
+
+void _presentRecords(BuildContext host, String title, String agentName,
+        Widget Function() view) =>
+    presentScreen(host,
+        style: PanelStyle.drawer,
+        maxWidth: 720,
+        maxHeight: 820,
+        builder: (_, close) => _RecordsPage(
+            title: title,
+            subtitle: agentName,
+            onClose: close,
+            child: view()));
+
+/// The agent's inbox or board on its own page.
+void openAgentRecords(BuildContext context,
+    {required DaemonClient client,
+    required String agentId,
+    required String agentName,
+    required bool board}) {
+  _presentRecords(
+      context,
+      board ? 'Board' : 'Inbox',
+      agentName,
+      () => board
+          ? AgentBoardView(client: client, agentId: agentId, agentName: agentName)
+          : AgentInboxView(client: client, agentId: agentId, agentName: agentName));
+}
+
+/// Desktop actions menu, opened under the button that was clicked.
+Future<void> openAgentMenu(
+  BuildContext anchor, {
+  required DaemonClient client,
+  required String agentId,
+  required String agentName,
+  VoidCallback? onDeleted,
+}) async {
+  final picked = await showAppMenu<String>(
+    anchor,
+    anchor: anchor,
+    below: true,
+    alignEnd: true,
+    minWidth: 220,
+    maxWidth: 280,
+    items: [
+      appMenuItem(value: 'desk', icon: 'terminal', label: 'Desk session'),
+      appMenuItem(value: 'memory', icon: 'brain', label: 'Memory'),
+      appMenuHeading<String>('Agent'),
+      appMenuItem(value: 'wakes', icon: 'calendar-clock', label: 'Wakes and reporting'),
+      appMenuItem(value: 'model', icon: 'cpu', label: 'Inference profile'),
+      appMenuItem(value: 'nickname', icon: 'edit', label: 'Nickname'),
+      appMenuItem(value: 'color', icon: 'sparkles', label: 'Colour'),
+      appMenuItem(value: 'delete', icon: 'trash', label: 'Delete agent', danger: true),
+    ],
+  );
+  if (picked == null || !anchor.mounted) return;
+  if (picked == 'desk') {
+    return _openSession(anchor, client, 'inbox-$agentId', '$agentName desk');
+  }
+  if (picked == 'memory') {
+    presentScreen(anchor,
+        builder: (_, close) => MemoryScreen(
+            client: client,
+            embedded: true,
+            onBack: close,
+            initialKey: 'agent:$agentId'));
+    return;
+  }
+  CoordinationAgent? agent;
+  try {
+    agent = (await client.coordinationAgents())
+        .where((a) => a.id == agentId)
+        .firstOrNull;
+  } catch (_) {}
+  if (agent == null || !anchor.mounted) return;
+  await runCrewAgentAction(anchor, picked,
+      client: client,
+      agent: agent,
+      onDeleted: picked == 'delete' ? onDeleted : null);
 }
 
 /// An agent's Actions: a full page on a phone and a sheet on desktop, the way a
@@ -166,17 +246,8 @@ class _AgentActionsState extends State<_AgentActions> {
     action(widget.host);
   }
 
-  void _openRecords(String title, Widget Function() view) => _run((host) {
-        presentScreen(host,
-            style: PanelStyle.drawer,
-            maxWidth: 720,
-            maxHeight: 820,
-            builder: (_, close) => _RecordsPage(
-                title: title,
-                subtitle: widget.agentName,
-                onClose: close,
-                child: view()));
-      });
+  void _openRecords(String title, Widget Function() view) => _run((host) =>
+      _presentRecords(host, title, widget.agentName, view));
 
   ActionRow _setting(
       String action, String icon, String label, String detail,
@@ -469,7 +540,7 @@ class _RecordListState<T> extends State<_RecordList<T>> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    final content = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
         padding: EdgeInsets.fromLTRB(_gutter, kMobile ? 12 : 10, _gutter, 8),
         child: ListSearchField(
@@ -492,6 +563,12 @@ class _RecordListState<T> extends State<_RecordList<T>> {
       ),
       Expanded(child: _list()),
     ]);
+    if (kMobile) return content;
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720), child: content),
+    );
   }
 
   Widget _list() {
@@ -642,39 +719,72 @@ class _StateTag extends StatelessWidget {
       );
 }
 
-/// One tappable record: a heading line with its time, then the content.
+/// One tappable record: a heading line with its time beside it, then the
+/// content. An unread row gets a dot and a stronger title.
 class _RecordRow extends StatelessWidget {
   const _RecordRow(
       {required this.leading,
       required this.time,
       required this.child,
-      required this.onTap});
+      required this.onTap,
+      this.unread = false,
+      this.selected = false});
 
   final Widget leading;
   final String time;
   final Widget child;
   final VoidCallback onTap;
+  final bool unread;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
     final t = _time(time);
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-            horizontal: _gutter, vertical: kMobile ? 10 : 7),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            Expanded(child: leading),
-            if (t != null) ...[
-              const SizedBox(width: 8),
-              Text(_clock(t),
-                  style: sans(_meta, color: AppColors.fg3, tabular: true)),
-            ],
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: kMobile ? 0 : 6),
+      child: Material(
+        color: selected ? AppColors.surface2 : Colors.transparent,
+        borderRadius: BorderRadius.circular(kMobile ? 0 : R.md),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          hoverColor: AppColors.surface1,
+          child: Stack(children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                  _gutter + (kMobile ? 12 : 12), kMobile ? 10 : 8,
+                  _gutter, kMobile ? 10 : 8),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(children: [
+                      Flexible(child: leading),
+                      if (t != null) ...[
+                        const SizedBox(width: 8),
+                        Text(_clock(t),
+                            style: TS.meta(AppColors.fg3).copyWith(
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures()
+                                ])),
+                      ],
+                    ]),
+                    const SizedBox(height: 2),
+                    child,
+                  ]),
+            ),
+            if (unread)
+              Positioned(
+                left: _gutter - (kMobile ? 0 : 2),
+                top: kMobile ? 17 : 14,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                      color: AppColors.accent, shape: BoxShape.circle),
+                ),
+              ),
           ]),
-          const SizedBox(height: 3),
-          child,
-        ]),
+        ),
       ),
     );
   }
@@ -755,10 +865,29 @@ class AgentInboxView extends StatefulWidget {
 
 class _AgentInboxViewState extends State<AgentInboxView> {
   Map<String, String> _names = const {};
+  int? _seenUpTo;
+  int _newest = 0;
+  int? _selectedId;
+  final _opened = <int>{};
+
+  String get _seenKey => 'inbox_seen_${widget.agentId}';
+
+  @override
+  void dispose() {
+    if (_newest > 0) {
+      SharedPreferences.getInstance()
+          .then((p) => p.setInt(_seenKey, _newest))
+          .catchError((_) => false);
+    }
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
+    SharedPreferences.getInstance().then((p) {
+      if (mounted) setState(() => _seenUpTo = p.getInt(_seenKey) ?? 0);
+    }).catchError((_) {});
     widget.client.coordinationAgents().then((agents) {
       if (!mounted) return;
       setState(() => _names = {
@@ -792,9 +921,20 @@ class _AgentInboxViewState extends State<AgentInboxView> {
     return (words[0].toUpperCase() + words.substring(1), AppColors.fg3);
   }
 
-  void _open(InboxEntry e) {
+  bool _unread(InboxEntry e) =>
+      _seenUpTo != null &&
+      _seenUpTo! > 0 &&
+      e.id > _seenUpTo! &&
+      !_opened.contains(e.id) &&
+      e.fromKind != 'human';
+
+  Future<void> _open(InboxEntry e) async {
     final task = e.taskId;
-    _showRecord(
+    setState(() {
+      _opened.add(e.id);
+      _selectedId = e.id;
+    });
+    await _showRecord(
       context,
       title: _sender(e),
       meta: [_tag(e)?.$1, _fullTime(e.createdAt)].nonNulls.join(' · '),
@@ -805,21 +945,28 @@ class _AgentInboxViewState extends State<AgentInboxView> {
           ('Open task', () => openTaskDetail(context, widget.client, task)),
       ],
     );
+    if (mounted) setState(() => _selectedId = null);
   }
 
   Widget _row(InboxEntry e) {
     final tag = _tag(e);
     final title = e.title;
     final preview = _plain(e.text);
+    if (e.id > _newest) _newest = e.id;
+    final unread = _unread(e);
     return _RecordRow(
       time: e.createdAt,
+      unread: unread,
+      selected: _selectedId == e.id,
       onTap: () => _open(e),
-      leading: Row(children: [
+      leading: Row(mainAxisSize: MainAxisSize.min, children: [
         Flexible(
           child: Text(_sender(e),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: sans(_title, weight: W.label, color: AppColors.fg1)),
+              style: unread
+                  ? TS.rowTitle(AppColors.fg1)
+                  : TS.rowTitle(AppColors.fg2).copyWith(fontWeight: W.body)),
         ),
         if (tag != null) ...[
           const SizedBox(width: 8),
@@ -831,12 +978,12 @@ class _AgentInboxViewState extends State<AgentInboxView> {
           Text(title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: sans(_body, color: AppColors.fg2, height: 1.4)),
+              style: TS.ui(AppColors.fg2)),
         if (preview.isNotEmpty)
           Text(preview,
               maxLines: title == null || title.isEmpty ? 3 : 2,
               overflow: TextOverflow.ellipsis,
-              style: sans(_body, color: AppColors.fg3, height: 1.4)),
+              style: TS.ui(AppColors.fg3)),
       ]),
     );
   }
@@ -1031,7 +1178,7 @@ class _AgentBoardViewState extends State<AgentBoardView> {
     return _RecordRow(
       time: e.createdAt,
       onTap: () => _openGroup(e, byFolder: byFolder),
-      leading: Row(children: [
+      leading: Row(mainAxisSize: MainAxisSize.min, children: [
         AppIcon(byFolder ? 'folder' : 'file-text',
             size: kMobile ? 15 : 13, color: AppColors.fg2),
         const SizedBox(width: 6),
@@ -1066,7 +1213,7 @@ class _AgentBoardViewState extends State<AgentBoardView> {
     return _RecordRow(
       time: e.createdAt,
       onTap: () => _open(e),
-      leading: Row(children: [
+      leading: Row(mainAxisSize: MainAxisSize.min, children: [
         AppIcon(look.$1, size: kMobile ? 15 : 13, color: look.$3),
         const SizedBox(width: 6),
         Text(look.$2,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../api.dart';
 import '../models.dart';
@@ -253,15 +254,17 @@ class _AgentCardState extends State<AgentCard> {
         : working > 0
             ? 'Working'
             : 'Available';
-    final (summary, summaryColor) = !agent.available
-        ? ('Paused', AppColors.fg4)
+    final (String, Color)? summary = !agent.available
+        ? ('Paused', AppColors.fg3)
         : blocked > 0
             ? ('$blocked blocked', AppColors.danger)
             : open > 0
                 ? ('$open open', AppColors.fg3)
                 : done > 0
-                    ? ('$done done', AppColors.fg4)
-                    : ('No tasks', AppColors.fg4);
+                    ? ('$done done', AppColors.fg3)
+                    : null;
+    final summaryText = summary?.$1 ?? '';
+    final summaryColor = summary?.$2 ?? AppColors.fg4;
     final nameSize = kMobile ? 15.5 : 13.0;
     final metaSize = kMobile ? 13.0 : 11.5;
     final segments = [
@@ -292,52 +295,85 @@ class _AgentCardState extends State<AgentCard> {
       ),
     );
     if (kMobile) {
-      return Material(
-        color: AppColors.surface1,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: AppColors.line),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: widget.onOpen,
-          onLongPress: () => _actions(null),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Opacity(
-                      opacity: agent.available ? 1 : 0.5,
-                      child: AgentMochi(agent.id, size: 30),
+      final dot = !agent.available
+          ? AppColors.fg4
+          : blocked > 0
+              ? AppColors.danger
+              : working > 0
+                  ? AppColors.run
+                  : null;
+      return InkWell(
+        onTap: widget.onOpen,
+        onLongPress: () {
+          HapticFeedback.selectionClick();
+          _actions(null);
+        },
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 68),
+          child: Row(
+            children: [
+              const SizedBox(width: M.gutter),
+              Opacity(
+                opacity: agent.available ? 1 : 0.5,
+                child: SizedBox.square(
+                  dimension: 40,
+                  child: Stack(clipBehavior: Clip.none, children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface2,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: AgentMochi(agent.id, size: 26),
                     ),
-                    const Spacer(),
-                    SwapText(summary,
-                        style:
-                            sans(12, color: summaryColor, tabular: true)),
-                  ],
+                    if (dot != null)
+                      Positioned(
+                        right: -1,
+                        bottom: -1,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: dot,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.bg, width: 2),
+                          ),
+                        ),
+                      ),
+                  ]),
                 ),
-                const Spacer(),
-                Text(name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(15,
-                        weight: W.label,
-                        color: agent.available
-                            ? AppColors.fg1
-                            : AppColors.fg3)),
-                const SizedBox(height: 2),
-                Text(role.isEmpty ? status : role,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13, color: AppColors.fg4)),
-                const SizedBox(height: 10),
-                bar,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TS.rowTitle(agent.available
+                              ? AppColors.fg1
+                              : AppColors.fg3)),
+                      const SizedBox(height: 2),
+                      Text(role.isEmpty ? status : role,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TS.meta(AppColors.fg3)),
+                    ],
+                  ),
+                ),
+              ),
+              if (summary != null) ...[
+                const SizedBox(width: 12),
+                SwapText(summary.$1,
+                    style: TS.meta(summary.$2)
+                        .copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
               ],
-            ),
+              const SizedBox(width: M.gutter),
+            ],
           ),
         ),
       );
@@ -349,7 +385,10 @@ class _AgentCardState extends State<AgentCard> {
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           onTap: widget.onOpen,
-          onLongPress: () => _actions(null),
+          onLongPress: () {
+            HapticFeedback.selectionClick();
+            _actions(null);
+          },
           borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(10, 8, 10, 9),
@@ -365,7 +404,7 @@ class _AgentCardState extends State<AgentCard> {
                     ),
                     const SizedBox(width: 8),
                     Flexible(
-                      flex: 0,
+                      flex: 2,
                       child: Text(name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -383,9 +422,10 @@ class _AgentCardState extends State<AgentCard> {
                           style: sans(metaSize, color: AppColors.fg4)),
                     ),
                     const SizedBox(width: 8),
-                    SwapText(summary,
-                        style: sans(metaSize,
-                            color: summaryColor, tabular: true)),
+                    if (summary != null)
+                      SwapText(summaryText,
+                          style: sans(metaSize,
+                              color: summaryColor, tabular: true)),
                   ],
                 ),
                 const SizedBox(height: 7),
