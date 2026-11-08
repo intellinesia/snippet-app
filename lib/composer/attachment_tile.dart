@@ -11,20 +11,35 @@ class ComposerAttachmentBar extends StatelessWidget {
 
   final List<Widget> tiles;
 
+  static bool _voice(Widget w) => w is ComposerAttachmentTile && w.isAudio;
+
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: SizedBox(
-          height: 62,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.only(top: 6, right: 6),
-            itemCount: tiles.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, i) => tiles[i],
-          ),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final voice = tiles.where(_voice).toList();
+    final rest = tiles.where((w) => !_voice(w)).toList();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final v in voice)
+            Padding(padding: const EdgeInsets.only(top: 6), child: v),
+          if (rest.isNotEmpty)
+            SizedBox(
+              height: 62,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(top: 6, right: 6),
+                itemCount: rest.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, i) => rest[i],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Thumbnail or file card with an upload overlay and a remove button. A caller
@@ -116,9 +131,82 @@ class ComposerAttachmentTile extends StatelessWidget {
     );
   }
 
+  Widget _voiceRow() => Pressable(
+        kind: PressKind.row,
+        radius: R.md,
+        enabled: onOpen != null,
+        child: Semantics(
+          button: onOpen != null,
+          label: uploading ? 'Voice note, uploading' : 'Voice note',
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onOpen,
+            child: Container(
+              height: 48,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: AppColors.surface2,
+                borderRadius: BorderRadius.circular(R.md),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Stack(children: [
+                Row(children: [
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentBg,
+                      shape: BoxShape.circle,
+                    ),
+                    child: AppIcon(uploading ? 'mic' : 'play',
+                        size: 14, color: AppColors.accent),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Voice note',
+                            maxLines: 1,
+                            style: sans(13,
+                                weight: W.label, color: AppColors.fg1)),
+                        Text(uploading ? 'Uploading…' : 'Ready to send',
+                            maxLines: 1,
+                            style: sans(12, color: AppColors.fg3)),
+                      ],
+                    ),
+                  ),
+                  IconBtn('x',
+                      size: 32,
+                      iconSize: 14,
+                      tooltip: 'Remove voice note',
+                      onTap: onRemove),
+                  const SizedBox(width: 4),
+                ]),
+                if (uploading)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: LinearProgressIndicator(
+                      minHeight: 2,
+                      backgroundColor: Colors.transparent,
+                      color: AppColors.accent,
+                    ),
+                  ),
+              ]),
+            ),
+          ),
+        ),
+      );
+
   @override
-  Widget build(BuildContext context) =>
-      Stack(clipBehavior: Clip.none, children: [
+  Widget build(BuildContext context) => isAudio && body == null
+      ? _voiceRow()
+      : Stack(clipBehavior: Clip.none, children: [
         onOpen == null
             ? (body ?? _defaultBody())
             : Semantics(
