@@ -19,10 +19,8 @@ class ActionGroup extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(4, 24, 4, 2),
-            child: Text(label.toUpperCase(),
-                style: sans(12,
-                    weight: W.label, spacing: 0.7, color: AppColors.fg4)),
+            padding: const EdgeInsets.fromLTRB(4, S.s24, 4, S.s2),
+            child: Text(label.toUpperCase(), style: TS.overline()),
           ),
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0)
@@ -39,30 +37,20 @@ class ActionGroup extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: kMobile
-              ? const EdgeInsets.fromLTRB(4, 20, 4, 6)
-              : const EdgeInsets.fromLTRB(4, 16, 4, 8),
-          child: Text(kMobile ? label : label.toUpperCase(),
-              style: kMobile
-                  ? sans(12, color: AppColors.fg4)
-                  : caps(10, color: AppColors.fg3)),
+          padding: const EdgeInsets.fromLTRB(4, S.s16, 4, S.s8),
+          child: Text(label.toUpperCase(), style: TS.overline()),
         ),
         Container(
           decoration: BoxDecoration(
             color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(kMobile ? 16 : R.md),
+            borderRadius: BorderRadius.circular(R.md),
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               for (var i = 0; i < rows.length; i++) ...[
-                if (i > 0)
-                  Container(
-                      height: 1,
-                      margin:
-                          EdgeInsets.symmetric(horizontal: kMobile ? 16 : 0),
-                      color: AppColors.border),
+                if (i > 0) Container(height: 1, color: AppColors.border),
                 rows[i],
               ],
             ],
@@ -127,22 +115,14 @@ class ActionRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(label,
-                          style: kMobile
-                              ? sans(15,
-                                  height: 20 / 15.5,
-                                  color: danger ? AppColors.danger : AppColors.fg1)
-                              : sans(13,
-                                  weight: W.label,
-                                  color: danger ? AppColors.danger : AppColors.fg1)),
+                          style: TS.rowTitle(
+                              danger ? AppColors.danger : AppColors.fg1)),
                       if (detail != null) ...[
                         const SizedBox(height: 2),
                         Text(detail,
                             maxLines: kMobile ? 1 : 2,
                             overflow: TextOverflow.ellipsis,
-                            style: kMobile
-                                ? sans(13,
-                                    height: 18 / 13, color: AppColors.fg3)
-                                : sans(M.meta, color: AppColors.fg3)),
+                            style: TS.meta()),
                       ],
                     ],
                   ),
@@ -155,7 +135,7 @@ class ActionRow extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.right,
-                        style: sans(M.meta, color: AppColors.fg3)),
+                        style: TS.meta()),
                   ),
                 ],
                 const SizedBox(width: 8),

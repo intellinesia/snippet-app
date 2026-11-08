@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../platform.dart';
 import '../theme.dart';
@@ -50,64 +51,27 @@ void showTabContextMenu({
     return;
   }
 
-  Widget tabMenuItem(
-    BuildContext ctx,
-    String icon,
-    String label,
-    VoidCallback onTap, {
-    bool danger = false,
-  }) {
-    final color = danger ? AppColors.danger : AppColors.fg1;
-    return InkWell(
-      onTap: () {
-        Navigator.of(ctx).pop();
-        onTap();
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        child: Row(children: [
-          AppIcon(icon, size: 16, color: color),
-          const SizedBox(width: 12),
-          Text(label, style: sans(13, color: color)),
-        ]),
-      ),
-    );
-  }
-
-  showModalBottomSheet(
-    sheetAnimationStyle: sheetMotion,
-    context: context,
-    backgroundColor: AppColors.surface1,
-    shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(R.sheetTop))),
-    builder: (ctx) => SafeArea(
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
-          child: Row(children: [
-            AppIcon(tabIconKind(tab),
-                size: 15, color: AppColors.fg3),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(tab.title.isEmpty ? '(untitled)' : tab.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TS.ui(AppColors.fg1)),
-            ),
-          ]),
-        ),
-        Divider(height: 1, color: AppColors.border),
-        if (!tab.isMissionControl)
-          tabMenuItem(ctx, 'x', 'Close tab', onCloseTab),
-        if (hasNonMissionControlTabs)
-          tabMenuItem(ctx, 'copy', 'Close other tabs', onCloseOthers),
-        if (hasNonMissionControlTabs)
-          tabMenuItem(ctx, 'trash', 'Close all tabs', onCloseAll,
-              danger: true),
-      ]),
-    ),
-  );
+  showAppMenu<String>(
+    context,
+    items: [
+      appMenuHeading<String>(tab.title.isEmpty ? '(untitled)' : tab.title),
+      if (!tab.isMissionControl)
+        appMenuItem(value: 'close', icon: 'x', label: 'Close tab'),
+      if (hasNonMissionControlTabs)
+        appMenuItem(
+            value: 'close_others', icon: 'copy', label: 'Close other tabs'),
+      if (hasNonMissionControlTabs)
+        appMenuItem(
+            value: 'close_all',
+            icon: 'trash',
+            label: 'Close all tabs',
+            danger: true),
+    ],
+  ).then((choice) {
+    if (choice == 'close') onCloseTab();
+    if (choice == 'close_others') onCloseOthers();
+    if (choice == 'close_all') onCloseAll();
+  });
 }
 
 /// A standalone rounded card tab chip used in fallback desktop and mobile layouts.
@@ -322,7 +286,10 @@ class CardTabStrip extends StatelessWidget {
                     subtitle: subtitleForTab(tabs[i]),
                     canClose: canCloseTab(tabs[i]),
                     onTap: () => onActivateTab(i),
-                    onLongPress: () => onTabMenu(i),
+                    onLongPress: () {
+                      HapticFeedback.selectionClick();
+                      onTabMenu(i);
+                    },
                     onClose: () => onCloseTab(i),
                     chipKey: chipKeyFor(tabs[i].key),
                   ),

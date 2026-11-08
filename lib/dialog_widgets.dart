@@ -265,10 +265,8 @@ Future<bool> confirmAction(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s4 : 0),
-            child: Text(body,
-                style:
-                    sans(kMobile ? 14 : 13, height: 1.5, color: AppColors.fg2)),
+            padding: EdgeInsets.zero,
+            child: Text(body, style: TS.ui()),
           ),
           SizedBox(height: kMobile ? S.s20 : 18),
           _DialogActions(
@@ -368,6 +366,8 @@ Future<T?> showPointPopover<T>(BuildContext context,
       .clamp(8.0, screen.width - w - 8);
   final top = (at.dy + 10)
       .clamp(8.0, (screen.height - maxHeight - 8).clamp(8.0, screen.height));
+  final origin = Alignment(
+      (((at.dx - left) / w) * 2 - 1).clamp(-1.0, 1.0), top < at.dy ? 1 : -1);
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: true,
@@ -398,7 +398,7 @@ Future<T?> showPointPopover<T>(BuildContext context,
         opacity: curve,
         child: ScaleTransition(
           scale: Tween(begin: 0.97, end: 1.0).animate(curve),
-          alignment: Alignment.topLeft,
+          alignment: origin,
           child: child,
         ),
       );
@@ -594,25 +594,28 @@ Future<T?> showAppSheet<T>(BuildContext context,
         child: Align(
           alignment: Alignment.bottomCenter,
           heightFactor: 1,
-          child: ClipRRect(
-            borderRadius:
-                BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
-            child: Material(
-              color: AppColors.raised,
-              shape: const RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
-              ),
-              clipBehavior: Clip.antiAlias,
+          child: Material(
+            type: MaterialType.transparency,
+            child: AppSheetSurface(
               child: ConstrainedBox(
                 constraints: BoxConstraints(maxHeight: limit),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  SheetHeader(
-                      title: title, onClose: () => Navigator.pop(sheetContext)),
+                  if (title.isNotEmpty && !ShellPanelRoot.inPanel(sheetContext))
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                          M.gutter, S.s4, M.gutter, S.s8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TS.sectionTitle()),
+                      ),
+                    ),
                   Flexible(
                     child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(
-                          S.s12, S.s6, S.s12, S.s12 + media.padding.bottom),
+                      padding: EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter,
+                          S.s12 + media.padding.bottom),
                       child: SurfaceScope(
                           group:
                               kMobile ? Colors.transparent : AppColors.overlay,
@@ -663,6 +666,9 @@ Future<T?> showAnchoredPanel<T>(
   final bottom = screen.height - origin.dy + 6;
   final room = (above ? origin.dy - 18 : screen.height - top - 12)
       .clamp(160.0, maxHeight);
+  final grow = Alignment(
+      ((origin.dx + box.size.width / 2 - left) / w * 2 - 1).clamp(-1.0, 1.0),
+      above ? 1 : -1);
   return showGeneralDialog<T>(
     context: anchor,
     barrierDismissible: true,
@@ -698,10 +704,9 @@ Future<T?> showAnchoredPanel<T>(
       final curve = CurvedAnimation(parent: animation, curve: Motion.enter);
       return FadeTransition(
         opacity: curve,
-        child: SlideTransition(
-          position:
-              Tween(begin: Offset(0, above ? 0.02 : -0.02), end: Offset.zero)
-                  .animate(curve),
+        child: ScaleTransition(
+          scale: Tween(begin: 0.97, end: 1.0).animate(curve),
+          alignment: grow,
           child: child,
         ),
       );

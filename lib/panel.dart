@@ -1,6 +1,7 @@
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
+import 'menu_widgets.dart';
 import 'platform.dart';
 import 'shell_panel.dart';
 import 'api.dart';
@@ -143,16 +144,7 @@ Future<T?> presentAdaptivePanel<T>(
               top: Radius.circular(R.sheetTop),
             ),
             child: Column(children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 30,
-                height: 3,
-                decoration: BoxDecoration(
-                  color: AppColors.border2,
-                  borderRadius: BorderRadius.circular(R.pill),
-                ),
-              ),
-              const SizedBox(height: 4),
+              const SheetGrabHandle(),
               Expanded(child: child),
             ]),
           ),

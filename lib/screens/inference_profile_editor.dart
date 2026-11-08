@@ -295,12 +295,11 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
     final picked = await showModalBottomSheet<CatalogModel>(
       sheetAnimationStyle: sheetMotion,
       context: context,
-      backgroundColor: AppColors.surface1,
+      backgroundColor: Colors.transparent,
+      barrierColor: AppColors.scrim,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.vertical(top: Radius.circular(R.sheetTop))),
-      builder: (ctx) => _ModelPickerSheet(models: models),
+      builder: (ctx) =>
+          AppSheetSurface(child: _ModelPickerSheet(models: models)),
     );
     if (picked != null) _applyPick(picked);
   }
@@ -1205,22 +1204,11 @@ class _ModelPickerSheetState extends State<_ModelPickerSheet> {
                       MediaQuery.of(context).viewInsets.bottom) *
                   0.75),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const SizedBox(height: 8),
-            // Grab handle: the only cue that this is a sheet rather than a
-            // dialog, so it stays.
-            Center(
-              child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                      color: AppColors.surface3,
-                      borderRadius: BorderRadius.circular(R.xs))),
-            ),
             // Header: title, count, close. The old sheet had no title at all --
             // just a grab handle and a labelled field, so nothing named the
             // surface or offered a visible way out.
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+              padding: const EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s12),
               child: Row(children: [
                 AppIcon('cpu', size: 16, color: AppColors.fg2),
                 const SizedBox(width: 9),
@@ -1236,12 +1224,6 @@ class _ModelPickerSheetState extends State<_ModelPickerSheet> {
                   child: Text('${widget.models.length}',
                       style: mono(10, color: AppColors.fg3)),
                 ),
-                const Spacer(),
-                IconBtn('x',
-                    size: 32,
-                    iconSize: 16,
-                    tooltip: 'Close',
-                    onTap: () => Navigator.pop(context)),
               ]),
             ),
             Padding(

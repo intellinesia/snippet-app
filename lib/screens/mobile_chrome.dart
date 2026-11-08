@@ -505,17 +505,13 @@ class _MobileMenuState extends State<_MobileMenu> {
   Widget _row(String icon, String label, MobileMenuPick pick) => InkWell(
         onTap: () => widget.onPick(pick),
         child: SizedBox(
-          height: 52,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 26),
-            child: Row(children: [
-              AppIcon(icon, size: 20, color: AppColors.fg2),
-              const SizedBox(width: 16),
-              Expanded(
-                  child: Text(label, style: sans(16, color: AppColors.fg1))),
-              AppIcon('chevron-right', size: 13, color: AppColors.fg4),
-            ]),
-          ),
+          height: M.minTarget + 8,
+          child: Row(children: [
+            AppIcon(icon, size: 19, color: AppColors.fg3),
+            const SizedBox(width: 14),
+            Expanded(child: Text(label, style: TS.rowTitle())),
+            AppIcon('chevron-right', size: 15, color: AppColors.fg4),
+          ]),
         ),
       );
 
@@ -523,132 +519,99 @@ class _MobileMenuState extends State<_MobileMenu> {
   Widget build(BuildContext context) {
     final agents = _agents ?? const <CoordinationAgent>[];
     final bottom = MediaQuery.paddingOf(context).bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(8, 0, 8, 8 + bottom),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(32),
-          boxShadow: [
-            BoxShadow(
-                color: AppColors.fg1.withValues(alpha: 0.08), spreadRadius: 1),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Material(
-          color: Colors.transparent,
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const SizedBox(height: 10),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.fg1.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 14),
-            if (widget.client != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Material(
-                  color: AppColors.surface2,
-                  borderRadius: BorderRadius.circular(20),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: () => widget.onPick(MobileMenuPick.newSession),
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                              color: AppColors.accentFill,
-                              shape: BoxShape.circle),
-                          alignment: Alignment.center,
-                          child: AppIcon('plus',
-                              size: 18, color: AppColors.accentFg),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('New session',
-                                  style: sans(16,
-                                      weight: W.strong, color: AppColors.fg1)),
-                              if (widget.newSessionSubtitle.isNotEmpty)
-                                Text(widget.newSessionSubtitle,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: sans(13, color: AppColors.fg3)),
-                            ],
+    return AppSheetSurface(
+      child: Material(
+        color: Colors.transparent,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, bottom + S.s12),
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (widget.client != null)
+                  Material(
+                    color: AppColors.surface2,
+                    borderRadius: BorderRadius.circular(R.lg),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () => widget.onPick(MobileMenuPick.newSession),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                                color: AppColors.accentFill,
+                                shape: BoxShape.circle),
+                            alignment: Alignment.center,
+                            child: AppIcon('plus',
+                                size: 18, color: AppColors.accentFg),
                           ),
-                        ),
-                        AppIcon('chevron-right',
-                            size: 13, color: AppColors.fg4),
-                      ]),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('New session', style: TS.rowTitle()),
+                                if (widget.newSessionSubtitle.isNotEmpty)
+                                  Text(widget.newSessionSubtitle,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TS.meta()),
+                              ],
+                            ),
+                          ),
+                          AppIcon('chevron-right',
+                              size: 15, color: AppColors.fg4),
+                        ]),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            if (agents.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(26, 20, 26, 6),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('AGENTS',
-                      style: sans(12,
-                          weight: W.label,
-                          spacing: 0.7,
-                          color: AppColors.fg4)),
-                ),
-              ),
-              SizedBox(
-                height: 82,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  children: [
-                    for (final a in agents)
-                      InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: () => widget.onAgent(a),
-                        child: SizedBox(
-                          width: 80,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              AgentMochi(a.id, size: 36),
-                              const SizedBox(height: 8),
-                              Text(
-                                  a.displayName.isEmpty
-                                      ? a.handle
-                                      : a.displayName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: sans(13, color: AppColors.fg2)),
-                            ],
+                if (agents.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, S.s20, 4, S.s4),
+                    child: Text('AGENTS', style: TS.overline()),
+                  ),
+                  SizedBox(
+                    height: 82,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        for (final a in agents)
+                          InkWell(
+                            borderRadius: BorderRadius.circular(R.lg),
+                            onTap: () => widget.onAgent(a),
+                            child: SizedBox(
+                              width: 80,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  AgentMochi(a.id, size: 36),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                      a.displayName.isEmpty
+                                          ? a.handle
+                                          : a.displayName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TS.meta(AppColors.fg2)),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-            Padding(
-              padding: const EdgeInsets.fromLTRB(26, 12, 26, 6),
-              child: Divider(height: 1, thickness: 1, color: AppColors.line),
-            ),
-            if (widget.client != null) ...[
-              _row('task', 'Tasks', MobileMenuPick.tasks),
-              _row('agent', 'Agents', MobileMenuPick.agents),
-              _row('analytics', 'Usage', MobileMenuPick.usage),
-            ],
-            _row('server', 'Machines', MobileMenuPick.machines),
-            const SizedBox(height: 10),
-          ]),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: S.s8),
+                if (widget.client != null) ...[
+                  _row('task', 'Tasks', MobileMenuPick.tasks),
+                  _row('agent', 'Agents', MobileMenuPick.agents),
+                  _row('analytics', 'Usage', MobileMenuPick.usage),
+                ],
+                _row('server', 'Machines', MobileMenuPick.machines),
+              ]),
         ),
       ),
     );

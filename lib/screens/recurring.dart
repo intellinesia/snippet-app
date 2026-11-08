@@ -187,17 +187,13 @@ class RecurringScreenState extends State<RecurringScreen>
     var sessionId = _boundSessionId;
     var schedule = 'every 1h';
     var mode = 'preset'; // preset | custom | daily | onceAt | onceIn
-    final saved = await showModalBottomSheet<bool>(
-      sheetAnimationStyle: sheetMotion,
-      context: context,
-      backgroundColor: AppColors.surface1,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.vertical(top: Radius.circular(R.sheetTop))),
-      builder: (ctx) => StatefulBuilder(
+    final saved = await showAppSheet<bool>(
+      context,
+      title: 'Schedule a goal or message',
+      maxWidth: 480,
+      maxHeight: 680,
+      child: StatefulBuilder(
         builder: (ctx, setSheet) {
-          final bottom = MediaQuery.of(ctx).viewInsets.bottom;
           Future<void> pickPlan() async {
             final start = (widget.workspace?.trim().isNotEmpty == true)
                 ? widget.workspace
@@ -218,20 +214,13 @@ class RecurringScreenState extends State<RecurringScreen>
             }
           }
 
-          return Padding(
-            padding: EdgeInsets.fromLTRB(16, 18, 16, 16 + bottom),
-            child: SingleChildScrollView(
-              child: Column(
+          return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Schedule a goal or message',
-                        style: sans(kMobile ? 14 : 13,
-                            weight: W.label, color: AppColors.fg1)),
-                    const SizedBox(height: 10),
                     Text(
                       'The first run fires immediately, then repeats per the schedule. Minimum interval is 5 minutes. A plan file is reread each fire.',
-                      style: sans(12, height: 1.4, color: AppColors.fg3),
+                      style: TS.caption(),
                     ),
                     const SizedBox(height: 14),
                     AppField(
@@ -320,10 +309,7 @@ class RecurringScreenState extends State<RecurringScreen>
                     const SizedBox(height: 16),
                     Btn('Save',
                         full: true, onTap: () => Navigator.pop(ctx, true)),
-                    const SizedBox(height: 8),
-                  ]),
-            ),
-          );
+                  ]);
         },
       ),
     );

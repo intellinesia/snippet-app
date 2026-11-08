@@ -70,8 +70,7 @@ Future<void> showToolBatchSheet(
     barrierColor: AppColors.scrim,
     sheetAnimationStyle: sheetMotion,
     builder: (sheetContext) => Padding(
-      padding: EdgeInsets.fromLTRB(
-          8, 0, 8, 8 + MediaQuery.paddingOf(sheetContext).bottom),
+      padding: EdgeInsets.only(top: MediaQuery.paddingOf(sheetContext).top),
       child: DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.62,
@@ -79,16 +78,15 @@ Future<void> showToolBatchSheet(
         maxChildSize: 0.95,
         snap: true,
         snapSizes: const [0.62],
-        builder: (_, scroll) => Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Material(
-            color: Colors.transparent,
-            child: body(() => Navigator.of(sheetContext).pop(), scroll: scroll),
+        builder: (_, scroll) => ClipRRect(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
+          child: ColoredBox(
+            color: AppColors.raised,
+            child: Material(
+              color: Colors.transparent,
+              child:
+                  body(() => Navigator.of(sheetContext).pop(), scroll: scroll),
+            ),
           ),
         ),
       ),
@@ -209,18 +207,7 @@ class _SheetHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(mainAxisSize: MainAxisSize.min, children: [
-      if (kMobile)
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.border2,
-              borderRadius: BorderRadius.circular(R.pill),
-            ),
-          ),
-        ),
+      if (kMobile) const SheetGrabHandle(),
       Padding(
         padding: EdgeInsets.symmetric(horizontal: 8, vertical: kMobile ? 0 : 8),
         child: Row(children: [
@@ -243,7 +230,7 @@ class _SheetHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (onClose != null)
+          if (onClose != null && !kMobile)
             IconBtn('x',
                 size: 34, iconSize: 16, tooltip: 'Close', onTap: onClose),
         ]),
@@ -416,8 +403,7 @@ class _TimelineState extends State<_Timeline> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Activity',
-                      style: sans(20, spacing: -0.4, color: AppColors.fg1)),
+                  Text('Activity', style: TS.sectionTitle()),
                   if (running) ...[
                     const SizedBox(height: 3),
                     Row(children: [
@@ -429,14 +415,13 @@ class _TimelineState extends State<_Timeline> {
                       ),
                       const SizedBox(width: 6),
                       Flexible(
-                          child: Text('Running',
-                              style: sans(13, color: AppColors.fg3))),
+                          child: Text('Running', style: TS.meta())),
                     ]),
                   ],
                 ],
               ),
             ),
-            if (widget.onClose != null)
+            if (widget.onClose != null && !kMobile)
               IconBtn('x',
                   size: M.minTarget,
                   iconSize: 16,

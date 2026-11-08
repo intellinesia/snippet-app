@@ -511,19 +511,12 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
 
 /// A sheet for writing a conversation comment.
 Future<String?> showPrCommentSheet(BuildContext context, {required String title, String action = 'Comment'}) {
-  return showModalBottomSheet<String>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: AppColors.surface1,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop))),
-    builder: (_) => _CommentSheet(title: title, action: action),
-  );
+  return showAppSheet<String>(context,
+      title: title, maxWidth: 520, maxHeight: 640, child: _CommentSheet(action: action));
 }
 
 class _CommentSheet extends StatefulWidget {
-  const _CommentSheet({required this.title, required this.action});
-  final String title;
+  const _CommentSheet({required this.action});
   final String action;
 
   @override
@@ -542,11 +535,7 @@ class _CommentSheetState extends State<_CommentSheet> {
   @override
   Widget build(BuildContext context) {
     final ready = _text.text.trim().isNotEmpty;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text(widget.title, style: sans(17, weight: W.strong, color: AppColors.fg1)),
-        const SizedBox(height: 12),
+    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         PrMarkdownComposer(
           controller: _text,
           autofocus: true,
@@ -557,7 +546,7 @@ class _CommentSheetState extends State<_CommentSheet> {
             const Spacer(),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel', style: sans(13, weight: W.label, color: AppColors.fg3)),
+              child: Text('Cancel', style: TS.label(AppColors.fg3)),
             ),
             const SizedBox(width: 4),
             FilledButton(
@@ -567,12 +556,11 @@ class _CommentSheetState extends State<_CommentSheet> {
                 foregroundColor: AppColors.accentFg,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kMobile ? R.pill : R.sm)),
               ),
-              child: Text(widget.action, style: sans(13, weight: W.label, color: AppColors.accentFg)),
+              child: Text(widget.action, style: TS.label(AppColors.accentFg)),
             ),
           ]),
         ),
-      ]),
-    );
+    ]);
   }
 }
 
@@ -1767,15 +1755,11 @@ Future<bool> submitPrReviewFlow(
   required List<PendingComment> pending,
   required bool isAuthor,
 }) async {
-  final result = await showModalBottomSheet<(String, String)>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: AppColors.surface1,
-    shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop))),
-    builder: (_) => _ReviewSheet(pendingCount: pending.length, isAuthor: isAuthor),
-  );
+  final result = await showAppSheet<(String, String)>(context,
+      title: 'Finish your review',
+      maxWidth: 520,
+      maxHeight: 700,
+      child: _ReviewSheet(pendingCount: pending.length, isAuthor: isAuthor));
   if (result == null || !context.mounted) return false;
   try {
     await client.submitPrReview(session, number,
@@ -1834,7 +1818,7 @@ class _ReviewSheetState extends State<_ReviewSheet> {
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: sans(14, weight: W.label, color: enabled ? AppColors.fg1 : AppColors.fg4)),
+              Text(label, style: TS.rowTitle(enabled ? AppColors.fg1 : AppColors.fg4)),
               Text(detail, style: TS.meta(AppColors.fg3)),
             ]),
           ),
@@ -1845,20 +1829,15 @@ class _ReviewSheetState extends State<_ReviewSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final inset = MediaQuery.of(context).viewInsets.bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + inset),
-      child: Column(
+    return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Finish your review', style: sans(17, weight: W.strong, color: AppColors.fg1)),
           if (widget.pendingCount > 0) ...[
-            const SizedBox(height: 4),
             Text('${widget.pendingCount} line comment${widget.pendingCount == 1 ? '' : 's'} will be posted with it',
                 style: TS.meta(AppColors.accent)),
+            const SizedBox(height: 14),
           ],
-          const SizedBox(height: 14),
           PrMarkdownComposer(
             controller: _body,
             hint: 'Leave a summary',
@@ -1881,10 +1860,9 @@ class _ReviewSheetState extends State<_ReviewSheet> {
               foregroundColor: AppColors.accentFg,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kMobile ? R.pill : R.sm)),
             ),
-            child: Text('Submit review', style: sans(14, weight: W.label, color: AppColors.accentFg)),
+            child: Text('Submit review', style: TS.label(AppColors.accentFg)),
           ),
         ],
-      ),
     );
   }
 }

@@ -56,16 +56,7 @@ Future<void> showMissionControlPanel(
               top: Radius.circular(R.sheetTop),
             ),
             child: Column(children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 30,
-                height: 3,
-                decoration: BoxDecoration(
-                  color: AppColors.border2,
-                  borderRadius: BorderRadius.circular(R.pill),
-                ),
-              ),
-              const SizedBox(height: 4),
+              const SheetGrabHandle(),
               Expanded(child: child),
             ]),
           ),
@@ -138,9 +129,7 @@ class MobileMissionControl extends StatelessWidget {
   ) async {
     final controller = TextEditingController();
     Widget buildBody(BuildContext ctx) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        child: Column(
+      return Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -176,35 +165,15 @@ class MobileMissionControl extends StatelessWidget {
               ],
             ),
           ],
-        ),
       );
     }
 
-    final String? reply;
-    if (!kMobile) {
-      reply = await showAppSheet<String>(
-        context,
-        title: 'Reply to agent',
-        maxWidth: 480,
-        child: Builder(builder: buildBody),
-      );
-    } else {
-      reply = await showModalBottomSheet<String>(
-        sheetAnimationStyle: sheetMotion,
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: AppColors.bg,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-        ),
-        builder: (sheetCtx) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
-          ),
-          child: buildBody(sheetCtx),
-        ),
-      );
-    }
+    final String? reply = await showAppSheet<String>(
+      context,
+      title: 'Reply to agent',
+      maxWidth: 480,
+      child: Builder(builder: buildBody),
+    );
     if (reply != null && reply.isNotEmpty) {
       await state.sendMessage(reply);
     }
@@ -228,10 +197,11 @@ Future<void> showNotificationInbox(
     sheetAnimationStyle: sheetMotion,
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppColors.bg,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
+    backgroundColor: Colors.transparent,
+    barrierColor: AppColors.scrim,
+    builder: (_) => AppSheetSurface(
+      color: AppColors.bg,
+      child: NotificationInbox(state: state),
     ),
-    builder: (_) => NotificationInbox(state: state),
   );
 }
