@@ -77,6 +77,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     }
 
     final running = _state?.status == 'running';
+    if (!running && !await _resolveCold()) return;
     // Reference each upload by its exact path so the agent reads it this turn.
     final markers = ready.map((a) => a.marker).join('\n');
     final msg = markers.isEmpty ? t : (t.isEmpty ? markers : '$t\n\n$markers');
@@ -103,6 +104,21 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     // Sending is an explicit action — re-pin and jump to the bottom.
     _stickToBottom = true;
     _scheduleBottom();
+  }
+
+  /// A cold session needs a resume choice before its next turn; the message
+  /// stays in the field until it is made in the strip.
+  Future<bool> _resolveCold() async {
+    if (_cold != null) {
+      toast(context, 'Choose Lean or Full first.');
+      return false;
+    }
+    final seen = _warmSeenAt;
+    if (seen != null && DateTime.now().difference(seen).inSeconds < 240) {
+      return true;
+    }
+    await _checkCold();
+    return _cold == null;
   }
 
   /// Send the composer's text to a selected agent as a direct message.

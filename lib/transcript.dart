@@ -715,6 +715,9 @@ class SystemRow extends StatelessWidget {
     if (step == 'history_compacted') {
       return _SystemDivider(label: 'context compacted');
     }
+    if (step == 'continued_lean') {
+      return _SystemDivider(label: 'continued lean · earlier history archived');
+    }
     if (step == 'idle_memory_save') {
       return _SystemDivider(label: 'saved memory while you were away');
     }

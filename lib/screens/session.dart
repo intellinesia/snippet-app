@@ -23,6 +23,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../approval_code.dart';
 import '../notification_text.dart';
 import '../api.dart';
+import '../composer/cold_strip.dart';
 import '../desktop_pick.dart';
 import '../drafts.dart';
 import '../macos_notch.dart';
@@ -357,6 +358,8 @@ class _SessionScreenState extends State<SessionScreen>
   bool _isPlayingRecording = false;
   bool _sendingAudio = false;
   bool _sendingMessage = false;
+  // Last moment the model was seen working; a send soon after needs no cold check.
+  DateTime? _warmSeenAt;
   String? _recordingPath;
   Uint8List? _recordingBytes;
   Duration _recordingElapsed = Duration.zero;
@@ -751,6 +754,23 @@ class _SessionScreenState extends State<SessionScreen>
 
   late String _title;
   bool _settled = false;
+  // Set while the prompt cache has lapsed and the next turn's resume is unchosen.
+  Map<String, dynamic>? _cold;
+
+  Future<void> _checkCold() async {
+    if (widget.readOnly) return;
+    final info = await widget.client.sessionCache(widget.sessionId);
+    if (!mounted || info == null) return;
+    final cold = info['cold'] == true ? info : null;
+    if ((cold == null) != (_cold == null)) setState(() => _cold = cold);
+  }
+
+  void _chooseResume(bool lean) {
+    if (lean) _send({'kind': 'continue_lean'});
+    _warmSeenAt = DateTime.now();
+    setState(() => _cold = null);
+  }
+
   bool _keepAwake = false;
 
   Future<void> _setAutoSettle(bool on) async {
@@ -877,6 +897,7 @@ class _SessionScreenState extends State<SessionScreen>
       if (!mounted || _closed) return;
       _loadGithubStatus();
       _loadSettled();
+      _checkCold();
       _loadModel();
     });
     if (widget.inboundShare != null) {
@@ -1589,6 +1610,15 @@ class _SessionScreenState extends State<SessionScreen>
                                     onSend: _sendDecision),
                               ),
                             )),
+                          if (!widget.readOnly && _cold != null && !running)
+                            _centerWide(
+                                ColdStrip(
+                                    resumeTokens:
+                                        (_cold!['resume_tokens'] as num?)
+                                            ?.toInt(),
+                                    onLean: () => _chooseResume(true),
+                                    onFull: () => _chooseResume(false)),
+                                extra: 2 * kComposerGutter),
                           if (!widget.readOnly && _settled)
                             _centerWide(_settledNotice(),
                                 extra: 2 * kComposerGutter),

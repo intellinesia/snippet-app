@@ -754,6 +754,19 @@ class DaemonClient {
     if (r.statusCode != 200) throw _err('wake session', r);
   }
 
+  /// Whether the session's prompt cache has lapsed; `null` when unknown.
+  Future<Map<String, dynamic>?> sessionCache(String sessionId) async {
+    try {
+      final r = await http
+          .get(_uri('/session/cache', {'id': sessionId}))
+          .timeout(const Duration(seconds: 3));
+      if (r.statusCode != 200) return null;
+      return jsonDecode(r.body) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> setKeepAwake(String sessionId, bool on) async {
     final r = await http.post(_uri('/session/keep_awake'),
         headers: _json, body: jsonEncode({'session': sessionId, 'on': on}));
