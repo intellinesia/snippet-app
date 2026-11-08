@@ -26,9 +26,9 @@ import '../widgets.dart';
 import '../swr.dart';
 import '../pull_refresh.dart';
 import 'agent_records.dart';
+import 'agent_view_switcher.dart';
 import 'mobile_chrome.dart';
 import '../mochi.dart';
-import 'agent_appearance.dart';
 
 /// Pick one agent from the directory, as an anchored DROPDOWN.
 ///
@@ -390,11 +390,58 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           agentName: widget.agentName,
           onDeleted: _closePage);
 
-  void _openRecords(bool board) => openAgentRecords(context,
-      client: widget.client,
-      agentId: widget.agentId,
-      agentName: widget.agentName,
-      board: board);
+  AgentView _view = AgentView.thread;
+  int _unread = 0;
+
+  void _loadUnread() => agentInboxUnread(widget.client, widget.agentId)
+      .then((n) {
+        if (mounted) setState(() => _unread = n);
+      })
+      .catchError((_) {});
+
+  void _setView(AgentView v) {
+    final leftInbox = _view == AgentView.inbox;
+    setState(() {
+      _view = v;
+      if (leftInbox) _unread = 0;
+    });
+    if (leftInbox) {
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted) _loadUnread();
+      });
+    }
+  }
+
+  Widget _switcher() => AgentViewSwitcher(
+      value: _view, unread: _unread, onChanged: _setView);
+
+  Widget _viewBody() {
+    final child = switch (_view) {
+      AgentView.thread => KeyedSubtree(
+          key: const ValueKey(AgentView.thread), child: _body()),
+      _ => KeyedSubtree(
+          key: ValueKey(_view),
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: agentRecordsBody(
+                  widget.client, widget.agentId, widget.agentName,
+                  board: _view == AgentView.board),
+            ),
+          )),
+    };
+    return AnimatedSwitcher(
+      duration: reduceMotion(context) ? Duration.zero : Motion.base,
+      switchInCurve: Motion.exit,
+      switchOutCurve: Motion.exit,
+      layoutBuilder: (current, previous) => Stack(
+        fit: StackFit.expand,
+        children: [...previous, if (current != null) current],
+      ),
+      child: child,
+    );
+  }
 
   void _openActions() => openAgentActions(context,
       client: widget.client,
@@ -461,6 +508,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   void initState() {
     super.initState();
     _loadLine();
+    _loadUnread();
     _thread = Swr<List<CoordinationEvent>>(
       client: widget.client,
       key: 'agent-thread:${widget.agentId}',
@@ -1032,13 +1080,19 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         child: Column(
           children: [
             if (!hideChrome || !kMobile) _header(),
-            Expanded(child: _body()),
-            _composer(),
+            if (kMobile) _phoneSwitcher(),
+            Expanded(child: _viewBody()),
+            if (_view == AgentView.thread) _composer(),
           ],
         ),
       ),
     );
   }
+
+  Widget _phoneSwitcher() => Padding(
+        padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 4),
+        child: _switcher(),
+      );
 
   Widget _desktopStatusLine(String subtitle) {
     final logo = widget.subtitle == null && _profileProvider != null;
@@ -1071,7 +1125,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         subtitle: subtitle.isEmpty ? null : subtitle,
         leading: AgentMochi(widget.agentId, size: 24),
         onBack: widget.showBack ? _closePage : null,
-        onTitleTap: _openActions,
+        onTitleTap: () {},
         trailing: [
           IconBtn('more-horizontal',
               size: M.minTarget,
@@ -1084,23 +1138,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     final canGoBack = !widget.embedded &&
         widget.showBack &&
         (widget.onClose != null || Navigator.of(context).canPop());
-    Widget recordBtn(String icon, String label, bool board) => Tooltip(
-          message: label,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(R.md),
-            onTap: () => _openRecords(board),
-            child: Container(
-              height: 28,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              alignment: Alignment.center,
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                AppIcon(icon, size: 14, color: AppColors.fg3),
-                const SizedBox(width: 6),
-                Text(label, style: TS.label(AppColors.fg2)),
-              ]),
-            ),
-          ),
-        );
     return Container(
       height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1119,20 +1156,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               onTap: _closePage,
             ),
           const SizedBox(width: 4),
-          Tooltip(
-            message: 'Change avatar',
-            child: Builder(
-                builder: (anchor) => InkWell(
-                      borderRadius: BorderRadius.circular(R.md),
-                      onTap: () => showAgentAppearance(anchor, widget.client,
-                          widget.agentId, widget.agentName,
-                          AgentAppearancePart.avatar),
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: AgentMochi(widget.agentId, size: 28),
-                      ),
-                    )),
-          ),
+          AgentMochi(widget.agentId, size: 28),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -1147,10 +1171,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               ],
             ),
           ),
-          recordBtn('inbox', 'Inbox', false),
-          const SizedBox(width: 2),
-          recordBtn('clipboard', 'Board', true),
-          const SizedBox(width: 4),
+          _switcher(),
+          const SizedBox(width: 8),
           Builder(
               builder: (anchor) => IconBtn(
                     'more-horizontal',

@@ -92,6 +92,23 @@ void openAgentRecords(BuildContext context,
           : AgentInboxView(client: client, agentId: agentId, agentName: agentName));
 }
 
+/// Entries that arrived since the inbox was last opened, as the inbox itself
+/// marks them. Capped at one page.
+Future<int> agentInboxUnread(DaemonClient client, String agentId) async {
+  final seen =
+      (await SharedPreferences.getInstance()).getInt('inbox_seen_$agentId') ?? 0;
+  if (seen <= 0) return 0;
+  final entries = await client.agentInbox(agentId, limit: _pageSize);
+  return entries.where((e) => e.id > seen && e.fromKind != 'human').length;
+}
+
+/// The inbox or board body, to sit inside another screen.
+Widget agentRecordsBody(DaemonClient client, String agentId, String agentName,
+        {required bool board}) =>
+    board
+        ? AgentBoardView(client: client, agentId: agentId, agentName: agentName)
+        : AgentInboxView(client: client, agentId: agentId, agentName: agentName);
+
 /// Desktop actions menu, opened under the button that was clicked.
 Future<void> openAgentMenu(
   BuildContext anchor, {
@@ -114,6 +131,7 @@ Future<void> openAgentMenu(
       appMenuItem(value: 'wakes', icon: 'calendar-clock', label: 'Wakes and reporting'),
       appMenuItem(value: 'model', icon: 'cpu', label: 'Inference profile'),
       appMenuItem(value: 'nickname', icon: 'edit', label: 'Nickname'),
+      appMenuItem(value: 'avatar', icon: 'user', label: 'Avatar'),
       appMenuItem(value: 'color', icon: 'sparkles', label: 'Colour'),
       appMenuItem(value: 'delete', icon: 'trash', label: 'Delete agent', danger: true),
     ],
@@ -315,6 +333,7 @@ class _AgentActionsState extends State<_AgentActions> {
               'When it wakes and who it tells'),
           _setting('model', 'cpu', 'Inference profile', 'The model it runs on'),
           _setting('nickname', 'edit', 'Nickname', 'What it is called here'),
+          _setting('avatar', 'user', 'Avatar', 'Its face across the app'),
           _setting('color', 'sparkles', 'Colour', 'Its colour across the app'),
           _setting('delete', 'trash', 'Delete agent',
               'Removes its identity and notes',
