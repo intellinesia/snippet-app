@@ -1390,8 +1390,8 @@ const double kComposerGutter = 16;
 // ---------------------------------------------------------------------------
 // Typography — Geist for UI, Geist Mono for code.
 //
-// Three weights: 400 for prose, 500 for row titles and controls, 600 for page
-// and section titles only.
+// Two weights: 400 for prose, 500 for titles, row titles and controls. Nothing
+// renders heavier than 500.
 // ---------------------------------------------------------------------------
 
 /// Role weights — prefer these over raw `FontWeight.wNNN` so the ramp stays
@@ -1400,12 +1400,11 @@ class W {
   static const body = FontWeight.w400;
   static const label = FontWeight.w500;
   static const title = FontWeight.w500;
-  static const strong = FontWeight.w600;
+  static const strong = FontWeight.w500;
 }
 
-// Geist ships 400 to 600 only; 700 would be synthesised.
 FontWeight weightFor(FontWeight w) =>
-    w.value > FontWeight.w600.value ? FontWeight.w600 : w;
+    w.value > FontWeight.w500.value ? FontWeight.w500 : w;
 
 /// Text keeps the face's own spacing; only titles from 20px tighten, to -2%
 /// at 28px.

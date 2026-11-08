@@ -30,6 +30,12 @@ String _trim(String s) => s.endsWith('.0') ? s.substring(0, s.length - 2) : s;
 }
 
 /// Project group label: the folder name, never the full path.
+/// Groups sessions by project regardless of home prefix or trailing slash.
+String projectKey(SessionInfo s) => s.projectFolder
+    .trim()
+    .replaceFirst(RegExp(r'^(/home/[^/]+|/Users/[^/]+)(?=/|$)'), '~')
+    .replaceFirst(RegExp(r'/+$'), '');
+
 String projectLabel(SessionInfo s) {
   final f = s.projectFolder.trim();
   if (f.isEmpty) return 'No project';
@@ -45,14 +51,17 @@ class SessionGroupHeader extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
         header: true,
         child: Container(
-          height: kMobile ? 36 : 28,
+          height: kMobile ? 40 : 30,
           alignment: Alignment.bottomLeft,
           padding: EdgeInsets.fromLTRB(
-              kMobile ? 4 : 10, 0, kMobile ? 4 : 10, kMobile ? 6 : 4),
+              (kMobile ? 4 : 10) + SessionListRow.dotSlot,
+              0,
+              kMobile ? 4 : 10,
+              kMobile ? 4 : 2),
           child: Text(label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TS.overline()),
+              style: TS.label(AppColors.fg3)),
         ),
       );
 }

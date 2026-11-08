@@ -727,9 +727,13 @@ class SidebarState extends State<Sidebar> {
             onTap: () => setState(() => _settledOpen = !_settledOpen),
             child: Container(
               height: kMobile ? M.minTarget : 32,
-              padding: EdgeInsets.symmetric(horizontal: kMobile ? 4 : 10),
+              padding: EdgeInsets.fromLTRB(
+                  (kMobile ? 4 : 10) + SessionListRow.dotSlot,
+                  0,
+                  kMobile ? 4 : 10,
+                  0),
               child: Row(children: [
-                Text('Settled', style: TS.overline()),
+                Text('Settled', style: TS.label(AppColors.fg3)),
                 const SizedBox(width: 8),
                 Text('${rows.length}', style: TS.meta()),
                 const Spacer(),
@@ -833,7 +837,7 @@ class SidebarState extends State<Sidebar> {
     if (sorted.isEmpty) return const [];
     final byFolder = <String, List<SessionInfo>>{};
     for (final s in sorted) {
-      byFolder.putIfAbsent(s.projectFolder.trim(), () => []).add(s);
+      byFolder.putIfAbsent(projectKey(s), () => []).add(s);
     }
     final pin = attentionFirst && _filterQuery.trim().isEmpty;
     int rank(SessionInfo s) => !pin
@@ -1161,21 +1165,21 @@ class SidebarState extends State<Sidebar> {
           SheetAction('edit', 'Rename', () {
             Navigator.pop(context);
             _beginRename(s);
-          }, tile: true),
+          }, detail: 'Change the title'),
           SheetAction('check', 'Select', () {
             Navigator.pop(context);
             _enterSelect(seed: s.id);
-          }, tile: true),
+          }, detail: 'Pick several to settle or delete'),
           if (s.settled)
             SheetAction('play', 'Wake', () {
               Navigator.pop(context);
               _setSettled(s, false);
-            }, tile: true)
+            }, detail: 'Bring it back to the list')
           else if (!sessionIsActive(s.status))
             SheetAction('archive', 'Settle', () {
               Navigator.pop(context);
               _setSettled(s, true);
-            }, tile: true),
+            }, detail: 'Save its memory and park it'),
           SheetAction('trash', 'Delete', () {
             Navigator.pop(context);
             _confirmDeleteSessions([s]);
