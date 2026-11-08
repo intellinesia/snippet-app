@@ -308,9 +308,7 @@ class SheetActions extends StatelessWidget {
     final groups = <List<SheetAction>>[];
     for (final a in actions.where((a) => !a.tile)) {
       final last = groups.isEmpty ? null : groups.last.first;
-      if (last == null ||
-          last.section != a.section ||
-          last.danger != a.danger) {
+      if (last == null || last.section != a.section) {
         groups.add([a]);
       } else {
         groups.last.add(a);
@@ -333,7 +331,7 @@ class SheetActions extends StatelessWidget {
         ),
       for (var g = 0; g < groups.length; g++)
         ActionGroup(
-          label: groups[g].first.danger ? '' : groups[g].first.section,
+          label: groups[g].first.section,
           top: g == 0 && tiles.isEmpty
               ? (groups[g].first.section.isEmpty ? 0 : S.s8)
               : null,

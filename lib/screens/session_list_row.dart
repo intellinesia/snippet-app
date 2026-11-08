@@ -100,7 +100,8 @@ class SessionListRow extends StatelessWidget {
   /// Agent or provider mark shown at the end of the second line.
   final Widget? badge;
 
-  static double get dotSlot => kMobile ? 18 : 16;
+  // Phone hangs the state dot in the gutter so titles align with the screen edge.
+  static double get dotSlot => kMobile ? 0 : 16;
 
   @override
   Widget build(BuildContext context) {
@@ -139,6 +140,24 @@ class SessionListRow extends StatelessWidget {
               height: lineH,
               child:
                   Center(child: SelectCheck(checked, size: kMobile ? 20 : 14)))
+        else if (kMobile)
+          SizedBox(
+            width: 0,
+            height: lineH,
+            child: (waiting || working)
+                ? Stack(clipBehavior: Clip.none, children: [
+                    Positioned(
+                        left: -14,
+                        top: 0,
+                        bottom: 0,
+                        child: Center(
+                            child: _StateDot(
+                                color:
+                                    waiting ? AppColors.run : AppColors.accent,
+                                pulse: working))),
+                  ])
+                : null,
+          )
         else
           SizedBox(
             width: dotSlot,
