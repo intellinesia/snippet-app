@@ -59,6 +59,7 @@ import 'shell_pane_view.dart';
 import 'shell_rail.dart';
 import 'shell_rail_tools.dart';
 import 'shell_shortcuts.dart';
+import 'agent_rail.dart';
 import 'shell_sidebar_host.dart';
 import 'shell_split_view.dart';
 import 'shell_welcome.dart';

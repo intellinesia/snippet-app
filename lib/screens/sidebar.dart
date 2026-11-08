@@ -7,7 +7,7 @@ import '../drafts.dart';
 import '../models.dart';
 import '../settled_sessions.dart';
 import '../crew_status.dart';
-import '../crew_widgets.dart';
+import 'agent_rail.dart' show agentRailShown;
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -997,84 +997,65 @@ class SidebarState extends State<Sidebar> {
         (sessionIsActive(mc.status) || mc.status == 'waiting_for_input');
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (hasClient || _crew.isNotEmpty) ...[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-          child: HoverSurface(
-            selected: mcSelected,
-            radius: 8,
-            onTap: hasClient ? widget.onOpenMissionControl : null,
-            child: Container(
-              height: 46,
-              padding: const EdgeInsets.only(left: 6, right: 2),
-              child: Row(children: [
-                MochiIcon(color: AppColors.accent, size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Mission Control',
-                          style: sans(13,
-                              weight: W.label,
-                              color:
-                                  mcSelected ? AppColors.fg1 : AppColors.fg2)),
-                      Row(children: [
-                        if (mcBusy && !mcWaiting) ...[
-                          SessionStateIcon(
-                            status: 'running',
-                            icon: 'activity',
-                            size: 11,
-                            activeColor: AppColors.accent,
+        if (!agentRailShown(context))
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+            child: HoverSurface(
+              selected: mcSelected,
+              radius: 8,
+              onTap: hasClient ? widget.onOpenMissionControl : null,
+              child: Container(
+                height: 46,
+                padding: const EdgeInsets.only(left: 6, right: 2),
+                child: Row(children: [
+                  MochiIcon(color: AppColors.accent, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Mission Control',
+                            style: sans(13,
+                                weight: W.label,
+                                color: mcSelected
+                                    ? AppColors.fg1
+                                    : AppColors.fg2)),
+                        Row(children: [
+                          if (mcBusy && !mcWaiting) ...[
+                            SessionStateIcon(
+                              status: 'running',
+                              icon: 'activity',
+                              size: 11,
+                              activeColor: AppColors.accent,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          Expanded(
+                            child: Text(
+                                mcWaiting
+                                    ? 'Waiting on you'
+                                    : mcBusy
+                                        ? 'Working'
+                                        : crewLine,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: sans(12,
+                                    color: mcWaiting
+                                        ? AppColors.run
+                                        : mcBusy
+                                            ? AppColors.fg1
+                                            : AppColors.fg4)),
                           ),
-                          const SizedBox(width: 4),
-                        ],
-                        Expanded(
-                          child: Text(
-                              mcWaiting
-                                  ? 'Waiting on you'
-                                  : mcBusy
-                                      ? 'Working'
-                                      : crewLine,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: sans(12,
-                                  color: mcWaiting
-                                      ? AppColors.run
-                                      : mcBusy
-                                          ? AppColors.fg1
-                                          : AppColors.fg4)),
-                        ),
-                      ]),
-                    ],
+                        ]),
+                      ],
+                    ),
                   ),
-                ),
-                if (_crew.isNotEmpty)
-                  CrewStack(
-                    entries: deriveCrew(
-                        _crew, widget.sessions ?? const <SessionInfo>[]),
-                    onOpen: (a) => widget.onOpenAgent?.call(a),
-                    onMenu: (ctx, agent, point) async {
-                      final c = widget.client;
-                      if (c == null) return;
-                      await showCrewAgentMenu(ctx,
-                          client: c, agent: agent, point: point, onDeleted: () {
-                        _crewAt = null;
-                        _loadCrew();
-                      });
-                    },
-                    onNew: () async {
-                      await _openCreateAgent(context);
-                      _crewAt = null;
-                      _loadCrew();
-                    },
-                  )
-                else
                   const SizedBox(width: 6),
-              ]),
+                ]),
+              ),
             ),
           ),
-        ),
         if (widget.onOpenPalette == null)
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),

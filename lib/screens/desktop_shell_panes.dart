@@ -263,7 +263,38 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     if (i >= 0) _closeTab(i, force: force);
   }
 
-  Widget _bodyRow({required bool topInset}) => ShellSplitView(
+  String? get _railAgentId {
+    if (_focusedPane == _Pane.left && (_activeTab?.isMissionControl ?? false)) {
+      return null;
+    }
+    for (final r in _rightTabs) {
+      if (r.isAgent && _activeKey[r.pane] == r.key) return r.agent!.id;
+    }
+    return null;
+  }
+
+  Widget _bodyRow({required bool topInset}) {
+    final split = _splitView(topInset: topInset);
+    if (kMobile || _sidebarHidden || !agentRailShown(context)) return split;
+    final agentId = _railAgentId;
+    return Expanded(
+      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        AgentRail(
+          client: _client,
+          sessions: _sessions,
+          mcSelected:
+              agentId == null && (_activeTab?.isMissionControl ?? false),
+          selectedAgentId: agentId,
+          topInset: kMacOS ? 46 : 10,
+          onOpenMissionControl: _openMissionControlTab,
+          onOpenAgent: _openRightAgent,
+        ),
+        split,
+      ]),
+    );
+  }
+
+  Widget _splitView({required bool topInset}) => ShellSplitView(
         sidebarHidden: _sidebarHidden,
         sidebar: ShellPanelScope(
           open: _openShellPanel,
@@ -693,12 +724,14 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     _syncPage();
   }
 
+  bool get _railOn => !kMobile && agentRailShown(context);
+
   Widget _sidebarTop() {
     return SizedBox(
       height: 46,
       child: Row(children: [
         if (kMacOS) ...[
-          const SizedBox(width: 78),
+          SizedBox(width: _railOn ? 78 - kAgentRailWidth : 78),
           const Spacer(),
         ] else
           const SizedBox(width: 10),
