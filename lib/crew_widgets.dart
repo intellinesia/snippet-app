@@ -186,56 +186,60 @@ class _Bubble extends StatelessWidget {
     ].join('\n');
     return Tooltip(
       message: tip,
-      child: Material(
-        color: AppColors.surface1,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(kMobile ? 16 : 12),
-          side: BorderSide(
-              color: idle ? AppColors.line : c.withValues(alpha: .8)),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          onSecondaryTapDown: onMenu == null
-              ? null
-              : (d) => onMenu!(context, e.agent, d.globalPosition),
-          onLongPress: onMenu == null
-              ? null
-              : () {
-                  final box = context.findRenderObject() as RenderBox;
-                  onMenu!(context, e.agent,
-                      box.localToGlobal(box.size.center(Offset.zero)));
-                },
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 10, 4, 8),
-            child: Stack(clipBehavior: Clip.none, children: [
-              SizedBox(
-                  width: double.infinity,
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Opacity(
-                        opacity: idle ? .75 : 1,
-                        child: AgentMochi(e.agent.id, size: 36)),
-                    const SizedBox(height: 6),
-                    Text(e.agent.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: sans(12,
-                            color: idle ? AppColors.fg3 : AppColors.fg1)),
-                  ])),
-              Positioned(
-                right: 2,
-                top: -4,
-                child: Container(
-                  width: 9,
-                  height: 9,
-                  decoration: BoxDecoration(color: c, shape: BoxShape.circle),
-                ),
+      child: Pressable(
+          kind: PressKind.card,
+          radius: kMobile ? 16 : 12,
+          child: Material(
+            color: AppColors.surface1,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(kMobile ? 16 : 12),
+              side: BorderSide(
+                  color: idle ? AppColors.line : c.withValues(alpha: .8)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              onSecondaryTapDown: onMenu == null
+                  ? null
+                  : (d) => onMenu!(context, e.agent, d.globalPosition),
+              onLongPress: onMenu == null
+                  ? null
+                  : () {
+                      final box = context.findRenderObject() as RenderBox;
+                      onMenu!(context, e.agent,
+                          box.localToGlobal(box.size.center(Offset.zero)));
+                    },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(4, 10, 4, 8),
+                child: Stack(clipBehavior: Clip.none, children: [
+                  SizedBox(
+                      width: double.infinity,
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Opacity(
+                            opacity: idle ? .75 : 1,
+                            child: AgentMochi(e.agent.id, size: 36)),
+                        const SizedBox(height: 6),
+                        Text(e.agent.displayName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: sans(12,
+                                color: idle ? AppColors.fg3 : AppColors.fg1)),
+                      ])),
+                  Positioned(
+                    right: 2,
+                    top: -4,
+                    child: Container(
+                      width: 9,
+                      height: 9,
+                      decoration:
+                          BoxDecoration(color: c, shape: BoxShape.circle),
+                    ),
+                  ),
+                ]),
               ),
-            ]),
-          ),
-        ),
-      ),
+            ),
+          )),
     );
   }
 }
@@ -411,118 +415,122 @@ class _CrewCardState extends State<_CrewCard> {
     final needs = e.state == CrewState.needsYou;
     final profile = e.agent.profile;
     final idle = e.state == CrewState.standingBy && e.lead == null;
-    return Material(
-      color: AppColors.surface1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(kMobile ? 16 : 12),
-        side: BorderSide(
-            color:
-                needs ? AppColors.run.withValues(alpha: .8) : AppColors.line),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: widget.onOpen,
-        onSecondaryTapDown: (d) => showCrewAgentMenu(context,
-            client: widget.client,
-            agent: widget.entry.agent,
-            point: d.globalPosition,
-            onDeleted: widget.onDeleted),
-        child: Padding(
-          padding: EdgeInsets.all(kMobile ? 14 : 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                CrewTile(e, size: 40),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(e.agent.displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              sans(14, weight: W.label, color: AppColors.fg1)),
-                      if (e.agent.role.trim().isNotEmpty || profile != null)
-                        Row(children: [
-                          if (e.agent.role.trim().isNotEmpty)
-                            Flexible(
-                              child: Text(e.agent.role.trim(),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: sans(13, color: AppColors.fg3)),
-                            ),
-                          if (profile != null) ...[
-                            const SizedBox(width: 6),
-                            AgentProviderMark(
-                                client: widget.client,
-                                profile: profile,
-                                size: kMobile ? 14 : 12),
-                          ],
-                        ]),
-                    ],
-                  ),
-                ),
-                Builder(
-                  builder: (ctx) => IconBtn('more-horizontal',
-                      size: kMobile ? 36 : 28,
-                      iconSize: 16,
-                      tooltip: 'Agent actions',
-                      onTap: () => showCrewAgentMenu(ctx,
-                          client: widget.client,
-                          agent: e.agent,
-                          onDeleted: widget.onDeleted)),
-                ),
-              ]),
-              if (!idle) ...[
-                const SizedBox(height: 10),
-                Text(e.line,
-                    maxLines: needs ? 4 : 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13,
-                        height: 1.4,
-                        color: needs ? AppColors.run : AppColors.fg2)),
-              ],
-              if (needs) ...[
-                const SizedBox(height: 10),
-                Wrap(spacing: S.s8, runSpacing: S.s8, children: [
-                  if (e.isApproval) ...[
-                    Btn('Approve',
-                        small: true,
-                        disabled: _busy,
-                        onTap: () => _send(const QuickApprove())),
-                    Btn('Deny',
-                        small: true,
-                        variant: BtnVariant.secondary,
-                        disabled: _busy,
-                        onTap: () => _send(const QuickDeny())),
-                  ] else
-                    Btn('Answer', small: true, onTap: _openChat),
-                  if (e.isApproval)
-                    Btn('Open chat',
-                        small: true,
-                        variant: BtnVariant.secondary,
-                        onTap: _openChat),
-                ]),
-                if (_failed)
-                  Padding(
-                    padding: const EdgeInsets.only(top: S.s6),
-                    child: Text("Couldn't send. Open chat",
-                        style: sans(12, color: AppColors.danger)),
-                  ),
-              ],
-              if (e.sessions.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Text(
-                    '${e.sessions.length} session${e.sessions.length == 1 ? '' : 's'}',
-                    style: sans(12, color: AppColors.fg3)),
-              ],
-            ],
+    return Pressable(
+        kind: PressKind.card,
+        radius: kMobile ? 16 : 12,
+        child: Material(
+          color: AppColors.surface1,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(kMobile ? 16 : 12),
+            side: BorderSide(
+                color: needs
+                    ? AppColors.run.withValues(alpha: .8)
+                    : AppColors.line),
           ),
-        ),
-      ),
-    );
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: widget.onOpen,
+            onSecondaryTapDown: (d) => showCrewAgentMenu(context,
+                client: widget.client,
+                agent: widget.entry.agent,
+                point: d.globalPosition,
+                onDeleted: widget.onDeleted),
+            child: Padding(
+              padding: EdgeInsets.all(kMobile ? 14 : 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    CrewTile(e, size: 40),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(e.agent.displayName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(14,
+                                  weight: W.label, color: AppColors.fg1)),
+                          if (e.agent.role.trim().isNotEmpty || profile != null)
+                            Row(children: [
+                              if (e.agent.role.trim().isNotEmpty)
+                                Flexible(
+                                  child: Text(e.agent.role.trim(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: sans(13, color: AppColors.fg3)),
+                                ),
+                              if (profile != null) ...[
+                                const SizedBox(width: 6),
+                                AgentProviderMark(
+                                    client: widget.client,
+                                    profile: profile,
+                                    size: kMobile ? 14 : 12),
+                              ],
+                            ]),
+                        ],
+                      ),
+                    ),
+                    Builder(
+                      builder: (ctx) => IconBtn('more-horizontal',
+                          size: kMobile ? 36 : 28,
+                          iconSize: 16,
+                          tooltip: 'Agent actions',
+                          onTap: () => showCrewAgentMenu(ctx,
+                              client: widget.client,
+                              agent: e.agent,
+                              onDeleted: widget.onDeleted)),
+                    ),
+                  ]),
+                  if (!idle) ...[
+                    const SizedBox(height: 10),
+                    Text(e.line,
+                        maxLines: needs ? 4 : 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13,
+                            height: 1.4,
+                            color: needs ? AppColors.run : AppColors.fg2)),
+                  ],
+                  if (needs) ...[
+                    const SizedBox(height: 10),
+                    Wrap(spacing: S.s8, runSpacing: S.s8, children: [
+                      if (e.isApproval) ...[
+                        Btn('Approve',
+                            small: true,
+                            disabled: _busy,
+                            onTap: () => _send(const QuickApprove())),
+                        Btn('Deny',
+                            small: true,
+                            variant: BtnVariant.secondary,
+                            disabled: _busy,
+                            onTap: () => _send(const QuickDeny())),
+                      ] else
+                        Btn('Answer', small: true, onTap: _openChat),
+                      if (e.isApproval)
+                        Btn('Open chat',
+                            small: true,
+                            variant: BtnVariant.secondary,
+                            onTap: _openChat),
+                    ]),
+                    if (_failed)
+                      Padding(
+                        padding: const EdgeInsets.only(top: S.s6),
+                        child: Text("Couldn't send. Open chat",
+                            style: sans(12, color: AppColors.danger)),
+                      ),
+                  ],
+                  if (e.sessions.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                        '${e.sessions.length} session${e.sessions.length == 1 ? '' : 's'}',
+                        style: sans(12, color: AppColors.fg3)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ));
   }
 }
 

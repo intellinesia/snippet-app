@@ -160,13 +160,13 @@ class _AgentCardState extends State<AgentCard> {
               }, tile: true),
             SheetAction('sparkles', 'Avatar', () {
               Navigator.pop(context);
-              showAgentAppearance(context, widget.client, widget.agent.id,
-                  name, AgentAppearancePart.avatar);
+              showAgentAppearance(context, widget.client, widget.agent.id, name,
+                  AgentAppearancePart.avatar);
             }, tile: true),
             SheetAction('sparkles', 'Colour', () {
               Navigator.pop(context);
-              showAgentAppearance(context, widget.client, widget.agent.id,
-                  name, AgentAppearancePart.colour);
+              showAgentAppearance(context, widget.client, widget.agent.id, name,
+                  AgentAppearancePart.colour);
             }, tile: true),
             if (!widget.agent.isMissionControl)
               SheetAction('calendar-clock', 'Wakes and reporting', () {
@@ -218,7 +218,11 @@ class _AgentCardState extends State<AgentCard> {
     if (picked == 'wakes' && mounted) _openWakes(name, point);
     if (picked == 'model' && mounted) _pickProfile(name, point: point);
     if ((picked == 'color' || picked == 'avatar') && mounted) {
-      showAgentAppearance(context, widget.client, widget.agent.id, name,
+      showAgentAppearance(
+          context,
+          widget.client,
+          widget.agent.id,
+          name,
           picked == 'avatar'
               ? AgentAppearancePart.avatar
               : AgentAppearancePart.colour,
@@ -320,89 +324,97 @@ class _AgentCardState extends State<AgentCard> {
               : working > 0
                   ? AppColors.run
                   : null;
-      return InkWell(
-        onTap: widget.onOpen,
-        onLongPress: () {
-          HapticFeedback.selectionClick();
-          _actions(null);
-        },
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 68),
-          child: Row(
-            children: [
-              const SizedBox(width: M.gutter),
-              Opacity(
-                opacity: agent.available ? 1 : 0.5,
-                child: SizedBox.square(
-                  dimension: 40,
-                  child: Stack(clipBehavior: Clip.none, children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.surface2,
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: AgentMochi(agent.id, size: 26),
-                    ),
-                    if (dot != null)
-                      Positioned(
-                        right: -1,
-                        bottom: -1,
-                        child: Container(
-                          width: 12,
-                          height: 12,
+      return Pressable(
+          kind: PressKind.row,
+          child: InkWell(
+            splashFactory: NoSplash.splashFactory,
+            highlightColor: Colors.transparent,
+            onTap: widget.onOpen,
+            onLongPress: () {
+              HapticFeedback.selectionClick();
+              _actions(null);
+            },
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 68),
+              child: Row(
+                children: [
+                  const SizedBox(width: M.gutter),
+                  Opacity(
+                    opacity: agent.available ? 1 : 0.5,
+                    child: SizedBox.square(
+                      dimension: 40,
+                      child: Stack(clipBehavior: Clip.none, children: [
+                        Container(
                           decoration: BoxDecoration(
-                            color: dot,
+                            color: AppColors.surface2,
                             shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.bg, width: 2),
                           ),
+                          alignment: Alignment.center,
+                          child: AgentMochi(agent.id, size: 26),
                         ),
-                      ),
-                  ]),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TS.rowTitle(
-                              agent.available ? AppColors.fg1 : AppColors.fg3)),
-                      const SizedBox(height: 2),
-                      Row(children: [
-                        Flexible(
-                          child: Text(role.isEmpty ? status : role,
+                        if (dot != null)
+                          Positioned(
+                            right: -1,
+                            bottom: -1,
+                            child: Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: dot,
+                                shape: BoxShape.circle,
+                                border:
+                                    Border.all(color: AppColors.bg, width: 2),
+                              ),
+                            ),
+                          ),
+                      ]),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TS.meta(AppColors.fg3)),
-                        ),
-                        if (profile != null) ...[
-                          const SizedBox(width: 6),
-                          AgentProviderMark(
-                              client: widget.client, profile: profile),
+                              style: TS.rowTitle(agent.available
+                                  ? AppColors.fg1
+                                  : AppColors.fg3)),
+                          const SizedBox(height: 2),
+                          Row(children: [
+                            Flexible(
+                              child: Text(role.isEmpty ? status : role,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TS.meta(AppColors.fg3)),
+                            ),
+                            if (profile != null) ...[
+                              const SizedBox(width: 6),
+                              AgentProviderMark(
+                                  client: widget.client, profile: profile),
+                            ],
+                          ]),
                         ],
-                      ]),
-                    ],
+                      ),
+                    ),
                   ),
-                ),
+                  if (summary != null) ...[
+                    const SizedBox(width: 12),
+                    SwapText(summary.$1,
+                        style: TS.meta(summary.$2).copyWith(
+                            fontFeatures: const [
+                              FontFeature.tabularFigures()
+                            ])),
+                  ],
+                  const SizedBox(width: M.gutter),
+                ],
               ),
-              if (summary != null) ...[
-                const SizedBox(width: 12),
-                SwapText(summary.$1,
-                    style: TS.meta(summary.$2).copyWith(
-                        fontFeatures: const [FontFeature.tabularFigures()])),
-              ],
-              const SizedBox(width: M.gutter),
-            ],
-          ),
-        ),
-      );
+            ),
+          ));
     }
     return GestureDetector(
       onSecondaryTapUp: (d) => _actions(d.globalPosition),
