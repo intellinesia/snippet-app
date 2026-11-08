@@ -23,7 +23,10 @@ String _trim(String s) => s.endsWith('.0') ? s.substring(0, s.length - 2) : s;
 ({int added, int removed})? sessionDiff(SessionInfo s) {
   final c = s.shownChanges;
   if (c == null || (c.added <= 0 && c.removed <= 0)) return null;
-  return (added: c.added < 0 ? 0 : c.added, removed: c.removed < 0 ? 0 : c.removed);
+  return (
+    added: c.added < 0 ? 0 : c.added,
+    removed: c.removed < 0 ? 0 : c.removed
+  );
 }
 
 /// Project group label: the folder name, never the full path.
@@ -125,7 +128,8 @@ class SessionListRow extends StatelessWidget {
         if (selecting)
           SizedBox(
               height: lineH,
-              child: Center(child: SelectCheck(checked, size: kMobile ? 20 : 14)))
+              child:
+                  Center(child: SelectCheck(checked, size: kMobile ? 20 : 14)))
         else
           SizedBox(
             width: dotSlot,
@@ -172,35 +176,38 @@ class SessionListRow extends StatelessWidget {
                 SizedBox(
                   height: kMobile ? 18 : 16,
                   child: Row(children: [
-                    if (branch.isNotEmpty)
-                      Flexible(
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          AppIcon('git-branch',
-                              size: kMobile ? 13 : 12, color: AppColors.fg3),
-                          const SizedBox(width: 4),
+                    Expanded(
+                      child: Row(children: [
+                        if (branch.isNotEmpty)
                           Flexible(
-                            child: Text(branch,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TS.meta()),
+                            child:
+                                Row(mainAxisSize: MainAxisSize.min, children: [
+                              AppIcon('git-branch',
+                                  size: kMobile ? 13 : 12,
+                                  color: AppColors.fg3),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(branch,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TS.meta()),
+                              ),
+                            ]),
                           ),
-                        ]),
-                      ),
-                    if (diff != null) ...[
-                      if (branch.isNotEmpty) const SizedBox(width: 8),
-                      if (diff.added > 0)
-                        Text('+${compactCount(diff.added)}',
-                            maxLines: 1,
-                            style: TS.meta(AppColors.ok)),
-                      if (diff.added > 0 && diff.removed > 0)
-                        const SizedBox(width: 5),
-                      if (diff.removed > 0)
-                        Text('-${compactCount(diff.removed)}',
-                            maxLines: 1,
-                            style: TS.meta(AppColors.danger)),
-                    ],
+                        if (diff != null) ...[
+                          if (branch.isNotEmpty) const SizedBox(width: 8),
+                          if (diff.added > 0)
+                            Text('+${compactCount(diff.added)}',
+                                maxLines: 1, style: TS.meta(AppColors.ok)),
+                          if (diff.added > 0 && diff.removed > 0)
+                            const SizedBox(width: 5),
+                          if (diff.removed > 0)
+                            Text('-${compactCount(diff.removed)}',
+                                maxLines: 1, style: TS.meta(AppColors.danger)),
+                        ],
+                      ]),
+                    ),
                     if (badge != null) ...[
-                      const Spacer(),
                       const SizedBox(width: 8),
                       badge!,
                     ],
@@ -228,14 +235,15 @@ class SessionListRow extends StatelessWidget {
                   constraints: const BoxConstraints(minHeight: 56),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-                    child: Align(
-                        alignment: Alignment.centerLeft, child: content),
+                    child:
+                        Align(alignment: Alignment.centerLeft, child: content),
                   ),
                 ),
                 if (divider)
                   Container(
                       height: 1,
-                      margin: EdgeInsets.only(left: selecting ? 36 : dotSlot + 4),
+                      margin:
+                          EdgeInsets.only(left: selecting ? 36 : dotSlot + 4),
                       color: AppColors.line),
               ]),
             ),
@@ -309,8 +317,8 @@ class _StateDotState extends State<_StateDot>
     );
     if (!widget.pulse) return dot;
     return FadeTransition(
-      opacity: Tween<double>(begin: 0.45, end: 1).animate(
-          CurvedAnimation(parent: _c, curve: Curves.easeOut)),
+      opacity: Tween<double>(begin: 0.45, end: 1)
+          .animate(CurvedAnimation(parent: _c, curve: Curves.easeOut)),
       child: dot,
     );
   }
