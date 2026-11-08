@@ -979,9 +979,9 @@ class _PressableState extends State<Pressable> with TickerProviderStateMixin {
       child: AnimatedBuilder(
         animation: _scale,
         child: out,
-        builder: (_, child) => _scale.value == 1
-            ? child!
-            : Transform.scale(scale: _scale.value, child: child),
+        // Always wrapped: adding the Transform on press remounted the child
+        // and dropped the tap in flight.
+        builder: (_, child) => Transform.scale(scale: _scale.value, child: child),
       ),
     );
   }
