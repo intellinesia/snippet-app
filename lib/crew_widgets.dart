@@ -452,23 +452,14 @@ class _CrewCardState extends State<_CrewCard> {
                               overflow: TextOverflow.ellipsis,
                               style: sans(14,
                                   weight: W.label, color: AppColors.fg1)),
-                          if (e.agent.role.trim().isNotEmpty || profile != null)
-                            Row(children: [
-                              if (e.agent.role.trim().isNotEmpty)
-                                Flexible(
-                                  child: Text(e.agent.role.trim(),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: sans(13, color: AppColors.fg3)),
-                                ),
-                              if (profile != null) ...[
-                                const SizedBox(width: 6),
-                                AgentProviderMark(
-                                    client: widget.client,
-                                    profile: profile,
-                                    size: kMobile ? 14 : 12),
-                              ],
-                            ]),
+                          if (profile != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: AgentProviderMark(
+                                  client: widget.client,
+                                  profile: profile,
+                                  size: kMobile ? 14 : 12),
+                            ),
                         ],
                       ),
                     ),

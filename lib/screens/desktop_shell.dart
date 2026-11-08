@@ -1165,10 +1165,7 @@ class _DesktopShellState extends State<DesktopShell>
                 kind: PaletteKind.agent,
                 icon: 'agent',
                 title: a.displayName.trim().isEmpty ? a.id : a.displayName,
-                subtitle: [
-                  if (a.handle.isNotEmpty) '@${a.handle}',
-                  if (a.role.isNotEmpty) a.role,
-                ].join(' · '),
+                subtitle: a.handle.isNotEmpty ? '@${a.handle}' : '',
                 keywords: [a.handle],
                 run: () => _openRightAgent(a),
               ),

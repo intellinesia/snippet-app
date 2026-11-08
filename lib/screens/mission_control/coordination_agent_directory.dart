@@ -186,9 +186,7 @@ class _CoordinationAgentDirectoryState
                     ListRow(
                       key: ValueKey('agent-${a.id}'),
                       title: a.displayName,
-                      subtitle: a.role.trim().isEmpty
-                          ? '@${a.handle}'
-                          : a.role.trim(),
+                      subtitle: '@${a.handle}',
                       selected: a.id == _selectedId,
                       leading: Container(
                         width: 8,
@@ -328,11 +326,7 @@ class _AgentPane extends StatelessWidget {
                                   color: AppColors.fg1)),
                           const SizedBox(height: S.s4),
                           Text(
-                            [
-                              '@${agent.handle}',
-                              if (agent.role.trim().isNotEmpty)
-                                agent.role.trim(),
-                            ].join(' · '),
+                            '@${agent.handle}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: sans(13, color: AppColors.fg3),

@@ -1110,7 +1110,6 @@ class CoordinationAgent {
   final String handle;
   final String kind;
   final String status;
-  final String role;
   final List<String> capabilities;
 
   /// What the UI shows: the nickname when one is set, else the name.
@@ -1148,7 +1147,6 @@ class CoordinationAgent {
         handle = j['handle'] as String? ?? '',
         kind = j['kind'] as String? ?? 'worker',
         status = j['status'] as String? ?? 'active',
-        role = j['role'] as String? ?? 'implementer',
         capabilities = ((j['capabilities'] as List?) ?? const [])
             .whereType<String>()
             .toList(),

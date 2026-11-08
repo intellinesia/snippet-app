@@ -87,7 +87,7 @@ Future<CoordinationAgent?> pickAgentId(
           value: a.id,
           icon: 'agent',
           label: a.displayName.trim().isEmpty ? a.id : a.displayName,
-          description: '${a.handle} · ${a.role} · ${a.status}',
+          description: '@${a.handle} · ${a.status}',
           selected: a.id == currentAgentId,
         ),
     ],
@@ -327,7 +327,7 @@ class AgentThreadScreen extends StatefulWidget {
   final String agentId;
   final String agentName;
 
-  /// Identity line under the name (`@handle · role · status`). Supplied by the
+  /// Identity line under the name (`@handle · status`). Supplied by the
   /// caller, which owns the agent record.
   final String? subtitle;
 
@@ -352,7 +352,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   String? _fetchedLine;
-  String? _fetchedRole;
+  bool _fetchedPaused = false;
   String? _fetchedProfile;
   String? _profileProvider;
 
@@ -360,18 +360,13 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     widget.client.coordinationAgents().then((all) {
       final a = all.where((x) => x.id == widget.agentId).firstOrNull;
       if (a == null || !mounted) return;
-      final role = a.role.trim();
       final line = [
         if (!a.available) 'Paused',
-        if (role.isNotEmpty) role,
         if (a.profile != null) a.profile!,
       ].join(' \u00b7 ');
       setState(() {
         _fetchedLine = line;
-        _fetchedRole = [
-          if (!a.available) 'Paused',
-          if (role.isNotEmpty) role,
-        ].join(' \u00b7 ');
+        _fetchedPaused = !a.available;
         _fetchedProfile = a.profile;
       });
       final name = a.profile;
@@ -1103,11 +1098,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           overflow: TextOverflow.ellipsis,
           style: TS.meta(AppColors.fg3));
     }
-    final role = (_fetchedRole ?? '').trim();
     return Row(children: [
-      if (role.isNotEmpty)
+      if (_fetchedPaused)
         Flexible(
-          child: Text('$role \u00b7 ',
+          child: Text('Paused \u00b7 ',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TS.meta(AppColors.fg3)),

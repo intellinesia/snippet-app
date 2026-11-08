@@ -270,8 +270,6 @@ class _AgentCardState extends State<AgentCard> {
     final open = working + queued + blocked;
     final done = _count({TaskStatus.done}, {'done'});
     final profile = _currentProfile;
-    final roleText = agent.role.trim();
-    final role = roleText;
     final status = !agent.available
         ? 'Paused'
         : working > 0
@@ -387,7 +385,7 @@ class _AgentCardState extends State<AgentCard> {
                           const SizedBox(height: 2),
                           Row(children: [
                             Flexible(
-                              child: Text(role.isEmpty ? status : role,
+                              child: Text(status,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TS.meta(AppColors.fg3)),
@@ -456,7 +454,7 @@ class _AgentCardState extends State<AgentCard> {
                     Expanded(
                       child: Row(children: [
                         Flexible(
-                          child: Text(role.isEmpty ? status : role,
+                          child: Text(status,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: sans(metaSize, color: AppColors.fg4)),

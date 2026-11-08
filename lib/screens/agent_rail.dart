@@ -202,10 +202,7 @@ String _agentTip(CrewEntry e) {
   final name = e.agent.displayName.trim().isEmpty
       ? e.agent.id
       : e.agent.displayName.trim();
-  final role = e.agent.role.trim();
-  final r =
-      role.isEmpty ? '' : '${role[0].toUpperCase()}${role.substring(1)} · ';
-  return '$name\n$r${_stateWord(e.state)}';
+  return '$name\n${_stateWord(e.state)}';
 }
 
 class _RailTile extends StatefulWidget {

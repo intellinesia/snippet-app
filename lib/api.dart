@@ -1732,7 +1732,6 @@ class DaemonClient {
     required String handle,
     String kind = 'worker',
     String status = 'active',
-    String role = 'implementer',
     List<String> capabilities = const [],
   }) async {
     final r = await http.post(
@@ -1744,7 +1743,6 @@ class DaemonClient {
         'handle': handle,
         'kind': kind,
         'status': status,
-        'role': role,
         'capabilities': capabilities,
       }),
     );

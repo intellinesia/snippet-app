@@ -780,15 +780,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                               overflow: TextOverflow.ellipsis,
                               style: sans(13, color: AppColors.fg1)),
                         ),
-                        if (matches[i].role.trim().isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(matches[i].role,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: sans(12, color: AppColors.fg4)),
-                          ),
-                        ],
                       ]),
                     ),
                   ),

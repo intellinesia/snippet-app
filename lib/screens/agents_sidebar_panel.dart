@@ -234,7 +234,6 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     if (a.displayName.toLowerCase().contains(q)) return true;
     if (a.id.toLowerCase().contains(q)) return true;
     if (a.handle.toLowerCase().contains(q)) return true;
-    if (a.role.toLowerCase().contains(q)) return true;
     if (a.capabilities.any((c) => c.toLowerCase().contains(q))) return true;
     return false;
   }
