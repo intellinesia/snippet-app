@@ -88,9 +88,6 @@ List<Widget> buildShellRailTools({
                     label: 'Wakes and reporting'),
                 appMenuItem(
                     value: 'model', icon: 'cpu', label: 'Inference profile'),
-                appMenuItem(value: 'nickname', icon: 'edit', label: 'Nickname'),
-                appMenuItem(value: 'avatar', icon: 'user', label: 'Avatar'),
-                appMenuItem(value: 'color', icon: 'sparkles', label: 'Colour'),
                 appMenuItem(
                     value: 'delete',
                     icon: 'trash',

@@ -238,19 +238,22 @@ class AgentActionsState extends State<AgentActions> {
     final client = widget.client;
     final id = widget.agentId;
     final name = widget.agentName;
+    // In the desktop shell the header switcher covers Inbox and Board, and
+    // naming and looks belong to the agent list, not the agent's own screen.
+    final inShell = widget.onAction != null;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ActionGroup(label: 'Work', rows: [
-          ActionRow(
+          if (!inShell) ActionRow(
             icon: 'inbox',
             label: 'Inbox',
             detail: 'Everything sent to this agent',
             onTap: () => _openRecords('inbox', 'Inbox',
                 () => AgentInboxView(client: client, agentId: id, agentName: name)),
           ),
-          ActionRow(
+          if (!inShell) ActionRow(
             icon: 'clipboard',
             label: 'Board',
             detail: 'What it dispatched, reported and noted',
@@ -283,9 +286,11 @@ class AgentActionsState extends State<AgentActions> {
           _setting('wakes', 'calendar-clock', 'Wakes and reporting',
               'When it wakes and who it tells'),
           _setting('model', 'cpu', 'Inference profile', 'The model it runs on'),
-          _setting('nickname', 'edit', 'Nickname', 'What it is called here'),
-          _setting('avatar', 'user', 'Avatar', 'Its face across the app'),
-          _setting('color', 'sparkles', 'Colour', 'Its colour across the app'),
+          if (!inShell) ...[
+            _setting('nickname', 'edit', 'Nickname', 'What it is called here'),
+            _setting('avatar', 'user', 'Avatar', 'Its face across the app'),
+            _setting('color', 'sparkles', 'Colour', 'Its colour across the app'),
+          ],
           _setting('delete', 'trash', 'Delete agent',
               'Removes its identity and notes',
               danger: true),

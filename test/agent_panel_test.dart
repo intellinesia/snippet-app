@@ -49,12 +49,12 @@ void main() {
       'Memory',
       'Wakes and reporting',
       'Inference profile',
-      'Nickname',
-      'Avatar',
-      'Colour',
       'Delete agent',
     ]) {
       expect(find.text(label), findsWidgets, reason: label);
+    }
+    for (final label in ['Nickname', 'Avatar', 'Colour']) {
+      expect(find.text(label), findsNothing, reason: label);
     }
     await tester.tap(find.text('Inference profile').last);
     await settle(tester);
