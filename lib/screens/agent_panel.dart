@@ -11,18 +11,9 @@ import 'agent_wake_panel.dart';
 import 'memory_screen.dart';
 import 'shell_models.dart' show RightTab;
 
-/// Actions that open as a page inside the shell's right panel. `desk` opens a
-/// session tab and `delete` is a confirm dialog, so neither is a panel page.
-const agentPanelPages = {
-  'inbox',
-  'board',
-  'memory',
-  'wakes',
-  'model',
-  'nickname',
-  'avatar',
-  'color',
-};
+/// The pages the agent's right panel shows, in segment order. Everything else
+/// in the agent's menu opens elsewhere: `desk` as a tab, `delete` as a confirm.
+const agentPanelPages = ['memory', 'wakes', 'model'];
 
 String _pageTitle(String action) => switch (action) {
       'inbox' => 'Inbox',
@@ -55,6 +46,7 @@ ShellPanelRequest agentPanelRequest(
             client: client,
             embedded: true,
             onBack: close,
+            hideBack: true,
             initialKey: 'agent:$agentId'),
         'wakes' => _WithAgent(
             client: client,
@@ -379,6 +371,8 @@ class AgentSidePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final reading = _reading;
+    final page = _pageOf(reading) ?? 'memory';
+    final others = readouts.where((r) => _pageOf(r) == null).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -389,8 +383,10 @@ class AgentSidePanel extends StatelessWidget {
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(children: [
-              _seg('Actions', reading == null, () => onClearReadout?.call()),
-              for (final r in readouts)
+              for (final p in agentPanelPages)
+                _seg(_segLabel(p), reading == null ? p == 'memory' : _pageOf(reading) == p,
+                    () => onAction(p)),
+              for (final r in others)
                 _seg(r.label, r.key == activeReadout,
                     () => onSelectReadout?.call(r),
                     onClose: () => onCloseReadout?.call(r)),
@@ -400,17 +396,24 @@ class AgentSidePanel extends StatelessWidget {
         Expanded(
           child: reading != null && readoutBody != null
               ? readoutBody!(reading)
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
-                  child: AgentActions(
-                    client: client,
-                    agentId: agentId,
-                    agentName: agentName,
-                    onAction: onAction,
-                  ),
-                ),
+              : agentPanelRequest(page,
+                      client: client, agentId: agentId, agentName: agentName)
+                  .builder(context, () {}),
         ),
       ],
     );
   }
+
+  String? _pageOf(RightTab? r) {
+    final id = r?.request?.id;
+    if (id == null || !id.startsWith('$agentId:')) return null;
+    final p = id.substring(agentId.length + 1);
+    return agentPanelPages.contains(p) ? p : null;
+  }
+
+  static String _segLabel(String p) => switch (p) {
+        'memory' => 'Memory',
+        'wakes' => 'Wakes',
+        _ => 'Profile',
+      };
 }

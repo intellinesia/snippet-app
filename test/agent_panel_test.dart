@@ -18,8 +18,12 @@ void main() {
     expect(find.byTooltip('Agent actions'), findsOneWidget);
     expect(find.byTooltip('Actions'), findsNothing);
     expect(find.byType(AgentSidePanel), findsOneWidget);
-    expect(find.byType(AgentActions), findsOneWidget);
-    expect(find.text('Desk session'), findsOneWidget);
+    // No actions list in the panel: it opens on Memory, with Wakes and Profile.
+    expect(find.byType(AgentActions), findsNothing);
+    expect(find.text('Desk session'), findsNothing);
+    expect(find.byType(MemoryScreen), findsOneWidget);
+    expect(find.text('Wakes'), findsOneWidget);
+    expect(find.text('Profile'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Hide panel'));
     await settle(tester, 2);
@@ -28,7 +32,7 @@ void main() {
     await settle(tester, 2);
     expect(find.byType(AgentSidePanel), findsOneWidget);
 
-    await tester.tap(find.text('Memory'));
+    await tester.tap(find.text('Memory').first);
     await settle(tester);
     expect(find.byType(MemoryScreen), findsOneWidget);
     expect(find.byType(AgentSidePanel), findsOneWidget);
