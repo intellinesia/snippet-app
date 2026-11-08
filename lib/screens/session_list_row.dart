@@ -133,12 +133,6 @@ class SessionListRow extends StatelessWidget {
     final content = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (selecting)
-          SizedBox(
-              height: lineH,
-              child:
-                  Center(child: SelectCheck(checked, size: kMobile ? 20 : 14))),
-        if (selecting) SizedBox(width: kMobile ? 12 : 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -226,28 +220,42 @@ class SessionListRow extends StatelessWidget {
     }
 
     final row = kMobile
-        ? Material(
-            color: checked ? AppColors.accentBg : Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              onLongPress: onLongPress == null ? null : longPress,
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 56),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-                    child:
-                        Align(alignment: Alignment.centerLeft, child: content),
+        ? Stack(clipBehavior: Clip.none, children: [
+            // Tint bleeds into the gutter so selection adds no inset.
+            if (checked)
+              Positioned(
+                left: -12,
+                right: -12,
+                top: 0,
+                bottom: 0,
+                child: DecoratedBox(
+                    decoration: BoxDecoration(
+                        color: AppColors.accentBg,
+                        borderRadius: BorderRadius.circular(R.md))),
+              ),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTap,
+                onLongPress: onLongPress == null ? null : longPress,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 56),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+                      child: Align(
+                          alignment: Alignment.centerLeft, child: content),
+                    ),
                   ),
-                ),
-                if (divider)
-                  Container(
-                      height: 1,
-                      margin: EdgeInsets.only(left: selecting ? 36 : 4),
-                      color: AppColors.line),
-              ]),
+                  if (divider)
+                    Container(
+                        height: 1,
+                        margin: const EdgeInsets.only(left: 4),
+                        color: checked ? Colors.transparent : AppColors.line),
+                ]),
+              ),
             ),
-          )
+          ])
         : HoverSurface(
             selected: selecting ? checked : selected,
             radius: 8,
@@ -264,7 +272,7 @@ class SessionListRow extends StatelessWidget {
 
     return Semantics(
       container: true,
-      selected: selected,
+      selected: selecting ? checked : selected,
       label: stateLabel == null ? null : '$stateLabel. $title',
       child: row,
     );
