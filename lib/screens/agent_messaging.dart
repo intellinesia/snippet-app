@@ -541,13 +541,26 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
 
   Future<void> _load({bool silent = false}) => _thread.refresh();
 
+  // Sent but not yet in a fetched list; merged back so a refetch can't hide them.
+  final List<CoordinationEvent> _unechoed = [];
+
   void _sync() {
     if (!mounted) return;
     final next = _thread.data;
-    final hadNew = next != null && next.length > _events.length;
+    if (next != null) {
+      final keys = {for (final e in next) e.idempotencyKey};
+      final bodies = {
+        for (final e in next)
+          if (e.actorKind == 'human') e.payload['body']
+      };
+      _unechoed.removeWhere((p) =>
+          keys.contains(p.idempotencyKey) || bodies.contains(p.payload['body']));
+    }
+    final merged = next == null ? null : [...next, ..._unechoed];
+    final hadNew = merged != null && merged.length > _events.length;
     final first = _events.isEmpty;
     setState(() {
-      if (next != null) _events = next;
+      if (merged != null) _events = merged;
       _loading = _thread.loading;
       _error =
           next == null && _thread.error != null ? '${_thread.error}' : null;
@@ -1039,6 +1052,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     _attachmentGeneration++;
     _attachments.clear();
     _discardRecording();
+    _unechoed.add(pending);
     setState(() => _events = [..._events, pending]);
     _jumpToBottom(animated: true);
     try {
@@ -1050,6 +1064,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       if (!mounted) return;
       await _load(silent: true);
     } catch (e) {
+      _unechoed.removeWhere((p) => p.eventId == key);
       if (!mounted) return;
       setState(() => _events = [
             for (final ev in _events)

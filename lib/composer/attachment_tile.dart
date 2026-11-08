@@ -131,72 +131,55 @@ class ComposerAttachmentTile extends StatelessWidget {
     );
   }
 
+  // Uploading shows the note dimmed rather than a progress animation.
   Widget _voiceRow() => Pressable(
         kind: PressKind.row,
         radius: R.md,
-        enabled: onOpen != null,
+        enabled: onOpen != null && !uploading,
         child: Semantics(
           button: onOpen != null,
           label: uploading ? 'Voice note, uploading' : 'Voice note',
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: onOpen,
+            onTap: uploading ? null : onOpen,
             child: Container(
               height: 48,
-              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: AppColors.surface2,
                 borderRadius: BorderRadius.circular(R.md),
                 border: Border.all(color: AppColors.border),
               ),
-              child: Stack(children: [
-                Row(children: [
-                  const SizedBox(width: 8),
-                  Container(
-                    width: 32,
-                    height: 32,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.accentBg,
-                      shape: BoxShape.circle,
-                    ),
-                    child: AppIcon(uploading ? 'mic' : 'play',
-                        size: 14, color: AppColors.accent),
+              child: Row(children: [
+                Expanded(
+                  child: AnimatedOpacity(
+                    opacity: uploading ? 0.4 : 1,
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOut,
+                    child: Row(children: [
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 32,
+                        height: 32,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.accentBg,
+                          shape: BoxShape.circle,
+                        ),
+                        child: AppIcon('play',
+                            size: 14, color: AppColors.accent),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: NoteWaveStrip(seed: name.hashCode)),
+                    ]),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Voice note',
-                            maxLines: 1,
-                            style: sans(13,
-                                weight: W.label, color: AppColors.fg1)),
-                        Text(uploading ? 'Uploading…' : 'Ready to send',
-                            maxLines: 1,
-                            style: sans(12, color: AppColors.fg3)),
-                      ],
-                    ),
-                  ),
-                  IconBtn('x',
-                      size: 32,
-                      iconSize: 14,
-                      tooltip: 'Remove voice note',
-                      onTap: onRemove),
-                  const SizedBox(width: 4),
-                ]),
-                if (uploading)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: LinearProgressIndicator(
-                      minHeight: 2,
-                      backgroundColor: Colors.transparent,
-                      color: AppColors.accent,
-                    ),
-                  ),
+                ),
+                const SizedBox(width: 8),
+                IconBtn('x',
+                    size: 32,
+                    iconSize: 14,
+                    tooltip: 'Remove voice note',
+                    onTap: onRemove),
+                const SizedBox(width: 4),
               ]),
             ),
           ),

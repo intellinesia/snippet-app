@@ -826,6 +826,27 @@ class LiveWave extends CustomPainter {
       old.samples.length != samples.length || old.progress != progress;
 }
 
+/// A still waveform for a voice note that has no playback position yet.
+class NoteWaveStrip extends StatelessWidget {
+  const NoteWaveStrip({super.key, required this.seed, this.height = 22});
+
+  final int seed;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: height,
+        width: double.infinity,
+        child: CustomPaint(
+          painter: _NoteWave(
+              seed: seed,
+              progress: 0,
+              played: AppColors.accent,
+              rest: AppColors.fg3),
+        ),
+      );
+}
+
 class _NoteWave extends CustomPainter {
   final int seed;
   final double progress;
