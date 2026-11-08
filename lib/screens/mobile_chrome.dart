@@ -328,6 +328,58 @@ class MobileBackBar extends StatelessWidget {
   }
 }
 
+/// A title bar with no side buttons. The pill keeps the width it has beside a
+/// back and a menu button, with the avatar stacked over the name.
+class MobileStackedTitleBar extends StatelessWidget {
+  const MobileStackedTitleBar({
+    super.key,
+    required this.title,
+    required this.avatar,
+    this.onTap,
+    this.tapHint,
+  });
+
+  final String title;
+  final Widget avatar;
+  final VoidCallback? onTap;
+  final String? tapHint;
+
+  static const _side = 16.0 + 44 + 10;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(_side, 8, _side, 8),
+        child: Semantics(
+          button: onTap != null,
+          label: title,
+          hint: tapHint,
+          child: Pressable(
+            kind: PressKind.card,
+            radius: 24,
+            enabled: onTap != null,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onTap,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+                decoration: _floating(24),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  avatar,
+                  const SizedBox(height: 4),
+                  Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: sans(15, weight: W.strong, color: AppColors.fg1)),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
 class FloatingSearch extends StatelessWidget {
   const FloatingSearch({
     super.key,

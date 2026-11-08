@@ -4,6 +4,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1107,19 +1109,13 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   Widget _header() {
     final subtitle = (widget.subtitle ?? _fetchedLine ?? '').trim();
     if (kMobile) {
-      return MobileBackBar(
+      // Back is the system gesture (iOS gets it from the Cupertino route);
+      // the pill opens the agent's actions.
+      return MobileStackedTitleBar(
         title: widget.agentName,
-        subtitle: subtitle.isEmpty ? null : subtitle,
-        leading: AgentMochi(widget.agentId, size: 24),
-        onBack: widget.showBack ? _closePage : null,
-        onTitleTap: () {},
-        trailing: [
-          IconBtn('more-horizontal',
-              size: M.minTarget,
-              iconSize: 20,
-              tooltip: 'Actions',
-              onTap: _openActions),
-        ],
+        avatar: AgentMochi(widget.agentId, size: 26),
+        onTap: _openActions,
+        tapHint: 'Agent actions',
       );
     }
     final canGoBack = !widget.embedded &&
@@ -1519,16 +1515,16 @@ void openAgentThread(
   required String agentName,
 }) {
   if (kMobile) {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => AgentThreadScreen(
+    Widget page(BuildContext _) => AgentThreadScreen(
           client: client,
           agentId: agentId,
           agentName: agentName,
           onClose: () => Navigator.pop(context),
-        ),
-      ),
-    );
+        );
+    Navigator.of(context).push<void>(
+        defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: page)
+            : MaterialPageRoute(builder: page));
     return;
   }
   presentScreen(
