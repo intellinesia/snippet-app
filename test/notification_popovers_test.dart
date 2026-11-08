@@ -2,10 +2,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:snippet/notification_inbox.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart' hide testWidgets;
+import 'package:flutter_test/flutter_test.dart' as ft show testWidgets;
 import 'package:snippet/notification_popovers.dart';
 import 'package:snippet/notification_sync.dart';
 import 'package:snippet/notifications.dart';
+
+void _platform(TargetPlatform p) => debugDefaultTargetPlatformOverride = p;
+
+void testWidgets(String name, Future<void> Function(WidgetTester) body) =>
+    ft.testWidgets(name, (t) async {
+      try {
+        await body(t);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
 
 void main() {
   test('desktop foreground state controls visible-chat suppression', () {
@@ -51,6 +63,7 @@ void main() {
 
   testWidgets('builder overlay supports tooltip, updates, and routing',
       (tester) async {
+    _platform(TargetPlatform.linux);
     final navigator = GlobalKey<NavigatorState>();
     final revision = ValueNotifier<int>(0);
     addTearDown(revision.dispose);
@@ -127,6 +140,7 @@ void main() {
   for (final direction in TextDirection.values) {
     testWidgets('both horizontal directions dismiss in $direction',
         (tester) async {
+      _platform(TargetPlatform.linux);
       final opened = <Map<String, dynamic>>[];
       onNotifTap = opened.add;
       foregroundNotifications.add({'title': 'Swipe'});
@@ -151,6 +165,42 @@ void main() {
       ]);
     });
   }
+
+  testWidgets('phone banners dismiss with a swipe up, not sideways',
+      (tester) async {
+    _platform(TargetPlatform.android);
+    foregroundNotifications.add({'title': 'Up'});
+    await tester.pumpWidget(
+        const MaterialApp(home: NotificationPopovers(child: Scaffold())));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(Dismissible), const Offset(500, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Up'), findsOneWidget);
+    await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Up'), findsOneWidget);
+    await tester.drag(find.byType(Dismissible), const Offset(0, 200));
+    await tester.pumpAndSettle();
+    expect(find.text('Up'), findsOneWidget);
+    await tester.fling(find.byType(Dismissible), const Offset(0, -80), 1500);
+    await tester.pumpAndSettle();
+    expect(find.text('Up'), findsNothing);
+    expect(haptics, ['HapticFeedbackType.lightImpact']);
+  });
+
+  testWidgets('desktop toasts dismiss sideways, not upward', (tester) async {
+    _platform(TargetPlatform.linux);
+    foregroundNotifications.add({'title': 'Side'});
+    await tester.pumpWidget(
+        const MaterialApp(home: NotificationPopovers(child: Scaffold())));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(Dismissible), const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(find.text('Side'), findsOneWidget);
+    await tester.drag(find.byType(Dismissible), const Offset(500, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Side'), findsNothing);
+  });
 
   testWidgets('gesture pauses expiry; reduced motion and suppression clean up',
       (tester) async {
@@ -233,6 +283,7 @@ void main() {
 
   testWidgets('narrow card handles long title and enlarged text',
       (tester) async {
+    _platform(TargetPlatform.linux);
     tester.view.physicalSize = const Size(240, 640);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -258,6 +309,7 @@ void main() {
 
   testWidgets('whole card tap and dismiss reveal the next in the stack',
       (tester) async {
+    _platform(TargetPlatform.linux);
     final opened = <Map<String, dynamic>>[];
     onNotifTap = opened.add;
     final third = <String, dynamic>{'title': 'Third', 'notification_id': 'one'};
