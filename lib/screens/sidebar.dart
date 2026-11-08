@@ -811,19 +811,24 @@ class SidebarState extends State<Sidebar> {
         _matchesQuery(s))));
     final children = <Widget>[
       ..._groupedRows(split.main, attentionFirst: true),
-      ..._settledSection(split.settled),
     ];
-    if (children.isEmpty) {
+    if (children.isEmpty && split.settled.isEmpty) {
       children.add(_emptySessions(searching: _filterQuery.trim().isNotEmpty));
     }
-    return PullToRefresh(
+    final list = PullToRefresh(
       onRefresh: () async => widget.onRefreshSessions(),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 120),
+        padding: EdgeInsets.fromLTRB(
+            M.gutter, 4, M.gutter, split.settled.isEmpty ? 120 : 16),
         children: children,
       ),
     );
+    if (split.settled.isEmpty) return list;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Expanded(child: list),
+      _settledPinned(split.settled),
+    ]);
   }
 
   /// Rows under their project's header. Groups follow the recency of their
@@ -936,20 +941,36 @@ class SidebarState extends State<Sidebar> {
     );
   }
 
-  /// Settled chats close the same list: a collapsible section, dimmed rows.
-  List<Widget> _settledSection(List<SessionInfo> rows) {
-    if (rows.isEmpty) return const [];
+  /// Settled chats sit pinned under the list and open upward over it.
+  Widget _settledPinned(List<SessionInfo> rows) {
     final open = _settledOpen || _filterQuery.trim().isNotEmpty;
-    return [
-      _settledHeader(rows, open: open),
-      Reveal(
-        show: open,
-        child: Column(children: [
-          for (var i = 0; i < rows.length; i++)
-            _listRow(rows[i], divider: kMobile && i + 1 < rows.length),
-        ]),
-      ),
-    ];
+    final maxHeight = MediaQuery.sizeOf(context).height * (kMobile ? 0.5 : 0.4);
+    return AnimatedContainer(
+      duration: Motion.base,
+      margin: EdgeInsets.symmetric(horizontal: kMobile ? M.gutter : 4),
+      decoration: BoxDecoration(
+          border: Border(
+              top: BorderSide(
+                  color: open ? AppColors.line : Colors.transparent))),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        _settledHeader(rows, open: open),
+        Reveal(
+          show: open,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.only(bottom: 8),
+              children: [
+                for (var i = 0; i < rows.length; i++)
+                  _listRow(rows[i], divider: kMobile && i + 1 < rows.length),
+              ],
+            ),
+          ),
+        ),
+        if (kMobile) const SizedBox(height: 76),
+      ]),
+    );
   }
 
   /// Desktop sidebar as a single recency-ordered chat stream. Workspace is
@@ -1103,14 +1124,13 @@ class SidebarState extends State<Sidebar> {
                 const SidebarEmpty('Add a machine to begin.')
               else if (list.isEmpty && settledRows.isEmpty)
                 _emptySessions(searching: _filterQuery.trim().isNotEmpty)
-              else ...[
+              else
                 ...rows,
-                ..._settledSection(settledRows),
-              ],
             ],
           ),
         ),
       ),
+      if (hasClient && settledRows.isNotEmpty) _settledPinned(settledRows),
       Container(
         decoration: BoxDecoration(
             border: Border(top: BorderSide(color: AppColors.line))),

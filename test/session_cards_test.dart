@@ -151,7 +151,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       expect(fade.size.height, greaterThan(midH));
       expect(find.text('Old chat'), findsOneWidget);
-      expect(tester.getTopLeft(find.text('Old chat')).dy, greaterThan(header));
+      expect(tester.getTopLeft(find.text('Old chat')).dy,
+          greaterThan(tester.getBottomLeft(find.text('Settled')).dy));
+      expect(tester.getTopLeft(find.text('Settled')).dy, lessThan(header));
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
