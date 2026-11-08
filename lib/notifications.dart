@@ -84,6 +84,37 @@ Future<void> _ensureDownloadPermission() async {
   } catch (_) {}
 }
 
+AndroidNotificationDetails _downloadAndroid(
+        {required String line, int? progress, bool failed = false}) =>
+    AndroidNotificationDetails(_downloadChannel, 'Downloads',
+        channelDescription: 'Files saved from a session',
+        importance: progress != null || !failed
+            ? Importance.low
+            : Importance.defaultImportance,
+        priority: progress != null || !failed
+            ? Priority.low
+            : Priority.defaultPriority,
+        category: progress != null
+            ? AndroidNotificationCategory.progress
+            : AndroidNotificationCategory.status,
+        groupKey: '${_androidGroupPrefix}downloads',
+        onlyAlertOnce: true,
+        ongoing: progress != null,
+        showProgress: progress != null,
+        maxProgress: 100,
+        progress: progress ?? 0,
+        // Same sender and avatar as session notifications.
+        styleInformation: MessagingStyleInformation(_snippetPerson,
+            conversationTitle: 'Downloads',
+            groupConversation: false,
+            messages: [Message(line, DateTime.now(), _snippetPerson)]),
+        actions: progress == null
+            ? null
+            : const <AndroidNotificationAction>[
+                AndroidNotificationAction(_cancelDownloadAction, 'Cancel',
+                    cancelNotification: true),
+              ]);
+
 /// Start a native download-progress notification. Returns its stable id.
 Future<int?> notifyDownloadStarted(String name,
     {VoidCallback? onCancel}) async {
@@ -93,29 +124,10 @@ Future<int?> notifyDownloadStarted(String name,
   if (onCancel != null) registerDownloadCancel(id, onCancel);
   await _enqueueDownloadNotification(() => _mainNotif.show(
         id: id,
-        title: 'Downloading',
-        body: name,
-        notificationDetails: const NotificationDetails(
-          android: AndroidNotificationDetails(
-            _downloadChannel,
-            'Downloads',
-            channelDescription: 'Files saved from a session',
-            importance: Importance.low,
-            priority: Priority.low,
-            onlyAlertOnce: true,
-            ongoing: true,
-            showProgress: true,
-            maxProgress: 100,
-            progress: 0,
-            actions: <AndroidNotificationAction>[
-              AndroidNotificationAction(
-                _cancelDownloadAction,
-                'Cancel',
-                cancelNotification: true,
-              ),
-            ],
-          ),
-        ),
+        title: 'Downloads',
+        body: 'Downloading $name',
+        notificationDetails: NotificationDetails(
+            android: _downloadAndroid(line: 'Downloading $name', progress: 0)),
         payload: jsonEncode({'type': 'download_progress', 'name': name}),
       ));
   return id;
@@ -125,29 +137,11 @@ Future<void> notifyDownloadProgress(int? id, String name, int progress) async {
   if (id == null || !kCanNotify || !kMobile) return;
   await _enqueueDownloadNotification(() => _mainNotif.show(
         id: id,
-        title: 'Downloading',
-        body: '$name · $progress%',
+        title: 'Downloads',
+        body: 'Downloading $name · $progress%',
         notificationDetails: NotificationDetails(
-          android: AndroidNotificationDetails(
-            _downloadChannel,
-            'Downloads',
-            channelDescription: 'Files saved from a session',
-            importance: Importance.low,
-            priority: Priority.low,
-            onlyAlertOnce: true,
-            ongoing: true,
-            showProgress: true,
-            maxProgress: 100,
-            progress: progress,
-            actions: const <AndroidNotificationAction>[
-              AndroidNotificationAction(
-                _cancelDownloadAction,
-                'Cancel',
-                cancelNotification: true,
-              ),
-            ],
-          ),
-        ),
+            android: _downloadAndroid(
+                line: 'Downloading $name · $progress%', progress: progress)),
       ));
 }
 
@@ -162,20 +156,11 @@ Future<void> notifyDownloadFailure(int? id, String name, Object error) async {
     await _mainNotif.cancel(id: id);
     await _mainNotif.show(
       id: id,
-      title: 'Download failed',
-      body: '$name: $error',
-      notificationDetails: const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _downloadChannel,
-          'Downloads',
-          channelDescription: 'Files saved from a session',
-          importance: Importance.defaultImportance,
-          priority: Priority.defaultPriority,
-          onlyAlertOnce: true,
-          ongoing: false,
-          showProgress: false,
-        ),
-      ),
+      title: 'Downloads',
+      body: "Couldn't download $name: $error",
+      notificationDetails: NotificationDetails(
+          android: _downloadAndroid(
+              line: "Couldn't download $name: $error", failed: true)),
     );
   });
 }
@@ -187,20 +172,11 @@ Future<void> notifyDownload(String name, String filePath, {int? id}) async {
     if (id != null) await _mainNotif.cancel(id: id);
     await _mainNotif.show(
       id: id ?? (_downloadNotifId++ & 0x7fffffff),
-      title: 'Download complete',
-      body: name,
-      notificationDetails: const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _downloadChannel,
-          'Downloads',
-          channelDescription: 'Files saved from a session',
-          importance: Importance.defaultImportance,
-          priority: Priority.defaultPriority,
-          onlyAlertOnce: true,
-          ongoing: false,
-          showProgress: false,
-        ),
-        macOS: DarwinNotificationDetails(),
+      title: 'Downloads',
+      body: 'Saved $name',
+      notificationDetails: NotificationDetails(
+        android: _downloadAndroid(line: 'Saved $name'),
+        macOS: const DarwinNotificationDetails(threadIdentifier: 'downloads'),
       ),
       payload: jsonEncode({'type': 'download', 'path': filePath}),
     );
@@ -371,8 +347,8 @@ NotificationDetails sessionNotificationDetails(
                 conversationTitle: title,
                 groupConversation: false,
                 messages: [
-                  ...?previous?.messages?.where((m) =>
-                      !_isStatusLine(m.text) && m.text != preview),
+                  ...?previous?.messages?.where(
+                      (m) => !_isStatusLine(m.text) && m.text != preview),
                   Message(preview, DateTime.now(), _snippetPerson)
                 ].take(10).toList())),
     macOS: DarwinNotificationDetails(
@@ -448,8 +424,8 @@ Future<void> notifyCallPrompt({
   FlutterLocalNotificationsPlugin? plugin,
 }) async {
   if (!kMobile || !kCanNotify) return;
-  final remaining = event.expiresAtMs -
-      (nowMs ?? DateTime.now().millisecondsSinceEpoch);
+  final remaining =
+      event.expiresAtMs - (nowMs ?? DateTime.now().millisecondsSinceEpoch);
   if (event.expiresAtMs > 0 && remaining <= 0) return;
   await (plugin ?? _mainNotif).show(
     id: callNotificationId(event.callId),
@@ -496,7 +472,8 @@ void notificationBackgroundResponse(NotificationResponse response) async {
   ui.DartPluginRegistrant.ensureInitialized();
   if (response.actionId == _cancelDownloadAction) {
     final id = response.id;
-    if (id != null) ui.IsolateNameServer.lookupPortByName(_cancelPort)?.send(id);
+    if (id != null)
+      ui.IsolateNameServer.lookupPortByName(_cancelPort)?.send(id);
     return;
   }
   if (await routeNotificationAction(
@@ -647,19 +624,23 @@ Future<void> initNotifications() async {
   final named = title.isEmpty ? 'Session' : title;
   final (String head, String body, String? html) = _richContent(e, named) ??
       switch (e['kind']?.toString()) {
-    'waiting' => ('${inst.label} needs your input', title, null),
-    'done' => ('${inst.label} finished', title, null),
-    'error' => ('${inst.label} hit an error', title, null),
-    'idle' => (named, stoppedSummary(e['lanes_running']), null),
-    'ping' => (title.isEmpty ? 'Mission Control' : title, message, null),
-    'direct_message.sent' || 'task.message' => ('Message', _payloadBody(e), null),
-    'term' => (
-        message.isEmpty ? '${inst.label} · $title' : message,
-        message.isEmpty ? 'Terminal' : title,
-        null,
-      ),
-    _ => (inst.label, title, null),
-  };
+        'waiting' => ('${inst.label} needs your input', title, null),
+        'done' => ('${inst.label} finished', title, null),
+        'error' => ('${inst.label} hit an error', title, null),
+        'idle' => (named, stoppedSummary(e['lanes_running']), null),
+        'ping' => (title.isEmpty ? 'Mission Control' : title, message, null),
+        'direct_message.sent' || 'task.message' => (
+            'Message',
+            _payloadBody(e),
+            null
+          ),
+        'term' => (
+            message.isEmpty ? '${inst.label} · $title' : message,
+            message.isEmpty ? 'Terminal' : title,
+            null,
+          ),
+        _ => (inst.label, title, null),
+      };
   // No token in the payload: the OS persists notification records and exposes
   // them to listeners — the tap handler re-resolves the token from the store.
   final payload = jsonEncode({
@@ -711,7 +692,10 @@ String _payloadBody(Map<String, dynamic> e) {
 
 String stoppedSummary(Object? lanes) {
   final names = lanes is List
-      ? lanes.map((l) => l.toString().trim()).where((l) => l.isNotEmpty).toList()
+      ? lanes
+          .map((l) => l.toString().trim())
+          .where((l) => l.isNotEmpty)
+          .toList()
       : const <String>[];
   if (names.isEmpty) return 'Finished · standing by';
   if (names.length == 1) return 'Paused while a lane works: ${names.first}';
