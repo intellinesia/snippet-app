@@ -567,6 +567,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                   title: title,
                   live: () => liveLane(id),
                   onOpen: () => _openLane(id),
+                  client: widget.client,
+                  sessionProfile: _currentProfile ?? widget.profile,
                 ));
           }
         case 'lane_cancelled':
@@ -583,6 +585,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                   live: () => liveLane(id),
                   onOpen: () => _openLane(id),
                   summary: _s(e['summary']),
+                  client: widget.client,
+                  sessionProfile: _currentProfile ?? widget.profile,
                 ));
           }
         case 'user_question':

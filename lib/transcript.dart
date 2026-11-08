@@ -7,6 +7,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'api.dart' show DaemonClient;
+import 'crew_widgets.dart' show AgentProviderMark;
 import 'mochi.dart';
 import 'motion.dart' show Shimmer;
 import 'screens/session_coordination_cards.dart' show CardMarkdownBody;
@@ -420,11 +422,67 @@ class _ToolRunState extends State<ToolRun> {
 // belongs in the dedicated lanes screen.
 // ---------------------------------------------------------------------------
 
+/// Who runs a lane and on what: provider logo for the effective profile, then
+/// the agent identity. Draws nothing when neither resolves.
+class LaneWho extends StatelessWidget {
+  final DaemonClient? client;
+  final String? agent;
+  final String? profile;
+  final double size;
+  final double textSize;
+  final double maxTextWidth;
+  final Color color;
+
+  const LaneWho({
+    super.key,
+    this.client,
+    this.agent,
+    this.profile,
+    this.size = 12,
+    this.textSize = 11,
+    this.maxTextWidth = 72,
+    this.color = const Color(0x00000000),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final name = agent?.trim() ?? '';
+    final model = profile?.trim() ?? '';
+    final c = client;
+    if (name.isEmpty && c == null) return const SizedBox.shrink();
+    final ink = color.a == 0 ? AppColors.fg3 : color;
+    return Tooltip(
+      message: [name, model.isEmpty ? 'default model' : model]
+          .where((e) => e.isNotEmpty)
+          .join(' · '),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (c != null)
+          AgentProviderMark(
+              client: c, profile: model, size: size, orActive: true),
+        if (name.isNotEmpty) ...[
+          const SizedBox(width: S.s4),
+          Flexible(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxTextWidth),
+              child: Text(name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(textSize, color: ink)),
+            ),
+          ),
+        ],
+      ]),
+    );
+  }
+}
+
 class LaneNotice extends StatefulWidget {
   final String title;
   final LaneInfo? Function() live;
   final VoidCallback onOpen;
   final String? summary;
+  final DaemonClient? client;
+  final String? sessionProfile;
 
   const LaneNotice({
     super.key,
@@ -432,6 +490,8 @@ class LaneNotice extends StatefulWidget {
     required this.live,
     required this.onOpen,
     this.summary,
+    this.client,
+    this.sessionProfile,
   });
 
   @override
@@ -475,10 +535,11 @@ class _LaneNoticeState extends State<LaneNotice> {
     final summary = widget.summary?.trim().isNotEmpty == true
         ? widget.summary!.trim()
         : lane?.summary?.trim() ?? '';
-    final agent = (lane?.agent?.trim().isNotEmpty == true
-            ? lane!.agent!.trim()
-            : lane?.profile?.trim()) ??
-        '';
+    final agent = lane?.agent?.trim() ?? '';
+    final profile = lane?.profile?.trim().isNotEmpty == true
+        ? lane!.profile!.trim()
+        : widget.sessionProfile?.trim() ?? '';
+    final narrow = MediaQuery.sizeOf(context).width < 360;
     final title = widget.title.trim().isNotEmpty
         ? widget.title.trim()
         : lane?.title.trim() ?? '';
@@ -511,18 +572,25 @@ class _LaneNoticeState extends State<LaneNotice> {
       const SizedBox(width: S.s6),
       Expanded(
         child: Text.rich(
-          TextSpan(children: [
-            TextSpan(text: title.isEmpty ? 'Lane' : title),
-            if (agent.isNotEmpty)
-              TextSpan(
-                  text: '  $agent', style: sans(small, color: AppColors.fg4)),
-          ]),
+          TextSpan(text: title.isEmpty ? 'Lane' : title),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: sans(TranscriptCard.titleSize,
               weight: W.label, height: 1.3, color: AppColors.fg1),
         ),
       ),
+      if (agent.isNotEmpty || profile.isNotEmpty) ...[
+        const SizedBox(width: S.s8),
+        Flexible(
+          flex: 0,
+          child: LaneWho(
+              client: widget.client,
+              agent: agent,
+              profile: profile,
+              textSize: small - 1,
+              maxTextWidth: narrow ? 48 : 80),
+        ),
+      ],
       if (status != null && status.isNotEmpty) ...[
         const SizedBox(width: S.s8),
         running
@@ -547,7 +615,8 @@ class _LaneNoticeState extends State<LaneNotice> {
         : const EdgeInsets.fromLTRB(12, 6, 12, 7);
     return Semantics(
       button: true,
-      label: '$title, ${(status ?? '').toLowerCase()}. Open the lane.',
+      label:
+          '$title${agent.isEmpty ? '' : ', $agent'}${profile.isEmpty ? '' : ', on $profile'}, ${(status ?? '').toLowerCase()}. Open the lane.',
       onTap: widget.onOpen,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),

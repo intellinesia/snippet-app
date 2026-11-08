@@ -18,11 +18,18 @@ import 'widgets.dart';
 /// profile is unset or unknown.
 class AgentProviderMark extends StatefulWidget {
   const AgentProviderMark(
-      {super.key, required this.client, required this.profile, this.size = 14});
+      {super.key,
+      required this.client,
+      required this.profile,
+      this.size = 14,
+      this.orActive = false});
 
   final DaemonClient client;
   final String? profile;
   final double size;
+
+  /// With no profile, show the daemon's active (default) profile instead.
+  final bool orActive;
 
   @override
   State<AgentProviderMark> createState() => _AgentProviderMarkState();
@@ -47,7 +54,7 @@ class _AgentProviderMarkState extends State<AgentProviderMark> {
 
   Future<void> _resolve() async {
     final name = widget.profile?.trim() ?? '';
-    if (name.isEmpty) {
+    if (name.isEmpty && !widget.orActive) {
       if (_resolved != null) setState(() => _resolved = null);
       return;
     }
@@ -56,7 +63,7 @@ class _AgentProviderMarkState extends State<AgentProviderMark> {
       if (!mounted || widget.profile?.trim() != name) return;
       InferenceProfile? hit;
       for (final p in cfg.profiles) {
-        if (p.name == name) hit = p;
+        if (name.isEmpty ? p.active : p.name == name) hit = p;
       }
       setState(() => _resolved = hit);
     } catch (_) {}
@@ -321,8 +328,7 @@ class _CrewBoardState extends State<CrewBoard> {
                 children: [
                   Text('Mission Control',
                       style: sans(14, weight: W.label, color: AppColors.fg1)),
-                  Text(crewSummary(all),
-                      style: sans(13, color: AppColors.fg3)),
+                  Text(crewSummary(all), style: sans(13, color: AppColors.fg3)),
                 ],
               ),
             ),
@@ -438,8 +444,7 @@ class _CrewCardState extends State<_CrewCard> {
                           overflow: TextOverflow.ellipsis,
                           style:
                               sans(14, weight: W.label, color: AppColors.fg1)),
-                      if (e.agent.role.trim().isNotEmpty ||
-                          profile != null)
+                      if (e.agent.role.trim().isNotEmpty || profile != null)
                         Row(children: [
                           if (e.agent.role.trim().isNotEmpty)
                             Flexible(
@@ -542,11 +547,10 @@ Future<void> showCrewAgentMenu(
           label: agent.nickname == null ? 'Set nickname' : 'Edit nickname'),
       appMenuItem(value: 'avatar', icon: 'sparkles', label: 'Change avatar'),
       appMenuItem(value: 'color', icon: 'sparkles', label: 'Change colour'),
-      appMenuItem(value: 'model', icon: 'cpu', label: 'Change inference profile'),
       appMenuItem(
-          value: 'wakes',
-          icon: 'calendar-clock',
-          label: 'Wakes and reporting'),
+          value: 'model', icon: 'cpu', label: 'Change inference profile'),
+      appMenuItem(
+          value: 'wakes', icon: 'calendar-clock', label: 'Wakes and reporting'),
       appMenuItem(
           value: 'delete', icon: 'trash', label: 'Delete agent', danger: true),
     ],
@@ -584,7 +588,11 @@ Future<void> runCrewAgentAction(
       if (context.mounted) toast(context, '$e', danger: true);
     }
   } else if (picked == 'color' || picked == 'avatar') {
-    await showAgentAppearance(context, client, agent.id, name,
+    await showAgentAppearance(
+        context,
+        client,
+        agent.id,
+        name,
         picked == 'avatar'
             ? AgentAppearancePart.avatar
             : AgentAppearancePart.colour,

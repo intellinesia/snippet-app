@@ -8,6 +8,7 @@ import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../transcript.dart' show LaneWho;
 import 'lanes.dart' show laneSections, openLaneView;
 
 /// Human-readable checkpoint timestamp ('Today · 3:04 PM').
@@ -146,7 +147,7 @@ class SessionCheckpointsPanel extends StatelessWidget {
 
 /// Delegated lanes, reusing the public `LaneDetailCard` so the pane and the
 /// full Lanes screen cannot diverge.
-class SessionLanesPanel extends StatelessWidget {
+class SessionLanesPanel extends StatefulWidget {
   const SessionLanesPanel(
       {super.key, required this.lanes, this.client, this.sessionId});
   final List<LaneInfo> lanes;
@@ -154,9 +155,49 @@ class SessionLanesPanel extends StatelessWidget {
   final String? sessionId;
 
   @override
+  State<SessionLanesPanel> createState() => _SessionLanesPanelState();
+}
+
+class _SessionLanesPanelState extends State<SessionLanesPanel> {
+  String? _sessionProfile;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  @override
+  void didUpdateWidget(SessionLanesPanel old) {
+    super.didUpdateWidget(old);
+    if (old.sessionId != widget.sessionId) _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final c = widget.client;
+    final id = widget.sessionId;
+    if (c == null || id == null) return;
+    try {
+      final all = await c.sessions();
+      if (!mounted || widget.sessionId != id) return;
+      String? hit;
+      for (final s in all) {
+        if (s.id == id) hit = s.profile;
+      }
+      setState(() => _sessionProfile = hit);
+    } catch (_) {}
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final lanes = widget.lanes;
+    final client = widget.client;
     if (!kMobile) {
-      return _DeskLanes(lanes: lanes, client: client, sessionId: sessionId);
+      return _DeskLanes(
+          lanes: lanes,
+          client: client,
+          sessionId: widget.sessionId,
+          sessionProfile: _sessionProfile);
     }
     if (lanes.isEmpty) {
       return const EmptyState(
@@ -167,7 +208,8 @@ class SessionLanesPanel extends StatelessWidget {
     final side = kMobile ? M.gutter : S.s12;
     return ListView(
       padding: EdgeInsets.fromLTRB(side, S.s12, side, S.s24),
-      children: laneSections(lanes),
+      children: laneSections(lanes,
+          client: client, sessionProfile: _sessionProfile),
     );
   }
 }
@@ -381,10 +423,12 @@ String _elapsed(String iso) {
 }
 
 class _DeskLanes extends StatefulWidget {
-  const _DeskLanes({required this.lanes, this.client, this.sessionId});
+  const _DeskLanes(
+      {required this.lanes, this.client, this.sessionId, this.sessionProfile});
   final List<LaneInfo> lanes;
   final DaemonClient? client;
   final String? sessionId;
+  final String? sessionProfile;
 
   @override
   State<_DeskLanes> createState() => _DeskLanesState();
@@ -490,12 +534,21 @@ class _DeskLanesState extends State<_DeskLanes> {
                     ),
                   ),
                 const Spacer(),
-                Text(
-                    [
-                      if ((l.profile ?? '').isNotEmpty) l.profile!,
-                      _elapsed(l.startedAt),
-                    ].where((e) => e.isNotEmpty).join(' · '),
-                    style: mono(11, color: AppColors.fg4)),
+                const SizedBox(width: S.s8),
+                Flexible(
+                  child: LaneWho(
+                      client: widget.client,
+                      agent: l.agent,
+                      profile: (l.profile ?? '').isNotEmpty
+                          ? l.profile
+                          : widget.sessionProfile,
+                      maxTextWidth: 96),
+                ),
+                if (_elapsed(l.startedAt).isNotEmpty) ...[
+                  const SizedBox(width: S.s8),
+                  Text(_elapsed(l.startedAt),
+                      style: mono(11, color: AppColors.fg4)),
+                ],
               ]),
             ]),
           ),

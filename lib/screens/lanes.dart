@@ -10,6 +10,7 @@ import '../panel.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../transcript.dart' show LaneWho;
 import 'session.dart';
 
 /// A focused view of delegated work. The session owns the live state; this
@@ -87,7 +88,9 @@ class _LanesScreenState extends State<LanesScreen> {
 }
 
 List<Widget> laneSections(List<LaneInfo> lanes,
-    {List<LaneInfo> Function()? liveLanes, DaemonClient? client}) {
+    {List<LaneInfo> Function()? liveLanes,
+    DaemonClient? client,
+    String? sessionProfile}) {
   final running = lanes.where((l) => l.running).toList();
   final failed = lanes.where((l) => l.status == 'failed').toList();
   final cancelled = lanes.where((l) => l.status == 'cancelled').toList();
@@ -110,7 +113,8 @@ List<Widget> laneSections(List<LaneInfo> lanes,
           key: ValueKey(items[i].id),
           lane: items[i],
           liveLanes: liveLanes,
-          client: client));
+          client: client,
+          sessionProfile: sessionProfile));
     }
   }
 
@@ -149,12 +153,14 @@ class LaneDetailCard extends StatefulWidget {
   final List<LaneInfo> Function()? liveLanes;
   final bool detail;
   final DaemonClient? client;
+  final String? sessionProfile;
   const LaneDetailCard(
       {super.key,
       required this.lane,
       this.liveLanes,
       this.detail = false,
-      this.client});
+      this.client,
+      this.sessionProfile});
 
   @override
   State<LaneDetailCard> createState() => _LaneDetailCardState();
@@ -233,6 +239,19 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
                             : TS.rowTitle()),
                   ),
                   const SizedBox(width: 10),
+                  Padding(
+                    padding: EdgeInsets.only(top: dense ? 3 : 4),
+                    child: LaneWho(
+                        client: widget.client,
+                        agent: MediaQuery.sizeOf(context).width < 360
+                            ? null
+                            : lane.agent,
+                        profile: (lane.profile ?? '').isNotEmpty
+                            ? lane.profile
+                            : widget.sessionProfile,
+                        maxTextWidth: 64),
+                  ),
+                  const SizedBox(width: 8),
                   Padding(
                     padding: EdgeInsets.only(top: dense ? 3 : 4),
                     child: Text(status,
