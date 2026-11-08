@@ -275,26 +275,29 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 
   Widget _bodyRow({required bool topInset}) {
     final split = _splitView(topInset: topInset);
-    if (kMobile || _sidebarHidden || !agentRailShown(context)) return split;
+    final rail = !kMobile && !_sidebarHidden && agentRailShown(context);
     final agentId = _railAgentId;
+    // One stable tree: swapping the parent on toggle remounted every open tab.
     return Expanded(
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        AgentRail(
-          client: _client,
-          sessions: _sessions,
-          mcSelected:
-              agentId == null && (_activeTab?.isMissionControl ?? false),
-          selectedAgentId: agentId,
-          topInset: kMacOS ? 46 : 10,
-          onOpenMissionControl: _openMissionControlTab,
-          onOpenAgent: _openRightAgent,
-        ),
+        if (rail)
+          AgentRail(
+            client: _client,
+            sessions: _sessions,
+            mcSelected:
+                agentId == null && (_activeTab?.isMissionControl ?? false),
+            selectedAgentId: agentId,
+            topInset: kMacOS ? 46 : 10,
+            onOpenMissionControl: _openMissionControlTab,
+            onOpenAgent: _openRightAgent,
+          ),
         split,
       ]),
     );
   }
 
   Widget _splitView({required bool topInset}) => ShellSplitView(
+        key: const ValueKey('shell-split'),
         sidebarHidden: _sidebarHidden,
         sidebar: ShellPanelScope(
           open: _openShellPanel,
