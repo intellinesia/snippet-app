@@ -35,6 +35,7 @@ class AgentRail extends StatefulWidget {
     required this.onOpenMissionControl,
     required this.onOpenAgent,
     this.topInset = 46,
+    this.footer = const [],
   });
 
   final DaemonClient? client;
@@ -46,6 +47,9 @@ class AgentRail extends StatefulWidget {
 
   /// Clears the macOS traffic lights; the window controls float over the rail.
   final double topInset;
+
+  /// Pinned under the agents, bottom-most last.
+  final List<Widget> footer;
 
   @override
   State<AgentRail> createState() => _AgentRailState();
@@ -187,6 +191,10 @@ class _AgentRailState extends State<AgentRail> {
             ),
           ),
         ),
+        if (widget.footer.isNotEmpty) ...[
+          ...widget.footer,
+          const SizedBox(height: 10),
+        ],
       ]),
     );
   }

@@ -41,8 +41,9 @@ class ComposerCard extends StatelessWidget {
 
   static InputDecoration decoration(String hint) => InputDecoration(
         isCollapsed: true,
+        // One line fills the button slot exactly, so the controls sit centred.
         contentPadding:
-            EdgeInsets.fromLTRB(4, kMobile ? 8 : 6, 4, kMobile ? 8 : 6),
+            EdgeInsets.fromLTRB(4, kMobile ? 6 : 5, 4, kMobile ? 6 : 5),
         border: InputBorder.none,
         hintText: hint,
         hintStyle: TS.body(AppColors.fg4),

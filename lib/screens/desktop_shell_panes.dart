@@ -290,6 +290,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             topInset: kMacOS ? 46 : 10,
             onOpenMissionControl: _openMissionControlTab,
             onOpenAgent: _openRightAgent,
+            footer: [_usageButton(32), _settingsButton(32)],
           ),
         split,
       ]),
@@ -781,20 +782,27 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     );
   }
 
+  Widget _usageButton(double size) => Builder(
+        builder: (ctx) => IconBtn('gauge',
+            size: size,
+            iconSize: 16,
+            tooltip: 'Usage',
+            onTap: _client == null
+                ? null
+                : () => showUsagePopover(ctx, _client!)),
+      );
+
+  Widget _settingsButton(double size) => IconBtn('settings',
+      size: size, iconSize: 16, tooltip: 'Settings', onTap: _openShellSettings);
+
   Widget _sidebarFooter() {
     final healthy = _active == null ? null : _health[_active!.url];
+    // With the agent rail on, usage and settings sit at its foot instead.
+    final rail = _railOn;
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 2, 8, 10),
       child: Row(children: [
-        Builder(
-          builder: (ctx) => IconBtn('gauge',
-              size: 28,
-              iconSize: 16,
-              tooltip: 'Usage',
-              onTap: _client == null
-                  ? null
-                  : () => showUsagePopover(ctx, _client!)),
-        ),
+        if (!rail) _usageButton(28),
         Expanded(
           child: Material(
             key: _topMachineKey,
@@ -837,11 +845,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             ),
           ),
         ),
-        IconBtn('settings',
-            size: 28,
-            iconSize: 16,
-            tooltip: 'Settings',
-            onTap: _openShellSettings),
+        if (!rail) _settingsButton(28),
         Builder(
           builder: (ctx) => IconBtn('task',
               size: 28,
