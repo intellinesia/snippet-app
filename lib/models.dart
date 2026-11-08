@@ -1102,6 +1102,25 @@ class NotificationMarker {
         delivered = j['delivered'] as bool? ?? false;
 }
 
+class AgentLastMessage {
+  const AgentLastMessage({required this.text, required this.fromUser, this.at});
+
+  final String text;
+  final bool fromUser;
+  final DateTime? at;
+
+  static AgentLastMessage? tryParse(Object? j) {
+    if (j is! Map) return null;
+    final text = '${j['text'] ?? ''}'.trim();
+    if (text.isEmpty) return null;
+    return AgentLastMessage(
+      text: text,
+      fromUser: j['from'] == 'user',
+      at: DateTime.tryParse('${j['at'] ?? ''}'),
+    );
+  }
+}
+
 /// A specialized worker identity in the SQLite coordination directory.
 class CoordinationAgent {
   final String id;
@@ -1111,6 +1130,10 @@ class CoordinationAgent {
   final String kind;
   final String status;
   final List<String> capabilities;
+
+  /// The newest message to or from this agent, across its direct thread and
+  /// sessions. Null when there is none or the daemon predates it.
+  final AgentLastMessage? lastMessage;
 
   /// What the UI shows: the nickname when one is set, else the name.
   String get displayName => nickname ?? fullName;
@@ -1150,6 +1173,7 @@ class CoordinationAgent {
         capabilities = ((j['capabilities'] as List?) ?? const [])
             .whereType<String>()
             .toList(),
+        lastMessage = AgentLastMessage.tryParse(j['last_message']),
         taskCounts = j['task_counts'] is Map
             ? {
                 for (final e in (j['task_counts'] as Map).entries)

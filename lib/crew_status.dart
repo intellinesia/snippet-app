@@ -27,13 +27,20 @@ class CrewEntry {
 
   bool get isApproval => attention?['type'] == 'approval';
 
-  /// One line for the row: the question, else the running session, else idle.
+  /// One line for the row: the question, else the running session, else the
+  /// last message, else what it last finished.
   String get line => switch (state) {
         CrewState.needsYou => _askText,
         CrewState.working => _title(lead),
-        CrewState.standingBy =>
-          lead == null ? 'Standing by' : 'Finished ${_title(lead)}',
+        CrewState.standingBy => _lastText ??
+            (lead == null ? 'Standing by' : 'Finished ${_title(lead)}'),
       };
+
+  String? get _lastText {
+    final m = agent.lastMessage;
+    if (m == null) return null;
+    return m.fromUser ? 'You: ${m.text}' : m.text;
+  }
 
   String get _askText {
     final t = '${attention?['text'] ?? ''}'.trim();

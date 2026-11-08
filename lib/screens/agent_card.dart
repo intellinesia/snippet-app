@@ -275,6 +275,10 @@ class _AgentCardState extends State<AgentCard> {
         : working > 0
             ? 'Working'
             : 'Available';
+    final last = agent.lastMessage;
+    final line = agent.available && working == 0 && last != null
+        ? (last.fromUser ? 'You: ${last.text}' : last.text)
+        : status;
     final (String, Color)? summary = !agent.available
         ? ('Paused', AppColors.fg3)
         : blocked > 0
@@ -385,7 +389,7 @@ class _AgentCardState extends State<AgentCard> {
                           const SizedBox(height: 2),
                           Row(children: [
                             Flexible(
-                              child: Text(status,
+                              child: Text(line,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TS.meta(AppColors.fg3)),
@@ -454,7 +458,7 @@ class _AgentCardState extends State<AgentCard> {
                     Expanded(
                       child: Row(children: [
                         Flexible(
-                          child: Text(status,
+                          child: Text(line,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: sans(metaSize, color: AppColors.fg4)),
