@@ -84,8 +84,13 @@ Future<void> _ensureDownloadPermission() async {
   } catch (_) {}
 }
 
+/// Start time per in-flight download, so every update carries the same `when`
+/// and Android never re-sorts the row; plus the last update, for throttling.
+final _downloadStarted = <int, int>{};
+final _downloadLast = <int, (int, int)>{};
+
 AndroidNotificationDetails _downloadAndroid(
-        {required String line, int? progress, bool failed = false}) =>
+        {required String line, int? progress, bool failed = false, int? id}) =>
     AndroidNotificationDetails(_downloadChannel, 'Downloads',
         channelDescription: 'Files saved from a session',
         importance: progress != null || !failed
@@ -97,17 +102,23 @@ AndroidNotificationDetails _downloadAndroid(
         category: progress != null
             ? AndroidNotificationCategory.progress
             : AndroidNotificationCategory.status,
-        groupKey: '${_androidGroupPrefix}downloads',
+        // A group or a conversation style on a progress row makes Android
+        // re-render it on every update; only the finished row uses them.
+        groupKey: progress == null ? '${_androidGroupPrefix}downloads' : null,
         onlyAlertOnce: true,
         ongoing: progress != null,
         showProgress: progress != null,
         maxProgress: 100,
         progress: progress ?? 0,
+        when: id == null ? null : _downloadStarted[id],
+        showWhen: progress == null,
         // Same sender and avatar as session notifications.
-        styleInformation: MessagingStyleInformation(_snippetPerson,
-            conversationTitle: 'Downloads',
-            groupConversation: false,
-            messages: [Message(line, DateTime.now(), _snippetPerson)]),
+        styleInformation: progress != null
+            ? null
+            : MessagingStyleInformation(_snippetPerson,
+                conversationTitle: 'Downloads',
+                groupConversation: false,
+                messages: [Message(line, DateTime.now(), _snippetPerson)]),
         actions: progress == null
             ? null
             : const <AndroidNotificationAction>[
@@ -121,13 +132,15 @@ Future<int?> notifyDownloadStarted(String name,
   if (!kCanNotify || !kMobile) return null;
   await _ensureDownloadPermission();
   final id = -1 - (_downloadNotifId++ & 0x7fffffff);
+  _downloadStarted[id] = DateTime.now().millisecondsSinceEpoch;
   if (onCancel != null) registerDownloadCancel(id, onCancel);
   await _enqueueDownloadNotification(() => _mainNotif.show(
         id: id,
         title: 'Downloads',
         body: 'Downloading $name',
         notificationDetails: NotificationDetails(
-            android: _downloadAndroid(line: 'Downloading $name', progress: 0)),
+            android: _downloadAndroid(
+                line: 'Downloading $name', progress: 0, id: id)),
         payload: jsonEncode({'type': 'download_progress', 'name': name}),
       ));
   return id;
@@ -135,25 +148,42 @@ Future<int?> notifyDownloadStarted(String name,
 
 Future<void> notifyDownloadProgress(int? id, String name, int progress) async {
   if (id == null || !kCanNotify || !kMobile) return;
+  // Progress arrives per chunk; Android drops updates past a few a second,
+  // which shows as the row vanishing and coming back.
+  final now = DateTime.now().millisecondsSinceEpoch;
+  final last = _downloadLast[id];
+  if (last != null &&
+      (last.$1 == progress || (progress < 100 && now - last.$2 < 350))) {
+    return;
+  }
+  _downloadLast[id] = (progress, now);
   await _enqueueDownloadNotification(() => _mainNotif.show(
         id: id,
         title: 'Downloads',
         body: 'Downloading $name · $progress%',
         notificationDetails: NotificationDetails(
             android: _downloadAndroid(
-                line: 'Downloading $name · $progress%', progress: progress)),
+                line: 'Downloading $name · $progress%',
+                progress: progress,
+                id: id)),
       ));
+}
+
+void _downloadDone(int id) {
+  _downloadStarted.remove(id);
+  _downloadLast.remove(id);
 }
 
 Future<void> notifyDownloadCancelled(int? id) async {
   if (id == null || !kCanNotify || !kMobile) return;
+  _downloadDone(id);
   await _enqueueDownloadNotification(() => _mainNotif.cancel(id: id));
 }
 
 Future<void> notifyDownloadFailure(int? id, String name, Object error) async {
   if (id == null || !kCanNotify || !kMobile) return;
+  _downloadDone(id);
   await _enqueueDownloadNotification(() async {
-    await _mainNotif.cancel(id: id);
     await _mainNotif.show(
       id: id,
       title: 'Downloads',
@@ -168,8 +198,9 @@ Future<void> notifyDownloadFailure(int? id, String name, Object error) async {
 /// Show a native "download complete" notification; tapping it opens the file.
 Future<void> notifyDownload(String name, String filePath, {int? id}) async {
   if (!kCanNotify) return;
+  if (id != null) _downloadDone(id);
   await _enqueueDownloadNotification(() async {
-    if (id != null) await _mainNotif.cancel(id: id);
+    // Updated in place: cancelling first made the row blink out and back.
     await _mainNotif.show(
       id: id ?? (_downloadNotifId++ & 0x7fffffff),
       title: 'Downloads',
