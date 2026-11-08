@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api.dart';
+import '../crew_widgets.dart' show AgentProviderMark;
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -257,9 +258,7 @@ class _AgentCardState extends State<AgentCard> {
     final done = _count({TaskStatus.done}, {'done'});
     final profile = _currentProfile;
     final roleText = agent.role.trim();
-    final role = profile == null
-        ? roleText
-        : (roleText.isEmpty ? profile : '$roleText · $profile');
+    final role = roleText;
     final status = !agent.available
         ? 'Paused'
         : working > 0
@@ -367,10 +366,19 @@ class _AgentCardState extends State<AgentCard> {
                           style: TS.rowTitle(
                               agent.available ? AppColors.fg1 : AppColors.fg3)),
                       const SizedBox(height: 2),
-                      Text(role.isEmpty ? status : role,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TS.meta(AppColors.fg3)),
+                      Row(children: [
+                        Flexible(
+                          child: Text(role.isEmpty ? status : role,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TS.meta(AppColors.fg3)),
+                        ),
+                        if (profile != null) ...[
+                          const SizedBox(width: 6),
+                          AgentProviderMark(
+                              client: widget.client, profile: profile),
+                        ],
+                      ]),
                     ],
                   ),
                 ),
@@ -425,10 +433,21 @@ class _AgentCardState extends State<AgentCard> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(role.isEmpty ? status : role,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(metaSize, color: AppColors.fg4)),
+                      child: Row(children: [
+                        Flexible(
+                          child: Text(role.isEmpty ? status : role,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(metaSize, color: AppColors.fg4)),
+                        ),
+                        if (profile != null) ...[
+                          const SizedBox(width: 5),
+                          AgentProviderMark(
+                              client: widget.client,
+                              profile: profile,
+                              size: 12),
+                        ],
+                      ]),
                     ),
                     const SizedBox(width: 8),
                     if (summary != null)

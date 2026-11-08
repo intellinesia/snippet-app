@@ -14,6 +14,66 @@ import 'session_quick_send.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
+/// The provider logo for an agent's inference profile, or nothing when the
+/// profile is unset or unknown.
+class AgentProviderMark extends StatefulWidget {
+  const AgentProviderMark(
+      {super.key, required this.client, required this.profile, this.size = 14});
+
+  final DaemonClient client;
+  final String? profile;
+  final double size;
+
+  @override
+  State<AgentProviderMark> createState() => _AgentProviderMarkState();
+}
+
+class _AgentProviderMarkState extends State<AgentProviderMark> {
+  InferenceProfile? _resolved;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  @override
+  void didUpdateWidget(AgentProviderMark old) {
+    super.didUpdateWidget(old);
+    if (old.profile != widget.profile || old.client != widget.client) {
+      _resolve();
+    }
+  }
+
+  Future<void> _resolve() async {
+    final name = widget.profile?.trim() ?? '';
+    if (name.isEmpty) {
+      if (_resolved != null) setState(() => _resolved = null);
+      return;
+    }
+    try {
+      final cfg = await widget.client.getConfig();
+      if (!mounted || widget.profile?.trim() != name) return;
+      InferenceProfile? hit;
+      for (final p in cfg.profiles) {
+        if (p.name == name) hit = p;
+      }
+      setState(() => _resolved = hit);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = _resolved;
+    if (p == null || p.provider.isEmpty) return const SizedBox.shrink();
+    return Semantics(
+      label: 'Model ${p.name}, ${p.provider}',
+      excludeSemantics: true,
+      child: ProviderLogo(p.provider, size: widget.size),
+    );
+  }
+}
+
 Color crewColor(CrewState s) => switch (s) {
       CrewState.needsYou => AppColors.run,
       CrewState.working => AppColors.accent,
@@ -61,20 +121,6 @@ class CrewTile extends StatelessWidget {
       ]),
     );
   }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip(this.text);
-  final String text;
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.lineStrong),
-          borderRadius: BorderRadius.circular(R.xs + 2),
-        ),
-        child: Text(text, style: mono(11, color: AppColors.fg3)),
-      );
 }
 
 /// Needs-you first, then working, then standing by; each group keeps the
@@ -392,11 +438,24 @@ class _CrewCardState extends State<_CrewCard> {
                           overflow: TextOverflow.ellipsis,
                           style:
                               sans(14, weight: W.label, color: AppColors.fg1)),
-                      if (e.agent.role.trim().isNotEmpty)
-                        Text(e.agent.role.trim(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(13, color: AppColors.fg3)),
+                      if (e.agent.role.trim().isNotEmpty ||
+                          profile != null)
+                        Row(children: [
+                          if (e.agent.role.trim().isNotEmpty)
+                            Flexible(
+                              child: Text(e.agent.role.trim(),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: sans(13, color: AppColors.fg3)),
+                            ),
+                          if (profile != null) ...[
+                            const SizedBox(width: 6),
+                            AgentProviderMark(
+                                client: widget.client,
+                                profile: profile,
+                                size: kMobile ? 14 : 12),
+                          ],
+                        ]),
                     ],
                   ),
                 ),
@@ -448,16 +507,11 @@ class _CrewCardState extends State<_CrewCard> {
                         style: sans(12, color: AppColors.danger)),
                   ),
               ],
-              if (e.sessions.isNotEmpty || profile != null) ...[
+              if (e.sessions.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                Row(children: [
-                  if (e.sessions.isNotEmpty)
-                    Text(
-                        '${e.sessions.length} session${e.sessions.length == 1 ? '' : 's'}',
-                        style: sans(12, color: AppColors.fg3)),
-                  const Spacer(),
-                  if (profile != null) _Chip(profile),
-                ]),
+                Text(
+                    '${e.sessions.length} session${e.sessions.length == 1 ? '' : 's'}',
+                    style: sans(12, color: AppColors.fg3)),
               ],
             ],
           ),
