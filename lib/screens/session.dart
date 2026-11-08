@@ -646,6 +646,7 @@ class _SessionScreenState extends State<SessionScreen>
     _send({
       'kind': 'history',
       'before': _transcriptStart,
+      'limit': 150,
     });
   }
 

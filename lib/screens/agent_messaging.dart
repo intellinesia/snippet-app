@@ -774,6 +774,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     }
   }
 
+  Future<void> _recordMore() async {
+    if (await _confirmRecording()) await _startRecording();
+  }
+
   Future<bool> _confirmRecording() async {
     final path = _recordingPath;
     final bytes = _recordingBytes;
@@ -1282,6 +1286,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         onPlay: () => unawaited(_toggleRecordingPlayback()),
         onStop: () => unawaited(_stopRecording()),
         onSend: () => unawaited(_send()),
+        onMore: reviewing && _attachments.length < _maxAttachments - 1
+            ? () => unawaited(_recordMore())
+            : null,
       );
     }
     Widget roundBtn(String icon, String tip, VoidCallback onTap,
@@ -1354,9 +1361,14 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         if (_isRecording)
           roundBtn('stop', 'Stop', () => unawaited(_stopRecording()),
               fill: AppColors.surface3)
-        else
+        else ...[
+          if (_attachments.length < _maxAttachments - 1) ...[
+            roundBtn('mic', 'Record more', () => unawaited(_recordMore())),
+            const SizedBox(width: 10),
+          ],
           roundBtn('arrow-up', 'Send voice note', () => unawaited(_send()),
               fill: AppColors.accentFill, ink: AppColors.accentFg),
+        ],
       ]),
     );
   }

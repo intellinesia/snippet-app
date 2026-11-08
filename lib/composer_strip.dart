@@ -52,6 +52,7 @@ class DesktopRecorderStrip extends StatelessWidget {
     required this.onStop,
     required this.onSend,
     this.onSeek,
+    this.onMore,
   });
 
   final bool recording;
@@ -63,6 +64,7 @@ class DesktopRecorderStrip extends StatelessWidget {
   final VoidCallback onStop;
   final VoidCallback onSend;
   final ValueChanged<double>? onSeek;
+  final VoidCallback? onMore;
 
   Widget _btn(String icon, String tip, VoidCallback onTap,
           {Color? color, Color? fill}) =>
@@ -130,6 +132,8 @@ class DesktopRecorderStrip extends StatelessWidget {
           const SizedBox(width: 8),
           timeText,
           const SizedBox(width: 4),
+          if (onMore != null)
+            _btn('mic', 'Record more', onMore!, color: AppColors.fg2),
           _btn('trash', 'Discard', onDiscard, color: AppColors.fg3),
           _btn('arrow-up', 'Send voice note', onSend,
               color: kMobile ? AppColors.accentFg : AppColors.bg,
