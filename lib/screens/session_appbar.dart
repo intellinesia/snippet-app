@@ -390,13 +390,24 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     }
   }
 
+  String _missionStatus(HarnessState? s) {
+    if (s == null) return '';
+    final n = s.lanes.where((l) => l.running).length;
+    if (n > 0) return n == 1 ? '1 task running' : '$n tasks running';
+    if (s.pendingQuestion != null) return 'Needs you';
+    if (s.compacting) return 'Tidying up';
+    return s.status == 'running' ? 'Working' : 'Idle';
+  }
+
   Widget _mobileHeader(HarnessState? s) {
     final ws = s?.workspace.trim() ?? '';
     final folder = ws.isEmpty ? '' : lastPathSegment(ws, ifEmpty: ws);
-    final sub = [
-      if (folder.isNotEmpty) folder,
-      if ((_modelLabel ?? '').isNotEmpty) _modelLabel!,
-    ].join(' · ');
+    final sub = _isMissionControl
+        ? _missionStatus(s)
+        : [
+            if (folder.isNotEmpty) folder,
+            if ((_modelLabel ?? '').isNotEmpty) _modelLabel!,
+          ].join(' · ');
     return MobileBackBar(
       title: _title.isEmpty ? 'Session' : _title,
       subtitle: sub,

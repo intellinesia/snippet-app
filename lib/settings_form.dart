@@ -104,7 +104,7 @@ class SettingsRow extends StatelessWidget {
           if (trailing != null) ...[const SizedBox(width: 12), trailing!],
           if (chevron) ...[
             const SizedBox(width: 8),
-            AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+            AppIcon('chevron-right', size: 14, color: AppColors.fg3),
           ],
         ]),
       ),
@@ -204,7 +204,7 @@ class SettingsPopup<T> extends StatelessWidget {
                       color: kMobile ? AppColors.fg3 : AppColors.fg1)),
               const SizedBox(width: 6),
               AppIcon(kMobile ? 'chevron-right' : 'chevrons-up-down',
-                  size: kMobile ? 14 : 12, color: AppColors.fg4),
+                  size: 14, color: AppColors.fg3),
             ]),
           ),
         ),

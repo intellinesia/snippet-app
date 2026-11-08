@@ -332,9 +332,9 @@ class SettingsPanelState extends State<SettingsPanel> {
 
   static const _nav = [
     (SettingsPage.general, 'server', 'General'),
-    (SettingsPage.appearance, 'sliders', 'Appearance'),
     (SettingsPage.models, 'sparkles', 'Profiles'),
     (SettingsPage.routing, 'route', 'Routing'),
+    (SettingsPage.accounts, 'users', 'Accounts'),
     (SettingsPage.usage, 'gauge', 'Usage'),
     (SettingsPage.memory, 'book-marked', 'Memory'),
     (SettingsPage.scheduled, 'calendar-clock', 'Scheduled'),
@@ -342,12 +342,14 @@ class SettingsPanelState extends State<SettingsPanel> {
     (SettingsPage.vault, 'lock', 'Vault'),
     (SettingsPage.voice, 'mic', 'Voice'),
     (SettingsPage.webSearch, 'globe', 'Web search'),
-    (SettingsPage.accounts, 'users', 'Accounts'),
+    (SettingsPage.appearance, 'sliders', 'Appearance'),
   ];
 
   static const _navGroups = {
-    SettingsPage.general: 'Work',
+    SettingsPage.general: 'Connection',
+    SettingsPage.models: 'Models',
     SettingsPage.memory: 'Agents',
+    SettingsPage.appearance: 'Appearance',
   };
 
   @override
@@ -481,10 +483,8 @@ class SettingsPanelState extends State<SettingsPanel> {
                                   Padding(
                                     padding: const EdgeInsets.fromLTRB(
                                         10, 14, 10, 4),
-                                    child: Text(_navGroups[page]!,
-                                        style: sans(12,
-                                            weight: W.label,
-                                            color: AppColors.fg4)),
+                                    child: Text(_navGroups[page]!.toUpperCase(),
+                                        style: TS.overline()),
                                   ),
                                 _settingsNavRow(page, icon, label),
                               ],
@@ -558,21 +558,19 @@ class SettingsPanelState extends State<SettingsPanel> {
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
             if (summary.isNotEmpty)
               ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 150),
+                constraints: const BoxConstraints(maxWidth: 170),
                 child: Text(summary,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(13, color: AppColors.fg3)),
+                    style: TS.meta(AppColors.fg3)),
               ),
             const SizedBox(width: S.s6),
-            AppIcon('chevron-right', size: 15, color: AppColors.fg4),
+            AppIcon('chevron-right', size: 14, color: AppColors.fg3),
           ]),
         );
     Widget label(String text) => Padding(
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 7),
-          child: Text(text.toUpperCase(),
-              style: sans(12,
-                  weight: W.label, spacing: 0.7, color: AppColors.fg4)),
+          child: Text(text.toUpperCase(), style: TS.overline()),
         );
     final name = active?.label.trim() ?? '';
     return ListView(
@@ -588,10 +586,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                   Text(name.isEmpty ? 'No machine yet' : name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(17,
-                          weight: W.strong,
-                          height: 22 / 17,
-                          color: AppColors.fg1)),
+                      style: TS.sectionTitle()),
                   const SizedBox(height: 2),
                   Row(children: [
                     if (active != null) ...[
@@ -610,19 +605,21 @@ class SettingsPanelState extends State<SettingsPanel> {
                               : 'Connected · ${hostOf(active.url)}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(13, color: AppColors.fg3)),
+                          style: TS.meta(AppColors.fg3)),
                     ),
                   ]),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Btn(_instances.length > 1 ? 'Switch' : 'Manage',
-                small: true,
-                variant: BtnVariant.secondary,
-                onTap: () => widget.onSection?.call(SettingsPage.general)),
           ]),
         ),
+        label('Connection'),
+        ListGroup(children: [
+          nav(SettingsPage.general, 'Machines',
+              _instances.length > 1 ? '${_instances.length} saved' : '',
+              'server'),
+          if (kCanNotify) _notifRow(),
+        ]),
         label('Models'),
         ListGroup(children: [
           nav(SettingsPage.models, 'Profiles', 'Models and keys', 'sparkles'),
@@ -631,7 +628,7 @@ class SettingsPanelState extends State<SettingsPanel> {
               'users'),
           nav(SettingsPage.usage, 'Usage', 'Tokens and spend', 'gauge'),
         ]),
-        label('Work'),
+        label('Agents'),
         ListGroup(children: [
           nav(SettingsPage.memory, 'Memory', 'What agents remember',
               'book-marked'),
@@ -639,11 +636,11 @@ class SettingsPanelState extends State<SettingsPanel> {
           nav(SettingsPage.vault, 'Vault', 'Secrets for agents', 'lock'),
           nav(SettingsPage.scheduled, 'Scheduled', 'Recurring jobs',
               'calendar-clock'),
-          nav(SettingsPage.wakes, 'Wakes', 'Agent schedules and keep-warm',
+          nav(SettingsPage.wakes, 'Wakes', 'Schedules',
               'repeat'),
-          nav(SettingsPage.voice, 'Voice', 'Voice notes and transcription',
+          nav(SettingsPage.voice, 'Voice', 'Notes and speech',
               'mic'),
-          nav(SettingsPage.webSearch, 'Web search', 'Let agents search the web',
+          nav(SettingsPage.webSearch, 'Web search', 'Agent search',
               'globe'),
         ]),
         label('Appearance'),
@@ -658,10 +655,6 @@ class SettingsPanelState extends State<SettingsPanel> {
             ),
           ]),
         ),
-        if (kCanNotify) ...[
-          label('Phone'),
-          ListGroup(children: [_notifRow()]),
-        ],
       ],
     );
   }
@@ -1071,10 +1064,10 @@ class SettingsPanelState extends State<SettingsPanel> {
     }
   }
 
-  Widget _machineMenu(Instance i) => Builder(
+  Widget _machineMenu(Instance i, {bool connect = false}) => Builder(
         builder: (anchor) => IconBtn('more-horizontal',
-            size: 28,
-            iconSize: 15,
+            size: kMobile ? M.minTarget : 28,
+            iconSize: 16,
             tooltip: 'Machine actions', onTap: () async {
           final picked = await showAppMenu<String>(context,
               anchor: anchor,
@@ -1082,9 +1075,11 @@ class SettingsPanelState extends State<SettingsPanel> {
               alignEnd: true,
               minWidth: 160,
               items: [
+                if (connect) appMenuItem(value: 'connect', label: 'Connect'),
                 appMenuItem(value: 'rename', label: 'Rename'),
                 appMenuItem(value: 'remove', label: 'Remove', danger: true),
               ]);
+          if (picked == 'connect') _selectInstance(i);
           if (picked == 'rename') _startRename(i);
           if (picked == 'remove') _confirmRemove(i);
         }),
@@ -1236,8 +1231,7 @@ class SettingsPanelState extends State<SettingsPanel> {
     if (_addingMachine) return _addMachinePane();
     return PageBody(children: [
       if (includeNotifications)
-        const SectionHeader('Machines',
-            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6)),
+        const SectionLabel('Machines'),
       if (_instances.isEmpty)
         EmptyState(
           icon: 'server',
@@ -1249,14 +1243,12 @@ class SettingsPanelState extends State<SettingsPanel> {
         ListGroup(children: [for (final i in _instances) _instanceRow(i)]),
       if (includeNotifications) ...[
         const SizedBox(height: S.s24),
-        const SectionHeader('Approvals',
-            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6)),
+        const SectionLabel('Approvals'),
         ListGroup(children: [ApprovalsRow(client: widget.client)]),
       ],
       if (includeNotifications && kCanNotify) ...[
         const SizedBox(height: S.s24),
-        const SectionHeader('Notifications',
-            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6)),
+        const SectionLabel('Notifications'),
         ListGroup(children: [_notifRow()]),
       ],
     ]);
@@ -1337,9 +1329,14 @@ class SettingsPanelState extends State<SettingsPanel> {
     final isActive = i.url == widget.active?.url;
     final isRenaming = _renamingUrl == i.url;
     final compact = kMobile && widget.embedded;
+    final canConnect = !isActive && widget.onSelect != null;
     return Material(
       color: Colors.transparent,
-      child: Padding(
+      child: InkWell(
+        onTap: compact && canConnect && !isRenaming
+            ? () => _selectInstance(i)
+            : null,
+        child: Padding(
         padding: const EdgeInsets.fromLTRB(S.s12, S.s8, S.s4, S.s8),
         child: Row(
           children: [
@@ -1374,24 +1371,31 @@ class SettingsPanelState extends State<SettingsPanel> {
                 ),
               ),
               const SizedBox(width: S.s8),
-              if (isActive)
-                const Tag('Active', tone: Tone.ok, dot: true)
-              else if (widget.onSelect != null)
-                TextAction('Connect', onTap: () => _selectInstance(i)),
-              const SizedBox(width: S.s4),
-              IconBtn('edit',
-                  size: compact ? M.minTarget : 30,
-                  iconSize: 16,
-                  tooltip: 'Rename machine',
-                  onTap: () => _startRename(i)),
-              IconBtn('trash',
-                  size: compact ? M.minTarget : 30,
-                  iconSize: 16,
-                  tooltip: 'Remove machine',
-                  onTap: () => _confirmRemove(i)),
+              if (compact) ...[
+                if (isActive)
+                  AppIcon('check', size: 16, color: AppColors.accent),
+                _machineMenu(i, connect: canConnect),
+              ] else ...[
+                if (isActive)
+                  const Tag('Active', tone: Tone.ok, dot: true)
+                else if (canConnect)
+                  TextAction('Connect', onTap: () => _selectInstance(i)),
+                const SizedBox(width: S.s4),
+                IconBtn('edit',
+                    size: 30,
+                    iconSize: 16,
+                    tooltip: 'Rename machine',
+                    onTap: () => _startRename(i)),
+                IconBtn('trash',
+                    size: 30,
+                    iconSize: 16,
+                    tooltip: 'Remove machine',
+                    onTap: () => _confirmRemove(i)),
+              ],
             ],
           ],
         ),
+      ),
       ),
     );
   }
@@ -1414,15 +1418,13 @@ class SettingsPanelState extends State<SettingsPanel> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(kMobile ? 'Notifications' : 'Session notifications',
-                  style: kMobile
-                      ? sans(15, weight: W.label, color: AppColors.fg1)
-                      : TS.rowTitle()),
+                  style: TS.rowTitle()),
               const SizedBox(height: S.s2),
               Text(
                   kMobile
                       ? 'When a chat needs you or finishes'
                       : 'When a session finishes or needs your input',
-                  style: kMobile ? sans(13, color: AppColors.fg3) : TS.meta()),
+                  style: TS.meta()),
             ],
           ),
         ),
@@ -1543,7 +1545,7 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
           Text(manual == null ? '' : (manual ? 'Ask' : 'Yolo'),
               style: sans(13, color: AppColors.fg3)),
           const SizedBox(width: S.s6),
-          AppIcon('chevron-down', size: 15, color: AppColors.fg4),
+          AppIcon('chevron-down', size: 14, color: AppColors.fg3),
         ]),
       ),
     );
@@ -2279,7 +2281,7 @@ class ThemePickerRow extends StatelessWidget {
               const SizedBox(width: S.s8),
               Text(base.label, style: sans(13, color: AppColors.fg3)),
               const SizedBox(width: S.s6),
-              AppIcon('chevron-down', size: 15, color: AppColors.fg4),
+              AppIcon('chevron-down', size: 14, color: AppColors.fg3),
             ]),
           ),
         );
@@ -2358,7 +2360,7 @@ class AccentPickerRow extends StatelessWidget {
               Text(custom?.label ?? 'Theme default',
                   style: sans(13, color: AppColors.fg3)),
               const SizedBox(width: S.s6),
-              AppIcon('chevron-down', size: 15, color: AppColors.fg4),
+              AppIcon('chevron-down', size: 14, color: AppColors.fg3),
             ]),
           ),
         );
@@ -2435,7 +2437,7 @@ class FontPickerRow extends StatelessWidget {
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(current.label, style: sans(13, color: AppColors.fg3)),
               const SizedBox(width: S.s6),
-              AppIcon('chevron-down', size: 15, color: AppColors.fg4),
+              AppIcon('chevron-down', size: 14, color: AppColors.fg3),
             ]),
           ),
         );
@@ -2489,7 +2491,7 @@ class MonoFontPickerRow extends StatelessWidget {
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(current.label, style: mono(13, color: AppColors.fg3)),
               const SizedBox(width: S.s6),
-              AppIcon('chevron-down', size: 15, color: AppColors.fg4),
+              AppIcon('chevron-down', size: 14, color: AppColors.fg3),
             ]),
           ),
         );

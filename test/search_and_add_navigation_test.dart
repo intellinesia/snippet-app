@@ -179,7 +179,8 @@ void main() {
       await tester.tap(find.byTooltip('New agent'));
       await tester.pumpAndSettle();
       expect(find.byType(CreateAgentForm), findsOneWidget);
-      await tester.tap(find.byTooltip('Close'));
+      // Phone sheets have no close X; tapping the scrim dismisses.
+      await tester.tapAt(const Offset(20, 20));
       await tester.pumpAndSettle();
 
       // 4. Settings has no New of its own.

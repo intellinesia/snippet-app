@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../desktop_layout.dart';
 import '../models.dart';
+import '../platform.dart';
 import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
@@ -76,26 +78,38 @@ class _WakesScreenState extends State<WakesScreen> {
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
+    final desk = !kMobile && widget.embedded && widget.onBack == null;
+    Widget page(List<Widget> children) => desk
+        ? SettingsColumn(children: [
+            const SettingsHeader(
+              title: 'Wakes',
+              subtitle: 'Agent schedules and keep-warm.',
+            ),
+            const SizedBox(height: S.s8),
+            ...children,
+          ])
+        : PageBody(children: children);
     final body =
         FutureBuilder<(WakeList, KeepWarmList?, List<CoordinationAgent>)>(
       future: _future,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
-          return const ListSkeleton();
+          return desk ? page(const []) : const ListSkeleton();
         }
         if (snap.hasError) {
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-            child: Text('${snap.error}',
-                style: sans(13, height: 1.4, color: AppColors.danger)),
-          );
+          return page([
+            Padding(
+              padding: const EdgeInsets.fromLTRB(S.s4, S.s8, S.s4, S.s24),
+              child: Text('${snap.error}', style: TS.ui(AppColors.danger)),
+            ),
+          ]);
         }
         final (wakes, warm, agents) = snap.data!;
         final warmOn = [
           for (final e in warm?.entries ?? const <KeepWarmEntry>[])
             if (e.enabled) e
         ];
-        return PageBody(children: [
+        return page([
           if (wakes.wakes.isEmpty)
             const EmptyState(
               icon: 'calendar-clock',
@@ -118,7 +132,7 @@ class _WakesScreenState extends State<WakesScreen> {
                 padding: const EdgeInsets.fromLTRB(S.s4, S.s8, S.s4, 0),
                 child: Text(
                     '${warm.calls7d} warm calls in the last 7 days, ${tokensLabel(warm.cacheReadTokens7d)} tokens read from cache.',
-                    style: sans(13, color: AppColors.fg4)),
+                    style: TS.meta()),
               ),
           ],
         ]);
@@ -139,9 +153,11 @@ class _WakesScreenState extends State<WakesScreen> {
     final name = _name(w.owner, agents);
     final next = !w.enabled
         ? 'paused'
-        : w.nextRunAt > 0
-            ? 'next ${wakeWhen(w.nextRunAt)}'
-            : '';
+        : w.nextRunAt <= 0
+            ? ''
+            : w.nextRunAt * 1000 < DateTime.now().millisecondsSinceEpoch
+                ? 'overdue'
+                : 'next ${wakeWhen(w.nextRunAt)}';
     final sub = [
       w.scheduleText.isEmpty ? w.schedule : w.scheduleText,
       if (next.isNotEmpty) next,
@@ -162,7 +178,7 @@ class _WakesScreenState extends State<WakesScreen> {
                     color: wakeStatusColor(w.lastStatus),
                     shape: BoxShape.circle)),
           const SizedBox(width: S.s6),
-          Text(w.ownerKind, style: sans(13, color: AppColors.fg4)),
+          Text(w.ownerKind, style: TS.meta()),
         ]),
         onTap: () => _open(ctx, w.owner, name, agents),
       ),
@@ -182,7 +198,7 @@ class _WakesScreenState extends State<WakesScreen> {
                 : 'Every ${e.intervalMinutes} min'),
         leading: AppIcon('gauge', size: 19, color: AppColors.fg3),
         trailing:
-            Text('${e.warms} warms', style: sans(13, color: AppColors.fg4)),
+            Text('${e.warms} warms', style: TS.meta()),
         onTap: () => _open(ctx, e.owner, name, agents),
       ),
     );

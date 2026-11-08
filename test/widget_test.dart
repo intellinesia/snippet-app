@@ -596,11 +596,11 @@ void main() {
   //      rendered regular and hierarchy came from size alone;
   //   2. palette values drifting below accessible contrast on the dark canvas.
 
-  test('every type helper is capped at weight 400', () {
+  test('type helpers honour 400-600 and cap at 600', () {
     TestWidgetsFlutterBinding.ensureInitialized();
-    expect(sans(15, weight: FontWeight.w500).fontWeight, FontWeight.w400);
-    expect(mono(13, weight: FontWeight.w500).fontWeight, FontWeight.w400);
-    expect(display(22).fontWeight, FontWeight.w400);
+    expect(sans(15, weight: FontWeight.w500).fontWeight, FontWeight.w500);
+    expect(mono(13, weight: FontWeight.w600).fontWeight, FontWeight.w600);
+    expect(sans(20, weight: FontWeight.w700).fontWeight, FontWeight.w600);
   });
 
   test('dark palette clears accessible contrast on every surface', () {
