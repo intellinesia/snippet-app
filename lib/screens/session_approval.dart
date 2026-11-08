@@ -1191,44 +1191,6 @@ class _Attachment {
   }
 }
 
-class _SendBtn extends StatelessWidget {
-  final bool enabled;
-  final bool running;
-  final VoidCallback? onTap;
-  const _SendBtn({required this.enabled, this.running = false, this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    final size = kMobile ? 36.0 : 30.0;
-    final iconSize = running ? 13.0 : (kMobile ? 16.0 : 15.0);
-    final fill = !enabled
-        ? AppColors.hover
-        : running
-            ? (kMobile ? AppColors.fg1 : AppColors.surface3)
-            : (kMobile ? AppColors.accentFill : AppColors.fg1);
-    final ink = !enabled
-        ? AppColors.fg4
-        : running
-            ? (kMobile ? AppColors.bg : AppColors.fg1)
-            : (kMobile ? AppColors.accentFg : AppColors.bg);
-    const ShapeBorder shape = CircleBorder();
-    return Material(
-      color: fill,
-      shape: shape,
-      child: InkWell(
-        customBorder: shape,
-        onTap: onTap,
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: Center(
-              child: AppIcon(running ? 'stop' : 'arrow-up',
-                  size: iconSize, color: ink)),
-        ),
-      ),
-    );
-  }
-}
-
 class _SessionActionsPanel extends StatefulWidget {
   final HarnessState? session;
   final void Function(String text) onSetGoal;

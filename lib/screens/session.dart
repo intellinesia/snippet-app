@@ -50,6 +50,8 @@ import 'pull_requests.dart';
 import '../github_models.dart';
 import 'presented_file_card.dart';
 import '../composer_strip.dart';
+import '../composer/attachment_tile.dart';
+import '../composer/composer_card.dart';
 import '../media_views.dart';
 import 'agent_messaging.dart';
 import 'package:xterm/xterm.dart';
@@ -331,6 +333,18 @@ class _SessionScreenState extends State<SessionScreen>
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   final _composerCardKey = GlobalKey();
   final _modelChipKey = GlobalKey();
+
+  @visibleForTesting
+  void debugSeedComposer({String? model, String? provider, String? file}) {
+    setState(() {
+      _modelLabel = model ?? _modelLabel;
+      _modelProvider = provider ?? _modelProvider;
+      if (file != null) {
+        _attachments.add(_Attachment(
+            name: file, isImage: false, isAudio: false)..uploading = false);
+      }
+    });
+  }
   final AudioRecorder _recorder = HeldRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
   StreamSubscription<Amplitude>? _amplitudeSub;
@@ -747,8 +761,6 @@ class _SessionScreenState extends State<SessionScreen>
       if (mounted) toast(context, "Couldn't change auto-settle: $e", danger: true);
     }
   }
-
-  bool _typedCompact = false;
 
   void _loadSettled() {
     if (_isMissionControl) return;

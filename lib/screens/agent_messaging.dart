@@ -12,6 +12,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
 import '../api.dart';
+import '../composer/attachment_tile.dart';
+import '../composer/composer_card.dart';
 import '../composer_strip.dart';
 import '../media_views.dart';
 import '../motion.dart';
@@ -349,6 +351,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   String? _fetchedLine;
+  String? _fetchedRole;
+  String? _fetchedProfile;
+  String? _profileProvider;
 
   void _loadLine() {
     widget.client.coordinationAgents().then((all) {
@@ -360,7 +365,20 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         if (role.isNotEmpty) role,
         if (a.profile != null) a.profile!,
       ].join(' \u00b7 ');
-      setState(() => _fetchedLine = line);
+      setState(() {
+        _fetchedLine = line;
+        _fetchedRole = [
+          if (!a.available) 'Paused',
+          if (role.isNotEmpty) role,
+        ].join(' \u00b7 ');
+        _fetchedProfile = a.profile;
+      });
+      final name = a.profile;
+      if (name == null) return;
+      widget.client.getConfig().then((cfg) {
+        final p = cfg.profiles.where((x) => x.name == name).firstOrNull;
+        if (p != null && mounted) setState(() => _profileProvider = p.provider);
+      }).catchError((_) {});
     }).catchError((_) {});
   }
 
@@ -395,6 +413,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   late final Swr<List<CoordinationEvent>> _thread;
 
   final List<_AgentAttachment> _attachments = [];
+
+  @visibleForTesting
+  void debugSeedAttachment(String name) => setState(() => _attachments
+      .add(_AgentAttachment(name: name, isImage: false, isAudio: false)
+        ..uploading = false));
   int _attachmentGeneration = 0;
 
   final AudioRecorder _recorder = HeldRecorder();
@@ -1017,6 +1040,29 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     );
   }
 
+  Widget _desktopStatusLine(String subtitle) {
+    final logo = widget.subtitle == null && _profileProvider != null;
+    if (!logo) {
+      return Text(subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TS.meta(AppColors.fg3));
+    }
+    final role = (_fetchedRole ?? '').trim();
+    return Row(children: [
+      if (role.isNotEmpty)
+        Flexible(
+          child: Text('$role \u00b7 ',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TS.meta(AppColors.fg3)),
+        ),
+      Tooltip(
+          message: _fetchedProfile ?? '',
+          child: ProviderLogo(_profileProvider, size: 13)),
+    ]);
+  }
+
   Widget _header() {
     final subtitle = (widget.subtitle ?? _fetchedLine ?? '').trim();
     if (kMobile) {
@@ -1096,11 +1142,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TS.rowTitle(AppColors.fg1)),
-                if (subtitle.isNotEmpty)
-                  Text(subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TS.meta(AppColors.fg3)),
+                if (subtitle.isNotEmpty) _desktopStatusLine(subtitle),
               ],
             ),
           ),
@@ -1323,80 +1365,17 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     );
   }
 
-  Widget _attachmentBar() {
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _attachments.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 6),
-        itemBuilder: (_, i) => _attachmentTile(_attachments[i]),
-      ),
-    );
-  }
-
-  Widget _attachmentTile(_AgentAttachment a) {
-    final thumb = a.isImage && a.localPath != null;
-    final isAudio = a.isAudio;
-    final body = thumb
-        ? ClipRRect(
-            borderRadius: BorderRadius.circular(R.sm),
-            child: Image.file(File(a.localPath!),
-                width: 36,
-                height: 36,
-                fit: BoxFit.cover,
-                cacheWidth: 72,
-                cacheHeight: 72),
-          )
-        : Container(
-            height: 36,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: isAudio ? AppColors.accentBg : AppColors.surface2,
-              borderRadius: BorderRadius.circular(R.sm),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon(isAudio ? 'mic' : (a.isImage ? 'image' : 'file'),
-                  size: 12, color: isAudio ? AppColors.accent : AppColors.fg3),
-              const SizedBox(width: 5),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 100),
-                child: Text(a.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(11,
-                        color: isAudio ? AppColors.accent : AppColors.fg2)),
-              ),
-            ]),
-          );
-    return Stack(children: [
-      body,
-      if (a.uploading)
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-                color: AppColors.scrim,
-                borderRadius: BorderRadius.circular(R.sm)),
-            alignment: Alignment.center,
-            child: Spinner(size: 16, color: AppColors.fg2),
+  Widget _attachmentBar() => ComposerAttachmentBar(tiles: [
+        for (final a in _attachments)
+          ComposerAttachmentTile(
+            name: a.name,
+            isImage: a.isImage,
+            isAudio: a.isAudio,
+            uploading: a.uploading,
+            localPath: a.localPath,
+            onRemove: () => setState(() => _attachments.remove(a)),
           ),
-        ),
-      Positioned(
-        top: 3,
-        right: 3,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: () => setState(() => _attachments.remove(a)),
-          child: Container(
-            padding: const EdgeInsets.all(3),
-            decoration: const BoxDecoration(
-                color: AppColors.scrim, shape: BoxShape.circle),
-            child: AppIcon('x', size: 8, color: Colors.white),
-          ),
-        ),
-      ),
-    ]);
-  }
+      ]);
 
   Widget _wideCap(Widget child) => kMobile
       ? child
@@ -1405,65 +1384,58 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               constraints: const BoxConstraints(maxWidth: 740),
               child: SizedBox(width: double.infinity, child: child)));
 
-  Widget _desktopStrip() => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_attachments.isNotEmpty) ...[
-            _attachmentBar(),
-            const SizedBox(height: 6),
-          ],
-          DesktopComposerStrip(
-            field: CallbackShortcuts(
-              bindings: {
-                const SingleActivator(LogicalKeyboardKey.enter): _send,
-                const SingleActivator(LogicalKeyboardKey.enter, meta: true):
-                    _send,
-                const SingleActivator(LogicalKeyboardKey.enter, control: true):
-                    _send,
-              },
-              child: TextField(
-                controller: _input,
-                minLines: 1,
-                maxLines: 8,
-                cursorColor: AppColors.accent,
-                onSubmitted: (_) => _send(),
-                style: TS.body(AppColors.fg1),
-                decoration: DesktopComposerStrip.decoration(
-                    'Message ${widget.agentName}…'),
-              ),
-            ),
-            send: ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _input,
-              builder: (_, val, __) {
-                final canSend = (val.text.trim().isNotEmpty ||
-                        _attachments.isNotEmpty ||
-                        _isRecording ||
-                        _recordingPath != null) &&
-                    !_sending;
-                return StripSendButton(
-                  enabled: canSend,
-                  sending: _sending,
-                  onTap: canSend ? _send : null,
-                );
-              },
-            ),
-            footer: [
-              StripIcon('plus', tooltip: 'Attach', onTap: _onAttachTap),
-              const Spacer(),
-              if (kCanRecord)
-                StripIcon(_isRecording ? 'mic-off' : 'mic',
-                    tooltip: 'Record',
-                    onTap: _onMicTap,
-                    color: _isRecording ? AppColors.danger : null),
-            ],
+  Widget _composerCard() => ComposerCard(
+        text: _input,
+        field: CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.enter): () {
+              if (!kMobile) _send();
+            },
+            const SingleActivator(LogicalKeyboardKey.enter, meta: true): _send,
+            const SingleActivator(LogicalKeyboardKey.enter, control: true):
+                _send,
+          },
+          child: TextField(
+            controller: _input,
+            minLines: 1,
+            maxLines: 8,
+            cursorColor: AppColors.accent,
+            onSubmitted: (_) {
+              if (!kMobile) _send();
+            },
+            style: TS.body(AppColors.fg1),
+            decoration: ComposerCard.decoration('Message ${widget.agentName}…'),
           ),
-        ],
+        ),
+        attach:
+            ComposerIconButton('plus', tooltip: 'Attach', onTap: _onAttachTap),
+        mic: kCanRecord
+            ? ComposerIconButton(_isRecording ? 'mic-off' : 'mic',
+                tooltip: 'Record',
+                onTap: _onMicTap,
+                color: _isRecording ? AppColors.danger : null)
+            : null,
+        send: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _input,
+          builder: (_, val, __) {
+            final canSend = (val.text.trim().isNotEmpty ||
+                    _attachments.isNotEmpty ||
+                    _isRecording ||
+                    _recordingPath != null) &&
+                !_sending;
+            return ComposerSendButton(
+              enabled: canSend,
+              sending: _sending,
+              onTap: canSend ? _send : null,
+            );
+          },
+        ),
       );
 
   Widget _composer() {
     final mq = MediaQuery.of(context);
     final keyboard = mq.viewInsets.bottom;
+    final recording = _isRecording || _recordingPath != null;
     return AnimatedPadding(
       duration: Motion.fast,
       curve: Motion.enter,
@@ -1476,153 +1448,18 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           10 + (keyboard > 0 ? 8 : mq.padding.bottom),
         ),
         child: Swap(
-          stateKey: (_isRecording || _recordingPath != null)
-              ? 'recorder'
-              : 'composer',
+          stateKey: recording ? 'recorder' : 'composer',
           alignment: Alignment.bottomCenter,
-          child: (_isRecording || _recordingPath != null)
-              ? _wideCap(_mobileRecorder())
-              : !kMobile
-                  ? _wideCap(_desktopStrip())
-                  : Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surface1,
-                    borderRadius: BorderRadius.circular(26),
-                    border: Border.all(
-                        color: AppColors.fg1.withValues(alpha: 0.08)),
-                  ),
-                  padding: const EdgeInsets.fromLTRB(16, 14, 10, 10),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (_attachments.isNotEmpty) ...[
-                        _attachmentBar(),
-                        const SizedBox(height: 6),
-                      ],
-                      CallbackShortcuts(
-                        bindings: {
-                          const SingleActivator(LogicalKeyboardKey.enter): () {
-                            if (!kMobile) _send();
-                          },
-                          const SingleActivator(LogicalKeyboardKey.enter,
-                              meta: true): () {
-                            _send();
-                          },
-                          const SingleActivator(LogicalKeyboardKey.enter,
-                              control: true): () {
-                            _send();
-                          },
-                        },
-                        child: TextField(
-                          controller: _input,
-                          minLines: 1,
-                          maxLines: 8,
-                          cursorColor: AppColors.accent,
-                          onSubmitted: (_) {
-                            if (!kMobile) _send();
-                          },
-                          style: TS.body(AppColors.fg1),
-                          decoration: InputDecoration(
-                            isCollapsed: true,
-                            contentPadding:
-                                const EdgeInsets.fromLTRB(2, 2, 8, 10),
-                            border: InputBorder.none,
-                            hintText: 'Message ${widget.agentName}…',
-                            hintStyle: TS.body(AppColors.fg4),
-                          ),
-                        ),
-                      ),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Material(
-                            color: Colors.transparent,
-                            borderRadius: BorderRadius.circular(R.sm),
-                            child: InkWell(
-                              onTap: _onAttachTap,
-                              borderRadius: BorderRadius.circular(R.sm),
-                              child: Padding(
-                                padding: const EdgeInsets.all(6),
-                                child: AppIcon('plus',
-                                    size: 18, color: AppColors.fg3),
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          if (kCanRecord) ...[
-                            Material(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(R.sm),
-                              child: InkWell(
-                                onTap: _onMicTap,
-                                borderRadius: BorderRadius.circular(R.sm),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: AppIcon(
-                                    _isRecording ? 'mic-off' : 'mic',
-                                    size: 18,
-                                    color: _isRecording
-                                        ? AppColors.danger
-                                        : AppColors.fg3,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                          ],
-                          ValueListenableBuilder<TextEditingValue>(
-                            valueListenable: _input,
-                            builder: (_, val, __) {
-                              final canSend = (val.text.trim().isNotEmpty ||
-                                      _attachments.isNotEmpty ||
-                                      _isRecording ||
-                                      _recordingPath != null) &&
-                                  !_sending;
-                              return _SendBtn(
-                                enabled: canSend,
-                                sending: _sending,
-                                onTap: canSend ? _send : null,
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SendBtn extends StatelessWidget {
-  final bool enabled;
-  final bool sending;
-  final VoidCallback? onTap;
-  const _SendBtn({required this.enabled, this.sending = false, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final size = kMobile ? 36.0 : 30.0;
-    const ShapeBorder shape = CircleBorder();
-    return Material(
-      color: enabled ? AppColors.accentFill : AppColors.hover,
-      shape: shape,
-      child: InkWell(
-        customBorder: shape,
-        onTap: onTap,
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: Center(
-            child: sending
-                ? Spinner(size: 14, color: AppColors.accentFg)
-                : AppIcon('arrow-up',
-                    size: 16,
-                    color: enabled ? AppColors.accentFg : AppColors.fg4),
-          ),
+          child: _wideCap(recording
+              ? _mobileRecorder()
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_attachments.isNotEmpty) _attachmentBar(),
+                    _composerCard(),
+                  ],
+                )),
         ),
       ),
     );

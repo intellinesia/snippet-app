@@ -516,47 +516,15 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     required VoidCallback onTap,
     VoidCallback? onClear,
     bool selected = false,
+    bool compact = false,
   }) =>
-      Material(
-        color: selected ? AppColors.accentBg : Colors.transparent,
-        borderRadius: BorderRadius.circular(9),
-        child: InkWell(
+      ComposerChip(
+          compact: compact,
+          icon: icon,
+          label: label,
           onTap: onTap,
-          borderRadius: BorderRadius.circular(9),
-          child: Container(
-            height: kMobile ? 28 : 26,
-            padding: EdgeInsets.fromLTRB(
-                kMobile ? 9 : 7, 0, onClear == null ? (kMobile ? 8 : 7) : 4, 0),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                AppIcon(icon,
-                    size: 13.5,
-                    color: selected ? AppColors.accent : AppColors.fg3),
-                const SizedBox(width: 6),
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: kMobile ? 110 : 140),
-                  child: Text(label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(12,
-                          color: selected ? AppColors.accent : AppColors.fg3)),
-                ),
-                if (onClear != null)
-                  IconBtn('x',
-                      size: 22, iconSize: 12, tooltip: 'Clear', onTap: onClear)
-                else ...[
-                  const SizedBox(width: 5),
-                  AppIcon('chevron-down',
-                      size: 12,
-                      color: selected ? AppColors.accent : AppColors.fg4),
-                ],
-              ],
-            ),
-          ),
-        ),
-      );
+          onClear: onClear,
+          selected: selected);
 
   /// Pick (or clear) the direct-message recipient for the composer.
   Future<void> _pickRecipient(BuildContext anchor) async {
@@ -674,28 +642,32 @@ extension _SessionScreenComposerExt on _SessionScreenState {
         },
       };
 
-  List<Widget> _composerChips() => [
-        if (!_isMissionControl && _recipientAgentId != null) ...[
-          Builder(
-            builder: (ctx) => _composerChip(
-              icon: 'agent',
-              label: _recipientAgentName ?? _recipientAgentId!,
-              selected: true,
-              onTap: () => _pickRecipient(ctx),
-              onClear: _clearRecipient,
-            ),
+  Widget? _recipientChip() {
+    if (_isMissionControl || _recipientAgentId == null) return null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Builder(
+          builder: (ctx) => _composerChip(
+            icon: 'agent',
+            label: _recipientAgentName ?? _recipientAgentId!,
+            selected: true,
+            onTap: () => _pickRecipient(ctx),
+            onClear: _clearRecipient,
           ),
-          const SizedBox(width: 6),
-        ],
-        const SizedBox(width: 6),
-        Builder(builder: (chipCtx) {
-          return _composerChip(
+        ),
+      ),
+    );
+  }
+
+  Widget _modelChip(bool compact) => Builder(
+      builder: (chipCtx) => _composerChip(
             icon: _modelProvider == null ? 'cpu' : 'provider:$_modelProvider',
             label: _modelLabel ?? 'Auto',
+            compact: compact,
             onTap: () => _switchModel(chipCtx),
-          );
-        }),
-      ];
+          ));
 
   void _trackMention() {
     if (_isMissionControl) return;
@@ -836,203 +808,65 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     );
   }
 
-  Widget _composerStrip(bool running) {
-    Widget hit(Widget child, VoidCallback onTap, {String? tip}) {
-      final w = Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(6),
-          child: Container(
-            height: 26,
-            constraints: const BoxConstraints(minWidth: 26),
-            padding: const EdgeInsets.symmetric(horizontal: 5),
-            child: Center(widthFactor: 1, child: child),
+  Widget _composerCard(bool running) {
+    final hint = _isMissionControl
+        ? 'Ask Mission Control…'
+        : running
+            ? 'Steer or queue a message'
+            : 'Reply to Snippet';
+    return KeyedSubtree(
+      key: _composerCardKey,
+      child: ComposerCard(
+        highlight: _draggingFiles,
+        text: _input,
+        banner: _state?.goal?.ongoing == true || _recipientChip() != null
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_state?.goal?.ongoing == true) _goalBanner(),
+                  if (_recipientChip() != null) _recipientChip()!,
+                ],
+              )
+            : null,
+        field: CallbackShortcuts(
+          bindings: _composerShortcuts,
+          child: TextField(
+            controller: _input,
+            focusNode: _inputFocus,
+            contentInsertionConfiguration: _keyboardContent,
+            minLines: 1,
+            maxLines: 8,
+            cursorColor: AppColors.accent,
+            onSubmitted: (_) => _sendMessage(),
+            style: TS.body(AppColors.fg1),
+            decoration: ComposerCard.decoration(hint),
           ),
         ),
-      );
-      return tip == null ? w : Tooltip(message: tip, child: w);
-    }
-
-    Widget icon(String name, String tip, VoidCallback onTap, {Color? color}) =>
-        hit(AppIcon(name, size: 16, color: color ?? AppColors.fg3), onTap,
-            tip: tip);
-    Widget label(String text, VoidCallback onTap,
-            {String? tip, bool selected = false, VoidCallback? onClear}) =>
-        Row(mainAxisSize: MainAxisSize.min, children: [
-          Flexible(
-            child: hit(
-                Text(text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13,
-                        color: selected ? AppColors.accent : AppColors.fg3)),
-                onTap,
-                tip: tip),
-          ),
-          if (onClear != null)
-            IconBtn('x',
-                size: 22, iconSize: 11, tooltip: 'Clear', onTap: onClear),
-        ]);
-
-    Widget low(Widget w, double bottom) =>
-        Padding(padding: EdgeInsets.only(bottom: bottom), child: w);
-
-    Widget modelChip(bool compact) => Builder(
-          key: _modelChipKey,
-          builder: (ctx) {
-            final showText = !compact || _modelProvider == null;
-            final dur = reduceMotion(ctx) ? Duration.zero : Motion.base;
-            return hit(
-                Row(mainAxisSize: MainAxisSize.min, children: [
-                  if (_modelProvider != null)
-                    ProviderLogo(_modelProvider, size: 12),
-                  ClipRect(
-                    child: AnimatedSize(
-                      duration: dur,
-                      curve: Curves.easeOutCubic,
-                      alignment: Alignment.centerLeft,
-                      child: showText
-                          ? Padding(
-                              padding: EdgeInsets.only(
-                                  left: _modelProvider != null ? 7 : 0),
-                              child: ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxWidth: 140),
-                                child: Text(_modelLabel ?? 'Auto',
-                                    maxLines: 1,
-                                    softWrap: false,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: sans(13, color: AppColors.fg2)),
-                              ),
-                            )
-                          : const SizedBox(width: 0, height: 16),
-                    ),
-                  ),
-                ]),
-                () => _switchModel(ctx),
-                tip: _modelLabel == null
-                    ? 'Inference profile'
-                    : 'Inference profile · $_modelLabel');
+        attach:
+            ComposerIconButton('plus', tooltip: 'Attach', onTap: _onAttachTap),
+        trailing: _modelChip,
+        meter: _contextLeftPct == null ? null : '$_contextLeftPct% left',
+        mic: kCanRecord
+            ? ComposerIconButton(_isRecording ? 'mic-off' : 'mic',
+                tooltip: 'Record',
+                onTap: _onMicTap,
+                color: _isRecording ? AppColors.danger : null)
+            : null,
+        send: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _input,
+          builder: (_, __, ___) {
+            final queue = running && _canSend;
+            final stop = running && !queue;
+            return ComposerSendButton(
+                enabled: stop || _canSend,
+                stop: stop,
+                onTap: stop
+                    ? () => _send({'kind': 'interrupt'})
+                    : (_canSend ? _sendMessage : null));
           },
-        );
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (_state?.goal?.ongoing == true) _goalBanner(),
-        Container(
-          key: _composerCardKey,
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.fromLTRB(6, 0, 7, 0),
-          decoration: BoxDecoration(
-            color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(14),
-            border: _draggingFiles
-                ? Border.all(color: AppColors.accent, width: 1.5)
-                : Border.all(color: AppColors.line),
-            boxShadow: [
-              BoxShadow(
-                  color: AppColors.bg.withValues(alpha: 0.9),
-                  blurRadius: 40,
-                  offset: const Offset(0, -18)),
-            ],
-          ),
-          child: LayoutBuilder(
-            builder: (context, box) => ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _input,
-              builder: (context, value, _) {
-                final narrow = box.maxWidth < 520;
-                final painter = TextPainter(
-                  text:
-                      TextSpan(text: value.text, style: TS.body(AppColors.fg1)),
-                  textDirection: TextDirection.ltr,
-                  maxLines: 1,
-                )..layout();
-                final threshold = box.maxWidth - 270;
-                if (!_typedCompact && painter.width > threshold) {
-                  _typedCompact = true;
-                } else if (_typedCompact && painter.width < threshold - 70) {
-                  _typedCompact = false;
-                }
-                final compact = narrow || _typedCompact;
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    low(icon('plus', 'Attach', _onAttachTap), 9),
-                    const SizedBox(width: 2),
-                    Expanded(
-                      child: CallbackShortcuts(
-                        bindings: _composerShortcuts,
-                        child: TextField(
-                          controller: _input,
-                          focusNode: _inputFocus,
-                          contentInsertionConfiguration: _keyboardContent,
-                          minLines: 1,
-                          maxLines: 8,
-                          cursorColor: AppColors.accent,
-                          onSubmitted: (_) => _sendMessage(),
-                          style: TS.body(AppColors.fg1),
-                          decoration: InputDecoration(
-                            isCollapsed: true,
-                            contentPadding:
-                                const EdgeInsets.fromLTRB(4, 9, 4, 14),
-                            border: InputBorder.none,
-                            hintText: _isMissionControl
-                                ? 'Reply to Snippet'
-                                : 'Reply, or @ to bring in an agent',
-                            hintStyle: TS.body(AppColors.fg4),
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (!_isMissionControl && _recipientAgentId != null)
-                      low(
-                          ConstrainedBox(
-                            constraints:
-                                BoxConstraints(maxWidth: compact ? 110 : 160),
-                            child: Builder(
-                              builder: (ctx) => label(
-                                  'To ${_recipientAgentName ?? _recipientAgentId!}',
-                                  () => _pickRecipient(ctx),
-                                  selected: true,
-                                  onClear: _clearRecipient),
-                            ),
-                          ),
-                          9),
-                    low(modelChip(compact), 9),
-                    if (kCanRecord)
-                      low(
-                          icon(_isRecording ? 'mic-off' : 'mic', 'Record',
-                              _onMicTap,
-                              color: _isRecording ? AppColors.danger : null),
-                          9),
-                    const SizedBox(width: 4),
-                    low(
-                      ValueListenableBuilder<TextEditingValue>(
-                        valueListenable: _input,
-                        builder: (_, __, ___) {
-                          final queue = running && _canSend;
-                          final stop = running && !queue;
-                          return _SendBtn(
-                              enabled: stop || _canSend,
-                              running: stop,
-                              onTap: stop
-                                  ? () => _send({'kind': 'interrupt'})
-                                  : (_canSend ? _sendMessage : null));
-                        },
-                      ),
-                      7,
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
         ),
-      ],
+      ),
     );
   }
 
@@ -1075,189 +909,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                             valueListenable: _recorderTick,
                             builder: (_, __, ___) => _mobileRecorder(running),
                           )
-                        : !kMobile
-                            ? _composerStrip(running)
-                            : Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                    Container(
-                                      key: _composerCardKey,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surface1,
-                                        borderRadius: BorderRadius.circular(26),
-                                        border: _draggingFiles
-                                            ? Border.all(
-                                                color: AppColors.accent,
-                                                width: 1.5)
-                                            : Border.all(
-                                                color: AppColors.fg1
-                                                    .withValues(alpha: 0.08)),
-                                      ),
-                                      // The card owns the inset and the rows sit inside it, so there is
-                                      // no per-row vertical padding to keep in sync. Slightly taller
-                                      // than it is wide-padded, so the field reads as a writing area.
-                                      padding: const EdgeInsets.fromLTRB(
-                                          16, 14, 10, 10),
-                                      child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.stretch,
-                                          children: [
-                                            if (_state?.goal?.ongoing == true)
-                                              _goalBanner(),
-                                            CallbackShortcuts(
-                                              bindings: _composerShortcuts,
-                                              child: TextField(
-                                                controller: _input,
-                                                focusNode: _inputFocus,
-                                                contentInsertionConfiguration:
-                                                    _keyboardContent,
-                                                // Two lines minimum: a single-line field read as a
-                                                // cramped search box, and it hid the fact that the
-                                                // composer accepts multi-line prose.
-                                                minLines: 1,
-                                                maxLines: 8,
-                                                cursorColor: AppColors.accent,
-                                                onSubmitted: (_) =>
-                                                    _sendMessage(),
-                                                style: TS.body(AppColors.fg1),
-                                                decoration: InputDecoration(
-                                                  isCollapsed: true,
-                                                  // The card supplies the inset; this only adds the gap
-                                                  // between the text and the control row beneath it.
-                                                  contentPadding:
-                                                      const EdgeInsets.fromLTRB(
-                                                          2, 2, 8, 10),
-                                                  border: InputBorder.none,
-                                                  hintText: _isMissionControl
-                                                      ? 'Ask Mission Control…'
-                                                      : running
-                                                          ? 'Steer or queue a message'
-                                                          : 'Reply to Snippet',
-                                                  hintStyle:
-                                                      TS.body(AppColors.fg4),
-                                                ),
-                                              ),
-                                            ),
-                                            Row(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.center,
-                                                children: [
-                                                  Material(
-                                                    color: Colors.transparent,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            R.sm),
-                                                    child: InkWell(
-                                                      onTap: _onAttachTap,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              R.sm),
-                                                      child: Padding(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .all(6),
-                                                        child: AppIcon('plus',
-                                                            size: 18,
-                                                            color:
-                                                                AppColors.fg3),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  // The chip group SCROLLS and the mic/send controls are
-                                                  // pinned outside it. Three chips plus two buttons
-                                                  // overflowed a narrow phone, which pushed Send off the
-                                                  // card; a scrolling group plus fixed trailing controls
-                                                  // cannot.
-                                                  Expanded(
-                                                    child:
-                                                        SingleChildScrollView(
-                                                      scrollDirection:
-                                                          Axis.horizontal,
-                                                      child: Row(
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .center,
-                                                          children: [
-                                                            // Sending to an agent remains a composer action: it
-                                                            // changes the destination of this message without
-                                                            // adding another control to the session list.
-                                                            ..._composerChips(),
-                                                          ]),
-                                                    ),
-                                                  ),
-                                                  if (_contextLeftPct != null)
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              left: 6,
-                                                              right: 2),
-                                                      child: Text(
-                                                          '$_contextLeftPct% left',
-                                                          style: sans(12,
-                                                              tabular: true,
-                                                              color: AppColors
-                                                                  .fg4)),
-                                                    ),
-                                                  const SizedBox(width: 2),
-                                                  if (kCanRecord) ...[
-                                                    Material(
-                                                      color: Colors.transparent,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              R.sm),
-                                                      child: InkWell(
-                                                        onTap: _onMicTap,
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(R.sm),
-                                                        child: Padding(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .all(6),
-                                                          child: AppIcon(
-                                                              _isRecording
-                                                                  ? 'mic-off'
-                                                                  : 'mic',
-                                                              size: 18,
-                                                              color: _isRecording
-                                                                  ? AppColors
-                                                                      .danger
-                                                                  : AppColors
-                                                                      .fg3),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                  ],
-                                                  ValueListenableBuilder<
-                                                      TextEditingValue>(
-                                                    valueListenable: _input,
-                                                    builder: (_, __, ___) {
-                                                      final queue =
-                                                          running && _canSend;
-                                                      final stop =
-                                                          running && !queue;
-                                                      return _SendBtn(
-                                                          enabled:
-                                                              stop || _canSend,
-                                                          running: stop,
-                                                          onTap: stop
-                                                              ? () => _send({
-                                                                    'kind':
-                                                                        'interrupt'
-                                                                  })
-                                                              : (_canSend
-                                                                  ? _sendMessage
-                                                                  : null));
-                                                    },
-                                                  ),
-                                                ]),
-                                          ]),
-                                    ),
-                                  ]),
+                        : _composerCard(running),
                   ),
                 ]),
           ),
@@ -1268,28 +920,11 @@ extension _SessionScreenComposerExt on _SessionScreenState {
 
   // Composer attachment row: image thumbnails and file cards, each with its
   // own remove button and an upload overlay until the file reaches the daemon.
-  Widget _attachmentBar() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: SizedBox(
-        height: 62,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.only(top: 6, right: 6),
-          itemCount: _attachments.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
-          itemBuilder: (_, i) => _attachmentTile(_attachments[i]),
-        ),
-      ),
-    );
-  }
+  Widget _attachmentBar() => ComposerAttachmentBar(
+      tiles: [for (final a in _attachments) _attachmentTile(a)]);
 
   Widget _attachmentTile(_Attachment a) {
-    const side = 56.0;
-    final kind = a.isAudio
-        ? MediaKind.audio
-        : (a.isImage ? MediaKind.image : mediaKindOf(a.name));
-    final Widget body;
+    Widget? body;
     final pasted = a.pastedText;
     if (pasted != null) {
       final lines = '\n'.allMatches(pasted.trimRight()).length + 1;
@@ -1297,7 +932,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       body = GestureDetector(
         onTap: () => _editPasted(a),
         child: Container(
-          height: side,
+          height: ComposerAttachmentTile.side,
           width: 176,
           padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
           decoration: BoxDecoration(
@@ -1325,111 +960,36 @@ extension _SessionScreenComposerExt on _SessionScreenState {
         ),
       );
     } else if (a.isImage &&
-        ((a.localPath != null && File(a.localPath!).existsSync()) ||
-            a.remotePath != null)) {
-      // A restored draft may have lost its local file (phones clear picker
-      // caches); the uploaded copy on the daemon stands in.
-      final local = a.localPath != null && File(a.localPath!).existsSync();
+        !(a.localPath != null && File(a.localPath!).existsSync()) &&
+        a.remotePath != null) {
+      // A restored draft may have lost its local file; the uploaded copy stands in.
       body = Container(
-        width: side,
-        height: side,
+        width: ComposerAttachmentTile.side,
+        height: ComposerAttachmentTile.side,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(R.md),
           border: Border.all(color: AppColors.border),
         ),
         clipBehavior: Clip.antiAlias,
-        child: local
-            ? Image.file(File(a.localPath!),
-                fit: BoxFit.cover, cacheWidth: 168, cacheHeight: 168)
-            : Image(
-                image: ResizeImage(widget.client.imageProvider(a.remotePath!),
-                    width: 168, height: 168),
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => ColoredBox(
-                    color: AppColors.surface2,
-                    child: Center(
-                        child:
-                            AppIcon('image', size: 16, color: AppColors.fg4)))),
-      );
-    } else {
-      final ext =
-          a.name.contains('.') ? a.name.split('.').last.toUpperCase() : 'FILE';
-      body = Container(
-        height: side,
-        constraints: const BoxConstraints(maxWidth: 190),
-        padding: const EdgeInsets.fromLTRB(8, 0, 12, 0),
-        decoration: BoxDecoration(
-          color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(R.md),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: a.isAudio ? AppColors.accentBg : AppColors.surface3,
-              borderRadius: BorderRadius.circular(R.sm),
-            ),
-            child: AppIcon(
-                a.isAudio ? 'mic' : (kind == MediaKind.pdf ? 'pdf' : 'file'),
-                size: 16,
-                color: a.isAudio ? AppColors.accent : AppColors.fg2),
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(a.isAudio ? 'Voice note' : a.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(12, weight: W.label, color: AppColors.fg1)),
-                Text(a.isAudio ? 'Audio' : (ext.length > 6 ? 'FILE' : ext),
-                    style: mono(10, color: AppColors.fg3)),
-              ],
-            ),
-          ),
-        ]),
+        child: Image(
+            image: ResizeImage(widget.client.imageProvider(a.remotePath!),
+                width: 168, height: 168),
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => ColoredBox(
+                color: AppColors.surface2,
+                child: Center(
+                    child: AppIcon('image', size: 16, color: AppColors.fg4)))),
       );
     }
-    return Stack(clipBehavior: Clip.none, children: [
-      body,
-      if (a.uploading)
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-                color: AppColors.scrim,
-                borderRadius: BorderRadius.circular(R.md)),
-            alignment: Alignment.center,
-            child: Spinner(size: 16, color: AppColors.fg1),
-          ),
-        ),
-      Positioned(
-        top: -6,
-        right: -6,
-        child: Semantics(
-          button: true,
-          label: 'Remove ${a.name}',
-          child: GestureDetector(
-            onTap: () => _setState(() => _attachments.remove(a)),
-            child: Container(
-              width: 22,
-              height: 22,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.surface3,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.bg, width: 2),
-              ),
-              child: AppIcon('x', size: 10, color: AppColors.fg1),
-            ),
-          ),
-        ),
-      ),
-    ]);
+    return ComposerAttachmentTile(
+      name: a.name,
+      isImage: a.isImage,
+      isAudio: a.isAudio,
+      uploading: a.uploading,
+      localPath: a.localPath,
+      body: body,
+      onRemove: () => _setState(() => _attachments.remove(a)),
+    );
   }
 
   /// Open a pasted-text card to read or edit it, move it back into the message

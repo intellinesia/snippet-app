@@ -3,140 +3,41 @@ import 'package:flutter/material.dart';
 import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
+import 'composer/composer_card.dart';
 
+/// Thin adapter kept for callers that only need field + send; the look lives
+/// in [ComposerCard].
 class DesktopComposerStrip extends StatelessWidget {
   const DesktopComposerStrip({
     super.key,
     required this.field,
     required this.send,
-    this.inline = const [],
-    this.footer = const [],
     this.highlight = false,
     this.cardKey,
   });
 
   final Widget field;
   final Widget send;
-  final List<Widget> inline;
-  final List<Widget> footer;
   final bool highlight;
   final Key? cardKey;
 
-  static InputDecoration decoration(String hint) => InputDecoration(
-        isCollapsed: true,
-        contentPadding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
-        border: InputBorder.none,
-        hintText: hint,
-        hintStyle: TS.body(AppColors.fg4),
-      );
+  static InputDecoration decoration(String hint) =>
+      ComposerCard.decoration(hint);
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => KeyedSubtree(
         key: cardKey,
-        padding: const EdgeInsets.fromLTRB(12, 0, 8, 8),
-        decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(16),
-          border: highlight
-              ? Border.all(color: AppColors.accent, width: 1.5)
-              : Border.all(color: AppColors.line),
-          boxShadow: [
-            BoxShadow(
-                color: AppColors.bg.withValues(alpha: 0.9),
-                blurRadius: 40,
-                offset: const Offset(0, -18)),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            field,
-            Row(children: [
-              ...footer,
-              if (!footer.any((w) => w is Spacer)) const Spacer(),
-              for (final w in inline)
-                Padding(padding: const EdgeInsets.only(right: 6), child: w),
-              send,
-            ]),
-          ],
-        ),
+        child: ComposerCard(field: field, send: send, highlight: highlight),
       );
 }
 
-class StripSendButton extends StatelessWidget {
+class StripSendButton extends ComposerSendButton {
   const StripSendButton(
       {super.key,
-      required this.enabled,
-      this.sending = false,
-      this.stop = false,
-      this.onTap});
-
-  final bool enabled;
-  final bool sending;
-  final bool stop;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final fill = !enabled
-        ? AppColors.hover
-        : stop
-            ? (kMobile ? AppColors.fg1 : AppColors.surface3)
-            : (kMobile ? AppColors.accentFill : AppColors.fg1);
-    final ink = !enabled
-        ? AppColors.fg4
-        : stop
-            ? (kMobile ? AppColors.bg : AppColors.fg1)
-            : (kMobile ? AppColors.accentFg : AppColors.bg);
-    const ShapeBorder shape = CircleBorder();
-    return Material(
-      color: fill,
-      shape: shape,
-      child: InkWell(
-        customBorder: shape,
-        onTap: onTap,
-        child: SizedBox.square(
-          dimension: kMobile ? 34 : 30,
-          child: Center(
-            child: sending
-                ? Spinner(size: 13, color: ink)
-                : AppIcon(stop ? 'stop' : 'arrow-up',
-                    size: stop ? 13 : 15, color: ink),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class StripIcon extends StatelessWidget {
-  const StripIcon(this.icon,
-      {super.key, required this.tooltip, required this.onTap, this.color});
-
-  final String icon;
-  final String tooltip;
-  final VoidCallback onTap;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) => Tooltip(
-        message: tooltip,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(6),
-            child: SizedBox.square(
-              dimension: 26,
-              child: Center(
-                  child:
-                      AppIcon(icon, size: 16, color: color ?? AppColors.fg3)),
-            ),
-          ),
-        ),
-      );
+      required super.enabled,
+      super.sending,
+      super.stop,
+      super.onTap});
 }
 
 class DesktopRecorderStrip extends StatelessWidget {
