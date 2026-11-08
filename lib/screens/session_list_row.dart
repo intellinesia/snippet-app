@@ -54,10 +54,7 @@ class SessionGroupHeader extends StatelessWidget {
           height: kMobile ? 40 : 30,
           alignment: Alignment.bottomLeft,
           padding: EdgeInsets.fromLTRB(
-              (kMobile ? 4 : 10) + SessionListRow.dotSlot,
-              0,
-              kMobile ? 4 : 10,
-              kMobile ? 4 : 2),
+              kMobile ? 4 : 10, 0, kMobile ? 4 : 10, kMobile ? 4 : 2),
           child: Text(label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -100,9 +97,6 @@ class SessionListRow extends StatelessWidget {
   /// Agent or provider mark shown at the end of the second line.
   final Widget? badge;
 
-  // Phone hangs the state dot in the gutter so titles align with the screen edge.
-  static double get dotSlot => kMobile ? 0 : 16;
-
   @override
   Widget build(BuildContext context) {
     final s = session;
@@ -122,7 +116,11 @@ class SessionListRow extends StatelessWidget {
     final lineH = kMobile ? 22.0 : 18.0;
     final diff = sessionDiff(s);
     final branch = s.branch?.trim() ?? '';
-    final hasMeta = branch.isNotEmpty || diff != null || badge != null;
+    final hasMeta = waiting ||
+        working ||
+        branch.isNotEmpty ||
+        diff != null ||
+        badge != null;
 
     final stateLabel = waiting
         ? 'Needs input'
@@ -139,37 +137,7 @@ class SessionListRow extends StatelessWidget {
           SizedBox(
               height: lineH,
               child:
-                  Center(child: SelectCheck(checked, size: kMobile ? 20 : 14)))
-        else if (kMobile)
-          SizedBox(
-            width: 0,
-            height: lineH,
-            child: (waiting || working)
-                ? Stack(clipBehavior: Clip.none, children: [
-                    Positioned(
-                        left: -14,
-                        top: 0,
-                        bottom: 0,
-                        child: Center(
-                            child: _StateDot(
-                                color:
-                                    waiting ? AppColors.run : AppColors.accent,
-                                pulse: working))),
-                  ])
-                : null,
-          )
-        else
-          SizedBox(
-            width: dotSlot,
-            height: lineH,
-            child: (waiting || working)
-                ? Align(
-                    alignment: Alignment.centerLeft,
-                    child: _StateDot(
-                        color: waiting ? AppColors.run : AppColors.accent,
-                        pulse: working))
-                : null,
-          ),
+                  Center(child: SelectCheck(checked, size: kMobile ? 20 : 14))),
         if (selecting) SizedBox(width: kMobile ? 12 : 10),
         Expanded(
           child: Column(
@@ -206,6 +174,11 @@ class SessionListRow extends StatelessWidget {
                   child: Row(children: [
                     Expanded(
                       child: Row(children: [
+                        if (waiting || working) ...[
+                          _StateLabel(waiting: waiting),
+                          if (branch.isNotEmpty || diff != null)
+                            const SizedBox(width: 10),
+                        ],
                         if (branch.isNotEmpty)
                           Flexible(
                             child:
@@ -270,8 +243,7 @@ class SessionListRow extends StatelessWidget {
                 if (divider)
                   Container(
                       height: 1,
-                      margin:
-                          EdgeInsets.only(left: selecting ? 36 : dotSlot + 4),
+                      margin: EdgeInsets.only(left: selecting ? 36 : 4),
                       color: AppColors.line),
               ]),
             ),
@@ -299,55 +271,30 @@ class SessionListRow extends StatelessWidget {
   }
 }
 
-class _StateDot extends StatefulWidget {
-  const _StateDot({required this.color, required this.pulse});
-  final Color color;
-  final bool pulse;
-
-  @override
-  State<_StateDot> createState() => _StateDotState();
-}
-
-class _StateDotState extends State<_StateDot>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: Motion.pulse);
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (widget.pulse && !reduceMotion(context)) {
-      if (!_c.isAnimating) _c.repeat(reverse: true);
-    } else {
-      _c.stop();
-      _c.value = 1;
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant _StateDot old) {
-    super.didUpdateWidget(old);
-    didChangeDependencies();
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
+class _StateLabel extends StatelessWidget {
+  const _StateLabel({required this.waiting});
+  final bool waiting;
 
   @override
   Widget build(BuildContext context) {
-    final dot = Container(
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
-    );
-    if (!widget.pulse) return dot;
-    return FadeTransition(
-      opacity: Tween<double>(begin: 0.45, end: 1)
-          .animate(CurvedAnimation(parent: _c, curve: Curves.easeOut)),
-      child: dot,
-    );
+    final color = waiting ? AppColors.run : AppColors.accent;
+    final size = kMobile ? 11.0 : 10.0;
+    final icon = waiting
+        ? AppIcon('message', size: size + 1, color: color)
+        : reduceMotion(context)
+            ? AppIcon('activity', size: size + 1, color: color)
+            : SizedBox(
+                width: size,
+                height: size,
+                child: CircularProgressIndicator(
+                    strokeWidth: 1.6,
+                    color: color,
+                    backgroundColor: color.withValues(alpha: 0.2)));
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      icon,
+      const SizedBox(width: 5),
+      Text(waiting ? 'Needs input' : 'Working',
+          maxLines: 1, style: TS.meta(color)),
+    ]);
   }
 }

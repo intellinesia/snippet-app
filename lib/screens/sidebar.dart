@@ -727,11 +727,8 @@ class SidebarState extends State<Sidebar> {
             onTap: () => setState(() => _settledOpen = !_settledOpen),
             child: Container(
               height: kMobile ? M.minTarget : 32,
-              padding: EdgeInsets.fromLTRB(
-                  (kMobile ? 4 : 10) + SessionListRow.dotSlot,
-                  0,
-                  kMobile ? 4 : 10,
-                  0),
+              padding:
+                  EdgeInsets.fromLTRB(kMobile ? 4 : 10, 0, kMobile ? 4 : 10, 0),
               child: Row(children: [
                 Text('Settled', style: TS.label(AppColors.fg3)),
                 const SizedBox(width: 8),
