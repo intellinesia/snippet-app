@@ -16,7 +16,6 @@ class ComposerCard extends StatelessWidget {
     this.banner,
     this.attach,
     this.trailing,
-    this.meter,
     this.mic,
     this.highlight = false,
   });
@@ -31,7 +30,6 @@ class ComposerCard extends StatelessWidget {
 
   /// Builds the trailing chips; `compact` asks for icon-only chips.
   final Widget Function(bool compact)? trailing;
-  final String? meter;
   final Widget? mic;
   final bool highlight;
 
@@ -43,7 +41,8 @@ class ComposerCard extends StatelessWidget {
 
   static InputDecoration decoration(String hint) => InputDecoration(
         isCollapsed: true,
-        contentPadding: EdgeInsets.fromLTRB(4, kMobile ? 8 : 6, 4, kMobile ? 7 : 6),
+        contentPadding:
+            EdgeInsets.fromLTRB(4, kMobile ? 8 : 6, 4, kMobile ? 8 : 6),
         border: InputBorder.none,
         hintText: hint,
         hintStyle: TS.body(AppColors.fg4),
@@ -75,7 +74,9 @@ class ComposerCard extends StatelessWidget {
             valueListenable: text ?? ValueNotifier(TextEditingValue.empty),
             builder: (context, v, _) {
               final compact = _compact(box.maxWidth, v.text);
-              final showMeter = meter != null && !compact && box.maxWidth >= 480;
+              final slot = kMobile ? 36.0 : 32.0;
+              Widget inSlot(Widget w) =>
+                  SizedBox(height: slot, child: Center(child: w));
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -84,28 +85,18 @@ class ComposerCard extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      if (attach != null)
-                        Padding(
-                            padding: const EdgeInsets.only(bottom: 1),
-                            child: attach!),
-                      Expanded(child: field),
-                      if (trailing != null)
-                        Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: trailing!(compact)),
-                      if (showMeter)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 6, right: 2, bottom: 9),
-                          child: Text(meter!,
-                              style: sans(12,
-                                  tabular: true, color: AppColors.fg4)),
+                      if (attach != null) inSlot(attach!),
+                      Expanded(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: slot),
+                          child: Align(
+                              alignment: Alignment.centerLeft, child: field),
                         ),
-                      if (mic != null)
-                        Padding(
-                            padding: const EdgeInsets.only(bottom: 1),
-                            child: mic!),
+                      ),
+                      if (trailing != null) inSlot(trailing!(compact)),
+                      if (mic != null) inSlot(mic!),
                       const SizedBox(width: 4),
-                      send,
+                      inSlot(send),
                     ],
                   ),
                 ],
@@ -220,8 +211,8 @@ class ComposerChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(9),
           child: Container(
             height: 28,
-            padding: EdgeInsets.fromLTRB(
-                compact ? 8 : (kMobile ? 9 : 8), 0, compact ? 8 : (onClear == null ? (kMobile ? 8 : 7) : 4), 0),
+            padding: EdgeInsets.fromLTRB(compact ? 8 : (kMobile ? 9 : 8), 0,
+                compact ? 8 : (onClear == null ? (kMobile ? 8 : 7) : 4), 0),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -231,14 +222,15 @@ class ComposerChip extends StatelessWidget {
                     color: selected ? AppColors.accent : AppColors.fg3),
                 if (!compact) const SizedBox(width: 6),
                 if (!compact)
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: kMobile ? 110 : 140),
-                  child: Text(label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(12,
-                          color: selected ? AppColors.accent : AppColors.fg3)),
-                ),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: kMobile ? 110 : 140),
+                    child: Text(label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12,
+                            color:
+                                selected ? AppColors.accent : AppColors.fg3)),
+                  ),
                 if (compact)
                   const SizedBox.shrink()
                 else if (onClear != null)

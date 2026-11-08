@@ -494,17 +494,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     await _ingest(files);
   }
 
-  /// Context still free, as a whole percent of the model's window. Null until
-  /// the daemon has reported both a window size and a prompt size.
-  int? get _contextLeftPct {
-    final s = _state;
-    if (s == null || s.contextWindow <= 0 || s.lastPromptTokens <= 0) {
-      return null;
-    }
-    final used = s.lastPromptTokens / s.contextWindow;
-    return (100 - used * 100).clamp(0, 100).round();
-  }
-
   /// One composer footer control: icon + label + disclosure chevron.
   /// A composer chip. When [onClear] is set the chip is in a CHOSEN state: it
   /// shows the value, and the trailing affordance clears it instead of opening
@@ -846,7 +835,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
         attach:
             ComposerIconButton('plus', tooltip: 'Attach', onTap: _onAttachTap),
         trailing: _modelChip,
-        meter: _contextLeftPct == null ? null : '$_contextLeftPct% left',
         mic: kCanRecord
             ? ComposerIconButton(_isRecording ? 'mic-off' : 'mic',
                 tooltip: 'Record',
