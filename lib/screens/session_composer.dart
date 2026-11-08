@@ -917,34 +917,31 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     if (pasted != null) {
       final lines = '\n'.allMatches(pasted.trimRight()).length + 1;
       final firstLine = pasted.trim().split('\n').first.trim();
-      body = GestureDetector(
-        onTap: () => _editPasted(a),
-        child: Container(
-          height: ComposerAttachmentTile.side,
-          width: 176,
-          padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
-          decoration: BoxDecoration(
-            color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(R.md),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(children: [
-                AppIcon('file-text', size: 12, color: AppColors.fg3),
-                const SizedBox(width: 5),
-                Text('Pasted · $lines lines',
-                    style: sans(11, weight: W.label, color: AppColors.fg2)),
-              ]),
-              const SizedBox(height: 4),
-              Text(firstLine,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: mono(11, color: AppColors.fg3)),
-            ],
-          ),
+      body = Container(
+        height: ComposerAttachmentTile.side,
+        width: 176,
+        padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(R.md),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(children: [
+              AppIcon('file-text', size: 12, color: AppColors.fg3),
+              const SizedBox(width: 5),
+              Text('Pasted · $lines lines',
+                  style: sans(11, weight: W.label, color: AppColors.fg2)),
+            ]),
+            const SizedBox(height: 4),
+            Text(firstLine,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: mono(11, color: AppColors.fg3)),
+          ],
         ),
       );
     } else if (a.isImage &&
@@ -976,121 +973,53 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       uploading: a.uploading,
       localPath: a.localPath,
       body: body,
+      onOpen: () => _previewAttachment(a),
       onRemove: () => _setState(() => _attachments.remove(a)),
     );
   }
 
-  /// Open a pasted-text card to read or edit it, move it back into the message
-  /// as plain text, or drop it.
-  Future<void> _editPasted(_Attachment a) async {
-    final result = await presentScreen<(String, String)>(
-      context,
-      builder: (_, close) =>
-          _PastedEditor(text: a.pastedText ?? '', onClose: close),
+  PreviewAttachment _toPreview(_Attachment a) {
+    final remote = a.remotePath;
+    return PreviewAttachment(
+      name: a.name,
+      isImage: a.isImage,
+      isAudio: a.isAudio,
+      localPath: a.localPath,
+      pastedText: a.pastedText,
+      imageProvider:
+          remote == null ? null : widget.client.imageProvider(remote),
     );
-    if (!mounted || result == null) return;
-    final (action, text) = result;
-    _setState(() {
-      switch (action) {
-        case 'save':
-          if (text.trim().isEmpty) {
-            _attachments.remove(a);
-          } else {
-            a.pastedText = text;
-          }
-        case 'inline':
-          _attachments.remove(a);
-          final current = _input.text;
-          final joined = current.trim().isEmpty ? text : '$current\n$text';
-          _input.value = TextEditingValue(
-            text: joined,
-            selection: TextSelection.collapsed(offset: joined.length),
-          );
-        case 'remove':
-          _attachments.remove(a);
-      }
-    });
+  }
+
+  /// Preview any attachment; pasted text can be edited, moved back into the
+  /// message as plain text, or dropped.
+  Future<void> _previewAttachment(_Attachment a) async {
+    final pairs = {for (final x in _attachments) _toPreview(x): x};
+    final items = pairs.keys.toList();
+    await showAttachmentPreview(
+      context,
+      items,
+      _attachments.indexOf(a),
+      onRemove: (p) => _setState(() => _attachments.remove(pairs[p])),
+      onEditText: (p, text) => _setState(() {
+        final t = pairs[p]!;
+        if (text.trim().isEmpty) {
+          _attachments.remove(t);
+        } else {
+          t.pastedText = text;
+        }
+      }),
+      onInsertText: (p, text) => _setState(() {
+        _attachments.remove(pairs[p]);
+        final current = _input.text;
+        final joined = current.trim().isEmpty ? text : '$current\n$text';
+        _input.value = TextEditingValue(
+          text: joined,
+          selection: TextSelection.collapsed(offset: joined.length),
+        );
+      }),
+    );
   }
 
   // ---- event → widget (pairs tool_call with its tool_result) ----
-}
-
-/// Full view of a pasted-text card: edit it, put it back into the message as
-/// plain text, or remove it. Pops with (action, text).
-class _PastedEditor extends StatefulWidget {
-  final String text;
-  final VoidCallback onClose;
-  const _PastedEditor({required this.text, required this.onClose});
-
-  @override
-  State<_PastedEditor> createState() => _PastedEditorState();
-}
-
-class _PastedEditorState extends State<_PastedEditor> {
-  late final TextEditingController _text =
-      TextEditingController(text: widget.text);
-
-  @override
-  void dispose() {
-    _text.dispose();
-    super.dispose();
-  }
-
-  void _done(String action) => Navigator.of(context).pop((action, _text.text));
-
-  @override
-  Widget build(BuildContext context) {
-    final lines = '\n'.allMatches(_text.text.trimRight()).length + 1;
-    return Scaffold(
-      backgroundColor: readingBg,
-      body: SafeArea(
-        child: Column(children: [
-          SnAppBar(
-            title: 'Pasted text',
-            subtitle: '$lines lines',
-            onBack: () => _done('save'),
-            keepBack: true,
-            actions: [
-              IconBtn('trash', tooltip: 'Remove', onTap: () => _done('remove')),
-            ],
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: TextField(
-                controller: _text,
-                maxLines: null,
-                expands: true,
-                textAlignVertical: TextAlignVertical.top,
-                onChanged: (_) => setState(() {}),
-                style: mono(13, height: 1.45, color: AppColors.fg1),
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  isCollapsed: true,
-                ),
-              ),
-            ),
-          ),
-          Container(height: 1, color: AppColors.border),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-            child: Row(children: [
-              TextButton(
-                onPressed: () => _done('inline'),
-                child: Text('Insert as text',
-                    style: sans(13, color: AppColors.fg2)),
-              ),
-              const Spacer(),
-              FilledButton(
-                onPressed: () => _done('save'),
-                child: Text('Done',
-                    style:
-                        sans(13, weight: W.label, color: AppColors.accentFg)),
-              ),
-            ]),
-          ),
-        ]),
-      ),
-    );
-  }
 }

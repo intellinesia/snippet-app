@@ -50,6 +50,7 @@ import 'pull_requests.dart';
 import '../github_models.dart';
 import 'presented_file_card.dart';
 import '../composer_strip.dart';
+import '../composer/attachment_preview.dart';
 import '../composer/attachment_tile.dart';
 import '../composer/composer_card.dart';
 import '../media_views.dart';

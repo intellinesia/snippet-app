@@ -12,6 +12,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
 import '../api.dart';
+import '../composer/attachment_preview.dart';
 import '../composer/attachment_tile.dart';
 import '../composer/composer_card.dart';
 import '../composer_strip.dart';
@@ -1396,9 +1397,31 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             isAudio: a.isAudio,
             uploading: a.uploading,
             localPath: a.localPath,
+            onOpen: () => _previewAttachment(a),
             onRemove: () => setState(() => _attachments.remove(a)),
           ),
       ]);
+
+  Future<void> _previewAttachment(_AgentAttachment a) {
+    final pairs = {
+      for (final x in _attachments)
+        PreviewAttachment(
+          name: x.name,
+          isImage: x.isImage,
+          isAudio: x.isAudio,
+          localPath: x.localPath,
+          imageProvider: x.remotePath == null
+              ? null
+              : widget.client.imageProvider(x.remotePath!),
+        ): x
+    };
+    return showAttachmentPreview(
+      context,
+      pairs.keys.toList(),
+      _attachments.indexOf(a),
+      onRemove: (p) => setState(() => _attachments.remove(pairs[p])),
+    );
+  }
 
   Widget _wideCap(Widget child) => kMobile
       ? child

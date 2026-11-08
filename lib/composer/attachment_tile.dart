@@ -37,6 +37,7 @@ class ComposerAttachmentTile extends StatelessWidget {
     required this.isAudio,
     required this.uploading,
     required this.onRemove,
+    this.onOpen,
     this.localPath,
     this.body,
   });
@@ -46,6 +47,9 @@ class ComposerAttachmentTile extends StatelessWidget {
   final bool isAudio;
   final bool uploading;
   final VoidCallback onRemove;
+
+  /// Tapping the tile body, e.g. to preview it.
+  final VoidCallback? onOpen;
   final String? localPath;
   final Widget? body;
 
@@ -68,7 +72,8 @@ class ComposerAttachmentTile extends StatelessWidget {
             fit: BoxFit.cover, cacheWidth: 168, cacheHeight: 168),
       );
     }
-    final ext = name.contains('.') ? name.split('.').last.toUpperCase() : 'FILE';
+    final ext =
+        name.contains('.') ? name.split('.').last.toUpperCase() : 'FILE';
     return Container(
       height: side,
       constraints: const BoxConstraints(maxWidth: 190),
@@ -112,8 +117,22 @@ class ComposerAttachmentTile extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Stack(clipBehavior: Clip.none, children: [
-        body ?? _defaultBody(),
+  Widget build(BuildContext context) =>
+      Stack(clipBehavior: Clip.none, children: [
+        onOpen == null
+            ? (body ?? _defaultBody())
+            : Semantics(
+                button: true,
+                label: 'Preview $name',
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onOpen,
+                    child: body ?? _defaultBody(),
+                  ),
+                ),
+              ),
         if (uploading)
           Positioned.fill(
             child: Container(
