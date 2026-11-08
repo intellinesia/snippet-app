@@ -1149,6 +1149,9 @@ class CoordinationAgent {
   /// uses the session's own model.
   final String? profile;
 
+  /// The profile its desk is running on right now, when the desk is live.
+  final String? deskProfile;
+
   /// Per-agent ceiling before compaction; null follows the model's window.
   final int? maxContextTokens;
 
@@ -1159,6 +1162,7 @@ class CoordinationAgent {
         profile = (j['profile'] as String?)?.trim().isEmpty ?? true
             ? null
             : (j['profile'] as String).trim(),
+        deskProfile = j['desk_profile'] as String?,
         maxContextTokens = switch (j['max_context_tokens']) {
           final num n when n > 0 => n.toInt(),
           _ => null,

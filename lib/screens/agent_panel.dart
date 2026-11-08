@@ -288,11 +288,22 @@ class _ProfilePageState extends State<_ProfilePage> {
     }
     if (cfg == null) return Center(child: DelayedSpinner(size: 16));
     final current = widget.agent.profile;
+    final running = widget.agent.deskProfile;
+    final switching = running != null && current != null && running != current;
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: S.s8),
       children: [
-        _row('sparkles', 'Default (from Routing)',
-            "The session's model, or your Routing settings", current == null,
+        if (running != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s8),
+            child: Text(
+                switching
+                    ? 'Desk is on $running, moving to $current after this turn'
+                    : 'Desk is running on $running',
+                style: TS.meta(AppColors.fg3)),
+          ),
+        _row('sparkles', 'Routing default',
+            "Your Routing settings for desks", current == null,
             () => _pick('')),
         for (final p in cfg.profiles)
           _row('provider:${p.provider}', p.name, '${p.provider} · ${p.model}',

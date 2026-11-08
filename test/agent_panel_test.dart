@@ -62,7 +62,7 @@ void main() {
     }
     await tester.tap(find.text('Inference profile').last);
     await settle(tester);
-    expect(find.text('Default (from Routing)'), findsOneWidget);
+    expect(find.text('Routing default'), findsOneWidget);
     expect(find.byType(AgentSidePanel), findsOneWidget);
 
     await closeShell(tester);

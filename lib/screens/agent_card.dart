@@ -72,7 +72,7 @@ class _AgentCardState extends State<AgentCard> {
       showAppSheet(context,
           title: '$name works on',
           child: SheetActions([
-            SheetAction('sparkles', 'Default (from Routing)', () {
+            SheetAction('sparkles', 'Routing default', () {
               Navigator.pop(context);
               _setProfile(null);
             }),
@@ -96,8 +96,8 @@ class _AgentCardState extends State<AgentCard> {
         appMenuRow<String>(
             value: '',
             icon: 'sparkles',
-            label: 'Default (from Routing)',
-            description: "The session's model, or your Routing settings",
+            label: 'Routing default',
+            description: "Your Routing settings for desks",
             selected: current == null),
         for (final p in cfg.profiles)
           appMenuRow<String>(
