@@ -1113,7 +1113,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       // the pill opens the agent's actions.
       return MobileStackedTitleBar(
         title: widget.agentName,
-        avatar: AgentMochi(widget.agentId, size: 26),
+        avatar: AgentMochi(widget.agentId, size: 20),
         onTap: _openActions,
         tapHint: 'Agent actions',
       );
