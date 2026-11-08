@@ -30,9 +30,7 @@ class SettingsGroup extends StatelessWidget {
         if (header != null)
           Padding(
             padding: EdgeInsets.fromLTRB(kMobile ? 16 : 4, 0, 4, 6),
-            child: Text(header!.toUpperCase(),
-                style: sans(kMobile ? 12 : 11,
-                    spacing: 0.7, color: AppColors.fg4)),
+            child: Text(header!.toUpperCase(), style: TS.overline()),
           ),
         Container(
           clipBehavior: Clip.antiAlias,
@@ -50,9 +48,7 @@ class SettingsGroup extends StatelessWidget {
         if (footer != null)
           Padding(
             padding: EdgeInsets.fromLTRB(kMobile ? 16 : 4, 7, 4, 0),
-            child: Text(footer!,
-                style: sans(kMobile ? 12.5 : 12,
-                    height: 1.5, color: AppColors.fg4)),
+            child: Text(footer!, style: TS.meta()),
           ),
       ]),
     );
@@ -97,21 +93,18 @@ class SettingsRow extends StatelessWidget {
                 children: [
                   labelWidget ??
                       Text(label,
-                          style: sans(kMobile ? 15 : 13,
-                              color:
-                                  danger ? AppColors.danger : AppColors.fg1)),
+                          style: TS.rowTitle(
+                              danger ? AppColors.danger : AppColors.fg1)),
                   if (sub != null && sub!.isNotEmpty) ...[
                     const SizedBox(height: 2),
-                    Text(sub!,
-                        style: sans(kMobile ? 12.5 : 12,
-                            height: 1.4, color: AppColors.fg4)),
+                    Text(sub!, style: TS.meta()),
                   ],
                 ]),
           ),
           if (trailing != null) ...[const SizedBox(width: 12), trailing!],
           if (chevron) ...[
             const SizedBox(width: 8),
-            AppIcon('chevron-right', size: 13, color: AppColors.fg4),
+            AppIcon('chevron-right', size: 14, color: AppColors.fg4),
           ],
         ]),
       ),
@@ -207,7 +200,7 @@ class SettingsPopup<T> extends StatelessWidget {
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               if (leading != null) ...[leading!, const SizedBox(width: 7)],
               Text(label,
-                  style: sans(kMobile ? 15 : 12.5,
+                  style: sans(kMobile ? 15 : 13,
                       color: kMobile ? AppColors.fg3 : AppColors.fg1)),
               const SizedBox(width: 6),
               AppIcon(kMobile ? 'chevron-right' : 'chevrons-up-down',
@@ -248,8 +241,8 @@ class SettingsField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = mono
-        ? sans(kMobile ? 15 : 12.5, color: AppColors.fg1)
-        : sans(kMobile ? 15 : 12.5, color: AppColors.fg1);
+        ? sans(kMobile ? 15 : 13, color: AppColors.fg1)
+        : sans(kMobile ? 15 : 13, color: AppColors.fg1);
     return SizedBox(
       width: kMobile ? (width > 210 ? 210 : width) : width,
       child: Container(
@@ -318,7 +311,7 @@ class SettingsPill extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             alignment: Alignment.center,
             child: Text(label,
-                style: sans(12.5,
+                style: sans(13,
                     color: danger ? AppColors.danger : AppColors.fg2)),
           ),
         ),

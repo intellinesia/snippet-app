@@ -753,7 +753,7 @@ class _StepBody extends StatelessWidget {
           if (tail)
             for (final line in shown)
               Text(line,
-                  style: codeMono(11.5,
+                  style: codeMono(12,
                       height: 18 / 11.5,
                       color:
                           RegExp(r'FAIL|error|panicked', caseSensitive: false)

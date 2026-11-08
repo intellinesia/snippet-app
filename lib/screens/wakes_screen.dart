@@ -118,7 +118,7 @@ class _WakesScreenState extends State<WakesScreen> {
                 padding: const EdgeInsets.fromLTRB(S.s4, S.s8, S.s4, 0),
                 child: Text(
                     '${warm.calls7d} warm calls in the last 7 days, ${tokensLabel(warm.cacheReadTokens7d)} tokens read from cache.',
-                    style: sans(12.5, color: AppColors.fg4)),
+                    style: sans(13, color: AppColors.fg4)),
               ),
           ],
         ]);
@@ -162,7 +162,7 @@ class _WakesScreenState extends State<WakesScreen> {
                     color: wakeStatusColor(w.lastStatus),
                     shape: BoxShape.circle)),
           const SizedBox(width: S.s6),
-          Text(w.ownerKind, style: sans(12.5, color: AppColors.fg4)),
+          Text(w.ownerKind, style: sans(13, color: AppColors.fg4)),
         ]),
         onTap: () => _open(ctx, w.owner, name, agents),
       ),
@@ -182,7 +182,7 @@ class _WakesScreenState extends State<WakesScreen> {
                 : 'Every ${e.intervalMinutes} min'),
         leading: AppIcon('gauge', size: 19, color: AppColors.fg3),
         trailing:
-            Text('${e.warms} warms', style: sans(12.5, color: AppColors.fg4)),
+            Text('${e.warms} warms', style: sans(13, color: AppColors.fg4)),
         onTap: () => _open(ctx, e.owner, name, agents),
       ),
     );

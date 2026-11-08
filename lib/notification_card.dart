@@ -196,7 +196,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
                 child: Text(title.isEmpty ? 'Snippet' : title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(kMobile ? 14 : 13.5,
+                    style: sans(kMobile ? 14 : 13,
                         weight: W.label, height: 1.35, color: AppColors.fg1)),
               ),
             ]),
@@ -204,7 +204,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
               Text(body,
                   maxLines: _expandable ? 1 : 2,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(kMobile ? 13 : 12.5,
+                  style: sans(kMobile ? 13 : 13,
                       height: 1.35, color: AppColors.fg3)),
           ],
         ),
@@ -223,7 +223,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
     final isApproval = action == CardAction.approval;
     final approval = isApproval ? approvalOf(attention) : null;
 
-    final link = sans(12.5, weight: W.label, color: AppColors.fg3);
+    final link = sans(13, weight: W.label, color: AppColors.fg3);
     Widget textLink(String label, VoidCallback onTap) => InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(R.xs),
@@ -282,7 +282,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
               attentionLabel.isNotEmpty
                   ? attentionLabel
                   : approval.headline(attentionTool),
-              style: sans(kMobile ? 14.5 : 13.5,
+              style: sans(kMobile ? 14 : 13,
                   height: 1.45, color: AppColors.fg1),
             ),
             if (approval.shownCommand.isNotEmpty)
@@ -314,7 +314,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
             Text(body,
                 maxLines: 10,
                 overflow: TextOverflow.ellipsis,
-                style: sans(kMobile ? 14.5 : 13.5,
+                style: sans(kMobile ? 14 : 13,
                     height: 1.45, color: AppColors.fg1)),
           if (_moreQuestions > 0)
             Padding(

@@ -252,7 +252,7 @@ class _StepDetailState extends State<_StepDetail> {
     final more = countsLines ? 'Show all $lines lines' : 'Show all';
     final meta = toolMetaParts(step);
     final copy = toolCopyText(step);
-    final metaStyle = sans(kMobile ? 12 : 11.5, color: AppColors.fg3);
+    final metaStyle = sans(kMobile ? 12 : 12, color: AppColors.fg3);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -288,7 +288,7 @@ class _StepDetailState extends State<_StepDetail> {
                   child: Padding(
                     padding: const EdgeInsets.only(top: S.s8),
                     child: Text(_full ? 'Show less' : more,
-                        style: sans(kMobile ? 13 : 12.5,
+                        style: sans(kMobile ? 13 : 13,
                             weight: W.label, color: AppColors.fg3)),
                   ),
                 ),

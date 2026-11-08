@@ -108,7 +108,7 @@ class _VoicePickerState extends State<_VoicePicker> {
           decoration: InputDecoration(
             isDense: true,
             hintText: 'Search ${widget.voices.length} voices',
-            hintStyle: sans(kMobile ? 14 : 12.5, color: AppColors.fg4),
+            hintStyle: sans(kMobile ? 14 : 13, color: AppColors.fg4),
             filled: true,
             fillColor: kMobile ? AppColors.surface2 : AppColors.surface1,
             prefixIcon: Padding(
@@ -203,7 +203,7 @@ class _VoicePickerState extends State<_VoicePicker> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Text(label,
-                style: sans(12.5, color: on ? AppColors.bg : AppColors.fg3)),
+                style: sans(13, color: on ? AppColors.bg : AppColors.fg3)),
           ),
         ),
       );

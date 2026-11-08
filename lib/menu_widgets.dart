@@ -44,7 +44,7 @@ PopupMenuItem<T> appMenuItem<T>({
               overflow: TextOverflow.ellipsis,
               style: (kMobile
                   ? sans(16, color: selected ? AppColors.accent : color)
-                  : sans(12.5, color: color))),
+                  : sans(13, color: color))),
         ),
         if (detail != null)
           Text(detail,
@@ -150,7 +150,7 @@ PopupMenuItem<T> appMenuRow<T>({
                 Text(description,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(11.5, color: AppColors.fg4)),
+                    style: sans(12, color: AppColors.fg4)),
               ],
             ],
           ),

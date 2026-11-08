@@ -651,7 +651,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
             suffix: GestureDetector(
               onTap: () => setState(() => _showKey = !_showKey),
               child: Text(_showKey ? 'Hide' : 'Show',
-                  style: sans(11.5, color: AppColors.fg3)),
+                  style: sans(12, color: AppColors.fg3)),
             ),
           ),
         ),
@@ -701,7 +701,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                     ProviderLogo(_provider, size: 12),
                     const SizedBox(width: 6),
                     Text(_providerLabel(_provider),
-                        style: sans(12.5, color: AppColors.fg3)),
+                        style: sans(13, color: AppColors.fg3)),
                   ])
                 : providerPicker(),
           ),
@@ -763,7 +763,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                     _reasoning?['control'] == 'model'
                         ? 'Set by the model'
                         : 'Not adjustable',
-                    style: sans(12.5, color: AppColors.fg3)),
+                    style: sans(13, color: AppColors.fg3)),
           ),
         ],
       ),
@@ -808,7 +808,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
               width: 40,
               child: Text('$compact%',
                   textAlign: TextAlign.right,
-                  style: sans(12.5, color: AppColors.fg2)),
+                  style: sans(13, color: AppColors.fg2)),
             ),
           ]),
         ),
@@ -925,7 +925,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                           ].join(' · '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(12.5, color: AppColors.fg4)),
+                          style: sans(13, color: AppColors.fg4)),
                     ]),
               ),
               if (_isEdit && widget.onDelete != null)
@@ -948,7 +948,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
             suffix: GestureDetector(
               onTap: () => setState(() => _showKey = !_showKey),
               child: Text(_showKey ? 'Hide' : 'Show',
-                  style: sans(11.5, color: AppColors.fg3)),
+                  style: sans(12, color: AppColors.fg3)),
             ),
           ),
         ),
@@ -990,7 +990,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                     ProviderLogo(_provider, size: 12),
                     const SizedBox(width: 6),
                     Text(_providerLabel(_provider),
-                        style: sans(kMobile ? 15 : 12.5, color: AppColors.fg3)),
+                        style: sans(kMobile ? 15 : 13, color: AppColors.fg3)),
                   ])
                 : providerPicker(),
           ),
@@ -1052,7 +1052,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                     _reasoning?['control'] == 'model'
                         ? 'Set by the model'
                         : 'Not adjustable',
-                    style: sans(kMobile ? 15 : 12.5, color: AppColors.fg3)),
+                    style: sans(kMobile ? 15 : 13, color: AppColors.fg3)),
           ),
         ]),
         if (_modelHint != null)
@@ -1102,7 +1102,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                 width: 40,
                 child: Text('$compact%',
                     textAlign: TextAlign.right,
-                    style: sans(kMobile ? 15 : 12.5, color: AppColors.fg2)),
+                    style: sans(kMobile ? 15 : 13, color: AppColors.fg2)),
               ),
             ]),
           ),

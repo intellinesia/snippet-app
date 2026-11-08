@@ -1321,7 +1321,7 @@ class Motion {
   /// Fast start, long soft settle — the iOS sheet curve.
   static const enter = Cubic(0.32, 0.72, 0, 1);
 
-  static const exit = Curves.easeInCubic;
+  static const exit = Cubic(0.23, 1, 0.32, 1);
 
   static const move = Curves.easeInOut;
 }
@@ -1390,9 +1390,8 @@ const double kComposerGutter = 16;
 // ---------------------------------------------------------------------------
 // Typography — Geist for UI, Geist Mono for code.
 //
-// The ceiling is 500. `600` exists as `strong` only for the single large page
-// title; everything else is 400 with 500 reserved for controls and row titles,
-// so weight reads as meaning rather than decoration.
+// Three weights: 400 for prose, 500 for row titles and controls, 600 for page
+// and section titles only.
 // ---------------------------------------------------------------------------
 
 /// Role weights — prefer these over raw `FontWeight.wNNN` so the ramp stays
@@ -1404,17 +1403,14 @@ class W {
   static const strong = FontWeight.w600;
 }
 
-/// Phones keep every face at its regular weight: hierarchy comes from size,
-/// ink and space rather than from heavier strokes.
+// Geist ships 400 to 600 only; 700 would be synthesised.
 FontWeight weightFor(FontWeight w) =>
-    kMobile && w.value >= FontWeight.w600.value
-        ? FontWeight.w500
-        : FontWeight.w400;
+    w.value > FontWeight.w600.value ? FontWeight.w600 : w;
 
-/// Geist is drawn with comfortable default spacing, so body text keeps it and
-/// only larger sizes tighten, up to -2% from 28px.
+/// Text keeps the face's own spacing; only titles from 20px tighten, to -2%
+/// at 28px.
 double _tracking(double size) =>
-    size <= 13 ? 0 : size * -0.02 * ((size - 13) / 15).clamp(0.0, 1.0);
+    size < 20 ? 0 : size * -0.02 * ((size - 18) / 10).clamp(0.0, 1.0);
 
 TextStyle sans(double size,
         {FontWeight weight = W.body,
@@ -1488,8 +1484,8 @@ TextStyle codeMono(double size,
 /// Five call sites had drifted into three different treatments (no spacing,
 /// `0.4`, `0.5`) with three different inks; this is the single replacement.
 TextStyle caps(double size,
-        {Color? color, double spacing = 0.5, FontWeight weight = W.label}) =>
-    sans(size, weight: weight, color: color, spacing: spacing);
+        {Color? color, double? spacing, FontWeight weight = W.label}) =>
+    sans(size, weight: weight, color: color, spacing: spacing ?? size * 0.06);
 
 String get kSansFamily => ThemeManager.instance.currentFont.family;
 const kSerifFamily = 'Literata';
@@ -1512,26 +1508,14 @@ String get monoFamily => ThemeManager.instance.currentMonoFont.family;
 /// Type roles. Screens use these, not raw sizes.
 class TS {
   static TextStyle pageTitle([Color? c]) => kMobile
-      ? sans(28,
-          weight: FontWeight.w700,
-          height: 34 / 28,
-          spacing: -0.8,
-          color: c ?? AppColors.fg1)
-      : sans(18, weight: W.strong, height: 24 / 18, color: c ?? AppColors.fg1);
+      ? sans(28, weight: W.strong, height: 34 / 28, color: c ?? AppColors.fg1)
+      : sans(20, weight: W.strong, height: 26 / 20, color: c ?? AppColors.fg1);
   static TextStyle sectionTitle([Color? c]) => kMobile
-      ? sans(18,
-          weight: W.strong,
-          height: 24 / 18,
-          spacing: -0.3,
-          color: c ?? AppColors.fg1)
-      : sans(15, weight: W.strong, height: 20 / 15, color: c ?? AppColors.fg1);
+      ? sans(20, weight: W.strong, height: 26 / 20, color: c ?? AppColors.fg1)
+      : sans(16, weight: W.strong, height: 22 / 16, color: c ?? AppColors.fg1);
   static TextStyle rowTitle([Color? c]) => kMobile
-      ? sans(16,
-          weight: W.strong,
-          height: 21 / 16,
-          spacing: -0.2,
-          color: c ?? AppColors.fg1)
-      : sans(13, weight: W.label, height: 18 / 13, color: c ?? AppColors.fg1);
+      ? sans(16, weight: W.title, height: 22 / 16, color: c ?? AppColors.fg1)
+      : sans(13, weight: W.title, height: 18 / 13, color: c ?? AppColors.fg1);
   static TextStyle body([Color? c]) => sans(kMobile ? 16 : 14,
       height: kMobile ? 24 / 16 : 22 / 14, color: c ?? AppColors.fg2);
   static TextStyle ui([Color? c]) => kMobile
@@ -1540,19 +1524,22 @@ class TS {
   static TextStyle label([Color? c]) => kMobile
       ? sans(13, weight: W.label, height: 18 / 13, color: c ?? AppColors.fg2)
       : sans(12, weight: W.label, height: 16 / 12, color: c ?? AppColors.fg2);
-  static TextStyle meta([Color? c]) =>
-      sans(12, height: 16 / 12, color: c ?? AppColors.fg3, tabular: true);
-  static TextStyle caption([Color? c]) =>
-      sans(11, height: 14 / 11, color: c ?? AppColors.fg3);
-  static TextStyle overline([Color? c]) =>
-      caps(11, color: c ?? AppColors.fg3).copyWith(height: 14 / 11);
+  static TextStyle meta([Color? c]) => kMobile
+      ? sans(13, height: 18 / 13, color: c ?? AppColors.fg3, tabular: true)
+      : sans(12, height: 16 / 12, color: c ?? AppColors.fg3, tabular: true);
+  static TextStyle caption([Color? c]) => kMobile
+      ? sans(12, height: 16 / 12, color: c ?? AppColors.fg3)
+      : sans(11, height: 14 / 11, color: c ?? AppColors.fg3);
+  static TextStyle overline([Color? c]) => kMobile
+      ? caps(12, color: c ?? AppColors.fg3).copyWith(height: 16 / 12)
+      : caps(11, color: c ?? AppColors.fg3).copyWith(height: 14 / 11);
 
   /// The agent's prose: the body sans a step up, with reading line height.
   static TextStyle reading([Color? c]) => kMobile
       ? sans(16, height: 26 / 16, color: c ?? AppColors.fg1)
       : sans(14, height: 22 / 14, color: c ?? AppColors.fg1);
-  static TextStyle code([Color? c]) =>
-      codeMono(13, height: 20 / 13, color: c ?? AppColors.fg2);
+  static TextStyle code([Color? c]) => codeMono(kMobile ? 13 : 12,
+      height: kMobile ? 20 / 13 : 18 / 12, color: c ?? AppColors.fg2);
   static TextStyle codeSmall([Color? c]) =>
       codeMono(12, height: 16 / 12, color: c ?? AppColors.fg3);
 }

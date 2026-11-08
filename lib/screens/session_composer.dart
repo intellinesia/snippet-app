@@ -817,7 +817,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                                   : matches[i].displayName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: sans(13.5, color: AppColors.fg1)),
+                              style: sans(13, color: AppColors.fg1)),
                         ),
                         if (matches[i].role.trim().isNotEmpty) ...[
                           const SizedBox(width: 8),
@@ -904,7 +904,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                                     maxLines: 1,
                                     softWrap: false,
                                     overflow: TextOverflow.ellipsis,
-                                    style: sans(12.5, color: AppColors.fg2)),
+                                    style: sans(13, color: AppColors.fg2)),
                               ),
                             )
                           : const SizedBox(width: 0, height: 16),

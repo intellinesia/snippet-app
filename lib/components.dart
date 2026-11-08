@@ -464,22 +464,14 @@ class ListRow extends StatelessWidget {
                         Text(title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: kMobile
-                                ? sans(15,
-                                    weight: W.label,
-                                    height: 20 / 15,
-                                    color: AppColors.fg1)
-                                : TS.rowTitle(AppColors.fg1)),
+                            style: TS.rowTitle()),
                     if (subtitle != null && subtitle!.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: S.s2),
                         child: Text(subtitle!,
                             maxLines: kMobile ? 2 : 1,
                             overflow: TextOverflow.ellipsis,
-                            style: kMobile
-                                ? sans(13,
-                                    height: 18 / 13, color: AppColors.fg3)
-                                : TS.meta()),
+                            style: TS.meta()),
                       ),
                   ],
                 ),

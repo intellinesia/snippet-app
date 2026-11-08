@@ -411,7 +411,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               const WorkingMochi(size: 15),
               Text('${s.lanes.where((l) => l.running).length}',
-                  style: sans(10.5,
+                  style: sans(11,
                       weight: W.label, height: 1.1, color: AppColors.fg2)),
             ]),
           ),
@@ -1166,7 +1166,7 @@ class _DockTabState extends State<_DockTab> {
                   size: 12, color: on ? AppColors.fg2 : AppColors.fg4),
               const SizedBox(width: 6),
               Text(widget.title,
-                  style: sans(12.5, weight: on ? W.label : W.body, color: fg)),
+                  style: sans(13, weight: on ? W.label : W.body, color: fg)),
               if (!widget.alive) ...[
                 const SizedBox(width: 6),
                 Text('exited', style: sans(11, color: AppColors.fg4)),

@@ -206,12 +206,12 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
           Expanded(
             child: TextField(
               controller: _search,
-              style: sans(12.5, color: AppColors.fg1),
+              style: sans(13, color: AppColors.fg1),
               decoration: InputDecoration(
                 isCollapsed: true,
                 border: InputBorder.none,
                 hintText: 'Search memory',
-                hintStyle: sans(12.5, color: AppColors.fg4),
+                hintStyle: sans(13, color: AppColors.fg4),
               ),
             ),
           ),
@@ -244,7 +244,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
                         child: Text(e.file!,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: mono(11.5, color: AppColors.fg2)),
+                            style: mono(12, color: AppColors.fg2)),
                       )
                     else
                       const Spacer(),
@@ -257,7 +257,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
               Text(e.text,
                   maxLines: wide ? 3 : 6,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(12.5, height: 1.5, color: AppColors.fg3)),
+                  style: sans(13, height: 1.5, color: AppColors.fg3)),
             ]),
           ),
         ),
@@ -402,7 +402,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
                     c.isConsolidation
                         ? c.subject.substring('Consolidate:'.length).trim()
                         : c.subject,
-                    style: sans(12.5, height: 1.45, color: AppColors.fg2)),
+                    style: sans(13, height: 1.45, color: AppColors.fg2)),
               ),
               const SizedBox(width: 8),
               Text(relativeTime(c.date),
@@ -478,7 +478,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
                                   ? 'Nothing remembered here yet. Agents save decisions and progress as they work.'
                                   : 'No entries match.',
                               textAlign: TextAlign.center,
-                              style: sans(12.5,
+                              style: sans(13,
                                   height: 1.5, color: AppColors.fg4)),
                         )
                       : ListView(
@@ -492,7 +492,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
             child: Text('Saved by agents while they work.',
-                style: sans(11.5, color: AppColors.fg4)),
+                style: sans(12, color: AppColors.fg4)),
           ),
       ]);
       if (!wide) {
@@ -511,7 +511,7 @@ class _DeskMemoryViewState extends State<DeskMemoryView> {
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
                   icon: AppIcon('chevron-left', size: 14, color: AppColors.fg3),
-                  label: Text('Memory', style: sans(12.5, color: AppColors.fg3)),
+                  label: Text('Memory', style: sans(13, color: AppColors.fg3)),
                 ),
               ),
             ),

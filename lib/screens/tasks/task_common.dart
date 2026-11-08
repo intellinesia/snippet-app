@@ -183,7 +183,7 @@ class TaskNoteLines extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (final l in lines)
-            Text(l, style: sans(12.5, color: colour ?? AppColors.fg4)),
+            Text(l, style: sans(13, color: colour ?? AppColors.fg4)),
         ],
       ),
     );

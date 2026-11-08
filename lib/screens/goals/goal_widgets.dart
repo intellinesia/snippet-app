@@ -63,7 +63,7 @@ class GoalRow extends StatelessWidget {
               child: Text(goal.title.isEmpty ? '(untitled goal)' : goal.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(kMobile ? 14.5 : 13,
+                  style: sans(kMobile ? 14 : 13,
                       weight: W.label, color: AppColors.fg1)),
             ),
             if (goal.attention != null) ...[
@@ -79,12 +79,12 @@ class GoalRow extends StatelessWidget {
           const SizedBox(height: 6),
           Row(children: [
             Text('${p.done} of ${p.total} slices',
-                style: sans(11.5, color: AppColors.fg3, tabular: true)),
+                style: sans(12, color: AppColors.fg3, tabular: true)),
             const Spacer(),
             AppIcon('check', size: 11, color: AppColors.fg4),
             const SizedBox(width: 4),
             Text('${goal.evidence.done} of ${goal.evidence.total} evidenced',
-                style: sans(11.5, color: AppColors.fg3, tabular: true)),
+                style: sans(12, color: AppColors.fg3, tabular: true)),
           ]),
         ]),
       ),

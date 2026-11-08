@@ -328,17 +328,13 @@ class NavBackRow extends StatelessWidget {
     }
     if (kMobile) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 16, 4),
+        padding: const EdgeInsets.fromLTRB(20, 14, 16, 12),
         child: Row(children: [
           Expanded(
             child: Text(title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: sans(22,
-                    weight: FontWeight.w500,
-                    height: 1.15,
-                    spacing: -0.4,
-                    color: AppColors.fg1)),
+                style: TS.pageTitle()),
           ),
         ]),
       );

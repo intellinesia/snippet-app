@@ -135,7 +135,7 @@ List<Widget> buildShellRailTools({
                     Row(children: [
                       Expanded(
                           child: Text('Context',
-                              style: sans(12.5, color: AppColors.fg2))),
+                              style: sans(13, color: AppColors.fg2))),
                       Text('${k(used)} / ${k(win)}',
                           style: mono(11, color: AppColors.fg4)),
                     ]),
@@ -179,7 +179,7 @@ List<Widget> buildShellRailTools({
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       alignment: Alignment.center,
                       child: Text('Compact now',
-                          style: sans(12.5, color: AppColors.fg1)),
+                          style: sans(13, color: AppColors.fg1)),
                     ),
                   ),
                 ),

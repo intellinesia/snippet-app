@@ -556,4 +556,4 @@ class _Messages extends StatelessWidget {
 }
 
 TextStyle _label(Color c) =>
-    kMobile ? sans(12.5, color: c) : mono(10, color: c);
+    kMobile ? sans(13, color: c) : mono(10, color: c);

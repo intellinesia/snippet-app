@@ -162,10 +162,10 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   Widget _metric(String label, GoalProgress p, String unit, {Color? colour}) =>
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Text(label, style: sans(12.5, color: AppColors.fg3)),
+          Text(label, style: sans(13, color: AppColors.fg3)),
           const Spacer(),
           Text('${p.done} of ${p.total} $unit',
-              style: sans(12.5, color: AppColors.fg2, tabular: true)),
+              style: sans(13, color: AppColors.fg2, tabular: true)),
         ]),
         const SizedBox(height: 6),
         GoalProgressBar(p, colour: colour),
@@ -205,7 +205,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(c.criterion,
-                  style: sans(13.5,
+                  style: sans(13,
                           height: 1.4,
                           color: gone
                               ? AppColors.fg4
@@ -247,7 +247,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         child: Text.rich(TextSpan(children: [
           TextSpan(text: '$k  ', style: sans(12, color: AppColors.fg4)),
           TextSpan(
-              text: v, style: sans(12.5, height: 1.45, color: AppColors.fg2)),
+              text: v, style: sans(13, height: 1.45, color: AppColors.fg2)),
         ])),
       );
 
@@ -291,7 +291,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(s.title.isEmpty ? (t?.title ?? '') : s.title,
-                  style: sans(13.5, height: 1.4, color: AppColors.fg1)),
+                  style: sans(13, height: 1.4, color: AppColors.fg1)),
               const SizedBox(height: 3),
               Row(children: [
                 Container(
@@ -353,7 +353,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(b.title,
-                  style: sans(13.5, height: 1.4, color: AppColors.fg1)),
+                  style: sans(13, height: 1.4, color: AppColors.fg1)),
               if (detail.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 2),

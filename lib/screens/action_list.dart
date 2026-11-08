@@ -128,7 +128,7 @@ class ActionRow extends StatelessWidget {
                     children: [
                       Text(label,
                           style: kMobile
-                              ? sans(15.5,
+                              ? sans(15,
                                   height: 20 / 15.5,
                                   color: danger ? AppColors.danger : AppColors.fg1)
                               : sans(13,

@@ -482,7 +482,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                                     padding: const EdgeInsets.fromLTRB(
                                         10, 14, 10, 4),
                                     child: Text(_navGroups[page]!,
-                                        style: sans(11.5,
+                                        style: sans(12,
                                             weight: W.label,
                                             color: AppColors.fg4)),
                                   ),
@@ -880,7 +880,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                 child: Text(label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(13.5,
+                    style: sans(13,
                         color: selected ? AppColors.fg1 : AppColors.fg2)),
               ),
             ]),
@@ -1145,7 +1145,7 @@ class SettingsPanelState extends State<SettingsPanel> {
           SettingsRow(
             label: 'snippet serve --enable',
             labelWidget: SelectableText('snippet serve --enable',
-                style: mono(12.5, color: AppColors.fg1)),
+                style: mono(13, color: AppColors.fg1)),
             trailing: IconBtn('copy',
                 size: 28, iconSize: 14, tooltip: 'Copy command', onTap: () {
               Clipboard.setData(const ClipboardData(text: 'snippet serve --enable'));
@@ -1291,7 +1291,7 @@ class SettingsPanelState extends State<SettingsPanel> {
             SettingsRow(
               label: 'snippet serve --enable',
               labelWidget: SelectableText('snippet serve --enable',
-                  style: mono(12.5, color: AppColors.fg1)),
+                  style: mono(13, color: AppColors.fg1)),
               trailing: IconBtn('copy',
                   size: 26, iconSize: 13, tooltip: 'Copy command', onTap: () {
                 Clipboard.setData(const ClipboardData(text: 'snippet serve --enable'));
@@ -1778,7 +1778,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                                       child: Text(
                                         '~/',
                                         style: mono(
-                                          10.5,
+                                          11,
                                           weight: W.label,
                                           color: preset.fg2,
                                           height: 1,
@@ -1992,7 +1992,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontFamily: font.family,
-                                    fontSize: 11.5,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w400,
                                     color: AppColors.fg3,
                                     height: 1.1,
@@ -2125,7 +2125,7 @@ class _AppearancePreviewCard extends StatelessWidget {
             Expanded(
               child: Text(
                 '${tm.baseTheme.label} · ${tm.currentFont.label}',
-                style: sans(13.5, weight: W.strong, color: AppColors.fg1),
+                style: sans(13, weight: W.strong, color: AppColors.fg1),
               ),
             ),
             Container(
@@ -2381,7 +2381,7 @@ Widget _fontSampleChip(String family) {
       'Aa',
       style: TextStyle(
         fontFamily: family,
-        fontSize: 11.5,
+        fontSize: 12,
         fontWeight: FontWeight.w600,
         color: AppColors.fg1,
         height: 1,
@@ -2487,7 +2487,7 @@ class MonoFontPickerRow extends StatelessWidget {
             leading: AppIcon('code', size: 19, color: AppColors.fg3),
             onTap: () => pick(context, anchor),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(current.label, style: mono(12.5, color: AppColors.fg3)),
+              Text(current.label, style: mono(13, color: AppColors.fg3)),
               const SizedBox(width: S.s6),
               AppIcon('chevron-down', size: 15, color: AppColors.fg4),
             ]),

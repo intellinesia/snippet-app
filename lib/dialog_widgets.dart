@@ -427,7 +427,7 @@ Future<String?> _showInlinePrompt(BuildContext context,
             Text(title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(12.5, color: AppColors.fg3)),
+                style: sans(13, color: AppColors.fg3)),
             const SizedBox(height: 8),
             _InlinePromptField(
                 initial: initial,

@@ -257,7 +257,7 @@ Widget toolDetailView(BuildContext context,
 double get _bodySize => kMobile ? 13.5 : 13;
 
 TextStyle _code([Color? color]) =>
-    codeMono(kMobile ? 12.5 : 12, height: 1.45, color: color ?? AppColors.fg2);
+    codeMono(kMobile ? 13 : 12, height: 1.45, color: color ?? AppColors.fg2);
 
 Widget _wrap(List<Widget> rows) =>
     Column(crossAxisAlignment: CrossAxisAlignment.start, children: rows);
@@ -405,20 +405,20 @@ Widget _fileLabel(String name, int adds, int dels, {String note = ''}) =>
         child: Text(name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: codeMono(kMobile ? 12 : 11.5, color: AppColors.fg3)),
+            style: codeMono(kMobile ? 12 : 12, color: AppColors.fg3)),
       ),
       if (adds > 0) ...[
         const SizedBox(width: S.s8),
-        Text('+$adds', style: codeMono(kMobile ? 12 : 11.5, color: AppColors.ok)),
+        Text('+$adds', style: codeMono(kMobile ? 12 : 12, color: AppColors.ok)),
       ],
       if (dels > 0) ...[
         const SizedBox(width: S.s6),
         Text('−$dels',
-            style: codeMono(kMobile ? 12 : 11.5, color: AppColors.danger)),
+            style: codeMono(kMobile ? 12 : 12, color: AppColors.danger)),
       ],
       if (note.isNotEmpty) ...[
         const SizedBox(width: S.s8),
-        Text(note, style: codeMono(kMobile ? 12 : 11.5, color: AppColors.fg4)),
+        Text(note, style: codeMono(kMobile ? 12 : 12, color: AppColors.fg4)),
       ],
     ]);
 
@@ -592,7 +592,7 @@ List<Widget> _readFileView(Map? a, Map? d) {
     if (all.length > cap) ...[
       const SizedBox(height: S.s6),
       Text('Showing the first $cap of ${all.length} lines',
-          style: sans(12.5, color: AppColors.fg3)),
+          style: sans(13, color: AppColors.fg3)),
     ],
   ];
 }
@@ -642,7 +642,7 @@ List<Widget> _searchContentView(Map? a, Map? d) {
             Text(m.line.isEmpty ? m.path : '${m.path}:${m.line}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: codeMono(kMobile ? 12 : 11.5, color: AppColors.fg3)),
+                style: codeMono(kMobile ? 12 : 12, color: AppColors.fg3)),
           if (m.text.isNotEmpty) _highlightedLine(m.text, query),
         ]),
       ),
@@ -702,7 +702,7 @@ class _WebResult extends StatelessWidget {
           child: Text(meta.join(' · '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: codeMono(kMobile ? 12 : 11.5, color: AppColors.fg3)),
+              style: codeMono(kMobile ? 12 : 12, color: AppColors.fg3)),
         ),
       if (snippet.isNotEmpty)
         Padding(

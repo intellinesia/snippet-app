@@ -573,7 +573,7 @@ class _FilterChip extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: kMobile ? 12 : 8),
             alignment: Alignment.center,
             child: Text(label,
-                style: sans(kMobile ? 13.5 : 12,
+                style: sans(kMobile ? 13 : 12,
                     weight: W.label,
                     color: selected ? AppColors.fg1 : AppColors.fg3)),
           ),

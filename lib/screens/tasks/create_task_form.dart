@@ -190,7 +190,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                         child: Text(_sessionLabel ?? 'Choose a session',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: sans(12.5,
+                            style: sans(13,
                                 color: _sessionLabel == null
                                     ? AppColors.fg4
                                     : AppColors.fg1)),

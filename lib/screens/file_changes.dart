@@ -92,12 +92,12 @@ class FileChangesScreen extends StatelessWidget {
                 Text(name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(15.5, color: AppColors.fg1)),
+                    style: sans(15, color: AppColors.fg1)),
                 if (dir.isNotEmpty)
                   Text(dir,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(12.5, color: AppColors.fg4)),
+                      style: sans(13, color: AppColors.fg4)),
               ],
             ),
           ),
@@ -111,9 +111,9 @@ class FileChangesScreen extends StatelessWidget {
 
   Widget _delta(int add, int del) =>
       Row(mainAxisSize: MainAxisSize.min, children: [
-        Text('+$add', style: mono(12.5, color: AppColors.ok)),
+        Text('+$add', style: mono(13, color: AppColors.ok)),
         const SizedBox(width: 6),
-        Text('\u2212$del', style: mono(12.5, color: AppColors.danger)),
+        Text('\u2212$del', style: mono(13, color: AppColors.danger)),
       ]);
 
   @override

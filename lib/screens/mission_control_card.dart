@@ -111,7 +111,7 @@ class _MissionControlCardState extends State<MissionControlCard> {
                     child: SwapText(_statusLine(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(11.5, color: AppColors.fg4)),
+                        style: sans(12, color: AppColors.fg4)),
                   ),
                 ),
               ]),

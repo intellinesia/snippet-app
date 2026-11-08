@@ -243,7 +243,7 @@ class NotificationStack extends StatelessWidget {
                 borderRadius: BorderRadius.circular(R.pill),
               ),
               child: Text('${items.length}',
-                  style: sans(10.5, color: AppColors.fg2)),
+                  style: sans(11, color: AppColors.fg2)),
             ),
             const Spacer(),
             _QuietButton('Clear all', onClearAll),

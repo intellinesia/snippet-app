@@ -260,7 +260,7 @@ class _CheckpointTimelineState extends State<_CheckpointTimeline> {
               padding: const EdgeInsets.symmetric(horizontal: 10),
               alignment: Alignment.center,
               child: Text(label,
-                  style: sans(11.5,
+                  style: sans(12,
                       color: filled ? AppColors.fg2 : AppColors.fg3)),
             ),
           ),
@@ -275,7 +275,7 @@ class _CheckpointTimelineState extends State<_CheckpointTimeline> {
       children: [
         _paneLabel('Checkpoints · ${cps.length}',
             trailing: Text('Files roll back too',
-                style: sans(11.5, color: AppColors.fg4))),
+                style: sans(12, color: AppColors.fg4))),
         Stack(children: [
           Positioned(
             left: 13,
@@ -329,7 +329,7 @@ class _CheckpointTimelineState extends State<_CheckpointTimeline> {
                       : c.label.trim().replaceAll(RegExp(r'\s+'), ' '),
                   maxLines: open ? 4 : 2,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(12.5,
+                  style: sans(13,
                       height: 1.45,
                       color: open || latest ? AppColors.fg1 : AppColors.fg2)),
               const SizedBox(height: 4),
@@ -338,7 +338,7 @@ class _CheckpointTimelineState extends State<_CheckpointTimeline> {
                   child: Text(formatCheckpointDate(c.createdAt),
                       style: sans(11, color: AppColors.fg4)),
                 ),
-                Text(_stat(c.id), style: mono(10.5, color: AppColors.fg3)),
+                Text(_stat(c.id), style: mono(11, color: AppColors.fg3)),
               ]),
               if (open) ...[
                 const SizedBox(height: 8),
@@ -466,14 +466,14 @@ class _DeskLanesState extends State<_DeskLanes> {
                       overflow: TextOverflow.ellipsis,
                       style: sans(13, color: AppColors.fg1)),
                 ),
-                Text(status, style: sans(11.5, color: color)),
+                Text(status, style: sans(12, color: color)),
               ]),
               if (task.isNotEmpty) ...[
                 const SizedBox(height: 7),
                 Text(task,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(12.5, height: 1.45, color: AppColors.fg3)),
+                    style: sans(13, height: 1.45, color: AppColors.fg3)),
               ],
               const SizedBox(height: 8),
               Row(children: [
@@ -495,7 +495,7 @@ class _DeskLanesState extends State<_DeskLanes> {
                       if ((l.profile ?? '').isNotEmpty) l.profile!,
                       _elapsed(l.startedAt),
                     ].where((e) => e.isNotEmpty).join(' · '),
-                    style: mono(10.5, color: AppColors.fg4)),
+                    style: mono(11, color: AppColors.fg4)),
               ]),
             ]),
           ),
@@ -519,7 +519,7 @@ class _DeskLanesState extends State<_DeskLanes> {
             padding: const EdgeInsets.fromLTRB(2, 0, 2, 4),
             child: Text(
                 'Parallel work this session hands off shows up here.',
-                style: sans(12.5, height: 1.5, color: AppColors.fg4)),
+                style: sans(13, height: 1.5, color: AppColors.fg4)),
           )
         else
           for (final l in lanes) _lane(l),
@@ -532,15 +532,15 @@ class _DeskLanesState extends State<_DeskLanes> {
                 SizedBox(
                   width: 46,
                   child: Text(_at(j.nextRunAt),
-                      style: mono(11.5, color: AppColors.accent)),
+                      style: mono(12, color: AppColors.accent)),
                 ),
                 Expanded(
                   child: Text(j.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(12.5, color: AppColors.fg2)),
+                      style: sans(13, color: AppColors.fg2)),
                 ),
-                Text(j.scheduleLabel, style: sans(11.5, color: AppColors.fg4)),
+                Text(j.scheduleLabel, style: sans(12, color: AppColors.fg4)),
               ]),
             ),
         ],

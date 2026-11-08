@@ -181,7 +181,7 @@ class _UsageScreenState extends State<UsageScreen> {
             padding: const EdgeInsets.fromLTRB(4, 2, 4, 0),
             child: Text(
               'Every model call is recorded against the provider and model that served it. Input includes cached tokens; rate limits come from each provider\'s own reports.',
-              style: sans(12.5, height: 1.5, color: AppColors.fg4),
+              style: sans(13, height: 1.5, color: AppColors.fg4),
             ),
           ),
         ],
@@ -208,7 +208,7 @@ class _UsageScreenState extends State<UsageScreen> {
             padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
             child: Text(
               'Every model call is recorded against the provider and model that served it. Input includes cached tokens; rate limits come from each provider\'s own reports.',
-              style: sans(12.5, height: 1.5, color: AppColors.fg4),
+              style: sans(13, height: 1.5, color: AppColors.fg4),
             ),
           ),
         ],
@@ -283,7 +283,7 @@ class _ProviderSection extends StatelessWidget {
                   'Subscription limits aren\'t exposed by this provider\'s API.',
                 null => 'Rate limits appear after the next turn.',
               },
-              style: sans(kMobile ? 13 : 12.5, color: AppColors.fg4),
+              style: sans(kMobile ? 13 : 13, color: AppColors.fg4),
             ),
           ),
         if (hasTokens)
@@ -313,7 +313,7 @@ class _ProviderSection extends StatelessWidget {
             ),
             trailing: Text(
               '${fmtSi(m.totalTokens)} · ${m.calls}×',
-              style: mono(kMobile ? 12.5 : 11.5, color: AppColors.fg4),
+              style: mono(kMobile ? 13 : 12, color: AppColors.fg4),
             ),
           ),
       ],
@@ -330,7 +330,7 @@ class _Metric extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: sans(11.5, color: AppColors.fg4)),
+          Text(label, style: sans(12, color: AppColors.fg4)),
           const SizedBox(height: 3),
           Text(
             value,

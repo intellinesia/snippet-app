@@ -348,7 +348,7 @@ class TaskRow extends StatelessWidget {
                         Text(detail,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: sans(11.5,
+                            style: sans(12,
                                 height: 15 / 11.5, color: AppColors.fg4)),
                       ],
                     ],

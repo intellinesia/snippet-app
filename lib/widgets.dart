@@ -375,7 +375,7 @@ MarkdownStyleSheet agentMarkdownStyle(BuildContext context) {
     code: kMobile
         ? TS
             .code(Color.lerp(AppColors.fg1, AppColors.run, 0.3))
-            .copyWith(fontSize: 13.5, backgroundColor: AppColors.surface2)
+            .copyWith(fontSize: 13, backgroundColor: AppColors.surface2)
         : TS
             .code(AppColors.fg1)
             .copyWith(fontSize: 13, backgroundColor: AppColors.surface1),
@@ -1379,7 +1379,7 @@ class _AudioTranscriptCardState extends State<AudioTranscriptCard> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: kMobile
-                          ? sans(12.5, height: 18 / 12.5, color: AppColors.fg2)
+                          ? sans(13, height: 18 / 12.5, color: AppColors.fg2)
                           : sans(12, height: 1.4, color: AppColors.fg2),
                     ),
                   ),
@@ -1717,7 +1717,7 @@ class NoteLine extends StatelessWidget {
             ? Text(text,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: sans(kMobile ? 13 : 12.5,
+                style: sans(kMobile ? 13 : 13,
                     height: 1.4, color: AppColors.fg3))
             : Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1732,7 +1732,7 @@ class NoteLine extends StatelessWidget {
                     child: Text(text,
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(kMobile ? 13 : 12.5,
+                        style: sans(kMobile ? 13 : 13,
                             height: 1.4, color: AppColors.fg3)),
                   ),
                 ],
@@ -1777,7 +1777,7 @@ class NoteLine extends StatelessWidget {
                     ]),
                     minLines: 1,
                     maxLines: 5,
-                    style: sans(kMobile ? 13 : 12.5,
+                    style: sans(kMobile ? 13 : 13,
                         height: 1.4, color: AppColors.fg2)),
               ),
               if (count > 1) ...[
@@ -1882,7 +1882,7 @@ class SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s2),
-        child: Text(text, style: TS.label(AppColors.fg2)),
+        child: Text(text.toUpperCase(), style: TS.overline()),
       );
 }
 

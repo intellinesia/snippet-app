@@ -85,3 +85,8 @@ test/failures/
 key.properties
 google-services.json
 GoogleService-Info.plist
+
+# Local render review artifacts, never committed
+test/preview/goldens/
+test/**/failures/
+test/**/goldens*/

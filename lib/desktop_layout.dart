@@ -84,7 +84,7 @@ class DetailEmpty extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Text(message, style: sans(13.5, color: AppColors.fg3)),
+      child: Text(message, style: sans(13, color: AppColors.fg3)),
     );
   }
 }
@@ -143,14 +143,13 @@ class SettingsHeader extends StatelessWidget {
               child: Text(title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(18,
-                      weight: W.strong, spacing: -0.2, color: AppColors.fg1)),
+                  style: TS.pageTitle()),
             ),
             for (final a in actions) ...[const SizedBox(width: S.s8), a],
           ]),
           if (subtitle != null && subtitle!.isNotEmpty) ...[
             const SizedBox(height: S.s4),
-            Text(subtitle!, style: sans(13, color: AppColors.fg3)),
+            Text(subtitle!, style: TS.ui(AppColors.fg3)),
           ],
         ],
       ),

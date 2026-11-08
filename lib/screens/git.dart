@@ -638,12 +638,12 @@ class _GitScreenState extends State<GitScreen> {
                   Text(fileName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(15.5, color: AppColors.fg1)),
+                      style: sans(15, color: AppColors.fg1)),
                   if (dir.isNotEmpty)
                     Text(dir.substring(0, dir.length - 1),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(12.5, color: AppColors.fg4)),
+                        style: sans(13, color: AppColors.fg4)),
                 ],
               ),
             ),
@@ -695,7 +695,7 @@ class _GitScreenState extends State<GitScreen> {
                         : TextSpan(children: [
                             TextSpan(
                                 text: fileName,
-                                style: sans(13.5, color: AppColors.fg1)),
+                                style: sans(13, color: AppColors.fg1)),
                             if (dir.isNotEmpty)
                               TextSpan(
                                   text: '  ${dir.substring(0, dir.length - 1)}',
@@ -927,7 +927,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
               label: Text(b,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: mono(12.5,
+                  style: mono(13,
                       color: b == widget.current
                           ? AppColors.accent
                           : AppColors.fg1)),
@@ -948,7 +948,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                 ]),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: mono(12.5, color: AppColors.fg1),
+                style: mono(13, color: AppColors.fg1),
               ),
             ),
         ],
@@ -1349,7 +1349,7 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
             width: _gutterWidth,
             child: Text(n,
                 textAlign: TextAlign.right,
-                style: codeMono(10.5, height: 1.5, color: gutterFg)),
+                style: codeMono(11, height: 1.5, color: gutterFg)),
           ),
           SizedBox(
             width: 16,

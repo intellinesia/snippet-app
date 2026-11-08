@@ -556,7 +556,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
           ),
         SettingsRow(
           label: 'Identifier',
-          trailing: Text(account.id, style: mono(12.5, color: AppColors.fg2)),
+          trailing: Text(account.id, style: mono(13, color: AppColors.fg2)),
         ),
       ]),
       if (canRemove)
@@ -597,7 +597,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
               Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: Text('Limit reached, $limitedLabel',
-                      style: sans(12.5, color: AppColors.danger))),
+                      style: sans(13, color: AppColors.danger))),
             if (usage?.primary != null) _meter(limitWindowLabel(usage!.primary!), usage.primary!),
             if (usage?.secondary != null) _meter(limitWindowLabel(usage!.secondary!), usage.secondary!),
           ]),

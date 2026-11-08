@@ -351,7 +351,7 @@ class VaultScreenState extends State<VaultScreen> {
         labelWidget: Text(name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: mono(kMobile ? 14 : 12.5, color: AppColors.fg1)),
+            style: mono(kMobile ? 14 : 13, color: AppColors.fg1)),
         trailing: IconBtn('trash',
             size: kMobile ? 36 : 26,
             iconSize: kMobile ? 15 : 13,

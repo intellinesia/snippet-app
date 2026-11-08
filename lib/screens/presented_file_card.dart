@@ -179,7 +179,7 @@ class MediaRow extends StatelessWidget {
                   Text(name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(kMobile ? 14.5 : 13.5,
+                      style: sans(kMobile ? 14 : 13,
                           weight: W.label, color: AppColors.fg1)),
                   if (detail.isNotEmpty) ...[
                     const SizedBox(height: 2),

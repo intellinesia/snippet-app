@@ -951,7 +951,7 @@ class SidebarState extends State<Sidebar> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Mission Control',
-                            style: sans(13.5,
+                            style: sans(13,
                                 weight: W.label,
                                 color: mcSelected
                                     ? AppColors.fg1
@@ -1183,7 +1183,7 @@ class SidebarState extends State<Sidebar> {
                       child: Text(_projectPath(s),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(11.5, color: AppColors.fg4)),
+                          style: sans(12, color: AppColors.fg4)),
                     ),
                     const SizedBox(width: 8),
                     _statusChip(s, draft: draft, size: 12, plain: true),
@@ -1197,7 +1197,7 @@ class SidebarState extends State<Sidebar> {
                           s.title.trim().isEmpty ? '(untitled)' : s.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(13.5,
+                          style: sans(13,
                               weight: W.label,
                               color: selected ? AppColors.fg1 : AppColors.fg2)),
                     ),

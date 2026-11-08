@@ -268,7 +268,7 @@ class MobileBackBar extends StatelessWidget {
             child: Text(subtitle!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(11.5, color: AppColors.fg3)),
+                style: sans(12, color: AppColors.fg3)),
           ),
       ],
     );

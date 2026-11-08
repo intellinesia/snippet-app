@@ -257,7 +257,7 @@ class _AutonomyPanelState extends State<AutonomyPanel> {
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('${w['note'] ?? ''}',
-            style: sans(13.5, height: 1.45, color: AppColors.fg1)),
+            style: sans(13, height: 1.45, color: AppColors.fg1)),
         const SizedBox(height: 4),
         Text(meta, style: sans(12, tabular: true, color: AppColors.fg4)),
       ]),

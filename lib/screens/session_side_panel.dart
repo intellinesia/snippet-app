@@ -154,7 +154,7 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Text(label,
                     style:
-                        sans(12.5, color: on ? AppColors.fg1 : AppColors.fg3)),
+                        sans(13, color: on ? AppColors.fg1 : AppColors.fg3)),
                 if (onClose != null) ...[
                   const SizedBox(width: 4),
                   InkWell(
@@ -194,7 +194,7 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
             if (terms.isNotEmpty) ...[
               const SizedBox(width: 6),
               Text('${terms.length}',
-                  style: sans(11.5, color: AppColors.fg4, tabular: true)),
+                  style: sans(12, color: AppColors.fg4, tabular: true)),
             ],
             const Spacer(),
             ShellSectionAction(

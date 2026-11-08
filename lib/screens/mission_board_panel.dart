@@ -159,7 +159,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                           key: ValueKey('note-${t.id}'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(11.5,
+                          style: sans(12,
                               color: t.status == 'blocked'
                                   ? AppColors.danger
                                   : AppColors.fg4)),
@@ -169,7 +169,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
             ),
             const SizedBox(width: 8),
             Text(relativeTime(t.updatedAt),
-                style: sans(11.5, color: AppColors.fg4, tabular: true)),
+                style: sans(12, color: AppColors.fg4, tabular: true)),
           ]),
         ),
       ),
@@ -194,7 +194,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
             padding: EdgeInsets.fromLTRB(10, 6, onClose != null ? 6 : 10, 6),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(text,
-                  style: sans(12.5,
+                  style: sans(13,
                       color: on ? AppColors.fg1 : AppColors.fg3)),
               if (onClose != null) ...[
                 const SizedBox(width: 5),
@@ -220,7 +220,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         height: 46,
         padding: const EdgeInsets.symmetric(horizontal: 18),
         alignment: Alignment.centerLeft,
-        child: Text('Board', style: sans(12.5, color: AppColors.fg3)),
+        child: Text('Board', style: sans(13, color: AppColors.fg3)),
       );
     }
     final reading = _readout;
@@ -300,7 +300,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                           'Work your agents pick up, scheduled runs and '
                           'what finished today land here.',
                           textAlign: TextAlign.center,
-                          style: sans(12.5,
+                          style: sans(13,
                               height: 1.5, color: AppColors.fg4)),
                     ]),
                   ),
@@ -336,7 +336,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                         SizedBox(
                           width: 48,
                           child: Text(_at(j.nextRunAt),
-                              style: mono(11.5, color: AppColors.fg3)),
+                              style: mono(12, color: AppColors.fg3)),
                         ),
                         Expanded(
                           child: Text(j.title,

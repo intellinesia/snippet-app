@@ -519,7 +519,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
               const SizedBox(width: 4),
             ],
             Text(label,
-                style: sans(12.5,
+                style: sans(13,
                     weight: FontWeight.w500, color: AppColors.accent)),
           ]),
         ),
@@ -531,12 +531,12 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SizedBox(
               width: 82,
-              child: Text(label, style: sans(12.5, color: AppColors.fg4))),
+              child: Text(label, style: sans(13, color: AppColors.fg4))),
           Expanded(
               child: Text(value,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(12.5, color: color ?? AppColors.fg1))),
+                  style: sans(13, color: color ?? AppColors.fg1))),
         ]),
       );
 
@@ -557,7 +557,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
           padding: const EdgeInsets.symmetric(horizontal: S.s4),
           child: Text(
               'No wake schedule. A wake gives ${widget.name} a brief on a timetable and reports back.',
-              style: sans(12.5, color: AppColors.fg3, height: 1.45)),
+              style: sans(13, color: AppColors.fg3, height: 1.45)),
         ),
       if (w != null && !_editing) ...[
         _line('Schedule',
@@ -605,7 +605,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         Padding(
           padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s4),
           child: Text('Recent runs',
-              style: sans(11.5, weight: FontWeight.w600, color: AppColors.fg3)),
+              style: sans(12, weight: FontWeight.w600, color: AppColors.fg3)),
         ),
         for (final r in _runs) _runRow(r),
       ],
@@ -809,7 +809,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
             builder: (ctx) => ListRow(
               title: 'Ping every',
               trailing: Text('${w?.intervalMinutes ?? 0} min',
-                  style: mono(12.5, color: AppColors.fg2)),
+                  style: mono(13, color: AppColors.fg2)),
               onTap: () => _pickWarmNumber(ctx, true, ints),
             ),
           ),
@@ -817,7 +817,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
             builder: (ctx) => ListRow(
               title: 'Stop after idle for',
               trailing: Text('${w?.maxIdleHours ?? 0} h',
-                  style: mono(12.5, color: AppColors.fg2)),
+                  style: mono(13, color: AppColors.fg2)),
               onTap: () => _pickWarmNumber(ctx, false, idles),
             ),
           ),
@@ -841,12 +841,12 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Compact above',
-                        style: sans(13.5,
+                        style: sans(13,
                             weight: FontWeight.w500, color: AppColors.fg1)),
                     const SizedBox(height: 3),
                     Text(
                       'Smaller ceilings compact sooner and cost less per turn',
-                      style: sans(12.5, color: AppColors.fg3, height: 1.38),
+                      style: sans(13, color: AppColors.fg3, height: 1.38),
                     ),
                   ],
                 ),
@@ -856,7 +856,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
                 Text(
                   _context == null ? 'Model window' : tokensLabel(_context!),
                   key: const ValueKey('context-value'),
-                  style: mono(12.5, color: AppColors.fg2),
+                  style: mono(13, color: AppColors.fg2),
                 ),
                 const SizedBox(width: 4),
                 AppIcon('chevron-right', size: 14, color: AppColors.fg4),

@@ -298,7 +298,7 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: codeMono(11.5, color: AppColors.fg2),
+                    style: codeMono(12, color: AppColors.fg2),
                   ),
                 ),
                 if (parsed.adds > 0) ...[
@@ -429,7 +429,7 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
             child: Text(
               numStr,
               textAlign: TextAlign.right,
-              style: codeMono(10.5, height: 1.55, color: numColor),
+              style: codeMono(11, height: 1.55, color: numColor),
             ),
           ),
           SizedBox(

@@ -463,11 +463,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   child: Text(t.agentId,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(kMobile ? 14.5 : 12.5, color: AppColors.fg1)),
+                      style: sans(kMobile ? 14 : 13, color: AppColors.fg1)),
                 ),
                 const SizedBox(width: 8),
                 Text(_turnSummary(t),
-                    style: sans(kMobile ? 13 : 11.5,
+                    style: sans(kMobile ? 13 : 12,
                         color: t.open ? AppColors.accent : AppColors.fg4)),
               ]),
             ],
@@ -896,7 +896,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                           child: Text(a.agentId,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: sans(15.5,
+                              style: sans(15,
                                   color: a.active
                                       ? AppColors.fg1
                                       : AppColors.fg3)),
@@ -946,14 +946,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             child: Text(roster[i].agentId,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: sans(12.5,
+                                style: sans(13,
                                     color: roster[i].active
                                         ? AppColors.fg1
                                         : AppColors.fg3)),
                           ),
                           Text(
                             _memberLabel(roster[i]),
-                            style: sans(11.5,
+                            style: sans(12,
                                 color: _holdsTurn(roster[i])
                                     ? AppColors.accent
                                     : AppColors.fg4),
@@ -1260,7 +1260,7 @@ class _WorkPlan extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Plan · $done/${steps.length}',
-            style: sans(12.5, weight: FontWeight.w500, color: AppColors.fg3)),
+            style: sans(13, weight: FontWeight.w500, color: AppColors.fg3)),
         const SizedBox(height: 8),
         for (final s in steps)
           Padding(

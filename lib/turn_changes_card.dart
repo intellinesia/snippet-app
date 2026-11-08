@@ -72,7 +72,7 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
                     child: Text(
                         '$total ${total == 1 ? 'file' : 'files'} changed',
                         style:
-                            sans(13.5, weight: W.label, color: AppColors.fg1)),
+                            sans(13, weight: W.label, color: AppColors.fg1)),
                   ),
                   _Bar(_n(e['add']), _n(e['del']), width: 44),
                   const SizedBox(width: 10),
@@ -150,9 +150,9 @@ class _Path extends StatelessWidget {
     final dir = i < 0 ? '' : path.substring(0, i);
     return Text.rich(
       TextSpan(children: [
-        TextSpan(text: name, style: sans(12.5, color: AppColors.fg1)),
+        TextSpan(text: name, style: sans(13, color: AppColors.fg1)),
         if (dir.isNotEmpty)
-          TextSpan(text: '  $dir', style: sans(11.5, color: AppColors.fg4)),
+          TextSpan(text: '  $dir', style: sans(12, color: AppColors.fg4)),
       ]),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,

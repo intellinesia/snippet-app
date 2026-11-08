@@ -169,7 +169,7 @@ class _FileViewerState extends State<FileViewer> {
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(label,
-              style: sans(12.5, color: on ? AppColors.fg1 : AppColors.fg3)),
+              style: sans(13, color: on ? AppColors.fg1 : AppColors.fg3)),
         ),
       );
 

@@ -169,7 +169,7 @@ class _CoordinationAgentDirectoryState
         Text(
             'Create a specialised agent with its own identity and workspace-independent sessions.',
             textAlign: TextAlign.center,
-            style: sans(12.5, color: AppColors.fg3, height: 1.45)),
+            style: sans(13, color: AppColors.fg3, height: 1.45)),
       ]);
     }
     return Material(

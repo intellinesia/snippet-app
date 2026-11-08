@@ -276,7 +276,7 @@ class _ArtifactInlineState extends State<ArtifactInline>
 
   Widget _note(String text) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Text(text, style: sans(12.5, color: AppColors.fg3)),
+        child: Text(text, style: sans(13, color: AppColors.fg3)),
       );
 
   Widget _textBody(ArtifactVersion v, Widget Function(String) render) =>
@@ -1354,8 +1354,8 @@ class _CsvTable extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Text(text,
               style: head
-                  ? sans(12.5, weight: W.label, color: AppColors.fg1)
-                  : sans(12.5, color: AppColors.fg2)),
+                  ? sans(13, weight: W.label, color: AppColors.fg1)
+                  : sans(13, color: AppColors.fg2)),
         );
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),

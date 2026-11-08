@@ -167,7 +167,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                 child: Text(label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(12.5, color: AppColors.fg3)),
+                    style: sans(13, color: AppColors.fg3)),
               ),
             ]),
           ),
@@ -210,7 +210,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
             ),
             const SizedBox(width: 7),
             Text('Worktree',
-                style: sans(12.5, color: on ? AppColors.fg2 : AppColors.fg4)),
+                style: sans(13, color: on ? AppColors.fg2 : AppColors.fg4)),
           ]),
         ),
       ),
@@ -275,7 +275,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                               focusNode: _focus,
                               minLines: 2,
                               maxLines: 10,
-                              style: sans(14.5,
+                              style: sans(14,
                                   height: 1.5, color: AppColors.fg1),
                               decoration: InputDecoration(
                                 isCollapsed: true,
@@ -284,7 +284,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                                     const EdgeInsets.fromLTRB(18, 12, 18, 6),
                                 hintText: 'Ask, build, or type / for commands',
                                 hintStyle:
-                                    sans(14.5, color: AppColors.fg4),
+                                    sans(14, color: AppColors.fg4),
                               ),
                             ),
                           ),
@@ -309,7 +309,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                                               size: 13),
                                           const SizedBox(width: 7),
                                           Text(current.name,
-                                              style: sans(12.5,
+                                              style: sans(13,
                                                   color: AppColors.fg2)),
                                         ]),
                                       ),
@@ -610,7 +610,7 @@ class _FolderPopoverState extends State<_FolderPopover> {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 2),
                             child: Text('/',
-                                style: mono(11.5, color: AppColors.fg4)),
+                                style: mono(12, color: AppColors.fg4)),
                           ),
                         InkWell(
                           borderRadius: BorderRadius.circular(5),
@@ -623,7 +623,7 @@ class _FolderPopoverState extends State<_FolderPopover> {
                             child: Text(
                               crumbs[i].label,
                               style: sans(
-                                12.5,
+                                13,
                                 weight: i == crumbs.length - 1
                                     ? FontWeight.w500
                                     : FontWeight.w400,
@@ -666,13 +666,13 @@ class _FolderPopoverState extends State<_FolderPopover> {
                     child: TextField(
                       controller: _newFolderCtrl,
                       autofocus: true,
-                      style: sans(12.5, color: AppColors.fg1),
+                      style: sans(13, color: AppColors.fg1),
                       onSubmitted: (_) => _submitNewFolder(),
                       decoration: InputDecoration(
                         isCollapsed: true,
                         border: InputBorder.none,
                         hintText: 'New folder name',
-                        hintStyle: sans(12.5, color: AppColors.fg4),
+                        hintStyle: sans(13, color: AppColors.fg4),
                       ),
                     ),
                   ),
@@ -688,7 +688,7 @@ class _FolderPopoverState extends State<_FolderPopover> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(_busy ? '…' : 'Create',
-                          style: sans(11.5,
+                          style: sans(12,
                               weight: FontWeight.w500, color: AppColors.fg1)),
                     ),
                   ),
@@ -721,7 +721,7 @@ class _FolderPopoverState extends State<_FolderPopover> {
                               height: 96,
                               child: Center(
                                 child: Text('No subfolders',
-                                    style: sans(12.5, color: AppColors.fg4)),
+                                    style: sans(13, color: AppColors.fg4)),
                               ),
                             )
                           : SizedBox(
@@ -775,7 +775,7 @@ class _FolderPopoverState extends State<_FolderPopover> {
                     _displayPath,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: mono(11.5, color: AppColors.fg3),
+                    style: mono(12, color: AppColors.fg3),
                   ),
                 ),
                 const SizedBox(width: 8),

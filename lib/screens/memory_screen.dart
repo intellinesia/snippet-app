@@ -491,7 +491,7 @@ class _ScopeViewState extends State<_ScopeView> {
               child: Text(scopeStatus(s),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(12.5, color: AppColors.fg4)),
+                  style: sans(13, color: AppColors.fg4)),
             ),
           Padding(
             padding: EdgeInsets.fromLTRB(side, 0, side, 10),

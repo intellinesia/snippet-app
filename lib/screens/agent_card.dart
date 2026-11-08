@@ -333,7 +333,7 @@ class _AgentCardState extends State<AgentCard> {
                 Text(role.isEmpty ? status : role,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(12.5, color: AppColors.fg4)),
+                    style: sans(13, color: AppColors.fg4)),
                 const SizedBox(height: 10),
                 bar,
               ],

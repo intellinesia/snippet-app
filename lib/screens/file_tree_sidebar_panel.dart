@@ -547,7 +547,7 @@ class _FileTreeRow extends StatelessWidget {
                 child: Text(entry.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(kMobile ? 13 : 12.5,
+                    style: sans(kMobile ? 13 : 13,
                         color: entry.isDir || kMobile
                             ? AppColors.fg2
                             : AppColors.fg3)),
@@ -595,7 +595,7 @@ extension on _FileTreeRow {
                 child: Text(entry.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(12.5,
+                    style: sans(13,
                         color: entry.isDir ? AppColors.fg2 : AppColors.fg3)),
               ),
             ]),

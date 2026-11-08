@@ -706,7 +706,7 @@ class _AmbientTurnCardState extends State<AmbientTurnCard> {
       if (turn.context.isNotEmpty)
         '${turn.context.length} earlier ${turn.context.length == 1 ? 'line' : 'lines'}',
     ].join(' · ');
-    final detail = sans(kMobile ? 13 : 12.5, height: 1.4, color: AppColors.fg3);
+    final detail = sans(kMobile ? 13 : 13, height: 1.4, color: AppColors.fg3);
     return LayoutBuilder(builder: (context, box) {
       final inset = kMobile
           ? 48.0
@@ -752,7 +752,7 @@ class _AmbientTurnCardState extends State<AmbientTurnCard> {
               padding: const EdgeInsets.only(top: S.s4, right: 2),
               child: Text(meta,
                   textAlign: TextAlign.end,
-                  style: sans(kMobile ? 12.5 : 12, color: AppColors.fg4)),
+                  style: sans(kMobile ? 13 : 12, color: AppColors.fg4)),
             ),
             if (_open) ...[
               const SizedBox(height: S.s6),

@@ -97,10 +97,10 @@ class _QuestionRecord extends StatelessWidget {
                 for (final (q, a) in rows) ...[
                   Text(q,
                       style:
-                          sans(14.5, height: 20 / 14.5, color: AppColors.fg2)),
+                          sans(14, height: 20 / 14.5, color: AppColors.fg2)),
                   const SizedBox(height: 3),
                   Text(a == null || a.isEmpty ? 'Not answered' : a,
-                      style: sans(14.5,
+                      style: sans(14,
                           weight: W.label,
                           height: 20 / 14.5,
                           color: a == null || a.isEmpty
@@ -1016,7 +1016,7 @@ class QuestionBarState extends State<QuestionBar> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(_sent ? 'Sending…' : 'Snippet asks',
-                          style: sans(13.5, color: AppColors.fg3)),
+                          style: sans(13, color: AppColors.fg3)),
                     ),
                     if (total > 1)
                       Container(
@@ -1028,7 +1028,7 @@ class QuestionBarState extends State<QuestionBar> {
                         ),
                         child: Text(
                             _review ? 'Review' : '${_step + 1} of $total',
-                            style: sans(12.5,
+                            style: sans(13,
                                 tabular: true, color: AppColors.fg2)),
                       ),
                   ])
@@ -1349,7 +1349,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
               Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(12.5, color: AppColors.fg2)),
+                  style: sans(13, color: AppColors.fg2)),
             ]),
           ),
         ),
