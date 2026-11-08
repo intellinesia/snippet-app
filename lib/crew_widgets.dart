@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'screens/agent_wake_panel.dart';
-import 'screens/mochi_color_picker.dart';
+import 'screens/agent_appearance.dart';
 import 'crew_status.dart';
 import 'mochi.dart';
 import 'models.dart';
@@ -540,6 +540,7 @@ Future<void> showCrewAgentMenu(
           value: 'nickname',
           icon: 'edit',
           label: agent.nickname == null ? 'Set nickname' : 'Edit nickname'),
+      appMenuItem(value: 'avatar', icon: 'sparkles', label: 'Change avatar'),
       appMenuItem(value: 'color', icon: 'sparkles', label: 'Change colour'),
       appMenuItem(value: 'model', icon: 'cpu', label: 'Change inference profile'),
       appMenuItem(
@@ -582,8 +583,12 @@ Future<void> runCrewAgentAction(
     } catch (e) {
       if (context.mounted) toast(context, '$e', danger: true);
     }
-  } else if (picked == 'color') {
-    await showMochiColorPicker(context, client, agent.id, name, point: point);
+  } else if (picked == 'color' || picked == 'avatar') {
+    await showAgentAppearance(context, client, agent.id, name,
+        picked == 'avatar'
+            ? AgentAppearancePart.avatar
+            : AgentAppearancePart.colour,
+        point: point);
   } else if (picked == 'wakes') {
     await showAgentWakeSettings(context,
         client: client,

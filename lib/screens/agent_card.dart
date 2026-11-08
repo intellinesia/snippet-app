@@ -10,7 +10,7 @@ import '../widgets.dart';
 import '../motion.dart';
 import '../mochi.dart';
 import 'agent_wake_panel.dart';
-import 'mochi_color_picker.dart';
+import 'agent_appearance.dart';
 
 /// One agent on the phone's Agents page, in the Mission Control card's shape:
 /// who it is, whether it is working, and its task counts.
@@ -158,10 +158,15 @@ class _AgentCardState extends State<AgentCard> {
                 Navigator.pop(context);
                 _editNickname();
               }, tile: true),
-            SheetAction('sparkles', 'Change colour', () {
+            SheetAction('sparkles', 'Avatar', () {
               Navigator.pop(context);
-              showMochiColorPicker(
-                  context, widget.client, widget.agent.id, name);
+              showAgentAppearance(context, widget.client, widget.agent.id,
+                  name, AgentAppearancePart.avatar);
+            }, tile: true),
+            SheetAction('sparkles', 'Colour', () {
+              Navigator.pop(context);
+              showAgentAppearance(context, widget.client, widget.agent.id,
+                  name, AgentAppearancePart.colour);
             }, tile: true),
             if (!widget.agent.isMissionControl)
               SheetAction('calendar-clock', 'Wakes and reporting', () {
@@ -190,6 +195,7 @@ class _AgentCardState extends State<AgentCard> {
       items: [
         if (!widget.agent.isMissionControl)
           appMenuItem(value: 'nickname', icon: 'edit', label: _nicknameLabel),
+        appMenuItem(value: 'avatar', icon: 'sparkles', label: 'Change avatar'),
         appMenuItem(value: 'color', icon: 'sparkles', label: 'Change colour'),
         if (!widget.agent.isMissionControl)
           appMenuItem(
@@ -211,8 +217,11 @@ class _AgentCardState extends State<AgentCard> {
     if (picked == 'nickname' && mounted) _editNickname(point: point);
     if (picked == 'wakes' && mounted) _openWakes(name, point);
     if (picked == 'model' && mounted) _pickProfile(name, point: point);
-    if (picked == 'color' && mounted) {
-      showMochiColorPicker(context, widget.client, widget.agent.id, name,
+    if ((picked == 'color' || picked == 'avatar') && mounted) {
+      showAgentAppearance(context, widget.client, widget.agent.id, name,
+          picked == 'avatar'
+              ? AgentAppearancePart.avatar
+              : AgentAppearancePart.colour,
           point: point);
     }
   }

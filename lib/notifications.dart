@@ -472,8 +472,9 @@ void notificationBackgroundResponse(NotificationResponse response) async {
   ui.DartPluginRegistrant.ensureInitialized();
   if (response.actionId == _cancelDownloadAction) {
     final id = response.id;
-    if (id != null)
+    if (id != null) {
       ui.IsolateNameServer.lookupPortByName(_cancelPort)?.send(id);
+    }
     return;
   }
   if (await routeNotificationAction(
