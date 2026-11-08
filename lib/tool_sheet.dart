@@ -207,7 +207,7 @@ class _SheetHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(mainAxisSize: MainAxisSize.min, children: [
-      if (kMobile) const SheetGrabHandle(),
+      if (kMobile) const SheetGrabHandle(compact: true),
       Padding(
         padding: EdgeInsets.symmetric(horizontal: 8, vertical: kMobile ? 0 : 8),
         child: Row(children: [

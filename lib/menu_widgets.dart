@@ -20,11 +20,13 @@ PopupMenuItem<T> appMenuItem<T>({
   String? detail,
   bool danger = false,
   bool selected = false,
+  bool enabled = true,
   double height = 30,
 }) {
   if (kMobile) {
     return PopupMenuItem<T>(
       value: value,
+      enabled: enabled,
       height: M.minTarget + 8,
       padding: EdgeInsets.zero,
       child: _SheetRowBody(
@@ -32,12 +34,18 @@ PopupMenuItem<T> appMenuItem<T>({
           label: label,
           trailing: detail,
           danger: danger,
-          selected: selected),
+          selected: selected,
+          disabled: !enabled),
     );
   }
-  final color = danger ? AppColors.danger : AppColors.fg1;
+  final color = !enabled
+      ? AppColors.fg4
+      : danger
+          ? AppColors.danger
+          : AppColors.fg1;
   return PopupMenuItem<T>(
     value: value,
+    enabled: enabled,
     height: height,
     padding: const EdgeInsets.symmetric(horizontal: 10),
     child: Row(children: [
@@ -70,11 +78,13 @@ PopupMenuItem<T> appMenuRow<T>({
   String? trailing,
   Widget? trailingWidget,
   bool selected = false,
+  bool enabled = true,
   double? height,
 }) {
   if (kMobile) {
     return PopupMenuItem<T>(
       value: value,
+      enabled: enabled,
       height: M.minTarget + 8,
       padding: EdgeInsets.zero,
       child: _SheetRowBody(
@@ -84,11 +94,13 @@ PopupMenuItem<T> appMenuRow<T>({
           detail: description,
           trailing: trailing,
           trailingWidget: trailingWidget,
-          selected: selected),
+          selected: selected,
+          disabled: !enabled),
     );
   }
   return PopupMenuItem<T>(
     value: value,
+    enabled: enabled,
     height: height ?? (description != null ? 44 : 34),
     padding: const EdgeInsets.symmetric(horizontal: 2),
     child: Container(
@@ -147,8 +159,17 @@ PopupMenuItem<T> appMenuHeading<T>(String label) => PopupMenuItem<T>(
       padding: kMobile
           ? EdgeInsets.zero
           : const EdgeInsets.fromLTRB(10, 8, 10, 2),
-      child: Text(label.toUpperCase(), style: TS.overline()),
+      child: _MenuHeading(label),
     );
+
+class _MenuHeading extends StatelessWidget {
+  const _MenuHeading(this.label);
+  final String label;
+
+  @override
+  Widget build(BuildContext context) =>
+      Text(label.toUpperCase(), style: TS.overline());
+}
 
 /// The row body shared by every phone menu entry: the session Actions row
 /// (leading icon, [TS.rowTitle] title, quiet detail line, optional value and a
@@ -163,8 +184,10 @@ class _SheetRowBody extends StatelessWidget {
     this.trailingWidget,
     this.danger = false,
     this.selected = false,
+    this.disabled = false,
   });
 
+  final bool disabled;
   final String? icon;
   final Widget? leading;
   final String label;
@@ -180,7 +203,12 @@ class _SheetRowBody extends StatelessWidget {
         (icon == null
             ? null
             : AppIcon(icon!,
-                size: 19, color: danger ? AppColors.danger : AppColors.fg3));
+                size: 19,
+                color: disabled
+                    ? AppColors.fg4
+                    : danger
+                        ? AppColors.danger
+                        : AppColors.fg3));
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: M.minTarget + 8),
       child: Padding(
@@ -195,13 +223,17 @@ class _SheetRowBody extends StatelessWidget {
                 Text(label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TS.rowTitle(danger ? AppColors.danger : null)),
+                    style: TS.rowTitle(disabled
+                        ? AppColors.fg4
+                        : danger
+                            ? AppColors.danger
+                            : null)),
                 if (detail != null) ...[
                   const SizedBox(height: 2),
                   Text(detail!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TS.meta()),
+                      style: TS.meta(disabled ? AppColors.fg4 : null)),
                 ],
               ],
             ),
@@ -233,11 +265,16 @@ class _SheetRowBody extends StatelessWidget {
 
 /// The 36x4 grab handle every phone sheet carries.
 class SheetGrabHandle extends StatelessWidget {
-  const SheetGrabHandle({super.key});
+  const SheetGrabHandle({super.key, this.compact = false});
+
+  /// Tight spacing for a sheet header that is already a fixed-height bar.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: S.s8, bottom: S.s8),
+        padding: compact
+            ? const EdgeInsets.only(top: S.s4)
+            : const EdgeInsets.only(top: S.s8, bottom: S.s8),
         child: Center(
           child: Container(
             width: 36,
@@ -418,9 +455,19 @@ List<Widget> _appMenuSheetEntries<T>(
     }
     if (entry is! PopupMenuItem<T>) continue;
     if (!entry.enabled) {
+      final child = entry.child;
+      if (child is _SheetRowBody) {
+        if (prevRow) out.add(Container(height: 1, color: AppColors.line));
+        out.add(child);
+        prevRow = true;
+        continue;
+      }
+      final heading = child is _MenuHeading;
       out.add(Padding(
-        padding: EdgeInsets.only(top: out.isEmpty ? S.s4 : S.s16, bottom: S.s4),
-        child: entry.child,
+        padding: heading
+            ? EdgeInsets.only(top: out.isEmpty ? S.s4 : S.s16, bottom: S.s4)
+            : const EdgeInsets.symmetric(vertical: S.s4),
+        child: child,
       ));
       prevRow = false;
       continue;
