@@ -241,7 +241,7 @@ void main() {
 
   group('Sidebar session list recency ordering', () {
     testWidgets(
-        'sessions are one flat list by recency, each showing its project',
+        'sessions are grouped under their project, newest group first',
         (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
       try {
@@ -318,18 +318,19 @@ void main() {
         ));
         await tester.pumpAndSettle();
 
-        // Flat list by recency: D (4000) -> C (3000) -> B (2000) -> A (1000)
+        // Grouped by project, groups by newest activity: gamma (4000), then
+        // alpha (3000, 1000), then beta (2000).
         final posD = tester.getTopLeft(find.text('Gamma Session Newest')).dy;
         final posC = tester.getTopLeft(find.text('Alpha Session New')).dy;
         final posB = tester.getTopLeft(find.text('Beta Session Middle')).dy;
         final posA = tester.getTopLeft(find.text('Alpha Session Old')).dy;
         expect(posD, lessThan(posC));
-        expect(posC, lessThan(posB));
-        expect(posB, lessThan(posA));
-        expect(find.text('REPO-ALPHA'), findsNothing);
-        expect(find.text('/workspace/repo-alpha'), findsNWidgets(2));
-        expect(find.text('/workspace/repo-beta'), findsOneWidget);
-        expect(find.text('/workspace/repo-gamma'), findsOneWidget);
+        expect(posC, lessThan(posA));
+        expect(posA, lessThan(posB));
+        expect(find.text('repo-alpha'), findsOneWidget);
+        expect(find.text('repo-beta'), findsOneWidget);
+        expect(find.text('repo-gamma'), findsOneWidget);
+        expect(find.text('/workspace/repo-alpha'), findsNothing);
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }

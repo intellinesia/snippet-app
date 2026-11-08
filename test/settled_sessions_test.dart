@@ -78,7 +78,7 @@ void main() {
       await tester.tap(find.text('Settled'));
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Chat b'), findsOneWidget);
-      expect(find.textContaining('deleted in 14 days'), findsOneWidget);
+      expect(find.text('14d left'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

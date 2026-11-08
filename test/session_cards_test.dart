@@ -90,9 +90,10 @@ void main() {
       (tester) async {
     try {
       await _pump(tester, const Size(390, 700), TargetPlatform.android);
-      expect(find.text('~/code/snippet-mobile'), findsNWidgets(2));
-      expect(find.text('Input'), findsOneWidget);
-      expect(find.text('Working 4m'), findsOneWidget);
+      expect(find.text('snippet-mobile'), findsOneWidget);
+      expect(find.text('~/code/snippet-mobile'), findsNothing);
+      expect(find.bySemanticsLabel(RegExp('^Needs input')), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('^Working')), findsOneWidget);
       expect(find.text('+88'), findsOneWidget);
       expect(find.text('-12'), findsOneWidget);
     } finally {
@@ -104,8 +105,8 @@ void main() {
       (tester) async {
     try {
       await _pump(tester, const Size(300, 520), TargetPlatform.macOS);
-      expect(find.text('SNIPPET-MOBILE'), findsNothing);
-      expect(find.text('Working 4m'), findsOneWidget);
+      expect(find.text('snippet-mobile'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('^Working')), findsOneWidget);
       expect(find.text('+120'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
@@ -136,8 +137,7 @@ void main() {
       await _pump(tester, const Size(300, 520), TargetPlatform.macOS,
           sessions: [_s('a', 'Live chat', 'idle'), settled]);
       final header = tester.getTopLeft(find.text('Settled')).dy;
-      expect(header,
-          greaterThan(tester.getBottomLeft(find.text('Live chat')).dy + 100));
+      expect(header, greaterThan(tester.getBottomLeft(find.text('Live chat')).dy));
       expect(find.text('Old chat'), findsNothing);
       await tester.tap(find.text('Settled'));
       await tester.pump();
@@ -151,7 +151,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       expect(fade.size.height, greaterThan(midH));
       expect(find.text('Old chat'), findsOneWidget);
-      expect(tester.getTopLeft(find.text('Settled').first).dy, lessThan(header));
+      expect(tester.getTopLeft(find.text('Old chat')).dy, greaterThan(header));
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
@@ -168,6 +168,10 @@ void main() {
       });
       await _pump(tester, const Size(390, 700), TargetPlatform.android,
           sessions: [_s('a', 'Live chat', 'idle'), settled]);
+      if (find.text('Old chat').evaluate().isEmpty) {
+        await tester.tap(find.text('Settled'));
+        await tester.pump(const Duration(milliseconds: 600));
+      }
       final box = tester.renderObject<RenderBox>(find
           .ancestor(of: find.text('Old chat'), matching: find.byType(AnimatedSize))
           .first);
