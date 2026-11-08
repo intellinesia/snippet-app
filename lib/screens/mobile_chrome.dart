@@ -329,18 +329,16 @@ class MobileBackBar extends StatelessWidget {
 }
 
 /// A title bar with no side buttons. The pill keeps the width it has beside a
-/// back and a menu button, with the avatar stacked over the name.
+/// back and a menu button.
 class MobileStackedTitleBar extends StatelessWidget {
   const MobileStackedTitleBar({
     super.key,
     required this.title,
-    required this.avatar,
     this.onTap,
     this.tapHint,
   });
 
   final String title;
-  final Widget avatar;
   final VoidCallback? onTap;
   final String? tapHint;
 
@@ -348,7 +346,7 @@ class MobileStackedTitleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(_side, 6, _side, 6),
+        padding: const EdgeInsets.fromLTRB(_side, 8, _side, 8),
         child: Semantics(
           button: onTap != null,
           label: title,
@@ -361,19 +359,16 @@ class MobileStackedTitleBar extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: onTap,
               child: Container(
+                height: 44,
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(18, 5, 18, 5),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                alignment: Alignment.center,
                 decoration: _floating(22),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  avatar,
-                  const SizedBox(height: 1),
-                  Text(title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: sans(14,
-                          weight: W.strong, color: AppColors.fg1, height: 1.2)),
-                ]),
+                child: Text(title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: sans(15, weight: W.strong, color: AppColors.fg1)),
               ),
             ),
           ),
