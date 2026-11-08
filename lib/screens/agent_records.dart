@@ -109,61 +109,8 @@ Widget agentRecordsBody(DaemonClient client, String agentId, String agentName,
         ? AgentBoardView(client: client, agentId: agentId, agentName: agentName)
         : AgentInboxView(client: client, agentId: agentId, agentName: agentName);
 
-/// Desktop actions menu, opened under the button that was clicked.
-Future<void> openAgentMenu(
-  BuildContext anchor, {
-  required DaemonClient client,
-  required String agentId,
-  required String agentName,
-  VoidCallback? onDeleted,
-}) async {
-  final picked = await showAppMenu<String>(
-    anchor,
-    anchor: anchor,
-    below: true,
-    alignEnd: true,
-    minWidth: 220,
-    maxWidth: 280,
-    items: [
-      appMenuItem(value: 'desk', icon: 'terminal', label: 'Desk session'),
-      appMenuItem(value: 'memory', icon: 'brain', label: 'Memory'),
-      appMenuHeading<String>('Agent'),
-      appMenuItem(value: 'wakes', icon: 'calendar-clock', label: 'Wakes and reporting'),
-      appMenuItem(value: 'model', icon: 'cpu', label: 'Inference profile'),
-      appMenuItem(value: 'nickname', icon: 'edit', label: 'Nickname'),
-      appMenuItem(value: 'avatar', icon: 'user', label: 'Avatar'),
-      appMenuItem(value: 'color', icon: 'sparkles', label: 'Colour'),
-      appMenuItem(value: 'delete', icon: 'trash', label: 'Delete agent', danger: true),
-    ],
-  );
-  if (picked == null || !anchor.mounted) return;
-  if (picked == 'desk') {
-    return _openSession(anchor, client, 'inbox-$agentId', '$agentName desk');
-  }
-  if (picked == 'memory') {
-    presentScreen(anchor,
-        builder: (_, close) => MemoryScreen(
-            client: client,
-            embedded: true,
-            onBack: close,
-            initialKey: 'agent:$agentId'));
-    return;
-  }
-  CoordinationAgent? agent;
-  try {
-    agent = (await client.coordinationAgents())
-        .where((a) => a.id == agentId)
-        .firstOrNull;
-  } catch (_) {}
-  if (agent == null || !anchor.mounted) return;
-  await runCrewAgentAction(anchor, picked,
-      client: client,
-      agent: agent,
-      onDeleted: picked == 'delete' ? onDeleted : null);
-}
-
-/// An agent's Actions: a full page on a phone and a sheet on desktop, the way a
-/// session's are.
+/// An agent's Actions: a full page on a phone. Desktop shows [AgentActions]
+/// in the shell's right panel instead.
 Future<void> openAgentActions(
   BuildContext context, {
   required DaemonClient client,
@@ -189,7 +136,7 @@ Future<void> openAgentActions(
               Expanded(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 28),
-                  child: _AgentActions(
+                  child: AgentActions(
                     client: client,
                     agentId: agentId,
                     agentName: agentName,
@@ -207,46 +154,42 @@ Future<void> openAgentActions(
       ),
     ));
   }
-  return showAppSheet<void>(
-    context,
-    title: 'Actions',
-    maxWidth: 420,
-    maxHeight: 680,
-    child: _AgentActions(
-      client: client,
-      agentId: agentId,
-      agentName: agentName,
-      host: context,
-      dismiss: () => Navigator.of(context).pop(),
-      onDeleted: onDeleted,
-    ),
-  );
+  return Future.value();
 }
 
-class _AgentActions extends StatefulWidget {
-  const _AgentActions({
+/// The agent's actions as rows. With [onAction] each row reports its name
+/// (`inbox`, `board`, `desk`, `memory`, `wakes`, `model`, `nickname`,
+/// `avatar`, `color`, `delete`) to the caller, which is how the desktop shell
+/// opens them inside its right panel. Without it a row opens its own screen
+/// from [host], as on a phone.
+class AgentActions extends StatefulWidget {
+  const AgentActions({
+    super.key,
     required this.client,
     required this.agentId,
     required this.agentName,
-    required this.host,
+    this.host,
     this.dismiss,
     this.onDeleted,
+    this.onAction,
   });
+
+  final ValueChanged<String>? onAction;
 
   final DaemonClient client;
   final String agentId;
   final String agentName;
 
   /// Where the chosen action opens. On desktop [dismiss] closes the sheet first.
-  final BuildContext host;
+  final BuildContext? host;
   final VoidCallback? dismiss;
   final VoidCallback? onDeleted;
 
   @override
-  State<_AgentActions> createState() => _AgentActionsState();
+  State<AgentActions> createState() => AgentActionsState();
 }
 
-class _AgentActionsState extends State<_AgentActions> {
+class AgentActionsState extends State<AgentActions> {
   CoordinationAgent? _agent;
 
   @override
@@ -259,13 +202,16 @@ class _AgentActionsState extends State<_AgentActions> {
     }).catchError((_) {});
   }
 
-  void _run(void Function(BuildContext) action) {
+  void _run(void Function(BuildContext) action, [String? name]) {
+    final report = widget.onAction;
+    if (report != null && name != null) return report(name);
     widget.dismiss?.call();
-    action(widget.host);
+    action(widget.host!);
   }
 
-  void _openRecords(String title, Widget Function() view) => _run((host) =>
-      _presentRecords(host, title, widget.agentName, view));
+  void _openRecords(String name, String title, Widget Function() view) =>
+      _run((host) => _presentRecords(host, title, widget.agentName, view),
+          name);
 
   ActionRow _setting(
       String action, String icon, String label, String detail,
@@ -276,12 +222,14 @@ class _AgentActionsState extends State<_AgentActions> {
       label: label,
       detail: detail,
       danger: danger,
-      onTap: agent == null
+      onTap: agent == null && widget.onAction == null
           ? null
-          : () => _run((host) => runCrewAgentAction(host, action,
-              client: widget.client,
-              agent: agent,
-              onDeleted: action == 'delete' ? widget.onDeleted : null)),
+          : () => _run(
+              (host) => runCrewAgentAction(host, action,
+                  client: widget.client,
+                  agent: agent!,
+                  onDeleted: action == 'delete' ? widget.onDeleted : null),
+              action),
     );
   }
 
@@ -299,22 +247,23 @@ class _AgentActionsState extends State<_AgentActions> {
             icon: 'inbox',
             label: 'Inbox',
             detail: 'Everything sent to this agent',
-            onTap: () => _openRecords('Inbox',
+            onTap: () => _openRecords('inbox', 'Inbox',
                 () => AgentInboxView(client: client, agentId: id, agentName: name)),
           ),
           ActionRow(
             icon: 'clipboard',
             label: 'Board',
             detail: 'What it dispatched, reported and noted',
-            onTap: () => _openRecords('Board',
+            onTap: () => _openRecords('board', 'Board',
                 () => AgentBoardView(client: client, agentId: id, agentName: name)),
           ),
           ActionRow(
             icon: 'terminal',
             label: 'Desk session',
             detail: 'The conversation where its mail arrives',
-            onTap: () => _run((host) =>
-                _openSession(host, client, 'inbox-$id', '$name desk')),
+            onTap: () => _run(
+                (host) => _openSession(host, client, 'inbox-$id', '$name desk'),
+                'desk'),
           ),
         ]),
         ActionGroup(label: 'Agent', rows: [
@@ -322,12 +271,14 @@ class _AgentActionsState extends State<_AgentActions> {
             icon: kMobile ? 'book-marked' : 'brain',
             label: 'Memory',
             detail: 'What this agent remembers',
-            onTap: () => _run((host) => presentScreen(host,
-                builder: (_, close) => MemoryScreen(
-                    client: client,
-                    embedded: true,
-                    onBack: close,
-                    initialKey: 'agent:$id'))),
+            onTap: () => _run(
+                (host) => presentScreen(host,
+                    builder: (_, close) => MemoryScreen(
+                        client: client,
+                        embedded: true,
+                        onBack: close,
+                        initialKey: 'agent:$id')),
+                'memory'),
           ),
           _setting('wakes', 'calendar-clock', 'Wakes and reporting',
               'When it wakes and who it tells'),

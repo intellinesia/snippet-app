@@ -378,14 +378,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     }).catchError((_) {});
   }
 
-  void _openMenu(BuildContext anchor) => kMobile
-      ? _openActions()
-      : openAgentMenu(anchor,
-          client: widget.client,
-          agentId: widget.agentId,
-          agentName: widget.agentName,
-          onDeleted: _closePage);
-
   AgentView _view = AgentView.thread;
   int _unread = 0;
 
@@ -1167,15 +1159,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             ),
           ),
           _switcher(),
-          const SizedBox(width: 8),
-          Builder(
-              builder: (anchor) => IconBtn(
-                    'more-horizontal',
-                    size: 32,
-                    iconSize: 16,
-                    tooltip: 'Actions',
-                    onTap: () => _openMenu(anchor),
-                  )),
           if (!widget.embedded && widget.onClose != null)
             IconBtn(
               'x',

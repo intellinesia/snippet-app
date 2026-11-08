@@ -73,9 +73,29 @@ Future<void> showAgentAppearance(BuildContext context, DaemonClient client,
   );
 }
 
+/// The avatar or colour grid on its own, for hosts that supply the surface:
+/// [onDone] runs after a choice instead of popping the route.
+class AgentAppearancePicker extends _Picker {
+  const AgentAppearancePicker(
+      {super.key,
+      required super.client,
+      required super.agentId,
+      required super.part,
+      required VoidCallback super.onDone});
+}
+
 class _Picker extends StatelessWidget {
   const _Picker(
-      {required this.client, required this.agentId, required this.part});
+      {super.key,
+      required this.client,
+      required this.agentId,
+      required this.part,
+      this.onDone});
+
+  final VoidCallback? onDone;
+
+  void _done(BuildContext context) =>
+      onDone != null ? onDone!() : Navigator.pop(context);
 
   static const desktopWidth = 4 * 40.0 + 3 * 2 + 16;
 
@@ -87,7 +107,7 @@ class _Picker extends StatelessWidget {
     final before = agentShapes.value[agentId];
     final value = shape == MascotShape.mochi ? null : shape.name;
     setRememberedAgentShape(agentId, value);
-    Navigator.pop(context);
+    _done(context);
     try {
       await client.setAgentShape(agentId, value);
     } catch (_) {
@@ -102,7 +122,7 @@ class _Picker extends StatelessWidget {
     final before = agentColors.value[agentId];
     final hex = color == null ? null : colorHex(color);
     setRememberedAgentColor(agentId, hex);
-    Navigator.pop(context);
+    _done(context);
     try {
       await client.setAgentColor(agentId, hex);
     } catch (_) {

@@ -60,8 +60,50 @@ List<Widget> buildShellRailTools({
   required void Function(RightPanel panel) onToggleRightPanel,
   required void Function(String action, [String? extra]) onSessionAction,
   required void Function(BuildContext ctx) onOpenGoalPopover,
+  void Function(String action)? onAgentAction,
 }) {
   final tab = activeTab;
+  if (tab != null && tab.readout?.isAgent == true && onAgentAction != null) {
+    return [
+      Builder(
+        builder: (ctx) => RailIcon(
+          icon: 'more-horizontal',
+          tooltip: 'Agent actions',
+          onTap: () async {
+            final picked = await showAppMenu<String>(
+              ctx,
+              anchor: ctx,
+              below: true,
+              alignEnd: true,
+              minWidth: 220,
+              maxWidth: 280,
+              items: [
+                appMenuItem(
+                    value: 'desk', icon: 'terminal', label: 'Desk session'),
+                appMenuItem(value: 'memory', icon: 'brain', label: 'Memory'),
+                appMenuHeading<String>('Agent'),
+                appMenuItem(
+                    value: 'wakes',
+                    icon: 'calendar-clock',
+                    label: 'Wakes and reporting'),
+                appMenuItem(
+                    value: 'model', icon: 'cpu', label: 'Inference profile'),
+                appMenuItem(value: 'nickname', icon: 'edit', label: 'Nickname'),
+                appMenuItem(value: 'avatar', icon: 'user', label: 'Avatar'),
+                appMenuItem(value: 'color', icon: 'sparkles', label: 'Colour'),
+                appMenuItem(
+                    value: 'delete',
+                    icon: 'trash',
+                    label: 'Delete agent',
+                    danger: true),
+              ],
+            );
+            if (picked != null) onAgentAction(picked);
+          },
+        ),
+      ),
+    ];
+  }
   final mc = tab?.isMissionControl ?? false;
   final s = macSessionStatus?.state;
   final goalRunning = s?.goal?.ongoing ?? false;

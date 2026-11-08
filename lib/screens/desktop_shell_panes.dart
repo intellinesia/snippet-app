@@ -339,8 +339,11 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         fallbackBuilder: _paneFallback,
         rightPanel: _sessionSidePanel(),
         hideRight: _activeTab != null &&
-            (_activeTab!.isDraft || _activeTab!.isReadout || _activeTab!.isPrs),
-        panelHostsReadouts: _activeTab != null && _activeTab!.sessionId != null,
+            (_activeTab!.isDraft ||
+                (_activeTab!.isReadout && _activeAgent == null) ||
+                _activeTab!.isPrs),
+        panelHostsReadouts: _activeTab != null &&
+            (_activeTab!.sessionId != null || _activeAgent != null),
         onPaneResize: (delta) => _setState(() {
           final max = MediaQuery.sizeOf(context).width * 0.72;
           _paneWidth = (_paneWidth - delta).clamp(kPaneMinWidth, max);
@@ -379,13 +382,32 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 
   Widget? _sessionSidePanel() {
     final tab = _activeTab;
-    if (tab == null || tab.sessionId == null || _sidePanelHidden) return null;
+    final agent = _activeAgent;
+    if (tab == null || (tab.sessionId == null && agent == null)) return null;
+    if (_panelHidden) return null;
     final tabReadouts = [
       for (final r in _rightTabs)
         if (r.pane == _Pane.right &&
             (r.originTabKey == null || r.originTabKey == tab.key))
           r
     ];
+    if (agent != null) {
+      return AgentSidePanel(
+        key: ValueKey('agent-panel-${tab.key}'),
+        client: tab.client,
+        agentId: agent.id,
+        agentName:
+            agent.displayName.trim().isEmpty ? agent.id : agent.displayName.trim(),
+        onAction: _agentAction,
+        readouts: tabReadouts,
+        activeReadout: _activeKey[_Pane.right],
+        readoutBody: (r) => _rightTabBody(r, null, null),
+        onSelectReadout: (r) =>
+            _setState(() => _activeKey[_Pane.right] = r.key),
+        onCloseReadout: (r) => _closeRightTab(r.key),
+        onClearReadout: () => _setState(() => _activeKey.remove(_Pane.right)),
+      );
+    }
     if (tab.isMissionControl) {
       return MissionBoardPanel(
         key: ValueKey('board-${tab.instanceUrl}'),

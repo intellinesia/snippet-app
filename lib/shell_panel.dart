@@ -33,17 +33,19 @@ class ShellPanelRequest {
       required this.id,
       required this.client,
       this.sessionId,
+      this.title,
       required this.builder});
 
   final ShellPanelPurpose purpose;
   final String id;
   final DaemonClient? client;
   final String? sessionId;
+  final String? title;
   final Widget Function(BuildContext, VoidCallback) builder;
   final Completer<Object?> dismissed = Completer<Object?>();
   final navigatorKey = GlobalKey<NavigatorState>();
   String get key => 'request|${client?.baseUrl}|$sessionId|${purpose.name}|$id';
-  String get label => switch (purpose) {
+  String get label => title ?? switch (purpose) {
         ShellPanelPurpose.task => 'Task',
         ShellPanelPurpose.agents => 'Agents',
         ShellPanelPurpose.conversation => 'Conversation',

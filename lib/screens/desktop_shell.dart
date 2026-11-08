@@ -31,7 +31,9 @@ import '../term.dart' show SessionTermView;
 import '../theme.dart';
 import '../media_views.dart';
 import '../widgets.dart';
+import '../crew_widgets.dart' show runCrewAgentAction;
 import 'add_instance.dart';
+import 'agent_panel.dart';
 import 'editor.dart';
 import 'files.dart';
 import 'git.dart';
@@ -320,6 +322,7 @@ class _DesktopShellState extends State<DesktopShell>
       }
       _activePane = _Pane.right;
       _sidePanelHidden = false;
+      _agentPanelHidden = false;
       _activeKey[_Pane.right] = key;
     });
   }
@@ -369,6 +372,7 @@ class _DesktopShellState extends State<DesktopShell>
       if (tab.pane == _Pane.right) {
         _rightCollapsed = false;
         _sidePanelHidden = false;
+        _agentPanelHidden = false;
       }
       _activePane = tab.pane;
       _activeKey[tab.pane] = tab.key;
@@ -435,6 +439,39 @@ class _DesktopShellState extends State<DesktopShell>
       _hiddenSections.contains(_section) ? ShellSection.sessions : _section;
 
   bool _sidePanelHidden = true;
+
+  /// An agent tab always has its panel unless the user hides it; separate from
+  /// [_sidePanelHidden], whose session default is hidden.
+  bool _agentPanelHidden = false;
+
+  CoordinationAgent? get _activeAgent => _activeTab?.readout?.agent;
+
+  bool get _panelHidden =>
+      _activeAgent != null ? _agentPanelHidden : _sidePanelHidden;
+
+  void _togglePanel() => setState(() {
+        if (_activeAgent != null) {
+          _agentPanelHidden = !_agentPanelHidden;
+        } else {
+          _sidePanelHidden = !_sidePanelHidden;
+        }
+      });
+
+  void _agentAction(String action) {
+    final tab = _activeTab;
+    final a = _activeAgent;
+    if (tab == null || a == null) return;
+    final name = a.displayName.trim().isEmpty ? a.id : a.displayName.trim();
+    if (action == 'desk') {
+      _openSession('inbox-${a.id}', '$name desk', null);
+    } else if (action == 'delete') {
+      runCrewAgentAction(context, 'delete',
+          client: tab.client, agent: a, onDeleted: () => _closePaneTab(tab));
+    } else if (agentPanelPages.contains(action)) {
+      _openShellPanel(agentPanelRequest(action,
+          client: tab.client, agentId: a.id, agentName: name));
+    }
+  }
   Map<String, String> _tabProviders = const {};
   String? _tabProvidersFor;
 
@@ -461,24 +498,23 @@ class _DesktopShellState extends State<DesktopShell>
           onToggleRightPanel: _toggleRightPanel,
           onSessionAction: _dispatchSessionAction,
           onOpenGoalPopover: _openGoalPopover,
+          onAgentAction: _agentAction,
         ),
-        if (_activeTab?.sessionId != null)
+        if (_activeTab?.sessionId != null || _activeAgent != null)
           Tooltip(
-            message: _sidePanelHidden ? 'Show panel' : 'Hide panel',
+            message: _panelHidden ? 'Show panel' : 'Hide panel',
             child: Material(
-              color: _sidePanelHidden ? Colors.transparent : AppColors.surface2,
+              color: _panelHidden ? Colors.transparent : AppColors.surface2,
               borderRadius: BorderRadius.circular(8),
               child: InkWell(
                 borderRadius: BorderRadius.circular(8),
-                onTap: () =>
-                    setState(() => _sidePanelHidden = !_sidePanelHidden),
+                onTap: _togglePanel,
                 child: SizedBox.square(
                   dimension: 30,
                   child: Center(
                     child: AppIcon('panel-right',
                         size: 16,
-                        color:
-                            _sidePanelHidden ? AppColors.fg3 : AppColors.fg1),
+                        color: _panelHidden ? AppColors.fg3 : AppColors.fg1),
                   ),
                 ),
               ),
