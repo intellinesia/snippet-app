@@ -6,7 +6,8 @@ import 'package:flutter/services.dart';
 import 'platform.dart';
 import 'theme.dart';
 import 'screens/action_list.dart' show ActionGroup, ActionRow;
-import 'widgets.dart' show AppIcon, ShellPanelRoot, StatusDot;
+import 'widgets.dart'
+    show AppIcon, PressKind, Pressable, ShellPanelRoot, StatusDot;
 
 enum Tone { neutral, accent, ok, run, danger }
 
@@ -400,27 +401,32 @@ class _ActionTile extends StatelessWidget {
     return Semantics(
       button: true,
       label: a.label,
-      child: Material(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.md),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: a.onTap,
-          child: SizedBox(
-            height: 76,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AppIcon(a.icon, size: 22, color: color),
-                const SizedBox(height: S.s8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: S.s4),
-                  child: Text(a.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TS.label(color)),
-                ),
-              ],
+      child: Pressable(
+        enabled: a.onTap != null,
+        kind: PressKind.card,
+        radius: R.md,
+        child: Material(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(R.md),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: a.onTap,
+            child: SizedBox(
+              height: 76,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AppIcon(a.icon, size: 22, color: color),
+                  const SizedBox(height: S.s8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: S.s4),
+                    child: Text(a.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TS.label(color)),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

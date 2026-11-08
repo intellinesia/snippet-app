@@ -40,8 +40,19 @@ class PresentedFileCard extends StatelessWidget {
         'zip' || 'tar' || 'gz' || 'tgz' || 'apk' || 'dmg' => 'archive',
         'mp4' || 'mov' || 'webm' || 'mkv' => 'film',
         'mp3' || 'wav' || 'm4a' || 'ogg' => 'music',
-        'json' || 'yaml' || 'yml' || 'toml' || 'rs' || 'dart' || 'py' || 'js' ||
-        'ts' || 'tsx' || 'go' || 'sh' || 'sql' =>
+        'json' ||
+        'yaml' ||
+        'yml' ||
+        'toml' ||
+        'rs' ||
+        'dart' ||
+        'py' ||
+        'js' ||
+        'ts' ||
+        'tsx' ||
+        'go' ||
+        'sh' ||
+        'sql' =>
           'file-code',
         _ => 'file',
       };
@@ -82,17 +93,19 @@ class PresentedFileCard extends StatelessWidget {
 
   Widget _downloadButton(BuildContext context) => Tooltip(
         message: 'Download',
-        child: InkWell(
-          onTap: () => _download(context),
-          customBorder: const CircleBorder(),
-          child: Container(
-            width: kMobile ? 36 : 28,
-            height: kMobile ? 36 : 28,
-            alignment: Alignment.center,
-            decoration:
-                BoxDecoration(color: AppColors.surface3, shape: BoxShape.circle),
-            child: AppIcon('download',
-                size: kMobile ? 16 : 14, color: AppColors.fg2),
+        child: Pressable(
+          child: InkWell(
+            onTap: () => _download(context),
+            customBorder: const CircleBorder(),
+            child: Container(
+              width: kMobile ? 36 : 28,
+              height: kMobile ? 36 : 28,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                  color: AppColors.surface3, shape: BoxShape.circle),
+              child: AppIcon('download',
+                  size: kMobile ? 16 : 14, color: AppColors.fg2),
+            ),
           ),
         ),
       );
@@ -199,14 +212,22 @@ class MediaRow extends StatelessWidget {
         ),
       ),
     );
-    if (grouped) return Material(color: Colors.transparent, child: row);
+    if (grouped) {
+      return Pressable(
+          kind: PressKind.row,
+          child: Material(color: Colors.transparent, child: row));
+    }
     return Padding(
       padding: EdgeInsets.symmetric(vertical: kMobile ? 4 : 3),
-      child: Material(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(12),
-        clipBehavior: Clip.antiAlias,
-        child: row,
+      child: Pressable(
+        kind: PressKind.card,
+        radius: 12,
+        child: Material(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(12),
+          clipBehavior: Clip.antiAlias,
+          child: row,
+        ),
       ),
     );
   }

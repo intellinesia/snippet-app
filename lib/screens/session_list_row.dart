@@ -116,11 +116,8 @@ class SessionListRow extends StatelessWidget {
     final lineH = kMobile ? 22.0 : 18.0;
     final diff = sessionDiff(s);
     final branch = s.branch?.trim() ?? '';
-    final hasMeta = waiting ||
-        working ||
-        branch.isNotEmpty ||
-        diff != null ||
-        badge != null;
+    final hasMeta =
+        waiting || branch.isNotEmpty || diff != null || badge != null;
 
     final stateLabel = waiting
         ? 'Needs input'
@@ -152,7 +149,10 @@ class SessionListRow extends StatelessWidget {
                     const SizedBox(width: 6),
                     AppIcon('lock', size: 11, color: AppColors.fg3),
                   ],
-                  if (renameField == null && timeText.isNotEmpty) ...[
+                  if (renameField == null && working) ...[
+                    const SizedBox(width: 8),
+                    const WorkingDots(),
+                  ] else if (renameField == null && timeText.isNotEmpty) ...[
                     const SizedBox(width: 8),
                     Text(timeText,
                         maxLines: 1,
@@ -168,8 +168,8 @@ class SessionListRow extends StatelessWidget {
                   child: Row(children: [
                     Expanded(
                       child: Row(children: [
-                        if (waiting || working) ...[
-                          _StateLabel(waiting: waiting),
+                        if (waiting) ...[
+                          const _StateLabel(),
                           if (branch.isNotEmpty || diff != null)
                             const SizedBox(width: 10),
                         ],
@@ -233,26 +233,31 @@ class SessionListRow extends StatelessWidget {
                         color: AppColors.accentBg,
                         borderRadius: BorderRadius.circular(R.md))),
               ),
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onTap,
-                onLongPress: onLongPress == null ? null : longPress,
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 56),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-                      child: Align(
-                          alignment: Alignment.centerLeft, child: content),
+            Pressable(
+              kind: PressKind.row,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  splashFactory: NoSplash.splashFactory,
+                  highlightColor: Colors.transparent,
+                  onLongPress: onLongPress == null ? null : longPress,
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 56),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+                        child: Align(
+                            alignment: Alignment.centerLeft, child: content),
+                      ),
                     ),
-                  ),
-                  if (divider)
-                    Container(
-                        height: 1,
-                        margin: const EdgeInsets.only(left: 4),
-                        color: checked ? Colors.transparent : AppColors.line),
-                ]),
+                    if (divider)
+                      Container(
+                          height: 1,
+                          margin: const EdgeInsets.only(left: 4),
+                          color: checked ? Colors.transparent : AppColors.line),
+                  ]),
+                ),
               ),
             ),
           ])
@@ -280,29 +285,83 @@ class SessionListRow extends StatelessWidget {
 }
 
 class _StateLabel extends StatelessWidget {
-  const _StateLabel({required this.waiting});
-  final bool waiting;
+  const _StateLabel();
 
   @override
   Widget build(BuildContext context) {
-    final color = waiting ? AppColors.run : AppColors.accent;
+    final color = AppColors.run;
     final size = kMobile ? 11.0 : 10.0;
-    final icon = waiting
-        ? AppIcon('message', size: size + 1, color: color)
-        : reduceMotion(context)
-            ? AppIcon('activity', size: size + 1, color: color)
-            : SizedBox(
-                width: size,
-                height: size,
-                child: CircularProgressIndicator(
-                    strokeWidth: 1.6,
-                    color: color,
-                    backgroundColor: color.withValues(alpha: 0.2)));
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      icon,
+      AppIcon('message', size: size + 1, color: color),
       const SizedBox(width: 5),
-      Text(waiting ? 'Needs input' : 'Working',
-          maxLines: 1, style: TS.meta(color)),
+      Text('Needs input', maxLines: 1, style: TS.meta(color)),
     ]);
+  }
+}
+
+/// Three accent dots rising in sequence, a typing-indicator read of "working".
+/// Takes the time label's slot; static under reduced motion.
+class WorkingDots extends StatefulWidget {
+  const WorkingDots({super.key});
+
+  @override
+  State<WorkingDots> createState() => _WorkingDotsState();
+}
+
+class _WorkingDotsState extends State<WorkingDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 900));
+  bool _running = false;
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  double _wave(double t, int i) {
+    final p = (t - i * 0.16) % 1.0;
+    final up = p < 0.5 ? p * 2 : 2 - p * 2;
+    return Curves.easeInOut.transform(up);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final still = reduceMotion(context);
+    if (still && _running) {
+      _c.stop();
+      _running = false;
+    } else if (!still && !_running) {
+      _c.repeat();
+      _running = true;
+    }
+    return Semantics(
+      label: 'Working',
+      excludeSemantics: true,
+      child: SizedBox(
+        width: 14,
+        height: 8,
+        child: AnimatedBuilder(
+          animation: _c,
+          builder: (_, __) => Stack(clipBehavior: Clip.none, children: [
+            for (var i = 0; i < 3; i++)
+              Positioned(
+                left: i * 5.5,
+                bottom: still ? 2 : 0.5 + 4 * _wave(_c.value, i),
+                child: Container(
+                  width: 3,
+                  height: 3,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.accent.withValues(
+                        alpha: still ? 0.8 : 0.45 + 0.55 * _wave(_c.value, i)),
+                  ),
+                ),
+              ),
+          ]),
+        ),
+      ),
+    );
   }
 }

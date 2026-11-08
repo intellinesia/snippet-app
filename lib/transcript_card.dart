@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'components.dart';
 import 'platform.dart';
 import 'theme.dart';
-import 'widgets.dart' show AppIcon;
+import 'widgets.dart' show AppIcon, PressKind, Pressable;
 
 class TranscriptCard extends StatefulWidget {
   const TranscriptCard({
@@ -143,7 +143,10 @@ class _TranscriptCardState extends State<TranscriptCard> {
         clipBehavior: Clip.antiAlias,
         child: widget.onTap == null
             ? content
-            : InkWell(onTap: widget.onTap, child: content),
+            : Pressable(
+                kind: PressKind.card,
+                radius: 10,
+                child: InkWell(onTap: widget.onTap, child: content)),
       ),
     );
   }

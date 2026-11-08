@@ -10,6 +10,8 @@ import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import 'platform.dart';
+import 'package:flutter/gestures.dart' show kTouchSlop;
+import 'gesture_physics.dart';
 import 'api.dart';
 import 'media_views.dart';
 import 'theme.dart';
@@ -654,6 +656,8 @@ class AppCard extends StatelessWidget {
     Theme.of(context); // Rebuild on theme change
     return Pressable(
       enabled: onTap != null,
+      kind: PressKind.card,
+      radius: R.card,
       child: Material(
         color: AppColors.surface1,
         borderRadius: BorderRadius.circular(R.card),
@@ -754,6 +758,7 @@ class Btn extends StatelessWidget {
       opacity: disabled ? 0.45 : 1,
       child: Pressable(
         enabled: !disabled && onTap != null,
+        haptic: variant == BtnVariant.primary,
         child: Material(
           color: bg,
           borderRadius: BorderRadius.circular(radius),
@@ -761,9 +766,6 @@ class Btn extends StatelessWidget {
             onTap: disabled || onTap == null
                 ? null
                 : () {
-                    if (variant == BtnVariant.primary) {
-                      HapticFeedback.lightImpact();
-                    }
                     onTap!();
                   },
             borderRadius: BorderRadius.circular(radius),
@@ -827,55 +829,159 @@ class PillBtn extends StatelessWidget {
   }
 }
 
-/// Tactile press feedback: a small scale-down while the finger or button is
-/// held down.
+/// How a surface answers a press: buttons shrink most, cards a little with a
+/// surface lift, rows only tint (a scaling full-width row looks wrong).
+enum PressKind { button, card, row }
+
+/// Tactile press feedback shared by buttons, cards, tiles and rows.
 ///
-/// An ink ripple confirms the RELEASE, so the control only answers once the
-/// touch is over. This answers on the way down, which is what makes a button
-/// feel like it is listening. It wraps a Material without disturbing the ink or
-/// the tap: a `Listener` observes the pointer but never joins the gesture arena.
+/// A `Listener` observes the pointer without joining the gesture arena, so the
+/// child's own tap, ripple and long-press are untouched. Press-in is a fast
+/// ease-out; release springs back with a hint of overshoot. Dragging past touch
+/// slop (a scroll) releases it. Reduced motion drops the scale, keeps the tint.
 class Pressable extends StatefulWidget {
   final Widget child;
 
   /// Off for inert controls, and for a surface where motion would distract.
   final bool enabled;
+  final PressKind kind;
 
-  /// Subtle by design — 0.96 reads as tactile, below 0.95 reads as exaggerated.
-  final double scale;
+  /// Pressed scale; defaults by [kind] and platform.
+  final double? scale;
+
+  /// Corner radius of the press tint. Cards and rows tint, buttons do not.
+  final double radius;
+
+  /// Fires a selection click on press-in (phone only).
+  final bool haptic;
+
+  /// Hold time before the press shows; for long-press targets, so a tap or
+  /// the start of a scroll never flinches.
+  final Duration delay;
 
   const Pressable({
     super.key,
     required this.child,
     this.enabled = true,
-    this.scale = 0.97,
+    this.kind = PressKind.button,
+    this.scale,
+    this.radius = 0,
+    this.haptic = false,
+    this.delay = Duration.zero,
   });
+
+  static const _pressIn = Duration(milliseconds: 80);
+  static const _down = SpringDescription(mass: 1, stiffness: 1100, damping: 66);
+  static const _spring =
+      SpringDescription(mass: 1, stiffness: 520, damping: 24);
+
+  static double scaleFor(PressKind kind) => switch (kind) {
+        PressKind.button => kMobile ? 0.96 : 0.98,
+        PressKind.card => 0.98,
+        PressKind.row => 1.0,
+      };
 
   @override
   State<Pressable> createState() => _PressableState();
 }
 
-class _PressableState extends State<Pressable> {
+class _PressableState extends State<Pressable> with TickerProviderStateMixin {
+  late final AnimationController _scale = AnimationController(
+      vsync: this, value: 1, lowerBound: 0.5, upperBound: 1.5);
+  late final AnimationController _tint = AnimationController(
+      vsync: this, duration: Pressable._pressIn, reverseDuration: Motion.quick);
+  Offset? _origin;
+  Timer? _hold;
   bool _down = false;
 
-  void _set(bool down) {
-    if (!widget.enabled || _down == down) return;
-    setState(() => _down = down);
+  bool get _tints => widget.kind != PressKind.button;
+
+  void _press(PointerDownEvent e) {
+    if (!widget.enabled || _down) return;
+    _down = true;
+    _origin = e.position;
+    if (widget.delay == Duration.zero) {
+      _show();
+    } else {
+      _hold = Timer(widget.delay, () {
+        if (mounted && _down) _show();
+      });
+    }
+  }
+
+  void _show() {
+    if (widget.haptic && kMobile) HapticFeedback.selectionClick();
+    final to = widget.scale ?? Pressable.scaleFor(widget.kind);
+    if (!reduceMotion(context) && to < 1) {
+      springTo(_scale, to, 0, spring: Pressable._down, epsilon: 0.001);
+    }
+    if (_tints) _tint.forward();
+  }
+
+  void _release() {
+    _hold?.cancel();
+    if (!_down) return;
+    _down = false;
+    if (_scale.value != 1) {
+      final v = _scale.velocity;
+      springTo(_scale, 1, v, spring: Pressable._spring, epsilon: 0.001);
+    }
+    if (_tints) _tint.reverse();
+  }
+
+  void _move(PointerMoveEvent e) {
+    final o = _origin;
+    if (_down && o != null && (e.position - o).distance > kTouchSlop) {
+      _release();
+    }
+  }
+
+  @override
+  void didUpdateWidget(Pressable old) {
+    super.didUpdateWidget(old);
+    if (!widget.enabled) _release();
+  }
+
+  @override
+  void dispose() {
+    _hold?.cancel();
+    _scale.dispose();
+    _tint.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Reduced motion keeps the press feedback but drops the travel: the state
-    // still changes, it just does not move across the screen.
-    final reduced = reduceMotion(context);
+    Widget out = widget.child;
+    if (_tints) {
+      out = Stack(fit: StackFit.passthrough, children: [
+        out,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _tint,
+              builder: (_, __) => DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.fg1.withValues(alpha: 0.06 * _tint.value),
+                  borderRadius: BorderRadius.circular(widget.radius),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ]);
+    }
     return Listener(
-      onPointerDown: (_) => _set(true),
-      onPointerUp: (_) => _set(false),
-      onPointerCancel: (_) => _set(false),
-      child: AnimatedScale(
-        scale: _down && !reduced ? widget.scale : 1.0,
-        duration: reduced ? Duration.zero : Motion.press,
-        curve: Motion.enter,
-        child: widget.child,
+      onPointerDown: _press,
+      onPointerMove: _move,
+      onPointerUp: (_) => _release(),
+      onPointerCancel: (_) => _release(),
+      child: AnimatedBuilder(
+        animation: _scale,
+        child: out,
+        builder: (_, child) => _scale.value == 1
+            ? child!
+            : Transform.scale(scale: _scale.value, child: child),
       ),
     );
   }
@@ -990,19 +1096,24 @@ class _HoverSurfaceState extends State<HoverSurface> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: AnimatedContainer(
-        duration: reduceMotion(context) ? Duration.zero : Motion.quick,
-        curve: Curves.easeOut,
-        decoration: BoxDecoration(color: color, borderRadius: r),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: r,
-            hoverColor: Colors.transparent,
-            onTap: widget.onTap,
-            onLongPress: widget.onLongPress,
-            onSecondaryTapDown: widget.onSecondaryTapDown,
-            child: widget.child,
+      child: Pressable(
+        kind: PressKind.row,
+        radius: widget.radius,
+        enabled: widget.onTap != null || widget.onLongPress != null,
+        child: AnimatedContainer(
+          duration: reduceMotion(context) ? Duration.zero : Motion.quick,
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(color: color, borderRadius: r),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: r,
+              hoverColor: Colors.transparent,
+              onTap: widget.onTap,
+              onLongPress: widget.onLongPress,
+              onSecondaryTapDown: widget.onSecondaryTapDown,
+              child: widget.child,
+            ),
           ),
         ),
       ),
@@ -1119,28 +1230,31 @@ class _DesktopIconBtnState extends State<_DesktopIconBtn> {
       child: Semantics(
         button: true,
         enabled: enabled,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          onTapDown: enabled ? (_) => setState(() => _down = true) : null,
-          onTapUp: enabled ? (_) => setState(() => _down = false) : null,
-          onTapCancel: enabled ? () => setState(() => _down = false) : null,
-          child: SizedBox(
-            width: widget.box,
-            height: widget.box,
-            child: Center(
-              child: AnimatedContainer(
-                duration: Motion.quick,
-                width: widget.ink,
-                height: widget.ink,
-                decoration: BoxDecoration(
-                  color: fill,
-                  borderRadius: BorderRadius.circular(R.sm),
-                ),
-                child: Center(
-                  child: AppIcon(widget.name,
-                      size: widget.iconSize,
-                      color: lit ? AppColors.fg1 : AppColors.fg2),
+        child: Pressable(
+          enabled: enabled,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onTap,
+            onTapDown: enabled ? (_) => setState(() => _down = true) : null,
+            onTapUp: enabled ? (_) => setState(() => _down = false) : null,
+            onTapCancel: enabled ? () => setState(() => _down = false) : null,
+            child: SizedBox(
+              width: widget.box,
+              height: widget.box,
+              child: Center(
+                child: AnimatedContainer(
+                  duration: Motion.quick,
+                  width: widget.ink,
+                  height: widget.ink,
+                  decoration: BoxDecoration(
+                    color: fill,
+                    borderRadius: BorderRadius.circular(R.sm),
+                  ),
+                  child: Center(
+                    child: AppIcon(widget.name,
+                        size: widget.iconSize,
+                        color: lit ? AppColors.fg1 : AppColors.fg2),
+                  ),
                 ),
               ),
             ),
@@ -1160,6 +1274,8 @@ class AddCard extends StatelessWidget {
   Widget build(BuildContext context) {
     Theme.of(context); // Rebuild on theme change
     return Pressable(
+      kind: PressKind.card,
+      radius: R.card,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(R.card),
@@ -1532,15 +1648,20 @@ class Bubble extends StatelessWidget {
       // whole message or selecting within it (a long-press can't do both).
       return Padding(
         padding: const EdgeInsets.only(right: 8, top: 4, bottom: 4),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onLongPress: shown.isEmpty
-              ? null
-              : () {
-                  HapticFeedback.selectionClick();
-                  _messageActions(context, shown);
-                },
-          child: agentContent,
+        child: Pressable(
+          enabled: shown.isNotEmpty,
+          scale: 0.98,
+          delay: const Duration(milliseconds: 160),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onLongPress: shown.isEmpty
+                ? null
+                : () {
+                    HapticFeedback.selectionClick();
+                    _messageActions(context, shown);
+                  },
+            child: agentContent,
+          ),
         ),
       );
     }
@@ -2211,6 +2332,8 @@ class AppToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     Theme.of(context); // Rebuild on theme change
     return Pressable(
+      kind: PressKind.row,
+      radius: R.md,
       child: InkWell(
         onTap: () {
           HapticFeedback.selectionClick();

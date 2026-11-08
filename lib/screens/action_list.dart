@@ -101,55 +101,61 @@ class ActionRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            child: Container(
-              constraints: const BoxConstraints(minHeight: M.minTarget + 8),
-              padding: EdgeInsets.symmetric(
-                  horizontal: kMobile ? 4 : 14, vertical: kMobile ? 11 : 0),
-              child: Row(children: [
-                AppIcon(icon,
-                    size: kMobile ? 19 : 17,
-                    color: danger ? AppColors.danger : AppColors.fg3),
-                SizedBox(width: kMobile ? 14 : 12),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(label,
-                          style: TS.rowTitle(
-                              danger ? AppColors.danger : AppColors.fg1)),
-                      if (detail != null) ...[
-                        const SizedBox(height: 2),
-                        Text(detail,
-                            maxLines: kMobile ? 1 : 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TS.meta()),
+        Pressable(
+          kind: PressKind.row,
+          enabled: onTap != null,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              splashFactory: kMobile ? NoSplash.splashFactory : null,
+              highlightColor: kMobile ? Colors.transparent : null,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: M.minTarget + 8),
+                padding: EdgeInsets.symmetric(
+                    horizontal: kMobile ? 4 : 14, vertical: kMobile ? 11 : 0),
+                child: Row(children: [
+                  AppIcon(icon,
+                      size: kMobile ? 19 : 17,
+                      color: danger ? AppColors.danger : AppColors.fg3),
+                  SizedBox(width: kMobile ? 14 : 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(label,
+                            style: TS.rowTitle(
+                                danger ? AppColors.danger : AppColors.fg1)),
+                        if (detail != null) ...[
+                          const SizedBox(height: 2),
+                          Text(detail,
+                              maxLines: kMobile ? 1 : 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TS.meta()),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                if (value != null) ...[
+                  if (value != null) ...[
+                    const SizedBox(width: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 140),
+                      child: Text(value,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: TS.meta()),
+                    ),
+                  ],
                   const SizedBox(width: 8),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 140),
-                    child: Text(value,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.right,
-                        style: TS.meta()),
-                  ),
-                ],
-                const SizedBox(width: 8),
-                if (trailing != null)
-                  trailing
-                else if (expandable || (kMobile && onTap != null))
-                  AppIcon(open ? 'chevron-down' : 'chevron-right',
-                      size: 15, color: AppColors.fg4),
-              ]),
+                  if (trailing != null)
+                    trailing
+                  else if (expandable || (kMobile && onTap != null))
+                    AppIcon(open ? 'chevron-down' : 'chevron-right',
+                        size: 15, color: AppColors.fg4),
+                ]),
+              ),
             ),
           ),
         ),
