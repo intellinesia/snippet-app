@@ -10,6 +10,7 @@ import '../../../ambient/capture.dart';
 import '../../../ambient/controller.dart';
 import '../../../ambient/voice.dart';
 import '../../../api.dart';
+import '../../../swr.dart';
 import '../../../gesture_physics.dart';
 import '../../../models.dart';
 import '../../../platform.dart';
@@ -36,7 +37,11 @@ class _AmbientModel extends ChangeNotifier {
       notifyListeners();
     });
     load();
-    _timer = Timer.periodic(const Duration(seconds: 10), (_) => load());
+    _live = Revalidator(
+        client: client,
+        on: (e) => e['kind'] == 'ambient_state' || e['kind'] == 'config',
+        debounce: const Duration(seconds: 1),
+        onRevalidate: ({required bool force}) => load());
   }
 
   final DaemonClient client;
@@ -45,7 +50,7 @@ class _AmbientModel extends ChangeNotifier {
   String selfId = '';
   String? error;
   bool busy = false;
-  Timer? _timer;
+  Revalidator? _live;
 
   AmbientStatus get status => ambient.status;
   bool get on => settings?.enabled ?? false;
@@ -116,7 +121,7 @@ class _AmbientModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _live?.dispose();
     ambient.removeListener(notifyListeners);
     super.dispose();
   }
@@ -367,7 +372,7 @@ class _AmbientStageState extends State<AmbientStage>
   late final CurvedAnimation _a = CurvedAnimation(
       parent: widget.animation, curve: Motion.enter, reverseCurve: Motion.exit);
   List<AmbientEvent> _recent = const [];
-  Timer? _recentTimer;
+  Revalidator? _recentLive;
   late final AnimationController _dragC =
       AnimationController.unbounded(vsync: this)..addListener(_changed);
   double get _drag => _dragC.value;
@@ -376,8 +381,11 @@ class _AmbientStageState extends State<AmbientStage>
   void initState() {
     super.initState();
     _loadRecent();
-    _recentTimer =
-        Timer.periodic(const Duration(seconds: 8), (_) => _loadRecent());
+    _recentLive = Revalidator(
+        client: widget.client,
+        on: (e) => (e['kind'] as String? ?? '').startsWith('ambient_'),
+        debounce: const Duration(seconds: 2),
+        onRevalidate: ({required bool force}) => _loadRecent());
   }
 
   Future<void> _loadRecent() async {
@@ -402,7 +410,7 @@ class _AmbientStageState extends State<AmbientStage>
 
   @override
   void dispose() {
-    _recentTimer?.cancel();
+    _recentLive?.dispose();
     _dragC.dispose();
     _m.removeListener(_changed);
     _m.dispose();

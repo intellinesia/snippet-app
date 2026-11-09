@@ -918,19 +918,11 @@ class _SessionScreenState extends State<SessionScreen>
   /// model's history, which is not what happened in the conversation.
   void _startAgentEvents() {
     _agentEventsSub?.cancel();
-    _agentEventsSub = widget.client.events().stream.listen((raw) {
+    _agentEventsSub = widget.client.deviceEvents.stream.listen((frame) {
       if (!mounted || _closed) return;
       if (!_parked && _channel == null) {
         _reconnectAttempt = 0;
         _connect();
-      }
-      final Map<String, dynamic> frame;
-      try {
-        final decoded = jsonDecode(raw as String);
-        if (decoded is! Map) return;
-        frame = decoded.cast<String, dynamic>();
-      } catch (_) {
-        return;
       }
       if (frame['session']?.toString() == widget.sessionId &&
           !_parked &&

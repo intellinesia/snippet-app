@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../swr.dart';
 import '../crew_widgets.dart';
 import '../media_views.dart' show DaemonScope;
 import '../models.dart';
@@ -351,8 +352,13 @@ class _RecordList<T> extends StatefulWidget {
     required this.timeOf,
     required this.row,
     required this.empty,
+    required this.client,
+    required this.liveOn,
     this.groupedFilters = const {},
   });
+
+  final DaemonClient client;
+  final SwrTrigger liveOn;
 
   /// Filters whose rows stand for groups: a group's newest row changes, so a
   /// poll replaces the list rather than prepending to it.
@@ -373,7 +379,7 @@ class _RecordListState<T> extends State<_RecordList<T>> {
   final _search = TextEditingController();
   final _scroll = ScrollController();
   Timer? _debounce;
-  Timer? _poll;
+  Revalidator? _live;
   List<T> _items = [];
   String? _filter;
   String? _error;
@@ -392,13 +398,17 @@ class _RecordListState<T> extends State<_RecordList<T>> {
     super.initState();
     _scroll.addListener(_nearEnd);
     _reload();
-    _poll = Timer.periodic(const Duration(seconds: 30), (_) => _pollHead());
+    _live = Revalidator(
+        client: widget.client,
+        on: widget.liveOn,
+        debounce: const Duration(seconds: 1),
+        onRevalidate: ({required bool force}) => _pollHead());
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
-    _poll?.cancel();
+    _live?.dispose();
     _scroll.dispose();
     _search.dispose();
     super.dispose();
@@ -1038,6 +1048,11 @@ class _AgentInboxViewState extends State<AgentInboxView> {
   @override
   Widget build(BuildContext context) {
     return _RecordList<InboxEntry>(
+      client: widget.client,
+      liveOn: (e) =>
+          Swr.coordination(e) ||
+          e['kind'] == 'dispatch' ||
+          e['kind'] == 'direct_message',
       hint: 'Search everything sent to ${widget.agentName}',
       filters: const [
         ('All', null),
@@ -1293,6 +1308,9 @@ class _AgentBoardViewState extends State<AgentBoardView> {
   @override
   Widget build(BuildContext context) {
     return _RecordList<BoardEntry>(
+      client: widget.client,
+      liveOn: (e) =>
+          e['kind'] == 'agent_board' && e['agent'] == widget.agentId,
       hint: "Search ${widget.agentName}'s work",
       groupedFilters: const {'by-task', 'by-folder'},
       filters: const [

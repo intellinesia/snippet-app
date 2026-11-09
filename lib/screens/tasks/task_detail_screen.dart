@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../api.dart';
+import '../../swr.dart';
 import '../../coordination/coordination_thread_state.dart';
 import '../../models.dart';
 import '../../platform.dart';
@@ -57,7 +58,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   String? addressee;
   int _lastSequence = -1;
   Timer? _crewDebounce;
-  Timer? _crewPoll;
+  Revalidator? _crewLive;
 
   @override
   void initState() {
@@ -71,7 +72,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     room?.dispose();
     _composer.dispose();
     _crewDebounce?.cancel();
-    _crewPoll?.cancel();
+    _crewLive?.dispose();
     super.dispose();
   }
 
@@ -136,12 +137,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       room.attachLive();
       unawaited(room.refresh());
       unawaited(_refreshCrew());
-      // Progress reports reach an agent's board, not this room, so no event
-      // announces them.
-      _crewPoll?.cancel();
-      _crewPoll = Timer.periodic(const Duration(seconds: 60), (_) {
-        if (turns.lastOrNull?.open ?? false) unawaited(_refreshCrew());
-      });
+      _crewLive?.dispose();
+      _crewLive = Revalidator(
+          client: widget.client,
+          on: (e) => e['kind'] == 'agent_board',
+          debounce: const Duration(seconds: 2),
+          onRevalidate: ({required bool force}) {
+            if (turns.lastOrNull?.open ?? false) unawaited(_refreshCrew());
+          });
       setState(() {
         this.task = task;
         this.roster = roster;

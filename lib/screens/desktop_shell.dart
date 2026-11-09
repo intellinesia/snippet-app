@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../ambient/live_caption.dart';
 import '../api.dart';
@@ -217,10 +215,7 @@ class _DesktopShellState extends State<DesktopShell>
   Revalidator? _sessionsRevalidator;
   Timer? _sessionsTicker;
   bool _appForeground = true;
-  WebSocketChannel? _eventsChannel;
   StreamSubscription? _eventsSub;
-  Timer? _eventsReconnect;
-  int _eventsGeneration = 0;
   final _liveStatus = SessionStatusUpdates();
 
   /// Which agents are working in each session, as display initials.
@@ -719,23 +714,15 @@ class _DesktopShellState extends State<DesktopShell>
   void _stopEventsWatch() {
     _sessionsRevalidator?.dispose();
     _sessionsRevalidator = null;
-    _eventsGeneration++;
-    _eventsReconnect?.cancel();
-    _eventsReconnect = null;
     _eventsSub?.cancel();
     _eventsSub = null;
-    _eventsChannel?.sink.close();
-    _eventsChannel = null;
   }
 
   void _connectEventsWatch() {
     final c = _client;
     MacosNotch.bindClient(c);
-    if (c == null) {
-      _stopEventsWatch();
-      return;
-    }
     _stopEventsWatch();
+    if (c == null) return;
     _sessionsRevalidator = Revalidator(
       client: c,
       on: Swr.sessionStatus,
@@ -744,61 +731,38 @@ class _DesktopShellState extends State<DesktopShell>
         if (mounted && _appForeground && !_sessionsLoading) _loadSessions();
       },
     );
-    final generation = _eventsGeneration;
-    try {
-      final ch = c.events();
-      if (_active != null) {
-        unawaited(syncNotificationInstance(_active!).catchError((Object _) {}));
-      }
-      _eventsChannel = ch;
-      _eventsSub = ch.stream.listen(
-        (msg) {
-          if (generation != _eventsGeneration ||
-              !identical(ch, _eventsChannel)) {
-            return;
-          }
-          final event = DeviceEvent.decode(msg);
-          if (event == null) return;
-          final kind = event.kind;
-          if (kind == 'ambient_live') {
-            final frame = jsonDecode(msg as String);
-            if (frame is Map) LiveCaptionFeed.instance.apply(frame);
-            return;
-          }
-          if (kind == 'notification' && _active != null) {
-            unawaited(receiveLiveNotification(_active!, msg)
-                .catchError((Object _) {}));
-          }
-          if (kind == 'models' || kind == 'config') {
-            c.invalidateConfig();
-            modelsRevision.value++;
-          }
-          final session = event.session;
-          final status = event.status;
-          if (session.isEmpty || status.isEmpty) return;
-          if (!mounted) return;
-          _patchSessionStatus(session, status);
-          setState(() {});
-        },
-        onDone: _scheduleEventsReconnect,
-        onError: (_) => _scheduleEventsReconnect(),
-        cancelOnError: true,
-      );
-    } catch (_) {
-      _scheduleEventsReconnect();
+    if (_active != null) {
+      unawaited(syncNotificationInstance(_active!).catchError((Object _) {}));
     }
-  }
-
-  void _scheduleEventsReconnect() {
-    if (!mounted || !_appForeground || _client == null) return;
-    _eventsReconnect?.cancel();
-    _eventsReconnect = Timer(const Duration(seconds: 3), () {
-      if (mounted && _appForeground) {
-        _connectEventsWatch();
-        if (!_sessionsLoading) _loadSessions();
+    _eventsSub = c.deviceEvents.stream.listen((frame) {
+      if (!mounted || !identical(c, _client)) return;
+      final event = DeviceEvent.decode(frame);
+      if (event == null) return;
+      final kind = event.kind;
+      if (kind == DeviceEventHub.reconnected && _active != null) {
+        unawaited(syncNotificationInstance(_active!).catchError((Object _) {}));
+        return;
       }
+      if (kind == 'ambient_live') {
+        LiveCaptionFeed.instance.apply(frame);
+        return;
+      }
+      if (kind == 'notification' && _active != null) {
+        unawaited(
+            receiveLiveNotification(_active!, frame).catchError((Object _) {}));
+      }
+      if (kind == 'models' || kind == 'config') {
+        c.invalidateConfig();
+        modelsRevision.value++;
+      }
+      final session = event.session;
+      final status = event.status;
+      if (session.isEmpty || status.isEmpty) return;
+      _patchSessionStatus(session, status);
+      setState(() {});
     });
   }
+
 
   void _setGithubReady(String key, bool ok) {
     if ((_githubReady[key] ?? false) == ok) return;

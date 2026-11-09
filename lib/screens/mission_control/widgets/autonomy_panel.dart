@@ -7,6 +7,7 @@ import '../../../platform.dart';
 import '../../../theme.dart';
 import '../../../widgets.dart';
 import '../../shell_nav.dart';
+import '../../../swr.dart';
 
 String _relative(int? epoch, {bool future = false}) {
   if (epoch == null) return '';
@@ -63,18 +64,25 @@ class AutonomyChip extends StatefulWidget {
 
 class _AutonomyChipState extends State<AutonomyChip> {
   Map<String, dynamic>? _autonomy;
-  Timer? _timer;
+  Revalidator? _live;
 
   @override
   void initState() {
     super.initState();
     _load();
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _load());
+    _live = Revalidator(
+        client: widget.client,
+        on: (e) =>
+            Swr.coordination(e) ||
+            e['kind'] == 'config' ||
+            e['session'] == 'mission-control',
+        debounce: const Duration(seconds: 2),
+        onRevalidate: ({required bool force}) => _load());
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _live?.dispose();
     super.dispose();
   }
 

@@ -168,8 +168,20 @@ class LaneDetailCard extends StatefulWidget {
 
 class _LaneDetailCardState extends State<LaneDetailCard> {
   bool get _expanded => widget.detail;
+  LaneInfo? _full;
 
-  LaneInfo get lane => widget.lane;
+  LaneInfo get lane => _full ?? widget.lane;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final session = widget.lane.trimmedIn;
+    if (!widget.detail || session == null || _full != null) return;
+    final client = widget.client ?? DaemonScope.maybeOf(context);
+    client?.sessionLane(session, widget.lane.id).then((full) {
+      if (mounted) setState(() => _full = full);
+    }, onError: (Object _) {});
+  }
 
   @override
   Widget build(BuildContext context) {

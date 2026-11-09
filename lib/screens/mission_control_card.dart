@@ -9,6 +9,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../motion.dart';
+import '../swr.dart';
 
 /// Mission Control pinned at the top of the Chats list: what it is doing, one
 /// tap from opening it.
@@ -30,14 +31,21 @@ class MissionControlCard extends StatefulWidget {
 
 class _MissionControlCardState extends State<MissionControlCard> {
   Map<String, dynamic>? _autonomy;
-  Timer? _poll;
+  Revalidator? _live;
 
   @override
   void initState() {
     super.initState();
     _autonomy = widget.client.cachedMcAutonomy();
     _load();
-    _poll = Timer.periodic(const Duration(seconds: 30), (_) => _load());
+    _live = Revalidator(
+        client: widget.client,
+        on: (e) =>
+            Swr.coordination(e) ||
+            e['kind'] == 'config' ||
+            e['session'] == 'mission-control',
+        debounce: const Duration(seconds: 2),
+        onRevalidate: ({required bool force}) => _load());
   }
 
   @override
@@ -48,7 +56,7 @@ class _MissionControlCardState extends State<MissionControlCard> {
 
   @override
   void dispose() {
-    _poll?.cancel();
+    _live?.dispose();
     super.dispose();
   }
 

@@ -23,6 +23,7 @@ import 'tasks/tasks_panel.dart';
 import '../pull_refresh.dart';
 import '../motion.dart';
 import '../mochi.dart';
+import '../swr.dart';
 import 'mobile_chrome.dart';
 export 'sidebar_mobile.dart';
 
@@ -152,7 +153,7 @@ class SidebarState extends State<Sidebar> {
 
   List<CoordinationAgent> _crew = const [];
   DateTime? _crewAt;
-  Timer? _crewTimer;
+  Revalidator? _crewLive;
 
   Future<void> _loadCrew() async {
     final client = widget.client;
@@ -189,16 +190,28 @@ class SidebarState extends State<Sidebar> {
     } catch (_) {}
   }
 
+  void _bindCrewLive() {
+    _crewLive?.dispose();
+    final client = widget.client;
+    _crewLive = client == null
+        ? null
+        : Revalidator(
+            client: client,
+            on: (e) => Swr.coordination(e) || Swr.sessionStatus(e),
+            debounce: const Duration(seconds: 2),
+            onRevalidate: ({required bool force}) {
+              _crewAt = null;
+              _loadCrew();
+            });
+  }
+
   @override
   void initState() {
     super.initState();
     Drafts.instance.addListener(_onDrafts);
     _loadProviders();
     if (!kMobile) {
-      _crewTimer = Timer.periodic(const Duration(seconds: 60), (_) {
-        _crewAt = null;
-        _loadCrew();
-      });
+      _bindCrewLive();
     }
     _pageController = PageController(initialPage: widget.mobileHome.index);
     if (widget.mobileHome != MobileHome.settings) {
@@ -209,7 +222,10 @@ class SidebarState extends State<Sidebar> {
   @override
   void didUpdateWidget(covariant Sidebar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.client != widget.client) _crewAt = null;
+    if (oldWidget.client != widget.client) {
+      _crewAt = null;
+      if (!kMobile) _bindCrewLive();
+    }
     if (oldWidget.client != widget.client ||
         (widget.sessions ?? const <SessionInfo>[]).any((s) =>
             (s.profile ?? '').isNotEmpty &&
@@ -250,7 +266,7 @@ class SidebarState extends State<Sidebar> {
   @override
   void dispose() {
     Drafts.instance.removeListener(_onDrafts);
-    _crewTimer?.cancel();
+    _crewLive?.dispose();
     _pageController.dispose();
     _renameCtl.dispose();
     _renameFocus.dispose();

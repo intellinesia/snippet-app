@@ -888,16 +888,23 @@ class DaemonClient {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> _gitGet(
+      String op, Map<String, String> query) async {
+    final r = await _get(_uri('/git/$op', query), timeout: _long);
+    if (r.statusCode != 200) throw _err('git $op', r);
+    return jsonDecode(r.body) as Map<String, dynamic>;
+  }
+
   Future<GitStatus> gitStatus(String session) async =>
-      GitStatus.fromJson(await _gitPost('status', {'session': session}));
+      GitStatus.fromJson(await _gitGet('status', {'session': session}));
 
   Future<String> gitDiff(String session,
       {String? file, bool staged = false, bool untracked = false}) async {
-    final d = await _gitPost('diff', {
+    final d = await _gitGet('diff', {
       'session': session,
       if (file != null) 'file': file,
-      'staged': staged,
-      'untracked': untracked,
+      'staged': '$staged',
+      'untracked': '$untracked',
     });
     return d['patch'] as String? ?? '';
   }
@@ -905,7 +912,7 @@ class DaemonClient {
   /// Current branch, local names, and remote-tracking names (`origin/foo`).
   Future<({String current, List<String> local, List<String> remotes})>
       gitBranches(String session) async {
-    final d = await _gitPost('branches', {'session': session});
+    final d = await _gitGet('branches', {'session': session});
     List<String> names(dynamic raw) =>
         ((raw as List?) ?? const []).map((e) => e.toString()).toList();
     return (
@@ -935,9 +942,14 @@ class DaemonClient {
       _gitPost(
           'checkout', {'session': session, 'target': target, 'create': create});
 
+  Future<LaneInfo> sessionLane(String session, String id) async {
+    final r = await _get(_uri('/session/lane', {'session': session, 'id': id}));
+    if (r.statusCode != 200) throw _err('lane', r);
+    return LaneInfo.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
   Future<List<Map<String, dynamic>>> bgList(String session) async {
-    final r = await _post(_uri('/bg'),
-        headers: _json, body: jsonEncode({'session': session}));
+    final r = await _get(_uri('/bg', {'session': session}));
     if (r.statusCode != 200) throw _err('list processes', r);
     final j = jsonDecode(r.body) as Map<String, dynamic>;
     final procs = (j['processes'] as List?) ?? const [];
@@ -951,9 +963,8 @@ class DaemonClient {
   }
 
   Future<String> bgLog(String session, String id, {int tail = 300}) async {
-    final r = await _post(_uri('/bg/log'),
-        headers: _json,
-        body: jsonEncode({'session': session, 'id': id, 'tail': tail}));
+    final r = await _get(
+        _uri('/bg/log', {'session': session, 'id': id, 'tail': '$tail'}));
     if (r.statusCode != 200) throw _err('read log', r);
     final j = jsonDecode(r.body) as Map<String, dynamic>;
     return j['log'] as String? ?? '';

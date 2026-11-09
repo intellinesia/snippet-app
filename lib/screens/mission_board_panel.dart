@@ -9,6 +9,7 @@ import '../models.dart';
 import '../task_reason.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../swr.dart';
 
 import 'goals/goal_widgets.dart';
 import 'shell_models.dart' show RightTab;
@@ -46,13 +47,17 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
   List<RecurringJob> _jobs = const [];
   List<Goal> _goals = const [];
   bool _loaded = false;
-  Timer? _timer;
+  Revalidator? _live;
 
   @override
   void initState() {
     super.initState();
     _load();
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _load());
+    _live = Revalidator(
+        client: widget.client,
+        on: (e) => Swr.coordination(e) || e['kind'] == 'recurring',
+        debounce: const Duration(seconds: 1),
+        onRevalidate: ({required bool force}) => _load());
   }
 
   @override
@@ -63,7 +68,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _live?.dispose();
     super.dispose();
   }
 

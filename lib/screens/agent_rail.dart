@@ -9,6 +9,7 @@ import '../mochi.dart';
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
+import '../swr.dart';
 import '../widgets.dart' show AppIcon;
 import 'agents_sidebar_panel.dart' show showCreateAgentDialog;
 import 'mission_control/mission_control_state.dart' show isDedicatedMcSession;
@@ -59,20 +60,32 @@ class _AgentRailState extends State<AgentRail> {
   List<CoordinationAgent> _agents = const [];
   Map<String, int> _unread = const {};
   DateTime? _loadedAt;
-  Timer? _timer;
+  Revalidator? _live;
 
   @override
   void initState() {
     super.initState();
     _load();
-    _timer =
-        Timer.periodic(const Duration(seconds: 30), (_) => _load(force: true));
+    _bindLive();
+  }
+
+  void _bindLive() {
+    _live?.dispose();
+    final client = widget.client;
+    _live = client == null
+        ? null
+        : Revalidator(
+            client: client,
+            on: (e) => Swr.coordination(e) || Swr.sessionStatus(e),
+            debounce: const Duration(seconds: 1),
+            onRevalidate: ({required bool force}) => _load(force: true));
   }
 
   @override
   void didUpdateWidget(covariant AgentRail old) {
     super.didUpdateWidget(old);
     if (old.client != widget.client) {
+      _bindLive();
       _load(force: true);
     } else if (old.selectedAgentId != widget.selectedAgentId) {
       _load();
@@ -81,7 +94,7 @@ class _AgentRailState extends State<AgentRail> {
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _live?.dispose();
     super.dispose();
   }
 

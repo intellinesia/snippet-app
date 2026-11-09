@@ -823,6 +823,9 @@ class LaneInfo {
   final String? agent;
   final bool readOnly;
   final String? profile;
+
+  /// Set when the snapshot trimmed this lane; the full lane lives in this session.
+  final String? trimmedIn;
   LaneInfo({
     required this.id,
     required this.title,
@@ -840,6 +843,7 @@ class LaneInfo {
     this.agent,
     this.readOnly = false,
     this.profile,
+    this.trimmedIn,
   });
   factory LaneInfo.fromJson(Map<String, dynamic> j) {
     String s(dynamic v) {
@@ -880,6 +884,7 @@ class LaneInfo {
       agent: opt(j['agent']),
       readOnly: j['read_only'] == true,
       profile: opt(j['profile']),
+      trimmedIn: j['trimmed'] == true ? opt(j['session']) : null,
     );
   }
   bool get running => status == 'running';
