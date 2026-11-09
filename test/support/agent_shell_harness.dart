@@ -37,6 +37,8 @@ class FakeDaemon {
     final server = await HttpServer.bind('127.0.0.1', 0);
     final d = FakeDaemon._(server);
     server.listen((req) async {
+      // Keep-alive would leave the shared client's idle timer pending in fake time.
+      req.response.persistentConnection = false;
       d.requests.add('${req.method} ${req.uri.path}');
       final path = req.uri.path;
       Object? body = extra?.call(path);
