@@ -106,16 +106,6 @@ class InstanceStore {
         return [];
       }
     }
-    // Migrate a legacy single connection from the first app build.
-    final url = p.getString('url');
-    final token = p.getString('token');
-    if (url != null && token != null) {
-      final inst = Instance(name: hostOf(url), url: url, token: token);
-      await save([inst]);
-      await p.remove('url');
-      await p.remove('token');
-      return [inst];
-    }
     return [];
   }
 

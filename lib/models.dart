@@ -525,19 +525,12 @@ class UsageProvider {
     for (final item in raw) {
       if (item is! Map) continue;
       final snapshot = item.cast<String, dynamic>();
-      // The service returns snapshots shaped as {primary, secondary}; accept
-      // both that wire shape and a direct window for backward compatibility.
-      final nested = <dynamic>[snapshot['primary'], snapshot['secondary']];
-      final windows = nested.whereType<Map>();
-      if (windows.isEmpty) {
-        final window = RateWindow.fromJson(snapshot);
+      final windows = <dynamic>[snapshot['primary'], snapshot['secondary']]
+          .whereType<Map>();
+      for (final value in windows) {
+        final window = RateWindow.fromJson(value.cast<String, dynamic>(),
+            label: snapshot['label'] as String?);
         if (window.isReported) out.add(window);
-      } else {
-        for (final value in windows) {
-          final window = RateWindow.fromJson(value.cast<String, dynamic>(),
-              label: snapshot['label'] as String?);
-          if (window.isReported) out.add(window);
-        }
       }
     }
     return out;
@@ -670,13 +663,9 @@ class HarnessState {
       return out;
     }
 
-    final legacyRequest = asString(j['user_request']);
     final rawTitle = asString(j['title']);
-    final title = (rawTitle != null && rawTitle.trim().isNotEmpty)
-        ? rawTitle
-        : ((legacyRequest != null && legacyRequest.trim().isNotEmpty)
-            ? legacyRequest
-            : null);
+    final title =
+        (rawTitle != null && rawTitle.trim().isNotEmpty) ? rawTitle : null;
     return HarnessState(
       status: asString(j['status']) ?? 'idle',
       workspace: asString(j['workspace']) ?? '',

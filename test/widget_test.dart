@@ -49,11 +49,11 @@ void main() {
     expect(merged.workspace, '/workspace');
   });
 
-  test('HarnessState preserves title fallback and checkpoints', () {
+  test('HarnessState preserves title and checkpoints', () {
     final state = HarnessState.fromJson({
       'status': 'idle',
       'workspace': '/workspace',
-      'user_request': 'Initial request',
+      'title': 'Initial request',
       'checkpoints': [
         {
           'id': 'cp-1',
