@@ -3,42 +3,6 @@ import 'package:flutter/material.dart';
 import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
-import 'composer/composer_card.dart';
-
-/// Thin adapter kept for callers that only need field + send; the look lives
-/// in [ComposerCard].
-class DesktopComposerStrip extends StatelessWidget {
-  const DesktopComposerStrip({
-    super.key,
-    required this.field,
-    required this.send,
-    this.highlight = false,
-    this.cardKey,
-  });
-
-  final Widget field;
-  final Widget send;
-  final bool highlight;
-  final Key? cardKey;
-
-  static InputDecoration decoration(String hint) =>
-      ComposerCard.decoration(hint);
-
-  @override
-  Widget build(BuildContext context) => KeyedSubtree(
-        key: cardKey,
-        child: ComposerCard(field: field, send: send, highlight: highlight),
-      );
-}
-
-class StripSendButton extends ComposerSendButton {
-  const StripSendButton(
-      {super.key,
-      required super.enabled,
-      super.sending,
-      super.stop,
-      super.onTap});
-}
 
 class DesktopRecorderStrip extends StatelessWidget {
   const DesktopRecorderStrip({
