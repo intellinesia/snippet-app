@@ -272,6 +272,8 @@ class _SessionScreenState extends State<SessionScreen>
   StreamSubscription<dynamic>? _sub;
   final List<String> _outbox = [];
   Timer? _bannerTimer;
+  static const _reconnecting = 'Reconnecting…';
+  static const _unreachable = "Can't reach Snippet";
   bool _confirmingRecording = false;
   SharedInbound? _consumedShare;
   HarnessState? _state;
@@ -1392,7 +1394,8 @@ class _SessionScreenState extends State<SessionScreen>
                             widget.mobileTopBar?.call(() => _openActionsDrawer(s)) ?? _mobileHeader(s),
                           if (widget.readOnly && widget.banner != null)
                             _centerWide(widget.banner!),
-                          if (_connError != null) _disconnectedBanner(),
+                          if (_connError != null && !kMobile)
+                            _disconnectedBanner(),
                           Expanded(
                             child: Stack(children: [
                               s == null

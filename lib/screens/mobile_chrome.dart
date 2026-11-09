@@ -206,6 +206,7 @@ class MobileBackBar extends StatelessWidget {
     required this.title,
     this.onBack,
     this.subtitle,
+    this.subtitleView,
     this.onTitleTap,
     this.trailing = const [],
     this.menu = false,
@@ -216,6 +217,9 @@ class MobileBackBar extends StatelessWidget {
 
   final String title;
   final String? subtitle;
+
+  /// Replaces [subtitle] when set, e.g. a live connection status.
+  final Widget? subtitleView;
   /// For a back that does something the system gesture wouldn't: closing an
   /// overlay inside the page or saving on the way out. Anywhere else the gesture
   /// is the way back and the bar stays clear.
@@ -262,7 +266,10 @@ class MobileBackBar extends StatelessWidget {
             AppIcon('chevron-down', size: 14, color: AppColors.fg3),
           ],
         ]),
-        if (subtitle != null && subtitle!.isNotEmpty)
+        if (subtitleView != null)
+          Padding(
+              padding: const EdgeInsets.only(top: 1), child: subtitleView)
+        else if (subtitle != null && subtitle!.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 1),
             child: Text(subtitle!,

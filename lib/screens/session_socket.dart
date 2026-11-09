@@ -13,7 +13,8 @@ extension _SessionScreenSocketExt on _SessionScreenState {
     _sub = null;
     _connectionWatchdog?.cancel();
     _channel?.sink.close();
-    if (mounted) _setState(() => _connError = null);
+    // Keep any reconnect status until a frame arrives; clearing it per attempt
+    // made the indicator flicker through every backoff step.
     _freshConn = true;
     _serverSupportsHeartbeat = false;
     _decodeQueue = null;
@@ -446,10 +447,13 @@ extension _SessionScreenSocketExt on _SessionScreenState {
     // Delay the banner briefly so transient handoffs do not flash a warning.
     _bannerTimer?.cancel();
     _bannerTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted && !_closed && _channel == null) {
-        _setState(() => _connError = 'Reconnecting…');
+      if (mounted && !_closed && _channel == null && _connError == null) {
+        _setState(() => _connError = _SessionScreenState._reconnecting);
       }
     });
+    if (_reconnectAttempt >= 6 && _connError == _SessionScreenState._reconnecting && mounted) {
+      _setState(() => _connError = _SessionScreenState._unreachable);
+    }
     _reconnectTimer = Timer(Duration(milliseconds: delayMs), () {
       if (!_closed) _connect();
     });
