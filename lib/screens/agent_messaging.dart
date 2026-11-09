@@ -1088,7 +1088,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         bottom: false,
         child: Column(
           children: [
-            if (!hideChrome || !kMobile) _header(),
+            if (!hideChrome) _header(),
             if (kMobile) _phoneSwitcher(),
             Expanded(child: _viewBody()),
             if (_view == AgentView.thread) _composer(),

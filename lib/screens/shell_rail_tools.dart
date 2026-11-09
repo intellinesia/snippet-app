@@ -78,6 +78,8 @@ List<Widget> buildShellRailTools({
               minWidth: 220,
               maxWidth: 280,
               items: [
+                appMenuItem(value: 'inbox', icon: 'inbox', label: 'Inbox'),
+                appMenuItem(value: 'board', icon: 'clipboard', label: 'Board'),
                 appMenuItem(
                     value: 'desk', icon: 'terminal', label: 'Desk session'),
                 appMenuItem(value: 'memory', icon: 'brain', label: 'Memory'),

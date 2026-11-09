@@ -393,6 +393,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           r
     ];
     if (agent != null) {
+      if (tabReadouts.isEmpty) return null;
       return AgentSidePanel(
         key: ValueKey('agent-panel-${tab.key}'),
         client: tab.client,

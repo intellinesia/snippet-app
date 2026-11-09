@@ -440,9 +440,12 @@ class _DesktopShellState extends State<DesktopShell>
 
   bool _sidePanelHidden = true;
 
-  /// An agent tab always has its panel unless the user hides it; separate from
-  /// [_sidePanelHidden], whose session default is hidden.
-  bool _agentPanelHidden = false;
+  /// An agent tab's panel holds only the pages opened from its Actions menu.
+  bool _agentPanelHidden = true;
+
+  bool get _agentHasPanelTabs => _rightTabs.any((r) =>
+      r.pane == _Pane.right &&
+      (r.originTabKey == null || r.originTabKey == _activeTab?.key));
 
   CoordinationAgent? get _activeAgent => _activeTab?.readout?.agent;
 
@@ -500,7 +503,8 @@ class _DesktopShellState extends State<DesktopShell>
           onOpenGoalPopover: _openGoalPopover,
           onAgentAction: _agentAction,
         ),
-        if (_activeTab?.sessionId != null || _activeAgent != null)
+        if (_activeTab?.sessionId != null ||
+            (_activeAgent != null && _agentHasPanelTabs))
           Tooltip(
             message: _panelHidden ? 'Show panel' : 'Hide panel',
             child: Material(
