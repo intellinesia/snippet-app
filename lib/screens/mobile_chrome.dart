@@ -347,31 +347,35 @@ class MobileStackedTitleBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(_side, 8, _side, 8),
-        child: Semantics(
+        child: Center(
+          child: Semantics(
           button: onTap != null,
           label: title,
           hint: tapHint,
           child: Pressable(
             kind: PressKind.card,
-            radius: 22,
+            radius: 20,
             enabled: onTap != null,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onTap,
               child: Container(
-                height: 44,
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                alignment: Alignment.center,
-                decoration: _floating(22),
-                child: Text(title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: sans(15, weight: W.strong, color: AppColors.fg1)),
+                height: 40,
+                constraints: const BoxConstraints(minWidth: 96),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: _floating(20),
+                child: Center(
+                  widthFactor: 1,
+                  child: Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: sans(15, weight: W.strong, color: AppColors.fg1)),
+                ),
               ),
             ),
           ),
+        ),
         ),
       );
 }

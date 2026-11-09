@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../crew_widgets.dart';
 import '../media_views.dart' show DaemonScope;
-import '../mochi.dart';
 import '../models.dart';
 import '../panel.dart';
 import '../platform.dart';
@@ -131,7 +130,6 @@ Future<void> openAgentActions(
               MobileBackBar(
                 title: agentName,
                 subtitle: 'Actions',
-                leading: AgentMochi(agentId, size: 24),
                 onBack: () => Navigator.of(page).pop(),
                 onTitleTap: () {},
               ),
