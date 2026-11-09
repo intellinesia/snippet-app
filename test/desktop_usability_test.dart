@@ -91,31 +91,20 @@ class _FakeDaemonClient extends DaemonClient {
 void main() {
   group('ShellShortcutsHandler', () {
     test('handles tab navigation, lifecycle, and toggles', () {
-      bool closedTab = false;
-      bool newSession = false;
-      int relativeDelta = 0;
-      int tabIndex = -1;
-      bool openedFiles = false;
-      bool openedGit = false;
-      bool toggledSidebar = false;
-      bool toggledRight = false;
-      bool openedPalette = false;
-      bool focusedComposer = false;
-      bool stoppedTask = false;
       bool showedShortcuts = false;
 
       final handler = ShellShortcutsHandler(
-        onCloseActiveTab: () => closedTab = true,
-        onNewSession: () => newSession = true,
-        onActivateRelativeTab: (d) => relativeDelta = d,
-        onActivateTab: (i) => tabIndex = i,
-        onOpenActiveFiles: () => openedFiles = true,
-        onOpenMacGit: () => openedGit = true,
-        onToggleSidebar: () => toggledSidebar = true,
-        onToggleRightPanel: () => toggledRight = true,
-        onOpenCommandPalette: () => openedPalette = true,
-        onFocusComposer: () => focusedComposer = true,
-        onStopRunningTask: () => stoppedTask = true,
+        onCloseActiveTab: () {},
+        onNewSession: () {},
+        onActivateRelativeTab: (_) {},
+        onActivateTab: (_) {},
+        onOpenActiveFiles: () {},
+        onOpenMacGit: () {},
+        onToggleSidebar: () {},
+        onToggleRightPanel: () {},
+        onOpenCommandPalette: () {},
+        onFocusComposer: () {},
+        onStopRunningTask: () {},
         onShowShortcuts: () => showedShortcuts = true,
       );
 
