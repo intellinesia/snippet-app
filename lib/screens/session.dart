@@ -1394,7 +1394,8 @@ class _SessionScreenState extends State<SessionScreen>
                             widget.mobileTopBar?.call(() => _openActionsDrawer(s)) ?? _mobileHeader(s),
                           if (widget.readOnly && widget.banner != null)
                             _centerWide(widget.banner!),
-                          if (_connError != null && !kMobile)
+                          // Mission Control's mobile top bar has no status line.
+                          if (_connError != null && (!kMobile || widget.mobileTopBar != null))
                             _disconnectedBanner(),
                           Expanded(
                             child: Stack(children: [

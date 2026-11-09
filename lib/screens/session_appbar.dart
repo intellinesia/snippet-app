@@ -409,13 +409,15 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
             if ((_modelLabel ?? '').isNotEmpty) _modelLabel!,
           ].join(' · ');
     final offline = _connError != null;
+    final stuck = _connError == _SessionScreenState._unreachable;
     return MobileBackBar(
       title: _title.isEmpty ? 'Session' : _title,
       subtitle: sub,
       subtitleView: offline ? _mobileConnectionLine() : null,
       onBack: widget.onMenu ?? () => Navigator.maybePop(context),
       keepBack: true,
-      onTitleTap: offline ? _retryNow : () => _openActionsDrawer(s),
+      onTitleTap: stuck ? _retryNow : () => _openActionsDrawer(s),
+      onTitleTapHint: stuck ? 'Retry connection' : 'Session actions',
       trailing: [
         if (s != null && s.lanes.any((l) => l.running)) ...[
           RoundBtn(
@@ -1033,6 +1035,9 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   void _retryNow() {
     HapticFeedback.selectionClick();
     _reconnectAttempt = 0;
+    if (_connError != null) {
+      _setState(() => _connError = _SessionScreenState._reconnecting);
+    }
     _connect();
   }
 
@@ -1047,6 +1052,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     return Semantics(
       liveRegion: true,
       label: text,
+      excludeSemantics: true,
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         StatusDot(
             status: stuck ? 'offline' : 'checking',
