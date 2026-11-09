@@ -307,7 +307,13 @@ extension _SessionScreenSocketExt on _SessionScreenState {
                   next.pendingQuestion != null) !=
               (cur.status == 'waiting_for_input' &&
                   cur.pendingQuestion != null);
-      if (eventsChanged || questionFlipped) _transcriptDirty = true;
+      // The transcript also draws the run spinner and live lane cards.
+      final chromeChanged = cur == null ||
+          next.status != cur.status ||
+          j.containsKey('lanes');
+      if (eventsChanged || questionFlipped || chromeChanged) {
+        _transcriptDirty = true;
+      }
       if (wire == 'snapshot') {
         final offset = (j['event_offset'] as num?)?.toInt();
         _transcriptStart = offset ?? 0;

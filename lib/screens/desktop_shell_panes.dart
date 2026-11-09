@@ -1,17 +1,18 @@
 part of 'desktop_shell.dart';
 
 extension _DesktopShellPanesExt on _DesktopShellState {
-  Widget _tabBody(_ShellTab t, {required bool primary}) => kMobile
-      ? _originTabBody(t, primary: primary)
+  Widget _tabBody(_ShellTab t, {required bool primary, bool? visible}) => kMobile
+      ? _originTabBody(t, primary: primary, visible: visible ?? primary)
       : ShellPanelScope(
           key: ValueKey('body-${t.key}'),
           open: _openShellPanel,
           client: t.client,
           sessionId: t.sessionId,
-          child: _originTabBody(t, primary: primary),
+          child: _originTabBody(t, primary: primary, visible: visible ?? primary),
         );
 
-  Widget _originTabBody(_ShellTab t, {required bool primary}) {
+  Widget _originTabBody(_ShellTab t,
+      {required bool primary, required bool visible}) {
     if (t.isReadout) {
       final origin = t.readoutOrigin;
       return Container(
@@ -112,6 +113,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           ? null
           : () => _setState(() => t.inboundShare = null),
       acceptDrops: primary,
+      live: visible,
       mobileActive: !kMobile ||
           (_appForeground &&
               !_mobileChatsOpen &&
@@ -330,7 +332,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         focusedPane: _focusedPane,
         statusForTab: _statusForTab,
         canCloseTab: (t) => _canCloseTab(t) || t.isTerminal,
-        tabBodyBuilder: (t, primary) => _tabBody(t, primary: primary),
+        tabBodyBuilder: (t, primary, visible) =>
+            _tabBody(t, primary: primary, visible: visible),
         readoutBodyBuilder: (r) {
           final tab = _activeTab;
           final controls = tab == null ? null : _macSessionControls[tab.key];
@@ -586,7 +589,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           _scrollStripToActive();
           _refreshMacGit();
         },
-        tabBodyBuilder: (t, primary) => _tabBody(t, primary: primary),
+        tabBodyBuilder: (t, primary, visible) =>
+            _tabBody(t, primary: primary, visible: visible),
         welcomeView: _welcome(),
         recentPlaceholder: _recentPlaceholder(),
         tabStrip: _tabStrip(onMenu),

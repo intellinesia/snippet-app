@@ -157,6 +157,11 @@ class SessionScreen extends StatefulWidget {
   /// file and the composer chips leak across tabs.
   final bool acceptDrops;
 
+  /// Whether the transcript is on screen and should keep its socket open.
+  /// Defaults to [acceptDrops]; a split pane without focus is visible but
+  /// must not take drops.
+  final bool? live;
+
   /// Android share / "Ask Snippet" payload to attach + send once the session
   /// is connected. Consumed by the first visible session that matches.
   final SharedInbound? inboundShare;
@@ -198,6 +203,7 @@ class SessionScreen extends StatefulWidget {
       this.onTerminalHost,
       this.onOpenScheduled,
       this.acceptDrops = true,
+      this.live,
       this.inboundShare,
       this.onShareConsumed,
       this.mobileActive = true,
@@ -889,7 +895,7 @@ class _SessionScreenState extends State<SessionScreen>
       _playbackDuration = duration;
       _recorderTick.value++;
     });
-    if (!widget.acceptDrops && _state != null) _parked = true;
+    if (!_live && _state != null) _parked = true;
     _startSession();
     _startAgentEvents();
     modelsRevision.addListener(_loadModel);
@@ -1021,14 +1027,14 @@ class _SessionScreenState extends State<SessionScreen>
     if (_isMissionControl && _title != 'Mission Control') {
       _title = 'Mission Control';
     }
-    if (sameSession && widget.acceptDrops != oldWidget.acceptDrops) {
-      if (widget.acceptDrops) {
+    if (sameSession && _live != (oldWidget.live ?? oldWidget.acceptDrops)) {
+      if (_live) {
         _unpark();
       } else {
         _park();
       }
     }
-    if (widget.acceptDrops && (_channel == null || _parked)) {
+    if (_live && (_channel == null || _parked)) {
       _unpark();
     }
     if (!sameSession) {
@@ -1039,7 +1045,7 @@ class _SessionScreenState extends State<SessionScreen>
           Drafts.keyFor(oldWidget.client.baseUrl, oldWidget.sessionId),
           _currentDraft(),
           now: true);
-      _parked = !widget.acceptDrops;
+      _parked = !_live;
       _title = _isMissionControl ? 'Mission Control' : widget.title;
       // PageView normally keys each session, but a parent may reuse this State
       // while switching tabs. Never carry composer/upload state across sessions.
@@ -1089,7 +1095,7 @@ class _SessionScreenState extends State<SessionScreen>
       if (!_githubKnown && state == AppLifecycleState.resumed) {
         _loadGithubStatus();
       }
-      if (widget.acceptDrops) {
+      if (_live) {
         if (_parked) {
           _unpark();
         } else if (_channel == null) {
@@ -1174,6 +1180,8 @@ class _SessionScreenState extends State<SessionScreen>
     _title = title;
     widget.onTitle?.call(title);
   }
+
+  bool get _live => widget.live ?? widget.acceptDrops;
 
   void _park() {
     if (_parked) return;
