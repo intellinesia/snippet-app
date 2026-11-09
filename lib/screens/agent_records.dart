@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../crew_widgets.dart';
+import '../media_views.dart' show DaemonScope;
 import '../mochi.dart';
 import '../models.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../pull_refresh.dart';
+import '../shell_panel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -773,45 +775,127 @@ Future<void> _showRecord(
   String? heading,
   List<Widget> extra = const [],
   List<(String, VoidCallback)> actions = const [],
-}) =>
-    showAppSheet<void>(
-      context,
+}) {
+  Widget body(VoidCallback dismiss) => _recordBody(
+      meta: meta,
+      text: text,
+      heading: heading,
+      extra: extra,
+      actions: actions,
+      dismiss: dismiss);
+  if (!kMobile) {
+    // Already in the right panel: a page of the panel's own navigator.
+    if (ShellPanelRoot.inPanel(context)) {
+      return Navigator.of(context).push<void>(PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 160),
+        reverseTransitionDuration: const Duration(milliseconds: 120),
+        pageBuilder: (page, _, __) => _RecordDetailPage(
+            title: title, child: body(() => Navigator.of(page).pop())),
+        transitionsBuilder: (_, a, __, child) => FadeTransition(
+            opacity: CurvedAnimation(parent: a, curve: Curves.easeOut),
+            child: child),
+      ));
+    }
+    final host = ShellPanelScope.maybeOf(context);
+    if (host != null) {
+      return host
+          .open(ShellPanelRequest(
+            purpose: ShellPanelPurpose.generic,
+            id: 'record:$title:$meta',
+            client: DaemonScope.maybeOf(context) ?? host.client,
+            sessionId: host.sessionId,
+            title: title,
+            builder: (_, close) => SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
+                child: body(close)),
+          ))
+          .then((_) {});
+    }
+  }
+  return showAppSheet<void>(context,
       title: title,
       maxWidth: 620,
       maxHeight: 680,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(meta, style: sans(_meta, color: AppColors.fg3)),
-          const SizedBox(height: 10),
-          if (heading != null && heading.isNotEmpty) ...[
-            Text(heading,
-                style: sans(_title,
-                    weight: W.label, color: AppColors.fg1, height: 1.35)),
-            const SizedBox(height: 8),
-          ],
-          if (text.trim().isNotEmpty)
-            CardMarkdownBody(body: text, collapsible: false),
-          ...extra,
-          if (actions.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Wrap(alignment: WrapAlignment.end, spacing: 8, children: [
-                for (final (label, run) in actions)
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      run();
-                    },
-                    child: Text(label,
-                        style: sans(_body, color: AppColors.accent)),
-                  ),
-              ]),
-            ),
+      child: body(() => Navigator.of(context).pop()));
+}
+
+Widget _recordBody({
+  required String meta,
+  required String text,
+  String? heading,
+  List<Widget> extra = const [],
+  List<(String, VoidCallback)> actions = const [],
+  required VoidCallback dismiss,
+}) =>
+    Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(meta, style: sans(_meta, color: AppColors.fg3)),
+        const SizedBox(height: 10),
+        if (heading != null && heading.isNotEmpty) ...[
+          Text(heading,
+              style: sans(_title,
+                  weight: W.label, color: AppColors.fg1, height: 1.35)),
+          const SizedBox(height: 8),
         ],
-      ),
+        if (text.trim().isNotEmpty)
+          CardMarkdownBody(body: text, collapsible: false),
+        ...extra,
+        if (actions.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Wrap(alignment: WrapAlignment.end, spacing: 8, children: [
+              for (final (label, run) in actions)
+                TextButton(
+                  onPressed: () {
+                    dismiss();
+                    run();
+                  },
+                  child:
+                      Text(label, style: sans(_body, color: AppColors.accent)),
+                ),
+            ]),
+          ),
+      ],
     );
+
+class _RecordDetailPage extends StatelessWidget {
+  const _RecordDetailPage({required this.title, required this.child});
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: AppColors.bg,
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Row(children: [
+              IconBtn('arrow-left',
+                  size: 28,
+                  iconSize: 15,
+                  tooltip: 'Back',
+                  onTap: () => Navigator.of(context).maybePop()),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, weight: W.label, color: AppColors.fg1)),
+              ),
+            ]),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(14, 4, 14, 16),
+                child: child),
+          ),
+        ]),
+      );
+}
 
 String _fullTime(String raw) {
   final t = _time(raw);
@@ -819,6 +903,11 @@ String _fullTime(String raw) {
 }
 
 void _openSession(BuildContext context, DaemonClient client, String id, String title) {
+  final tab = openSessionInTab;
+  if (!kMobile && tab != null) {
+    tab(client, id, title);
+    return;
+  }
   presentScreen(context,
       builder: (_, close) => SessionScreen(
           client: client, sessionId: id, title: title, onMenu: close));

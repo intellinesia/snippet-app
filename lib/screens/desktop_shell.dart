@@ -536,7 +536,10 @@ class _DesktopShellState extends State<DesktopShell>
     // Tapping a session notification opens it in-place (consistent with the app),
     // not a separate full-screen route.
     onNotifTap = _onNotif;
-    if (!kMobile) openTaskInTab = _openTaskTabById;
+    if (!kMobile) {
+      openTaskInTab = _openTaskTabById;
+      openSessionInTab = (_, id, title) => _openSession(id, title, null);
+    }
     _startSessionsTicker();
     if (!kMobile) HardwareKeyboard.instance.addHandler(_handleGlobalShortcuts);
     if (kMobile) ShareInbound.listen(_onInboundShare);
@@ -567,6 +570,7 @@ class _DesktopShellState extends State<DesktopShell>
     _shells.dispose();
     if (onNotifTap == _onNotif) onNotifTap = null;
     openTaskInTab = null;
+    openSessionInTab = null;
     if (kMobile) ShareInbound.dispose();
     super.dispose();
   }

@@ -27,6 +27,10 @@ enum ShellPanelPurpose {
   generic,
 }
 
+/// Set by the desktop shell so panel content can open a session as a tab.
+void Function(DaemonClient client, String sessionId, String title)?
+    openSessionInTab;
+
 class ShellPanelRequest {
   ShellPanelRequest(
       {required this.purpose,

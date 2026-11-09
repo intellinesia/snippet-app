@@ -33,14 +33,15 @@ class FakeDaemon {
   final HttpServer server;
   final requests = <String>[];
 
-  static Future<FakeDaemon> start() async {
+  static Future<FakeDaemon> start({Object? Function(String path)? extra}) async {
     final server = await HttpServer.bind('127.0.0.1', 0);
     final d = FakeDaemon._(server);
     server.listen((req) async {
       d.requests.add('${req.method} ${req.uri.path}');
       final path = req.uri.path;
-      Object? body;
-      if (path == '/agents') {
+      Object? body = extra?.call(path);
+      if (body != null) {
+      } else if (path == '/agents') {
         body = [
           agentJson('snippet', 'Snippet', 'Implementer', profile: 'opus'),
           agentJson('reviewer', 'Rust PR Reviewer', 'Code reviewer'),
