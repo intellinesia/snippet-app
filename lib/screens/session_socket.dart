@@ -324,6 +324,13 @@ extension _SessionScreenSocketExt on _SessionScreenState {
         cache.remove(cache.keys.first);
       }
       cache[_cacheKey] = (next, _transcriptStart);
+      // A tab opened hidden with nothing cached connects for its first
+      // snapshot; without this it stays attached until shown and hidden again.
+      if (wire == 'snapshot' && !_live && !_parked) {
+        scheduleMicrotask(() {
+          if (mounted && !_live) _park();
+        });
+      }
       _setState(() {
         _state = next;
         if (!_isMissionControl) {

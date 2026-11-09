@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +50,33 @@ void main() {
     expect(attachOpen(), isTrue);
     await show(tester, acceptDrops: false, live: true);
     expect(attachOpen(), isTrue);
+    await tester.pumpWidget(const SizedBox.shrink());
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('a chat opened hidden parks once its first snapshot lands', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    await tester.pumpWidget(MaterialApp(
+      theme: buildAppTheme(),
+      home: SessionScreen(
+        client: client,
+        sessionId: 'opened-hidden',
+        title: 'Hidden',
+        embedded: true,
+        acceptDrops: false,
+        live: false,
+      ),
+    ));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(attachOpen(), isTrue);
+    sockets.lastWhere((s) => s.uri.path.contains('attach'))._controller.add(jsonEncode({
+      'wire': 'snapshot',
+      'session_id': 'opened-hidden',
+      'status': 'idle',
+      'events': [],
+    }));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(attachOpen(), isFalse);
     await tester.pumpWidget(const SizedBox.shrink());
     debugDefaultTargetPlatformOverride = null;
   });
