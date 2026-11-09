@@ -443,7 +443,7 @@ class DaemonClient {
       String provider, String model) async {
     final r = await _get(_uri('/reasoning', {'provider': provider, 'model': model}));
     if (r.statusCode != 200) {
-      throw Exception(r.body.isEmpty ? 'HTTP ${r.statusCode}' : r.body);
+      throw Exception(r.body.isEmpty ? 'HTTP ${r.statusCode}' : errorDetail(r.body));
     }
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
@@ -451,7 +451,7 @@ class DaemonClient {
   Future<Map<String, dynamic>> cliAgentStatus(String provider) async {
     final r = await _get(_uri('/cli-agent/status', {'provider': provider}));
     if (r.statusCode != 200) {
-      throw Exception(r.body.isEmpty ? 'HTTP ${r.statusCode}' : r.body);
+      throw Exception(r.body.isEmpty ? 'HTTP ${r.statusCode}' : errorDetail(r.body));
     }
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
@@ -498,7 +498,7 @@ class DaemonClient {
           if (maxSeconds != null) 'max_seconds': maxSeconds,
         }));
     if (r.statusCode != 200) {
-      throw r.statusCode == 400 ? r.body : _err('save voice settings', r);
+      throw r.statusCode == 400 ? errorDetail(r.body) : _err('save voice settings', r);
     }
     invalidateConfig();
     return VoiceSettings.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
@@ -592,7 +592,7 @@ class DaemonClient {
           if (stt != null) 'stt': stt,
         }));
     if (r.statusCode != 200) {
-      throw r.statusCode == 400 ? r.body : _err('save ambient settings', r);
+      throw r.statusCode == 400 ? errorDetail(r.body) : _err('save ambient settings', r);
     }
     return AmbientSettings.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
@@ -680,7 +680,7 @@ class DaemonClient {
         body:
             jsonEncode({if (provider != null) 'provider': provider, ...body}), timeout: _long);
     if (r.statusCode != 200) {
-      throw r.statusCode == 400 ? r.body : _err('$action account', r);
+      throw r.statusCode == 400 ? errorDetail(r.body) : _err('$action account', r);
     }
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
@@ -988,15 +988,8 @@ class DaemonClient {
     }
   }
 
-  String _ghError(http.Response r) {
-    try {
-      return (jsonDecode(r.body) as Map<String, dynamic>)['error']
-              ?.toString() ??
-          r.body;
-    } catch (_) {
-      return r.body;
-    }
-  }
+  String _ghError(http.Response r) => errorDetail(r.body);
+
 
   /// GET /github/prs — open, mine, review or closed.
   Future<({List<PrSummary> prs, String? next})> githubPrPage(
@@ -1957,6 +1950,17 @@ class DaemonClient {
     if (r.statusCode != 200) throw _err('delete recurring job', r);
   }
 
-  String _err(String what, http.Response r) =>
-      'Failed to $what (HTTP ${r.statusCode})${r.body.isNotEmpty ? ': ${r.body}' : ''}';
+  String _err(String what, http.Response r) {
+    final detail = errorDetail(r.body);
+    return 'Failed to $what (HTTP ${r.statusCode})${detail.isNotEmpty ? ': $detail' : ''}';
+  }
+
+  /// The daemon's `{"error": "..."}` message, or the raw body if it is not JSON.
+  static String errorDetail(String body) {
+    try {
+      final j = jsonDecode(body);
+      if (j is Map && j['error'] is String) return j['error'] as String;
+    } catch (_) {}
+    return body.trim();
+  }
 }
