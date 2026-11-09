@@ -504,54 +504,6 @@ void toast(BuildContext context, String message, {bool danger = false}) {
   });
 }
 
-/// A toast with tappable action buttons (e.g. Open / Share after a download).
-/// Unlike [toast] it isn't IgnorePointer'd, and it lingers longer so the actions
-/// are reachable. Tapping an action dismisses it.
-typedef ToastAction = ({String label, String icon, VoidCallback onTap});
-
-void actionToast(BuildContext context, String message,
-    {required List<ToastAction> actions}) {
-  final overlay = Overlay.maybeOf(context, rootOverlay: true);
-  if (overlay == null) return;
-  _activeToast?.remove();
-  _toastTimer?.cancel();
-  late final OverlayEntry entry;
-  void dismiss() {
-    if (_activeToast == entry) {
-      entry.remove();
-      _activeToast = null;
-      _toastTimer?.cancel();
-    }
-  }
-
-  entry = OverlayEntry(
-    builder: (ctx) => _toastSlot(
-      ctx,
-      Center(
-        child: _ToastCard(
-          message: message,
-          danger: false,
-          actions: actions
-              .map((a) => (
-                    label: a.label,
-                    icon: a.icon,
-                    onTap: () {
-                      // Run the action first, then tear the toast down — removing the
-                      // overlay entry mid-tap could otherwise swallow the action.
-                      a.onTap();
-                      dismiss();
-                    }
-                  ))
-              .toList(),
-        ),
-      ),
-    ),
-  );
-  _activeToast = entry;
-  overlay.insert(entry);
-  _toastTimer = Timer(const Duration(milliseconds: 6000), dismiss);
-}
-
 /// Where toasts sit: under the status bar on phones, so they never cover the
 /// composer or the bottom bar; bottom-centre on desktop.
 Widget _toastSlot(BuildContext ctx, Widget card) {
@@ -568,9 +520,7 @@ Widget _toastSlot(BuildContext ctx, Widget card) {
 class _ToastCard extends StatefulWidget {
   final String message;
   final bool danger;
-  final List<ToastAction> actions;
-  const _ToastCard(
-      {required this.message, required this.danger, this.actions = const []});
+  const _ToastCard({required this.message, required this.danger});
   @override
   State<_ToastCard> createState() => _ToastCardState();
 }
@@ -648,21 +598,6 @@ class _ToastCardState extends State<_ToastCard>
                             color: AppColors.fg1)
                         .copyWith(decoration: TextDecoration.none)),
               ),
-              for (final a in widget.actions) ...[
-                const SizedBox(width: 8),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: a.onTap,
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    child: Text(a.label,
-                        style: sans(kMobile ? 14 : 13,
-                                weight: W.label, color: AppColors.accent)
-                            .copyWith(decoration: TextDecoration.none)),
-                  ),
-                ),
-              ],
             ]),
           ),
         ),

@@ -285,8 +285,6 @@ class SettingsField extends StatelessWidget {
   }
 }
 
-TextStyle mono_(double size) => mono(size, color: AppColors.fg1);
-
 class SettingsPill extends StatelessWidget {
   const SettingsPill(this.label,
       {super.key, required this.onTap, this.danger = false});

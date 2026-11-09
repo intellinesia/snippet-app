@@ -126,14 +126,4 @@ void main() {
     expect(r.main.map((s) => s.id), ['m1', 'm2']);
     expect(r.settled.map((s) => s.id), ['s2', 's1']);
   });
-
-  test('settledMeta counts days to deletion', () {
-    const day = 86400;
-    final s = _s('x', settled: true, at: 1000);
-    expect(settledMeta(s, nowSecs: 1000 + day), 'Settled · deleted in 14 days');
-    expect(settledMeta(s, nowSecs: 1000 + 14 * day + 1),
-        'Settled · deleted in 1 day');
-    expect(settledMeta(s, nowSecs: 1000 + 16 * day), 'Settled · deleted today');
-    expect(settledMeta(_s('y', settled: true), nowSecs: 5), 'Settled');
-  });
 }

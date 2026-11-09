@@ -558,16 +558,6 @@ Future<void> initializeNotificationBackgroundIsolate(
   await _initializeAndroidNotifications(plugin ?? _mainNotif);
 }
 
-/// Build the device-wide events WebSocket URI for an instance.
-Uri eventsUri(String baseUrl, String token) {
-  final u = Uri.parse(baseUrl);
-  return u.replace(
-    scheme: u.scheme == 'https' ? 'wss' : 'ws',
-    path: '/events',
-    queryParameters: {'token': token},
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Main-isolate setup: foreground-task config + tap routing + launch handling.
 // ---------------------------------------------------------------------------

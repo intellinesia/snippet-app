@@ -626,21 +626,6 @@ class _StatusDotState extends State<StatusDot>
   }
 }
 
-/// Rounded status pill with a leading dot.
-class StatusPill extends StatelessWidget {
-  final String status;
-  const StatusPill({super.key, required this.status});
-  @override
-  Widget build(BuildContext context) => switch (status) {
-        'running' => const Tag('Running', tone: Tone.run, live: true),
-        'online' => const Tag('Online', tone: Tone.ok, dot: true),
-        'offline' => const Tag('Offline', tone: Tone.danger, dot: true),
-        'error' => const Tag('Error', tone: Tone.danger, dot: true),
-        'checking' => const Tag('Checking', dot: true),
-        _ => const Tag('Idle', dot: true),
-      };
-}
-
 /// Surface-1 card with a hairline border.
 class AppCard extends StatelessWidget {
   final Widget child;
@@ -1265,67 +1250,6 @@ class _DesktopIconBtnState extends State<_DesktopIconBtn> {
   }
 }
 
-/// Dashed add / empty card.
-class AddCard extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-  const AddCard({super.key, required this.label, required this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    Theme.of(context); // Rebuild on theme change
-    return Pressable(
-      kind: PressKind.card,
-      radius: R.card,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(R.card),
-        child: CustomPaint(
-          painter: _DashedBorder(color: AppColors.border2, radius: R.card),
-          child: Container(
-            width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 44),
-            padding: const EdgeInsets.all(12),
-            alignment: Alignment.center,
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const AppIcon('plus', size: 15),
-              const SizedBox(width: 8),
-              Text(label,
-                  style: sans(12, weight: W.label, color: AppColors.fg2)),
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DashedBorder extends CustomPainter {
-  final Color color;
-  final double radius;
-  const _DashedBorder({required this.color, required this.radius});
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1
-      ..style = PaintingStyle.stroke;
-    final path = Path()
-      ..addRRect(
-          RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius)));
-    const dash = 5.0, gap = 4.0;
-    for (final m in path.computeMetrics()) {
-      double d = 0;
-      while (d < m.length) {
-        canvas.drawPath(m.extractPath(d, (d + dash).clamp(0, m.length)), paint);
-        d += dash + gap;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedBorder old) => old.color != color;
-}
-
 /// Internal attachment and transcription markers are agent-facing metadata, not
 /// user-facing chat text.
 final RegExp _attachMarkerRe =
@@ -1361,11 +1285,6 @@ List<AudioTranscriptItem> audioTranscriptItems(String raw) {
     items.add(AudioTranscriptItem(error, unavailable: true));
   }
   return items;
-}
-
-String? audioTranscriptionError(String raw) {
-  final match = _audioUnavailableRe.firstMatch(raw);
-  return match?.group(1)?.trim();
 }
 
 bool isAudioAttachmentPath(String value) {
@@ -1921,45 +1840,6 @@ class NoteLine extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class StatTile extends StatelessWidget {
-  final String label;
-  final String value;
-  final String? sub;
-  final bool accent;
-  const StatTile(
-      {super.key,
-      required this.label,
-      required this.value,
-      this.sub,
-      this.accent = false});
-  @override
-  Widget build(BuildContext context) {
-    Theme.of(context); // Rebuild on theme change
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.md),
-      ),
-      child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(label, style: TS.caption()),
-            const SizedBox(height: 5),
-            Text(value,
-                style: mono(16,
-                    weight: W.label,
-                    color: accent ? AppColors.accent : AppColors.fg1)),
-            if (sub != null) ...[
-              const SizedBox(height: 4),
-              Text(sub!, style: mono(10, color: AppColors.fg3))
-            ],
-          ]),
     );
   }
 }

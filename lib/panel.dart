@@ -1,7 +1,6 @@
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
-import 'menu_widgets.dart';
 import 'platform.dart';
 import 'shell_panel.dart';
 import 'api.dart';
@@ -95,61 +94,6 @@ Future<T?> presentScreen<T>(
               child: child,
             );
       return transition;
-    },
-  );
-}
-
-/// Present an adaptive panel: a rounded, dismissible bottom sheet on phones
-/// and the existing drawer/dialog treatment on wider layouts.
-Future<T?> presentAdaptivePanel<T>(
-  BuildContext context,
-  Widget child, {
-  PanelStyle style = PanelStyle.drawer,
-  double maxWidth = 720,
-  double maxHeight = 820,
-  ShellPanelPurpose purpose = ShellPanelPurpose.generic,
-  String? panelId,
-}) {
-  if (!kMobile) {
-    return presentScreen<T>(
-      context,
-      style: style,
-      purpose: purpose,
-      panelId: panelId ?? child.runtimeType.toString(),
-      maxWidth: maxWidth,
-      maxHeight: maxHeight,
-      builder: (_, __) => child,
-    );
-  }
-  return showModalBottomSheet<T>(
-    sheetAnimationStyle: sheetMotion,
-    context: context,
-    isScrollControlled: true,
-    isDismissible: true,
-    enableDrag: true,
-    useSafeArea: false,
-    backgroundColor: Colors.transparent,
-    barrierColor: AppColors.scrim,
-    builder: (sheetContext) {
-      final media = MediaQuery.of(sheetContext);
-      final height = (media.size.height - media.padding.top) * 0.9;
-      return SafeArea(
-        top: false,
-        child: SizedBox(
-          height: height,
-          child: Material(
-            color: AppColors.bg,
-            clipBehavior: Clip.antiAlias,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(R.sheetTop),
-            ),
-            child: Column(children: [
-              const SheetGrabHandle(),
-              Expanded(child: child),
-            ]),
-          ),
-        ),
-      );
     },
   );
 }

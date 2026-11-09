@@ -543,24 +543,3 @@ class _EmptyTeam extends StatelessWidget {
       );
 }
 
-/// State icon for agents, visually distinct from the session chat bubble.
-class AgentStateIcon extends StatelessWidget {
-  final bool active;
-  final double size;
-  const AgentStateIcon({super.key, this.active = false, this.size = 17});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Center(
-        child: AppIcon(
-          'agent',
-          size: size - 1,
-          color: active ? AppColors.accent : AppColors.fg3,
-        ),
-      ),
-    );
-  }
-}

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'media_views.dart';
-import 'panel.dart';
 import 'platform.dart';
 import 'theme.dart';
 import 'tool_activity.dart';
@@ -15,83 +14,6 @@ class ToolBatch {
   final List<ToolStep> steps;
   final bool running;
   const ToolBatch(this.steps, {this.running = false});
-}
-
-/// Open a tool batch: a draggable bottom sheet on phones, a right-side panel on
-/// wider windows. [batch] keeps updating while the calls are still running.
-Future<void> showToolBatchSheet(
-  BuildContext context, {
-  required ValueListenable<ToolBatch> batch,
-  int? initialStep,
-}) {
-  final scope = DaemonScope.scopeOf(context);
-  final openInPane = scope?.onOpenTools;
-  if (!kMobile && openInPane != null) {
-    openInPane(batch);
-    return Future.value();
-  }
-  Widget body(VoidCallback close, {ScrollController? scroll}) {
-    final view = ToolBatchView(
-      batch: batch,
-      onClose: close,
-      scroll: scroll,
-      initialStep: initialStep,
-    );
-    if (scope == null) return view;
-    final openTab = scope.onOpenFile;
-    return DaemonScope(
-      client: scope.client,
-      // A file opened from the side panel lands in a tab behind it, so the
-      // panel steps aside first.
-      onOpenFile: openTab == null
-          ? null
-          : (path, name) {
-              close();
-              openTab(path, name);
-            },
-      child: view,
-    );
-  }
-
-  if (!kMobile) {
-    return presentScreen<void>(
-      context,
-      style: PanelStyle.drawer,
-      maxWidth: 560,
-      builder: (_, close) => body(close),
-    );
-  }
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    showDragHandle: false,
-    backgroundColor: Colors.transparent,
-    barrierColor: AppColors.scrim,
-    sheetAnimationStyle: sheetMotion,
-    builder: (sheetContext) => Padding(
-      padding: EdgeInsets.only(top: MediaQuery.paddingOf(sheetContext).top),
-      child: DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.62,
-        minChildSize: 0.35,
-        maxChildSize: 0.95,
-        snap: true,
-        snapSizes: const [0.62],
-        builder: (_, scroll) => ClipRRect(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
-          child: ColoredBox(
-            color: AppColors.raised,
-            child: Material(
-              color: Colors.transparent,
-              child:
-                  body(() => Navigator.of(sheetContext).pop(), scroll: scroll),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
 }
 
 /// The sheet's content: the list of calls, and one call's full detail pushed on

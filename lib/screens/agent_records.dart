@@ -78,21 +78,6 @@ void _presentRecords(BuildContext host, String title, String agentName,
             onClose: close,
             child: view()));
 
-/// The agent's inbox or board on its own page.
-void openAgentRecords(BuildContext context,
-    {required DaemonClient client,
-    required String agentId,
-    required String agentName,
-    required bool board}) {
-  _presentRecords(
-      context,
-      board ? 'Board' : 'Inbox',
-      agentName,
-      () => board
-          ? AgentBoardView(client: client, agentId: agentId, agentName: agentName)
-          : AgentInboxView(client: client, agentId: agentId, agentName: agentName));
-}
-
 /// Entries that arrived since the inbox was last opened, as the inbox itself
 /// marks them. Capped at one page.
 Future<int> agentInboxUnread(DaemonClient client, String agentId) async {

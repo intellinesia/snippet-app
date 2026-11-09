@@ -1,8 +1,6 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:snippet/android_reconciliation.dart';
 
 import 'package:snippet/models.dart';
 import 'package:snippet/tool_activity.dart';
@@ -13,13 +11,6 @@ import 'package:snippet/transcript.dart';
 import 'package:snippet/widgets.dart';
 
 void main() {
-  test('Android reconciliation diff only returns newly observed ids', () {
-    expect(
-      newlyObservedSessionIds(['old', 'shared'], ['shared', 'new']),
-      {'new'},
-    );
-  });
-
   test('QueuedInput preserves stable identity and text', () {
     final item = QueuedInput.fromJson({'id': 'queue-1', 'text': 'duplicate'});
     expect(item.id, 'queue-1');

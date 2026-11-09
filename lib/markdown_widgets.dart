@@ -72,31 +72,6 @@ class MarkdownPreview extends StatelessWidget {
   }
 }
 
-/// Inline `code` only. Fenced blocks are handled by [PreBlockBuilder] on `pre`
-/// so we don't nest a second chrome box or paint the accent pill on whole blocks.
-class CodeBlockBuilder extends MarkdownElementBuilder {
-  @override
-  Widget? visitElementAfterWithContext(BuildContext context, md.Element element,
-      TextStyle? preferredStyle, TextStyle? parentStyle) {
-    final raw = element.textContent;
-    final isBlock = raw.contains('\n') ||
-        (element.attributes['class'] ?? '').startsWith('language-');
-    if (isBlock) {
-      // Nested under <pre> — PreBlockBuilder owns the chrome; return plain text.
-      final code = raw.endsWith('\n') ? raw.substring(0, raw.length - 1) : raw;
-      return Text(code, style: codeMono(13, height: 1.5, color: AppColors.fg1));
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-      decoration: BoxDecoration(
-        color: AppColors.accentBg,
-        borderRadius: BorderRadius.circular(R.xs),
-      ),
-      child: Text(raw, style: codeMono(13, color: AppColors.accent)),
-    );
-  }
-}
-
 /// Fenced ``` blocks — highlighted text only, no boxed chrome.
 class PreBlockBuilder extends MarkdownElementBuilder {
   @override

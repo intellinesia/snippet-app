@@ -7,7 +7,7 @@ import 'platform.dart';
 import 'theme.dart';
 import 'screens/action_list.dart' show ActionGroup, ActionRow;
 import 'widgets.dart'
-    show AppIcon, PressKind, Pressable, ShellPanelRoot, StatusDot;
+    show AppIcon, PressKind, Pressable, StatusDot;
 
 enum Tone { neutral, accent, ok, run, danger }
 
@@ -200,76 +200,6 @@ class SurfaceScope extends InheritedWidget {
 
   @override
   bool updateShouldNotify(SurfaceScope oldWidget) => group != oldWidget.group;
-}
-
-class SheetHeader extends StatelessWidget {
-  const SheetHeader({super.key, required this.title, required this.onClose});
-
-  final String title;
-  final VoidCallback onClose;
-
-  @override
-  Widget build(BuildContext context) => ShellPanelRoot.inPanel(context)
-      ? const SizedBox.shrink()
-      : Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: S.s8),
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.lineStrong,
-                  borderRadius: BorderRadius.circular(R.pill),
-                ),
-              ),
-            ),
-            Padding(
-              padding: kMobile
-                  ? const EdgeInsets.fromLTRB(20, 10, 8, 6)
-                  : const EdgeInsets.fromLTRB(S.s16, S.s4, S.s6, S.s2),
-              child: Row(children: [
-                Expanded(
-                  child: Text(title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: kMobile
-                          ? sans(20,
-                              weight: FontWeight.w700,
-                              spacing: -0.4,
-                              height: 26 / 20,
-                              color: AppColors.fg1)
-                          : TS.rowTitle(AppColors.fg1).copyWith(
-                              fontWeight: weightFor(FontWeight.w600))),
-                ),
-                Tooltip(
-                  message: 'Close',
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: onClose,
-                    child: SizedBox.square(
-                      dimension: 40,
-                      child: Center(
-                        child: Container(
-                          width: 26,
-                          height: 26,
-                          decoration: BoxDecoration(
-                            color: AppColors.overlay,
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: AppIcon('x', size: 13, color: AppColors.fg3),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ]),
-            ),
-          ],
-        );
 }
 
 class SheetAction {
@@ -841,33 +771,6 @@ class ListSkeleton extends StatelessWidget {
           ),
         ]),
       );
-}
-
-class InsetPanel extends StatelessWidget {
-  const InsetPanel({
-    super.key,
-    required this.child,
-    this.tone,
-    this.padding = const EdgeInsets.all(S.s12),
-  });
-
-  final Widget child;
-  final Tone? tone;
-  final EdgeInsetsGeometry padding;
-
-  @override
-  Widget build(BuildContext context) {
-    final bg = tone == null ? AppColors.overlay : toneColors(tone!).$2;
-    return Container(
-      width: double.infinity,
-      padding: padding,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(R.sm + 2),
-      ),
-      child: child,
-    );
-  }
 }
 
 class PageBody extends StatelessWidget {
