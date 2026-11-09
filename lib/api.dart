@@ -90,15 +90,6 @@ class DaemonClient {
         .toList();
   }
 
-  /// {folder: session count} across the device — for per-folder badges without
-  /// downloading the whole session list.
-  Future<Map<String, int>> sessionCounts() async {
-    final r = await http.get(_uri('/sessions/counts'));
-    if (r.statusCode != 200) throw _err('session counts', r);
-    return (jsonDecode(r.body) as Map<String, dynamic>)
-        .map((k, v) => MapEntry(k, (v as num).toInt()));
-  }
-
   Future<FsListing> fs(String? path) async {
     final r = await http.get(_uri('/fs', path == null ? null : {'path': path}));
     if (r.statusCode != 200) throw _err('browse', r);
@@ -228,10 +219,6 @@ class DaemonClient {
     return r.statusCode;
   }
 
-  Future<int> trackCall(String callId) => ambientCallAction(callId, 'track');
-  Future<int> ignoreCall(String callId) => ambientCallAction(callId, 'ignore');
-  Future<int> stopCall(String callId) => ambientCallAction(callId, 'stop');
-
   /// Device-wide `/events` firehose (status + terminal bells). Independent of
   /// the notification watcher so the session list can update live even when
   /// OS banners are off.
@@ -329,13 +316,6 @@ class DaemonClient {
     if (r.statusCode != 200) throw _err('save profile', r);
     invalidateConfig();
     return (jsonDecode(r.body) as Map<String, dynamic>)['name'] as String;
-  }
-
-  Future<void> setActiveProfile(String name) async {
-    final r = await http.post(_uri('/config/active'),
-        headers: _json, body: jsonEncode({'name': name}));
-    if (r.statusCode != 200) throw _err('set active', r);
-    invalidateConfig();
   }
 
   /// Live model catalog from the provider's own models API (the key stays on
@@ -630,12 +610,6 @@ class DaemonClient {
     if (r.statusCode != 200) throw _err('$mode recording', r);
   }
 
-  Future<AmbientStats> ambientStats() async {
-    final r = await http.get(_uri('/ambient/stats'));
-    if (r.statusCode != 200) throw _err('load ambient stats', r);
-    return AmbientStats.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
-  }
-
   Future<Map<String, List<Account>>> getAccounts() async {
     final r = await http.get(_uri('/accounts'));
     if (r.statusCode != 200) throw _err('load accounts', r);
@@ -905,13 +879,6 @@ class DaemonClient {
     return d['patch'] as String? ?? '';
   }
 
-  Future<List<GitCommit>> gitLog(String session, {int limit = 50}) async {
-    final d = await _gitPost('log', {'session': session, 'limit': limit});
-    return ((d['commits'] as List?) ?? [])
-        .map((e) => GitCommit.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
   /// Current branch, local names, and remote-tracking names (`origin/foo`).
   Future<({String current, List<String> local, List<String> remotes})>
       gitBranches(String session) async {
@@ -982,25 +949,6 @@ class DaemonClient {
       _gitPost('init', {'session': session});
 
   // ---- Mission Control ----
-
-  /// GET /mission-control/settings — notification routing policy.
-  Future<String> mcNotificationPolicy() async {
-    final r = await http.get(_uri('/mission-control/settings'));
-    if (r.statusCode != 200) throw _err('get Mission Control settings', r);
-    return (jsonDecode(r.body) as Map<String, dynamic>)['notification_policy']
-            as String? ??
-        'mission_control_only';
-  }
-
-  /// PUT /mission-control/settings — mission_control_only | all_sessions | none.
-  Future<String> mcSetNotificationPolicy(String policy) async {
-    final r = await http.put(_uri('/mission-control/settings'),
-        headers: _json, body: jsonEncode({'notification_policy': policy}));
-    if (r.statusCode != 200) throw _err('set Mission Control settings', r);
-    return (jsonDecode(r.body) as Map<String, dynamic>)['notification_policy']
-            as String? ??
-        policy;
-  }
 
   /// GET /mission-control/autonomy — whether Mission Control is autonomous, its rhythm
   /// and quiet hours, and when it last and next checks in.
@@ -1338,21 +1286,6 @@ class DaemonClient {
     }
   }
 
-  MissionControlOverview? cachedMcOverview() => _recall('mc-overview',
-      (j) => MissionControlOverview.fromJson(j as Map<String, dynamic>));
-
-  List<MissionControlTask>? cachedMcTasks() => _recall(
-      'mc-tasks',
-      (j) => (j as List)
-          .map((e) => MissionControlTask.fromJson(e as Map<String, dynamic>))
-          .toList());
-
-  List<ManagedSession>? cachedMcSessions() => _recall(
-      'mc-sessions',
-      (j) => (j as List)
-          .map((e) => ManagedSession.fromJson(e as Map<String, dynamic>))
-          .toList());
-
   Map<String, dynamic>? cachedMcAutonomy() =>
       _recall('mc-autonomy', (j) => j as Map<String, dynamic>);
 
@@ -1361,135 +1294,6 @@ class DaemonClient {
       (j) => (j as List)
           .map((e) => CoordinationAgent.fromJson(e as Map<String, dynamic>))
           .toList());
-
-  /// GET /mission-control/tasks — list all tasks (optionally filtered).
-  Future<List<MissionControlTask>> mcTasks({bool? archived}) async {
-    final q = <String, String>{'view': 'summary'};
-    if (archived != null) q['archived'] = '$archived';
-    final r = await http.get(_uri('/mission-control/tasks', q));
-    if (r.statusCode != 200) throw _err('list mission control tasks', r);
-    if (archived == false) _remember('mc-tasks', r.body);
-    final list = jsonDecode(r.body) as List;
-    return list
-        .map((e) => MissionControlTask.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
-  Future<MissionControlTask> mcTask(String id) async {
-    final r = await http
-        .get(_uri('/mission-control/tasks/${Uri.encodeComponent(id)}'));
-    if (r.statusCode != 200) throw _err('load mission control task', r);
-    return MissionControlTask.fromJson(
-        jsonDecode(r.body) as Map<String, dynamic>);
-  }
-
-  /// POST /mission-control/tasks — create a new task. Returns the created task.
-  Future<MissionControlTask> mcCreateTask({
-    required String title,
-    required String sessionId,
-    String description = '',
-    List<String>? ownedPaths,
-  }) async {
-    final body = <String, dynamic>{
-      'title': title,
-      'description': description,
-      'session_id': sessionId,
-    };
-    if (ownedPaths != null && ownedPaths.isNotEmpty) {
-      body['owned_paths'] = ownedPaths;
-    }
-    final r = await http.post(_uri('/mission-control/tasks'),
-        headers: _json, body: jsonEncode(body));
-    if (r.statusCode != 200) throw _err('create mission control task', r);
-    return MissionControlTask.fromJson(
-        jsonDecode(r.body) as Map<String, dynamic>);
-  }
-
-  /// PUT /mission-control/tasks/{id} — update an existing task.
-  Future<MissionControlTask> mcUpdateTask(
-    String id, {
-    String? title,
-    String? description,
-    String? status,
-    String? sessionId,
-    List<String>? ownedPaths,
-  }) async {
-    final body = <String, dynamic>{};
-    if (title != null) body['title'] = title;
-    if (description != null) body['description'] = description;
-    if (status != null) body['status'] = status;
-    if (sessionId != null) body['session_id'] = sessionId;
-    if (ownedPaths != null) body['owned_paths'] = ownedPaths;
-    final r = await http.put(_uri('/mission-control/tasks/$id'),
-        headers: _json, body: jsonEncode(body));
-    if (r.statusCode != 200) throw _err('update mission control task', r);
-    return MissionControlTask.fromJson(
-        jsonDecode(r.body) as Map<String, dynamic>);
-  }
-
-  /// POST /mission-control/tasks/{id}/archive — soft-archive a task.
-  Future<void> mcArchiveTask(String id) async {
-    final r = await http.post(_uri('/mission-control/tasks/$id/archive'),
-        headers: _json);
-    if (r.statusCode != 200) throw _err('archive mission control task', r);
-  }
-
-  /// GET /mission-control/sessions — list managed sessions.
-  Future<List<ManagedSession>> mcSessions({bool? archived}) async {
-    final q = <String, String>{};
-    if (archived != null) q['archived'] = '$archived';
-    final r =
-        await http.get(_uri('/mission-control/sessions', q.isEmpty ? null : q));
-    if (r.statusCode != 200) throw _err('list mission control sessions', r);
-    if (archived == false) _remember('mc-sessions', r.body);
-    final list = jsonDecode(r.body) as List;
-    return list
-        .map((e) => ManagedSession.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
-  /// POST /mission-control/sessions — register a session with Mission Control.
-  Future<ManagedSession> mcCreateSession({
-    required String sessionId,
-    required String folder,
-    String title = '',
-    String? profile,
-  }) async {
-    final body = <String, dynamic>{
-      'session_id': sessionId,
-      'folder': folder,
-    };
-    if (title.isNotEmpty) body['title'] = title;
-    if (profile != null && profile.isNotEmpty) body['profile'] = profile;
-    final r = await http.post(_uri('/mission-control/sessions'),
-        headers: _json, body: jsonEncode(body));
-    if (r.statusCode != 200) throw _err('create mission control session', r);
-    return ManagedSession.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
-  }
-
-  /// PUT /mission-control/sessions/{id} — update a managed session.
-  Future<ManagedSession> mcUpdateSession(
-    String id, {
-    String? title,
-    String? status,
-    String? profile,
-  }) async {
-    final body = <String, dynamic>{};
-    if (title != null) body['title'] = title;
-    if (status != null) body['status'] = status;
-    if (profile != null) body['profile'] = profile;
-    final r = await http.put(_uri('/mission-control/sessions/$id'),
-        headers: _json, body: jsonEncode(body));
-    if (r.statusCode != 200) throw _err('update mission control session', r);
-    return ManagedSession.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
-  }
-
-  /// POST /mission-control/sessions/{id}/archive — soft-archive a session.
-  Future<void> mcArchiveSession(String id) async {
-    final r = await http.post(_uri('/mission-control/sessions/$id/archive'),
-        headers: _json);
-    if (r.statusCode != 200) throw _err('archive mission control session', r);
-  }
 
   // ---- Coordination agents ----
 
@@ -1646,14 +1450,6 @@ class DaemonClient {
     return KeepWarmEntry.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
-  /// DELETE /keep-warm/{owner}.
-  Future<void> clearKeepWarm(String owner) async {
-    final r = await http.delete(_uri(_ownerPath('/keep-warm', owner)));
-    if (r.statusCode != 200 && r.statusCode != 404) {
-      throw _err('clear keep-warm', r);
-    }
-  }
-
   /// The board with paging, and the dispatches still waiting for a report.
   /// [outstanding] narrows to those dispatches.
   /// [group] is `task` or `folder`: one row per group, newest activity first.
@@ -1736,32 +1532,6 @@ class DaemonClient {
       }),
     );
     if (r.statusCode != 202) throw _err('build coordination agent', r);
-  }
-
-  /// POST /agents — direct registration for trusted/system callers.
-  Future<CoordinationAgent> createCoordinationAgent({
-    required String id,
-    required String displayName,
-    required String handle,
-    String kind = 'worker',
-    String status = 'active',
-    List<String> capabilities = const [],
-  }) async {
-    final r = await http.post(
-      _uri('/agents'),
-      headers: _json,
-      body: jsonEncode({
-        'id': id,
-        'display_name': displayName,
-        'handle': handle,
-        'kind': kind,
-        'status': status,
-        'capabilities': capabilities,
-      }),
-    );
-    if (r.statusCode != 201) throw _err('create coordination agent', r);
-    return CoordinationAgent.fromJson(
-        jsonDecode(r.body) as Map<String, dynamic>);
   }
 
   /// POST /coordination/direct/messages — send a direct message to an agent.
@@ -2019,26 +1789,6 @@ class DaemonClient {
     return TaskItem.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
-  /// PATCH /coordination/tasks/{id} — only the fields supplied are changed.
-  Future<TaskItem> updateTask(
-    String id, {
-    String? title,
-    String? description,
-    int? priority,
-  }) async {
-    final body = <String, dynamic>{};
-    if (title != null) body['title'] = title;
-    if (description != null) body['description'] = description;
-    if (priority != null) body['priority'] = priority;
-    final r = await http.patch(
-      _uri('/coordination/tasks/${Uri.encodeComponent(id)}'),
-      headers: _json,
-      body: jsonEncode(body),
-    );
-    if (r.statusCode != 200) throw _err('update task', r);
-    return TaskItem.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
-  }
-
   /// POST /coordination/tasks/{id}/status — move between board columns.
   Future<TaskItem> setTaskStatus(String id, TaskStatus status) async {
     final r = await http.post(
@@ -2073,12 +1823,6 @@ class DaemonClient {
     if (r.statusCode != 201) throw _err('link tasks', r);
   }
 
-  Future<void> unlinkTasks(String a, String b) async {
-    final r = await http.delete(_uri(
-        '/coordination/tasks/${Uri.encodeComponent(a)}/links/${Uri.encodeComponent(b)}'));
-    if (r.statusCode != 204) throw _err('unlink tasks', r);
-  }
-
   /// GET /coordination/tasks/{id}/agents — the roster, active members first.
   Future<List<TaskAgent>> taskAgents(String id) async {
     final r = await http
@@ -2110,12 +1854,6 @@ class DaemonClient {
       body: jsonEncode({'agent_id': agentId, 'role': role}),
     );
     if (r.statusCode != 204) throw _err('add task agent', r);
-  }
-
-  Future<void> removeTaskAgent(String id, String agentId) async {
-    final r = await http.delete(_uri(
-        '/coordination/tasks/${Uri.encodeComponent(id)}/agents/${Uri.encodeComponent(agentId)}'));
-    if (r.statusCode != 204) throw _err('remove task agent', r);
   }
 
   Future<void> transferTaskLease(

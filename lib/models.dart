@@ -1037,16 +1037,6 @@ class GitStatus {
   List<GitFile> get untracked => files.where((f) => f.untracked).toList();
 }
 
-class GitCommit {
-  final String hash, short, author, date, subject;
-  GitCommit.fromJson(Map<String, dynamic> j)
-      : hash = j['hash'] as String? ?? '',
-        short = j['short'] as String? ?? '',
-        author = j['author'] as String? ?? '',
-        date = j['date'] as String? ?? '',
-        subject = j['subject'] as String? ?? '';
-}
-
 // ---- Mission Control ----
 
 /// Summary dashboard returned by GET /mission-control/overview.
@@ -1947,20 +1937,6 @@ class RecordingPolicy {
           for (final r in (j['recordings'] as List?) ?? [])
             RecordingEntry.fromJson((r as Map).cast<String, dynamic>())
         ];
-}
-
-class AmbientStats {
-  final int segments;
-  final int audioSeconds;
-  final Map<String, int> byStatus;
-
-  AmbientStats.fromJson(Map<String, dynamic> j)
-      : segments = (j['segments'] as num?)?.toInt() ?? 0,
-        audioSeconds = (j['audio_seconds'] as num?)?.toInt() ?? 0,
-        byStatus = {
-          for (final e in ((j['by_status'] as Map?) ?? {}).entries)
-            e.key as String: (e.value as num).toInt()
-        };
 }
 
 class AmbientDevice {
