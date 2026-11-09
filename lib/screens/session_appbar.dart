@@ -408,12 +408,16 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
             if (folder.isNotEmpty) folder,
             if ((_modelLabel ?? '').isNotEmpty) _modelLabel!,
           ].join(' · ');
+    final offline = _connError != null;
+    final stuck = _connError == _SessionScreenState._unreachable;
     return MobileBackBar(
       title: _title.isEmpty ? 'Session' : _title,
       subtitle: sub,
+      subtitleView: offline ? _mobileConnectionLine() : null,
       onBack: widget.onMenu ?? () => Navigator.maybePop(context),
       keepBack: true,
-      onTitleTap: () => _openActionsDrawer(s),
+      onTitleTap: stuck ? _retryNow : () => _openActionsDrawer(s),
+      onTitleTapHint: stuck ? 'Retry connection' : 'Session actions',
       trailing: [
         if (s != null && s.lanes.any((l) => l.running)) ...[
           RoundBtn(
@@ -1001,7 +1005,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   }
 
   Widget _disconnectedBanner() {
-    if (kMobile) return _mobileDisconnectedBanner();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
@@ -1019,10 +1022,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                     : '${_connError ?? 'Disconnected'} · ${_outbox.length} message${_outbox.length == 1 ? '' : 's'} will send on reconnect',
                 style: sans(12, height: 1.3, color: AppColors.fg1))),
         GestureDetector(
-          onTap: () {
-            _reconnectAttempt = 0;
-            _connect();
-          },
+          onTap: _retryNow,
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Text('Retry now',
                 style: sans(12, weight: W.label, color: AppColors.danger)),
@@ -1032,41 +1032,40 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     );
   }
 
-  Widget _mobileDisconnectedBanner() {
-    final text = _outbox.isEmpty
-        ? (_connError ?? 'Disconnected')
-        : '${_connError ?? 'Disconnected'} · ${_outbox.length} message${_outbox.length == 1 ? '' : 's'} will send on reconnect';
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(M.gutter, 8, M.gutter, 4),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
-        decoration: BoxDecoration(
-          color: AppColors.dangerBg,
-          borderRadius: BorderRadius.circular(14),
+  void _retryNow() {
+    HapticFeedback.selectionClick();
+    _reconnectAttempt = 0;
+    if (_connError != null) {
+      _setState(() => _connError = _SessionScreenState._reconnecting);
+    }
+    _connect();
+  }
+
+  Widget _mobileConnectionLine() {
+    final stuck = _connError == _SessionScreenState._unreachable;
+    final queued = _outbox.length;
+    final text = [
+      stuck ? _SessionScreenState._unreachable : 'Reconnecting',
+      if (queued > 0) '$queued queued',
+      if (stuck) 'tap to retry',
+    ].join(' · ');
+    return Semantics(
+      liveRegion: true,
+      label: text,
+      excludeSemantics: true,
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        StatusDot(
+            status: stuck ? 'offline' : 'checking',
+            size: 6,
+            color: stuck ? AppColors.danger : AppColors.fg2),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(12, color: AppColors.fg3)),
         ),
-        child: Row(children: [
-          AppIcon('wifi-off', size: 16, color: AppColors.danger),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(text,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: sans(13, height: 18 / 13, color: AppColors.fg1)),
-          ),
-          TextButton(
-            onPressed: () {
-              _reconnectAttempt = 0;
-              _connect();
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.danger,
-              minimumSize: const Size(0, 36),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-            ),
-            child: Text('Retry', style: sans(13, color: AppColors.danger)),
-          ),
-        ]),
-      ),
+      ]),
     );
   }
 

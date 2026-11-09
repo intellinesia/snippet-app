@@ -12,7 +12,8 @@ BoxDecoration _floating(double radius) => BoxDecoration(
       color: AppColors.surface1,
       borderRadius: BorderRadius.circular(radius),
       boxShadow: [
-        BoxShadow(color: AppColors.fg1.withValues(alpha: 0.08), spreadRadius: 1),
+        BoxShadow(
+            color: AppColors.fg1.withValues(alpha: 0.08), spreadRadius: 1),
       ],
     );
 
@@ -206,7 +207,9 @@ class MobileBackBar extends StatelessWidget {
     required this.title,
     this.onBack,
     this.subtitle,
+    this.subtitleView,
     this.onTitleTap,
+    this.onTitleTapHint,
     this.trailing = const [],
     this.menu = false,
     this.chevron = false,
@@ -216,6 +219,10 @@ class MobileBackBar extends StatelessWidget {
 
   final String title;
   final String? subtitle;
+
+  /// Replaces [subtitle] when set, e.g. a live connection status.
+  final Widget? subtitleView;
+
   /// For a back that does something the system gesture wouldn't: closing an
   /// overlay inside the page or saving on the way out. Anywhere else the gesture
   /// is the way back and the bar stays clear.
@@ -225,6 +232,7 @@ class MobileBackBar extends StatelessWidget {
   final bool chevron;
   final VoidCallback? onBack;
   final VoidCallback? onTitleTap;
+  final String? onTitleTapHint;
   final List<Widget> trailing;
 
   @override
@@ -262,7 +270,9 @@ class MobileBackBar extends StatelessWidget {
             AppIcon('chevron-down', size: 14, color: AppColors.fg3),
           ],
         ]),
-        if (subtitle != null && subtitle!.isNotEmpty)
+        if (subtitleView != null)
+          Padding(padding: const EdgeInsets.only(top: 1), child: subtitleView)
+        else if (subtitle != null && subtitle!.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 1),
             child: Text(subtitle!,
@@ -297,19 +307,24 @@ class MobileBackBar extends StatelessWidget {
           Expanded(
             child: pill
                 ? Center(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: onTitleTap,
-                      child: Container(
-                        height: 44,
-                        constraints: fill
-                            ? const BoxConstraints(minWidth: double.infinity)
-                            : const BoxConstraints(minWidth: 280),
-                        padding: const EdgeInsets.symmetric(horizontal: 18),
-                        decoration: _floating(22),
-                        child: Align(
-                            widthFactor: fill ? null : 1,
-                            child: fill ? label : IntrinsicWidth(child: label)),
+                    child: Semantics(
+                      button: onTitleTap != null,
+                      onTapHint: onTitleTapHint,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: onTitleTap,
+                        child: Container(
+                          height: 44,
+                          constraints: fill
+                              ? const BoxConstraints(minWidth: double.infinity)
+                              : const BoxConstraints(minWidth: 280),
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          decoration: _floating(22),
+                          child: Align(
+                              widthFactor: fill ? null : 1,
+                              child:
+                                  fill ? label : IntrinsicWidth(child: label)),
+                        ),
                       ),
                     ),
                   )
@@ -349,33 +364,34 @@ class MobileStackedTitleBar extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(_side, 8, _side, 8),
         child: Center(
           child: Semantics(
-          button: onTap != null,
-          label: title,
-          hint: tapHint,
-          child: Pressable(
-            kind: PressKind.card,
-            radius: 20,
-            enabled: onTap != null,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onTap,
-              child: Container(
-                height: 40,
-                constraints: const BoxConstraints(minWidth: 96),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: _floating(20),
-                child: Center(
-                  widthFactor: 1,
-                  child: Text(title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: sans(15, weight: W.strong, color: AppColors.fg1)),
+            button: onTap != null,
+            label: title,
+            hint: tapHint,
+            child: Pressable(
+              kind: PressKind.card,
+              radius: 20,
+              enabled: onTap != null,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onTap,
+                child: Container(
+                  height: 40,
+                  constraints: const BoxConstraints(minWidth: 96),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: _floating(20),
+                  child: Center(
+                    widthFactor: 1,
+                    child: Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style:
+                            sans(15, weight: W.strong, color: AppColors.fg1)),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
         ),
       );
 }
@@ -421,14 +437,11 @@ class FloatingSearch extends StatelessWidget {
             listenable: controller,
             builder: (_, __) => controller.text.isEmpty
                 ? const SizedBox(width: 8)
-                : IconBtn('x',
-                    size: 36,
-                    iconSize: 16,
-                    tooltip: 'Clear',
+                : IconBtn('x', size: 36, iconSize: 16, tooltip: 'Clear',
                     onTap: () {
-                      controller.clear();
-                      onChanged('');
-                    }),
+                    controller.clear();
+                    onChanged('');
+                  }),
           ),
         ]),
       );
@@ -436,7 +449,10 @@ class FloatingSearch extends StatelessWidget {
 
 class AccentFab extends StatelessWidget {
   const AccentFab(
-      {super.key, required this.tooltip, required this.onTap, this.icon = 'plus'});
+      {super.key,
+      required this.tooltip,
+      required this.onTap,
+      this.icon = 'plus'});
 
   final String tooltip;
   final VoidCallback onTap;
@@ -545,8 +561,8 @@ class _MobileMenuState extends State<_MobileMenu> {
     if (c != null) {
       c.coordinationAgents().then((a) {
         if (mounted) {
-          setState(() => _agents =
-              a.where((x) => !x.isMissionControl).toList());
+          setState(
+              () => _agents = a.where((x) => !x.isMissionControl).toList());
         }
       }).catchError((_) {
         if (mounted) setState(() => _agents = const []);
