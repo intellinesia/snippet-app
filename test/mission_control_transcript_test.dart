@@ -14,6 +14,30 @@ String _report(String status, String summary, {String id = 'task-1'}) =>
     'summary: $summary\n[/mission_task_report]\nWorkflow W3 instructions.';
 
 void main() {
+  test('review findings parse to their list, without the ledger repeat', () {
+    final e = parseMissionEnvelope('[review_findings]\n'
+        'task_id: 2d1cba9c-1249\n'
+        'title: Build Dude browser\n'
+        'reviewer: snippet\n'
+        'round: 1\n'
+        'The review sent this task back.\n'
+        'findings:\n'
+        '  - docs/BUILD_NOTES.md:41: literal path\n'
+        '  - app/src/test/: no unit tests\n'
+        '[task_ledger v20]\n'
+        'review findings to fix (round 1):\n'
+        '  - docs/BUILD_NOTES.md:41: literal path\n'
+        '[/task_ledger]\n'
+        '[/review_findings]')!;
+    expect(e.review, 'findings');
+    expect(e.round, '1');
+    expect(e.title, 'Build Dude browser');
+    expect(e.summary.split('\n'), [
+      '- docs/BUILD_NOTES.md:41: literal path',
+      '- app/src/test/: no unit tests',
+    ]);
+  });
+
   group('quietWakeRuns', () {
     test('folds adjacent quiet wakes, including a rescheduled look', () {
       final runs = quietWakeRuns([
