@@ -9,7 +9,7 @@ import '../../theme.dart';
 import '../../widgets.dart';
 import '../list_search_field.dart';
 import 'task_common.dart';
-import 'task_list.dart' show PriorityMark;
+import 'task_list.dart' show PriorityMark, TaskLoadMore;
 
 /// The task board as columns, for a wide window.
 ///
@@ -229,8 +229,12 @@ class _TaskKanbanState extends State<TaskKanban> {
                       ? _emptyColumn(status, refuses)
                       : ListView.builder(
                           padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                          itemCount: items.length,
-                          itemBuilder: (_, i) => _draggableCard(items[i]),
+                          itemCount:
+                              items.length + (_feed.hasMore(status) ? 1 : 0),
+                          itemBuilder: (_, i) => i < items.length
+                              ? _draggableCard(items[i])
+                              : TaskLoadMore(
+                                  onTap: () => _feed.loadMore(status)),
                         ),
                 ),
               ],

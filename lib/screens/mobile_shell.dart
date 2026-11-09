@@ -2,11 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../gesture_physics.dart';
 import '../theme.dart';
 import 'shell_models.dart';
 
 /// Full-screen mobile shell layout with sliding sidebar and platform back handling.
-class MobileShell extends StatelessWidget {
+class MobileShell extends StatefulWidget {
   final Widget? activeTabBody;
   final Widget sidebar;
   final bool hasActiveTab;
@@ -43,8 +44,98 @@ class MobileShell extends StatelessWidget {
   });
 
   @override
+  State<MobileShell> createState() => _MobileShellState();
+}
+
+class _MobileShellState extends State<MobileShell>
+    with SingleTickerProviderStateMixin {
+  // 0 = sessions list in front, 1 = the tab body in front. Dragged 1:1.
+  late final AnimationController _v =
+      AnimationController.unbounded(vsync: this, value: _chatsVisible ? 0 : 1)
+        ..addListener(() => setState(() {}));
+  double _base = 0;
+  double _raw = 0;
+  double? _commitVelocity;
+
+  bool get _chatsVisible => widget.chatsOpen || !widget.hasActiveTab;
+  double get _exitX => widget.missionPair ? 1.0 : -1.0;
+
+  @override
+  void didUpdateWidget(MobileShell old) {
+    super.didUpdateWidget(old);
+    final was = old.chatsOpen || !old.hasActiveTab;
+    if (was == _chatsVisible) return;
+    final to = _chatsVisible ? 0.0 : 1.0;
+    final velocity = _commitVelocity;
+    _commitVelocity = null;
+    if (velocity != null) {
+      springTo(_v, to, velocity, epsilon: 0.001);
+    } else {
+      _v.animateTo(to, duration: Motion.base, curve: Motion.enter);
+    }
+  }
+
+  @override
+  void dispose() {
+    _v.dispose();
+    super.dispose();
+  }
+
+  void _dragStart() {
+    _v.stop();
+    _base = _v.value;
+    _raw = 0;
+  }
+
+  void _dragUpdate(double dx, double width) {
+    _raw += dx / width * _exitX;
+    var v = _base + _raw;
+    if (v < 0) v = -rubberBand(-v, .35);
+    if (v > 1) v = 1 + rubberBand(v - 1, .35);
+    _v.value = v;
+  }
+
+  /// [onCommit] runs when the drag carries far or fast enough to switch.
+  void _dragEnd(double velocityPx, double width, VoidCallback onCommit) {
+    final here = _chatsVisible ? 0.0 : 1.0;
+    final toward = _chatsVisible ? 1.0 : 0.0;
+    final vel = velocityPx / width * _exitX;
+    final dir = toward - here;
+    final moved = (_v.value - here) * dir;
+    if (dragDismisses(
+        distance: moved * width,
+        velocity: vel * dir * width,
+        distanceThreshold: 80,
+        velocityThreshold: 600)) {
+      HapticFeedback.selectionClick();
+      _commitVelocity = vel;
+      onCommit();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_commitVelocity == null || !mounted) return;
+        _commitVelocity = null;
+        springTo(_v, here, vel, epsilon: 0.001);
+      });
+    } else {
+      springTo(_v, here, vel, epsilon: 0.001);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final chatsVisible = chatsOpen || !hasActiveTab;
+    final activeTabBody = widget.activeTabBody;
+    final sidebar = widget.sidebar;
+    final drilledDown = widget.drilledDown;
+    final mobileHome = widget.mobileHome;
+    final onClearDrillDown = widget.onClearDrillDown;
+    final onMobileHome = widget.onMobileHome;
+    final onCloseChats = widget.onCloseChats;
+    final onOpenChats = widget.onOpenChats;
+    final onPopRoute = widget.onPopRoute;
+    final missionPair = widget.missionPair;
+    final onSwipeToSessions = widget.onSwipeToSessions;
+    final onSwipeToMission = widget.onSwipeToMission;
+    final chatsVisible = _chatsVisible;
+    final canPopRoute = widget.canPopRoute;
     final canPop = canPopRoute ??
         (!chatsVisible || drilledDown || mobileHome != MobileHome.chats);
 
@@ -55,12 +146,12 @@ class MobileShell extends StatelessWidget {
         return;
       }
       if (onPopRoute != null) {
-        onPopRoute!();
+        onPopRoute();
         return;
       }
       if (!chatsVisible) {
         if (onOpenChats != null) {
-          onOpenChats!();
+          onOpenChats();
         } else {
           onCloseChats();
         }
@@ -78,19 +169,16 @@ class MobileShell extends StatelessWidget {
           Positioned.fill(
             child: IgnorePointer(
               ignoring: chatsVisible,
-              child: AnimatedSlide(
-                duration: Motion.base,
-                curve: Motion.enter,
-                offset: chatsVisible
-                    ? Offset(missionPair ? -0.25 : 0.15, 0)
-                    : Offset.zero,
-                child: AnimatedOpacity(
-                  duration: Motion.base,
-                  curve: Motion.enter,
-                  opacity: chatsVisible ? 0.0 : 1.0,
+              child: FractionalTranslation(
+                translation: Offset(
+                    (missionPair ? -0.25 : 0.15) *
+                        (1 - _v.value.clamp(0.0, 1.0)),
+                    0),
+                child: Opacity(
+                  opacity: _v.value.clamp(0.0, 1.0),
                   child: SafeArea(
                     bottom: false,
-                    child: activeTabBody!,
+                    child: activeTabBody,
                   ),
                 ),
               ),
@@ -99,12 +187,8 @@ class MobileShell extends StatelessWidget {
         Positioned.fill(
           child: IgnorePointer(
             ignoring: !chatsVisible,
-            child: AnimatedSlide(
-              duration: Motion.base,
-              curve: Motion.enter,
-              offset: chatsVisible
-                  ? Offset.zero
-                  : Offset(missionPair ? 1 : -1, 0),
+            child: FractionalTranslation(
+              translation: Offset(_exitX * _v.value, 0),
               child: Material(
                 color: AppColors.bg,
                 child: SafeArea(
@@ -127,7 +211,11 @@ class MobileShell extends StatelessWidget {
             bottom: 0,
             left: 0,
             width: 20,
-            child: _EdgeSwipeBack(onBack: handleBack),
+            child: _EdgeSwipeBack(
+              onStart: _dragStart,
+              onDelta: (dx, w) => _dragUpdate(-dx * _exitX, w),
+              onEnd: (v, w) => _dragEnd(-v * _exitX, w, handleBack),
+            ),
           ),
       ]),
     );
@@ -138,7 +226,11 @@ class MobileShell extends StatelessWidget {
             : null)
         : (missionPair ? onSwipeToSessions : null);
     final body = swipe != null
-        ? _PairSwipe(toRight: chatsVisible, onSwipe: swipe, child: shell)
+        ? _PairSwipe(
+            onStart: _dragStart,
+            onDelta: _dragUpdate,
+            onEnd: (v, w) => _dragEnd(v, w, swipe),
+            child: shell)
         : shell;
 
     if (canPop) {
@@ -167,63 +259,49 @@ class MobileShell extends StatelessWidget {
   }
 }
 
-class _PairSwipe extends StatefulWidget {
-  final bool toRight;
-  final VoidCallback onSwipe;
+typedef _DragEnd = void Function(double velocityPx, double width);
+
+class _PairSwipe extends StatelessWidget {
+  final VoidCallback onStart;
+  final void Function(double dx, double width) onDelta;
+  final _DragEnd onEnd;
   final Widget child;
   const _PairSwipe(
-      {required this.toRight, required this.onSwipe, required this.child});
-
-  @override
-  State<_PairSwipe> createState() => _PairSwipeState();
-}
-
-class _PairSwipeState extends State<_PairSwipe> {
-  double _travel = 0;
+      {required this.onStart,
+      required this.onDelta,
+      required this.onEnd,
+      required this.child});
 
   @override
   Widget build(BuildContext context) {
-    final dir = widget.toRight ? 1.0 : -1.0;
+    final width = MediaQuery.sizeOf(context).width;
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onHorizontalDragStart: (_) => _travel = 0,
-      onHorizontalDragUpdate: (d) => _travel += d.delta.dx,
-      onHorizontalDragEnd: (d) {
-        final v = (d.primaryVelocity ?? 0) * dir;
-        if (_travel * dir > 80 || v > 600) {
-          HapticFeedback.selectionClick();
-          widget.onSwipe();
-        }
-        _travel = 0;
-      },
-      onHorizontalDragCancel: () => _travel = 0,
-      child: widget.child,
+      onHorizontalDragStart: (_) => onStart(),
+      onHorizontalDragUpdate: (d) => onDelta(d.delta.dx, width),
+      onHorizontalDragEnd: (d) => onEnd(d.primaryVelocity ?? 0, width),
+      onHorizontalDragCancel: () => onEnd(0, width),
+      child: child,
     );
   }
 }
 
-class _EdgeSwipeBack extends StatefulWidget {
-  final VoidCallback onBack;
-  const _EdgeSwipeBack({required this.onBack});
-
-  @override
-  State<_EdgeSwipeBack> createState() => _EdgeSwipeBackState();
-}
-
-class _EdgeSwipeBackState extends State<_EdgeSwipeBack> {
-  double _travel = 0;
+class _EdgeSwipeBack extends StatelessWidget {
+  final VoidCallback onStart;
+  final void Function(double dx, double width) onDelta;
+  final _DragEnd onEnd;
+  const _EdgeSwipeBack(
+      {required this.onStart, required this.onDelta, required this.onEnd});
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onHorizontalDragStart: (_) => _travel = 0,
-      onHorizontalDragUpdate: (d) => _travel += d.delta.dx,
-      onHorizontalDragEnd: (d) {
-        if (_travel > 60 || (d.primaryVelocity ?? 0) > 700) widget.onBack();
-        _travel = 0;
-      },
-      onHorizontalDragCancel: () => _travel = 0,
+      onHorizontalDragStart: (_) => onStart(),
+      onHorizontalDragUpdate: (d) => onDelta(d.delta.dx, width),
+      onHorizontalDragEnd: (d) => onEnd(d.primaryVelocity ?? 0, width),
+      onHorizontalDragCancel: () => onEnd(0, width),
     );
   }
 }

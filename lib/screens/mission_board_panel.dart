@@ -9,6 +9,7 @@ import '../models.dart';
 import '../task_reason.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../swr.dart';
 
 import 'goals/goal_widgets.dart';
 import 'shell_models.dart' show RightTab;
@@ -46,24 +47,36 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
   List<RecurringJob> _jobs = const [];
   List<Goal> _goals = const [];
   bool _loaded = false;
-  Timer? _timer;
+  Revalidator? _live;
 
   @override
   void initState() {
     super.initState();
     _load();
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _load());
+    _bindLive();
   }
 
   @override
   void didUpdateWidget(MissionBoardPanel old) {
     super.didUpdateWidget(old);
-    if (old.client != widget.client) _load();
+    if (old.client != widget.client) {
+      _bindLive();
+      _load();
+    }
+  }
+
+  void _bindLive() {
+    _live?.dispose();
+    _live = Revalidator(
+        client: widget.client,
+        on: (e) => Swr.coordination(e) || e['kind'] == 'recurring',
+        debounce: const Duration(seconds: 1),
+        onRevalidate: ({required bool force}) => _load());
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _live?.dispose();
     super.dispose();
   }
 
@@ -159,7 +172,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                           key: ValueKey('note-${t.id}'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(11.5,
+                          style: sans(12,
                               color: t.status == 'blocked'
                                   ? AppColors.danger
                                   : AppColors.fg4)),
@@ -169,7 +182,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
             ),
             const SizedBox(width: 8),
             Text(relativeTime(t.updatedAt),
-                style: sans(11.5, color: AppColors.fg4, tabular: true)),
+                style: sans(12, color: AppColors.fg4, tabular: true)),
           ]),
         ),
       ),
@@ -194,7 +207,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
             padding: EdgeInsets.fromLTRB(10, 6, onClose != null ? 6 : 10, 6),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(text,
-                  style: sans(12.5,
+                  style: sans(13,
                       color: on ? AppColors.fg1 : AppColors.fg3)),
               if (onClose != null) ...[
                 const SizedBox(width: 5),
@@ -220,7 +233,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         height: 46,
         padding: const EdgeInsets.symmetric(horizontal: 18),
         alignment: Alignment.centerLeft,
-        child: Text('Board', style: sans(12.5, color: AppColors.fg3)),
+        child: Text('Board', style: sans(13, color: AppColors.fg3)),
       );
     }
     final reading = _readout;
@@ -300,7 +313,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                           'Work your agents pick up, scheduled runs and '
                           'what finished today land here.',
                           textAlign: TextAlign.center,
-                          style: sans(12.5,
+                          style: sans(13,
                               height: 1.5, color: AppColors.fg4)),
                     ]),
                   ),
@@ -336,7 +349,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                         SizedBox(
                           width: 48,
                           child: Text(_at(j.nextRunAt),
-                              style: mono(11.5, color: AppColors.fg3)),
+                              style: mono(12, color: AppColors.fg3)),
                         ),
                         Expanded(
                           child: Text(j.title,

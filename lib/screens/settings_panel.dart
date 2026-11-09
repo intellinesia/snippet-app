@@ -332,9 +332,9 @@ class SettingsPanelState extends State<SettingsPanel> {
 
   static const _nav = [
     (SettingsPage.general, 'server', 'General'),
-    (SettingsPage.appearance, 'sliders', 'Appearance'),
     (SettingsPage.models, 'sparkles', 'Profiles'),
     (SettingsPage.routing, 'route', 'Routing'),
+    (SettingsPage.accounts, 'users', 'Accounts'),
     (SettingsPage.usage, 'gauge', 'Usage'),
     (SettingsPage.memory, 'book-marked', 'Memory'),
     (SettingsPage.scheduled, 'calendar-clock', 'Scheduled'),
@@ -342,12 +342,14 @@ class SettingsPanelState extends State<SettingsPanel> {
     (SettingsPage.vault, 'lock', 'Vault'),
     (SettingsPage.voice, 'mic', 'Voice'),
     (SettingsPage.webSearch, 'globe', 'Web search'),
-    (SettingsPage.accounts, 'users', 'Accounts'),
+    (SettingsPage.appearance, 'sliders', 'Appearance'),
   ];
 
   static const _navGroups = {
-    SettingsPage.general: 'Work',
+    SettingsPage.general: 'Connection',
+    SettingsPage.models: 'Models',
     SettingsPage.memory: 'Agents',
+    SettingsPage.appearance: 'Appearance',
   };
 
   @override
@@ -481,10 +483,8 @@ class SettingsPanelState extends State<SettingsPanel> {
                                   Padding(
                                     padding: const EdgeInsets.fromLTRB(
                                         10, 14, 10, 4),
-                                    child: Text(_navGroups[page]!,
-                                        style: sans(11.5,
-                                            weight: W.label,
-                                            color: AppColors.fg4)),
+                                    child: Text(_navGroups[page]!.toUpperCase(),
+                                        style: TS.overline()),
                                   ),
                                 _settingsNavRow(page, icon, label),
                               ],
@@ -558,21 +558,19 @@ class SettingsPanelState extends State<SettingsPanel> {
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
             if (summary.isNotEmpty)
               ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 150),
+                constraints: const BoxConstraints(maxWidth: 170),
                 child: Text(summary,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(13, color: AppColors.fg3)),
+                    style: TS.meta(AppColors.fg3)),
               ),
             const SizedBox(width: S.s6),
-            AppIcon('chevron-right', size: 15, color: AppColors.fg4),
+            AppIcon('chevron-right', size: 14, color: AppColors.fg3),
           ]),
         );
     Widget label(String text) => Padding(
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 7),
-          child: Text(text.toUpperCase(),
-              style: sans(12,
-                  weight: W.label, spacing: 0.7, color: AppColors.fg4)),
+          child: Text(text.toUpperCase(), style: TS.overline()),
         );
     final name = active?.label.trim() ?? '';
     return ListView(
@@ -588,10 +586,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                   Text(name.isEmpty ? 'No machine yet' : name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(17,
-                          weight: W.strong,
-                          height: 22 / 17,
-                          color: AppColors.fg1)),
+                      style: TS.sectionTitle()),
                   const SizedBox(height: 2),
                   Row(children: [
                     if (active != null) ...[
@@ -610,19 +605,21 @@ class SettingsPanelState extends State<SettingsPanel> {
                               : 'Connected · ${hostOf(active.url)}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(13, color: AppColors.fg3)),
+                          style: TS.meta(AppColors.fg3)),
                     ),
                   ]),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Btn(_instances.length > 1 ? 'Switch' : 'Manage',
-                small: true,
-                variant: BtnVariant.secondary,
-                onTap: () => widget.onSection?.call(SettingsPage.general)),
           ]),
         ),
+        label('Connection'),
+        ListGroup(children: [
+          nav(SettingsPage.general, 'Machines',
+              _instances.length > 1 ? '${_instances.length} saved' : '',
+              'server'),
+          if (kCanNotify) _notifRow(),
+        ]),
         label('Models'),
         ListGroup(children: [
           nav(SettingsPage.models, 'Profiles', 'Models and keys', 'sparkles'),
@@ -631,7 +628,7 @@ class SettingsPanelState extends State<SettingsPanel> {
               'users'),
           nav(SettingsPage.usage, 'Usage', 'Tokens and spend', 'gauge'),
         ]),
-        label('Work'),
+        label('Agents'),
         ListGroup(children: [
           nav(SettingsPage.memory, 'Memory', 'What agents remember',
               'book-marked'),
@@ -639,11 +636,11 @@ class SettingsPanelState extends State<SettingsPanel> {
           nav(SettingsPage.vault, 'Vault', 'Secrets for agents', 'lock'),
           nav(SettingsPage.scheduled, 'Scheduled', 'Recurring jobs',
               'calendar-clock'),
-          nav(SettingsPage.wakes, 'Wakes', 'Agent schedules and keep-warm',
+          nav(SettingsPage.wakes, 'Wakes', 'Schedules',
               'repeat'),
-          nav(SettingsPage.voice, 'Voice', 'Voice notes and transcription',
+          nav(SettingsPage.voice, 'Voice', 'Notes and speech',
               'mic'),
-          nav(SettingsPage.webSearch, 'Web search', 'Let agents search the web',
+          nav(SettingsPage.webSearch, 'Web search', 'Agent search',
               'globe'),
         ]),
         label('Appearance'),
@@ -658,10 +655,6 @@ class SettingsPanelState extends State<SettingsPanel> {
             ),
           ]),
         ),
-        if (kCanNotify) ...[
-          label('Phone'),
-          ListGroup(children: [_notifRow()]),
-        ],
       ],
     );
   }
@@ -880,7 +873,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                 child: Text(label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(13.5,
+                    style: sans(13,
                         color: selected ? AppColors.fg1 : AppColors.fg2)),
               ),
             ]),
@@ -1071,10 +1064,10 @@ class SettingsPanelState extends State<SettingsPanel> {
     }
   }
 
-  Widget _machineMenu(Instance i) => Builder(
+  Widget _machineMenu(Instance i, {bool connect = false}) => Builder(
         builder: (anchor) => IconBtn('more-horizontal',
-            size: 28,
-            iconSize: 15,
+            size: kMobile ? M.minTarget : 28,
+            iconSize: 16,
             tooltip: 'Machine actions', onTap: () async {
           final picked = await showAppMenu<String>(context,
               anchor: anchor,
@@ -1082,9 +1075,11 @@ class SettingsPanelState extends State<SettingsPanel> {
               alignEnd: true,
               minWidth: 160,
               items: [
+                if (connect) appMenuItem(value: 'connect', label: 'Connect'),
                 appMenuItem(value: 'rename', label: 'Rename'),
                 appMenuItem(value: 'remove', label: 'Remove', danger: true),
               ]);
+          if (picked == 'connect') _selectInstance(i);
           if (picked == 'rename') _startRename(i);
           if (picked == 'remove') _confirmRemove(i);
         }),
@@ -1145,7 +1140,7 @@ class SettingsPanelState extends State<SettingsPanel> {
           SettingsRow(
             label: 'snippet serve --enable',
             labelWidget: SelectableText('snippet serve --enable',
-                style: mono(12.5, color: AppColors.fg1)),
+                style: mono(13, color: AppColors.fg1)),
             trailing: IconBtn('copy',
                 size: 28, iconSize: 14, tooltip: 'Copy command', onTap: () {
               Clipboard.setData(const ClipboardData(text: 'snippet serve --enable'));
@@ -1236,8 +1231,7 @@ class SettingsPanelState extends State<SettingsPanel> {
     if (_addingMachine) return _addMachinePane();
     return PageBody(children: [
       if (includeNotifications)
-        const SectionHeader('Machines',
-            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6)),
+        const SectionLabel('Machines'),
       if (_instances.isEmpty)
         EmptyState(
           icon: 'server',
@@ -1249,14 +1243,12 @@ class SettingsPanelState extends State<SettingsPanel> {
         ListGroup(children: [for (final i in _instances) _instanceRow(i)]),
       if (includeNotifications) ...[
         const SizedBox(height: S.s24),
-        const SectionHeader('Approvals',
-            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6)),
+        const SectionLabel('Approvals'),
         ListGroup(children: [ApprovalsRow(client: widget.client)]),
       ],
       if (includeNotifications && kCanNotify) ...[
         const SizedBox(height: S.s24),
-        const SectionHeader('Notifications',
-            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6)),
+        const SectionLabel('Notifications'),
         ListGroup(children: [_notifRow()]),
       ],
     ]);
@@ -1291,7 +1283,7 @@ class SettingsPanelState extends State<SettingsPanel> {
             SettingsRow(
               label: 'snippet serve --enable',
               labelWidget: SelectableText('snippet serve --enable',
-                  style: mono(12.5, color: AppColors.fg1)),
+                  style: mono(13, color: AppColors.fg1)),
               trailing: IconBtn('copy',
                   size: 26, iconSize: 13, tooltip: 'Copy command', onTap: () {
                 Clipboard.setData(const ClipboardData(text: 'snippet serve --enable'));
@@ -1337,9 +1329,14 @@ class SettingsPanelState extends State<SettingsPanel> {
     final isActive = i.url == widget.active?.url;
     final isRenaming = _renamingUrl == i.url;
     final compact = kMobile && widget.embedded;
+    final canConnect = !isActive && widget.onSelect != null;
     return Material(
       color: Colors.transparent,
-      child: Padding(
+      child: InkWell(
+        onTap: compact && canConnect && !isRenaming
+            ? () => _selectInstance(i)
+            : null,
+        child: Padding(
         padding: const EdgeInsets.fromLTRB(S.s12, S.s8, S.s4, S.s8),
         child: Row(
           children: [
@@ -1374,24 +1371,31 @@ class SettingsPanelState extends State<SettingsPanel> {
                 ),
               ),
               const SizedBox(width: S.s8),
-              if (isActive)
-                const Tag('Active', tone: Tone.ok, dot: true)
-              else if (widget.onSelect != null)
-                TextAction('Connect', onTap: () => _selectInstance(i)),
-              const SizedBox(width: S.s4),
-              IconBtn('edit',
-                  size: compact ? M.minTarget : 30,
-                  iconSize: 16,
-                  tooltip: 'Rename machine',
-                  onTap: () => _startRename(i)),
-              IconBtn('trash',
-                  size: compact ? M.minTarget : 30,
-                  iconSize: 16,
-                  tooltip: 'Remove machine',
-                  onTap: () => _confirmRemove(i)),
+              if (compact) ...[
+                if (isActive)
+                  AppIcon('check', size: 16, color: AppColors.accent),
+                _machineMenu(i, connect: canConnect),
+              ] else ...[
+                if (isActive)
+                  const Tag('Active', tone: Tone.ok, dot: true)
+                else if (canConnect)
+                  TextAction('Connect', onTap: () => _selectInstance(i)),
+                const SizedBox(width: S.s4),
+                IconBtn('edit',
+                    size: 30,
+                    iconSize: 16,
+                    tooltip: 'Rename machine',
+                    onTap: () => _startRename(i)),
+                IconBtn('trash',
+                    size: 30,
+                    iconSize: 16,
+                    tooltip: 'Remove machine',
+                    onTap: () => _confirmRemove(i)),
+              ],
             ],
           ],
         ),
+      ),
       ),
     );
   }
@@ -1414,15 +1418,13 @@ class SettingsPanelState extends State<SettingsPanel> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(kMobile ? 'Notifications' : 'Session notifications',
-                  style: kMobile
-                      ? sans(15, weight: W.label, color: AppColors.fg1)
-                      : TS.rowTitle()),
+                  style: TS.rowTitle()),
               const SizedBox(height: S.s2),
               Text(
                   kMobile
                       ? 'When a chat needs you or finishes'
                       : 'When a session finishes or needs your input',
-                  style: kMobile ? sans(13, color: AppColors.fg3) : TS.meta()),
+                  style: TS.meta()),
             ],
           ),
         ),
@@ -1543,7 +1545,7 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
           Text(manual == null ? '' : (manual ? 'Ask' : 'Yolo'),
               style: sans(13, color: AppColors.fg3)),
           const SizedBox(width: S.s6),
-          AppIcon('chevron-down', size: 15, color: AppColors.fg4),
+          AppIcon('chevron-down', size: 14, color: AppColors.fg3),
         ]),
       ),
     );
@@ -1778,7 +1780,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                                       child: Text(
                                         '~/',
                                         style: mono(
-                                          10.5,
+                                          11,
                                           weight: W.label,
                                           color: preset.fg2,
                                           height: 1,
@@ -1992,7 +1994,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontFamily: font.family,
-                                    fontSize: 11.5,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w400,
                                     color: AppColors.fg3,
                                     height: 1.1,
@@ -2125,7 +2127,7 @@ class _AppearancePreviewCard extends StatelessWidget {
             Expanded(
               child: Text(
                 '${tm.baseTheme.label} · ${tm.currentFont.label}',
-                style: sans(13.5, weight: W.strong, color: AppColors.fg1),
+                style: sans(13, weight: W.strong, color: AppColors.fg1),
               ),
             ),
             Container(
@@ -2153,347 +2155,6 @@ class _AppearancePreviewCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-Widget _themeCardChip(ThemePreset preset) {
-  return Container(
-    width: 34,
-    height: 22,
-    padding: const EdgeInsets.symmetric(horizontal: 5),
-    decoration: BoxDecoration(
-      color: preset.bg,
-      borderRadius: BorderRadius.circular(5),
-      border: Border.all(color: preset.border2, width: 1),
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Aa',
-          style: sans(10, weight: W.strong, color: preset.fg1, height: 1),
-        ),
-        Container(
-          width: 4,
-          height: 11,
-          decoration: BoxDecoration(
-            color: preset.accent,
-            borderRadius: BorderRadius.circular(1.5),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _themePaletteDots(ThemePreset preset, {double size = 9}) {
-  final colors = [
-    preset.bg,
-    preset.surface2,
-    preset.surface3,
-    preset.fg2,
-    preset.accent,
-  ];
-  return Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      for (var i = 0; i < colors.length; i++) ...[
-        if (i > 0) const SizedBox(width: 3),
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: colors[i],
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.16),
-              width: 0.75,
-            ),
-          ),
-        ),
-      ],
-    ],
-  );
-}
-
-Widget _accentSwatchDot(Color color) {
-  return Container(
-    width: 16,
-    height: 16,
-    decoration: BoxDecoration(
-      color: color,
-      shape: BoxShape.circle,
-      border: Border.all(
-        color: Colors.white.withValues(alpha: 0.22),
-        width: 1,
-      ),
-    ),
-  );
-}
-
-class ThemePickerRow extends StatelessWidget {
-  const ThemePickerRow({super.key});
-
-  static Future<void> pick(BuildContext context, BuildContext anchor) async {
-    final current = ThemeManager.instance.baseTheme.name;
-    final picked = await showAppMenu<String>(
-      context,
-      anchor: anchor,
-      below: true,
-      alignEnd: true,
-      minWidth: 310,
-      maxWidth: 360,
-      sheetHeightFactor: 0.72,
-      items: [
-        appMenuHeading<String>('Color theme'),
-        for (final preset in allPresets)
-          appMenuRow<String>(
-            value: preset.name,
-            leading: _themeCardChip(preset),
-            label: preset.label,
-            trailingWidget: _themePaletteDots(preset),
-            selected: preset.name == current,
-          ),
-      ],
-    );
-    if (picked != null && picked != current) {
-      await ThemeManager.instance.setName(picked);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: ThemeManager.instance,
-      builder: (context, _) {
-        final base = ThemeManager.instance.baseTheme;
-        return Builder(
-          builder: (anchor) => ListRow(
-            title: 'Theme',
-            subtitle: kMobile ? null : 'Surface palette saved on this device',
-            leading: _themeCardChip(base),
-            onTap: () => pick(context, anchor),
-            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              _themePaletteDots(base, size: 8),
-              const SizedBox(width: S.s8),
-              Text(base.label, style: sans(13, color: AppColors.fg3)),
-              const SizedBox(width: S.s6),
-              AppIcon('chevron-down', size: 15, color: AppColors.fg4),
-            ]),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class AccentPickerRow extends StatelessWidget {
-  const AccentPickerRow({super.key});
-
-  static Future<void> pick(BuildContext context, BuildContext anchor) async {
-    final custom = ThemeManager.instance.customAccent;
-    final current = custom?.name ?? '__theme__';
-    final baseAccent = ThemeManager.instance.baseTheme.accent;
-    final picked = await showAppMenu<String>(
-      context,
-      anchor: anchor,
-      below: true,
-      alignEnd: true,
-      minWidth: 260,
-      maxWidth: 320,
-      sheetHeightFactor: 0.68,
-      items: [
-        appMenuHeading<String>('Accent colour'),
-        appMenuRow<String>(
-          value: '__theme__',
-          leading: _accentSwatchDot(baseAccent),
-          label: 'Theme default',
-          description: 'Matches ${ThemeManager.instance.baseTheme.label}',
-          selected: current == '__theme__',
-        ),
-        const PopupMenuDivider(height: 9),
-        for (final a in allAccents)
-          appMenuRow<String>(
-            value: a.name,
-            leading: _accentSwatchDot(a.accent),
-            label: a.label,
-            selected: a.name == current,
-          ),
-      ],
-    );
-    if (picked == null || picked == current) return;
-    await ThemeManager.instance
-        .setAccentName(picked == '__theme__' ? null : picked);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: ThemeManager.instance,
-      builder: (context, _) {
-        final custom = ThemeManager.instance.customAccent;
-        final activeAccent = ThemeManager.instance.current.accent;
-        return Builder(
-          builder: (anchor) => ListRow(
-            title: 'Accent colour',
-            subtitle:
-                kMobile ? null : 'Override the active theme highlight colour',
-            leading: Container(
-              width: 19,
-              height: 19,
-              alignment: Alignment.center,
-              child: Container(
-                width: 13,
-                height: 13,
-                decoration: BoxDecoration(
-                  color: activeAccent,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.border2, width: 1.5),
-                ),
-              ),
-            ),
-            onTap: () => pick(context, anchor),
-            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(custom?.label ?? 'Theme default',
-                  style: sans(13, color: AppColors.fg3)),
-              const SizedBox(width: S.s6),
-              AppIcon('chevron-down', size: 15, color: AppColors.fg4),
-            ]),
-          ),
-        );
-      },
-    );
-  }
-}
-
-Widget _fontSampleChip(String family) {
-  return Container(
-    width: 30,
-    height: 22,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: AppColors.surface2,
-      borderRadius: BorderRadius.circular(5),
-      border: Border.all(color: AppColors.border2, width: 1),
-    ),
-    child: Text(
-      'Aa',
-      style: TextStyle(
-        fontFamily: family,
-        fontSize: 11.5,
-        fontWeight: FontWeight.w600,
-        color: AppColors.fg1,
-        height: 1,
-      ),
-    ),
-  );
-}
-
-class FontPickerRow extends StatelessWidget {
-  const FontPickerRow({super.key});
-
-  static Future<void> pick(BuildContext context, BuildContext anchor) async {
-    final current = ThemeManager.instance.currentFont.family;
-    final picked = await showAppMenu<String>(
-      context,
-      anchor: anchor,
-      below: true,
-      alignEnd: true,
-      minWidth: 280,
-      maxWidth: 350,
-      sheetHeightFactor: 0.72,
-      items: [
-        appMenuHeading<String>('UI typeface'),
-        for (final font in allFonts)
-          appMenuRow<String>(
-            value: font.family,
-            leading: _fontSampleChip(font.family),
-            label: font.label,
-            description: font.description,
-            selected: font.family == current,
-          ),
-      ],
-    );
-    if (picked != null && picked != current) {
-      await ThemeManager.instance.setFontFamily(picked);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: ThemeManager.instance,
-      builder: (context, _) {
-        final current = ThemeManager.instance.currentFont;
-        return Builder(
-          builder: (anchor) => ListRow(
-            title: 'Typeface',
-            subtitle: kMobile ? null : current.description,
-            leading: AppIcon('file-text', size: 19, color: AppColors.fg3),
-            onTap: () => pick(context, anchor),
-            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(current.label, style: sans(13, color: AppColors.fg3)),
-              const SizedBox(width: S.s6),
-              AppIcon('chevron-down', size: 15, color: AppColors.fg4),
-            ]),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class MonoFontPickerRow extends StatelessWidget {
-  const MonoFontPickerRow({super.key});
-
-  static Future<void> pick(BuildContext context, BuildContext anchor) async {
-    final current = ThemeManager.instance.currentMonoFont.family;
-    final picked = await showAppMenu<String>(
-      context,
-      anchor: anchor,
-      below: true,
-      alignEnd: true,
-      minWidth: 280,
-      maxWidth: 350,
-      sheetHeightFactor: 0.72,
-      items: [
-        appMenuHeading<String>('Code typeface'),
-        for (final font in allMonoFonts)
-          appMenuRow<String>(
-            value: font.family,
-            leading: _fontSampleChip(font.family),
-            label: font.label,
-            description: font.description,
-            selected: font.family == current,
-          ),
-      ],
-    );
-    if (picked != null && picked != current) {
-      await ThemeManager.instance.setMonoFontFamily(picked);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: ThemeManager.instance,
-      builder: (context, _) {
-        final current = ThemeManager.instance.currentMonoFont;
-        return Builder(
-          builder: (anchor) => ListRow(
-            title: 'Code font',
-            subtitle: kMobile ? null : current.description,
-            leading: AppIcon('code', size: 19, color: AppColors.fg3),
-            onTap: () => pick(context, anchor),
-            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(current.label, style: mono(12.5, color: AppColors.fg3)),
-              const SizedBox(width: S.s6),
-              AppIcon('chevron-down', size: 15, color: AppColors.fg4),
-            ]),
-          ),
-        );
-      },
     );
   }
 }

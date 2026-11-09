@@ -8,10 +8,8 @@ import 'package:snippet/api.dart';
 import 'package:snippet/goal_models.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/goals/goal_detail_screen.dart';
-import 'package:snippet/screens/goals/goal_widgets.dart';
 import 'package:snippet/screens/tasks/task_detail_screen.dart';
 import 'package:snippet/swr.dart';
-import 'package:snippet/theme.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -116,6 +114,11 @@ class _Daemon extends DaemonClient {
   Future<TaskLinks> taskLinks(String id) async => const TaskLinks();
 
   @override
+  Future<List<TaskItem>> recentTasks(
+          {required String status, required int limit}) async =>
+      (await tasks()).where((t) => t.status.wire == status).take(limit).toList();
+
+  @override
   Future<List<TaskItem>> tasks(
           {String? status, String? agentId, int? limit}) async =>
       const [];
@@ -194,31 +197,6 @@ void main() {
   });
 
   group('widgets', () {
-    phoneTest('list shows title, progress, evidence and attention chip',
-        (tester) async {
-      final c = _Daemon()
-        ..rows = [
-          _row('g1', 'Launch goals',
-              done: 1, total: 3, have: 1, ev: 2, attention: 'stalled'),
-          _row('g2', 'Tidy settings',
-              done: 4, total: 4, have: 2, ev: 2, attention: 'ready_to_close'),
-          _row('g3', 'Quiet one', done: 0, total: 2),
-        ];
-      await _phone(tester,
-          Scaffold(backgroundColor: AppColors.bg, body: GoalsList(client: c)));
-      expect(find.text('Launch goals'), findsOneWidget);
-      expect(find.text('1 of 3 slices'), findsOneWidget);
-      expect(find.text('1 of 2 evidenced'), findsOneWidget);
-      expect(find.text('Stalled'), findsOneWidget);
-      expect(find.text('Ready to close'), findsOneWidget);
-      expect(find.text('Quiet one'), findsOneWidget);
-    });
-
-    phoneTest('list empty state', (tester) async {
-      await _phone(tester, Scaffold(body: GoalsList(client: _Daemon())));
-      expect(find.text('No open goals'), findsOneWidget);
-    });
-
     phoneTest('detail shows criteria, plan, waiting and blockers',
         (tester) async {
       final c = _Daemon();

@@ -44,8 +44,3 @@ Future<void> reconcileAndroidNotificationState() async {
   await syncSavedNotifications(background: true);
 }
 
-Set<String> newlyObservedSessionIds(
-    Iterable<String> previous, Iterable<String> current) {
-  final old = previous.toSet();
-  return current.where((id) => !old.contains(id)).toSet();
-}

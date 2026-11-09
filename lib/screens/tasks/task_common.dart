@@ -20,13 +20,49 @@ class TaskFeed {
       : _swr = Swr<List<TaskItem>>(
           client: client,
           key: 'coordination:tasks',
-          fetch: () => client.tasks(),
+          fetch: () => _fetch(client),
           revalidateOn: Swr.coordination,
           onChange: onChange,
         );
 
   final DaemonClient client;
   final Swr<List<TaskItem>> _swr;
+
+  static const pageSize = 100;
+
+  // Per machine, so every surface sharing the feed loads the same depth.
+  static final _limits = <String, Map<TaskStatus, int>>{};
+  static final _more = <String, Set<TaskStatus>>{};
+
+  static Future<List<TaskItem>> _fetch(DaemonClient c) async {
+    final limits = _limits.putIfAbsent(c.baseUrl, () => {});
+    final lists = await Future.wait([
+      for (final s in TaskStatus.values)
+        c.recentTasks(status: s.wire, limit: limits[s] ?? pageSize),
+    ]);
+    final more = <TaskStatus>{};
+    final out = <TaskItem>[];
+    for (var i = 0; i < lists.length; i++) {
+      final s = TaskStatus.values[i];
+      if (lists[i].length >= (limits[s] ?? pageSize)) more.add(s);
+      out.addAll(lists[i]
+        ..sort((a, b) => a.priority != b.priority
+            ? b.priority.compareTo(a.priority)
+            : b.updatedAt.compareTo(a.updatedAt)));
+    }
+    _more[c.baseUrl] = more;
+    return out;
+  }
+
+  /// Whether [status] has older tasks than the ones loaded.
+  bool hasMore(TaskStatus status) =>
+      _more[client.baseUrl]?.contains(status) ?? false;
+
+  Future<void> loadMore(TaskStatus status) {
+    final limits = _limits.putIfAbsent(client.baseUrl, () => {});
+    limits[status] = (limits[status] ?? pageSize) + pageSize;
+    return _swr.refresh();
+  }
 
   List<TaskItem> get tasks => _swr.data ?? const [];
   bool get loading => _swr.data == null && _swr.error == null;
@@ -183,7 +219,7 @@ class TaskNoteLines extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (final l in lines)
-            Text(l, style: sans(12.5, color: colour ?? AppColors.fg4)),
+            Text(l, style: sans(13, color: colour ?? AppColors.fg4)),
         ],
       ),
     );

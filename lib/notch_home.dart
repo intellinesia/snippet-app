@@ -305,7 +305,6 @@ Map<String, dynamic> buildModel({
       'title': e.agent.displayName,
       'line': plainInline(e.line),
       'tone': asking ? 'run' : 'accent',
-      'tag': e.agent.role.trim(),
       'meta': e.sessions.length > 1 ? '${e.sessions.length} sessions' : '',
       'actions': asking
           ? _askActions(e.attention)
@@ -313,7 +312,6 @@ Map<String, dynamic> buildModel({
               {'label': 'Open', 'action': 'open', 'primary': false},
             ],
       'details': [
-        if (e.agent.role.trim().isNotEmpty) 'Role\t${e.agent.role.trim()}',
         'Sessions\t${e.sessions.length}',
         if (e.agent.profile != null) 'Model\t${e.agent.profile}',
       ],

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'media_views.dart';
-import 'panel.dart';
 import 'platform.dart';
 import 'theme.dart';
 import 'tool_activity.dart';
@@ -15,85 +14,6 @@ class ToolBatch {
   final List<ToolStep> steps;
   final bool running;
   const ToolBatch(this.steps, {this.running = false});
-}
-
-/// Open a tool batch: a draggable bottom sheet on phones, a right-side panel on
-/// wider windows. [batch] keeps updating while the calls are still running.
-Future<void> showToolBatchSheet(
-  BuildContext context, {
-  required ValueListenable<ToolBatch> batch,
-  int? initialStep,
-}) {
-  final scope = DaemonScope.scopeOf(context);
-  final openInPane = scope?.onOpenTools;
-  if (!kMobile && openInPane != null) {
-    openInPane(batch);
-    return Future.value();
-  }
-  Widget body(VoidCallback close, {ScrollController? scroll}) {
-    final view = ToolBatchView(
-      batch: batch,
-      onClose: close,
-      scroll: scroll,
-      initialStep: initialStep,
-    );
-    if (scope == null) return view;
-    final openTab = scope.onOpenFile;
-    return DaemonScope(
-      client: scope.client,
-      // A file opened from the side panel lands in a tab behind it, so the
-      // panel steps aside first.
-      onOpenFile: openTab == null
-          ? null
-          : (path, name) {
-              close();
-              openTab(path, name);
-            },
-      child: view,
-    );
-  }
-
-  if (!kMobile) {
-    return presentScreen<void>(
-      context,
-      style: PanelStyle.drawer,
-      maxWidth: 560,
-      builder: (_, close) => body(close),
-    );
-  }
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    showDragHandle: false,
-    backgroundColor: Colors.transparent,
-    barrierColor: AppColors.scrim,
-    sheetAnimationStyle: sheetMotion,
-    builder: (sheetContext) => Padding(
-      padding: EdgeInsets.fromLTRB(
-          8, 0, 8, 8 + MediaQuery.paddingOf(sheetContext).bottom),
-      child: DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.62,
-        minChildSize: 0.35,
-        maxChildSize: 0.95,
-        snap: true,
-        snapSizes: const [0.62],
-        builder: (_, scroll) => Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Material(
-            color: Colors.transparent,
-            child: body(() => Navigator.of(sheetContext).pop(), scroll: scroll),
-          ),
-        ),
-      ),
-    ),
-  );
 }
 
 /// The sheet's content: the list of calls, and one call's full detail pushed on
@@ -209,18 +129,7 @@ class _SheetHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(mainAxisSize: MainAxisSize.min, children: [
-      if (kMobile)
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.border2,
-              borderRadius: BorderRadius.circular(R.pill),
-            ),
-          ),
-        ),
+      if (kMobile) const SheetGrabHandle(compact: true),
       Padding(
         padding: EdgeInsets.symmetric(horizontal: 8, vertical: kMobile ? 0 : 8),
         child: Row(children: [
@@ -243,7 +152,7 @@ class _SheetHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (onClose != null)
+          if (onClose != null && !kMobile)
             IconBtn('x',
                 size: 34, iconSize: 16, tooltip: 'Close', onTap: onClose),
         ]),
@@ -416,8 +325,7 @@ class _TimelineState extends State<_Timeline> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Activity',
-                      style: sans(20, spacing: -0.4, color: AppColors.fg1)),
+                  Text('Activity', style: TS.sectionTitle()),
                   if (running) ...[
                     const SizedBox(height: 3),
                     Row(children: [
@@ -429,14 +337,13 @@ class _TimelineState extends State<_Timeline> {
                       ),
                       const SizedBox(width: 6),
                       Flexible(
-                          child: Text('Running',
-                              style: sans(13, color: AppColors.fg3))),
+                          child: Text('Running', style: TS.meta())),
                     ]),
                   ],
                 ],
               ),
             ),
-            if (widget.onClose != null)
+            if (widget.onClose != null && !kMobile)
               IconBtn('x',
                   size: M.minTarget,
                   iconSize: 16,
@@ -753,7 +660,7 @@ class _StepBody extends StatelessWidget {
           if (tail)
             for (final line in shown)
               Text(line,
-                  style: codeMono(11.5,
+                  style: codeMono(12,
                       height: 18 / 11.5,
                       color:
                           RegExp(r'FAIL|error|panicked', caseSensitive: false)

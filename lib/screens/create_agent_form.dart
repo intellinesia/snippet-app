@@ -13,7 +13,7 @@ import '../widgets.dart';
 /// enable its submit button.
 ///
 /// The prompt field is deliberately the whole form. The daemon takes only
-/// `{prompt}` and derives name, handle, role and capabilities itself, so
+/// `{prompt}` and derives name, handle and capabilities itself, so
 /// exposing those as inputs would offer controls it ignores.
 class CreateAgentForm extends StatefulWidget {
   const CreateAgentForm({super.key, required this.client});

@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../ambient/live_caption.dart';
 import '../api.dart';
@@ -31,7 +29,9 @@ import '../term.dart' show SessionTermView;
 import '../theme.dart';
 import '../media_views.dart';
 import '../widgets.dart';
+import '../crew_widgets.dart' show runCrewAgentAction;
 import 'add_instance.dart';
+import 'agent_panel.dart';
 import 'editor.dart';
 import 'files.dart';
 import 'git.dart';
@@ -59,6 +59,7 @@ import 'shell_pane_view.dart';
 import 'shell_rail.dart';
 import 'shell_rail_tools.dart';
 import 'shell_shortcuts.dart';
+import 'agent_rail.dart';
 import 'shell_sidebar_host.dart';
 import 'shell_split_view.dart';
 import 'shell_welcome.dart';
@@ -214,10 +215,7 @@ class _DesktopShellState extends State<DesktopShell>
   Revalidator? _sessionsRevalidator;
   Timer? _sessionsTicker;
   bool _appForeground = true;
-  WebSocketChannel? _eventsChannel;
   StreamSubscription? _eventsSub;
-  Timer? _eventsReconnect;
-  int _eventsGeneration = 0;
   final _liveStatus = SessionStatusUpdates();
 
   /// Which agents are working in each session, as display initials.
@@ -319,6 +317,7 @@ class _DesktopShellState extends State<DesktopShell>
       }
       _activePane = _Pane.right;
       _sidePanelHidden = false;
+      _agentPanelHidden = false;
       _activeKey[_Pane.right] = key;
     });
   }
@@ -368,6 +367,7 @@ class _DesktopShellState extends State<DesktopShell>
       if (tab.pane == _Pane.right) {
         _rightCollapsed = false;
         _sidePanelHidden = false;
+        _agentPanelHidden = false;
       }
       _activePane = tab.pane;
       _activeKey[tab.pane] = tab.key;
@@ -434,6 +434,42 @@ class _DesktopShellState extends State<DesktopShell>
       _hiddenSections.contains(_section) ? ShellSection.sessions : _section;
 
   bool _sidePanelHidden = true;
+
+  /// An agent tab's panel holds only the pages opened from its Actions menu.
+  bool _agentPanelHidden = true;
+
+  bool get _agentHasPanelTabs => _rightTabs.any((r) =>
+      r.pane == _Pane.right &&
+      (r.originTabKey == null || r.originTabKey == _activeTab?.key));
+
+  CoordinationAgent? get _activeAgent => _activeTab?.readout?.agent;
+
+  bool get _panelHidden =>
+      _activeAgent != null ? _agentPanelHidden : _sidePanelHidden;
+
+  void _togglePanel() => setState(() {
+        if (_activeAgent != null) {
+          _agentPanelHidden = !_agentPanelHidden;
+        } else {
+          _sidePanelHidden = !_sidePanelHidden;
+        }
+      });
+
+  void _agentAction(String action) {
+    final tab = _activeTab;
+    final a = _activeAgent;
+    if (tab == null || a == null) return;
+    final name = a.displayName.trim().isEmpty ? a.id : a.displayName.trim();
+    if (action == 'desk') {
+      _openSession('inbox-${a.id}', '$name desk', null);
+    } else if (action == 'delete') {
+      runCrewAgentAction(context, 'delete',
+          client: tab.client, agent: a, onDeleted: () => _closePaneTab(tab));
+    } else if (agentPanelPages.contains(action)) {
+      _openShellPanel(agentPanelRequest(action,
+          client: tab.client, agentId: a.id, agentName: name));
+    }
+  }
   Map<String, String> _tabProviders = const {};
   String? _tabProvidersFor;
 
@@ -460,24 +496,24 @@ class _DesktopShellState extends State<DesktopShell>
           onToggleRightPanel: _toggleRightPanel,
           onSessionAction: _dispatchSessionAction,
           onOpenGoalPopover: _openGoalPopover,
+          onAgentAction: _agentAction,
         ),
-        if (_activeTab?.sessionId != null)
+        if (_activeTab?.sessionId != null ||
+            (_activeAgent != null && _agentHasPanelTabs))
           Tooltip(
-            message: _sidePanelHidden ? 'Show panel' : 'Hide panel',
+            message: _panelHidden ? 'Show panel' : 'Hide panel',
             child: Material(
-              color: _sidePanelHidden ? Colors.transparent : AppColors.surface2,
+              color: _panelHidden ? Colors.transparent : AppColors.surface2,
               borderRadius: BorderRadius.circular(8),
               child: InkWell(
                 borderRadius: BorderRadius.circular(8),
-                onTap: () =>
-                    setState(() => _sidePanelHidden = !_sidePanelHidden),
+                onTap: _togglePanel,
                 child: SizedBox.square(
                   dimension: 30,
                   child: Center(
                     child: AppIcon('panel-right',
                         size: 16,
-                        color:
-                            _sidePanelHidden ? AppColors.fg3 : AppColors.fg1),
+                        color: _panelHidden ? AppColors.fg3 : AppColors.fg1),
                   ),
                 ),
               ),
@@ -499,7 +535,10 @@ class _DesktopShellState extends State<DesktopShell>
     // Tapping a session notification opens it in-place (consistent with the app),
     // not a separate full-screen route.
     onNotifTap = _onNotif;
-    if (!kMobile) openTaskInTab = _openTaskTabById;
+    if (!kMobile) {
+      openTaskInTab = _openTaskTabById;
+      openSessionInTab = (_, id, title) => _openSession(id, title, null);
+    }
     _startSessionsTicker();
     if (!kMobile) HardwareKeyboard.instance.addHandler(_handleGlobalShortcuts);
     if (kMobile) ShareInbound.listen(_onInboundShare);
@@ -530,6 +569,7 @@ class _DesktopShellState extends State<DesktopShell>
     _shells.dispose();
     if (onNotifTap == _onNotif) onNotifTap = null;
     openTaskInTab = null;
+    openSessionInTab = null;
     if (kMobile) ShareInbound.dispose();
     super.dispose();
   }
@@ -674,23 +714,15 @@ class _DesktopShellState extends State<DesktopShell>
   void _stopEventsWatch() {
     _sessionsRevalidator?.dispose();
     _sessionsRevalidator = null;
-    _eventsGeneration++;
-    _eventsReconnect?.cancel();
-    _eventsReconnect = null;
     _eventsSub?.cancel();
     _eventsSub = null;
-    _eventsChannel?.sink.close();
-    _eventsChannel = null;
   }
 
   void _connectEventsWatch() {
     final c = _client;
     MacosNotch.bindClient(c);
-    if (c == null) {
-      _stopEventsWatch();
-      return;
-    }
     _stopEventsWatch();
+    if (c == null) return;
     _sessionsRevalidator = Revalidator(
       client: c,
       on: Swr.sessionStatus,
@@ -699,61 +731,38 @@ class _DesktopShellState extends State<DesktopShell>
         if (mounted && _appForeground && !_sessionsLoading) _loadSessions();
       },
     );
-    final generation = _eventsGeneration;
-    try {
-      final ch = c.events();
-      if (_active != null) {
-        unawaited(syncNotificationInstance(_active!).catchError((Object _) {}));
-      }
-      _eventsChannel = ch;
-      _eventsSub = ch.stream.listen(
-        (msg) {
-          if (generation != _eventsGeneration ||
-              !identical(ch, _eventsChannel)) {
-            return;
-          }
-          final event = DeviceEvent.decode(msg);
-          if (event == null) return;
-          final kind = event.kind;
-          if (kind == 'ambient_live') {
-            final frame = jsonDecode(msg as String);
-            if (frame is Map) LiveCaptionFeed.instance.apply(frame);
-            return;
-          }
-          if (kind == 'notification' && _active != null) {
-            unawaited(receiveLiveNotification(_active!, msg)
-                .catchError((Object _) {}));
-          }
-          if (kind == 'models' || kind == 'config') {
-            c.invalidateConfig();
-            modelsRevision.value++;
-          }
-          final session = event.session;
-          final status = event.status;
-          if (session.isEmpty || status.isEmpty) return;
-          if (!mounted) return;
-          _patchSessionStatus(session, status);
-          setState(() {});
-        },
-        onDone: _scheduleEventsReconnect,
-        onError: (_) => _scheduleEventsReconnect(),
-        cancelOnError: true,
-      );
-    } catch (_) {
-      _scheduleEventsReconnect();
+    if (_active != null) {
+      unawaited(syncNotificationInstance(_active!).catchError((Object _) {}));
     }
-  }
-
-  void _scheduleEventsReconnect() {
-    if (!mounted || !_appForeground || _client == null) return;
-    _eventsReconnect?.cancel();
-    _eventsReconnect = Timer(const Duration(seconds: 3), () {
-      if (mounted && _appForeground) {
-        _connectEventsWatch();
-        if (!_sessionsLoading) _loadSessions();
+    _eventsSub = c.deviceEvents.stream.listen((frame) {
+      if (!mounted || !identical(c, _client)) return;
+      final event = DeviceEvent.decode(frame);
+      if (event == null) return;
+      final kind = event.kind;
+      if (kind == DeviceEventHub.reconnected && _active != null) {
+        unawaited(syncNotificationInstance(_active!).catchError((Object _) {}));
+        return;
       }
+      if (kind == 'ambient_live') {
+        LiveCaptionFeed.instance.apply(frame);
+        return;
+      }
+      if (kind == 'notification' && _active != null) {
+        unawaited(
+            receiveLiveNotification(_active!, frame).catchError((Object _) {}));
+      }
+      if (kind == 'models' || kind == 'config') {
+        c.invalidateConfig();
+        modelsRevision.value++;
+      }
+      final session = event.session;
+      final status = event.status;
+      if (session.isEmpty || status.isEmpty) return;
+      _patchSessionStatus(session, status);
+      setState(() {});
     });
   }
+
 
   void _setGithubReady(String key, bool ok) {
     if ((_githubReady[key] ?? false) == ok) return;
@@ -1164,10 +1173,7 @@ class _DesktopShellState extends State<DesktopShell>
                 kind: PaletteKind.agent,
                 icon: 'agent',
                 title: a.displayName.trim().isEmpty ? a.id : a.displayName,
-                subtitle: [
-                  if (a.handle.isNotEmpty) '@${a.handle}',
-                  if (a.role.isNotEmpty) a.role,
-                ].join(' · '),
+                subtitle: a.handle.isNotEmpty ? '@${a.handle}' : '',
                 keywords: [a.handle],
                 run: () => _openRightAgent(a),
               ),

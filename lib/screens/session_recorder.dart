@@ -256,6 +256,15 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
     }
   }
 
+  /// Attach this take and start the next one, so a thought can continue.
+  Future<void> _recordMore() async {
+    if (_maxAttachments - _attachments.length <= 0) {
+      _toast('Attachment limit reached.');
+      return;
+    }
+    if (await _confirmRecording()) await _startRecording();
+  }
+
   Future<void> _discardRecording() async {
     final path = _recordingPath;
     if (_isRecording) {
@@ -322,6 +331,9 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
       onStop: () => unawaited(_stopRecording()),
       onSend: () => unawaited(_sendMessage()),
       onSeek: reviewing ? (f) => unawaited(_seekRecording(f, total)) : null,
+      onMore: reviewing && _attachments.length < _maxAttachments - 1
+          ? () => unawaited(_recordMore())
+          : null,
     );
   }
 

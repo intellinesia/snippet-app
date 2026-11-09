@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,6 +21,11 @@ class _FakeDaemon extends DaemonClient {
   List<Map<String, dynamic>> items;
   final moves = <String, TaskStatus>{};
   bool refuse = false;
+
+  @override
+  Future<List<TaskItem>> recentTasks(
+          {required String status, required int limit}) async =>
+      (await tasks()).where((t) => t.status.wire == status).take(limit).toList();
 
   @override
   Future<List<TaskItem>> tasks(
@@ -196,52 +199,6 @@ void main() {
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
-  });
-
-  test('desktop shell has no board command or creation callback', () {
-    final shell = File('lib/screens/desktop_shell.dart')
-        .readAsStringSync()
-        .replaceAll('\r\n', '\n');
-    final tabs = File('lib/screens/desktop_shell_tabs.dart')
-        .readAsStringSync()
-        .replaceAll('\r\n', '\n');
-    final sidebar = File('lib/screens/shell_sidebar_host.dart')
-        .readAsStringSync()
-        .replaceAll('\r\n', '\n');
-    expect(shell, isNot(contains('Open Task Board')));
-    expect(shell, isNot(contains("'kanban'")));
-    expect(shell, isNot(contains('_openBoardTab')));
-    expect(tabs, isNot(contains('_openBoardTab')));
-    expect(sidebar, isNot(contains('onOpenBoard')));
-    final panes = File('lib/screens/desktop_shell_panes.dart')
-        .readAsStringSync()
-        .replaceAll('\r\n', '\n');
-    expect(panes, contains('''return kMobile
-          ? TaskKanban(key: ValueKey('body-\${t.key}'), client: t.client)
-          : TasksPanel(
-              key: ValueKey('body-\${t.key}'),
-              client: t.client,
-              onOpenTask: (task) => _openTaskTab(t.client, t.instanceUrl, task));'''));
-    expect(
-        tabs, contains('shouldRestoreShellTab(descriptor, mobile: kMobile)'));
-  });
-
-  test('legacy board restore is omitted on desktop and retained on mobile', () {
-    final legacy = OpenTabDescriptor.fromJson({
-      'instanceUrl': 'http://m',
-      'title': 'Tasks',
-      'board': true,
-      'pane': 'right',
-      'groupSessionKey': 'http://m|session',
-    });
-    expect(shouldRestoreShellTab(legacy, mobile: false), isFalse);
-    expect(shouldRestoreShellTab(legacy, mobile: true), isTrue);
-    final session = OpenTabDescriptor(
-      instanceUrl: 'http://m',
-      title: 'Chat',
-      sessionId: 'session',
-    );
-    expect(shouldRestoreShellTab(session, mobile: false), isTrue);
   });
 
   test('legacy board descriptor remains readable for mobile restore', () {

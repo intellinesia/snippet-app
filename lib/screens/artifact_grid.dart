@@ -202,7 +202,7 @@ class _CardState extends State<_Card> {
                     Text(widget.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(12.5, color: AppColors.fg1)),
+                        style: sans(13, color: AppColors.fg1)),
                     const SizedBox(height: 2),
                     Text(widget.meta,
                         maxLines: 1,

@@ -63,7 +63,7 @@ class GoalRow extends StatelessWidget {
               child: Text(goal.title.isEmpty ? '(untitled goal)' : goal.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(kMobile ? 14.5 : 13,
+                  style: sans(kMobile ? 14 : 13,
                       weight: W.label, color: AppColors.fg1)),
             ),
             if (goal.attention != null) ...[
@@ -79,12 +79,12 @@ class GoalRow extends StatelessWidget {
           const SizedBox(height: 6),
           Row(children: [
             Text('${p.done} of ${p.total} slices',
-                style: sans(11.5, color: AppColors.fg3, tabular: true)),
+                style: sans(12, color: AppColors.fg3, tabular: true)),
             const Spacer(),
             AppIcon('check', size: 11, color: AppColors.fg4),
             const SizedBox(width: 4),
             Text('${goal.evidence.done} of ${goal.evidence.total} evidenced',
-                style: sans(11.5, color: AppColors.fg3, tabular: true)),
+                style: sans(12, color: AppColors.fg3, tabular: true)),
           ]),
         ]),
       ),
@@ -150,102 +150,4 @@ Future<void> openGoalDetail(
     builder: (_, close) =>
         GoalDetailScreen(client: client, goalId: goalId, onClose: close),
   );
-}
-
-/// Open-goal feed shared by the board panel and the Goals tab.
-class GoalsList extends StatefulWidget {
-  const GoalsList({
-    super.key,
-    required this.client,
-    this.padding = const EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 16),
-    this.shrinkWrap = false,
-    this.onOpen,
-  });
-
-  final DaemonClient client;
-  final EdgeInsets padding;
-  final bool shrinkWrap;
-  final void Function(Goal goal)? onOpen;
-
-  @override
-  State<GoalsList> createState() => _GoalsListState();
-}
-
-class _GoalsListState extends State<GoalsList> {
-  List<Goal>? _goals;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  @override
-  void didUpdateWidget(GoalsList old) {
-    super.didUpdateWidget(old);
-    if (old.client != widget.client) _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final goals = await widget.client.goals();
-      if (mounted) {
-        setState(() {
-          _goals = goals;
-          _error = null;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _error = '$e');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final goals = _goals;
-    if (goals == null && _error == null) {
-      return const Center(child: Spinner(size: 20));
-    }
-    if (goals == null) {
-      return Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Could not load goals', style: sans(13, color: AppColors.fg2)),
-          const SizedBox(height: 10),
-          Btn('Retry', small: true, onTap: _load),
-        ]),
-      );
-    }
-    if (goals.isEmpty) {
-      return const EmptyState(
-        icon: 'layers',
-        title: 'No open goals',
-        body: 'Outcomes your agents are working towards appear here.',
-      );
-    }
-    final order = {
-      GoalAttention.stalled: 0,
-      GoalAttention.readyToClose: 1,
-    };
-    final sorted = [...goals]..sort(
-        (a, b) => (order[a.attention] ?? 2).compareTo(order[b.attention] ?? 2));
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView(
-        shrinkWrap: widget.shrinkWrap,
-        physics:
-            widget.shrinkWrap ? const NeverScrollableScrollPhysics() : null,
-        padding: widget.padding,
-        children: [
-          for (final g in sorted)
-            GoalRow(
-              goal: g,
-              onTap: () => widget.onOpen != null
-                  ? widget.onOpen!(g)
-                  : openGoalDetail(context, widget.client, g.id),
-            ),
-        ],
-      ),
-    );
-  }
 }

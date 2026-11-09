@@ -87,15 +87,6 @@ class ToolStep {
 String toolBaseName(String tool) =>
     tool.startsWith('mcp__') ? tool.substring(tool.lastIndexOf('__') + 2) : tool;
 
-enum ToolKind { change, run, web, other }
-
-ToolKind toolKind(String tool) => switch (toolBaseName(tool)) {
-      'change_files' => ToolKind.change,
-      'bash' || 'manage_process' => ToolKind.run,
-      'web_search' || 'web_read' => ToolKind.web,
-      _ => ToolKind.other,
-    };
-
 String toolVerb(String tool, {required bool running}) {
   tool = toolBaseName(tool);
   final (done, doing) = switch (tool) {

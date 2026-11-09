@@ -185,7 +185,7 @@ List<({String text, String? summary})> _segments(String body) {
 }
 
 MarkdownStyleSheet _compactMarkdown(BuildContext context) {
-  final text = sans(kMobile ? 14 : 13.5, height: 1.55, color: AppColors.fg2);
+  final text = sans(kMobile ? 14 : 13, height: 1.55, color: AppColors.fg2);
   return markdownStyle(context).copyWith(
     p: text,
     listBullet: text,
@@ -193,8 +193,8 @@ MarkdownStyleSheet _compactMarkdown(BuildContext context) {
     em: text.copyWith(fontStyle: FontStyle.italic),
     a: text.copyWith(color: AppColors.accent),
     h1: sans(17, weight: W.strong, color: AppColors.fg1),
-    h2: sans(15.5, weight: W.strong, color: AppColors.fg1),
-    h3: sans(14.5, weight: W.strong, color: AppColors.fg1),
+    h2: sans(15, weight: W.strong, color: AppColors.fg1),
+    h3: sans(14, weight: W.strong, color: AppColors.fg1),
     code: codeMono(12, color: AppColors.fg1).copyWith(backgroundColor: AppColors.surface2),
     blockSpacing: 8,
   );
@@ -297,7 +297,7 @@ class _CollapsibleState extends State<_Collapsible> {
               child: Text(widget.summary,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(13.5, weight: W.label, color: AppColors.fg1)),
+                  style: sans(13, weight: W.label, color: AppColors.fg1)),
             ),
           ]),
         ),
@@ -412,7 +412,7 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(label,
-              style: sans(12.5, weight: W.label, color: selected ? AppColors.fg1 : AppColors.fg3)),
+              style: sans(13, weight: W.label, color: selected ? AppColors.fg1 : AppColors.fg3)),
         ),
       );
 
@@ -511,19 +511,12 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
 
 /// A sheet for writing a conversation comment.
 Future<String?> showPrCommentSheet(BuildContext context, {required String title, String action = 'Comment'}) {
-  return showModalBottomSheet<String>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: AppColors.surface1,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop))),
-    builder: (_) => _CommentSheet(title: title, action: action),
-  );
+  return showAppSheet<String>(context,
+      title: title, maxWidth: 520, maxHeight: 640, child: _CommentSheet(action: action));
 }
 
 class _CommentSheet extends StatefulWidget {
-  const _CommentSheet({required this.title, required this.action});
-  final String title;
+  const _CommentSheet({required this.action});
   final String action;
 
   @override
@@ -542,11 +535,7 @@ class _CommentSheetState extends State<_CommentSheet> {
   @override
   Widget build(BuildContext context) {
     final ready = _text.text.trim().isNotEmpty;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text(widget.title, style: sans(17, weight: W.strong, color: AppColors.fg1)),
-        const SizedBox(height: 12),
+    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         PrMarkdownComposer(
           controller: _text,
           autofocus: true,
@@ -557,7 +546,7 @@ class _CommentSheetState extends State<_CommentSheet> {
             const Spacer(),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel', style: sans(13, weight: W.label, color: AppColors.fg3)),
+              child: Text('Cancel', style: TS.label(AppColors.fg3)),
             ),
             const SizedBox(width: 4),
             FilledButton(
@@ -567,12 +556,11 @@ class _CommentSheetState extends State<_CommentSheet> {
                 foregroundColor: AppColors.accentFg,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kMobile ? R.pill : R.sm)),
               ),
-              child: Text(widget.action, style: sans(13, weight: W.label, color: AppColors.accentFg)),
+              child: Text(widget.action, style: TS.label(AppColors.accentFg)),
             ),
           ]),
         ),
-      ]),
-    );
+    ]);
   }
 }
 
@@ -922,7 +910,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(label, style: sans(14.5, weight: W.label, color: AppColors.fg1)),
+                Text(label, style: sans(14, weight: W.label, color: AppColors.fg1)),
                 if (detail.isNotEmpty) Text(detail, style: TS.meta(AppColors.fg3)),
               ]),
             ),
@@ -1051,8 +1039,8 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
             ink: ink,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text.rich(TextSpan(children: [
-                TextSpan(text: e.author, style: sans(13.5, weight: W.label, color: AppColors.fg1)),
-                TextSpan(text: ' $verb', style: sans(13.5, color: AppColors.fg2)),
+                TextSpan(text: e.author, style: sans(13, weight: W.label, color: AppColors.fg1)),
+                TextSpan(text: ' $verb', style: sans(13, color: AppColors.fg2)),
                 TextSpan(text: ' · ${prAgo(e.at)}', style: TS.meta(AppColors.fg4)),
               ])),
               if (e.body.trim().isNotEmpty) ...[
@@ -1081,7 +1069,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
             avatar: e.author,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text.rich(TextSpan(children: [
-                TextSpan(text: e.author, style: sans(13.5, weight: W.label, color: AppColors.fg1)),
+                TextSpan(text: e.author, style: sans(13, weight: W.label, color: AppColors.fg1)),
                 TextSpan(text: ' · ${prAgo(e.at)}', style: TS.meta(AppColors.fg4)),
               ])),
               const SizedBox(height: 6),
@@ -1210,7 +1198,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text.rich(TextSpan(children: [
-                  TextSpan(text: s.author, style: sans(14.5, weight: W.label, color: AppColors.fg1)),
+                  TextSpan(text: s.author, style: sans(14, weight: W.label, color: AppColors.fg1)),
                   TextSpan(text: ' · opened ${prAgo(pr.createdAt)}', style: TS.meta(AppColors.fg3)),
                 ])),
               ),
@@ -1308,7 +1296,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
               AppIcon(icon, size: 15, color: primary ? AppColors.accentFg : AppColors.fg1),
               const SizedBox(width: 7),
               Text(label,
-                  style: sans(13.5, weight: W.label, color: primary ? AppColors.accentFg : AppColors.fg1)),
+                  style: sans(13, weight: W.label, color: primary ? AppColors.accentFg : AppColors.fg1)),
             ]),
           ),
         ),
@@ -1552,7 +1540,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Text(label,
-                  style: sans(14.5, weight: W.strong, color: enabled ? AppColors.accentFg : AppColors.fg4)),
+                  style: sans(14, weight: W.strong, color: enabled ? AppColors.accentFg : AppColors.fg4)),
             ),
           ),
         ),
@@ -1564,7 +1552,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
         controller: c,
         minLines: lines,
         maxLines: lines == 1 ? 1 : 10,
-        style: lines == 1 ? sans(14, weight: W.label, color: AppColors.fg1) : mono(12.5, height: 1.5, color: AppColors.fg1),
+        style: lines == 1 ? sans(14, weight: W.label, color: AppColors.fg1) : mono(13, height: 1.5, color: AppColors.fg1),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: TS.body(AppColors.fg4),
@@ -1607,7 +1595,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
             const SizedBox(width: 10),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: sans(14.5, weight: W.label, color: AppColors.fg1)),
+                Text(title, style: sans(14, weight: W.label, color: AppColors.fg1)),
                 if (detail.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(detail, style: sans(13, height: 1.4, color: AppColors.fg3)),
@@ -1633,7 +1621,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kMobile ? R.pill : 8)),
           padding: const EdgeInsets.symmetric(horizontal: 14),
         ),
-        child: Text(label, style: sans(13.5, weight: W.label, color: AppColors.fg1)),
+        child: Text(label, style: sans(13, weight: W.label, color: AppColors.fg1)),
       );
 
   Widget _content() {
@@ -1677,7 +1665,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
     final blocked = !_ready;
     if (_confirming) {
       children.addAll([
-        Text(_label(_method), style: sans(14.5, weight: W.strong, color: AppColors.fg1)),
+        Text(_label(_method), style: sans(14, weight: W.strong, color: AppColors.fg1)),
         const SizedBox(height: 10),
         if (_method == 'rebase')
           Text('The ${pr.commits.length} commit${pr.commits.length == 1 ? '' : 's'} from ${_s.head} will be rebased onto ${_s.base}.',
@@ -1719,7 +1707,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
         TextButton(
           style: TextButton.styleFrom(minimumSize: const Size.fromHeight(40)),
           onPressed: _busy ? null : () => setState(() => _confirming = false),
-          child: Text('Cancel', style: sans(13.5, weight: W.label, color: AppColors.fg3)),
+          child: Text('Cancel', style: sans(13, weight: W.label, color: AppColors.fg3)),
         ),
       ]);
     } else {
@@ -1767,15 +1755,11 @@ Future<bool> submitPrReviewFlow(
   required List<PendingComment> pending,
   required bool isAuthor,
 }) async {
-  final result = await showModalBottomSheet<(String, String)>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: AppColors.surface1,
-    shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop))),
-    builder: (_) => _ReviewSheet(pendingCount: pending.length, isAuthor: isAuthor),
-  );
+  final result = await showAppSheet<(String, String)>(context,
+      title: 'Finish your review',
+      maxWidth: 520,
+      maxHeight: 700,
+      child: _ReviewSheet(pendingCount: pending.length, isAuthor: isAuthor));
   if (result == null || !context.mounted) return false;
   try {
     await client.submitPrReview(session, number,
@@ -1834,7 +1818,7 @@ class _ReviewSheetState extends State<_ReviewSheet> {
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: sans(14, weight: W.label, color: enabled ? AppColors.fg1 : AppColors.fg4)),
+              Text(label, style: TS.rowTitle(enabled ? AppColors.fg1 : AppColors.fg4)),
               Text(detail, style: TS.meta(AppColors.fg3)),
             ]),
           ),
@@ -1845,20 +1829,15 @@ class _ReviewSheetState extends State<_ReviewSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final inset = MediaQuery.of(context).viewInsets.bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + inset),
-      child: Column(
+    return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Finish your review', style: sans(17, weight: W.strong, color: AppColors.fg1)),
           if (widget.pendingCount > 0) ...[
-            const SizedBox(height: 4),
             Text('${widget.pendingCount} line comment${widget.pendingCount == 1 ? '' : 's'} will be posted with it',
                 style: TS.meta(AppColors.accent)),
+            const SizedBox(height: 14),
           ],
-          const SizedBox(height: 14),
           PrMarkdownComposer(
             controller: _body,
             hint: 'Leave a summary',
@@ -1881,10 +1860,9 @@ class _ReviewSheetState extends State<_ReviewSheet> {
               foregroundColor: AppColors.accentFg,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kMobile ? R.pill : R.sm)),
             ),
-            child: Text('Submit review', style: sans(14, weight: W.label, color: AppColors.accentFg)),
+            child: Text('Submit review', style: TS.label(AppColors.accentFg)),
           ),
         ],
-      ),
     );
   }
 }
@@ -2263,7 +2241,7 @@ class _PrFileDiffState extends State<PrFileDiff> {
   TextSpan _span(int index, String text) => _spans.putIfAbsent(
       index,
       () => highlightedCodeSpan(text.isEmpty ? ' ' : text,
-          language: _ext, fontSize: kMobile ? 12 : 12.5, height: 1.5));
+          language: _ext, fontSize: kMobile ? 12 : 13, height: 1.5));
 
   (int, int)? get _range {
     if (_selStart == null) return null;
@@ -2371,13 +2349,13 @@ class _PrFileDiffState extends State<PrFileDiff> {
       return Text(path,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: mono(12.5, color: AppColors.fg1));
+          style: mono(13, color: AppColors.fg1));
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(path.substring(slash + 1),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: mono(12.5, color: AppColors.fg1)),
+          style: mono(13, color: AppColors.fg1)),
       Text(path.substring(0, slash),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -2437,7 +2415,7 @@ class _PrFileDiffState extends State<PrFileDiff> {
       return Container(
         color: AppColors.accentBg,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        child: Text(line.text, style: codeMono(11.5, color: AppColors.accent)),
+        child: Text(line.text, style: codeMono(12, color: AppColors.accent)),
       );
     }
     final bg = selected
@@ -2805,7 +2783,7 @@ class _PrThreadBoxState extends State<PrThreadBox>
               TextButton(
                 onPressed: _busy ? null : _resolve,
                 child: Text(t.resolved ? 'Unresolve' : 'Resolve conversation',
-                    style: sans(12.5, weight: W.label, color: AppColors.fg2)),
+                    style: sans(13, weight: W.label, color: AppColors.fg2)),
               ),
               const SizedBox(width: 4),
             ]),
@@ -2931,7 +2909,7 @@ class _CommitRowState extends State<_CommitRow> {
                 Flexible(
                   child: Text.rich(
                     TextSpan(children: [
-                      TextSpan(text: c.author, style: sans(12.5, weight: W.label, color: AppColors.fg2)),
+                      TextSpan(text: c.author, style: sans(13, weight: W.label, color: AppColors.fg2)),
                       TextSpan(text: ' committed ${prAgo(c.date)}', style: TS.meta(AppColors.fg3)),
                     ]),
                     maxLines: 1,
@@ -2948,7 +2926,7 @@ class _CommitRowState extends State<_CommitRow> {
               color: AppColors.surface2,
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text(short, style: mono(11.5, color: AppColors.fg2)),
+            child: Text(short, style: mono(12, color: AppColors.fg2)),
           ),
           IconBtn('copy', size: 28, iconSize: 13, tooltip: 'Copy SHA', onTap: () {
             Clipboard.setData(ClipboardData(text: c.oid));

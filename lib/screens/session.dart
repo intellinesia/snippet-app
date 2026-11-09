@@ -23,6 +23,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../approval_code.dart';
 import '../notification_text.dart';
 import '../api.dart';
+import '../composer/cold_strip.dart';
 import '../desktop_pick.dart';
 import '../drafts.dart';
 import '../macos_notch.dart';
@@ -50,6 +51,9 @@ import 'pull_requests.dart';
 import '../github_models.dart';
 import 'presented_file_card.dart';
 import '../composer_strip.dart';
+import '../composer/attachment_preview.dart';
+import '../composer/attachment_tile.dart';
+import '../composer/composer_card.dart';
 import '../media_views.dart';
 import 'agent_messaging.dart';
 import 'package:xterm/xterm.dart';
@@ -331,6 +335,18 @@ class _SessionScreenState extends State<SessionScreen>
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   final _composerCardKey = GlobalKey();
   final _modelChipKey = GlobalKey();
+
+  @visibleForTesting
+  void debugSeedComposer({String? model, String? provider, String? file}) {
+    setState(() {
+      _modelLabel = model ?? _modelLabel;
+      _modelProvider = provider ?? _modelProvider;
+      if (file != null) {
+        _attachments.add(_Attachment(
+            name: file, isImage: false, isAudio: false)..uploading = false);
+      }
+    });
+  }
   final AudioRecorder _recorder = HeldRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
   StreamSubscription<Amplitude>? _amplitudeSub;
@@ -342,6 +358,8 @@ class _SessionScreenState extends State<SessionScreen>
   bool _isPlayingRecording = false;
   bool _sendingAudio = false;
   bool _sendingMessage = false;
+  // Last moment the model was seen working; a send soon after needs no cold check.
+  DateTime? _warmSeenAt;
   String? _recordingPath;
   Uint8List? _recordingBytes;
   Duration _recordingElapsed = Duration.zero;
@@ -631,6 +649,7 @@ class _SessionScreenState extends State<SessionScreen>
     _send({
       'kind': 'history',
       'before': _transcriptStart,
+      'limit': 150,
     });
   }
 
@@ -735,6 +754,23 @@ class _SessionScreenState extends State<SessionScreen>
 
   late String _title;
   bool _settled = false;
+  // Set while the prompt cache has lapsed and the next turn's resume is unchosen.
+  Map<String, dynamic>? _cold;
+
+  Future<void> _checkCold() async {
+    if (widget.readOnly) return;
+    final info = await widget.client.sessionCache(widget.sessionId);
+    if (!mounted || info == null) return;
+    final cold = info['cold'] == true ? info : null;
+    if ((cold == null) != (_cold == null)) setState(() => _cold = cold);
+  }
+
+  void _chooseResume(bool lean) {
+    if (lean) _send({'kind': 'continue_lean'});
+    _warmSeenAt = DateTime.now();
+    setState(() => _cold = null);
+  }
+
   bool _keepAwake = false;
 
   Future<void> _setAutoSettle(bool on) async {
@@ -747,8 +783,6 @@ class _SessionScreenState extends State<SessionScreen>
       if (mounted) toast(context, "Couldn't change auto-settle: $e", danger: true);
     }
   }
-
-  bool _typedCompact = false;
 
   void _loadSettled() {
     if (_isMissionControl) return;
@@ -863,6 +897,7 @@ class _SessionScreenState extends State<SessionScreen>
       if (!mounted || _closed) return;
       _loadGithubStatus();
       _loadSettled();
+      _checkCold();
       _loadModel();
     });
     if (widget.inboundShare != null) {
@@ -883,19 +918,11 @@ class _SessionScreenState extends State<SessionScreen>
   /// model's history, which is not what happened in the conversation.
   void _startAgentEvents() {
     _agentEventsSub?.cancel();
-    _agentEventsSub = widget.client.events().stream.listen((raw) {
+    _agentEventsSub = widget.client.deviceEvents.stream.listen((frame) {
       if (!mounted || _closed) return;
       if (!_parked && _channel == null) {
         _reconnectAttempt = 0;
         _connect();
-      }
-      final Map<String, dynamic> frame;
-      try {
-        final decoded = jsonDecode(raw as String);
-        if (decoded is! Map) return;
-        frame = decoded.cast<String, dynamic>();
-      } catch (_) {
-        return;
       }
       if (frame['session']?.toString() == widget.sessionId &&
           !_parked &&
@@ -988,6 +1015,9 @@ class _SessionScreenState extends State<SessionScreen>
     super.didUpdateWidget(oldWidget);
     final sameSession = oldWidget.sessionId == widget.sessionId &&
         oldWidget.client.baseUrl == widget.client.baseUrl;
+    if (sameSession && !identical(oldWidget.client, widget.client)) {
+      _startAgentEvents();
+    }
     if (_isMissionControl && _title != 'Mission Control') {
       _title = 'Mission Control';
     }
@@ -1575,6 +1605,15 @@ class _SessionScreenState extends State<SessionScreen>
                                     onSend: _sendDecision),
                               ),
                             )),
+                          if (!widget.readOnly && _cold != null && !running)
+                            _centerWide(
+                                ColdStrip(
+                                    resumeTokens:
+                                        (_cold!['resume_tokens'] as num?)
+                                            ?.toInt(),
+                                    onLean: () => _chooseResume(true),
+                                    onFull: () => _chooseResume(false)),
+                                extra: 2 * kComposerGutter),
                           if (!widget.readOnly && _settled)
                             _centerWide(_settledNotice(),
                                 extra: 2 * kComposerGutter),

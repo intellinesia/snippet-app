@@ -165,8 +165,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Enter this code on the sign-in page.',
-                    style: sans(kMobile ? 14 : 13, color: AppColors.fg2)),
+                Text('Enter this code on the sign-in page.', style: TS.ui()),
                 const SizedBox(height: 12),
                 Container(
                   alignment: Alignment.center,
@@ -368,7 +367,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Text(
             'When an account reaches its 5-hour or weekly limit, Snippet moves to the next one in this order.',
-            style: sans(12, height: 1.5, color: AppColors.fg4)),
+            style: TS.meta()),
       ),
     ]);
   }
@@ -556,7 +555,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
           ),
         SettingsRow(
           label: 'Identifier',
-          trailing: Text(account.id, style: mono(12.5, color: AppColors.fg2)),
+          trailing: Text(account.id, style: mono(13, color: AppColors.fg2)),
         ),
       ]),
       if (canRemove)
@@ -587,7 +586,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
               Flexible(
                   child: Text(name,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(kMobile ? 15 : 13, color: AppColors.fg1))),
+                      style: TS.rowTitle())),
               if (account.active) ...[
                 const SizedBox(width: 8),
                 Text('In use', style: sans(12, color: AppColors.accent)),
@@ -597,7 +596,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
               Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: Text('Limit reached, $limitedLabel',
-                      style: sans(12.5, color: AppColors.danger))),
+                      style: sans(13, color: AppColors.danger))),
             if (usage?.primary != null) _meter(limitWindowLabel(usage!.primary!), usage.primary!),
             if (usage?.secondary != null) _meter(limitWindowLabel(usage!.secondary!), usage.secondary!),
           ]),
@@ -655,7 +654,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
         padding: const EdgeInsets.only(top: 8),
         child: Row(children: [
           SizedBox(
-              width: 40, child: Text(label, style: sans(12, color: AppColors.fg4))),
+              width: 40, child: Text(label, style: TS.caption())),
           Expanded(
               child: ClipRRect(
                   borderRadius: BorderRadius.circular(3),
@@ -679,7 +678,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   child: Text(reset ?? '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(12, color: AppColors.fg4))))
+                      style: TS.caption())))
         ]));
   }
 

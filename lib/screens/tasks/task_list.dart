@@ -1,6 +1,5 @@
 import '../../task_reason.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../models.dart';
 import '../../platform.dart';
@@ -26,7 +25,12 @@ class TaskList extends StatelessWidget {
     this.padding,
     this.appearSince,
     this.selectedId,
+    this.hasMore,
+    this.onLoadMore,
   });
+
+  final bool Function(TaskStatus status)? hasMore;
+  final Future<void> Function(TaskStatus status)? onLoadMore;
 
   final List<TaskItem> tasks;
   final ValueChanged<TaskItem> onOpen;
@@ -89,6 +93,10 @@ class TaskList extends StatelessWidget {
     );
   }
 
+  Widget _loadMore(TaskStatus status) => TaskLoadMore(
+      key: ValueKey('more-${status.name}'),
+      onTap: () => onLoadMore?.call(status) ?? Future.value());
+
   List<Widget> _group(TaskStatus status, Iterable<TaskItem> items) {
     if (items.isEmpty) return const [];
     if (kMobile) {
@@ -105,6 +113,7 @@ class TaskList extends StatelessWidget {
               note: noteForTask(list[i], tasks),
               onTap: () => onOpen(list[i]),
               divider: i < list.length - 1),
+        if (hasMore?.call(status) ?? false) _loadMore(status),
       ];
     }
     return [
@@ -119,6 +128,7 @@ class TaskList extends StatelessWidget {
             note: noteForTask(task, tasks),
             selected: task.id == selectedId,
             onTap: () => onOpen(task)),
+      if (hasMore?.call(status) ?? false) _loadMore(status),
     ];
   }
 
@@ -348,7 +358,7 @@ class TaskRow extends StatelessWidget {
                         Text(detail,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: sans(11.5,
+                            style: sans(12,
                                 height: 15 / 11.5, color: AppColors.fg4)),
                       ],
                     ],
@@ -435,188 +445,42 @@ class PriorityMark extends StatelessWidget {
       );
 }
 
-/// Pick which statuses to show. Empty means all of them.
-Future<Set<TaskStatus>?> showTaskFilter(BuildContext context,
-    {required Set<TaskStatus> selected, required List<TaskItem> tasks}) {
-  return showAppSheet<Set<TaskStatus>>(
-    context,
-    title: 'Filter by status',
-    child: _FilterPanel(
-      selected: selected,
-      counts: {
-        for (final s in TaskStatus.values)
-          s: tasks.where((t) => t.status == s).length,
-      },
-    ),
-  );
-}
-
-class _FilterPanel extends StatefulWidget {
-  const _FilterPanel({required this.selected, required this.counts});
-
-  final Set<TaskStatus> selected;
-  final Map<TaskStatus, int> counts;
+/// The row under a status group that loads its next page of older tasks.
+class TaskLoadMore extends StatefulWidget {
+  const TaskLoadMore({super.key, required this.onTap});
+  final Future<void> Function() onTap;
 
   @override
-  State<_FilterPanel> createState() => _FilterPanelState();
+  State<TaskLoadMore> createState() => _TaskLoadMoreState();
 }
 
-class _FilterPanelState extends State<_FilterPanel> {
-  late final Set<TaskStatus> _selected = {...widget.selected};
+class _TaskLoadMoreState extends State<TaskLoadMore> {
+  bool _busy = false;
+
+  Future<void> _run() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await widget.onTap();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
-  Widget build(BuildContext context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _row(
-            label: 'All statuses',
-            selected: _selected.isEmpty,
-            onTap: () => setState(() => _selected.clear()),
-          ),
-          if (kMobile)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-              child: Container(height: 1, color: AppColors.line),
-            )
-          else
-            const SizedBox(height: S.s8),
-          for (final s in TaskStatus.values)
-            _row(
-              label: s.label,
-              count: widget.counts[s] ?? 0,
-              dot: statusColor(s),
-              selected: _selected.contains(s),
-              onTap: () => setState(() {
-                if (!_selected.remove(s)) _selected.add(s);
-              }),
-            ),
-          const SizedBox(height: S.s16),
-          // "Apply", not "Done": Done is already a status row above.
-          Btn('Apply',
-              full: true,
-              onTap: () => Navigator.pop<Set<TaskStatus>>(context, _selected)),
-        ],
-      );
-
-  Widget _row({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-    int? count,
-    Color? dot,
-  }) =>
-      kMobile
-          ? _mobileRow(
-              label: label,
-              selected: selected,
-              onTap: onTap,
-              count: count,
-              dot: dot)
-          : Padding(
-              padding: const EdgeInsets.only(bottom: S.s2),
-              child: Material(
-                color: selected ? AppColors.accentBg : Colors.transparent,
-                borderRadius: BorderRadius.circular(R.md),
-                child: InkWell(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    onTap();
-                  },
-                  borderRadius: BorderRadius.circular(R.md),
-                  child: Container(
-                    height: kMobile ? M.minTarget + 4 : 36,
-                    padding: const EdgeInsets.symmetric(horizontal: S.s12),
-                    child: Row(children: [
-                      Container(
-                        width: 20,
-                        height: 20,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: selected
-                              ? AppColors.accentFill
-                              : Colors.transparent,
-                          border: Border.all(
-                              color: selected
-                                  ? AppColors.accentFill
-                                  : AppColors.lineStrong,
-                              width: 1.5),
-                        ),
-                        child: selected
-                            ? AppIcon('check',
-                                size: 12, color: AppColors.accentFg)
-                            : null,
-                      ),
-                      const SizedBox(width: S.s12),
-                      if (dot != null) ...[
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration:
-                              BoxDecoration(color: dot, shape: BoxShape.circle),
-                        ),
-                        const SizedBox(width: S.s8),
-                      ],
-                      Expanded(
-                        child: Text(label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TS
-                                .ui(selected ? AppColors.fg1 : AppColors.fg2)),
-                      ),
-                      if (count != null) Text('$count', style: TS.meta()),
-                    ]),
-                  ),
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.symmetric(
+            horizontal: kMobile ? M.gutter : kNavPadH, vertical: 4),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: _busy
+              ? const SizedBox(
+                  height: 32, child: Center(child: Spinner(size: 14)))
+              : TextButton(
+                  onPressed: _run,
+                  child: Text('Load more',
+                      style: TS.ui(AppColors.accent)),
                 ),
-              ),
-            );
-
-  Widget _mobileRow({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-    int? count,
-    Color? dot,
-  }) =>
-      InkWell(
-        borderRadius: BorderRadius.circular(R.lg),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: Container(
-          height: 50,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(children: [
-            if (dot != null) ...[
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 14),
-            ],
-            Expanded(
-              child: Text(label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(16,
-                      color: selected ? AppColors.accent : AppColors.fg1)),
-            ),
-            if (count != null)
-              Text('$count',
-                  style: sans(14, color: AppColors.fg3, tabular: true)),
-            SizedBox(
-              width: 32,
-              child: selected
-                  ? Align(
-                      alignment: Alignment.centerRight,
-                      child:
-                          AppIcon('check', size: 18, color: AppColors.accent))
-                  : null,
-            ),
-          ]),
         ),
       );
 }

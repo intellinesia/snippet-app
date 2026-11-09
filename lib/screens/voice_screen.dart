@@ -835,7 +835,7 @@ class _VoiceButton extends StatelessWidget {
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(label, style: sans(kMobile ? 15 : 13, color: AppColors.fg2)),
               const SizedBox(width: 6),
-              AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+              AppIcon('chevron-right', size: 14, color: AppColors.fg3),
             ]),
           ),
         ),

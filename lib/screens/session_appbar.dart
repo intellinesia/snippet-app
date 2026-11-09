@@ -390,13 +390,24 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     }
   }
 
+  String _missionStatus(HarnessState? s) {
+    if (s == null) return '';
+    final n = s.lanes.where((l) => l.running).length;
+    if (n > 0) return n == 1 ? '1 task running' : '$n tasks running';
+    if (s.pendingQuestion != null) return 'Needs you';
+    if (s.compacting) return 'Tidying up';
+    return s.status == 'running' ? 'Working' : 'Idle';
+  }
+
   Widget _mobileHeader(HarnessState? s) {
     final ws = s?.workspace.trim() ?? '';
     final folder = ws.isEmpty ? '' : lastPathSegment(ws, ifEmpty: ws);
-    final sub = [
-      if (folder.isNotEmpty) folder,
-      if ((_modelLabel ?? '').isNotEmpty) _modelLabel!,
-    ].join(' · ');
+    final sub = _isMissionControl
+        ? _missionStatus(s)
+        : [
+            if (folder.isNotEmpty) folder,
+            if ((_modelLabel ?? '').isNotEmpty) _modelLabel!,
+          ].join(' · ');
     return MobileBackBar(
       title: _title.isEmpty ? 'Session' : _title,
       subtitle: sub,
@@ -411,7 +422,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               const WorkingMochi(size: 15),
               Text('${s.lanes.where((l) => l.running).length}',
-                  style: sans(10.5,
+                  style: sans(11,
                       weight: W.label, height: 1.1, color: AppColors.fg2)),
             ]),
           ),
@@ -1166,7 +1177,7 @@ class _DockTabState extends State<_DockTab> {
                   size: 12, color: on ? AppColors.fg2 : AppColors.fg4),
               const SizedBox(width: 6),
               Text(widget.title,
-                  style: sans(12.5, weight: on ? W.label : W.body, color: fg)),
+                  style: sans(13, weight: on ? W.label : W.body, color: fg)),
               if (!widget.alive) ...[
                 const SizedBox(width: 6),
                 Text('exited', style: sans(11, color: AppColors.fg4)),

@@ -244,7 +244,7 @@ List<Widget>? coordinationToolBody(
               ? _s(x['id'])
               : _s(x['display_name']),
           status: (x) => _s(x['status']),
-          meta: (x) => _s(x['role']),
+          meta: (x) => _s(x['handle']).isEmpty ? '' : '@${_s(x['handle'])}',
         ),
       ];
     case 'list_profiles':
@@ -556,4 +556,4 @@ class _Messages extends StatelessWidget {
 }
 
 TextStyle _label(Color c) =>
-    kMobile ? sans(12.5, color: c) : mono(10, color: c);
+    kMobile ? sans(13, color: c) : mono(10, color: c);

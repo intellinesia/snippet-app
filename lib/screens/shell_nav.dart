@@ -271,42 +271,6 @@ class ShellSectionHeader extends StatelessWidget {
   }
 }
 
-/// The ONE navigation header for a drilled-down phone screen.
-///
-/// Every nested surface under the phone home — a settings section, an agent's
-/// detail — uses this, so the back affordance and title sit in the same place at
-/// the same size wherever you are. Per-screen headers are how the two drifted:
-/// settings had a 16px title behind an arrow-left, agent detail its own behind
-/// an x. Two screens inside one shell should not offer two different exits.
-class MobileBackLink extends StatelessWidget {
-  const MobileBackLink(
-      {super.key, required this.onBack, this.label = 'Back', this.trailing = const []});
-  final VoidCallback onBack;
-  final String label;
-  final List<Widget> trailing;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-        height: 38,
-        child: Row(children: [
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onBack,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                AppIcon('chevron-left', size: 20, color: AppColors.accent),
-                Text(label, style: sans(16, color: AppColors.accent)),
-              ]),
-            ),
-          ),
-          const Spacer(),
-          ...trailing,
-          const SizedBox(width: 12),
-        ]),
-      );
-}
-
 class NavBackRow extends StatelessWidget {
   const NavBackRow({
     super.key,
@@ -328,17 +292,13 @@ class NavBackRow extends StatelessWidget {
     }
     if (kMobile) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 16, 4),
+        padding: const EdgeInsets.fromLTRB(20, 14, 16, 12),
         child: Row(children: [
           Expanded(
             child: Text(title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: sans(22,
-                    weight: FontWeight.w500,
-                    height: 1.15,
-                    spacing: -0.4,
-                    color: AppColors.fg1)),
+                style: TS.pageTitle()),
           ),
         ]),
       );
@@ -414,60 +374,6 @@ class ShellSectionAction extends StatelessWidget {
           ),
         ),
       );
-}
-
-/// Title-case collapsible group inside a section (e.g. a folder).
-class ShellGroupHeader extends StatelessWidget {
-  const ShellGroupHeader({
-    super.key,
-    required this.label,
-    required this.icon,
-    required this.tone,
-    required this.expanded,
-    required this.onToggle,
-    this.indent = kNavRowInset,
-    this.trailing,
-  });
-
-  final String label;
-  final String icon;
-  final ShellTone tone;
-  final bool expanded;
-  final VoidCallback onToggle;
-  final double indent;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    Theme.of(context);
-    return SizedBox(
-      height: kNavRowHeight,
-      child: Padding(
-        padding: EdgeInsets.only(left: indent, right: kSidebarContentInset),
-        child: InkWell(
-          onTap: onToggle,
-          borderRadius: BorderRadius.circular(R.md),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: kNavPadH),
-            child: Row(children: [
-              AppIcon(expanded ? 'chevron-down' : 'chevron-right',
-                  size: 16, color: AppColors.fg4),
-              const SizedBox(width: 8),
-              AppIcon(icon, size: kNavIcon, color: toneColor(tone)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TS.label()),
-              ),
-              if (trailing != null) trailing!,
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// The leaf: one nav row.
@@ -564,13 +470,6 @@ class ShellNavRow extends StatelessWidget {
   }
 }
 
-/// Header height for a pane. Measured 36px in the reference.
-const double kPaneHeaderHeight = 36;
-
-/// A framed tab sits in the full strip band. Every tab carries the same hairline
-/// top seam, so a pane is bounded on top; the active tab additionally overlays a
-/// heavier white stroke on its own segment.
-const double kPaneTabHeight = kPaneHeaderHeight;
 const double kPaneHairline = 0.2;
 const double kPaneActiveStroke = 2.0;
 
@@ -626,127 +525,6 @@ bool paneTabBelongsInGroup({
 }) {
   if (rootKey == null) return isAuxiliary;
   return tabKey == rootKey || groupSessionKey == rootKey;
-}
-
-/// Pane tab label size.
-const double kPaneTabText = 13;
-
-/// One tab in a pane header. Readout tabs may close themselves; the pane never
-/// owns a separate close action.
-class PaneTab {
-  const PaneTab({required this.label, required this.icon, this.onClose});
-  final String label;
-  final String icon;
-  final VoidCallback? onClose;
-}
-
-/// Shared joined tab strip for a pane readout. Tabs meet directly and share one
-/// near-background baseline; the active tab carries a solid white top edge.
-class PaneTabStrip extends StatelessWidget {
-  const PaneTabStrip({
-    super.key,
-    required this.tabs,
-    required this.activeIndex,
-    this.onSelect,
-  });
-
-  final List<PaneTab> tabs;
-  final int activeIndex;
-  final ValueChanged<int>? onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    Theme.of(context);
-    return Container(
-      height: kPaneHeaderHeight,
-      color: readingBg,
-      child: Stack(fit: StackFit.expand, children: [
-        LayoutBuilder(builder: (context, c) {
-          final w = kPaneTabWidth(c.maxWidth, tabs.length);
-          return ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.zero,
-            itemCount: tabs.length,
-            separatorBuilder: (_, __) => const SizedBox.shrink(),
-            itemBuilder: (_, i) => _tab(i, w),
-          );
-        }),
-        // Foreground baseline: the ListView paints over the container's own
-        // decoration, so the strip rule must be laid on top of the tabs.
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: IgnorePointer(
-            child: Container(height: kPaneHairline, color: kPaneSeamColor),
-          ),
-        ),
-      ]),
-    );
-  }
-
-  Widget _tab(int i, double width) {
-    final t = tabs[i];
-    final active = i == activeIndex;
-    return MouseRegion(
-      cursor: onSelect == null ? MouseCursor.defer : SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onSelect == null ? null : () => onSelect!(i),
-        child: SizedBox(
-          width: width,
-          // Every tab carries the SAME hairline top border, so selection cannot
-          // move anything. The active tab's heavier stroke is a
-          // `foregroundDecoration`: it paints above the child and takes no part
-          // in layout. A thicker `Border` insets the active tab's content, which
-          // jogs its label by the width difference every time you switch tabs.
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: active ? readingBg : Colors.transparent,
-              border: Border(
-                right: BorderSide(color: kPaneSeamColor, width: kPaneHairline),
-                top: BorderSide(color: kPaneSeamColor, width: kPaneHairline),
-              ),
-            ),
-            foregroundDecoration: !active
-                ? null
-                : BoxDecoration(
-                    border: Border(
-                      top: BorderSide(
-                          color: AppColors.fg1, width: kPaneActiveStroke),
-                    ),
-                  ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon(t.icon,
-                  size: 14, color: active ? AppColors.fg2 : AppColors.fg4),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  t.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(kPaneTabText,
-                      weight: active ? W.label : W.body,
-                      color: active ? AppColors.fg1 : AppColors.fg3),
-                ),
-              ),
-              if (t.onClose != null) ...[
-                const SizedBox(width: 6),
-                GestureDetector(
-                  onTap: t.onClose,
-                  behavior: HitTestBehavior.opaque,
-                  child: Padding(
-                    padding: const EdgeInsets.all(3),
-                    child: AppIcon('x', size: 11, color: AppColors.fg4),
-                  ),
-                ),
-              ],
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// Secondary pane width. Width-driven rather than a flex ratio: a fixed flex

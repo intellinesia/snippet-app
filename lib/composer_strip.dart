@@ -4,140 +4,6 @@ import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
-class DesktopComposerStrip extends StatelessWidget {
-  const DesktopComposerStrip({
-    super.key,
-    required this.field,
-    required this.send,
-    this.inline = const [],
-    this.footer = const [],
-    this.highlight = false,
-    this.cardKey,
-  });
-
-  final Widget field;
-  final Widget send;
-  final List<Widget> inline;
-  final List<Widget> footer;
-  final bool highlight;
-  final Key? cardKey;
-
-  static InputDecoration decoration(String hint) => InputDecoration(
-        isCollapsed: true,
-        contentPadding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
-        border: InputBorder.none,
-        hintText: hint,
-        hintStyle: TS.body(AppColors.fg4),
-      );
-
-  @override
-  Widget build(BuildContext context) => Container(
-        key: cardKey,
-        padding: const EdgeInsets.fromLTRB(12, 0, 8, 8),
-        decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(16),
-          border: highlight
-              ? Border.all(color: AppColors.accent, width: 1.5)
-              : Border.all(color: AppColors.line),
-          boxShadow: [
-            BoxShadow(
-                color: AppColors.bg.withValues(alpha: 0.9),
-                blurRadius: 40,
-                offset: const Offset(0, -18)),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            field,
-            Row(children: [
-              ...footer,
-              if (!footer.any((w) => w is Spacer)) const Spacer(),
-              for (final w in inline)
-                Padding(padding: const EdgeInsets.only(right: 6), child: w),
-              send,
-            ]),
-          ],
-        ),
-      );
-}
-
-class StripSendButton extends StatelessWidget {
-  const StripSendButton(
-      {super.key,
-      required this.enabled,
-      this.sending = false,
-      this.stop = false,
-      this.onTap});
-
-  final bool enabled;
-  final bool sending;
-  final bool stop;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final fill = !enabled
-        ? AppColors.hover
-        : stop
-            ? (kMobile ? AppColors.fg1 : AppColors.surface3)
-            : (kMobile ? AppColors.accentFill : AppColors.fg1);
-    final ink = !enabled
-        ? AppColors.fg4
-        : stop
-            ? (kMobile ? AppColors.bg : AppColors.fg1)
-            : (kMobile ? AppColors.accentFg : AppColors.bg);
-    const ShapeBorder shape = CircleBorder();
-    return Material(
-      color: fill,
-      shape: shape,
-      child: InkWell(
-        customBorder: shape,
-        onTap: onTap,
-        child: SizedBox.square(
-          dimension: kMobile ? 34 : 30,
-          child: Center(
-            child: sending
-                ? Spinner(size: 13, color: ink)
-                : AppIcon(stop ? 'stop' : 'arrow-up',
-                    size: stop ? 13 : 15, color: ink),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class StripIcon extends StatelessWidget {
-  const StripIcon(this.icon,
-      {super.key, required this.tooltip, required this.onTap, this.color});
-
-  final String icon;
-  final String tooltip;
-  final VoidCallback onTap;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) => Tooltip(
-        message: tooltip,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(6),
-            child: SizedBox.square(
-              dimension: 26,
-              child: Center(
-                  child: AppIcon(icon, size: 16, color: color ?? AppColors.fg3)),
-            ),
-          ),
-        ),
-      );
-}
-
 class DesktopRecorderStrip extends StatelessWidget {
   const DesktopRecorderStrip({
     super.key,
@@ -150,6 +16,7 @@ class DesktopRecorderStrip extends StatelessWidget {
     required this.onStop,
     required this.onSend,
     this.onSeek,
+    this.onMore,
   });
 
   final bool recording;
@@ -161,6 +28,7 @@ class DesktopRecorderStrip extends StatelessWidget {
   final VoidCallback onStop;
   final VoidCallback onSend;
   final ValueChanged<double>? onSeek;
+  final VoidCallback? onMore;
 
   Widget _btn(String icon, String tip, VoidCallback onTap,
           {Color? color, Color? fill}) =>
@@ -192,10 +60,11 @@ class DesktopRecorderStrip extends StatelessWidget {
       track = LayoutBuilder(
         builder: (_, c) => GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTapDown: (d) => onSeek!((d.localPosition.dx / c.maxWidth).clamp(0.0, 1.0)),
+          onTapDown: (d) =>
+              onSeek!((d.localPosition.dx / c.maxWidth).clamp(0.0, 1.0)),
           onHorizontalDragUpdate: (d) =>
               onSeek!((d.localPosition.dx / c.maxWidth).clamp(0.0, 1.0)),
-          child: Center(child: bar),
+          child: SizedBox(height: 44, child: Center(child: bar)),
         ),
       );
     }
@@ -227,6 +96,8 @@ class DesktopRecorderStrip extends StatelessWidget {
           const SizedBox(width: 8),
           timeText,
           const SizedBox(width: 4),
+          if (onMore != null)
+            _btn('mic', 'Record more', onMore!, color: AppColors.fg2),
           _btn('trash', 'Discard', onDiscard, color: AppColors.fg3),
           _btn('arrow-up', 'Send voice note', onSend,
               color: kMobile ? AppColors.accentFg : AppColors.bg,

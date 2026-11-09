@@ -20,41 +20,49 @@ PopupMenuItem<T> appMenuItem<T>({
   String? detail,
   bool danger = false,
   bool selected = false,
+  bool enabled = true,
   double height = 30,
 }) {
-  final color = danger ? AppColors.danger : AppColors.fg1;
+  if (kMobile) {
+    return PopupMenuItem<T>(
+      value: value,
+      enabled: enabled,
+      height: M.minTarget + 8,
+      padding: EdgeInsets.zero,
+      child: _SheetRowBody(
+          icon: icon,
+          label: label,
+          trailing: detail,
+          danger: danger,
+          selected: selected,
+          disabled: !enabled),
+    );
+  }
+  final color = !enabled
+      ? AppColors.fg4
+      : danger
+          ? AppColors.danger
+          : AppColors.fg1;
   return PopupMenuItem<T>(
     value: value,
-    height: kMobile ? 52 : height,
-    padding: EdgeInsets.symmetric(horizontal: kMobile ? 16 : 10),
-    child: Padding(
-      padding: kMobile
-          ? const EdgeInsets.symmetric(horizontal: 12, vertical: 4)
-          : EdgeInsets.zero,
-      child: Row(children: [
-        if (icon != null) ...[
-          AppIcon(icon,
-              size: kMobile ? 19 : 14,
-              color: danger ? AppColors.danger : AppColors.fg3),
-          SizedBox(width: kMobile ? 14 : 9),
-        ],
-        Expanded(
-          child: Text(label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: (kMobile
-                  ? sans(16, color: selected ? AppColors.accent : color)
-                  : sans(12.5, color: color))),
-        ),
-        if (detail != null)
-          Text(detail,
-              style: kMobile ? sans(13, color: AppColors.fg3) : TS.meta()),
-        if (selected) ...[
-          const SizedBox(width: S.s8),
-          AppIcon('check', size: kMobile ? 18 : 14, color: AppColors.accent),
-        ],
-      ]),
-    ),
+    enabled: enabled,
+    height: height,
+    padding: const EdgeInsets.symmetric(horizontal: 10),
+    child: Row(children: [
+      if (icon != null) ...[
+        AppIcon(icon, size: 14, color: danger ? AppColors.danger : AppColors.fg3),
+        const SizedBox(width: 9),
+      ],
+      Expanded(
+        child: Text(label,
+            maxLines: 1, overflow: TextOverflow.ellipsis, style: TS.ui(color)),
+      ),
+      if (detail != null) Text(detail, style: TS.meta()),
+      if (selected) ...[
+        const SizedBox(width: S.s8),
+        AppIcon('check', size: 14, color: AppColors.accent),
+      ],
+    ]),
   );
 }
 
@@ -70,61 +78,31 @@ PopupMenuItem<T> appMenuRow<T>({
   String? trailing,
   Widget? trailingWidget,
   bool selected = false,
+  bool enabled = true,
   double? height,
 }) {
   if (kMobile) {
     return PopupMenuItem<T>(
       value: value,
-      height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
-        child: Row(children: [
-          leading ??
-              AppIcon(icon,
-                  size: 19, color: selected ? AppColors.accent : AppColors.fg3),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(16,
-                        height: 21 / 16,
-                        color: selected ? AppColors.accent : AppColors.fg1)),
-                if (description != null) ...[
-                  const SizedBox(height: 2),
-                  Text(description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(13, height: 18 / 13, color: AppColors.fg3)),
-                ],
-              ],
-            ),
-          ),
-          if (trailingWidget != null) ...[
-            const SizedBox(width: 8),
-            trailingWidget,
-          ],
-          if (trailing != null) ...[
-            const SizedBox(width: 8),
-            Text(trailing, style: sans(13, color: AppColors.fg3)),
-          ],
-          if (selected) ...[
-            const SizedBox(width: 10),
-            AppIcon('check', size: 18, color: AppColors.accent),
-          ],
-        ]),
-      ),
+      enabled: enabled,
+      height: M.minTarget + 8,
+      padding: EdgeInsets.zero,
+      child: _SheetRowBody(
+          icon: icon,
+          leading: leading,
+          label: label,
+          detail: description,
+          trailing: trailing,
+          trailingWidget: trailingWidget,
+          selected: selected,
+          disabled: !enabled),
     );
   }
   return PopupMenuItem<T>(
     value: value,
+    enabled: enabled,
     height: height ?? (description != null ? 44 : 34),
-    padding: const EdgeInsets.symmetric(horizontal: 4),
+    padding: const EdgeInsets.symmetric(horizontal: 2),
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
@@ -144,13 +122,13 @@ PopupMenuItem<T> appMenuRow<T>({
               Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(13, color: AppColors.fg1)),
+                  style: TS.ui(AppColors.fg1)),
               if (description != null) ...[
                 const SizedBox(height: 1),
                 Text(description,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(11.5, color: AppColors.fg4)),
+                    style: TS.caption()),
               ],
             ],
           ),
@@ -161,7 +139,7 @@ PopupMenuItem<T> appMenuRow<T>({
         ],
         if (trailing != null) ...[
           const SizedBox(width: 8),
-          Text(trailing, style: sans(12, color: AppColors.fg4)),
+          Text(trailing, style: TS.caption()),
         ],
         if (selected) ...[
           const SizedBox(width: 8),
@@ -177,15 +155,158 @@ PopupMenuItem<T> appMenuRow<T>({
 PopupMenuItem<T> appMenuHeading<T>(String label) => PopupMenuItem<T>(
       enabled: false,
       height: 34,
+      // Desktop inset matches the item content edge (10px item padding).
       padding: kMobile
-          ? const EdgeInsets.fromLTRB(16, 12, 16, 2)
-          : const EdgeInsets.fromLTRB(14, 8, 14, 2),
-      // Upper case -> `caps()`, and a group heading is a label, not a
-      // disabled control, so `fg3` rather than the `fg4` placeholder rung.
-      child: kMobile
-          ? Text(label, style: sans(13, color: AppColors.fg3))
-          : Text(label.toUpperCase(), style: TS.overline()),
+          ? EdgeInsets.zero
+          : const EdgeInsets.fromLTRB(10, 8, 10, 2),
+      child: _MenuHeading(label),
     );
+
+class _MenuHeading extends StatelessWidget {
+  const _MenuHeading(this.label);
+  final String label;
+
+  @override
+  Widget build(BuildContext context) =>
+      Text(label.toUpperCase(), style: TS.overline());
+}
+
+/// The row body shared by every phone menu entry: the session Actions row
+/// (leading icon, [TS.rowTitle] title, quiet detail line, optional value and a
+/// check for the selected item), without its own tap target.
+class _SheetRowBody extends StatelessWidget {
+  const _SheetRowBody({
+    this.icon,
+    this.leading,
+    required this.label,
+    this.detail,
+    this.trailing,
+    this.trailingWidget,
+    this.danger = false,
+    this.selected = false,
+    this.disabled = false,
+  });
+
+  final bool disabled;
+  final String? icon;
+  final Widget? leading;
+  final String label;
+  final String? detail;
+  final String? trailing;
+  final Widget? trailingWidget;
+  final bool danger;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final lead = leading ??
+        (icon == null
+            ? null
+            : AppIcon(icon!,
+                size: 19,
+                color: disabled
+                    ? AppColors.fg4
+                    : danger
+                        ? AppColors.danger
+                        : AppColors.fg3));
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: M.minTarget + 8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        child: Row(children: [
+          if (lead != null) ...[lead, const SizedBox(width: 14)],
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TS.rowTitle(disabled
+                        ? AppColors.fg4
+                        : danger
+                            ? AppColors.danger
+                            : null)),
+                if (detail != null) ...[
+                  const SizedBox(height: 2),
+                  Text(detail!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TS.meta(disabled ? AppColors.fg4 : null)),
+                ],
+              ],
+            ),
+          ),
+          if (trailingWidget != null) ...[
+            const SizedBox(width: 8),
+            trailingWidget!,
+          ],
+          if (trailing != null) ...[
+            const SizedBox(width: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 140),
+              child: Text(trailing!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: TS.meta()),
+            ),
+          ],
+          if (selected) ...[
+            const SizedBox(width: 10),
+            AppIcon('check', size: 18, color: AppColors.accent),
+          ],
+        ]),
+      ),
+    );
+  }
+}
+
+/// The 36x4 grab handle every phone sheet carries.
+class SheetGrabHandle extends StatelessWidget {
+  const SheetGrabHandle({super.key, this.compact = false});
+
+  /// Tight spacing for a sheet header that is already a fixed-height bar.
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: compact
+            ? const EdgeInsets.only(top: S.s4)
+            : const EdgeInsets.only(top: S.s8, bottom: S.s8),
+        child: Center(
+          child: Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+                color: AppColors.lineStrong,
+                borderRadius: BorderRadius.circular(R.pill)),
+          ),
+        ),
+      );
+}
+
+/// The one phone sheet surface: [R.sheetTop] top corners, raised fill, grab
+/// handle. [child] gets the remaining height.
+class AppSheetSurface extends StatelessWidget {
+  const AppSheetSurface({super.key, required this.child, this.color});
+
+  final Widget child;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
+        child: ColoredBox(
+          color: color ?? AppColors.raised,
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [const SheetGrabHandle(), Flexible(child: child)]),
+        ),
+      );
+}
 
 /// Present a menu in the shape the platform expects.
 ///
@@ -236,50 +357,24 @@ Future<T?> showAppMenu<T>(
       isScrollControlled: true,
       builder: (sheet) {
         final media = MediaQuery.of(sheet);
-        return ClipRRect(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
-          child: Container(
-            decoration: BoxDecoration(
-              color: color ?? AppColors.raised,
-              borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
+        return AppSheetSurface(
+          color: color,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+                maxHeight: sheetHeightFactor == null
+                    ? double.infinity
+                    : media.size.height * sheetHeightFactor),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                  M.gutter, 0, M.gutter, media.padding.bottom + S.s12),
+              child: Material(
+                color: Colors.transparent,
+                child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: _appMenuSheetEntries(sheet, items)),
+              ),
             ),
-            child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: S.s8),
-                  Center(
-                      child: Container(
-                          width: 36,
-                          height: 4,
-                          decoration: BoxDecoration(
-                              color: AppColors.lineStrong,
-                              borderRadius: BorderRadius.circular(R.pill)))),
-                  const SizedBox(height: S.s8),
-                  Flexible(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                          maxHeight: sheetHeightFactor == null
-                              ? double.infinity
-                              : media.size.height * sheetHeightFactor),
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: S.s4),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                for (final item in items)
-                                  _appMenuSheetEntry(sheet, item),
-                              ]),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: media.padding.bottom + S.s12),
-                ]),
           ),
         );
       },
@@ -336,58 +431,55 @@ Future<T?> showAppMenu<T>(
     shape: appMenuShape,
     menuPadding: const EdgeInsets.symmetric(vertical: 4),
     constraints: BoxConstraints(minWidth: effMin, maxWidth: effMax),
+    popUpAnimationStyle: AnimationStyle(
+        duration: Motion.fast,
+        reverseDuration: Motion.quick,
+        curve: Motion.enter,
+        reverseCurve: Motion.exit),
     items: items,
   );
 }
 
-/// One entry inside the phone menu sheet.
-///
-/// Mirrors what `PopupMenuItem` draws, so a helper-built row needs no
-/// mobile-specific variant — but sized to a real touch target, which the popup
-/// defaults are not.
-Widget _appMenuSheetEntry<T>(BuildContext sheet, PopupMenuEntry<T> entry) {
-  if (entry is PopupMenuDivider) {
-    return Divider(
-        height: 17,
-        thickness: 1,
-        indent: 16,
-        endIndent: 16,
-        color: AppColors.line);
-  }
-  if (entry is! PopupMenuItem<T>) {
-    return const SizedBox.shrink();
-  }
-  final pad = entry.padding ?? const EdgeInsets.symmetric(horizontal: S.s12);
-  // A heading is a section label and is deliberately NOT tappable.
-  if (!entry.enabled) {
-    if (kMobile) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 2, 20, 6),
-        child: entry.child,
-      );
+/// The phone menu sheet's rows: headings as group labels, hairlines between
+/// consecutive rows (as ActionGroup draws them), dividers as group gaps.
+List<Widget> _appMenuSheetEntries<T>(
+    BuildContext sheet, List<PopupMenuEntry<T>> items) {
+  final out = <Widget>[];
+  var prevRow = false;
+  for (var i = 0; i < items.length; i++) {
+    final entry = items[i];
+    if (entry is PopupMenuDivider) {
+      out.add(const SizedBox(height: S.s8));
+      prevRow = false;
+      continue;
     }
-    return Padding(
-      padding: pad,
-      child: SizedBox(height: entry.height, child: entry.child),
-    );
+    if (entry is! PopupMenuItem<T>) continue;
+    if (!entry.enabled) {
+      final child = entry.child;
+      if (child is _SheetRowBody) {
+        if (prevRow) out.add(Container(height: 1, color: AppColors.line));
+        out.add(child);
+        prevRow = true;
+        continue;
+      }
+      final heading = child is _MenuHeading;
+      out.add(Padding(
+        padding: heading
+            ? EdgeInsets.only(top: out.isEmpty ? S.s4 : S.s16, bottom: S.s4)
+            : const EdgeInsets.symmetric(vertical: S.s4),
+        child: child,
+      ));
+      prevRow = false;
+      continue;
+    }
+    if (prevRow) out.add(Container(height: 1, color: AppColors.line));
+    out.add(InkWell(
+      onTap: () => Navigator.pop(sheet, entry.value),
+      child: entry.child,
+    ));
+    prevRow = true;
   }
-  return InkWell(
-    borderRadius: BorderRadius.circular(R.lg),
-    onTap: () => Navigator.pop(sheet, entry.value),
-    child: Padding(
-      // The row now draws its own rounded, filled hit area for desktop, where a
-      // 4px outer inset is right — the popover supplies the surrounding gutter.
-      // A SHEET does not: it is full width, so inheriting 4px would run the fill
-      // nearly edge-to-edge. Impose the sheet's own gutter here and let the row's
-      // fill sit inside it.
-      padding: const EdgeInsets.symmetric(horizontal: S.s4),
-      // At least a touch target, and taller when a row carries a description.
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: Align(alignment: Alignment.centerLeft, child: entry.child),
-      ),
-    ),
-  );
+  return out;
 }
 
 /// A slick, theme-styled toast rendered in the ROOT overlay — so it floats above
@@ -412,54 +504,6 @@ void toast(BuildContext context, String message, {bool danger = false}) {
   });
 }
 
-/// A toast with tappable action buttons (e.g. Open / Share after a download).
-/// Unlike [toast] it isn't IgnorePointer'd, and it lingers longer so the actions
-/// are reachable. Tapping an action dismisses it.
-typedef ToastAction = ({String label, String icon, VoidCallback onTap});
-
-void actionToast(BuildContext context, String message,
-    {required List<ToastAction> actions}) {
-  final overlay = Overlay.maybeOf(context, rootOverlay: true);
-  if (overlay == null) return;
-  _activeToast?.remove();
-  _toastTimer?.cancel();
-  late final OverlayEntry entry;
-  void dismiss() {
-    if (_activeToast == entry) {
-      entry.remove();
-      _activeToast = null;
-      _toastTimer?.cancel();
-    }
-  }
-
-  entry = OverlayEntry(
-    builder: (ctx) => _toastSlot(
-      ctx,
-      Center(
-        child: _ToastCard(
-          message: message,
-          danger: false,
-          actions: actions
-              .map((a) => (
-                    label: a.label,
-                    icon: a.icon,
-                    onTap: () {
-                      // Run the action first, then tear the toast down — removing the
-                      // overlay entry mid-tap could otherwise swallow the action.
-                      a.onTap();
-                      dismiss();
-                    }
-                  ))
-              .toList(),
-        ),
-      ),
-    ),
-  );
-  _activeToast = entry;
-  overlay.insert(entry);
-  _toastTimer = Timer(const Duration(milliseconds: 6000), dismiss);
-}
-
 /// Where toasts sit: under the status bar on phones, so they never cover the
 /// composer or the bottom bar; bottom-centre on desktop.
 Widget _toastSlot(BuildContext ctx, Widget card) {
@@ -476,9 +520,7 @@ Widget _toastSlot(BuildContext ctx, Widget card) {
 class _ToastCard extends StatefulWidget {
   final String message;
   final bool danger;
-  final List<ToastAction> actions;
-  const _ToastCard(
-      {required this.message, required this.danger, this.actions = const []});
+  const _ToastCard({required this.message, required this.danger});
   @override
   State<_ToastCard> createState() => _ToastCardState();
 }
@@ -556,21 +598,6 @@ class _ToastCardState extends State<_ToastCard>
                             color: AppColors.fg1)
                         .copyWith(decoration: TextDecoration.none)),
               ),
-              for (final a in widget.actions) ...[
-                const SizedBox(width: 8),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: a.onTap,
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    child: Text(a.label,
-                        style: sans(kMobile ? 14 : 13,
-                                weight: W.label, color: AppColors.accent)
-                            .copyWith(decoration: TextDecoration.none)),
-                  ),
-                ),
-              ],
             ]),
           ),
         ),

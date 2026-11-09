@@ -9,6 +9,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../motion.dart';
+import '../swr.dart';
 
 /// Mission Control pinned at the top of the Chats list: what it is doing, one
 /// tap from opening it.
@@ -30,25 +31,40 @@ class MissionControlCard extends StatefulWidget {
 
 class _MissionControlCardState extends State<MissionControlCard> {
   Map<String, dynamic>? _autonomy;
-  Timer? _poll;
+  Revalidator? _live;
 
   @override
   void initState() {
     super.initState();
     _autonomy = widget.client.cachedMcAutonomy();
     _load();
-    _poll = Timer.periodic(const Duration(seconds: 30), (_) => _load());
+    _bindLive();
   }
 
   @override
   void didUpdateWidget(MissionControlCard old) {
     super.didUpdateWidget(old);
-    if (old.client != widget.client) _load();
+    if (old.client != widget.client) {
+      _bindLive();
+      _load();
+    }
+  }
+
+  void _bindLive() {
+    _live?.dispose();
+    _live = Revalidator(
+        client: widget.client,
+        on: (e) =>
+            Swr.coordination(e) ||
+            e['kind'] == 'config' ||
+            e['session'] == 'mission-control',
+        debounce: const Duration(seconds: 2),
+        onRevalidate: ({required bool force}) => _load());
   }
 
   @override
   void dispose() {
-    _poll?.cancel();
+    _live?.dispose();
     super.dispose();
   }
 
@@ -111,7 +127,7 @@ class _MissionControlCardState extends State<MissionControlCard> {
                     child: SwapText(_statusLine(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(11.5, color: AppColors.fg4)),
+                        style: sans(12, color: AppColors.fg4)),
                   ),
                 ),
               ]),

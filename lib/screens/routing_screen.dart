@@ -224,7 +224,7 @@ class _RoutingScreenState extends State<RoutingScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(defaultLabel,
-                              style: sans(12.5, color: AppColors.fg3)),
+                              style: sans(13, color: AppColors.fg3)),
                         ],
                       ),
                     ),
@@ -271,7 +271,7 @@ class _RoutingScreenState extends State<RoutingScreen> {
                               Text(
                                 name,
                                 style: sans(
-                                  12.5,
+                                  13,
                                   color: isPrimary ? AppColors.fg1 : AppColors.fg3,
                                 ),
                               ),
@@ -351,7 +351,7 @@ class _RoutingScreenState extends State<RoutingScreen> {
         children: [
           Text(title, style: sans(15, color: AppColors.fg1)),
           const SizedBox(height: 2),
-          Text(about, style: sans(12.5, color: AppColors.fg4)),
+          Text(about, style: sans(13, color: AppColors.fg4)),
           const SizedBox(height: 10),
           _chainWrap(key, chosen),
         ],

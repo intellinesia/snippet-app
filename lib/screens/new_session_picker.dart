@@ -185,10 +185,9 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
 
   String get _here => _listing?.path ?? '';
 
-  String get _hereName =>
-      _here.isEmpty || (_atHome && kMobile)
-          ? 'Home'
-          : lastPathSegment(_here, ifEmpty: _here);
+  String get _hereName => _here.isEmpty || (_atHome && kMobile)
+      ? 'Home'
+      : lastPathSegment(_here, ifEmpty: _here);
 
   bool get _atHome =>
       _homePath == null || _homePath!.isEmpty || _here == _homePath;
@@ -377,22 +376,22 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
           onBack: widget.onClose ?? () => Navigator.maybePop(context),
         )
       : Padding(
-        padding: EdgeInsets.fromLTRB(kMobile ? M.gutter : 16, 12, 10, 8),
-        child: Row(children: [
-          Expanded(
-            child: Text('New chat',
-                style: kMobile
-                    ? sans(22, spacing: -0.5, color: AppColors.fg1)
-                    : TS.sectionTitle()),
-          ),
-          if (widget.onClose != null)
-            IconBtn('x',
-                size: kMobile ? M.minTarget : 30,
-                iconSize: kMobile ? 19 : 15,
-                tooltip: 'Close',
-                onTap: widget.onClose),
-        ]),
-      );
+          padding: EdgeInsets.fromLTRB(kMobile ? M.gutter : 16, 12, 10, 8),
+          child: Row(children: [
+            Expanded(
+              child: Text('New chat',
+                  style: kMobile
+                      ? sans(22, spacing: -0.5, color: AppColors.fg1)
+                      : TS.sectionTitle()),
+            ),
+            if (widget.onClose != null)
+              IconBtn('x',
+                  size: kMobile ? M.minTarget : 30,
+                  iconSize: kMobile ? 19 : 15,
+                  tooltip: 'Close',
+                  onTap: widget.onClose),
+          ]),
+        );
 
   /// Breadcrumb + home, in place of a raw path field: it shows where you are and
   /// jumps up several levels in one tap, instead of asking you to edit text.
@@ -575,19 +574,20 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
 
   void _addMenu() => showAppSheet(context,
       title: 'Add to $_hereName',
+      subtitle: '',
       child: SheetActions([
         SheetAction('folder-plus', 'New folder', () {
           Navigator.pop(context);
           _newFolder();
-        }),
+        }, tile: true),
         SheetAction('file-plus', 'New file', () {
           Navigator.pop(context);
           _newFile();
-        }),
-        SheetAction('upload', 'Upload files', () {
+        }, tile: true),
+        SheetAction('upload', 'Upload', () {
           Navigator.pop(context);
           _upload();
-        }),
+        }, tile: true),
       ]));
 
   /// The single highlighted action, pinned so it never scrolls out of reach.
@@ -600,9 +600,8 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
             kMobile ? M.gutter : 16, 8, kMobile ? M.gutter : 16, 10),
         decoration: BoxDecoration(
           color: kMobile ? AppColors.bg : AppColors.base,
-          border: kMobile
-              ? Border(top: BorderSide(color: AppColors.line))
-              : null,
+          border:
+              kMobile ? Border(top: BorderSide(color: AppColors.line)) : null,
         ),
         child: Row(children: [
           // Phones get one labelled "+" menu: tooltips don't exist on touch,

@@ -44,6 +44,11 @@ class _FakeTestClient extends DaemonClient {
   }
 
   @override
+  Future<List<TaskItem>> recentTasks(
+          {required String status, required int limit}) async =>
+      (await tasks()).where((t) => t.status.wire == status).take(limit).toList();
+
+  @override
   Future<List<TaskItem>> tasks(
           {String? status, String? agentId, int? limit}) async =>
       [];
@@ -179,7 +184,8 @@ void main() {
       await tester.tap(find.byTooltip('New agent'));
       await tester.pumpAndSettle();
       expect(find.byType(CreateAgentForm), findsOneWidget);
-      await tester.tap(find.byTooltip('Close'));
+      // Phone sheets have no close X; tapping the scrim dismisses.
+      await tester.tapAt(const Offset(20, 20));
       await tester.pumpAndSettle();
 
       // 4. Settings has no New of its own.

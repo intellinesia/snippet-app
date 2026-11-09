@@ -283,6 +283,8 @@ class TasksPanelState extends State<TasksPanel> {
       selectedId: _selectedTaskId,
       onOpen: _open,
       onRefresh: _feed.refresh,
+      hasMore: _feed.hasMore,
+      onLoadMore: _feed.loadMore,
     );
     final error = _feed.error;
     Widget? empty;
@@ -555,6 +557,8 @@ class TasksPanelState extends State<TasksPanel> {
       filter: _filter,
       onOpen: _open,
       onRefresh: _feed.refresh,
+      hasMore: _feed.hasMore,
+      onLoadMore: _feed.loadMore,
       padding: kMobile
           ? const EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 16)
           : const EdgeInsets.fromLTRB(10, 2, 10, 16),

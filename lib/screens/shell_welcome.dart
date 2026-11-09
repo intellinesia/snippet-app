@@ -212,7 +212,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
         padding: const EdgeInsets.only(bottom: 8),
         child: Text(text,
             textAlign: TextAlign.center,
-            style: sans(12.5, weight: W.label, color: AppColors.fg1)),
+            style: sans(13, weight: W.label, color: AppColors.fg1)),
       );
 
   Text _body(String text) => Text(text,
@@ -231,7 +231,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
           ),
           const SizedBox(width: 8),
           Text('Snippet is running here',
-              style: sans(12.5, color: AppColors.fg1)),
+              style: sans(13, color: AppColors.fg1)),
           const SizedBox(width: 8),
           Flexible(
             child: Text(_found!.name,
@@ -287,7 +287,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
       if (_error != null) ...[
         Text(_error!,
             textAlign: TextAlign.center,
-            style: sans(11.5, height: 1.45, color: AppColors.danger)),
+            style: sans(12, height: 1.45, color: AppColors.danger)),
         const SizedBox(height: 8),
         const _CommandBox(installCommand),
         const SizedBox(height: 12),
@@ -322,11 +322,11 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
         if (_remoteError != null)
           Text(_remoteError!,
               textAlign: TextAlign.center,
-              style: sans(11.5, height: 1.4, color: AppColors.danger))
+              style: sans(12, height: 1.4, color: AppColors.danger))
         else
           SelectableText.rich(
             TextSpan(
-                style: sans(11.5, height: 1.5, color: AppColors.fg4),
+                style: sans(12, height: 1.5, color: AppColors.fg4),
                 children: [
                   const TextSpan(text: 'On that computer: '),
                   TextSpan(
@@ -399,7 +399,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                           const SizedBox(height: 8),
                           Text(body,
                               textAlign: TextAlign.center,
-                              style: sans(12.5,
+                              style: sans(13,
                                   height: 1.55, color: AppColors.fg3)),
                           const SizedBox(height: 22),
                           controls,
@@ -474,7 +474,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
               MochiIcon(color: const Color(0xFFB9C6FF), size: 16),
               const SizedBox(width: 8),
               Text('Snippet needs a service',
-                  style: sans(12.5, color: AppColors.fg3)),
+                  style: sans(13, color: AppColors.fg3)),
             ]),
           ),
         ),
@@ -498,7 +498,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                 AppIcon(icon, size: 16, color: AppColors.accentFg),
                 const SizedBox(width: 8),
                 Text(label,
-                    style: sans(kMobile ? 15 : 13.5,
+                    style: sans(kMobile ? 15 : 13,
                         weight: W.label, color: AppColors.accentFg)),
               ]),
             ),
@@ -528,7 +528,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                   'Snippet does its work in a small service that runs on a '
                   'computer or server. This app is your window onto it.',
                   textAlign: TextAlign.center,
-                  style: sans(14.5, height: 1.5, color: AppColors.fg3),
+                  style: sans(14, height: 1.5, color: AppColors.fg3),
                 ),
                 const SizedBox(height: 28),
                 _wideButton('Scan QR code', 'scan', widget.onAddInstance),
@@ -538,7 +538,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Text('or paste its link',
-                        style: sans(12.5, color: AppColors.fg4)),
+                        style: sans(13, color: AppColors.fg4)),
                   ),
                   Expanded(child: Container(height: 1, color: AppColors.border)),
                 ]),
@@ -560,7 +560,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                   const SizedBox(height: 10),
                   Text(_remoteError!,
                       textAlign: TextAlign.center,
-                      style: sans(12.5, height: 1.4, color: AppColors.danger)),
+                      style: sans(13, height: 1.4, color: AppColors.danger)),
                 ],
                 const SizedBox(height: 32),
                 Container(
@@ -574,7 +574,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text('Not running yet? On your computer:',
-                          style: sans(13.5,
+                          style: sans(13,
                               weight: W.label, color: AppColors.fg1)),
                       const SizedBox(height: 14),
                       const _WelcomeStep(
@@ -646,7 +646,7 @@ class _StageRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label,
-                  style: sans(12.5,
+                  style: sans(13,
                       color: state == _StageState.pending
                           ? AppColors.fg4
                           : AppColors.fg1)),
@@ -656,7 +656,7 @@ class _StageRow extends StatelessWidget {
                   child: Text(detail,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: mono(10.5, color: AppColors.fg3)),
+                      style: mono(11, color: AppColors.fg3)),
                 ),
             ],
           ),
@@ -681,7 +681,7 @@ class _CommandBox extends StatelessWidget {
         child: Row(children: [
           Expanded(
             child: SelectableText(command,
-                style: mono(kMobile ? 12 : 11.5, color: AppColors.fg1)),
+                style: mono(kMobile ? 12 : 12, color: AppColors.fg1)),
           ),
           IconBtn('copy', size: 30, iconSize: 13, tooltip: 'Copy', onTap: () {
             Clipboard.setData(ClipboardData(text: command));
@@ -722,7 +722,7 @@ class _WelcomeStep extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 2),
               child: Text(title,
-                  style: sans(kMobile ? 14.5 : 13, color: AppColors.fg1)),
+                  style: sans(kMobile ? 14 : 13, color: AppColors.fg1)),
             ),
             if (command != null) ...[
               const SizedBox(height: 8),

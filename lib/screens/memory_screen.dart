@@ -19,6 +19,9 @@ class MemoryScreen extends StatefulWidget {
   final bool embedded;
   final VoidCallback? onBack;
 
+  /// For a host that already names the page, like the agent panel's segments.
+  final bool hideBack;
+
   /// Open straight into one scope (`agent:<id>`, `session:<id>`, …).
   final String? initialKey;
 
@@ -27,6 +30,7 @@ class MemoryScreen extends StatefulWidget {
     required this.client,
     this.embedded = false,
     this.onBack,
+    this.hideBack = false,
     this.initialKey,
   });
 
@@ -130,7 +134,8 @@ class _MemoryScreenState extends State<MemoryScreen> {
               scope: scope,
             ),
     );
-    final back = open != null || widget.onBack != null || !widget.embedded;
+    final back = !widget.hideBack &&
+        (open != null || widget.onBack != null || !widget.embedded);
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -491,7 +496,7 @@ class _ScopeViewState extends State<_ScopeView> {
               child: Text(scopeStatus(s),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(12.5, color: AppColors.fg4)),
+                  style: sans(13, color: AppColors.fg4)),
             ),
           Padding(
             padding: EdgeInsets.fromLTRB(side, 0, side, 10),

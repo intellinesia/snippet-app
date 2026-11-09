@@ -10,6 +10,8 @@ import '../../../ambient/capture.dart';
 import '../../../ambient/controller.dart';
 import '../../../ambient/voice.dart';
 import '../../../api.dart';
+import '../../../swr.dart';
+import '../../../gesture_physics.dart';
 import '../../../models.dart';
 import '../../../platform.dart';
 import '../../../settings_form.dart';
@@ -35,7 +37,11 @@ class _AmbientModel extends ChangeNotifier {
       notifyListeners();
     });
     load();
-    _timer = Timer.periodic(const Duration(seconds: 10), (_) => load());
+    _live = Revalidator(
+        client: client,
+        on: (e) => e['kind'] == 'ambient_state' || e['kind'] == 'config',
+        debounce: const Duration(seconds: 1),
+        onRevalidate: ({required bool force}) => load());
   }
 
   final DaemonClient client;
@@ -44,7 +50,7 @@ class _AmbientModel extends ChangeNotifier {
   String selfId = '';
   String? error;
   bool busy = false;
-  Timer? _timer;
+  Revalidator? _live;
 
   AmbientStatus get status => ambient.status;
   bool get on => settings?.enabled ?? false;
@@ -115,7 +121,7 @@ class _AmbientModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _live?.dispose();
     ambient.removeListener(notifyListeners);
     super.dispose();
   }
@@ -359,21 +365,27 @@ class AmbientStage extends StatefulWidget {
   State<AmbientStage> createState() => _AmbientStageState();
 }
 
-class _AmbientStageState extends State<AmbientStage> {
+class _AmbientStageState extends State<AmbientStage>
+    with SingleTickerProviderStateMixin {
   late final _AmbientModel _m = _AmbientModel(widget.client)
     ..addListener(_changed);
   late final CurvedAnimation _a = CurvedAnimation(
       parent: widget.animation, curve: Motion.enter, reverseCurve: Motion.exit);
   List<AmbientEvent> _recent = const [];
-  Timer? _recentTimer;
-  double _drag = 0;
+  Revalidator? _recentLive;
+  late final AnimationController _dragC =
+      AnimationController.unbounded(vsync: this)..addListener(_changed);
+  double get _drag => _dragC.value;
 
   @override
   void initState() {
     super.initState();
     _loadRecent();
-    _recentTimer =
-        Timer.periodic(const Duration(seconds: 8), (_) => _loadRecent());
+    _recentLive = Revalidator(
+        client: widget.client,
+        on: (e) => (e['kind'] as String? ?? '').startsWith('ambient_'),
+        debounce: const Duration(seconds: 2),
+        onRevalidate: ({required bool force}) => _loadRecent());
   }
 
   Future<void> _loadRecent() async {
@@ -398,7 +410,8 @@ class _AmbientStageState extends State<AmbientStage> {
 
   @override
   void dispose() {
-    _recentTimer?.cancel();
+    _recentLive?.dispose();
+    _dragC.dispose();
     _m.removeListener(_changed);
     _m.dispose();
     _a.dispose();
@@ -662,15 +675,26 @@ class _AmbientStageState extends State<AmbientStage> {
                 ),
               ),
               child: GestureDetector(
-                onVerticalDragUpdate: (d) =>
-                    setState(() => _drag = math.max(0, _drag + d.delta.dy)),
+                onVerticalDragStart: (_) => _dragC.stop(),
+                onVerticalDragUpdate: (d) {
+                  final y = _dragC.value + d.delta.dy;
+                  _dragC.value = y >= 0 ? y : y * .25;
+                },
                 onVerticalDragEnd: (d) {
-                  if (_drag > 90 || (d.primaryVelocity ?? 0) > 700) {
+                  final v = d.primaryVelocity ?? 0;
+                  if (dragDismisses(
+                      distance: _drag,
+                      velocity: v,
+                      distanceThreshold: 90,
+                      velocityThreshold: 700)) {
+                    HapticFeedback.lightImpact();
                     _close();
+                    springTo(_dragC, _drag + 360, math.max(v, 0));
                   } else {
-                    setState(() => _drag = 0);
+                    springTo(_dragC, 0, v);
                   }
                 },
+                onVerticalDragCancel: () => springTo(_dragC, 0, 0),
                 child: SafeArea(
                   top: false,
                   minimum: const EdgeInsets.fromLTRB(8, 0, 8, 8),
@@ -698,9 +722,10 @@ class _AmbientStageState extends State<AmbientStage> {
                 behavior: HitTestBehavior.opaque,
                 onTap: _close,
                 child: AnimatedBuilder(
-                  animation: _a,
+                  animation: Listenable.merge([_a, _dragC]),
                   builder: (_, __) {
-                    final v = _a.value.clamp(0.0, 1.0);
+                    final lift = (1 - _drag.clamp(0.0, 400.0) / 400);
+                    final v = _a.value.clamp(0.0, 1.0) * lift;
                     if (anchor != null) {
                       return ColoredBox(
                           color: Colors.black.withValues(alpha: 0.14 * v));

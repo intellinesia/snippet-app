@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../api.dart';
+import '../gesture_physics.dart';
 import '../models.dart';
 import '../panel.dart';
 import '../platform.dart';
@@ -93,17 +96,24 @@ class _HeaderDragSheet extends StatefulWidget {
   State<_HeaderDragSheet> createState() => _HeaderDragSheetState();
 }
 
-class _HeaderDragSheetState extends State<_HeaderDragSheet> {
+class _HeaderDragSheetState extends State<_HeaderDragSheet>
+    with SingleTickerProviderStateMixin {
   static const _headerHeight = 76.0;
-  double _dy = 0;
-  bool _dragging = false;
+  late final AnimationController _dy = AnimationController.unbounded(vsync: this)
+    ..addListener(() => setState(() {}));
+  double _raw = 0;
+
+  @override
+  void dispose() {
+    _dy.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: _dragging ? Duration.zero : const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
-      transform: Matrix4.translationValues(0, _dy, 0),
+    final h = MediaQuery.sizeOf(context).height;
+    return Transform.translate(
+      offset: Offset(0, _dy.value),
       child: Stack(children: [
         Positioned.fill(child: widget.child),
         Positioned(
@@ -113,24 +123,29 @@ class _HeaderDragSheetState extends State<_HeaderDragSheet> {
           height: _headerHeight,
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
-            onVerticalDragStart: (_) => setState(() => _dragging = true),
-            onVerticalDragUpdate: (d) =>
-                setState(() => _dy = (_dy + d.delta.dy).clamp(0.0, double.infinity)),
+            onVerticalDragStart: (_) {
+              _dy.stop();
+              _raw = _dy.value;
+            },
+            onVerticalDragUpdate: (d) {
+              _raw += d.delta.dy;
+              _dy.value = _raw >= 0 ? _raw : rubberBand(_raw, 80);
+            },
             onVerticalDragEnd: (d) {
-              final flick = (d.primaryVelocity ?? 0) > 700;
-              if (flick || _dy > 140) {
+              final v = d.primaryVelocity ?? 0;
+              if (dragDismisses(
+                  distance: _dy.value,
+                  velocity: v,
+                  distanceThreshold: 140,
+                  velocityThreshold: 700)) {
+                HapticFeedback.lightImpact();
                 widget.onClose();
+                springTo(_dy, h, math.max(v, 0));
               } else {
-                setState(() {
-                  _dragging = false;
-                  _dy = 0;
-                });
+                springTo(_dy, 0, v);
               }
             },
-            onVerticalDragCancel: () => setState(() {
-              _dragging = false;
-              _dy = 0;
-            }),
+            onVerticalDragCancel: () => springTo(_dy, 0, 0),
           ),
         ),
       ]),
@@ -276,7 +291,7 @@ class _ArtifactInlineState extends State<ArtifactInline>
 
   Widget _note(String text) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Text(text, style: sans(12.5, color: AppColors.fg3)),
+        child: Text(text, style: sans(13, color: AppColors.fg3)),
       );
 
   Widget _textBody(ArtifactVersion v, Widget Function(String) render) =>
@@ -1354,8 +1369,8 @@ class _CsvTable extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Text(text,
               style: head
-                  ? sans(12.5, weight: W.label, color: AppColors.fg1)
-                  : sans(12.5, color: AppColors.fg2)),
+                  ? sans(13, weight: W.label, color: AppColors.fg1)
+                  : sans(13, color: AppColors.fg2)),
         );
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),

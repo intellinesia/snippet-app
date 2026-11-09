@@ -1,9 +1,19 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart' hide testWidgets;
+import 'package:flutter_test/flutter_test.dart' as ft show testWidgets;
 import 'package:snippet/notification_popovers.dart';
 import 'package:snippet/notification_sync.dart';
 import 'package:snippet/notifications.dart';
+
+void testWidgets(String name, Future<void> Function(WidgetTester) body) =>
+    ft.testWidgets(name, (t) async {
+      try {
+        await body(t);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
 
 void main() {
   setUp(() {
@@ -106,19 +116,27 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('swipe removes only the top card', (tester) async {
-    await mount(tester);
-    for (final title in ['First', 'Second', 'Third']) {
-      enqueue(title);
-    }
-    await tester.pump();
-    await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Third'), findsNothing);
-    expect(find.text('Second'), findsOneWidget);
-    expect(find.text('1 more'), findsOneWidget);
-    await tester.pumpWidget(const SizedBox());
-  });
+  for (final mobile in [true, false]) {
+    testWidgets(
+        'swipe removes only the top card on ${mobile ? 'phone' : 'desktop'}',
+        (tester) async {
+      debugDefaultTargetPlatformOverride =
+          mobile ? TargetPlatform.android : TargetPlatform.linux;
+      await mount(tester);
+      for (final title in ['First', 'Second', 'Third']) {
+        enqueue(title);
+      }
+      await tester.pump();
+      await tester.drag(find.byType(Dismissible),
+          mobile ? const Offset(0, -500) : const Offset(-500, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Third'), findsNothing);
+      expect(find.text('Second'), findsOneWidget);
+      expect(find.text('1 more'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      debugDefaultTargetPlatformOverride = null;
+    });
+  }
 
   for (final platform in [TargetPlatform.android, TargetPlatform.linux]) {
     testWidgets('narrow scaled stack fits on $platform', (tester) async {

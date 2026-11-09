@@ -193,7 +193,7 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
       bool reducedMotion) {
     return Dismissible(
       key: ObjectKey(payload),
-      direction: DismissDirection.horizontal,
+      direction: kMobile ? DismissDirection.up : DismissDirection.horizontal,
       movementDuration: reducedMotion ? Duration.zero : Motion.fast,
       resizeDuration: null,
       onDismissed: (_) => _remove(payload, feedback: true),

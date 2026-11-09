@@ -263,7 +263,42 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     if (i >= 0) _closeTab(i, force: force);
   }
 
-  Widget _bodyRow({required bool topInset}) => ShellSplitView(
+  String? get _railAgentId {
+    if (_focusedPane == _Pane.left && (_activeTab?.isMissionControl ?? false)) {
+      return null;
+    }
+    for (final r in _rightTabs) {
+      if (r.isAgent && _activeKey[r.pane] == r.key) return r.agent!.id;
+    }
+    return null;
+  }
+
+  Widget _bodyRow({required bool topInset}) {
+    final split = _splitView(topInset: topInset);
+    final rail = !kMobile && !_sidebarHidden && agentRailShown(context);
+    final agentId = _railAgentId;
+    // One stable tree: swapping the parent on toggle remounted every open tab.
+    return Expanded(
+      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (rail)
+          AgentRail(
+            client: _client,
+            sessions: _sessions,
+            mcSelected:
+                agentId == null && (_activeTab?.isMissionControl ?? false),
+            selectedAgentId: agentId,
+            topInset: kMacOS ? 46 : 10,
+            onOpenMissionControl: _openMissionControlTab,
+            onOpenAgent: _openRightAgent,
+            footer: [_usageButton(32), _settingsButton(32)],
+          ),
+        split,
+      ]),
+    );
+  }
+
+  Widget _splitView({required bool topInset}) => ShellSplitView(
+        key: const ValueKey('shell-split'),
         sidebarHidden: _sidebarHidden,
         sidebar: ShellPanelScope(
           open: _openShellPanel,
@@ -305,8 +340,11 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         fallbackBuilder: _paneFallback,
         rightPanel: _sessionSidePanel(),
         hideRight: _activeTab != null &&
-            (_activeTab!.isDraft || _activeTab!.isReadout || _activeTab!.isPrs),
-        panelHostsReadouts: _activeTab != null && _activeTab!.sessionId != null,
+            (_activeTab!.isDraft ||
+                (_activeTab!.isReadout && _activeAgent == null) ||
+                _activeTab!.isPrs),
+        panelHostsReadouts: _activeTab != null &&
+            (_activeTab!.sessionId != null || _activeAgent != null),
         onPaneResize: (delta) => _setState(() {
           final max = MediaQuery.sizeOf(context).width * 0.72;
           _paneWidth = (_paneWidth - delta).clamp(kPaneMinWidth, max);
@@ -345,13 +383,33 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 
   Widget? _sessionSidePanel() {
     final tab = _activeTab;
-    if (tab == null || tab.sessionId == null || _sidePanelHidden) return null;
+    final agent = _activeAgent;
+    if (tab == null || (tab.sessionId == null && agent == null)) return null;
+    if (_panelHidden) return null;
     final tabReadouts = [
       for (final r in _rightTabs)
         if (r.pane == _Pane.right &&
             (r.originTabKey == null || r.originTabKey == tab.key))
           r
     ];
+    if (agent != null) {
+      if (tabReadouts.isEmpty) return null;
+      return AgentSidePanel(
+        key: ValueKey('agent-panel-${tab.key}'),
+        client: tab.client,
+        agentId: agent.id,
+        agentName:
+            agent.displayName.trim().isEmpty ? agent.id : agent.displayName.trim(),
+        onAction: _agentAction,
+        readouts: tabReadouts,
+        activeReadout: _activeKey[_Pane.right],
+        readoutBody: (r) => _rightTabBody(r, null, null),
+        onSelectReadout: (r) =>
+            _setState(() => _activeKey[_Pane.right] = r.key),
+        onCloseReadout: (r) => _closeRightTab(r.key),
+        onClearReadout: () => _setState(() => _activeKey.remove(_Pane.right)),
+      );
+    }
     if (tab.isMissionControl) {
       return MissionBoardPanel(
         key: ValueKey('board-${tab.instanceUrl}'),
@@ -693,12 +751,14 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     _syncPage();
   }
 
+  bool get _railOn => !kMobile && agentRailShown(context);
+
   Widget _sidebarTop() {
     return SizedBox(
       height: 46,
       child: Row(children: [
         if (kMacOS) ...[
-          const SizedBox(width: 78),
+          SizedBox(width: _railOn ? 78 - kAgentRailWidth : 78),
           const Spacer(),
         ] else
           const SizedBox(width: 10),
@@ -723,20 +783,27 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     );
   }
 
+  Widget _usageButton(double size) => Builder(
+        builder: (ctx) => IconBtn('gauge',
+            size: size,
+            iconSize: 16,
+            tooltip: 'Usage',
+            onTap: _client == null
+                ? null
+                : () => showUsagePopover(ctx, _client!)),
+      );
+
+  Widget _settingsButton(double size) => IconBtn('settings',
+      size: size, iconSize: 16, tooltip: 'Settings', onTap: _openShellSettings);
+
   Widget _sidebarFooter() {
     final healthy = _active == null ? null : _health[_active!.url];
+    // With the agent rail on, usage and settings sit at its foot instead.
+    final rail = _railOn;
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 2, 8, 10),
       child: Row(children: [
-        Builder(
-          builder: (ctx) => IconBtn('gauge',
-              size: 28,
-              iconSize: 16,
-              tooltip: 'Usage',
-              onTap: _client == null
-                  ? null
-                  : () => showUsagePopover(ctx, _client!)),
-        ),
+        if (!rail) _usageButton(28),
         Expanded(
           child: Material(
             key: _topMachineKey,
@@ -779,11 +846,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             ),
           ),
         ),
-        IconBtn('settings',
-            size: 28,
-            iconSize: 16,
-            tooltip: 'Settings',
-            onTap: _openShellSettings),
+        if (!rail) _settingsButton(28),
         Builder(
           builder: (ctx) => IconBtn('task',
               size: 28,

@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'api.dart';
+import 'gesture_physics.dart';
 import 'platform.dart';
 import 'screens/file_viewer.dart';
 import 'theme.dart';
@@ -615,15 +616,18 @@ class _VoiceNoteState extends State<VoiceNote> {
                       _seekTo(d.localPosition.dx / c.maxWidth),
                   child: SizedBox(
                     width: double.infinity,
-                    height: 22,
-                    child: CustomPaint(
-                      painter: _NoteWave(
-                        seed: widget.path.hashCode,
-                        progress: progress,
-                        played: AppColors.fg1,
-                        rest: AppColors.fg4.withValues(alpha: 0.5),
-                      ),
-                    ),
+                    height: 44,
+                    child: Center(
+                        child: SizedBox(
+                            height: 22,
+                            child: CustomPaint(
+                              painter: _NoteWave(
+                                seed: widget.path.hashCode,
+                                progress: progress,
+                                played: AppColors.fg1,
+                                rest: AppColors.fg4.withValues(alpha: 0.5),
+                              ),
+                            ))),
                   ),
                 ),
               ),
@@ -788,38 +792,25 @@ class _SmoothWave extends CustomPainter {
       old.buffer != buffer;
 }
 
-class LiveWave extends CustomPainter {
-  final List<double> samples;
-  final double? progress;
-  const LiveWave(this.samples, {this.progress});
+/// A still waveform for a voice note that has no playback position yet.
+class NoteWaveStrip extends StatelessWidget {
+  const NoteWaveStrip({super.key, required this.seed, this.height = 22});
+
+  final int seed;
+  final double height;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    const step = 5.0;
-    final count = (size.width / step).floor();
-    final shown = samples.length > count
-        ? samples.sublist(samples.length - count)
-        : samples;
-    final paint = Paint()
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-    final start = size.width - shown.length * step;
-    for (var i = 0; i < shown.length; i++) {
-      final x = start + i * step + step / 2;
-      final half = (size.height * 0.48 * shown[i].clamp(0.06, 1.0))
-          .clamp(1.5, size.height * 0.48);
-      final played = progress == null || (i / shown.length) <= progress!;
-      paint.color = progress == null
-          ? AppColors.accent
-          : (played ? AppColors.accent : AppColors.fg4);
-      canvas.drawLine(Offset(x, size.height / 2 - half),
-          Offset(x, size.height / 2 + half), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant LiveWave old) =>
-      old.samples.length != samples.length || old.progress != progress;
+  Widget build(BuildContext context) => SizedBox(
+        height: height,
+        width: double.infinity,
+        child: CustomPaint(
+          painter: _NoteWave(
+              seed: seed,
+              progress: 0,
+              played: AppColors.accent,
+              rest: AppColors.fg3),
+        ),
+      );
 }
 
 class _NoteWave extends CustomPainter {
@@ -895,11 +886,15 @@ class _ImageViewer extends StatefulWidget {
   State<_ImageViewer> createState() => _ImageViewerState();
 }
 
-class _ImageViewerState extends State<_ImageViewer> {
+class _ImageViewerState extends State<_ImageViewer>
+    with SingleTickerProviderStateMixin {
   late final PageController _pages = PageController(initialPage: _index);
   late int _index = widget.initial;
   final Map<int, TransformationController> _zooms = {};
-  double _dragY = 0;
+  late final AnimationController _dragC =
+      AnimationController.unbounded(vsync: this)
+        ..addListener(() => setState(() {}));
+  double get _dragY => _dragC.value;
   bool _chrome = true;
   bool _busy = false;
 
@@ -912,6 +907,7 @@ class _ImageViewerState extends State<_ImageViewer> {
 
   @override
   void dispose() {
+    _dragC.dispose();
     _pages.dispose();
     for (final z in _zooms.values) {
       z.dispose();
@@ -1000,7 +996,7 @@ class _ImageViewerState extends State<_ImageViewer> {
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final fade = (1 - (_dragY.abs() / 400)).clamp(0.3, 1.0);
+    final fade = (1 - _dragY.abs() / (size.height * .5)).clamp(0.0, 1.0);
     final many = widget.paths.length > 1;
     final showChrome = _chrome && _dragY == 0;
     return Scaffold(
@@ -1011,18 +1007,28 @@ class _ImageViewerState extends State<_ImageViewer> {
             onTap: kMobile
                 ? () => setState(() => _chrome = !_chrome)
                 : () => Navigator.of(context).pop(),
+            onVerticalDragStart: _zoomed ? null : (_) => _dragC.stop(),
             onVerticalDragUpdate:
-                _zoomed ? null : (d) => setState(() => _dragY += d.delta.dy),
+                _zoomed ? null : (d) => _dragC.value += d.delta.dy,
             onVerticalDragEnd: _zoomed
                 ? null
                 : (d) {
-                    if (_dragY.abs() > 120 ||
-                        (d.primaryVelocity ?? 0).abs() > 900) {
+                    final v = d.primaryVelocity ?? 0;
+                    final dir = _dragY == 0 ? v.sign : _dragY.sign;
+                    if (dragDismisses(
+                        distance: _dragY.abs(),
+                        velocity: v * dir,
+                        distanceThreshold: 120,
+                        velocityThreshold: 900)) {
+                      HapticFeedback.lightImpact();
                       Navigator.of(context).pop();
+                      springTo(_dragC, _dragY + dir * size.height * .5,
+                          v * dir > 0 ? v : 0);
                     } else {
-                      setState(() => _dragY = 0);
+                      springTo(_dragC, 0, v);
                     }
                   },
+            onVerticalDragCancel: _zoomed ? null : () => springTo(_dragC, 0, 0),
             child: Transform.translate(
               offset: Offset(0, _dragY),
               child: PageView.builder(
@@ -1246,8 +1252,8 @@ class _PastedTextCardState extends State<PastedTextCard> {
                       constraints: const BoxConstraints(maxHeight: 360),
                       child: SingleChildScrollView(
                         child: SelectableText(widget.text,
-                            style:
-                                codeMono(12, height: 1.45, color: AppColors.fg1)),
+                            style: codeMono(12,
+                                height: 1.45, color: AppColors.fg1)),
                       ),
                     )
                   : Text(

@@ -4,6 +4,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -12,6 +14,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
 import '../api.dart';
+import '../composer/attachment_preview.dart';
+import '../composer/attachment_tile.dart';
+import '../composer/composer_card.dart';
 import '../composer_strip.dart';
 import '../media_views.dart';
 import '../motion.dart';
@@ -24,9 +29,9 @@ import '../widgets.dart';
 import '../swr.dart';
 import '../pull_refresh.dart';
 import 'agent_records.dart';
+import 'agent_view_switcher.dart';
 import 'mobile_chrome.dart';
 import '../mochi.dart';
-import 'mochi_color_picker.dart';
 
 /// Pick one agent from the directory, as an anchored DROPDOWN.
 ///
@@ -84,7 +89,7 @@ Future<CoordinationAgent?> pickAgentId(
           value: a.id,
           icon: 'agent',
           label: a.displayName.trim().isEmpty ? a.id : a.displayName,
-          description: '${a.handle} · ${a.role} · ${a.status}',
+          description: '@${a.handle} · ${a.status}',
           selected: a.id == currentAgentId,
         ),
     ],
@@ -324,7 +329,7 @@ class AgentThreadScreen extends StatefulWidget {
   final String agentId;
   final String agentName;
 
-  /// Identity line under the name (`@handle · role · status`). Supplied by the
+  /// Identity line under the name (`@handle · status`). Supplied by the
   /// caller, which owns the agent record.
   final String? subtitle;
 
@@ -348,6 +353,86 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     }
   }
 
+  String? _fetchedLine;
+  bool _fetchedPaused = false;
+  String? _fetchedProfile;
+  String? _profileProvider;
+
+  void _loadLine() {
+    widget.client.coordinationAgents().then((all) {
+      final a = all.where((x) => x.id == widget.agentId).firstOrNull;
+      if (a == null || !mounted) return;
+      final line = [
+        if (!a.available) 'Paused',
+        if (a.profile != null) a.profile!,
+      ].join(' \u00b7 ');
+      setState(() {
+        _fetchedLine = line;
+        _fetchedPaused = !a.available;
+        _fetchedProfile = a.profile;
+      });
+      final name = a.profile;
+      if (name == null) return;
+      widget.client.getConfig().then((cfg) {
+        final p = cfg.profiles.where((x) => x.name == name).firstOrNull;
+        if (p != null && mounted) setState(() => _profileProvider = p.provider);
+      }).catchError((_) {});
+    }).catchError((_) {});
+  }
+
+  AgentView _view = AgentView.thread;
+  int _unread = 0;
+
+  void _loadUnread() => agentInboxUnread(widget.client, widget.agentId)
+      .then((n) {
+        if (mounted) setState(() => _unread = n);
+      })
+      .catchError((_) {});
+
+  void _setView(AgentView v) {
+    final leftInbox = _view == AgentView.inbox;
+    setState(() {
+      _view = v;
+      if (leftInbox) _unread = 0;
+    });
+    if (leftInbox) {
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted) _loadUnread();
+      });
+    }
+  }
+
+  Widget _switcher() => AgentViewSwitcher(
+      value: _view, unread: _unread, onChanged: _setView);
+
+  Widget _viewBody() {
+    final child = switch (_view) {
+      AgentView.thread => KeyedSubtree(
+          key: const ValueKey(AgentView.thread), child: _body()),
+      _ => KeyedSubtree(
+          key: ValueKey(_view),
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: agentRecordsBody(
+                  widget.client, widget.agentId, widget.agentName,
+                  board: _view == AgentView.board),
+            ),
+          )),
+    };
+    return AnimatedSwitcher(
+      duration: reduceMotion(context) ? Duration.zero : Motion.base,
+      switchInCurve: Motion.exit,
+      switchOutCurve: Motion.exit,
+      layoutBuilder: (current, previous) => Stack(
+        fit: StackFit.expand,
+        children: [...previous, if (current != null) current],
+      ),
+      child: child,
+    );
+  }
+
   void _openActions() => openAgentActions(context,
       client: widget.client,
       agentId: widget.agentId,
@@ -365,6 +450,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   late final Swr<List<CoordinationEvent>> _thread;
 
   final List<_AgentAttachment> _attachments = [];
+
+  @visibleForTesting
+  void debugSeedAttachment(String name) => setState(() => _attachments
+      .add(_AgentAttachment(name: name, isImage: false, isAudio: false)
+        ..uploading = false));
   int _attachmentGeneration = 0;
 
   final AudioRecorder _recorder = HeldRecorder();
@@ -407,6 +497,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   @override
   void initState() {
     super.initState();
+    _loadLine();
+    _loadUnread();
     _thread = Swr<List<CoordinationEvent>>(
       client: widget.client,
       key: 'agent-thread:${widget.agentId}',
@@ -449,13 +541,26 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
 
   Future<void> _load({bool silent = false}) => _thread.refresh();
 
+  // Sent but not yet in a fetched list; merged back so a refetch can't hide them.
+  final List<CoordinationEvent> _unechoed = [];
+
   void _sync() {
     if (!mounted) return;
     final next = _thread.data;
-    final hadNew = next != null && next.length > _events.length;
+    if (next != null) {
+      final keys = {for (final e in next) e.idempotencyKey};
+      final bodies = {
+        for (final e in next)
+          if (e.actorKind == 'human') e.payload['body']
+      };
+      _unechoed.removeWhere((p) =>
+          keys.contains(p.idempotencyKey) || bodies.contains(p.payload['body']));
+    }
+    final merged = next == null ? null : [...next, ..._unechoed];
+    final hadNew = merged != null && merged.length > _events.length;
     final first = _events.isEmpty;
     setState(() {
-      if (next != null) _events = next;
+      if (merged != null) _events = merged;
       _loading = _thread.loading;
       _error =
           next == null && _thread.error != null ? '${_thread.error}' : null;
@@ -682,6 +787,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     }
   }
 
+  Future<void> _recordMore() async {
+    if (await _confirmRecording()) await _startRecording();
+  }
+
   Future<bool> _confirmRecording() async {
     final path = _recordingPath;
     final bytes = _recordingBytes;
@@ -769,25 +878,19 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       await _pickFiles();
       return;
     }
-    final choice = await showModalBottomSheet<String>(
-      sheetAnimationStyle: sheetMotion,
-      context: context,
-      backgroundColor: AppColors.surface1,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-          child: Row(
-            children: [
-              _attachOption('camera', 'Camera', 'camera'),
-              const SizedBox(width: 10),
-              _attachOption('image', 'Photos', 'photos'),
-              const SizedBox(width: 10),
-              _attachOption('file', 'Files', 'files'),
-            ],
-          ),
+    final choice = await showAppSheet<String>(
+      context,
+      title: 'Attach',
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          children: [
+            _attachOption('camera', 'Camera', 'camera'),
+            const SizedBox(width: 10),
+            _attachOption('image', 'Photos', 'photos'),
+            const SizedBox(width: 10),
+            _attachOption('file', 'Files', 'files'),
+          ],
         ),
       ),
     );
@@ -949,6 +1052,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     _attachmentGeneration++;
     _attachments.clear();
     _discardRecording();
+    _unechoed.add(pending);
     setState(() => _events = [..._events, pending]);
     _jumpToBottom(animated: true);
     try {
@@ -960,6 +1064,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       if (!mounted) return;
       await _load(silent: true);
     } catch (e) {
+      _unechoed.removeWhere((p) => p.eventId == key);
       if (!mounted) return;
       setState(() => _events = [
             for (final ev in _events)
@@ -983,116 +1088,99 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         bottom: false,
         child: Column(
           children: [
-            if (!hideChrome) ...[
-              _header(),
-              if (!kMobile) Divider(height: 1, color: AppColors.border),
-            ] else
-              Container(
-                height: 30,
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: IconBtn('more-horizontal',
-                    size: 26,
-                    iconSize: 15,
-                    tooltip: 'Actions',
-                    onTap: _openActions),
-              ),
-            Expanded(child: _body()),
-            _composer(),
+            if (!hideChrome) _header(),
+            if (kMobile) _phoneSwitcher(),
+            Expanded(child: _viewBody()),
+            if (_view == AgentView.thread) _composer(),
           ],
         ),
       ),
     );
   }
 
+  Widget _phoneSwitcher() => Padding(
+        padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 4),
+        child: _switcher(),
+      );
+
+  Widget _desktopStatusLine(String subtitle) {
+    final logo = widget.subtitle == null && _profileProvider != null;
+    if (!logo) {
+      return Text(subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TS.meta(AppColors.fg3));
+    }
+    return Row(children: [
+      if (_fetchedPaused)
+        Flexible(
+          child: Text('Paused \u00b7 ',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TS.meta(AppColors.fg3)),
+        ),
+      Tooltip(
+          message: _fetchedProfile ?? '',
+          child: ProviderLogo(_profileProvider, size: 13)),
+    ]);
+  }
+
   Widget _header() {
-    final subtitle = widget.subtitle?.trim() ?? '';
+    final subtitle = (widget.subtitle ?? _fetchedLine ?? '').trim();
     if (kMobile) {
-      return MobileBackBar(
+      // Back is the system gesture (iOS gets it from the Cupertino route);
+      // the pill opens the agent's actions.
+      return MobileStackedTitleBar(
         title: widget.agentName,
-        subtitle: subtitle.isEmpty ? null : subtitle,
-        leading: AgentMochi(widget.agentId, size: 24),
-        onBack: widget.showBack ? _closePage : null,
-        onTitleTap: _openActions,
+        onTap: _openActions,
+        tapHint: 'Agent actions',
       );
     }
-    final canGoBack = widget.showBack &&
+    final canGoBack = !widget.embedded &&
+        widget.showBack &&
         (widget.onClose != null || Navigator.of(context).canPop());
     return Container(
-      height: M.appBarHeight,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      color: AppColors.bg,
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppColors.bg,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
       child: Row(
         children: [
           if (canGoBack)
             IconBtn(
               'chevron-left',
-              size: M.minTarget,
-              iconSize: 20,
+              size: 28,
+              iconSize: 16,
               tooltip: 'Back',
-              onTap: () {
-                if (widget.onClose != null) {
-                  widget.onClose!();
-                } else {
-                  Navigator.of(context).maybePop();
-                }
-              },
+              onTap: _closePage,
             ),
-          SizedBox(width: canGoBack ? 4 : 10),
-          Tooltip(
-            message: 'Change colour',
-            child: Builder(builder: (anchor) => InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () => showMochiColorPicker(
-                  anchor, widget.client, widget.agentId, widget.agentName),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: AgentMochi(widget.agentId, size: kMobile ? 28 : 24),
-              ),
-            )),
-          ),
+          const SizedBox(width: 4),
+          AgentMochi(widget.agentId, size: 28),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.agentName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(kMobile ? M.sectionTitle : 15,
-                      weight: W.label, color: AppColors.fg1),
-                ),
-                if (!kMobile && subtitle.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
+                Text(widget.agentName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: mono(M.monoMeta, color: AppColors.fg3),
-                  ),
-                ],
+                    style: TS.rowTitle(AppColors.fg1)),
+                if (subtitle.isNotEmpty) _desktopStatusLine(subtitle),
               ],
             ),
           ),
-          IconBtn(
-            'more-horizontal',
-            size: M.minTarget,
-            iconSize: 18,
-            tooltip: 'Actions',
-            onTap: _openActions,
-          ),
-          if (!kMobile && widget.onClose != null) ...[
-            const SizedBox(width: 4),
+          _switcher(),
+          if (!widget.embedded && widget.onClose != null)
             IconBtn(
               'x',
-              size: M.minTarget,
+              size: 28,
               iconSize: 16,
               tooltip: 'Close',
               onTap: widget.onClose!,
             ),
-          ],
         ],
       ),
     );
@@ -1213,6 +1301,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         onPlay: () => unawaited(_toggleRecordingPlayback()),
         onStop: () => unawaited(_stopRecording()),
         onSend: () => unawaited(_send()),
+        onMore: reviewing && _attachments.length < _maxAttachments - 1
+            ? () => unawaited(_recordMore())
+            : null,
       );
     }
     Widget roundBtn(String icon, String tip, VoidCallback onTap,
@@ -1285,86 +1376,50 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         if (_isRecording)
           roundBtn('stop', 'Stop', () => unawaited(_stopRecording()),
               fill: AppColors.surface3)
-        else
+        else ...[
+          if (_attachments.length < _maxAttachments - 1) ...[
+            roundBtn('mic', 'Record more', () => unawaited(_recordMore())),
+            const SizedBox(width: 10),
+          ],
           roundBtn('arrow-up', 'Send voice note', () => unawaited(_send()),
               fill: AppColors.accentFill, ink: AppColors.accentFg),
+        ],
       ]),
     );
   }
 
-  Widget _attachmentBar() {
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _attachments.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 6),
-        itemBuilder: (_, i) => _attachmentTile(_attachments[i]),
-      ),
-    );
-  }
+  Widget _attachmentBar() => ComposerAttachmentBar(tiles: [
+        for (final a in _attachments)
+          ComposerAttachmentTile(
+            name: a.name,
+            isImage: a.isImage,
+            isAudio: a.isAudio,
+            uploading: a.uploading,
+            localPath: a.localPath,
+            onOpen: () => _previewAttachment(a),
+            onRemove: () => setState(() => _attachments.remove(a)),
+          ),
+      ]);
 
-  Widget _attachmentTile(_AgentAttachment a) {
-    final thumb = a.isImage && a.localPath != null;
-    final isAudio = a.isAudio;
-    final body = thumb
-        ? ClipRRect(
-            borderRadius: BorderRadius.circular(R.sm),
-            child: Image.file(File(a.localPath!),
-                width: 36,
-                height: 36,
-                fit: BoxFit.cover,
-                cacheWidth: 72,
-                cacheHeight: 72),
-          )
-        : Container(
-            height: 36,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: isAudio ? AppColors.accentBg : AppColors.surface2,
-              borderRadius: BorderRadius.circular(R.sm),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon(isAudio ? 'mic' : (a.isImage ? 'image' : 'file'),
-                  size: 12, color: isAudio ? AppColors.accent : AppColors.fg3),
-              const SizedBox(width: 5),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 100),
-                child: Text(a.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(11,
-                        color: isAudio ? AppColors.accent : AppColors.fg2)),
-              ),
-            ]),
-          );
-    return Stack(children: [
-      body,
-      if (a.uploading)
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-                color: AppColors.scrim,
-                borderRadius: BorderRadius.circular(R.sm)),
-            alignment: Alignment.center,
-            child: Spinner(size: 16, color: AppColors.fg2),
-          ),
-        ),
-      Positioned(
-        top: 3,
-        right: 3,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: () => setState(() => _attachments.remove(a)),
-          child: Container(
-            padding: const EdgeInsets.all(3),
-            decoration: const BoxDecoration(
-                color: AppColors.scrim, shape: BoxShape.circle),
-            child: AppIcon('x', size: 8, color: Colors.white),
-          ),
-        ),
-      ),
-    ]);
+  Future<void> _previewAttachment(_AgentAttachment a) {
+    final pairs = {
+      for (final x in _attachments)
+        PreviewAttachment(
+          name: x.name,
+          isImage: x.isImage,
+          isAudio: x.isAudio,
+          localPath: x.localPath,
+          imageProvider: x.remotePath == null
+              ? null
+              : widget.client.imageProvider(x.remotePath!),
+        ): x
+    };
+    return showAttachmentPreview(
+      context,
+      pairs.keys.toList(),
+      _attachments.indexOf(a),
+      onRemove: (p) => setState(() => _attachments.remove(pairs[p])),
+    );
   }
 
   Widget _wideCap(Widget child) => kMobile
@@ -1374,65 +1429,58 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               constraints: const BoxConstraints(maxWidth: 740),
               child: SizedBox(width: double.infinity, child: child)));
 
-  Widget _desktopStrip() => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_attachments.isNotEmpty) ...[
-            _attachmentBar(),
-            const SizedBox(height: 6),
-          ],
-          DesktopComposerStrip(
-            field: CallbackShortcuts(
-              bindings: {
-                const SingleActivator(LogicalKeyboardKey.enter): _send,
-                const SingleActivator(LogicalKeyboardKey.enter, meta: true):
-                    _send,
-                const SingleActivator(LogicalKeyboardKey.enter, control: true):
-                    _send,
-              },
-              child: TextField(
-                controller: _input,
-                minLines: 1,
-                maxLines: 8,
-                cursorColor: AppColors.accent,
-                onSubmitted: (_) => _send(),
-                style: TS.body(AppColors.fg1),
-                decoration: DesktopComposerStrip.decoration(
-                    'Message ${widget.agentName}…'),
-              ),
-            ),
-            send: ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _input,
-              builder: (_, val, __) {
-                final canSend = (val.text.trim().isNotEmpty ||
-                        _attachments.isNotEmpty ||
-                        _isRecording ||
-                        _recordingPath != null) &&
-                    !_sending;
-                return StripSendButton(
-                  enabled: canSend,
-                  sending: _sending,
-                  onTap: canSend ? _send : null,
-                );
-              },
-            ),
-            footer: [
-              StripIcon('plus', tooltip: 'Attach', onTap: _onAttachTap),
-              const Spacer(),
-              if (kCanRecord)
-                StripIcon(_isRecording ? 'mic-off' : 'mic',
-                    tooltip: 'Record',
-                    onTap: _onMicTap,
-                    color: _isRecording ? AppColors.danger : null),
-            ],
+  Widget _composerCard() => ComposerCard(
+        text: _input,
+        field: CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.enter): () {
+              if (!kMobile) _send();
+            },
+            const SingleActivator(LogicalKeyboardKey.enter, meta: true): _send,
+            const SingleActivator(LogicalKeyboardKey.enter, control: true):
+                _send,
+          },
+          child: TextField(
+            controller: _input,
+            minLines: 1,
+            maxLines: 8,
+            cursorColor: AppColors.accent,
+            onSubmitted: (_) {
+              if (!kMobile) _send();
+            },
+            style: TS.body(AppColors.fg1),
+            decoration: ComposerCard.decoration('Message ${widget.agentName}…'),
           ),
-        ],
+        ),
+        attach:
+            ComposerIconButton('plus', tooltip: 'Attach', onTap: _onAttachTap),
+        mic: kCanRecord
+            ? ComposerIconButton(_isRecording ? 'mic-off' : 'mic',
+                tooltip: 'Record',
+                onTap: _onMicTap,
+                color: _isRecording ? AppColors.danger : null)
+            : null,
+        send: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _input,
+          builder: (_, val, __) {
+            final canSend = (val.text.trim().isNotEmpty ||
+                    _attachments.isNotEmpty ||
+                    _isRecording ||
+                    _recordingPath != null) &&
+                !_sending;
+            return ComposerSendButton(
+              enabled: canSend,
+              sending: _sending,
+              onTap: canSend ? _send : null,
+            );
+          },
+        ),
       );
 
   Widget _composer() {
     final mq = MediaQuery.of(context);
     final keyboard = mq.viewInsets.bottom;
+    final recording = _isRecording || _recordingPath != null;
     return AnimatedPadding(
       duration: Motion.fast,
       curve: Motion.enter,
@@ -1445,153 +1493,18 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           10 + (keyboard > 0 ? 8 : mq.padding.bottom),
         ),
         child: Swap(
-          stateKey: (_isRecording || _recordingPath != null)
-              ? 'recorder'
-              : 'composer',
+          stateKey: recording ? 'recorder' : 'composer',
           alignment: Alignment.bottomCenter,
-          child: (_isRecording || _recordingPath != null)
-              ? _wideCap(_mobileRecorder())
-              : !kMobile
-                  ? _wideCap(_desktopStrip())
-                  : Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surface1,
-                    borderRadius: BorderRadius.circular(26),
-                    border: Border.all(
-                        color: AppColors.fg1.withValues(alpha: 0.08)),
-                  ),
-                  padding: const EdgeInsets.fromLTRB(16, 14, 10, 10),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (_attachments.isNotEmpty) ...[
-                        _attachmentBar(),
-                        const SizedBox(height: 6),
-                      ],
-                      CallbackShortcuts(
-                        bindings: {
-                          const SingleActivator(LogicalKeyboardKey.enter): () {
-                            if (!kMobile) _send();
-                          },
-                          const SingleActivator(LogicalKeyboardKey.enter,
-                              meta: true): () {
-                            _send();
-                          },
-                          const SingleActivator(LogicalKeyboardKey.enter,
-                              control: true): () {
-                            _send();
-                          },
-                        },
-                        child: TextField(
-                          controller: _input,
-                          minLines: 1,
-                          maxLines: 8,
-                          cursorColor: AppColors.accent,
-                          onSubmitted: (_) {
-                            if (!kMobile) _send();
-                          },
-                          style: TS.body(AppColors.fg1),
-                          decoration: InputDecoration(
-                            isCollapsed: true,
-                            contentPadding:
-                                const EdgeInsets.fromLTRB(2, 2, 8, 10),
-                            border: InputBorder.none,
-                            hintText: 'Message ${widget.agentName}…',
-                            hintStyle: TS.body(AppColors.fg4),
-                          ),
-                        ),
-                      ),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Material(
-                            color: Colors.transparent,
-                            borderRadius: BorderRadius.circular(R.sm),
-                            child: InkWell(
-                              onTap: _onAttachTap,
-                              borderRadius: BorderRadius.circular(R.sm),
-                              child: Padding(
-                                padding: const EdgeInsets.all(6),
-                                child: AppIcon('plus',
-                                    size: 18, color: AppColors.fg3),
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          if (kCanRecord) ...[
-                            Material(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(R.sm),
-                              child: InkWell(
-                                onTap: _onMicTap,
-                                borderRadius: BorderRadius.circular(R.sm),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: AppIcon(
-                                    _isRecording ? 'mic-off' : 'mic',
-                                    size: 18,
-                                    color: _isRecording
-                                        ? AppColors.danger
-                                        : AppColors.fg3,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                          ],
-                          ValueListenableBuilder<TextEditingValue>(
-                            valueListenable: _input,
-                            builder: (_, val, __) {
-                              final canSend = (val.text.trim().isNotEmpty ||
-                                      _attachments.isNotEmpty ||
-                                      _isRecording ||
-                                      _recordingPath != null) &&
-                                  !_sending;
-                              return _SendBtn(
-                                enabled: canSend,
-                                sending: _sending,
-                                onTap: canSend ? _send : null,
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SendBtn extends StatelessWidget {
-  final bool enabled;
-  final bool sending;
-  final VoidCallback? onTap;
-  const _SendBtn({required this.enabled, this.sending = false, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final size = kMobile ? 36.0 : 30.0;
-    const ShapeBorder shape = CircleBorder();
-    return Material(
-      color: enabled ? AppColors.accentFill : AppColors.hover,
-      shape: shape,
-      child: InkWell(
-        customBorder: shape,
-        onTap: onTap,
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: Center(
-            child: sending
-                ? Spinner(size: 14, color: AppColors.accentFg)
-                : AppIcon('arrow-up',
-                    size: 16,
-                    color: enabled ? AppColors.accentFg : AppColors.fg4),
-          ),
+          child: _wideCap(recording
+              ? _mobileRecorder()
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_attachments.isNotEmpty) _attachmentBar(),
+                    _composerCard(),
+                  ],
+                )),
         ),
       ),
     );
@@ -1628,16 +1541,16 @@ void openAgentThread(
   required String agentName,
 }) {
   if (kMobile) {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => AgentThreadScreen(
+    Widget page(BuildContext _) => AgentThreadScreen(
           client: client,
           agentId: agentId,
           agentName: agentName,
           onClose: () => Navigator.pop(context),
-        ),
-      ),
-    );
+        );
+    Navigator.of(context).push<void>(
+        defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: page)
+            : MaterialPageRoute(builder: page));
     return;
   }
   presentScreen(

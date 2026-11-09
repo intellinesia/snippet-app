@@ -83,7 +83,7 @@ class _CallPromptCardState extends State<CallPromptCard> {
                 child: Text(widget.status.body,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(kMobile ? 13.5 : 13, color: AppColors.fg2)),
+                    style: sans(kMobile ? 13 : 13, color: AppColors.fg2)),
               ),
             Padding(
               padding: const EdgeInsets.only(top: S.s8, left: 16),

@@ -144,7 +144,7 @@ class _PrListPanelState extends State<PrListPanel> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             child: Text(label,
-                style: sans(12.5,
+                style: sans(13,
                     weight: W.label, color: on ? AppColors.fg1 : AppColors.fg3)),
           ),
         ),
@@ -218,7 +218,7 @@ class _PrListPanelState extends State<PrListPanel> {
 
   Widget _label(String text, int count) => Padding(
         padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
-        child: Text('$text  $count', style: sans(11.5, weight: W.label, color: AppColors.fg4)),
+        child: Text('$text  $count', style: sans(12, weight: W.label, color: AppColors.fg4)),
       );
 
   List<Widget> _rows(List<PrSummary> prs) {
@@ -273,13 +273,13 @@ class _PrListPanelState extends State<PrListPanel> {
               child: TextField(
                 controller: _search,
                 onChanged: (v) => setState(() => _query = v),
-                style: sans(12.5, color: AppColors.fg1),
+                style: sans(13, color: AppColors.fg1),
                 cursorColor: AppColors.accent,
                 decoration: InputDecoration(
                   isCollapsed: true,
                   border: InputBorder.none,
                   hintText: 'Filter by title, number, author',
-                  hintStyle: sans(12.5, color: AppColors.fg4),
+                  hintStyle: sans(13, color: AppColors.fg4),
                 ),
               ),
             ),
@@ -708,7 +708,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
           color: AppColors.surface2,
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Text(name, style: mono(11.5, color: AppColors.fg2)),
+        child: Text(name, style: mono(12, color: AppColors.fg2)),
       );
 
   Widget _header(PrDetail pr) {
@@ -997,7 +997,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                     maxLines: 1, overflow: TextOverflow.ellipsis, style: sans(13, color: AppColors.fg2)),
               ),
               const SizedBox(width: 10),
-              Text(e.sha.length > 7 ? e.sha.substring(0, 7) : e.sha, style: mono(11.5, color: AppColors.fg4)),
+              Text(e.sha.length > 7 ? e.sha.substring(0, 7) : e.sha, style: mono(12, color: AppColors.fg4)),
             ]),
           ));
         case PrEventKind.review:
@@ -1042,7 +1042,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                         icon: AppIcon('message', size: 13, color: AppColors.accent),
                         label: Text(
                             '${threads.length} comment${threads.length == 1 ? '' : 's'} on ${threads.map((t) => t.path.split('/').last).toSet().join(', ')}',
-                            style: sans(12.5, weight: W.label, color: AppColors.accent)),
+                            style: sans(13, weight: W.label, color: AppColors.accent)),
                       ),
                   ]),
           ));
@@ -1063,7 +1063,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
 
   Widget _sideTitle(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Text(text, style: sans(11.5, weight: W.label, color: AppColors.fg4)),
+        child: Text(text, style: sans(12, weight: W.label, color: AppColors.fg4)),
       );
 
   Widget _sideRow(String icon, Color ink, String label, {String detail = '', VoidCallback? onTap}) => InkWell(
@@ -1218,13 +1218,13 @@ class _DesktopCommitsState extends State<_DesktopCommits> {
                 Text(c.headline,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(13.5, weight: W.label, height: 1.35, color: AppColors.fg1)),
+                    style: sans(13, weight: W.label, height: 1.35, color: AppColors.fg1)),
                 const SizedBox(height: 3),
                 Text('${c.author} · ${prAgo(c.date)}', style: TS.meta(AppColors.fg4)),
               ]),
             ),
             const SizedBox(width: 10),
-            Text(short, style: mono(11.5, color: AppColors.fg3)),
+            Text(short, style: mono(12, color: AppColors.fg3)),
             IconBtn('copy', size: 26, iconSize: 12, tooltip: 'Copy SHA', onTap: () {
               Clipboard.setData(ClipboardData(text: c.oid));
               toast(context, 'Copied $short');
@@ -1388,12 +1388,12 @@ class _DesktopFilesState extends State<_DesktopFiles> {
                 ),
         ),
         const SizedBox(width: 8),
-        Text('$viewed of ${files.length} viewed', style: sans(12.5, color: AppColors.fg3)),
+        Text('$viewed of ${files.length} viewed', style: sans(13, color: AppColors.fg3)),
         if (pending > 0) ...[
           const SizedBox(width: 12),
           AppIcon('message', size: 12, color: AppColors.accent),
           const SizedBox(width: 5),
-          Text('$pending pending', style: sans(12.5, color: AppColors.accent)),
+          Text('$pending pending', style: sans(13, color: AppColors.accent)),
         ],
         const Spacer(),
         Builder(
@@ -1405,7 +1405,7 @@ class _DesktopFilesState extends State<_DesktopFiles> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.sm)),
             ),
             icon: AppIcon('folder-open', size: 13, color: AppColors.fg3),
-            label: Text('Jump to file', style: sans(12.5, color: AppColors.fg2)),
+            label: Text('Jump to file', style: sans(13, color: AppColors.fg2)),
           ),
         ),
       ]),

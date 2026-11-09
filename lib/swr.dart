@@ -44,20 +44,29 @@ class DeviceEventHub {
 
   static const attachedToolResult = '_attached_tool_result';
 
-  void _connect() {
+  void _connect({bool announce = false}) {
     final open = _open;
     if (open == null) return;
     _retry?.cancel();
     try {
       final channel = open();
       _channel = channel;
+      if (announce) {
+        channel.ready.then((_) {
+          if (identical(_channel, channel)) {
+            _controller.add({'kind': reconnected});
+          }
+        }, onError: (_) {});
+      }
       _sub = channel.stream.listen(
         (raw) {
           try {
             final frame = jsonDecode(raw as String);
             if (frame is Map) {
               _attempt = 0;
-              _controller.add(frame.cast<String, dynamic>());
+              _controller.add(frame['kind'] == 'resync'
+                  ? {'kind': reconnected}
+                  : frame.cast<String, dynamic>());
             }
           } catch (_) {}
         },
@@ -78,8 +87,7 @@ class DeviceEventHub {
     final seconds = math.min(30, 1 << math.min(_attempt++, 5));
     _retry = Timer(Duration(seconds: seconds), () {
       if (!_controller.hasListener) return;
-      _connect();
-      _controller.add({'kind': reconnected});
+      _connect(announce: true);
     });
   }
 

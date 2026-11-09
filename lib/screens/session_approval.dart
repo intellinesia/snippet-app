@@ -97,10 +97,10 @@ class _QuestionRecord extends StatelessWidget {
                 for (final (q, a) in rows) ...[
                   Text(q,
                       style:
-                          sans(14.5, height: 20 / 14.5, color: AppColors.fg2)),
+                          sans(14, height: 20 / 14.5, color: AppColors.fg2)),
                   const SizedBox(height: 3),
                   Text(a == null || a.isEmpty ? 'Not answered' : a,
-                      style: sans(14.5,
+                      style: sans(14,
                           weight: W.label,
                           height: 20 / 14.5,
                           color: a == null || a.isEmpty
@@ -1016,7 +1016,7 @@ class QuestionBarState extends State<QuestionBar> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(_sent ? 'Sending…' : 'Snippet asks',
-                          style: sans(13.5, color: AppColors.fg3)),
+                          style: sans(13, color: AppColors.fg3)),
                     ),
                     if (total > 1)
                       Container(
@@ -1028,7 +1028,7 @@ class QuestionBarState extends State<QuestionBar> {
                         ),
                         child: Text(
                             _review ? 'Review' : '${_step + 1} of $total',
-                            style: sans(12.5,
+                            style: sans(13,
                                 tabular: true, color: AppColors.fg2)),
                       ),
                   ])
@@ -1191,44 +1191,6 @@ class _Attachment {
   }
 }
 
-class _SendBtn extends StatelessWidget {
-  final bool enabled;
-  final bool running;
-  final VoidCallback? onTap;
-  const _SendBtn({required this.enabled, this.running = false, this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    final size = kMobile ? 36.0 : 30.0;
-    final iconSize = running ? 13.0 : (kMobile ? 16.0 : 15.0);
-    final fill = !enabled
-        ? AppColors.hover
-        : running
-            ? (kMobile ? AppColors.fg1 : AppColors.surface3)
-            : (kMobile ? AppColors.accentFill : AppColors.fg1);
-    final ink = !enabled
-        ? AppColors.fg4
-        : running
-            ? (kMobile ? AppColors.bg : AppColors.fg1)
-            : (kMobile ? AppColors.accentFg : AppColors.bg);
-    const ShapeBorder shape = CircleBorder();
-    return Material(
-      color: fill,
-      shape: shape,
-      child: InkWell(
-        customBorder: shape,
-        onTap: onTap,
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: Center(
-              child: AppIcon(running ? 'stop' : 'arrow-up',
-                  size: iconSize, color: ink)),
-        ),
-      ),
-    );
-  }
-}
-
 class _SessionActionsPanel extends StatefulWidget {
   final HarnessState? session;
   final void Function(String text) onSetGoal;
@@ -1349,7 +1311,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
               Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(12.5, color: AppColors.fg2)),
+                  style: sans(13, color: AppColors.fg2)),
             ]),
           ),
         ),

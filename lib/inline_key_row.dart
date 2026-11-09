@@ -90,7 +90,7 @@ class _InlineKeyRowState extends State<InlineKeyRow> {
           decoration: InputDecoration(
             isDense: true,
             hintText: widget.hint,
-            hintStyle: sans(kMobile ? 14 : 12.5, color: AppColors.fg4),
+            hintStyle: sans(kMobile ? 14 : 13, color: AppColors.fg4),
             filled: true,
             fillColor: AppColors.surface2,
             contentPadding:

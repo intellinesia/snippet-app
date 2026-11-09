@@ -30,11 +30,6 @@ enum MobileHome {
   final String icon;
 }
 
-/// Floating tab bar geometry. The radius is deliberately larger than `R.card`
-/// so the bar reads as a float rather than another card.
-const double kMobileBarHeight = 60;
-const double kMobileBarRadius = 20;
-
 /// One open tab in the shell — a live chat session, an opened file, a single git
 /// change, or a terminal, on a given instance.
 ///

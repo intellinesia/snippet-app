@@ -31,15 +31,8 @@ void main() {
     expect(userQuestionLead({}), 'Needs your input');
   });
 
-  test('ambient notes with attributes are recognised and hidden', () {
+  test('ambient resume notes with attributes are recognised', () {
     expect(isAmbientResume('<ambient_resume interrupted_reply="Two quick">x</ambient_resume>'), isTrue);
     expect(isAmbientResume('<ambient_resume>x</ambient_resume>'), isTrue);
-    expect(isAmbientNote('<ambient_check_in>x</ambient_check_in>'), isTrue);
-    expect(isAmbientNote('Ship it'), isFalse);
-    final items = feedItemsFromEvents([
-      {'kind': 'user_input', 'text': '<ambient_resume interrupted_reply="a">b</ambient_resume>'},
-      {'kind': 'user_input', 'text': 'Ship it'},
-    ]);
-    expect(items.length, 1);
   });
 }

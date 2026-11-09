@@ -27,23 +27,29 @@ enum ShellPanelPurpose {
   generic,
 }
 
+/// Set by the desktop shell so panel content can open a session as a tab.
+void Function(DaemonClient client, String sessionId, String title)?
+    openSessionInTab;
+
 class ShellPanelRequest {
   ShellPanelRequest(
       {required this.purpose,
       required this.id,
       required this.client,
       this.sessionId,
+      this.title,
       required this.builder});
 
   final ShellPanelPurpose purpose;
   final String id;
   final DaemonClient? client;
   final String? sessionId;
+  final String? title;
   final Widget Function(BuildContext, VoidCallback) builder;
   final Completer<Object?> dismissed = Completer<Object?>();
   final navigatorKey = GlobalKey<NavigatorState>();
   String get key => 'request|${client?.baseUrl}|$sessionId|${purpose.name}|$id';
-  String get label => switch (purpose) {
+  String get label => title ?? switch (purpose) {
         ShellPanelPurpose.task => 'Task',
         ShellPanelPurpose.agents => 'Agents',
         ShellPanelPurpose.conversation => 'Conversation',

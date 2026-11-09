@@ -4,11 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../drafts.dart';
-import '../diff_counts.dart';
 import '../models.dart';
 import '../settled_sessions.dart';
 import '../crew_status.dart';
-import '../crew_widgets.dart';
+import 'agent_rail.dart' show agentRailShown;
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -16,14 +15,15 @@ import 'agents_sidebar_panel.dart';
 import 'mission_control.dart';
 import 'mission_control/coordination_agent_detail.dart';
 import 'settings_panel.dart';
-import 'shell_components.dart';
 import 'shell_models.dart';
 import 'shell_nav.dart';
+import 'session_list_row.dart';
 import 'sidebar_mobile.dart';
 import 'tasks/tasks_panel.dart';
 import '../pull_refresh.dart';
 import '../motion.dart';
 import '../mochi.dart';
+import '../swr.dart';
 import 'mobile_chrome.dart';
 export 'sidebar_mobile.dart';
 
@@ -153,7 +153,7 @@ class SidebarState extends State<Sidebar> {
 
   List<CoordinationAgent> _crew = const [];
   DateTime? _crewAt;
-  Timer? _crewTimer;
+  Revalidator? _crewLive;
 
   Future<void> _loadCrew() async {
     final client = widget.client;
@@ -190,16 +190,28 @@ class SidebarState extends State<Sidebar> {
     } catch (_) {}
   }
 
+  void _bindCrewLive() {
+    _crewLive?.dispose();
+    final client = widget.client;
+    _crewLive = client == null
+        ? null
+        : Revalidator(
+            client: client,
+            on: (e) => Swr.coordination(e) || Swr.sessionStatus(e),
+            debounce: const Duration(seconds: 2),
+            onRevalidate: ({required bool force}) {
+              _crewAt = null;
+              _loadCrew();
+            });
+  }
+
   @override
   void initState() {
     super.initState();
     Drafts.instance.addListener(_onDrafts);
     _loadProviders();
     if (!kMobile) {
-      _crewTimer = Timer.periodic(const Duration(seconds: 60), (_) {
-        _crewAt = null;
-        _loadCrew();
-      });
+      _bindCrewLive();
     }
     _pageController = PageController(initialPage: widget.mobileHome.index);
     if (widget.mobileHome != MobileHome.settings) {
@@ -210,7 +222,10 @@ class SidebarState extends State<Sidebar> {
   @override
   void didUpdateWidget(covariant Sidebar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.client != widget.client) _crewAt = null;
+    if (oldWidget.client != widget.client) {
+      _crewAt = null;
+      if (!kMobile) _bindCrewLive();
+    }
     if (oldWidget.client != widget.client ||
         (widget.sessions ?? const <SessionInfo>[]).any((s) =>
             (s.profile ?? '').isNotEmpty &&
@@ -233,7 +248,6 @@ class SidebarState extends State<Sidebar> {
   }
 
   String? _renamingId;
-  String? _hoveredId;
   final TextEditingController _renameCtl = TextEditingController();
   final FocusNode _renameFocus = FocusNode();
 
@@ -252,7 +266,7 @@ class SidebarState extends State<Sidebar> {
   @override
   void dispose() {
     Drafts.instance.removeListener(_onDrafts);
-    _crewTimer?.cancel();
+    _crewLive?.dispose();
     _pageController.dispose();
     _renameCtl.dispose();
     _renameFocus.dispose();
@@ -716,39 +730,37 @@ class SidebarState extends State<Sidebar> {
         (s.branch?.toLowerCase().contains(q) ?? false);
   }
 
-  Widget _settledHeader(List<SessionInfo> rows,
-      {required bool mobile, required bool open}) {
-    return HoverSurface(
-      radius: 8,
-      onTap: () => setState(() => _settledOpen = !_settledOpen),
-      child: Padding(
-        padding: mobile
-            ? const EdgeInsets.fromLTRB(4, 16, 4, 10)
-            : const EdgeInsets.fromLTRB(10, 10, 10, 10),
-        child: Row(children: [
-          AppIcon('archive', size: mobile ? 15 : 13, color: AppColors.fg4),
-          const SizedBox(width: 8),
-          Text('Settled',
-              style: sans(mobile ? 14 : 13,
-                  weight: W.label, color: AppColors.fg3)),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-            decoration: BoxDecoration(
-                color: AppColors.surface2,
-                borderRadius: BorderRadius.circular(99)),
-            child: Text('${rows.length}',
-                style: sans(mobile ? 12.5 : 11.5,
-                    color: AppColors.fg3, tabular: true)),
+  Widget _settledHeader(List<SessionInfo> rows, {required bool open}) {
+    return Padding(
+      padding: EdgeInsets.only(top: kMobile ? 8 : 4),
+      child: Semantics(
+        button: true,
+        expanded: open,
+        label: 'Settled, ${rows.length}',
+        child: ExcludeSemantics(
+          child: HoverSurface(
+            radius: 8,
+            onTap: () => setState(() => _settledOpen = !_settledOpen),
+            child: Container(
+              height: kMobile ? M.minTarget : 32,
+              padding:
+                  EdgeInsets.fromLTRB(kMobile ? 4 : 10, 0, kMobile ? 4 : 10, 0),
+              child: Row(children: [
+                Text('Settled', style: TS.label(AppColors.fg3)),
+                const SizedBox(width: 8),
+                Text('${rows.length}', style: TS.meta()),
+                const Spacer(),
+                AnimatedRotation(
+                  turns: open ? 0.25 : 0,
+                  duration: Motion.base,
+                  curve: Curves.easeOutCubic,
+                  child:
+                      AppIcon('chevron-right', size: 13, color: AppColors.fg3),
+                ),
+              ]),
+            ),
           ),
-          const Spacer(),
-          AnimatedRotation(
-            turns: open ? 0.25 : 0,
-            duration: Motion.base,
-            curve: Curves.easeOutCubic,
-            child: AppIcon('chevron-right', size: 13, color: AppColors.fg4),
-          ),
-        ]),
+        ),
       ),
     );
   }
@@ -788,8 +800,7 @@ class SidebarState extends State<Sidebar> {
       // Offline ≠ empty: a failed fetch gets an explicit error + retry.
       if (widget.sessionsError != null) {
         return ListView(
-            padding: EdgeInsets.fromLTRB(
-                kMobile ? M.gutter : 8, 2, kMobile ? M.gutter : 8, 32),
+            padding: const EdgeInsets.fromLTRB(M.gutter, 2, M.gutter, 32),
             children: [
               Padding(
                   padding: const EdgeInsets.all(20),
@@ -807,95 +818,174 @@ class SidebarState extends State<Sidebar> {
             ]);
       }
       return ListView(
-          padding: EdgeInsets.fromLTRB(
-              kMobile ? M.gutter : 8, 2, kMobile ? M.gutter : 8, 32),
-          children: [
-            _emptySessions(),
-          ]);
+          padding: const EdgeInsets.fromLTRB(M.gutter, 2, M.gutter, 32),
+          children: [_emptySessions()]);
     }
-    final mc = all.where((s) => isDedicatedMcSession(s.id)).toList();
     final split = splitSettled(_sortSessionsByRecency(all.where((s) =>
         !isDedicatedMcSession(s.id) &&
         !isInboxSessionRow(s) &&
         _matchesQuery(s))));
-    final list = split.main;
-    final settledRows = split.settled;
-    // Phone chats are one flat, chronological surface.
-    if (kMobile) {
-      bool isActive(SessionInfo s) =>
-          sessionIsActive(s.status) || s.status == 'waiting_for_input';
-      final active = _filterQuery.trim().isEmpty
-          ? (_sortSessionsByRecency(list.where(isActive))
-            ..sort((a, b) {
-              final aw = a.status == 'waiting_for_input' ? 0 : 1;
-              final bw = b.status == 'waiting_for_input' ? 0 : 1;
-              return aw.compareTo(bw);
-            }))
-          : <SessionInfo>[];
-      final activeIds = {for (final s in active) s.id};
+    final children = <Widget>[
+      ..._groupedRows(split.main, attentionFirst: true),
+    ];
+    if (children.isEmpty && split.settled.isEmpty) {
+      children.add(_emptySessions(searching: _filterQuery.trim().isNotEmpty));
+    }
+    final list = PullToRefresh(
+      onRefresh: () async => widget.onRefreshSessions(),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(
+            M.gutter, 4, M.gutter, split.settled.isEmpty ? 120 : 16),
+        children: children,
+      ),
+    );
+    if (split.settled.isEmpty) return list;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Expanded(child: list),
+      _settledPinned(split.settled),
+    ]);
+  }
+
+  /// Rows under their project's header. Groups follow the recency of their
+  /// newest session; on phones a group holding a chat that needs input leads,
+  /// and inside a group input-needed then working chats come first.
+  List<Widget> _groupedRows(List<SessionInfo> sorted,
+      {required bool attentionFirst}) {
+    if (sorted.isEmpty) return const [];
+    final byFolder = <String, List<SessionInfo>>{};
+    for (final s in sorted) {
+      byFolder.putIfAbsent(projectKey(s), () => []).add(s);
+    }
+    final pin = attentionFirst && _filterQuery.trim().isEmpty;
+    int rank(SessionInfo s) => !pin
+        ? 0
+        : s.status == 'waiting_for_input'
+            ? 0
+            : sessionIsActive(s.status)
+                ? 1
+                : 2;
+    var keys = byFolder.keys.toList();
+    if (pin) {
+      bool needs(String k) =>
+          byFolder[k]!.any((s) => s.status == 'waiting_for_input');
+      keys = [...keys.where(needs), ...keys.where((k) => !needs(k))];
+    }
+    final labelCount = <String, int>{};
+    for (final k in keys) {
+      final l = projectLabel(byFolder[k]!.first);
+      labelCount[l] = (labelCount[l] ?? 0) + 1;
+    }
+    _chatsShownAt ??= DateTime.now();
+    final out = <Widget>[];
+    var n = 0;
+    for (final k in keys) {
       final rows = [
-        ...active,
-        ..._sortSessionsByRecency(list.where((s) => !activeIds.contains(s.id))),
+        for (var r = 0; r <= 2; r++)
+          ...byFolder[k]!.where((s) => rank(s) == r || (!pin && r == 0)),
       ];
-      final mobileChildren = <Widget>[];
-      _chatsShownAt ??= DateTime.now();
+      final first = rows.first;
+      var label = projectLabel(first);
+      if ((labelCount[label] ?? 0) > 1) label = _projectPath(first);
+      out.add(SessionGroupHeader(label));
       for (var i = 0; i < rows.length; i++) {
-        mobileChildren.add(Appear(
+        out.add(Appear(
           key: ValueKey('chat-${rows[i].id}'),
-          index: i,
+          index: n++,
           since: _chatsShownAt,
-          child: _mobileSessionRow(rows[i], divider: i + 1 < rows.length),
+          child: _listRow(rows[i], divider: kMobile && i + 1 < rows.length),
         ));
       }
-      if (mobileChildren.isEmpty && settledRows.isEmpty) {
-        mobileChildren
-            .add(_emptySessions(searching: _filterQuery.trim().isNotEmpty));
-      }
-      final refreshList = PullToRefresh(
-        onRefresh: () async => widget.onRefreshSessions(),
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-              M.gutter, 4, M.gutter, settledRows.isEmpty ? 120 : 16),
-          children: mobileChildren,
+    }
+    return out;
+  }
+
+  String _projectPath(SessionInfo s) {
+    final f = s.projectFolder.trim();
+    if (f.isEmpty) return 'No project';
+    final home = RegExp(r'^(/home/[^/]+|/Users/[^/]+)(?=/|$)').firstMatch(f);
+    final rest = home == null ? f : f.substring(home.end);
+    final parts = rest.split('/').where((e) => e.isNotEmpty).toList();
+    if (parts.isEmpty) return home == null ? '/' : '~';
+    final tail = parts.length > 3 ? parts.sublist(parts.length - 3) : parts;
+    final lead = parts.length > 3
+        ? '…/'
+        : home != null
+            ? '~/'
+            : f.startsWith('/')
+                ? '/'
+                : '';
+    return '$lead${tail.join('/')}';
+  }
+
+  Widget? _agentBadge(SessionInfo s) {
+    final agent = s.displayAgentId?.trim() ?? '';
+    if (agent.isNotEmpty) return AgentMochi(agent, size: 14);
+    final profile = s.profile ?? '';
+    if (profile.isEmpty) return null;
+    final provider = _profileProviders[profile];
+    if (provider != null) return ProviderLogo(provider, size: 14);
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 72),
+      child: Text(profile,
+          maxLines: 1, overflow: TextOverflow.ellipsis, style: TS.meta()),
+    );
+  }
+
+  Widget _listRow(SessionInfo s, {bool divider = false}) {
+    final renaming = _renamingId == s.id;
+    return SessionListRow(
+      session: s,
+      selected: !kMobile && s.id == widget.selectedSessionId,
+      selecting: _selecting,
+      checked: _selected.contains(s.id),
+      draft: !renaming && _hasDraft(s),
+      divider: divider,
+      renameField: renaming ? _inlineRenameField(s, compact: !kMobile) : null,
+      badge: _agentBadge(s),
+      onTap: renaming
+          ? null
+          : () => _selecting
+              ? _toggleSelected(s.id)
+              : widget.onOpenSession(s.id, s.title, s.profile),
+      onLongPress: renaming || !kMobile
+          ? null
+          : () => _selecting ? _toggleSelected(s.id) : _sessionActions(s),
+      onSecondaryTapDown: renaming || kMobile || _selecting
+          ? null
+          : (d) => _sessionActions(s, position: d.globalPosition),
+    );
+  }
+
+  /// Settled chats sit pinned under the list and open upward over it.
+  Widget _settledPinned(List<SessionInfo> rows) {
+    final open = _settledOpen || _filterQuery.trim().isNotEmpty;
+    final maxHeight = MediaQuery.sizeOf(context).height * (kMobile ? 0.5 : 0.4);
+    return AnimatedContainer(
+      duration: Motion.base,
+      margin: EdgeInsets.symmetric(horizontal: kMobile ? M.gutter : 4),
+      decoration: BoxDecoration(
+          border: Border(
+              top: BorderSide(
+                  color: open ? AppColors.line : Colors.transparent))),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        _settledHeader(rows, open: open),
+        Reveal(
+          show: open,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.only(bottom: 8),
+              children: [
+                for (var i = 0; i < rows.length; i++)
+                  _listRow(rows[i], divider: kMobile && i + 1 < rows.length),
+              ],
+            ),
+          ),
         ),
-      );
-      if (settledRows.isEmpty) return refreshList;
-      return LayoutBuilder(builder: (context, box) {
-        final panelMax = box.maxHeight.isFinite ? box.maxHeight * 0.5 : 320.0;
-        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Expanded(child: refreshList),
-          _mobileSettledPanel(settledRows, panelMax),
-        ]);
-      });
-    }
-    final children = <Widget>[];
-    if (mc.isNotEmpty) {
-      children.add(_missionControlPin(mc.first));
-    }
-    // Purely based on recency.
-    list.sort((a, b) => b.lastActive.compareTo(a.lastActive));
-    for (var i = 0; i < list.length; i++) {
-      if (kMobile) {
-        children.add(Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: _sessionCard(list[i])));
-      } else {
-        children.add(_desktopTreeRow(list[i], last: i == list.length - 1));
-      }
-    }
-    if (list.isEmpty && mc.isEmpty && settledRows.isEmpty) {
-      children.add(_emptySessions());
-    }
-    final listView = ListView(
-        padding: EdgeInsets.fromLTRB(
-            kMobile ? M.gutter : 14, 2, kMobile ? M.gutter : 14, 32),
-        children: children);
-    // Phones: the natural refresh gesture. Desktop keeps the header button.
-    if (!kMobile) return listView;
-    return PullToRefresh(
-      onRefresh: () async => widget.onRefreshSessions(),
-      child: listView,
+        if (kMobile) const SizedBox(height: 76),
+      ]),
     );
   }
 
@@ -912,15 +1002,7 @@ class SidebarState extends State<Sidebar> {
     final settledRows = split.settled;
     final mc = all.where((s) => isDedicatedMcSession(s.id)).firstOrNull;
     _chatsShownAt ??= DateTime.now();
-    final rows = <Widget>[];
-    for (var i = 0; i < list.length; i++) {
-      rows.add(Appear(
-        key: ValueKey('chat-${list[i].id}'),
-        index: i,
-        since: _chatsShownAt,
-        child: _desktopChatRow(list[i]),
-      ));
-    }
+    final rows = _groupedRows(list, attentionFirst: false);
     final mcSelected = mc != null && mc.id == widget.selectedSessionId;
     final mcWaiting = mc != null && mc.status == 'waiting_for_input';
     final crewLine = _crew.isEmpty
@@ -929,10 +1011,9 @@ class SidebarState extends State<Sidebar> {
             deriveCrew(_crew, widget.sessions ?? const <SessionInfo>[]));
     final mcBusy = mc != null &&
         (sessionIsActive(mc.status) || mc.status == 'waiting_for_input');
-    return LayoutBuilder(builder: (context, box) {
-      final panelMax = box.maxHeight.isFinite ? box.maxHeight * 0.55 : 360.0;
-      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (hasClient || _crew.isNotEmpty) ...[
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (hasClient || _crew.isNotEmpty) ...[
+        if (!agentRailShown(context))
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
             child: HoverSurface(
@@ -951,7 +1032,7 @@ class SidebarState extends State<Sidebar> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Mission Control',
-                            style: sans(13.5,
+                            style: sans(13,
                                 weight: W.label,
                                 color: mcSelected
                                     ? AppColors.fg1
@@ -986,774 +1067,75 @@ class SidebarState extends State<Sidebar> {
                       ],
                     ),
                   ),
-                  if (_crew.isNotEmpty)
-                    CrewStack(
-                      entries: deriveCrew(
-                          _crew, widget.sessions ?? const <SessionInfo>[]),
-                      onOpen: (a) => widget.onOpenAgent?.call(a),
-                      onMenu: (ctx, agent, point) async {
-                        final c = widget.client;
-                        if (c == null) return;
-                        await showCrewAgentMenu(ctx,
-                            client: c,
-                            agent: agent,
-                            point: point, onDeleted: () {
-                          _crewAt = null;
-                          _loadCrew();
-                        });
-                      },
-                      onNew: () async {
-                        await _openCreateAgent(context);
-                        _crewAt = null;
-                        _loadCrew();
-                      },
-                    )
-                  else
-                    const SizedBox(width: 6),
+                  const SizedBox(width: 6),
                 ]),
               ),
             ),
           ),
-          if (widget.onOpenPalette == null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
-              child: Container(
-                height: 32,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.surface1,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.line),
-                ),
-                child: Row(children: [
-                  AppIcon('search', size: 14, color: AppColors.fg4),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: _desktopChatsSearchCtl,
-                      focusNode: _desktopChatsSearchFocus,
-                      onChanged: (v) => setState(() => _filterQuery = v),
-                      style: sans(13, color: AppColors.fg1),
-                      decoration: InputDecoration(
-                        isCollapsed: true,
-                        border: InputBorder.none,
-                        hintText: 'Search chats',
-                        hintStyle: sans(13, color: AppColors.fg4),
-                      ),
-                    ),
-                  ),
-                  if (_desktopChatsSearchCtl.text.isNotEmpty)
-                    IconBtn('x', size: 20, iconSize: 10, tooltip: 'Clear',
-                        onTap: () {
-                      _desktopChatsSearchCtl.clear();
-                      setState(() => _filterQuery = '');
-                    }),
-                ]),
+        if (widget.onOpenPalette == null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
+            child: Container(
+              height: 32,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: AppColors.surface1,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.line),
               ),
-            ),
-        ],
-        Expanded(
-          child: PullToRefresh(
-            onRefresh: () async => widget.onRefreshSessions(),
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
-              children: [
-                if (!hasClient)
-                  const SidebarEmpty('Add a machine to begin.')
-                else if (list.isEmpty && settledRows.isEmpty)
-                  _emptySessions(searching: _filterQuery.trim().isNotEmpty)
-                else ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
-                    child: Text('Sessions',
-                        style: sans(12, weight: W.label, color: AppColors.fg4)),
+              child: Row(children: [
+                AppIcon('search', size: 14, color: AppColors.fg4),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _desktopChatsSearchCtl,
+                    focusNode: _desktopChatsSearchFocus,
+                    onChanged: (v) => setState(() => _filterQuery = v),
+                    style: sans(13, color: AppColors.fg1),
+                    decoration: InputDecoration(
+                      isCollapsed: true,
+                      border: InputBorder.none,
+                      hintText: 'Search chats',
+                      hintStyle: sans(13, color: AppColors.fg4),
+                    ),
                   ),
-                  ...rows,
-                ],
-              ],
-            ),
-          ),
-        ),
-        if (hasClient && settledRows.isNotEmpty)
-          _settledPanel(settledRows, panelMax),
-        Container(
-          decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.line))),
-          child: Column(children: [
-            if (widget.desktopFooter != null) widget.desktopFooter!,
-          ]),
-        ),
-      ]);
-    });
-  }
-
-  /// Phones: Settled pinned above the search bar, opening upward over the list.
-  Widget _mobileSettledPanel(List<SessionInfo> rows, double maxHeight) {
-    final open = _settledOpen || _filterQuery.trim().isNotEmpty;
-    return AnimatedContainer(
-      duration: Motion.base,
-      margin: const EdgeInsets.symmetric(horizontal: M.gutter),
-      decoration: BoxDecoration(
-          border: Border(
-              top: BorderSide(
-                  color: open ? AppColors.line : Colors.transparent))),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        _settledHeader(rows, mobile: true, open: open),
-        Reveal(
-          show: open,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                for (var i = 0; i < rows.length; i++)
-                  _mobileSessionRow(rows[i], divider: i + 1 < rows.length),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 76),
-      ]),
-    );
-  }
-
-  Widget _settledPanel(List<SessionInfo> rows, double maxHeight) {
-    final open = _settledOpen || _filterQuery.trim().isNotEmpty;
-    return AnimatedContainer(
-      duration: Motion.base,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-          border: Border(
-              top: BorderSide(
-                  color: open ? AppColors.line : Colors.transparent))),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        _settledHeader(rows, mobile: false, open: open),
-        Reveal(
-          show: open,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.only(bottom: 8),
-              children: [for (final r in rows) _desktopChatRow(r)],
-            ),
-          ),
-        ),
-      ]),
-    );
-  }
-
-  Widget _desktopChatRow(SessionInfo s) {
-    final selected = s.id == widget.selectedSessionId;
-    if (_renamingId == s.id) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        child: _inlineRenameField(s, compact: true),
-      );
-    }
-    final checked = _selected.contains(s.id);
-    final draft = _hasDraft(s);
-    final on = _selecting ? checked : selected;
-    return HoverSurface(
-      selected: on,
-      radius: 8,
-      onTap: _selecting
-          ? () => _toggleSelected(s.id)
-          : () => widget.onOpenSession(s.id, s.title, s.profile),
-      onSecondaryTapDown: _selecting
-          ? null
-          : (d) => _sessionActions(s, position: d.globalPosition),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 11, 10, 11),
-        child: Row(children: [
-          if (_selecting) ...[
-            SelectCheck(checked, size: 14),
-            const SizedBox(width: 10),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  height: 16,
-                  child: Row(children: [
-                    Expanded(
-                      child: Text(_projectPath(s),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(11.5, color: AppColors.fg4)),
-                    ),
-                    const SizedBox(width: 8),
-                    _statusChip(s, draft: draft, size: 12, plain: true),
-                  ]),
                 ),
-                SizedBox(
-                  height: 20,
-                  child: Row(children: [
-                    Expanded(
-                      child: Text(
-                          s.title.trim().isEmpty ? '(untitled)' : s.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(13.5,
-                              weight: W.label,
-                              color: selected ? AppColors.fg1 : AppColors.fg2)),
-                    ),
-                    if (s.keepAwake) ...[
-                      const SizedBox(width: 6),
-                      Tooltip(
-                          message: "Won't auto-settle",
-                          child:
-                              AppIcon('lock', size: 11, color: AppColors.fg4)),
-                    ],
-                  ]),
-                ),
-                SizedBox(
-                  height: 16,
-                  child: Row(children: [
-                    Expanded(
-                        child: _detailLine(s, size: 12) ??
-                            const SizedBox.shrink()),
-                    if (_profileProviders[s.profile] != null)
-                      ProviderLogo(_profileProviders[s.profile],
-                          size: 14),
-                  ]),
-                ),
-              ],
+                if (_desktopChatsSearchCtl.text.isNotEmpty)
+                  IconBtn('x', size: 20, iconSize: 10, tooltip: 'Clear',
+                      onTap: () {
+                    _desktopChatsSearchCtl.clear();
+                    setState(() => _filterQuery = '');
+                  }),
+              ]),
             ),
           ),
+      ],
+      Expanded(
+        child: PullToRefresh(
+          onRefresh: () async => widget.onRefreshSessions(),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
+            children: [
+              if (!hasClient)
+                const SidebarEmpty('Add a machine to begin.')
+              else if (list.isEmpty && settledRows.isEmpty)
+                _emptySessions(searching: _filterQuery.trim().isNotEmpty)
+              else
+                ...rows,
+            ],
+          ),
+        ),
+      ),
+      if (hasClient && settledRows.isNotEmpty) _settledPinned(settledRows),
+      Container(
+        decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: AppColors.line))),
+        child: Column(children: [
+          if (widget.desktopFooter != null) widget.desktopFooter!,
         ]),
       ),
-    );
-  }
-
-  String _projectPath(SessionInfo s) {
-    final f = s.projectFolder.trim();
-    if (f.isEmpty) return 'No project';
-    final home = RegExp(r'^(/home/[^/]+|/Users/[^/]+)(?=/|$)').firstMatch(f);
-    final rest = home == null ? f : f.substring(home.end);
-    final parts = rest.split('/').where((e) => e.isNotEmpty).toList();
-    if (parts.isEmpty) return home == null ? '/' : '~';
-    final tail = parts.length > 3 ? parts.sublist(parts.length - 3) : parts;
-    final lead = parts.length > 3
-        ? '…/'
-        : home != null
-            ? '~/'
-            : f.startsWith('/')
-                ? '/'
-                : '';
-    return '$lead${tail.join('/')}';
-  }
-
-  String _elapsed(int since) {
-    final secs = DateTime.now().millisecondsSinceEpoch ~/ 1000 - since;
-    if (secs < 60) return '${secs < 0 ? 0 : secs}s';
-    if (secs < 3600) return '${secs ~/ 60}m';
-    return '${secs ~/ 3600}h ${(secs % 3600) ~/ 60}m';
-  }
-
-  Widget _statusChip(SessionInfo s,
-      {required bool draft, required double size, bool plain = false}) {
-    final settled = s.settled;
-    final running = !settled && sessionIsActive(s.status);
-    final waiting = !settled && s.status == 'waiting_for_input';
-    final left = settled ? settledDaysLeft(s) : null;
-    final (String text, Color color, bool pill) = settled
-        ? (left == null ? 'Settled' : '${left}d left', AppColors.fg4, false)
-        : waiting
-            ? ('Input', AppColors.run, true)
-            : running
-                ? (
-                    s.runningSince != null
-                        ? 'Working ${_elapsed(s.runningSince!)}'
-                        : 'Working',
-                    AppColors.accent,
-                    true
-                  )
-                : draft
-                    ? ('Draft', AppColors.accent, false)
-                    : (relativeTime(s.lastActive), AppColors.fg4, false);
-    final label = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (running) ...[
-          SessionStateIcon(
-            status: 'running',
-            icon: 'activity',
-            size: size,
-            activeColor: color,
-          ),
-          const SizedBox(width: 4),
-        ] else if (waiting) ...[
-          AppIcon('alert-circle', size: size, color: color),
-          const SizedBox(width: 4),
-        ],
-        Text(text,
-            style: sans(size,
-                weight: pill ? W.label : W.body, color: color, tabular: true)),
-      ],
-    );
-    if (!pill || plain) return label;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1.5),
-      decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(99)),
-      child: label,
-    );
-  }
-
-  Widget? _detailLine(SessionInfo s, {required double size}) {
-    final branch = s.branch?.trim() ?? '';
-    final c = s.shownChanges;
-    final hasDiff = c != null && (c.added > 0 || c.removed > 0);
-    return Row(children: [
-      AppIcon(s.isGit ? 'git-branch' : 'folder',
-          size: size + 1, color: AppColors.fg4),
-      const SizedBox(width: 5),
-      if (!s.isGit)
-        Text('No git repo', style: sans(size, color: AppColors.fg4)),
-      if (branch.isNotEmpty)
-        Flexible(
-          child: Text(branch,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(size, color: AppColors.fg4)),
-        ),
-      if (hasDiff) ...[
-        const SizedBox(width: 8),
-        DiffCounts(s, size: size),
-      ],
     ]);
-  }
-
-  Widget _desktopTreeRow(SessionInfo s, {required bool last}) {
-    return _sessionRow(s);
-  }
-
-  Widget _missionControlPin(SessionInfo s) {
-    final selected = !kMobile && s.id == widget.selectedSessionId;
-    final waiting = s.status == 'waiting_for_input';
-    final running = s.status == 'running';
-    void open() => widget.onOpenSession(s.id, 'Mission Control', s.profile);
-    final status = running || waiting
-        ? Container(
-            width: kMobile ? 8 : 6,
-            height: kMobile ? 8 : 6,
-            decoration: BoxDecoration(
-              color: waiting ? AppColors.accent : AppColors.run,
-              shape: BoxShape.circle,
-            ),
-          )
-        : null;
-    if (kMobile) {
-      return Material(
-        color: selected ? AppColors.surface2 : Colors.transparent,
-        borderRadius: BorderRadius.circular(R.sm),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(R.sm),
-          onTap: open,
-          child: Container(
-            height: M.rowHeight,
-            padding: EdgeInsets.symmetric(horizontal: M.rowPadH),
-            child: Row(children: [
-              AppIcon('layers',
-                  size: 16, color: selected ? AppColors.accent : AppColors.fg3),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text('Mission Control',
-                    style: sans(kMobile ? M.rowTitle : 13,
-                        weight: W.label,
-                        color: selected ? AppColors.fg1 : AppColors.fg2)),
-              ),
-              if (status != null) status,
-            ]),
-          ),
-        ),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 2, 0, 6),
-      child: Material(
-        // Surface step, matching the mobile branch above AND every other
-        // selection in the shell. This one used `accentBg`, so the same pinned
-        // row changed colour with the window width and read as an alert on
-        // desktop — accent is reserved for state (running / needs-attention).
-        color: selected ? AppColors.surface2 : Colors.transparent,
-        borderRadius: BorderRadius.circular(R.sm),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(R.sm),
-          onTap: open,
-          child: Container(
-            height: 36,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(children: [
-              AppIcon('layers',
-                  size: 16, color: selected ? AppColors.fg1 : AppColors.fg3),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text('Mission Control',
-                    style: sans(13,
-                        weight: W.label,
-                        color: selected ? AppColors.fg1 : AppColors.fg2)),
-              ),
-              if (status != null) status,
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Desktop: flat native thread row — no card chrome, rounded hover, a status
-  // dot only when it means something (needs input / running).
-  Widget _sessionRow(SessionInfo s) {
-    final selected = s.id == widget.selectedSessionId;
-    final waiting = s.status == 'waiting_for_input';
-    final checked = _selected.contains(s.id);
-    final renaming = _renamingId == s.id;
-    final hovered = !kMobile && _hoveredId == s.id;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hoveredId = s.id),
-      onExit: (_) {
-        if (_hoveredId == s.id) setState(() => _hoveredId = null);
-      },
-      child: Material(
-        color: _selecting && checked
-            ? AppColors.accentBg
-            : (selected ? AppColors.surface2 : Colors.transparent),
-        borderRadius: BorderRadius.circular(R.sm),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(R.sm),
-          onTap: renaming
-              ? null
-              : () {
-                  if (_selecting) {
-                    _toggleSelected(s.id);
-                  } else {
-                    widget.onOpenSession(s.id, s.title, s.profile);
-                  }
-                },
-          onLongPress: renaming
-              ? null
-              : () {
-                  if (_selecting) {
-                    _toggleSelected(s.id);
-                  } else {
-                    _enterSelect(seed: s.id);
-                  }
-                },
-          // Right-click is the desktop way to reach a session's actions;
-          // phones use long-press (select) and the row's menu.
-          onSecondaryTapDown: (renaming || kMobile)
-              ? null
-              : (details) =>
-                  _sessionActions(s, position: details.globalPosition),
-          child: Container(
-            height: 36,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(children: [
-              if (_selecting) ...[
-                SelectCheck(checked, size: 16),
-                const SizedBox(width: S.s8),
-              ] else ...[
-                // Always present, so titles share one left edge; the colour is
-                // what carries state.
-                SessionStateIcon(status: s.status, size: 16),
-                const SizedBox(width: 8),
-              ],
-              Expanded(
-                  child: renaming
-                      ? _inlineRenameField(s, compact: true)
-                      : Text(s.title.isEmpty ? '(untitled)' : s.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(13,
-                              color:
-                                  selected ? AppColors.fg1 : AppColors.fg2))),
-              if (!renaming) ...[
-                if (hovered && !_selecting && !isDedicatedMcSession(s.id)) ...[
-                  const SizedBox(width: 4),
-                  Tooltip(
-                    message: 'Rename',
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(R.xs),
-                      onTap: () => _beginRename(s),
-                      child: Padding(
-                        padding: const EdgeInsets.all(3),
-                        child: AppIcon('edit', size: 12, color: AppColors.fg3),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 2),
-                  Tooltip(
-                    message: 'Delete',
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(R.xs),
-                      onTap: () => _confirmDeleteSessions([s]),
-                      child: Padding(
-                        padding: const EdgeInsets.all(3),
-                        child:
-                            AppIcon('trash', size: 12, color: AppColors.danger),
-                      ),
-                    ),
-                  ),
-                ] else if (_hasDraft(s)) ...[
-                  const SizedBox(width: 8),
-                  Text('draft', style: mono(10, color: AppColors.accent)),
-                ] else ...[
-                  const SizedBox(width: 8),
-                  Text(relativeTime(s.lastActive),
-                      // A timestamp is content, not a placeholder.
-                      style: mono(10,
-                          color: waiting ? AppColors.accent : AppColors.fg3)),
-                ],
-              ],
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _sessionCard(SessionInfo s, {bool divider = false}) {
-    if (kMobile) return _mobileSessionRow(s, divider: divider);
-    final checked = _selected.contains(s.id);
-    final renaming = _renamingId == s.id;
-    final selected = !kMobile && s.id == widget.selectedSessionId;
-    // The project, not the generated worktree directory.
-    final folderName = s.projectFolder.trim().isEmpty
-        ? ''
-        : lastPathSegment(s.projectFolder, ifEmpty: s.projectFolder);
-    final trailingText =
-        folderName.isNotEmpty ? folderName : relativeTime(s.lastActive);
-    final card = Material(
-      color: _selecting && checked
-          ? AppColors.accentBg
-          : (selected ? AppColors.surface2 : Colors.transparent),
-      borderRadius: BorderRadius.circular(R.md),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(R.md),
-        onTap: renaming
-            ? null
-            : () {
-                if (_selecting) {
-                  _toggleSelected(s.id);
-                } else {
-                  widget.onOpenSession(s.id, s.title, s.profile);
-                }
-              },
-        // Long-press opens this chat's actions rather than jumping straight into
-        // selection: the common intent is to rename or delete ONE chat, and bulk
-        // selection stays reachable from that same sheet.
-        onLongPress: renaming
-            ? null
-            : () {
-                if (_selecting) {
-                  _toggleSelected(s.id);
-                } else {
-                  _sessionActions(s);
-                }
-              },
-        child: SizedBox(
-          height: M.rowHeight,
-          child: AnimatedPadding(
-            duration: Motion.quick,
-            // While selecting, the tint is a surface: keep the check and the
-            // trailing text off its edges.
-            padding:
-                EdgeInsets.symmetric(horizontal: _selecting ? M.rowPadH : 0),
-            child:
-                Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-              if (_selecting) ...[
-                SelectCheck(checked, size: 20),
-                const SizedBox(width: S.s12),
-              ] else ...[
-                // The conversation glyph, tinted by run state (and pulsing while
-                // working).
-                SessionStateIcon(status: s.status, size: 16),
-                const SizedBox(width: 8),
-              ],
-              Expanded(
-                child: renaming
-                    ? _inlineRenameField(s, compact: false)
-                    : Text(
-                        s.title.isEmpty ? '(untitled)' : s.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(kMobile ? M.rowTitle : 13,
-                            color: selected ? AppColors.fg1 : AppColors.fg2),
-                      ),
-              ),
-              // No per-row overflow button. At this row height it crowded the
-              // title, and its glyph rendered as a dark blob rather than a
-              // control. The same actions live on long-press.
-              //
-              // Who is working in this session, inline. Rendered only when an
-              // agent is actually dispatched here, so an ordinary chat keeps the
-              // row's original spacing. Tinted by run state, like the desktop
-              // sidebar, so an agent merely assigned reads differently from one
-              // mid-turn.
-              if (s.displayAgentId != null &&
-                  s.displayAgentId!.trim().isNotEmpty) ...[
-                const SizedBox(width: 8),
-                AgentBadge(
-                  agentId: s.displayAgentId!,
-                  working: sessionIsActive(s.status),
-                ),
-              ],
-              // The gap is REQUIRED, not cosmetic: the title is `Expanded`, so a
-              // long one fills the full width and butts straight against the
-              // folder — the two run together with no separation.
-              if (!renaming && _hasDraft(s)) ...[
-                const SizedBox(width: 10),
-                Text('Draft',
-                    style:
-                        sans(M.meta, weight: W.label, color: AppColors.accent)),
-              ] else if (!renaming && trailingText.isNotEmpty) ...[
-                const SizedBox(width: 10),
-                if (s.inWorktree) ...[
-                  Tooltip(
-                    message: 'Worktree · ${s.branch ?? s.folder}',
-                    child:
-                        AppIcon('git-branch', size: 12, color: AppColors.fg3),
-                  ),
-                  const SizedBox(width: 4),
-                ],
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 130),
-                  child: Text(trailingText,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(M.meta, color: AppColors.fg3)),
-                ),
-              ],
-            ]),
-          ),
-        ),
-      ),
-    );
-    // A hairline gap while selecting, so adjacent checked rows read as
-    // separate chats rather than one block.
-    return AnimatedPadding(
-      duration: Motion.quick,
-      padding: EdgeInsets.only(bottom: _selecting ? 2 : 0),
-      child: card,
-    );
-  }
-
-  Widget _mobileSessionRow(SessionInfo s, {required bool divider}) {
-    final checked = _selected.contains(s.id);
-    final renaming = _renamingId == s.id;
-    final draft = !renaming && _hasDraft(s);
-    final settled = s.settled;
-    void open() {
-      if (_selecting) {
-        _toggleSelected(s.id);
-      } else {
-        widget.onOpenSession(s.id, s.title, s.profile);
-      }
-    }
-
-    return Material(
-      color: _selecting && checked ? AppColors.accentBg : Colors.transparent,
-      child: InkWell(
-        onTap: renaming ? null : open,
-        onLongPress: renaming
-            ? null
-            : () {
-                if (_selecting) {
-                  _toggleSelected(s.id);
-                } else {
-                  _sessionActions(s);
-                }
-              },
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(4, 13, 4, 13),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                  color: divider ? AppColors.line : Colors.transparent),
-            ),
-          ),
-          child: Row(children: [
-            if (_selecting) ...[
-              SelectCheck(checked, size: 20),
-              const SizedBox(width: 12),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(children: [
-                    Expanded(
-                      child: Text(_projectPath(s),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(14, color: AppColors.fg3)),
-                    ),
-                    const SizedBox(width: 10),
-                    _statusChip(s, draft: draft, size: 12.5),
-                  ]),
-                  const SizedBox(height: 6),
-                  Row(children: [
-                    Expanded(
-                      child: renaming
-                          ? _inlineRenameField(s, compact: false)
-                          : Text(s.title.isEmpty ? '(untitled)' : s.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: sans(16,
-                                  weight: W.strong,
-                                  height: 21 / 16,
-                                  color: AppColors.fg1)),
-                    ),
-                    if (s.keepAwake) ...[
-                      const SizedBox(width: 8),
-                      AppIcon('lock', size: 12, color: AppColors.fg4),
-                    ],
-                  ]),
-                  if (settled ||
-                      _detailLine(s, size: 13) != null ||
-                      (s.displayAgentId ?? '').trim().isNotEmpty ||
-                      (s.profile ?? '').isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Row(children: [
-                      Expanded(
-                        child: settled
-                            ? Text(
-                                settledMeta(s).replaceFirst('Settled · ', ''),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: sans(13, color: AppColors.fg4))
-                            : _detailLine(s, size: 13) ??
-                                const SizedBox.shrink(),
-                      ),
-                      if (s.displayAgentId != null &&
-                          s.displayAgentId!.trim().isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        AgentMochi(s.displayAgentId!, size: 14),
-                      ] else if ((s.profile ?? '').isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        if (_profileProviders[s.profile] != null)
-                          ProviderLogo(_profileProviders[s.profile],
-                              size: 15)
-                        else
-                          Text(s.profile!,
-                              style: sans(13, color: AppColors.fg3)),
-                      ],
-                    ]),
-                  ],
-                ],
-              ),
-            ),
-          ]),
-        ),
-      ),
-    );
   }
 
   // Long-press / right-click a session → rename or delete.
@@ -1789,31 +1171,33 @@ class SidebarState extends State<Sidebar> {
       }
       return;
     }
+    final project = lastPathSegment(s.folder);
     showAppSheet(context,
         title: s.title.isEmpty ? '(untitled)' : s.title,
+        subtitle: project.isEmpty ? 'Chat' : project,
         child: SheetActions([
-          SheetAction('check', 'Select', () {
-            Navigator.pop(context);
-            _enterSelect(seed: s.id);
-          }),
           SheetAction('edit', 'Rename', () {
             Navigator.pop(context);
             _beginRename(s);
-          }),
+          }, detail: 'Change the title'),
+          SheetAction('check', 'Select', () {
+            Navigator.pop(context);
+            _enterSelect(seed: s.id);
+          }, detail: 'Pick several to settle or delete'),
           if (s.settled)
             SheetAction('play', 'Wake', () {
               Navigator.pop(context);
               _setSettled(s, false);
-            })
+            }, detail: 'Bring it back to the list')
           else if (!sessionIsActive(s.status))
-            SheetAction('archive', 'Settle now', () {
+            SheetAction('archive', 'Settle', () {
               Navigator.pop(context);
               _setSettled(s, true);
-            }),
+            }, detail: 'Save its memory and park it'),
           SheetAction('trash', 'Delete', () {
             Navigator.pop(context);
             _confirmDeleteSessions([s]);
-          }, danger: true),
+          }, danger: true, detail: 'Remove this chat and its history'),
         ]));
   }
 

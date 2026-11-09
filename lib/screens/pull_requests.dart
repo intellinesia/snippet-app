@@ -295,7 +295,7 @@ class _PullRequestsScreenState extends State<PullRequestsScreen> {
   Widget _sectionHeader(String label, int count) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 6),
         child: Row(children: [
-          Text(label, style: sans(12.5, weight: W.label, color: AppColors.fg2)),
+          Text(label, style: sans(13, weight: W.label, color: AppColors.fg2)),
           const SizedBox(width: 6),
           Text('$count', style: TS.meta(AppColors.fg4)),
         ]),

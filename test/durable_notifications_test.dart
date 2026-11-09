@@ -155,7 +155,7 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.text('Other instance'), findsOneWidget);
-    await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
+    await tester.drag(find.byType(Dismissible), const Offset(0, -500));
     await tester.pumpAndSettle();
     expect(find.text('Queued'), findsNothing);
     expect(find.text('Other instance'), findsNothing);
@@ -411,7 +411,7 @@ void main() {
     await tester.pumpWidget(
         const MaterialApp(home: NotificationPopovers(child: Scaffold())));
     expect(find.text('Queued at startup'), findsOneWidget);
-    await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
+    await tester.drag(find.byType(Dismissible), const Offset(0, -500));
     await tester.pumpAndSettle();
     expect(find.text('Queued at startup'), findsNothing);
   });

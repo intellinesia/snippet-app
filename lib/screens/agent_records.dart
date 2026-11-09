@@ -3,12 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../swr.dart';
 import '../crew_widgets.dart';
-import '../mochi.dart';
+import '../media_views.dart' show DaemonScope;
 import '../models.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../pull_refresh.dart';
+import '../shell_panel.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'action_list.dart';
@@ -64,8 +67,37 @@ String _folder(String path) {
   return parts.length <= 2 ? parts.join('/') : parts.sublist(parts.length - 2).join('/');
 }
 
-/// An agent's Actions: a full page on a phone and a sheet on desktop, the way a
-/// session's are.
+void _presentRecords(BuildContext host, String title, String agentName,
+        Widget Function() view) =>
+    presentScreen(host,
+        style: PanelStyle.drawer,
+        maxWidth: 720,
+        maxHeight: 820,
+        builder: (_, close) => _RecordsPage(
+            title: title,
+            subtitle: agentName,
+            onClose: close,
+            child: view()));
+
+/// Entries that arrived since the inbox was last opened, as the inbox itself
+/// marks them. Capped at one page.
+Future<int> agentInboxUnread(DaemonClient client, String agentId) async {
+  final seen =
+      (await SharedPreferences.getInstance()).getInt('inbox_seen_$agentId') ?? 0;
+  if (seen <= 0) return 0;
+  final entries = await client.agentInbox(agentId, limit: _pageSize);
+  return entries.where((e) => e.id > seen && e.fromKind != 'human').length;
+}
+
+/// The inbox or board body, to sit inside another screen.
+Widget agentRecordsBody(DaemonClient client, String agentId, String agentName,
+        {required bool board}) =>
+    board
+        ? AgentBoardView(client: client, agentId: agentId, agentName: agentName)
+        : AgentInboxView(client: client, agentId: agentId, agentName: agentName);
+
+/// An agent's Actions: a full page on a phone. Desktop shows [AgentActions]
+/// in the shell's right panel instead.
 Future<void> openAgentActions(
   BuildContext context, {
   required DaemonClient client,
@@ -84,14 +116,13 @@ Future<void> openAgentActions(
               MobileBackBar(
                 title: agentName,
                 subtitle: 'Actions',
-                leading: AgentMochi(agentId, size: 24),
                 onBack: () => Navigator.of(page).pop(),
                 onTitleTap: () {},
               ),
               Expanded(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 28),
-                  child: _AgentActions(
+                  child: AgentActions(
                     client: client,
                     agentId: agentId,
                     agentName: agentName,
@@ -109,46 +140,42 @@ Future<void> openAgentActions(
       ),
     ));
   }
-  return showAppSheet<void>(
-    context,
-    title: 'Actions',
-    maxWidth: 420,
-    maxHeight: 680,
-    child: _AgentActions(
-      client: client,
-      agentId: agentId,
-      agentName: agentName,
-      host: context,
-      dismiss: () => Navigator.of(context).pop(),
-      onDeleted: onDeleted,
-    ),
-  );
+  return Future.value();
 }
 
-class _AgentActions extends StatefulWidget {
-  const _AgentActions({
+/// The agent's actions as rows. With [onAction] each row reports its name
+/// (`inbox`, `board`, `desk`, `memory`, `wakes`, `model`, `nickname`,
+/// `avatar`, `color`, `delete`) to the caller, which is how the desktop shell
+/// opens them inside its right panel. Without it a row opens its own screen
+/// from [host], as on a phone.
+class AgentActions extends StatefulWidget {
+  const AgentActions({
+    super.key,
     required this.client,
     required this.agentId,
     required this.agentName,
-    required this.host,
+    this.host,
     this.dismiss,
     this.onDeleted,
+    this.onAction,
   });
+
+  final ValueChanged<String>? onAction;
 
   final DaemonClient client;
   final String agentId;
   final String agentName;
 
   /// Where the chosen action opens. On desktop [dismiss] closes the sheet first.
-  final BuildContext host;
+  final BuildContext? host;
   final VoidCallback? dismiss;
   final VoidCallback? onDeleted;
 
   @override
-  State<_AgentActions> createState() => _AgentActionsState();
+  State<AgentActions> createState() => AgentActionsState();
 }
 
-class _AgentActionsState extends State<_AgentActions> {
+class AgentActionsState extends State<AgentActions> {
   CoordinationAgent? _agent;
 
   @override
@@ -161,22 +188,16 @@ class _AgentActionsState extends State<_AgentActions> {
     }).catchError((_) {});
   }
 
-  void _run(void Function(BuildContext) action) {
+  void _run(void Function(BuildContext) action, [String? name]) {
+    final report = widget.onAction;
+    if (report != null && name != null) return report(name);
     widget.dismiss?.call();
-    action(widget.host);
+    action(widget.host!);
   }
 
-  void _openRecords(String title, Widget Function() view) => _run((host) {
-        presentScreen(host,
-            style: PanelStyle.drawer,
-            maxWidth: 720,
-            maxHeight: 820,
-            builder: (_, close) => _RecordsPage(
-                title: title,
-                subtitle: widget.agentName,
-                onClose: close,
-                child: view()));
-      });
+  void _openRecords(String name, String title, Widget Function() view) =>
+      _run((host) => _presentRecords(host, title, widget.agentName, view),
+          name);
 
   ActionRow _setting(
       String action, String icon, String label, String detail,
@@ -187,12 +208,14 @@ class _AgentActionsState extends State<_AgentActions> {
       label: label,
       detail: detail,
       danger: danger,
-      onTap: agent == null
+      onTap: agent == null && widget.onAction == null
           ? null
-          : () => _run((host) => runCrewAgentAction(host, action,
-              client: widget.client,
-              agent: agent,
-              onDeleted: action == 'delete' ? widget.onDeleted : null)),
+          : () => _run(
+              (host) => runCrewAgentAction(host, action,
+                  client: widget.client,
+                  agent: agent!,
+                  onDeleted: action == 'delete' ? widget.onDeleted : null),
+              action),
     );
   }
 
@@ -201,31 +224,35 @@ class _AgentActionsState extends State<_AgentActions> {
     final client = widget.client;
     final id = widget.agentId;
     final name = widget.agentName;
+    // In the desktop shell the header switcher covers Inbox and Board, and
+    // naming and looks belong to the agent list, not the agent's own screen.
+    final inShell = widget.onAction != null;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ActionGroup(label: 'Work', rows: [
-          ActionRow(
+          if (!inShell) ActionRow(
             icon: 'inbox',
             label: 'Inbox',
             detail: 'Everything sent to this agent',
-            onTap: () => _openRecords('Inbox',
+            onTap: () => _openRecords('inbox', 'Inbox',
                 () => AgentInboxView(client: client, agentId: id, agentName: name)),
           ),
-          ActionRow(
+          if (!inShell) ActionRow(
             icon: 'clipboard',
             label: 'Board',
             detail: 'What it dispatched, reported and noted',
-            onTap: () => _openRecords('Board',
+            onTap: () => _openRecords('board', 'Board',
                 () => AgentBoardView(client: client, agentId: id, agentName: name)),
           ),
           ActionRow(
             icon: 'terminal',
             label: 'Desk session',
             detail: 'The conversation where its mail arrives',
-            onTap: () => _run((host) =>
-                _openSession(host, client, 'inbox-$id', '$name desk')),
+            onTap: () => _run(
+                (host) => _openSession(host, client, 'inbox-$id', '$name desk'),
+                'desk'),
           ),
         ]),
         ActionGroup(label: 'Agent', rows: [
@@ -233,18 +260,23 @@ class _AgentActionsState extends State<_AgentActions> {
             icon: kMobile ? 'book-marked' : 'brain',
             label: 'Memory',
             detail: 'What this agent remembers',
-            onTap: () => _run((host) => presentScreen(host,
-                builder: (_, close) => MemoryScreen(
-                    client: client,
-                    embedded: true,
-                    onBack: close,
-                    initialKey: 'agent:$id'))),
+            onTap: () => _run(
+                (host) => presentScreen(host,
+                    builder: (_, close) => MemoryScreen(
+                        client: client,
+                        embedded: true,
+                        onBack: close,
+                        initialKey: 'agent:$id')),
+                'memory'),
           ),
           _setting('wakes', 'calendar-clock', 'Wakes and reporting',
               'When it wakes and who it tells'),
           _setting('model', 'cpu', 'Inference profile', 'The model it runs on'),
-          _setting('nickname', 'edit', 'Nickname', 'What it is called here'),
-          _setting('color', 'sparkles', 'Colour', 'Its colour across the app'),
+          if (!inShell) ...[
+            _setting('nickname', 'edit', 'Nickname', 'What it is called here'),
+            _setting('avatar', 'user', 'Avatar', 'Its face across the app'),
+            _setting('color', 'sparkles', 'Colour', 'Its colour across the app'),
+          ],
           _setting('delete', 'trash', 'Delete agent',
               'Removes its identity and notes',
               danger: true),
@@ -320,8 +352,13 @@ class _RecordList<T> extends StatefulWidget {
     required this.timeOf,
     required this.row,
     required this.empty,
+    required this.client,
+    required this.liveOn,
     this.groupedFilters = const {},
   });
+
+  final DaemonClient client;
+  final SwrTrigger liveOn;
 
   /// Filters whose rows stand for groups: a group's newest row changes, so a
   /// poll replaces the list rather than prepending to it.
@@ -342,7 +379,7 @@ class _RecordListState<T> extends State<_RecordList<T>> {
   final _search = TextEditingController();
   final _scroll = ScrollController();
   Timer? _debounce;
-  Timer? _poll;
+  Revalidator? _live;
   List<T> _items = [];
   String? _filter;
   String? _error;
@@ -361,13 +398,17 @@ class _RecordListState<T> extends State<_RecordList<T>> {
     super.initState();
     _scroll.addListener(_nearEnd);
     _reload();
-    _poll = Timer.periodic(const Duration(seconds: 30), (_) => _pollHead());
+    _live = Revalidator(
+        client: widget.client,
+        on: widget.liveOn,
+        debounce: const Duration(seconds: 1),
+        onRevalidate: ({required bool force}) => _pollHead());
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
-    _poll?.cancel();
+    _live?.dispose();
     _scroll.dispose();
     _search.dispose();
     super.dispose();
@@ -469,7 +510,7 @@ class _RecordListState<T> extends State<_RecordList<T>> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    final content = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
         padding: EdgeInsets.fromLTRB(_gutter, kMobile ? 12 : 10, _gutter, 8),
         child: ListSearchField(
@@ -492,6 +533,12 @@ class _RecordListState<T> extends State<_RecordList<T>> {
       ),
       Expanded(child: _list()),
     ]);
+    if (kMobile) return content;
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720), child: content),
+    );
   }
 
   Widget _list() {
@@ -573,7 +620,7 @@ class _FilterChip extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: kMobile ? 12 : 8),
             alignment: Alignment.center,
             child: Text(label,
-                style: sans(kMobile ? 13.5 : 12,
+                style: sans(kMobile ? 13 : 12,
                     weight: W.label,
                     color: selected ? AppColors.fg1 : AppColors.fg3)),
           ),
@@ -642,39 +689,72 @@ class _StateTag extends StatelessWidget {
       );
 }
 
-/// One tappable record: a heading line with its time, then the content.
+/// One tappable record: a heading line with its time beside it, then the
+/// content. An unread row gets a dot and a stronger title.
 class _RecordRow extends StatelessWidget {
   const _RecordRow(
       {required this.leading,
       required this.time,
       required this.child,
-      required this.onTap});
+      required this.onTap,
+      this.unread = false,
+      this.selected = false});
 
   final Widget leading;
   final String time;
   final Widget child;
   final VoidCallback onTap;
+  final bool unread;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
     final t = _time(time);
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-            horizontal: _gutter, vertical: kMobile ? 10 : 7),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            Expanded(child: leading),
-            if (t != null) ...[
-              const SizedBox(width: 8),
-              Text(_clock(t),
-                  style: sans(_meta, color: AppColors.fg3, tabular: true)),
-            ],
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: kMobile ? 0 : 6),
+      child: Material(
+        color: selected ? AppColors.surface2 : Colors.transparent,
+        borderRadius: BorderRadius.circular(kMobile ? 0 : R.md),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          hoverColor: AppColors.surface1,
+          child: Stack(children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                  _gutter + (kMobile ? 12 : 12), kMobile ? 10 : 8,
+                  _gutter, kMobile ? 10 : 8),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(children: [
+                      Flexible(child: leading),
+                      if (t != null) ...[
+                        const SizedBox(width: 8),
+                        Text(_clock(t),
+                            style: TS.meta(AppColors.fg3).copyWith(
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures()
+                                ])),
+                      ],
+                    ]),
+                    const SizedBox(height: 2),
+                    child,
+                  ]),
+            ),
+            if (unread)
+              Positioned(
+                left: _gutter - (kMobile ? 0 : 2),
+                top: kMobile ? 17 : 14,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                      color: AppColors.accent, shape: BoxShape.circle),
+                ),
+              ),
           ]),
-          const SizedBox(height: 3),
-          child,
-        ]),
+        ),
       ),
     );
   }
@@ -688,45 +768,127 @@ Future<void> _showRecord(
   String? heading,
   List<Widget> extra = const [],
   List<(String, VoidCallback)> actions = const [],
-}) =>
-    showAppSheet<void>(
-      context,
+}) {
+  Widget body(VoidCallback dismiss) => _recordBody(
+      meta: meta,
+      text: text,
+      heading: heading,
+      extra: extra,
+      actions: actions,
+      dismiss: dismiss);
+  if (!kMobile) {
+    // Already in the right panel: a page of the panel's own navigator.
+    if (ShellPanelRoot.inPanel(context)) {
+      return Navigator.of(context).push<void>(PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 160),
+        reverseTransitionDuration: const Duration(milliseconds: 120),
+        pageBuilder: (page, _, __) => _RecordDetailPage(
+            title: title, child: body(() => Navigator.of(page).pop())),
+        transitionsBuilder: (_, a, __, child) => FadeTransition(
+            opacity: CurvedAnimation(parent: a, curve: Curves.easeOut),
+            child: child),
+      ));
+    }
+    final host = ShellPanelScope.maybeOf(context);
+    if (host != null) {
+      return host
+          .open(ShellPanelRequest(
+            purpose: ShellPanelPurpose.generic,
+            id: 'record:$title:$meta',
+            client: DaemonScope.maybeOf(context) ?? host.client,
+            sessionId: host.sessionId,
+            title: title,
+            builder: (_, close) => SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
+                child: body(close)),
+          ))
+          .then((_) {});
+    }
+  }
+  return showAppSheet<void>(context,
       title: title,
       maxWidth: 620,
       maxHeight: 680,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(meta, style: sans(_meta, color: AppColors.fg3)),
-          const SizedBox(height: 10),
-          if (heading != null && heading.isNotEmpty) ...[
-            Text(heading,
-                style: sans(_title,
-                    weight: W.label, color: AppColors.fg1, height: 1.35)),
-            const SizedBox(height: 8),
-          ],
-          if (text.trim().isNotEmpty)
-            CardMarkdownBody(body: text, collapsible: false),
-          ...extra,
-          if (actions.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Wrap(alignment: WrapAlignment.end, spacing: 8, children: [
-                for (final (label, run) in actions)
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      run();
-                    },
-                    child: Text(label,
-                        style: sans(_body, color: AppColors.accent)),
-                  ),
-              ]),
-            ),
+      child: body(() => Navigator.of(context).pop()));
+}
+
+Widget _recordBody({
+  required String meta,
+  required String text,
+  String? heading,
+  List<Widget> extra = const [],
+  List<(String, VoidCallback)> actions = const [],
+  required VoidCallback dismiss,
+}) =>
+    Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(meta, style: sans(_meta, color: AppColors.fg3)),
+        const SizedBox(height: 10),
+        if (heading != null && heading.isNotEmpty) ...[
+          Text(heading,
+              style: sans(_title,
+                  weight: W.label, color: AppColors.fg1, height: 1.35)),
+          const SizedBox(height: 8),
         ],
-      ),
+        if (text.trim().isNotEmpty)
+          CardMarkdownBody(body: text, collapsible: false),
+        ...extra,
+        if (actions.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Wrap(alignment: WrapAlignment.end, spacing: 8, children: [
+              for (final (label, run) in actions)
+                TextButton(
+                  onPressed: () {
+                    dismiss();
+                    run();
+                  },
+                  child:
+                      Text(label, style: sans(_body, color: AppColors.accent)),
+                ),
+            ]),
+          ),
+      ],
     );
+
+class _RecordDetailPage extends StatelessWidget {
+  const _RecordDetailPage({required this.title, required this.child});
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: AppColors.bg,
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Row(children: [
+              IconBtn('arrow-left',
+                  size: 28,
+                  iconSize: 15,
+                  tooltip: 'Back',
+                  onTap: () => Navigator.of(context).maybePop()),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, weight: W.label, color: AppColors.fg1)),
+              ),
+            ]),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(14, 4, 14, 16),
+                child: child),
+          ),
+        ]),
+      );
+}
 
 String _fullTime(String raw) {
   final t = _time(raw);
@@ -734,6 +896,11 @@ String _fullTime(String raw) {
 }
 
 void _openSession(BuildContext context, DaemonClient client, String id, String title) {
+  final tab = openSessionInTab;
+  if (!kMobile && tab != null) {
+    tab(client, id, title);
+    return;
+  }
   presentScreen(context,
       builder: (_, close) => SessionScreen(
           client: client, sessionId: id, title: title, onMenu: close));
@@ -755,10 +922,29 @@ class AgentInboxView extends StatefulWidget {
 
 class _AgentInboxViewState extends State<AgentInboxView> {
   Map<String, String> _names = const {};
+  int? _seenUpTo;
+  int _newest = 0;
+  int? _selectedId;
+  final _opened = <int>{};
+
+  String get _seenKey => 'inbox_seen_${widget.agentId}';
+
+  @override
+  void dispose() {
+    if (_newest > 0) {
+      SharedPreferences.getInstance()
+          .then((p) => p.setInt(_seenKey, _newest))
+          .catchError((_) => false);
+    }
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
+    SharedPreferences.getInstance().then((p) {
+      if (mounted) setState(() => _seenUpTo = p.getInt(_seenKey) ?? 0);
+    }).catchError((_) {});
     widget.client.coordinationAgents().then((agents) {
       if (!mounted) return;
       setState(() => _names = {
@@ -792,9 +978,20 @@ class _AgentInboxViewState extends State<AgentInboxView> {
     return (words[0].toUpperCase() + words.substring(1), AppColors.fg3);
   }
 
-  void _open(InboxEntry e) {
+  bool _unread(InboxEntry e) =>
+      _seenUpTo != null &&
+      _seenUpTo! > 0 &&
+      e.id > _seenUpTo! &&
+      !_opened.contains(e.id) &&
+      e.fromKind != 'human';
+
+  Future<void> _open(InboxEntry e) async {
     final task = e.taskId;
-    _showRecord(
+    setState(() {
+      _opened.add(e.id);
+      _selectedId = e.id;
+    });
+    await _showRecord(
       context,
       title: _sender(e),
       meta: [_tag(e)?.$1, _fullTime(e.createdAt)].nonNulls.join(' · '),
@@ -805,21 +1002,28 @@ class _AgentInboxViewState extends State<AgentInboxView> {
           ('Open task', () => openTaskDetail(context, widget.client, task)),
       ],
     );
+    if (mounted) setState(() => _selectedId = null);
   }
 
   Widget _row(InboxEntry e) {
     final tag = _tag(e);
     final title = e.title;
     final preview = _plain(e.text);
+    if (e.id > _newest) _newest = e.id;
+    final unread = _unread(e);
     return _RecordRow(
       time: e.createdAt,
+      unread: unread,
+      selected: _selectedId == e.id,
       onTap: () => _open(e),
-      leading: Row(children: [
+      leading: Row(mainAxisSize: MainAxisSize.min, children: [
         Flexible(
           child: Text(_sender(e),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: sans(_title, weight: W.label, color: AppColors.fg1)),
+              style: unread
+                  ? TS.rowTitle(AppColors.fg1)
+                  : TS.rowTitle(AppColors.fg2).copyWith(fontWeight: W.body)),
         ),
         if (tag != null) ...[
           const SizedBox(width: 8),
@@ -831,12 +1035,12 @@ class _AgentInboxViewState extends State<AgentInboxView> {
           Text(title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: sans(_body, color: AppColors.fg2, height: 1.4)),
+              style: TS.ui(AppColors.fg2)),
         if (preview.isNotEmpty)
           Text(preview,
               maxLines: title == null || title.isEmpty ? 3 : 2,
               overflow: TextOverflow.ellipsis,
-              style: sans(_body, color: AppColors.fg3, height: 1.4)),
+              style: TS.ui(AppColors.fg3)),
       ]),
     );
   }
@@ -844,6 +1048,8 @@ class _AgentInboxViewState extends State<AgentInboxView> {
   @override
   Widget build(BuildContext context) {
     return _RecordList<InboxEntry>(
+      client: widget.client,
+      liveOn: Swr.coordination,
       hint: 'Search everything sent to ${widget.agentName}',
       filters: const [
         ('All', null),
@@ -1031,7 +1237,7 @@ class _AgentBoardViewState extends State<AgentBoardView> {
     return _RecordRow(
       time: e.createdAt,
       onTap: () => _openGroup(e, byFolder: byFolder),
-      leading: Row(children: [
+      leading: Row(mainAxisSize: MainAxisSize.min, children: [
         AppIcon(byFolder ? 'folder' : 'file-text',
             size: kMobile ? 15 : 13, color: AppColors.fg2),
         const SizedBox(width: 6),
@@ -1066,7 +1272,7 @@ class _AgentBoardViewState extends State<AgentBoardView> {
     return _RecordRow(
       time: e.createdAt,
       onTap: () => _open(e),
-      leading: Row(children: [
+      leading: Row(mainAxisSize: MainAxisSize.min, children: [
         AppIcon(look.$1, size: kMobile ? 15 : 13, color: look.$3),
         const SizedBox(width: 6),
         Text(look.$2,
@@ -1099,6 +1305,9 @@ class _AgentBoardViewState extends State<AgentBoardView> {
   @override
   Widget build(BuildContext context) {
     return _RecordList<BoardEntry>(
+      client: widget.client,
+      liveOn: (e) =>
+          e['kind'] == 'agent_board' && e['agent'] == widget.agentId,
       hint: "Search ${widget.agentName}'s work",
       groupedFilters: const {'by-task', 'by-folder'},
       filters: const [

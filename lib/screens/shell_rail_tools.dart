@@ -60,8 +60,49 @@ List<Widget> buildShellRailTools({
   required void Function(RightPanel panel) onToggleRightPanel,
   required void Function(String action, [String? extra]) onSessionAction,
   required void Function(BuildContext ctx) onOpenGoalPopover,
+  void Function(String action)? onAgentAction,
 }) {
   final tab = activeTab;
+  if (tab != null && tab.readout?.isAgent == true && onAgentAction != null) {
+    return [
+      Builder(
+        builder: (ctx) => RailIcon(
+          icon: 'more-horizontal',
+          tooltip: 'Agent actions',
+          onTap: () async {
+            final picked = await showAppMenu<String>(
+              ctx,
+              anchor: ctx,
+              below: true,
+              alignEnd: true,
+              minWidth: 220,
+              maxWidth: 280,
+              items: [
+                appMenuItem(value: 'inbox', icon: 'inbox', label: 'Inbox'),
+                appMenuItem(value: 'board', icon: 'clipboard', label: 'Board'),
+                appMenuItem(
+                    value: 'desk', icon: 'terminal', label: 'Desk session'),
+                appMenuItem(value: 'memory', icon: 'brain', label: 'Memory'),
+                appMenuHeading<String>('Agent'),
+                appMenuItem(
+                    value: 'wakes',
+                    icon: 'calendar-clock',
+                    label: 'Wakes and reporting'),
+                appMenuItem(
+                    value: 'model', icon: 'cpu', label: 'Inference profile'),
+                appMenuItem(
+                    value: 'delete',
+                    icon: 'trash',
+                    label: 'Delete agent',
+                    danger: true),
+              ],
+            );
+            if (picked != null) onAgentAction(picked);
+          },
+        ),
+      ),
+    ];
+  }
   final mc = tab?.isMissionControl ?? false;
   final s = macSessionStatus?.state;
   final goalRunning = s?.goal?.ongoing ?? false;
@@ -106,22 +147,16 @@ List<Widget> buildShellRailTools({
       );
 
   Future<void> openMenu(BuildContext ctx) async {
-    final box = ctx.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final o = box.localToGlobal(Offset(0, box.size.height + 6));
-    final screen = MediaQuery.sizeOf(ctx);
     PopupMenuItem<VoidCallback> item(String icon, String label, VoidCallback fn,
             {String? detail}) =>
         appMenuItem(value: fn, icon: icon, label: label, detail: detail);
-    final fn = await showMenu<VoidCallback>(
-      context: ctx,
-      color: AppColors.surface1,
-      elevation: 0,
-      shape: appMenuShape,
-      constraints: const BoxConstraints(minWidth: 260, maxWidth: 280),
-      menuPadding: const EdgeInsets.symmetric(vertical: 6),
-      position: RelativeRect.fromLTRB(
-          o.dx + box.size.width - 280, o.dy, screen.width - o.dx - box.size.width, 0),
+    final fn = await showAppMenu<VoidCallback>(
+      ctx,
+      anchor: ctx,
+      below: true,
+      alignEnd: true,
+      minWidth: 260,
+      maxWidth: 280,
       items: [
         if (win > 0 && used > 0) ...[
           PopupMenuItem<VoidCallback>(
@@ -134,10 +169,8 @@ List<Widget> buildShellRailTools({
                   children: [
                     Row(children: [
                       Expanded(
-                          child: Text('Context',
-                              style: sans(12.5, color: AppColors.fg2))),
-                      Text('${k(used)} / ${k(win)}',
-                          style: mono(11, color: AppColors.fg4)),
+                          child: Text('Context', style: TS.ui())),
+                      Text('${k(used)} / ${k(win)}', style: TS.meta()),
                     ]),
                     const SizedBox(height: 10),
                     Row(
@@ -178,8 +211,7 @@ List<Widget> buildShellRailTools({
                       height: 30,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       alignment: Alignment.center,
-                      child: Text('Compact now',
-                          style: sans(12.5, color: AppColors.fg1)),
+                      child: Text('Compact now', style: TS.ui(AppColors.fg1)),
                     ),
                   ),
                 ),
@@ -233,7 +265,7 @@ List<Widget> buildShellRailTools({
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             dots(8, 4, 2),
             const SizedBox(width: 4),
-            Text(k(used), style: sans(12, color: AppColors.fg4)),
+            Text(k(used), style: TS.caption()),
           ]),
         ),
       ),

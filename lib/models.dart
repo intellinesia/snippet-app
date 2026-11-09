@@ -525,19 +525,12 @@ class UsageProvider {
     for (final item in raw) {
       if (item is! Map) continue;
       final snapshot = item.cast<String, dynamic>();
-      // The service returns snapshots shaped as {primary, secondary}; accept
-      // both that wire shape and a direct window for backward compatibility.
-      final nested = <dynamic>[snapshot['primary'], snapshot['secondary']];
-      final windows = nested.whereType<Map>();
-      if (windows.isEmpty) {
-        final window = RateWindow.fromJson(snapshot);
+      final windows = <dynamic>[snapshot['primary'], snapshot['secondary']]
+          .whereType<Map>();
+      for (final value in windows) {
+        final window = RateWindow.fromJson(value.cast<String, dynamic>(),
+            label: snapshot['label'] as String?);
         if (window.isReported) out.add(window);
-      } else {
-        for (final value in windows) {
-          final window = RateWindow.fromJson(value.cast<String, dynamic>(),
-              label: snapshot['label'] as String?);
-          if (window.isReported) out.add(window);
-        }
       }
     }
     return out;
@@ -670,13 +663,9 @@ class HarnessState {
       return out;
     }
 
-    final legacyRequest = asString(j['user_request']);
     final rawTitle = asString(j['title']);
-    final title = (rawTitle != null && rawTitle.trim().isNotEmpty)
-        ? rawTitle
-        : ((legacyRequest != null && legacyRequest.trim().isNotEmpty)
-            ? legacyRequest
-            : null);
+    final title =
+        (rawTitle != null && rawTitle.trim().isNotEmpty) ? rawTitle : null;
     return HarnessState(
       status: asString(j['status']) ?? 'idle',
       workspace: asString(j['workspace']) ?? '',
@@ -834,6 +823,9 @@ class LaneInfo {
   final String? agent;
   final bool readOnly;
   final String? profile;
+
+  /// Set when the snapshot trimmed this lane; the full lane lives in this session.
+  final String? trimmedIn;
   LaneInfo({
     required this.id,
     required this.title,
@@ -851,6 +843,7 @@ class LaneInfo {
     this.agent,
     this.readOnly = false,
     this.profile,
+    this.trimmedIn,
   });
   factory LaneInfo.fromJson(Map<String, dynamic> j) {
     String s(dynamic v) {
@@ -891,6 +884,7 @@ class LaneInfo {
       agent: opt(j['agent']),
       readOnly: j['read_only'] == true,
       profile: opt(j['profile']),
+      trimmedIn: j['trimmed'] == true ? opt(j['session']) : null,
     );
   }
   bool get running => status == 'running';
@@ -1037,16 +1031,6 @@ class GitStatus {
   List<GitFile> get untracked => files.where((f) => f.untracked).toList();
 }
 
-class GitCommit {
-  final String hash, short, author, date, subject;
-  GitCommit.fromJson(Map<String, dynamic> j)
-      : hash = j['hash'] as String? ?? '',
-        short = j['short'] as String? ?? '',
-        author = j['author'] as String? ?? '',
-        date = j['date'] as String? ?? '',
-        subject = j['subject'] as String? ?? '';
-}
-
 // ---- Mission Control ----
 
 /// Summary dashboard returned by GET /mission-control/overview.
@@ -1102,6 +1086,25 @@ class NotificationMarker {
         delivered = j['delivered'] as bool? ?? false;
 }
 
+class AgentLastMessage {
+  const AgentLastMessage({required this.text, required this.fromUser, this.at});
+
+  final String text;
+  final bool fromUser;
+  final DateTime? at;
+
+  static AgentLastMessage? tryParse(Object? j) {
+    if (j is! Map) return null;
+    final text = '${j['text'] ?? ''}'.trim();
+    if (text.isEmpty) return null;
+    return AgentLastMessage(
+      text: text,
+      fromUser: j['from'] == 'user',
+      at: DateTime.tryParse('${j['at'] ?? ''}'),
+    );
+  }
+}
+
 /// A specialized worker identity in the SQLite coordination directory.
 class CoordinationAgent {
   final String id;
@@ -1110,8 +1113,11 @@ class CoordinationAgent {
   final String handle;
   final String kind;
   final String status;
-  final String role;
   final List<String> capabilities;
+
+  /// The newest message to or from this agent, across its direct thread and
+  /// sessions. Null when there is none or the daemon predates it.
+  final AgentLastMessage? lastMessage;
 
   /// What the UI shows: the nickname when one is set, else the name.
   String get displayName => nickname ?? fullName;
@@ -1127,6 +1133,9 @@ class CoordinationAgent {
   /// uses the session's own model.
   final String? profile;
 
+  /// The profile its desk is running on right now, when the desk is live.
+  final String? deskProfile;
+
   /// Per-agent ceiling before compaction; null follows the model's window.
   final int? maxContextTokens;
 
@@ -1137,6 +1146,7 @@ class CoordinationAgent {
         profile = (j['profile'] as String?)?.trim().isEmpty ?? true
             ? null
             : (j['profile'] as String).trim(),
+        deskProfile = j['desk_profile'] as String?,
         maxContextTokens = switch (j['max_context_tokens']) {
           final num n when n > 0 => n.toInt(),
           _ => null,
@@ -1148,10 +1158,10 @@ class CoordinationAgent {
         handle = j['handle'] as String? ?? '',
         kind = j['kind'] as String? ?? 'worker',
         status = j['status'] as String? ?? 'active',
-        role = j['role'] as String? ?? 'implementer',
         capabilities = ((j['capabilities'] as List?) ?? const [])
             .whereType<String>()
             .toList(),
+        lastMessage = AgentLastMessage.tryParse(j['last_message']),
         taskCounts = j['task_counts'] is Map
             ? {
                 for (final e in (j['task_counts'] as Map).entries)
@@ -1921,20 +1931,6 @@ class RecordingPolicy {
           for (final r in (j['recordings'] as List?) ?? [])
             RecordingEntry.fromJson((r as Map).cast<String, dynamic>())
         ];
-}
-
-class AmbientStats {
-  final int segments;
-  final int audioSeconds;
-  final Map<String, int> byStatus;
-
-  AmbientStats.fromJson(Map<String, dynamic> j)
-      : segments = (j['segments'] as num?)?.toInt() ?? 0,
-        audioSeconds = (j['audio_seconds'] as num?)?.toInt() ?? 0,
-        byStatus = {
-          for (final e in ((j['by_status'] as Map?) ?? {}).entries)
-            e.key as String: (e.value as num).toInt()
-        };
 }
 
 class AmbientDevice {
