@@ -53,17 +53,25 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
   void initState() {
     super.initState();
     _load();
-    _live = Revalidator(
-        client: widget.client,
-        on: (e) => Swr.coordination(e) || e['kind'] == 'recurring',
-        debounce: const Duration(seconds: 1),
-        onRevalidate: ({required bool force}) => _load());
+    _bindLive();
   }
 
   @override
   void didUpdateWidget(MissionBoardPanel old) {
     super.didUpdateWidget(old);
-    if (old.client != widget.client) _load();
+    if (old.client != widget.client) {
+      _bindLive();
+      _load();
+    }
+  }
+
+  void _bindLive() {
+    _live?.dispose();
+    _live = Revalidator(
+        client: widget.client,
+        on: (e) => Swr.coordination(e) || e['kind'] == 'recurring',
+        debounce: const Duration(seconds: 1),
+        onRevalidate: ({required bool force}) => _load());
   }
 
   @override

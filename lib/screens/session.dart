@@ -1015,6 +1015,9 @@ class _SessionScreenState extends State<SessionScreen>
     super.didUpdateWidget(oldWidget);
     final sameSession = oldWidget.sessionId == widget.sessionId &&
         oldWidget.client.baseUrl == widget.client.baseUrl;
+    if (sameSession && !identical(oldWidget.client, widget.client)) {
+      _startAgentEvents();
+    }
     if (_isMissionControl && _title != 'Mission Control') {
       _title = 'Mission Control';
     }

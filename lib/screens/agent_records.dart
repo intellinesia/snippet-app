@@ -1049,10 +1049,7 @@ class _AgentInboxViewState extends State<AgentInboxView> {
   Widget build(BuildContext context) {
     return _RecordList<InboxEntry>(
       client: widget.client,
-      liveOn: (e) =>
-          Swr.coordination(e) ||
-          e['kind'] == 'dispatch' ||
-          e['kind'] == 'direct_message',
+      liveOn: Swr.coordination,
       hint: 'Search everything sent to ${widget.agentName}',
       filters: const [
         ('All', null),

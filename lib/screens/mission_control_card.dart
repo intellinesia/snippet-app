@@ -38,6 +38,20 @@ class _MissionControlCardState extends State<MissionControlCard> {
     super.initState();
     _autonomy = widget.client.cachedMcAutonomy();
     _load();
+    _bindLive();
+  }
+
+  @override
+  void didUpdateWidget(MissionControlCard old) {
+    super.didUpdateWidget(old);
+    if (old.client != widget.client) {
+      _bindLive();
+      _load();
+    }
+  }
+
+  void _bindLive() {
+    _live?.dispose();
     _live = Revalidator(
         client: widget.client,
         on: (e) =>
@@ -46,12 +60,6 @@ class _MissionControlCardState extends State<MissionControlCard> {
             e['session'] == 'mission-control',
         debounce: const Duration(seconds: 2),
         onRevalidate: ({required bool force}) => _load());
-  }
-
-  @override
-  void didUpdateWidget(MissionControlCard old) {
-    super.didUpdateWidget(old);
-    if (old.client != widget.client) _load();
   }
 
   @override

@@ -87,6 +87,7 @@ class RecurringScreenState extends State<RecurringScreen>
     if (oldWidget.client != widget.client ||
         oldWidget.sessionId != widget.sessionId) {
       _future = widget.client.recurringJobs();
+      if (oldWidget.client != widget.client) _watchEvents();
     }
   }
 
