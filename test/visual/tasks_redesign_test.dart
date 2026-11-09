@@ -19,6 +19,11 @@ class _FakeDaemon extends DaemonClient {
   late final DeviceEventHub deviceEvents = DeviceEventHub.local();
 
   @override
+  Future<List<TaskItem>> recentTasks(
+          {required String status, required int limit}) async =>
+      (await tasks()).where((t) => t.status.wire == status).take(limit).toList();
+
+  @override
   Future<List<TaskItem>> tasks(
           {String? status, String? agentId, int? limit}) async =>
       _tasks.map(TaskItem.fromJson).toList();

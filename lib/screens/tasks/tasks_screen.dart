@@ -132,6 +132,8 @@ class _TasksScreenState extends State<TasksScreen> {
       filter: _filter,
       onOpen: _open,
       onRefresh: _feed.refresh,
+      hasMore: _feed.hasMore,
+      onLoadMore: _feed.loadMore,
     );
   }
 }

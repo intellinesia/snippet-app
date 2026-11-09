@@ -1971,6 +1971,29 @@ class DaemonClient {
     }
   }
 
+  /// The [limit] most recently updated tasks in one [status].
+  Future<List<TaskItem>> recentTasks(
+      {required String status, required int limit}) async {
+    final out = <TaskItem>[];
+    while (out.length < limit) {
+      final size = (limit - out.length).clamp(1, 500);
+      final r = await http.get(_uri('/coordination/tasks', {
+        'limit': '$size',
+        'view': 'summary',
+        'order': 'recent',
+        'offset': '${out.length}',
+        'status': status,
+      }));
+      if (r.statusCode != 200) throw _err('list tasks', r);
+      final list = (jsonDecode(r.body) as List)
+          .map((e) => TaskItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+      out.addAll(list);
+      if (list.length < size) break;
+    }
+    return out;
+  }
+
   /// POST /coordination/tasks.
   ///
   /// [sessionId] is the session that should do the work. It is REQUIRED by the

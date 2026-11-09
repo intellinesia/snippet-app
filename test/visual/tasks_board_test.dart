@@ -23,6 +23,11 @@ class _FakeDaemon extends DaemonClient {
   List<Map<String, dynamic>> items = [];
 
   @override
+  Future<List<TaskItem>> recentTasks(
+          {required String status, required int limit}) async =>
+      (await tasks()).where((t) => t.status.wire == status).take(limit).toList();
+
+  @override
   Future<List<TaskItem>> tasks(
       {String? status, String? agentId, int? limit}) async {
     return items.map((e) => TaskItem.fromJson(e)).toList();

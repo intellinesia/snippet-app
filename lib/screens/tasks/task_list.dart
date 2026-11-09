@@ -26,7 +26,12 @@ class TaskList extends StatelessWidget {
     this.padding,
     this.appearSince,
     this.selectedId,
+    this.hasMore,
+    this.onLoadMore,
   });
+
+  final bool Function(TaskStatus status)? hasMore;
+  final Future<void> Function(TaskStatus status)? onLoadMore;
 
   final List<TaskItem> tasks;
   final ValueChanged<TaskItem> onOpen;
@@ -89,6 +94,10 @@ class TaskList extends StatelessWidget {
     );
   }
 
+  Widget _loadMore(TaskStatus status) => TaskLoadMore(
+      key: ValueKey('more-${status.name}'),
+      onTap: () => onLoadMore?.call(status) ?? Future.value());
+
   List<Widget> _group(TaskStatus status, Iterable<TaskItem> items) {
     if (items.isEmpty) return const [];
     if (kMobile) {
@@ -105,6 +114,7 @@ class TaskList extends StatelessWidget {
               note: noteForTask(list[i], tasks),
               onTap: () => onOpen(list[i]),
               divider: i < list.length - 1),
+        if (hasMore?.call(status) ?? false) _loadMore(status),
       ];
     }
     return [
@@ -119,6 +129,7 @@ class TaskList extends StatelessWidget {
             note: noteForTask(task, tasks),
             selected: task.id == selectedId,
             onTap: () => onOpen(task)),
+      if (hasMore?.call(status) ?? false) _loadMore(status),
     ];
   }
 
@@ -617,6 +628,46 @@ class _FilterPanelState extends State<_FilterPanel> {
                   : null,
             ),
           ]),
+        ),
+      );
+}
+
+/// The row under a status group that loads its next page of older tasks.
+class TaskLoadMore extends StatefulWidget {
+  const TaskLoadMore({super.key, required this.onTap});
+  final Future<void> Function() onTap;
+
+  @override
+  State<TaskLoadMore> createState() => _TaskLoadMoreState();
+}
+
+class _TaskLoadMoreState extends State<TaskLoadMore> {
+  bool _busy = false;
+
+  Future<void> _run() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await widget.onTap();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.symmetric(
+            horizontal: kMobile ? M.gutter : kNavPadH, vertical: 4),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: _busy
+              ? const SizedBox(
+                  height: 32, child: Center(child: Spinner(size: 14)))
+              : TextButton(
+                  onPressed: _run,
+                  child: Text('Load more',
+                      style: TS.ui(AppColors.accent)),
+                ),
         ),
       );
 }
