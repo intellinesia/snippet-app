@@ -61,7 +61,7 @@ class ShellSplitView extends StatefulWidget {
   final ShellPane focusedPane;
   final String? Function(ShellTab tab) statusForTab;
   final bool Function(ShellTab tab) canCloseTab;
-  final Widget Function(ShellTab tab, bool primary) tabBodyBuilder;
+  final Widget Function(ShellTab tab, bool primary, bool visible) tabBodyBuilder;
   final Widget Function(RightTab readout) readoutBodyBuilder;
   final Widget Function(ShellPane pane) fallbackBuilder;
   final Widget? rightPanel;
@@ -149,6 +149,7 @@ class _ShellSplitViewState extends State<ShellSplitView> {
             child: widget.tabBodyBuilder(
               t,
               t == shownTab && widget.focusedPane == p,
+              t == shownTab,
             ),
           ),
         for (final readout in readouts)

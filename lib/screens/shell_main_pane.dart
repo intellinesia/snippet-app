@@ -27,7 +27,7 @@ class MainPaneView extends StatelessWidget {
   final int activeIndex;
   final PageController pageController;
   final ValueChanged<int> onPageChanged;
-  final Widget Function(ShellTab tab, bool primary) tabBodyBuilder;
+  final Widget Function(ShellTab tab, bool primary, bool visible) tabBodyBuilder;
   final Widget welcomeView;
   final Widget recentPlaceholder;
   final Widget? tabStrip;
@@ -81,7 +81,7 @@ class MainPaneView extends StatelessWidget {
                     // Same body builder as the split panes, so a terminal
                     // or a diff renders identically whether it is in a pane or
                     // the narrow single-column layout.
-                    child: tabBodyBuilder(t, i == activeIndex),
+                    child: tabBodyBuilder(t, i == activeIndex, i == activeIndex),
                   );
                 },
               ),

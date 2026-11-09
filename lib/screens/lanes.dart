@@ -551,6 +551,7 @@ class LaneTranscriptScreen extends StatelessWidget {
       title: lane.title,
       readOnly: true,
       acceptDrops: false,
+      live: true,
     );
   }
 }
