@@ -396,23 +396,35 @@ class _AgentCardState extends State<AgentCard> {
                                   overflow: TextOverflow.ellipsis,
                                   style: TS.meta(AppColors.fg3)),
                             ),
-                            if (profile != null) ...[
-                              const SizedBox(width: 6),
-                              AgentProviderMark(
-                                  client: widget.client, profile: profile),
-                            ],
                           ]),
                         ],
                       ),
                     ),
                   ),
-                  if (summary != null) ...[
+                  if (summary != null || profile != null) ...[
                     const SizedBox(width: 12),
-                    SwapText(summary.$1,
-                        style: TS.meta(summary.$2).copyWith(
-                            fontFeatures: const [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          height: 20,
+                          child: profile == null
+                              ? null
+                              : Center(
+                                  child: AgentProviderMark(
+                                      key: const ValueKey('agent-provider'),
+                                      client: widget.client,
+                                      profile: profile)),
+                        ),
+                        const SizedBox(height: 2),
+                        SwapText(summary?.$1 ?? '',
+                            style: TS.meta(summary?.$2 ?? AppColors.fg3)
+                                .copyWith(fontFeatures: const [
                               FontFeature.tabularFigures()
                             ])),
+                      ],
+                    ),
                   ],
                   const SizedBox(width: M.gutter),
                 ],
