@@ -140,7 +140,6 @@ class _AgentCardState extends State<AgentCard> {
           client: widget.client,
           owner: widget.agent.id,
           name: name,
-          agent: widget.agent,
           point: point,
           onChanged: widget.onChanged);
 

@@ -65,12 +65,10 @@ class _WakesScreenState extends State<WakesScreen> {
 
   void _open(BuildContext ctx, String owner, String name,
       List<CoordinationAgent> agents) {
-    final agent = agents.where((a) => a.id == owner).firstOrNull;
     showAgentWakeSettings(ctx,
         client: widget.client,
         owner: owner,
         name: name,
-        agent: agent,
         point: lastPointerDown,
         onChanged: _refresh);
   }

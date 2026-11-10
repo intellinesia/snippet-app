@@ -167,7 +167,6 @@ Future<void> runCrewAgentAction(
         client: client,
         owner: agent.id,
         name: name,
-        agent: agent,
         point: point,
         onChanged: onDeleted);
   } else if (picked == 'model') {
