@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
-import '../composer/composer_card.dart';
 import '../mochi.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -19,6 +19,19 @@ BoxDecoration _floating(double radius) => BoxDecoration(
 
 // Shared by the home list and the top bar so both follow the agents/sessions switch.
 final mobileAgentsList = ValueNotifier<bool>(false);
+const _agentsListPref = 'mobile_home_agents_list';
+
+Future<void> loadMobileAgentsList() async {
+  mobileAgentsList.value =
+      (await SharedPreferences.getInstance()).getBool(_agentsListPref) ?? false;
+}
+
+void setMobileAgentsList(bool agents) {
+  FocusManager.instance.primaryFocus?.unfocus();
+  mobileAgentsList.value = agents;
+  SharedPreferences.getInstance()
+      .then((p) => p.setBool(_agentsListPref, agents));
+}
 
 // The chat composer's card, so the home search row reads as the same control.
 BoxDecoration _composerLike(double radius) => BoxDecoration(
@@ -109,18 +122,21 @@ class MobileTopBar extends StatelessWidget {
   final bool sessionsBusy;
 
   Widget _segment({
+    Key? key,
     required bool active,
     required Widget glyph,
     required String label,
     required VoidCallback onTap,
     VoidCallback? onActiveTap,
     bool dot = false,
+    bool flips = false,
   }) {
     return Semantics(
       button: true,
       selected: active,
       label: label,
       child: GestureDetector(
+        key: key,
         behavior: HitTestBehavior.opaque,
         onTap: active
             ? (onActiveTap == null
@@ -161,6 +177,10 @@ class MobileTopBar extends StatelessWidget {
               const SizedBox(width: 8),
               Text(label,
                   style: sans(15, weight: W.strong, color: AppColors.fg1)),
+              if (flips) ...[
+                const SizedBox(width: 6),
+                AppIcon('chevron-down', size: 14, color: AppColors.fg3),
+              ],
             ],
           ]),
         ),
@@ -195,8 +215,11 @@ class MobileTopBar extends StatelessWidget {
               ValueListenableBuilder<bool>(
                 valueListenable: mobileAgentsList,
                 builder: (_, agents, __) => _segment(
+                  key: const ValueKey('home-list-segment'),
                   active: !mission,
                   label: agents ? 'Agents' : 'Sessions',
+                  flips: true,
+                  onActiveTap: () => setMobileAgentsList(!agents),
                   dot: sessionsBusy,
                   glyph: AppIcon(agents ? 'agent' : 'list',
                       size: 18,
@@ -427,7 +450,7 @@ class FloatingSearch extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         height: 50,
-        decoration: _composerLike(ComposerCard.radius),
+        decoration: _composerLike(25),
         padding: const EdgeInsets.only(left: 18, right: 8),
         child: Row(children: [
           AppIcon('search', size: 16, color: AppColors.fg4),
@@ -463,54 +486,6 @@ class FloatingSearch extends StatelessWidget {
 
 /// Sessions or agents for the home list: two icons in one floating pill,
 /// the active one filled.
-class FloatingListSwitch extends StatelessWidget {
-  const FloatingListSwitch(
-      {super.key, required this.agents, required this.onChanged});
-
-  final bool agents;
-  final ValueChanged<bool> onChanged;
-
-  Widget _seg(String icon, String label, bool on, bool value) => Semantics(
-        button: true,
-        selected: on,
-        label: label,
-        excludeSemantics: true,
-        child: GestureDetector(
-          key: ValueKey(value ? 'list-switch-agents' : 'list-switch-sessions'),
-          behavior: HitTestBehavior.opaque,
-          onTap: on
-              ? null
-              : () {
-                  HapticFeedback.selectionClick();
-                  onChanged(value);
-                },
-          child: AnimatedContainer(
-            duration: Motion.fast,
-            width: 40,
-            height: 40,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: on ? AppColors.surface3 : Colors.transparent,
-              borderRadius: BorderRadius.circular(ComposerCard.radius - 5),
-            ),
-            child: AppIcon(icon,
-                size: 17, color: on ? AppColors.fg1 : AppColors.fg4),
-          ),
-        ),
-      );
-
-  @override
-  Widget build(BuildContext context) => Container(
-        height: 50,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: _composerLike(ComposerCard.radius),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          _seg('chat-thread', 'Show sessions', !agents, false),
-          _seg('agent', 'Show agents', agents, true),
-        ]),
-      );
-}
-
 class AccentFab extends StatelessWidget {
   const AccentFab(
       {super.key,

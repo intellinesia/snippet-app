@@ -9,6 +9,7 @@ import 'package:snippet/models.dart';
 import 'package:snippet/screens/create_agent_form.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/screens/sidebar.dart';
+import 'package:snippet/screens/mobile_chrome.dart';
 import 'package:snippet/screens/mission_control_card.dart';
 import 'package:snippet/theme.dart';
 
@@ -173,11 +174,11 @@ void main() {
       expect(find.text('No tasks yet'), findsOneWidget);
       expect(find.byTooltip('New task'), findsOneWidget);
 
-      // 3. Agents: the switch beside search turns the home list into
-      // agents, search filters them and New creates one.
+      // 3. Agents: flipping the home list (the header's Sessions segment)
+      // shows agents, search filters them and New creates one.
       await tester.pumpWidget(buildTestWidget(home: MobileHome.chats));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('list-switch-agents')));
+      setMobileAgentsList(true);
       await tester.pumpAndSettle();
       expect(find.text('Snippet'), findsOneWidget);
       expect(find.text('Reviewer'), findsOneWidget);
@@ -201,7 +202,7 @@ void main() {
       // Phone sheets have no close X; tapping the scrim dismisses.
       await tester.tapAt(const Offset(20, 20));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('list-switch-sessions')));
+      setMobileAgentsList(false);
       await tester.pumpAndSettle();
       expect(find.text('Feature Setup'), findsOneWidget);
 

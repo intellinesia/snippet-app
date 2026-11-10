@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
 import '../drafts.dart';
@@ -118,7 +117,6 @@ class SidebarState extends State<Sidebar> {
 
   /// The phone home list shows agents instead of sessions; kept across launches.
   bool get _agentsList => mobileAgentsList.value;
-  static const _agentsListPref = 'mobile_home_agents_list';
   final _machineKey = GlobalKey(); // anchors the desktop machine popover
   final GlobalKey<TasksPanelState> _tasksPanelKey =
       GlobalKey<TasksPanelState>();
@@ -221,9 +219,7 @@ class SidebarState extends State<Sidebar> {
     _pageController = PageController(initialPage: widget.mobileHome.index);
     if (kMobile) {
       mobileAgentsList.addListener(_onAgentsList);
-      SharedPreferences.getInstance().then((p) {
-        if (mounted) mobileAgentsList.value = p.getBool(_agentsListPref) ?? false;
-      });
+      loadMobileAgentsList();
     }
     if (widget.mobileHome != MobileHome.settings) {
       _lastMainHome = widget.mobileHome;
@@ -399,10 +395,6 @@ class SidebarState extends State<Sidebar> {
                           right: M.gutter,
                           bottom: 12,
                           child: Row(children: [
-                            FloatingListSwitch(
-                                agents: _agentsList,
-                                onChanged: _setAgentsList),
-                            const SizedBox(width: 8),
                             Expanded(
                               child: _agentsList
                                   ? FloatingSearch(
@@ -569,13 +561,6 @@ class SidebarState extends State<Sidebar> {
 
   void _onAgentsList() {
     if (mounted) setState(() {});
-  }
-
-  void _setAgentsList(bool agents) {
-    FocusManager.instance.primaryFocus?.unfocus();
-    mobileAgentsList.value = agents;
-    SharedPreferences.getInstance()
-        .then((p) => p.setBool(_agentsListPref, agents));
   }
 
   Widget _agentList(DaemonClient client) => AgentsSidebarPanel(
