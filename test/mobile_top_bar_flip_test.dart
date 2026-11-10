@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/screens/mobile_chrome.dart';
 
 void main() {
-  testWidgets('tapping the active Sessions segment flips to Agents and back',
+  testWidgets('the active segment opens a picker for sessions or agents',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
@@ -24,11 +24,23 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('home-list-segment')));
       await tester.pumpAndSettle();
+      expect(find.text('What each agent is working on and its last message.'),
+          findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('list-pick-agents')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('list-pick-agents')), findsNothing);
       expect(find.text('Agents'), findsOneWidget);
       expect(mobileAgentsList.value, isTrue);
       expect((await SharedPreferences.getInstance()).getBool('mobile_home_agents_list'), isTrue);
 
       await tester.tap(find.byKey(const ValueKey('home-list-segment')));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(200, 500));
+      await tester.pumpAndSettle();
+      expect(mobileAgentsList.value, isTrue);
+      await tester.tap(find.byKey(const ValueKey('home-list-segment')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('list-pick-sessions')));
       await tester.pumpAndSettle();
       expect(find.text('Sessions'), findsOneWidget);
       expect(sessionsTaps, 0);

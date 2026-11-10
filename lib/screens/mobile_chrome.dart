@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,6 +26,126 @@ const _agentsListPref = 'mobile_home_agents_list';
 Future<void> loadMobileAgentsList() async {
   mobileAgentsList.value =
       (await SharedPreferences.getInstance()).getBool(_agentsListPref) ?? false;
+}
+
+/// Blurs the home below the header and offers both lists, each with a line
+/// on what it holds.
+Future<void> showMobileListPicker(BuildContext anchor) {
+  final box = anchor.findRenderObject() as RenderBox?;
+  final top = box == null
+      ? 76.0
+      : box.localToGlobal(Offset(0, box.size.height)).dy + 16;
+  return showGeneralDialog<void>(
+    context: anchor,
+    barrierDismissible: true,
+    barrierLabel: 'Close',
+    barrierColor: Colors.transparent,
+    transitionDuration: Motion.fast,
+    pageBuilder: (context, _, __) {
+      Widget option(String icon, String title, String desc, bool agents) {
+        final on = mobileAgentsList.value == agents;
+        return Semantics(
+          button: true,
+          selected: on,
+          label: title,
+          excludeSemantics: true,
+          child: GestureDetector(
+            key: ValueKey(agents ? 'list-pick-agents' : 'list-pick-sessions'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              HapticFeedback.selectionClick();
+              if (!on) setMobileAgentsList(agents);
+              Navigator.of(context).pop();
+            },
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: on ? AppColors.surface3 : Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: on
+                            ? AppColors.accent.withValues(alpha: 0.16)
+                            : AppColors.surface2,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: AppIcon(icon,
+                          size: 18,
+                          color: on ? AppColors.accent : AppColors.fg2),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title,
+                                style: sans(15,
+                                    weight: W.strong, color: AppColors.fg1)),
+                            const SizedBox(height: 2),
+                            Text(desc, style: sans(13, color: AppColors.fg3)),
+                          ]),
+                    ),
+                    if (on)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8, top: 8),
+                        child: AppIcon('check',
+                            size: 16, color: AppColors.accent),
+                      ),
+                  ]),
+            ),
+          ),
+        );
+      }
+
+      return Stack(children: [
+        Positioned.fill(
+          top: top - 4,
+          child: GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                child:
+                    ColoredBox(color: Colors.black.withValues(alpha: 0.35)),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: top,
+          left: M.gutter,
+          right: M.gutter,
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: _composerLike(20),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                option('list', 'Sessions',
+                    'Your conversations and the work running in them, newest first.',
+                    false),
+                const SizedBox(height: 4),
+                option('agent', 'Agents',
+                    'What each agent is working on and its last message.',
+                    true),
+              ]),
+            ),
+          ),
+        ),
+      ]);
+    },
+    transitionBuilder: (_, a, __, child) => FadeTransition(
+      opacity: CurvedAnimation(parent: a, curve: Motion.enter),
+      child: child,
+    ),
+  );
 }
 
 void setMobileAgentsList(bool agents) {
@@ -214,12 +336,12 @@ class MobileTopBar extends StatelessWidget {
               const SizedBox(width: 2),
               ValueListenableBuilder<bool>(
                 valueListenable: mobileAgentsList,
-                builder: (_, agents, __) => _segment(
+                builder: (context, agents, __) => _segment(
                   key: const ValueKey('home-list-segment'),
                   active: !mission,
                   label: agents ? 'Agents' : 'Sessions',
                   flips: true,
-                  onActiveTap: () => setMobileAgentsList(!agents),
+                  onActiveTap: () => showMobileListPicker(context),
                   dot: sessionsBusy,
                   glyph: AppIcon(agents ? 'agent' : 'list',
                       size: 18,
