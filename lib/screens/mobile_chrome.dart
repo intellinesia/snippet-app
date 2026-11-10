@@ -35,6 +35,9 @@ Future<void> showMobileListPicker(BuildContext anchor) {
   final top = box == null
       ? 76.0
       : box.localToGlobal(Offset(0, box.size.height)).dy + 16;
+  final screen = MediaQuery.sizeOf(anchor).width;
+  final width = (screen - 2 * M.gutter).clamp(0.0, 300.0);
+  final left = (screen - width) / 2;
   return showGeneralDialog<void>(
     context: anchor,
     barrierDismissible: true,
@@ -120,8 +123,8 @@ Future<void> showMobileListPicker(BuildContext anchor) {
         ),
         Positioned(
           top: top,
-          left: M.gutter,
-          right: M.gutter,
+          left: left,
+          width: width,
           child: Material(
             type: MaterialType.transparency,
             child: Container(
