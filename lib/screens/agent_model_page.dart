@@ -5,6 +5,32 @@ import '../models.dart';
 import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
+import '../panel.dart';
+import 'mobile_chrome.dart';
+
+/// The model page on its own screen, for phones where there is no side panel.
+Future<void> showAgentModelPage(BuildContext context,
+        {required DaemonClient client,
+        required CoordinationAgent agent,
+        required String name}) =>
+    presentScreen(context,
+        builder: (_, close) => Material(
+              color: readingBg,
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    MobileBackBar(
+                        title: 'Inference profile',
+                        subtitle: name,
+                        onBack: close),
+                    Expanded(
+                        child: AgentModelPage(client: client, agent: agent)),
+                  ],
+                ),
+              ),
+            ));
 
 /// An agent's models and context length: the profile its tasks run on, an
 /// optional separate one for its desk, and its context ceiling.
