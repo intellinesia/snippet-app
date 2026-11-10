@@ -1670,6 +1670,7 @@ class _DesktopShellState extends State<DesktopShell>
             _handleMobileBack();
           } else {
             setState(() {
+              _mobileHome = _MobileHome.agents;
               _mobileAgent = a;
               _pushMobileRoute(
                   _MobileRoute(home: _MobileHome.agents, agent: a));

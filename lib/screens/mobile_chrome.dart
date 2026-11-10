@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 
 import '../api.dart';
 import '../mochi.dart';
-import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -447,6 +446,56 @@ class FloatingSearch extends StatelessWidget {
       );
 }
 
+/// Sessions or agents for the home list: two icons in one floating pill,
+/// the active one filled.
+class FloatingListSwitch extends StatelessWidget {
+  const FloatingListSwitch(
+      {super.key, required this.agents, required this.onChanged});
+
+  final bool agents;
+  final ValueChanged<bool> onChanged;
+
+  Widget _seg(String icon, String label, bool on, bool value) => Semantics(
+        button: true,
+        selected: on,
+        label: label,
+        excludeSemantics: true,
+        child: GestureDetector(
+          key: ValueKey(value ? 'list-switch-agents' : 'list-switch-sessions'),
+          behavior: HitTestBehavior.opaque,
+          onTap: on
+              ? null
+              : () {
+                  HapticFeedback.selectionClick();
+                  onChanged(value);
+                },
+          child: AnimatedContainer(
+            duration: Motion.fast,
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: on ? AppColors.surface3 : Colors.transparent,
+              shape: BoxShape.circle,
+            ),
+            child: AppIcon(icon,
+                size: 18, color: on ? AppColors.fg1 : AppColors.fg4),
+          ),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 50,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: _floating(25),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          _seg('chat-thread', 'Show sessions', !agents, false),
+          _seg('agent', 'Show agents', agents, true),
+        ]),
+      );
+}
+
 class AccentFab extends StatelessWidget {
   const AccentFab(
       {super.key,
@@ -503,14 +552,13 @@ class BottomFade extends StatelessWidget {
       );
 }
 
-enum MobileMenuPick { newSession, tasks, agents, usage, machines }
+enum MobileMenuPick { newSession, tasks, usage, machines }
 
 Future<void> showMobileMenu(
   BuildContext context, {
   required DaemonClient? client,
   required String newSessionSubtitle,
   required void Function(MobileMenuPick pick) onPick,
-  required void Function(CoordinationAgent agent) onAgent,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -526,52 +574,23 @@ Future<void> showMobileMenu(
         Navigator.pop(sheet);
         onPick(p);
       },
-      onAgent: (a) {
-        Navigator.pop(sheet);
-        onAgent(a);
-      },
     ),
   );
 }
 
-class _MobileMenu extends StatefulWidget {
+class _MobileMenu extends StatelessWidget {
   const _MobileMenu({
     required this.client,
     required this.newSessionSubtitle,
     required this.onPick,
-    required this.onAgent,
   });
 
   final DaemonClient? client;
   final String newSessionSubtitle;
   final ValueChanged<MobileMenuPick> onPick;
-  final ValueChanged<CoordinationAgent> onAgent;
-
-  @override
-  State<_MobileMenu> createState() => _MobileMenuState();
-}
-
-class _MobileMenuState extends State<_MobileMenu> {
-  List<CoordinationAgent>? _agents;
-
-  @override
-  void initState() {
-    super.initState();
-    final c = widget.client;
-    if (c != null) {
-      c.coordinationAgents().then((a) {
-        if (mounted) {
-          setState(
-              () => _agents = a.where((x) => !x.isMissionControl).toList());
-        }
-      }).catchError((_) {
-        if (mounted) setState(() => _agents = const []);
-      });
-    }
-  }
 
   Widget _row(String icon, String label, MobileMenuPick pick) => InkWell(
-        onTap: () => widget.onPick(pick),
+        onTap: () => onPick(pick),
         child: SizedBox(
           height: M.minTarget + 8,
           child: Row(children: [
@@ -585,7 +604,6 @@ class _MobileMenuState extends State<_MobileMenu> {
 
   @override
   Widget build(BuildContext context) {
-    final agents = _agents ?? const <CoordinationAgent>[];
     final bottom = MediaQuery.paddingOf(context).bottom;
     return AppSheetSurface(
       child: Material(
@@ -596,13 +614,13 @@ class _MobileMenuState extends State<_MobileMenu> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (widget.client != null)
+                if (client != null)
                   Material(
                     color: AppColors.surface2,
                     borderRadius: BorderRadius.circular(R.lg),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
-                      onTap: () => widget.onPick(MobileMenuPick.newSession),
+                      onTap: () => onPick(MobileMenuPick.newSession),
                       child: Padding(
                         padding: const EdgeInsets.all(14),
                         child: Row(children: [
@@ -622,8 +640,8 @@ class _MobileMenuState extends State<_MobileMenu> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('New session', style: TS.rowTitle()),
-                                if (widget.newSessionSubtitle.isNotEmpty)
-                                  Text(widget.newSessionSubtitle,
+                                if (newSessionSubtitle.isNotEmpty)
+                                  Text(newSessionSubtitle,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TS.meta()),
@@ -636,46 +654,9 @@ class _MobileMenuState extends State<_MobileMenu> {
                       ),
                     ),
                   ),
-                if (agents.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, S.s20, 4, S.s4),
-                    child: Text('AGENTS', style: TS.overline()),
-                  ),
-                  SizedBox(
-                    height: 82,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        for (final a in agents)
-                          InkWell(
-                            borderRadius: BorderRadius.circular(R.lg),
-                            onTap: () => widget.onAgent(a),
-                            child: SizedBox(
-                              width: 80,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  AgentMochi(a.id, size: 36),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                      a.displayName.isEmpty
-                                          ? a.handle
-                                          : a.displayName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TS.meta(AppColors.fg2)),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
                 const SizedBox(height: S.s8),
-                if (widget.client != null) ...[
+                if (client != null) ...[
                   _row('task', 'Tasks', MobileMenuPick.tasks),
-                  _row('agent', 'Agents', MobileMenuPick.agents),
                   _row('analytics', 'Usage', MobileMenuPick.usage),
                 ],
                 _row('server', 'Machines', MobileMenuPick.machines),

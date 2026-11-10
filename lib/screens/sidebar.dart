@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
 import '../drafts.dart';
@@ -114,6 +115,10 @@ class SidebarState extends State<Sidebar> {
   // sidebar is presentational, so opening the drawer doesn't refetch.
   String _filterQuery = '';
   String _agentFilterQuery = '';
+
+  /// The phone home list shows agents instead of sessions; kept across launches.
+  bool _agentsList = false;
+  static const _agentsListPref = 'mobile_home_agents_list';
   final _machineKey = GlobalKey(); // anchors the desktop machine popover
   final GlobalKey<TasksPanelState> _tasksPanelKey =
       GlobalKey<TasksPanelState>();
@@ -214,6 +219,13 @@ class SidebarState extends State<Sidebar> {
       _bindCrewLive();
     }
     _pageController = PageController(initialPage: widget.mobileHome.index);
+    if (kMobile) {
+      SharedPreferences.getInstance().then((p) {
+        if (mounted && (p.getBool(_agentsListPref) ?? false)) {
+          setState(() => _agentsList = true);
+        }
+      });
+    }
     if (widget.mobileHome != MobileHome.settings) {
       _lastMainHome = widget.mobileHome;
     }
@@ -375,7 +387,10 @@ class SidebarState extends State<Sidebar> {
               child: !hasClient
                   ? _mobileUnavailable('Add a machine to begin.')
                   : Stack(children: [
-                      Positioned.fill(child: _sessionList()),
+                      Positioned.fill(
+                          child: _agentsList && !_selecting
+                              ? _agentList(widget.client!)
+                              : _sessionList()),
                       if (!_selecting) ...[
                         const Positioned(
                             left: 0, right: 0, bottom: 0, child: BottomFade()),
@@ -384,19 +399,37 @@ class SidebarState extends State<Sidebar> {
                           right: 12,
                           bottom: 12,
                           child: Row(children: [
+                            FloatingListSwitch(
+                                agents: _agentsList,
+                                onChanged: _setAgentsList),
+                            const SizedBox(width: 8),
                             Expanded(
-                              child: FloatingSearch(
-                                controller: _searchCtl,
-                                focusNode: _searchFocus,
-                                hint: 'Search sessions',
-                                onChanged: (v) =>
-                                    setState(() => _filterQuery = v),
-                              ),
+                              child: _agentsList
+                                  ? FloatingSearch(
+                                      key: const ValueKey('search-agents'),
+                                      controller: _agentSearchCtl,
+                                      focusNode: _searchFocus,
+                                      hint: 'Search agents',
+                                      onChanged: (v) => setState(
+                                          () => _agentFilterQuery = v),
+                                    )
+                                  : FloatingSearch(
+                                      key: const ValueKey('search-sessions'),
+                                      controller: _searchCtl,
+                                      focusNode: _searchFocus,
+                                      hint: 'Search sessions',
+                                      onChanged: (v) =>
+                                          setState(() => _filterQuery = v),
+                                    ),
                             ),
                             const SizedBox(width: 8),
-                            AccentFab(
-                                tooltip: 'New session',
-                                onTap: widget.onNewSession),
+                            _agentsList
+                                ? AccentFab(
+                                    tooltip: 'New agent',
+                                    onTap: _openCreateAgent)
+                                : AccentFab(
+                                    tooltip: 'New session',
+                                    onTap: widget.onNewSession),
                           ]),
                         ),
                       ],
@@ -441,60 +474,15 @@ class SidebarState extends State<Sidebar> {
         if (client == null) {
           return _mobileUnavailable('Add a machine to see its agents.');
         }
-        // Drilled into one agent: same shared header as every other nested
-        // phone screen, with smooth slide-and-fade screen transition.
+        // The agent list lives on the home list; this is one agent's detail.
         final agent = widget.agent;
-        return AnimatedSwitcher(
-          duration: Motion.base,
-          switchInCurve: Motion.enter,
-          switchOutCurve: Motion.exit,
-          transitionBuilder: (child, anim) {
-            final isDetail = child.key == const ValueKey('agent-detail');
-            final dx = isDetail ? 0.08 : -0.08;
-            return FadeTransition(
-              opacity: anim,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: Offset(dx, 0),
-                  end: Offset.zero,
-                ).animate(anim),
-                child: child,
-              ),
-            );
-          },
-          child: agent != null
-              ? CoordinationAgentDetail(
-                  key: const ValueKey('agent-detail'),
-                  agent: agent,
-                  client: client,
-                  embedded: false,
-                  onClose: () => widget.onAgent(null),
-                )
-              : Column(
-                  key: const ValueKey('agents-list'),
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _mobileAgentsHeader(hasClient),
-                    Expanded(
-                      child: AgentsSidebarPanel(
-                        key: _agentsPanelKey,
-                        client: client,
-                        searchQuery: _agentFilterQuery,
-                        onSearchChanged: (v) => setState(() {
-                          _agentFilterQuery = v;
-                          if (_agentSearchCtl.text != v) {
-                            _agentSearchCtl.text = v;
-                          }
-                        }),
-                        onOpenAgent: (a) => widget.onAgent(a),
-                        onOpenMissionControl: widget.onOpenMissionControl,
-                        missionControl: _sessions
-                            ?.where((s) => isDedicatedMcSession(s.id))
-                            .firstOrNull,
-                      ),
-                    ),
-                  ],
-                ),
+        if (agent == null) return _mobileHomeBody(hasClient, MobileHome.chats);
+        return CoordinationAgentDetail(
+          key: const ValueKey('agent-detail'),
+          agent: agent,
+          client: client,
+          embedded: false,
+          onClose: () => widget.onAgent(null),
         );
 
       case MobileHome.settings:
@@ -579,6 +567,27 @@ class SidebarState extends State<Sidebar> {
     }
   }
 
+  void _setAgentsList(bool agents) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _agentsList = agents);
+    SharedPreferences.getInstance()
+        .then((p) => p.setBool(_agentsListPref, agents));
+  }
+
+  Widget _agentList(DaemonClient client) => AgentsSidebarPanel(
+        key: _agentsPanelKey,
+        client: client,
+        searchQuery: _agentFilterQuery,
+        onSearchChanged: (v) => setState(() {
+          _agentFilterQuery = v;
+          if (_agentSearchCtl.text != v) _agentSearchCtl.text = v;
+        }),
+        onOpenAgent: (a) => widget.onAgent(a),
+        onOpenMissionControl: widget.onOpenMissionControl,
+        missionControl:
+            _sessions?.where((s) => isDedicatedMcSession(s.id)).firstOrNull,
+      );
+
   Future<void> _openCreateAgent([BuildContext? anchorCtx]) async {
     final client = widget.client;
     if (client == null) return;
@@ -628,17 +637,6 @@ class SidebarState extends State<Sidebar> {
       ]),
     );
   }
-
-  Widget _mobileAgentsHeader(bool hasClient) => MobileBackBar(
-        title: 'Agents',
-        menu: widget.onMobileMenu != null,
-        onBack: widget.onMobileMenu ?? () => Navigator.maybePop(context),
-        trailing: [
-          if (hasClient)
-            RoundBtn(
-                icon: 'plus', tooltip: 'New agent', onTap: _openCreateAgent),
-        ],
-      );
 
   /// The control at the right of every phone page header: the machine
   /// switcher.

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/swr.dart';
@@ -68,6 +69,7 @@ void main() {
       'each phone page has its search and its own New',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    SharedPreferences.setMockInitialValues({});
     try {
       tester.view.devicePixelRatio = 2.0;
       tester.view.physicalSize = const Size(390, 844) * 2.0;
@@ -171,14 +173,26 @@ void main() {
       expect(find.text('No tasks yet'), findsOneWidget);
       expect(find.byTooltip('New task'), findsOneWidget);
 
-      // 3. Agents: one card per agent, with no search field.
-      await tester.pumpWidget(buildTestWidget(home: MobileHome.agents));
+      // 3. Agents: the switch beside search turns the home list into
+      // agents, search filters them and New creates one.
+      await tester.pumpWidget(buildTestWidget(home: MobileHome.chats));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('list-switch-agents')));
       await tester.pumpAndSettle();
       expect(find.text('Snippet'), findsOneWidget);
       expect(find.text('Reviewer'), findsOneWidget);
-      expect(find.byTooltip('Mission Control'), findsNothing);
+      expect(find.text('Feature Setup'), findsNothing);
+      expect(
+          (await SharedPreferences.getInstance())
+              .getBool('mobile_home_agents_list'),
+          isTrue);
 
-      expect(_field('Search agents'), findsNothing);
+      await tester.enterText(_field('Search agents'), 'review');
+      await tester.pumpAndSettle();
+      expect(find.text('Snippet'), findsNothing);
+      expect(find.text('Reviewer'), findsOneWidget);
+      await tester.tap(find.byTooltip('Clear').first);
+      await tester.pumpAndSettle();
 
       expect(find.byType(CreateAgentForm), findsNothing);
       await tester.tap(find.byTooltip('New agent'));
@@ -187,6 +201,9 @@ void main() {
       // Phone sheets have no close X; tapping the scrim dismisses.
       await tester.tapAt(const Offset(20, 20));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('list-switch-sessions')));
+      await tester.pumpAndSettle();
+      expect(find.text('Feature Setup'), findsOneWidget);
 
       // 4. Settings has no New of its own.
       await tester.pumpWidget(buildTestWidget(home: MobileHome.settings));

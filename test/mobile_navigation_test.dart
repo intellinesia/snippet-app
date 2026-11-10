@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/notifications.dart';
+import 'package:snippet/models.dart';
+import 'package:snippet/screens/mission_control/coordination_agent_detail.dart';
 import 'package:snippet/screens/agents_sidebar_panel.dart';
 import 'package:snippet/screens/desktop_shell.dart';
 import 'package:snippet/screens/mobile_chrome.dart';
@@ -115,7 +117,7 @@ void main() {
     }
   });
 
-  testWidgets('back from a session opened on Agents returns to Agents',
+  testWidgets('the saved agent list opens an agent and back returns to it',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     DaemonClient.wsConnector = (uri, {connectTimeout, pingInterval}) =>
@@ -125,29 +127,28 @@ void main() {
       SharedPreferences.setMockInitialValues({
         'instances':
             '[{"name":"Local","url":"http://127.0.0.1:9090","token":"tok"}]',
+        'mobile_home_agents_list': true,
       });
       await _pumpShell(tester);
 
-      await tester.tap(_visible(find.byTooltip('Menu')).first);
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.tap(find.text('Agents').last);
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(AgentsSidebarPanel), findsOneWidget);
 
       final sidebar = tester.widget<Sidebar>(find.byType(Sidebar));
-      sidebar.onOpenSession('test-session-1', 'Agent Task Session', null);
+      sidebar.onAgent(CoordinationAgent.fromJson(
+          {'id': 'scout', 'display_name': 'Scout', 'handle': 'scout'}));
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('Agent Task Session'), findsWidgets);
+      var shell = tester.widget<MobileShell>(find.byType(MobileShell));
+      expect(shell.mobileHome, MobileHome.agents);
+      expect(find.byType(CoordinationAgentDetail), findsOneWidget);
 
       await tester.binding.handlePopRoute();
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
-      final mobileShell = tester.widget<MobileShell>(find.byType(MobileShell));
-      expect(mobileShell.chatsOpen, isTrue);
-      expect(mobileShell.mobileHome, MobileHome.agents);
+      shell = tester.widget<MobileShell>(find.byType(MobileShell));
+      expect(shell.mobileHome, MobileHome.chats);
+      expect(find.byType(CoordinationAgentDetail), findsNothing);
+      expect(find.byType(AgentsSidebarPanel), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
