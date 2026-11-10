@@ -117,7 +117,7 @@ class SidebarState extends State<Sidebar> {
   String _agentFilterQuery = '';
 
   /// The phone home list shows agents instead of sessions; kept across launches.
-  bool _agentsList = false;
+  bool get _agentsList => mobileAgentsList.value;
   static const _agentsListPref = 'mobile_home_agents_list';
   final _machineKey = GlobalKey(); // anchors the desktop machine popover
   final GlobalKey<TasksPanelState> _tasksPanelKey =
@@ -220,10 +220,9 @@ class SidebarState extends State<Sidebar> {
     }
     _pageController = PageController(initialPage: widget.mobileHome.index);
     if (kMobile) {
+      mobileAgentsList.addListener(_onAgentsList);
       SharedPreferences.getInstance().then((p) {
-        if (mounted && (p.getBool(_agentsListPref) ?? false)) {
-          setState(() => _agentsList = true);
-        }
+        if (mounted) mobileAgentsList.value = p.getBool(_agentsListPref) ?? false;
       });
     }
     if (widget.mobileHome != MobileHome.settings) {
@@ -277,6 +276,7 @@ class SidebarState extends State<Sidebar> {
 
   @override
   void dispose() {
+    mobileAgentsList.removeListener(_onAgentsList);
     Drafts.instance.removeListener(_onDrafts);
     _crewLive?.dispose();
     _pageController.dispose();
@@ -567,9 +567,13 @@ class SidebarState extends State<Sidebar> {
     }
   }
 
+  void _onAgentsList() {
+    if (mounted) setState(() {});
+  }
+
   void _setAgentsList(bool agents) {
     FocusManager.instance.primaryFocus?.unfocus();
-    setState(() => _agentsList = agents);
+    mobileAgentsList.value = agents;
     SharedPreferences.getInstance()
         .then((p) => p.setBool(_agentsListPref, agents));
   }
@@ -583,9 +587,6 @@ class SidebarState extends State<Sidebar> {
           if (_agentSearchCtl.text != v) _agentSearchCtl.text = v;
         }),
         onOpenAgent: (a) => widget.onAgent(a),
-        onOpenMissionControl: widget.onOpenMissionControl,
-        missionControl:
-            _sessions?.where((s) => isDedicatedMcSession(s.id)).firstOrNull,
       );
 
   Future<void> _openCreateAgent([BuildContext? anchorCtx]) async {

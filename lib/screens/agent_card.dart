@@ -270,15 +270,10 @@ class _AgentCardState extends State<AgentCard> {
     final open = working + queued + blocked;
     final done = _count({TaskStatus.done}, {'done'});
     final profile = _currentProfile;
-    final status = !agent.available
-        ? 'Paused'
-        : working > 0
-            ? 'Working'
-            : 'Available';
     final last = agent.lastMessage;
-    final line = agent.available && working == 0 && last != null
-        ? (last.fromUser ? 'You: ${last.text}' : last.text)
-        : status;
+    final line = last == null
+        ? 'No messages yet'
+        : (last.fromUser ? 'You: ${last.text}' : last.text);
     final (String, Color)? summary = !agent.available
         ? ('Paused', AppColors.fg3)
         : blocked > 0
@@ -388,6 +383,13 @@ class _AgentCardState extends State<AgentCard> {
                                   : AppColors.fg3)),
                           const SizedBox(height: 2),
                           Row(children: [
+                            if (agent.available && working > 0) ...[
+                              Spinner(
+                                  key: const ValueKey('agent-working'),
+                                  size: 11,
+                                  color: AppColors.run),
+                              const SizedBox(width: 6),
+                            ],
                             Flexible(
                               child: Text(line,
                                   maxLines: 1,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api.dart';
+import '../composer/composer_card.dart';
 import '../mochi.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -14,6 +15,16 @@ BoxDecoration _floating(double radius) => BoxDecoration(
         BoxShadow(
             color: AppColors.fg1.withValues(alpha: 0.08), spreadRadius: 1),
       ],
+    );
+
+// Shared by the home list and the top bar so both follow the agents/sessions switch.
+final mobileAgentsList = ValueNotifier<bool>(false);
+
+// The chat composer's card, so the home search row reads as the same control.
+BoxDecoration _composerLike(double radius) => BoxDecoration(
+      color: AppColors.surface1,
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
     );
 
 class RoundBtn extends StatelessWidget {
@@ -181,13 +192,17 @@ class MobileTopBar extends StatelessWidget {
                 onActiveTap: onActions,
               ),
               const SizedBox(width: 2),
-              _segment(
-                active: !mission,
-                label: 'Sessions',
-                dot: sessionsBusy,
-                glyph: AppIcon('list',
-                    size: 18, color: mission ? AppColors.fg3 : AppColors.fg1),
-                onTap: onSessions,
+              ValueListenableBuilder<bool>(
+                valueListenable: mobileAgentsList,
+                builder: (_, agents, __) => _segment(
+                  active: !mission,
+                  label: agents ? 'Agents' : 'Sessions',
+                  dot: sessionsBusy,
+                  glyph: AppIcon(agents ? 'agent' : 'list',
+                      size: 18,
+                      color: mission ? AppColors.fg3 : AppColors.fg1),
+                  onTap: onSessions,
+                ),
               ),
             ]),
           ),
@@ -411,8 +426,8 @@ class FloatingSearch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        height: 48,
-        decoration: _floating(24),
+        height: 50,
+        decoration: _composerLike(ComposerCard.radius),
         padding: const EdgeInsets.only(left: 18, right: 8),
         child: Row(children: [
           AppIcon('search', size: 16, color: AppColors.fg4),
@@ -476,7 +491,7 @@ class FloatingListSwitch extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: on ? AppColors.surface3 : Colors.transparent,
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(ComposerCard.radius - 5),
             ),
             child: AppIcon(icon,
                 size: 17, color: on ? AppColors.fg1 : AppColors.fg4),
@@ -486,9 +501,9 @@ class FloatingListSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        height: 48,
+        height: 50,
         padding: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: _floating(24),
+        decoration: _composerLike(ComposerCard.radius),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           _seg('chat-thread', 'Show sessions', !agents, false),
           _seg('agent', 'Show agents', agents, true),
@@ -519,8 +534,8 @@ class AccentFab extends StatelessWidget {
               onTap();
             },
             child: Container(
-              width: 48,
-              height: 48,
+              width: 50,
+              height: 50,
               decoration: BoxDecoration(
                   color: AppColors.accentFill, shape: BoxShape.circle),
               alignment: Alignment.center,
