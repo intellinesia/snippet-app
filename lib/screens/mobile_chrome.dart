@@ -411,24 +411,24 @@ class FloatingSearch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        height: 50,
-        decoration: _floating(25),
+        height: 48,
+        decoration: _floating(24),
         padding: const EdgeInsets.only(left: 18, right: 8),
         child: Row(children: [
-          AppIcon('search', size: 17, color: AppColors.fg4),
+          AppIcon('search', size: 16, color: AppColors.fg4),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
               controller: controller,
               focusNode: focusNode,
               onChanged: onChanged,
-              style: sans(16, color: AppColors.fg1),
+              style: sans(15, color: AppColors.fg1),
               cursorColor: AppColors.accent,
               decoration: InputDecoration(
                 isCollapsed: true,
                 border: InputBorder.none,
                 hintText: hint,
-                hintStyle: sans(16, color: AppColors.fg4),
+                hintStyle: sans(15, color: AppColors.fg4),
               ),
             ),
           ),
@@ -471,24 +471,24 @@ class FloatingListSwitch extends StatelessWidget {
                 },
           child: AnimatedContainer(
             duration: Motion.fast,
-            width: 42,
-            height: 42,
+            width: 40,
+            height: 40,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: on ? AppColors.surface3 : Colors.transparent,
               shape: BoxShape.circle,
             ),
             child: AppIcon(icon,
-                size: 18, color: on ? AppColors.fg1 : AppColors.fg4),
+                size: 17, color: on ? AppColors.fg1 : AppColors.fg4),
           ),
         ),
       );
 
   @override
   Widget build(BuildContext context) => Container(
-        height: 50,
+        height: 48,
         padding: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: _floating(25),
+        decoration: _floating(24),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           _seg('chat-thread', 'Show sessions', !agents, false),
           _seg('agent', 'Show agents', agents, true),
@@ -519,12 +519,12 @@ class AccentFab extends StatelessWidget {
               onTap();
             },
             child: Container(
-              width: 50,
-              height: 50,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                   color: AppColors.accentFill, shape: BoxShape.circle),
               alignment: Alignment.center,
-              child: AppIcon(icon, size: 21, color: AppColors.accentFg),
+              child: AppIcon(icon, size: 20, color: AppColors.accentFg),
             ),
           ),
         ),

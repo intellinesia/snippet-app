@@ -395,8 +395,8 @@ class SidebarState extends State<Sidebar> {
                         const Positioned(
                             left: 0, right: 0, bottom: 0, child: BottomFade()),
                         Positioned(
-                          left: 12,
-                          right: 12,
+                          left: M.gutter,
+                          right: M.gutter,
                           bottom: 12,
                           child: Row(children: [
                             FloatingListSwitch(
