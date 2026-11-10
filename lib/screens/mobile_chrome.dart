@@ -28,15 +28,14 @@ Future<void> loadMobileAgentsList() async {
       (await SharedPreferences.getInstance()).getBool(_agentsListPref) ?? false;
 }
 
-/// Blurs the home below the header and offers both lists, each with a line
-/// on what it holds.
+/// Blurs the home below the header and offers both lists.
 Future<void> showMobileListPicker(BuildContext anchor) {
   final box = anchor.findRenderObject() as RenderBox?;
   final top = box == null
       ? 76.0
       : box.localToGlobal(Offset(0, box.size.height)).dy + 16;
   final screen = MediaQuery.sizeOf(anchor).width;
-  final width = (screen - 2 * M.gutter).clamp(0.0, 300.0);
+  final width = (screen - 2 * M.gutter).clamp(0.0, 220.0);
   final left = (screen - width) / 2;
   return showGeneralDialog<void>(
     context: anchor,
@@ -45,7 +44,7 @@ Future<void> showMobileListPicker(BuildContext anchor) {
     barrierColor: Colors.transparent,
     transitionDuration: Motion.fast,
     pageBuilder: (context, _, __) {
-      Widget option(String icon, String title, String desc, bool agents) {
+      Widget option(String icon, String title, bool agents) {
         final on = mobileAgentsList.value == agents;
         return Semantics(
           button: true,
@@ -61,14 +60,12 @@ Future<void> showMobileListPicker(BuildContext anchor) {
               Navigator.of(context).pop();
             },
             child: Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: on ? AppColors.surface3 : Colors.transparent,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              child: Row(children: [
                     Container(
                       width: 36,
                       height: 36,
@@ -85,19 +82,13 @@ Future<void> showMobileListPicker(BuildContext anchor) {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(title,
-                                style: sans(15,
-                                    weight: W.strong, color: AppColors.fg1)),
-                            const SizedBox(height: 2),
-                            Text(desc, style: sans(13, color: AppColors.fg3)),
-                          ]),
+                      child: Text(title,
+                          style: sans(15,
+                              weight: W.strong, color: AppColors.fg1)),
                     ),
                     if (on)
                       Padding(
-                        padding: const EdgeInsets.only(left: 8, top: 8),
+                        padding: const EdgeInsets.only(left: 8, right: 4),
                         child: AppIcon('check',
                             size: 16, color: AppColors.accent),
                       ),
@@ -131,13 +122,9 @@ Future<void> showMobileListPicker(BuildContext anchor) {
               padding: const EdgeInsets.all(6),
               decoration: _composerLike(20),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                option('list', 'Sessions',
-                    'Your conversations and the work running in them, newest first.',
-                    false),
+                option('list', 'Sessions', false),
                 const SizedBox(height: 4),
-                option('agent', 'Agents',
-                    'What each agent is working on and its last message.',
-                    true),
+                option('agent', 'Agents', true),
               ]),
             ),
           ),

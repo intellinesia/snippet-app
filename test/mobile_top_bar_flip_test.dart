@@ -24,8 +24,7 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('home-list-segment')));
       await tester.pumpAndSettle();
-      expect(find.text('What each agent is working on and its last message.'),
-          findsOneWidget);
+      expect(find.byKey(const ValueKey('list-pick-sessions')), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('list-pick-agents')));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('list-pick-agents')), findsNothing);
@@ -62,7 +61,7 @@ void main() {
                 of: find.byKey(const ValueKey('list-pick-sessions')),
                 matching: find.byType(Material))
             .first);
-        expect(card.width, lessThanOrEqualTo(300), reason: 'width at $w');
+        expect(card.width, lessThanOrEqualTo(220), reason: 'width at $w');
         expect(card.left, greaterThanOrEqualTo(16), reason: 'left at $w');
         expect(card.right, lessThanOrEqualTo(w - 16), reason: 'right at $w');
         Navigator.of(tester.element(find.byKey(const ValueKey('list-pick-sessions')))).pop();
