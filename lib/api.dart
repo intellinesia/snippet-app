@@ -840,7 +840,9 @@ class DaemonClient {
     bool Function()? isCancelled,
   }) async {
     try {
-      final request = http.Request('GET', _uri('/fs/download', {'path': path}));
+      // Compression drops Content-Length, and without it there is no progress.
+      final request = http.Request('GET', _uri('/fs/download', {'path': path}))
+        ..headers['Accept-Encoding'] = 'identity';
       final response = await _http.send(request).timeout(_long);
       if (isCancelled?.call() ?? false) throw const DownloadCancelled();
       if (response.statusCode != 200) {

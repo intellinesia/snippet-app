@@ -730,6 +730,8 @@ Future<String?> downloadRemoteFile(
         if (total != null && total > 0) {
           final percent = ((received * 100) ~/ total).clamp(0, 100);
           notifyDownloadProgress(progressId, name, percent);
+        } else {
+          notifyDownloadProgress(progressId, name, null, received: received);
         }
       },
       isCancelled: () => cancelled || (isCancelled?.call() ?? false),
