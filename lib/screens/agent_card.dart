@@ -287,32 +287,6 @@ class _AgentCardState extends State<AgentCard> {
     final summaryColor = summary?.$2 ?? AppColors.fg4;
     final nameSize = kMobile ? 15.5 : 13.0;
     final metaSize = kMobile ? 13.0 : 11.5;
-    final segments = [
-      (working, AppColors.run),
-      (queued, AppColors.surface3),
-      (blocked, AppColors.danger),
-      (done, AppColors.ok.withValues(alpha: 0.55)),
-    ].where((e) => e.$1 > 0).toList();
-    final barHeight = kMobile ? 4.0 : 3.0;
-    final bar = ClipRRect(
-      borderRadius: BorderRadius.circular(barHeight),
-      child: SizedBox(
-        height: barHeight,
-        child: segments.isEmpty
-            ? ColoredBox(
-                color: AppColors.surface2, child: const SizedBox.expand())
-            : Row(children: [
-                for (var j = 0; j < segments.length; j++) ...[
-                  if (j > 0) const SizedBox(width: 2),
-                  Expanded(
-                    flex: segments[j].$1,
-                    child: ColoredBox(
-                        color: segments[j].$2, child: const SizedBox.expand()),
-                  ),
-                ],
-              ]),
-      ),
-    );
     if (kMobile) {
       final dot = !agent.available
           ? AppColors.fg4
@@ -419,7 +393,8 @@ class _AgentCardState extends State<AgentCard> {
                         ),
                         const SizedBox(height: 2),
                         SwapText(summary?.$1 ?? '',
-                            style: TS.meta(summary?.$2 ?? AppColors.fg3)
+                            style: TS
+                                .meta(summary?.$2 ?? AppColors.fg3)
                                 .copyWith(fontFeatures: const [
                               FontFeature.tabularFigures()
                             ])),
@@ -432,6 +407,13 @@ class _AgentCardState extends State<AgentCard> {
             ),
           ));
     }
+    final dot = !agent.available
+        ? AppColors.fg4
+        : blocked > 0
+            ? AppColors.danger
+            : working > 0
+                ? AppColors.run
+                : null;
     return GestureDetector(
       onSecondaryTapUp: (d) => _actions(d.globalPosition),
       child: Material(
@@ -445,58 +427,89 @@ class _AgentCardState extends State<AgentCard> {
           },
           borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 9),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Opacity(
-                      opacity: agent.available ? 1 : 0.5,
-                      child: AgentMochi(agent.id, size: 18),
+            padding: const EdgeInsets.fromLTRB(8, 7, 10, 7),
+            child: Row(children: [
+              Opacity(
+                opacity: agent.available ? 1 : 0.5,
+                child: SizedBox.square(
+                  dimension: 32,
+                  child: Stack(clipBehavior: Clip.none, children: [
+                    Container(
+                      decoration: BoxDecoration(
+                          color: AppColors.surface2, shape: BoxShape.circle),
+                      alignment: Alignment.center,
+                      child: AgentMochi(agent.id, size: 20),
                     ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      flex: 2,
-                      child: Text(name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(nameSize,
-                              weight: W.body,
-                              color: agent.available
-                                  ? AppColors.fg1
-                                  : AppColors.fg3)),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Row(children: [
-                        Flexible(
-                          child: Text(line,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: sans(metaSize, color: AppColors.fg4)),
+                    if (dot != null)
+                      Positioned(
+                        right: -1,
+                        bottom: -1,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: dot,
+                            shape: BoxShape.circle,
+                            border:
+                                Border.all(color: AppColors.windowBg, width: 2),
+                          ),
                         ),
-                        if (profile != null) ...[
-                          const SizedBox(width: 5),
-                          AgentProviderMark(
-                              client: widget.client,
-                              profile: profile,
-                              size: 12),
-                        ],
-                      ]),
-                    ),
-                    const SizedBox(width: 8),
-                    if (summary != null)
-                      SwapText(summaryText,
-                          style: sans(metaSize,
-                              color: summaryColor, tabular: true)),
+                      ),
+                  ]),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(children: [
+                      Expanded(
+                        child: Text(name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(nameSize,
+                                weight: W.body,
+                                color: agent.available
+                                    ? AppColors.fg1
+                                    : AppColors.fg3)),
+                      ),
+                      if (profile != null) ...[
+                        const SizedBox(width: 6),
+                        AgentProviderMark(
+                            key: const ValueKey('agent-provider'),
+                            client: widget.client,
+                            profile: profile,
+                            size: 12),
+                      ],
+                    ]),
+                    const SizedBox(height: 2),
+                    Row(children: [
+                      if (agent.available && working > 0) ...[
+                        Spinner(
+                            key: const ValueKey('agent-working'),
+                            size: 10,
+                            color: AppColors.run),
+                        const SizedBox(width: 5),
+                      ],
+                      Expanded(
+                        child: Text(line,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(metaSize, color: AppColors.fg3)),
+                      ),
+                      if (summary != null) ...[
+                        const SizedBox(width: 8),
+                        SwapText(summaryText,
+                            style: sans(metaSize,
+                                color: summaryColor, tabular: true)),
+                      ],
+                    ]),
                   ],
                 ),
-                const SizedBox(height: 7),
-                bar,
-              ],
-            ),
+              ),
+            ]),
           ),
         ),
       ),

@@ -8,6 +8,7 @@ import '../models.dart';
 import '../settled_sessions.dart';
 import '../crew_status.dart';
 import 'agent_rail.dart' show agentRailShown;
+import 'sidebar_mode.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -221,6 +222,7 @@ class SidebarState extends State<Sidebar> {
       mobileAgentsList.addListener(_onAgentsList);
       loadMobileAgentsList();
     }
+    if (!kMobile) sidebarAgentsFirst.addListener(_onAgentsList);
     if (widget.mobileHome != MobileHome.settings) {
       _lastMainHome = widget.mobileHome;
     }
@@ -273,6 +275,7 @@ class SidebarState extends State<Sidebar> {
   @override
   void dispose() {
     mobileAgentsList.removeListener(_onAgentsList);
+    sidebarAgentsFirst.removeListener(_onAgentsList);
     Drafts.instance.removeListener(_onDrafts);
     _crewLive?.dispose();
     _pageController.dispose();
@@ -402,8 +405,8 @@ class SidebarState extends State<Sidebar> {
                                       controller: _agentSearchCtl,
                                       focusNode: _searchFocus,
                                       hint: 'Search agents',
-                                      onChanged: (v) => setState(
-                                          () => _agentFilterQuery = v),
+                                      onChanged: (v) =>
+                                          setState(() => _agentFilterQuery = v),
                                     )
                                   : FloatingSearch(
                                       key: const ValueKey('search-sessions'),
@@ -563,9 +566,13 @@ class SidebarState extends State<Sidebar> {
     if (mounted) setState(() {});
   }
 
-  Widget _agentList(DaemonClient client) => AgentsSidebarPanel(
+  Widget _agentList(DaemonClient client,
+          {SessionInfo? missionControl, VoidCallback? onOpenMissionControl}) =>
+      AgentsSidebarPanel(
         key: _agentsPanelKey,
         client: client,
+        missionControl: missionControl,
+        onOpenMissionControl: onOpenMissionControl,
         searchQuery: _agentFilterQuery,
         onSearchChanged: (v) => setState(() {
           _agentFilterQuery = v;
@@ -995,7 +1002,8 @@ class SidebarState extends State<Sidebar> {
             deriveCrew(_crew, widget.sessions ?? const <SessionInfo>[]));
     final mcBusy = mc != null &&
         (sessionIsActive(mc.status) || mc.status == 'waiting_for_input');
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    final sessionsBody =
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (hasClient || _crew.isNotEmpty) ...[
         if (!agentRailShown(context))
           Padding(
@@ -1112,6 +1120,17 @@ class SidebarState extends State<Sidebar> {
         ),
       ),
       if (hasClient && settledRows.isNotEmpty) _settledPinned(settledRows),
+    ]);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Expanded(
+        child: SidebarModeSwap(
+          agentsFirst: sidebarAgentsFirst.value && hasClient,
+          sessions: sessionsBody,
+          agents: (_) => _agentList(widget.client!,
+              missionControl: mc,
+              onOpenMissionControl: widget.onOpenMissionControl),
+        ),
+      ),
       Container(
         decoration: BoxDecoration(
             border: Border(top: BorderSide(color: AppColors.line))),

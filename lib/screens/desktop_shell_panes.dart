@@ -1,15 +1,17 @@
 part of 'desktop_shell.dart';
 
 extension _DesktopShellPanesExt on _DesktopShellState {
-  Widget _tabBody(_ShellTab t, {required bool primary, bool? visible}) => kMobile
-      ? _originTabBody(t, primary: primary, visible: visible ?? primary)
-      : ShellPanelScope(
-          key: ValueKey('body-${t.key}'),
-          open: _openShellPanel,
-          client: t.client,
-          sessionId: t.sessionId,
-          child: _originTabBody(t, primary: primary, visible: visible ?? primary),
-        );
+  Widget _tabBody(_ShellTab t, {required bool primary, bool? visible}) =>
+      kMobile
+          ? _originTabBody(t, primary: primary, visible: visible ?? primary)
+          : ShellPanelScope(
+              key: ValueKey('body-${t.key}'),
+              open: _openShellPanel,
+              client: t.client,
+              sessionId: t.sessionId,
+              child: _originTabBody(t,
+                  primary: primary, visible: visible ?? primary),
+            );
 
   Widget _originTabBody(_ShellTab t,
       {required bool primary, required bool visible}) {
@@ -57,7 +59,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           : TasksPanel(
               key: ValueKey('body-${t.key}'),
               client: t.client,
-              onOpenTask: (task) => _openTaskTab(t.client, t.instanceUrl, task));
+              onOpenTask: (task) =>
+                  _openTaskTab(t.client, t.instanceUrl, task));
     }
     if (t.isTerminal) {
       if (t.termSessionKey == null) {
@@ -283,7 +286,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     return Expanded(
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (rail)
-          AgentRail(
+          _railSlot(AgentRail(
             client: _client,
             sessions: _sessions,
             mcSelected:
@@ -293,11 +296,26 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             onOpenMissionControl: _openMissionControlTab,
             onOpenAgent: _openRightAgent,
             footer: [_usageButton(32), _settingsButton(32)],
-          ),
+          )),
         split,
       ]),
     );
   }
+
+  // Agents first: the rail folds away as the sidebar takes over its list.
+  Widget _railSlot(Widget rail) => AnimatedContainer(
+        duration: Motion.page,
+        curve: Curves.easeInOutCubic,
+        width: sidebarAgentsFirst.value ? 0 : kAgentRailWidth,
+        clipBehavior: Clip.hardEdge,
+        decoration: const BoxDecoration(),
+        child: OverflowBox(
+          alignment: Alignment.centerRight,
+          minWidth: kAgentRailWidth,
+          maxWidth: kAgentRailWidth,
+          child: rail,
+        ),
+      );
 
   Widget _splitView({required bool topInset}) => ShellSplitView(
         key: const ValueKey('shell-split'),
@@ -401,8 +419,9 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         key: ValueKey('agent-panel-${tab.key}'),
         client: tab.client,
         agentId: agent.id,
-        agentName:
-            agent.displayName.trim().isEmpty ? agent.id : agent.displayName.trim(),
+        agentName: agent.displayName.trim().isEmpty
+            ? agent.id
+            : agent.displayName.trim(),
         onAction: _agentAction,
         readouts: tabReadouts,
         activeReadout: _activeKey[_Pane.right],
@@ -755,7 +774,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     _syncPage();
   }
 
-  bool get _railOn => !kMobile && agentRailShown(context);
+  bool get _railOn =>
+      !kMobile && agentRailShown(context) && !sidebarAgentsFirst.value;
 
   Widget _sidebarTop() {
     return SizedBox(
@@ -772,16 +792,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             tooltip: kMacOS ? 'Hide sidebar (⌘B)' : 'Hide sidebar (Ctrl+B)',
             onTap: _toggleSidebar),
         if (!kMacOS) const Spacer(),
-        IconBtn('chevron-left',
-            size: 28,
-            iconSize: 16,
-            tooltip: 'Back',
-            onTap: _canNavigateBack ? _navigateBack : null),
-        IconBtn('chevron-right',
-            size: 28,
-            iconSize: 16,
-            tooltip: 'Forward',
-            onTap: _canNavigateForward ? _navigateForward : null),
+        const SizedBox(width: 6),
+        const SidebarModeSwitch(),
         const SizedBox(width: 10),
       ]),
     );
@@ -792,9 +804,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             size: size,
             iconSize: 16,
             tooltip: 'Usage',
-            onTap: _client == null
-                ? null
-                : () => showUsagePopover(ctx, _client!)),
+            onTap:
+                _client == null ? null : () => showUsagePopover(ctx, _client!)),
       );
 
   Widget _settingsButton(double size) => IconBtn('settings',
