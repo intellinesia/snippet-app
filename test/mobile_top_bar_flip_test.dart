@@ -49,4 +49,45 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
+
+  testWidgets('the picker keeps a fixed max width and stays on screen',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    try {
+      SharedPreferences.setMockInitialValues({});
+      for (final w in [320.0, 390.0, 800.0]) {
+        await _openAt(tester, w);
+        final card = tester.getRect(find
+            .ancestor(
+                of: find.byKey(const ValueKey('list-pick-sessions')),
+                matching: find.byType(Material))
+            .first);
+        expect(card.width, lessThanOrEqualTo(300), reason: 'width at $w');
+        expect(card.left, greaterThanOrEqualTo(16), reason: 'left at $w');
+        expect(card.right, lessThanOrEqualTo(w - 16), reason: 'right at $w');
+        Navigator.of(tester.element(find.byKey(const ValueKey('list-pick-sessions')))).pop();
+        await tester.pumpAndSettle();
+      }
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+}
+
+void _noop() {}
+
+Future<void> _openAt(WidgetTester tester, double width) async {
+  tester.view.physicalSize = Size(width, 800);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+          body: MobileTopBar(
+              mission: false,
+              onMission: _noop,
+              onSessions: _noop,
+              onMenu: _noop,
+              onSettings: _noop))));
+  await tester.tap(find.byKey(const ValueKey('home-list-segment')));
+  await tester.pumpAndSettle();
 }
