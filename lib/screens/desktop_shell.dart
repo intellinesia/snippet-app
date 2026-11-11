@@ -554,8 +554,17 @@ class _DesktopShellState extends State<DesktopShell>
     _shells.addListener(_syncGlobalShellTabs);
   }
 
+  late bool _railFolded = sidebarAgentsFirst.value;
+
   void _onSidebarMode() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {
+      if (!sidebarAgentsFirst.value) {
+        _railFolded = false;
+      } else if (reduceMotion(context)) {
+        _railFolded = true;
+      }
+    });
   }
 
   @override

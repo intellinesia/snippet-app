@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
+import 'package:snippet/models.dart';
 import 'package:snippet/screens/agent_rail.dart';
 import 'package:snippet/screens/agents_sidebar_panel.dart';
 import 'package:snippet/screens/desktop_shell.dart';
@@ -78,20 +79,13 @@ void main() {
 
     final before = tester.state(find.byType(ShellSplitView));
     expect(find.byTooltip('Back'), findsNothing);
-    double railWidth() => tester
-        .getSize(find
-            .ancestor(
-                of: find.byType(AgentRail),
-                matching: find.byType(AnimatedContainer))
-            .first)
-        .width;
-    expect(railWidth(), kAgentRailWidth);
+    expect(find.byType(AgentRail), findsOneWidget);
     expect(find.byType(AgentsSidebarPanel), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('sidebar-mode-agents')));
     await _pump(tester);
     expect(sidebarAgentsFirst.value, isTrue);
-    expect(railWidth(), 0);
+    expect(find.byType(AgentRail), findsNothing);
     expect(find.byType(AgentsSidebarPanel), findsOneWidget);
     for (final tip in ['Usage', 'Settings', 'Tasks']) {
       expect(
@@ -104,9 +98,18 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getBool('desktop_sidebar_agents_first'), isTrue);
 
+    // A row opens the agent beside the chat, not the phone route.
+    tester
+            .widget<AgentsSidebarPanel>(find.byType(AgentsSidebarPanel))
+            .onOpenAgent!(
+        CoordinationAgent.fromJson(
+            {'id': 'scout', 'display_name': 'Scout', 'handle': 'scout'}));
+    await _pump(tester);
+    expect(find.text('Scout'), findsWidgets);
+
     await tester.tap(find.byKey(const ValueKey('sidebar-mode-sessions')));
     await _pump(tester);
-    expect(railWidth(), kAgentRailWidth);
+    expect(find.byType(AgentRail), findsOneWidget);
     expect(find.byType(AgentsSidebarPanel), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());

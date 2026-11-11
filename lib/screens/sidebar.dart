@@ -578,7 +578,8 @@ class SidebarState extends State<Sidebar> {
           _agentFilterQuery = v;
           if (_agentSearchCtl.text != v) _agentSearchCtl.text = v;
         }),
-        onOpenAgent: (a) => widget.onAgent(a),
+        onOpenAgent: (a) =>
+            kMobile ? widget.onAgent(a) : widget.onOpenAgent?.call(a),
       );
 
   Future<void> _openCreateAgent([BuildContext? anchorCtx]) async {
@@ -1124,7 +1125,9 @@ class SidebarState extends State<Sidebar> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Expanded(
         child: SidebarModeSwap(
-          agentsFirst: sidebarAgentsFirst.value && hasClient,
+          // The narrow drawer has no switch, so it always lists sessions.
+          agentsFirst:
+              sidebarAgentsFirst.value && hasClient && agentRailShown(context),
           sessions: sessionsBody,
           agents: (_) => _agentList(widget.client!,
               missionControl: mc,

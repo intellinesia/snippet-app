@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'drafts.dart';
+import 'screens/mobile_chrome.dart' show loadMobileAgentsList;
+import 'screens/sidebar_mode.dart' show loadSidebarAgentsFirst;
 import 'ambient/ambient_edge_glow.dart';
 import 'notifications.dart';
 import 'notification_popovers.dart';
@@ -48,6 +50,9 @@ void main() async {
     await ThemeManager.instance.init();
   } catch (_) {}
   await Drafts.instance.init();
+  try {
+    await (kMobile ? loadMobileAgentsList() : loadSidebarAgentsFirst());
+  } catch (_) {}
   await ResponseCache.instance.init();
   if (kCanNotify) {
     try {
@@ -100,7 +105,8 @@ class _SnippetAppState extends State<SnippetApp> with WidgetsBindingObserver {
       title: 'snippet',
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
-      scrollBehavior: const MaterialScrollBehavior().copyWith(scrollbars: false),
+      scrollBehavior:
+          const MaterialScrollBehavior().copyWith(scrollbars: false),
       theme: buildAppTheme(),
       // Deliberately NOT wrapped in WithForegroundTask. That widget is a
       // `WillPopScope`, and `Navigator.maybePop` consults WillPopScope callbacks

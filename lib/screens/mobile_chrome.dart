@@ -66,33 +66,30 @@ Future<void> showMobileListPicker(BuildContext anchor) {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Row(children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: on
-                            ? AppColors.accent.withValues(alpha: 0.16)
-                            : AppColors.surface2,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: AppIcon(icon,
-                          size: 18,
-                          color: on ? AppColors.accent : AppColors.fg2),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(title,
-                          style: sans(15,
-                              weight: W.strong, color: AppColors.fg1)),
-                    ),
-                    if (on)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8, right: 4),
-                        child: AppIcon('check',
-                            size: 16, color: AppColors.accent),
-                      ),
-                  ]),
+                Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: on
+                        ? AppColors.accent.withValues(alpha: 0.16)
+                        : AppColors.surface2,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: AppIcon(icon,
+                      size: 18, color: on ? AppColors.accent : AppColors.fg2),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(title,
+                      style: sans(15, weight: W.strong, color: AppColors.fg1)),
+                ),
+                if (on)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8, right: 4),
+                    child: AppIcon('check', size: 16, color: AppColors.accent),
+                  ),
+              ]),
             ),
           ),
         );
@@ -106,8 +103,7 @@ Future<void> showMobileListPicker(BuildContext anchor) {
             child: ClipRect(
               child: BackdropFilter(
                 filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                child:
-                    ColoredBox(color: Colors.black.withValues(alpha: 0.35)),
+                child: ColoredBox(color: Colors.black.withValues(alpha: 0.35)),
               ),
             ),
           ),
@@ -332,10 +328,9 @@ class MobileTopBar extends StatelessWidget {
                   label: agents ? 'Agents' : 'Sessions',
                   flips: true,
                   onActiveTap: () => showMobileListPicker(context),
-                  dot: sessionsBusy,
+                  dot: !agents && sessionsBusy,
                   glyph: AppIcon(agents ? 'agent' : 'list',
-                      size: 18,
-                      color: mission ? AppColors.fg3 : AppColors.fg1),
+                      size: 18, color: mission ? AppColors.fg3 : AppColors.fg1),
                   onTap: onSessions,
                 ),
               ),
@@ -596,8 +591,6 @@ class FloatingSearch extends StatelessWidget {
       );
 }
 
-/// Sessions or agents for the home list: two icons in one floating pill,
-/// the active one filled.
 class AccentFab extends StatelessWidget {
   const AccentFab(
       {super.key,

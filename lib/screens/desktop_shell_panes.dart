@@ -303,19 +303,28 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   }
 
   // Agents first: the rail folds away as the sidebar takes over its list.
-  Widget _railSlot(Widget rail) => AnimatedContainer(
-        duration: Motion.page,
-        curve: Curves.easeInOutCubic,
-        width: sidebarAgentsFirst.value ? 0 : kAgentRailWidth,
-        clipBehavior: Clip.hardEdge,
-        decoration: const BoxDecoration(),
-        child: OverflowBox(
-          alignment: Alignment.centerRight,
-          minWidth: kAgentRailWidth,
-          maxWidth: kAgentRailWidth,
-          child: rail,
-        ),
-      );
+  Widget _railSlot(Widget rail) {
+    final folding = sidebarAgentsFirst.value;
+    return AnimatedContainer(
+      duration: reduceMotion(context) ? Duration.zero : Motion.page,
+      curve: Curves.easeInOutCubic,
+      width: folding ? 0 : kAgentRailWidth,
+      clipBehavior: Clip.hardEdge,
+      decoration: const BoxDecoration(),
+      onEnd: () {
+        if (mounted) _setState(() => _railFolded = sidebarAgentsFirst.value);
+      },
+      // Once folded the rail is dropped, so it stops polling and taking focus.
+      child: _railFolded
+          ? null
+          : OverflowBox(
+              alignment: Alignment.centerRight,
+              minWidth: kAgentRailWidth,
+              maxWidth: kAgentRailWidth,
+              child: ExcludeFocus(excluding: folding, child: rail),
+            ),
+    );
+  }
 
   Widget _splitView({required bool topInset}) => ShellSplitView(
         key: const ValueKey('shell-split'),
@@ -782,7 +791,10 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       height: 46,
       child: Row(children: [
         if (kMacOS) ...[
-          SizedBox(width: _railOn ? 78 - kAgentRailWidth : 78),
+          AnimatedContainer(
+              duration: reduceMotion(context) ? Duration.zero : Motion.page,
+              curve: Curves.easeInOutCubic,
+              width: _railOn ? 78 - kAgentRailWidth : 78),
           const Spacer(),
         ] else
           const SizedBox(width: 10),

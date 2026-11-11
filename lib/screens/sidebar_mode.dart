@@ -41,7 +41,7 @@ class SidebarModeSwitch extends StatelessWidget {
         ),
         child: Stack(children: [
           AnimatedPositioned(
-            duration: Motion.base,
+            duration: reduceMotion(context) ? Duration.zero : Motion.base,
             curve: Curves.easeOutCubic,
             left: agents ? _cell : 0,
             top: 0,
@@ -116,6 +116,30 @@ class SidebarModeSwap extends StatefulWidget {
 
 class _SidebarModeSwapState extends State<SidebarModeSwap>
     with SingleTickerProviderStateMixin {
+  Widget _layer(Key key,
+          {required bool shown,
+          required bool active,
+          required double opacity,
+          required double dx,
+          required Widget child}) =>
+      Offstage(
+        key: key,
+        offstage: !shown,
+        child: TickerMode(
+          enabled: shown,
+          child: ExcludeFocus(
+            excluding: !active,
+            child: IgnorePointer(
+              ignoring: !active,
+              child: Opacity(
+                opacity: opacity,
+                child: Transform.translate(offset: Offset(dx, 0), child: child),
+              ),
+            ),
+          ),
+        ),
+      );
+
   late final _c = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 340),
@@ -147,29 +171,25 @@ class _SidebarModeSwapState extends State<SidebarModeSwap>
         final out = Curves.easeInCubic.transform((t / 0.7).clamp(0.0, 1.0));
         final inn =
             Curves.easeOutCubic.transform(((t - 0.2) / 0.8).clamp(0.0, 1.0));
+        // The sessions layer stays mounted so its scroll position survives.
         return ClipRect(
           child: Stack(fit: StackFit.expand, children: [
-            if (t < 1)
-              IgnorePointer(
-                ignoring: widget.agentsFirst,
-                child: Opacity(
-                  opacity: 1 - out,
-                  child: Transform.translate(
-                    offset: Offset(60 * out, 0),
-                    child: widget.sessions,
-                  ),
-                ),
-              ),
+            _layer(
+              const ValueKey('sidebar-sessions-layer'),
+              shown: t < 1,
+              active: !widget.agentsFirst,
+              opacity: 1 - out,
+              dx: 60 * out,
+              child: widget.sessions,
+            ),
             if (t > 0)
-              IgnorePointer(
-                ignoring: !widget.agentsFirst,
-                child: Opacity(
-                  opacity: inn,
-                  child: Transform.translate(
-                    offset: Offset(-52 * (1 - inn), 0),
-                    child: widget.agents(context),
-                  ),
-                ),
+              _layer(
+                const ValueKey('sidebar-agents-layer'),
+                shown: true,
+                active: widget.agentsFirst,
+                opacity: inn,
+                dx: -52 * (1 - inn),
+                child: widget.agents(context),
               ),
           ]),
         );
