@@ -90,7 +90,11 @@ final _downloadStarted = <int, int>{};
 final _downloadLast = <int, (int, int)>{};
 
 AndroidNotificationDetails _downloadAndroid(
-        {required String line, int? progress, bool failed = false, int? id}) =>
+        {required String line,
+        int? progress,
+        bool failed = false,
+        bool indeterminate = false,
+        int? id}) =>
     AndroidNotificationDetails(_downloadChannel, 'Downloads',
         channelDescription: 'Files saved from a session',
         importance: progress != null || !failed
@@ -108,6 +112,7 @@ AndroidNotificationDetails _downloadAndroid(
         onlyAlertOnce: true,
         ongoing: progress != null,
         showProgress: progress != null,
+        indeterminate: indeterminate,
         maxProgress: 100,
         progress: progress ?? 0,
         when: id == null ? null : _downloadStarted[id],
@@ -146,28 +151,40 @@ Future<int?> notifyDownloadStarted(String name,
   return id;
 }
 
-Future<void> notifyDownloadProgress(int? id, String name, int progress) async {
+/// [progress] is a percentage; null means the size is unknown, so the row
+/// shows a moving bar and the bytes [received] so far.
+Future<void> notifyDownloadProgress(int? id, String name, int? progress,
+    {int received = 0}) async {
   if (id == null || !kCanNotify || !kMobile) return;
   // Progress arrives per chunk; Android drops updates past a few a second,
   // which shows as the row vanishing and coming back.
   final now = DateTime.now().millisecondsSinceEpoch;
   final last = _downloadLast[id];
+  final mark = progress ?? -1 - (received >> 18);
   if (last != null &&
-      (last.$1 == progress || (progress < 100 && now - last.$2 < 350))) {
+      (last.$1 == mark || ((progress ?? 0) < 100 && now - last.$2 < 350))) {
     return;
   }
-  _downloadLast[id] = (progress, now);
+  _downloadLast[id] = (mark, now);
+  final line = progress == null
+      ? 'Downloading $name · ${formatDownloadBytes(received)}'
+      : 'Downloading $name · $progress%';
   await _enqueueDownloadNotification(() => _mainNotif.show(
         id: id,
         title: 'Downloads',
-        body: 'Downloading $name · $progress%',
+        body: line,
         notificationDetails: NotificationDetails(
             android: _downloadAndroid(
-                line: 'Downloading $name · $progress%',
-                progress: progress,
+                line: line,
+                progress: progress ?? 0,
+                indeterminate: progress == null,
                 id: id)),
       ));
 }
+
+String formatDownloadBytes(int b) => b < 1024 * 1024
+    ? '${(b / 1024).toStringAsFixed(0)} KB'
+    : '${(b / 1024 / 1024).toStringAsFixed(1)} MB';
 
 void _downloadDone(int id) {
   _downloadStarted.remove(id);

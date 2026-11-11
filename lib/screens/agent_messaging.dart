@@ -381,6 +381,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   AgentView _view = AgentView.thread;
+  String? _filter;
   int _unread = 0;
 
   void _loadUnread() => agentInboxUnread(widget.client, widget.agentId)
@@ -393,6 +394,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     final leftInbox = _view == AgentView.inbox;
     setState(() {
       _view = v;
+      _filter = null;
       if (leftInbox) _unread = 0;
     });
     if (leftInbox) {
@@ -417,7 +419,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               constraints: const BoxConstraints(maxWidth: 720),
               child: agentRecordsBody(
                   widget.client, widget.agentId, widget.agentName,
-                  board: _view == AgentView.board),
+                  board: _view == AgentView.board,
+                  filter: _filter,
+                  filterChips: !kMobile),
             ),
           )),
     };
@@ -437,7 +441,93 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       client: widget.client,
       agentId: widget.agentId,
       agentName: widget.agentName,
+      views: false,
       onDeleted: _closePage);
+
+  List<(String, String?)> get _filters => switch (_view) {
+        AgentView.inbox => agentInboxFilters,
+        AgentView.board => agentBoardFilters,
+        AgentView.thread => const [],
+      };
+
+  String get _viewLine {
+    final view = switch (_view) {
+      AgentView.thread => 'Chat',
+      AgentView.inbox => 'Inbox',
+      AgentView.board => 'Board',
+    };
+    final f = _filters.where((f) => f.$2 != null && f.$2 == _filter);
+    return f.isEmpty ? view : '$view \u00b7 ${f.first.$1}';
+  }
+
+  /// The phone title menu: the views, the open view's filters, and the rest
+  /// of the agent behind More actions.
+  Future<void> _openViewMenu() async {
+    final picked = await showAppMenu<String>(
+      context,
+      minWidth: 240,
+      items: [
+        for (final (v, icon, label) in const [
+          (AgentView.thread, 'message', 'Chat'),
+          (AgentView.inbox, 'inbox', 'Inbox'),
+          (AgentView.board, 'clipboard', 'Board'),
+        ])
+          appMenuRow<String>(
+            value: 'view:${v.name}',
+            icon: icon,
+            label: label,
+            trailing: v == AgentView.inbox && _unread > 0 ? '$_unread' : null,
+            selected: v == _view,
+          ),
+        appMenuRow<String>(
+            value: 'desk', icon: 'terminal', label: 'Desk session'),
+        if (_filters.isNotEmpty) ...[
+          const PopupMenuDivider(),
+          appMenuHeading<String>('Show'),
+          for (final (label, value) in _filters)
+            appMenuRow<String>(
+              value: 'filter:${value ?? ''}',
+              icon: switch (value) {
+                'offer' || 'dispatched' => 'send',
+                'message' => 'message',
+                'room' => 'users',
+                'by-task' => 'clipboard',
+                'by-folder' => 'folder',
+                'waiting' => 'clock',
+                'reported' => 'check-circle',
+                'progress' => 'activity',
+                'noted' => 'edit',
+                _ => 'list',
+              },
+              label: label,
+              selected: value == _filter,
+            ),
+        ],
+        appMenuRow<String>(
+          value: 'actions',
+          icon: 'more-horizontal',
+          label: 'More actions',
+          trailingWidget:
+              AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+        ),
+      ],
+    );
+    if (picked == null || !mounted) return;
+    if (picked == 'actions') return _openActions();
+    if (picked == 'desk') {
+      return openAgentDesk(
+          context, widget.client, widget.agentId, widget.agentName);
+    }
+    if (picked.startsWith('view:')) {
+      final v = AgentView.values.byName(picked.substring(5));
+      if (v != _view) _setView(v);
+      return;
+    }
+    if (picked.startsWith('filter:')) {
+      final f = picked.substring(7);
+      setState(() => _filter = f.isEmpty ? null : f);
+    }
+  }
   static const _maxAttachments = 10;
   Duration _maxRecordingDuration = const Duration(minutes: 3);
 
@@ -1089,7 +1179,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         child: Column(
           children: [
             if (!hideChrome) _header(),
-            if (kMobile) _phoneSwitcher(),
             Expanded(child: _viewBody()),
             if (_view == AgentView.thread) _composer(),
           ],
@@ -1097,11 +1186,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       ),
     );
   }
-
-  Widget _phoneSwitcher() => Padding(
-        padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 4),
-        child: _switcher(),
-      );
 
   Widget _desktopStatusLine(String subtitle) {
     final logo = widget.subtitle == null && _profileProvider != null;
@@ -1128,12 +1212,12 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   Widget _header() {
     final subtitle = (widget.subtitle ?? _fetchedLine ?? '').trim();
     if (kMobile) {
-      // Back is the system gesture (iOS gets it from the Cupertino route);
-      // the pill opens the agent's actions.
+      // Back is the system gesture (iOS gets it from the Cupertino route).
       return MobileStackedTitleBar(
         title: widget.agentName,
-        onTap: _openActions,
-        tapHint: 'Agent actions',
+        subtitle: _viewLine,
+        onTap: _openViewMenu,
+        tapHint: 'Switch view',
       );
     }
     final canGoBack = !widget.embedded &&

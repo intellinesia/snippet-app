@@ -60,6 +60,7 @@ import 'shell_rail.dart';
 import 'shell_rail_tools.dart';
 import 'shell_shortcuts.dart';
 import 'agent_rail.dart';
+import 'sidebar_mode.dart';
 import 'shell_sidebar_host.dart';
 import 'shell_split_view.dart';
 import 'shell_welcome.dart';
@@ -470,6 +471,7 @@ class _DesktopShellState extends State<DesktopShell>
           client: tab.client, agentId: a.id, agentName: name));
     }
   }
+
   Map<String, String> _tabProviders = const {};
   String? _tabProvidersFor;
 
@@ -541,11 +543,28 @@ class _DesktopShellState extends State<DesktopShell>
     }
     _startSessionsTicker();
     if (!kMobile) HardwareKeyboard.instance.addHandler(_handleGlobalShortcuts);
+    if (!kMobile) {
+      sidebarAgentsFirst.addListener(_onSidebarMode);
+      loadSidebarAgentsFirst();
+    }
     if (kMobile) ShareInbound.listen(_onInboundShare);
     // Global shells mirror into tabs whenever the daemon reports a change: a
     // reconnect adopts whatever ptys already exist, so live shells never vanish
     // from the strip just because the socket dropped.
     _shells.addListener(_syncGlobalShellTabs);
+  }
+
+  late bool _railFolded = sidebarAgentsFirst.value;
+
+  void _onSidebarMode() {
+    if (!mounted) return;
+    setState(() {
+      if (!sidebarAgentsFirst.value) {
+        _railFolded = false;
+      } else if (reduceMotion(context)) {
+        _railFolded = true;
+      }
+    });
   }
 
   @override
@@ -557,6 +576,7 @@ class _DesktopShellState extends State<DesktopShell>
     WidgetsBinding.instance.removeObserver(this);
     if (!kMobile) {
       HardwareKeyboard.instance.removeHandler(_handleGlobalShortcuts);
+      sidebarAgentsFirst.removeListener(_onSidebarMode);
     }
     _sessionsTicker?.cancel();
     _stopEventsWatch();
@@ -762,7 +782,6 @@ class _DesktopShellState extends State<DesktopShell>
       setState(() {});
     });
   }
-
 
   void _setGithubReady(String key, bool ok) {
     if ((_githubReady[key] ?? false) == ok) return;
@@ -1201,12 +1220,14 @@ class _DesktopShellState extends State<DesktopShell>
       if (_instances.isEmpty) _instances = items;
     }
     final name = '${m['name'] ?? ''}';
-    String norm(String u) => u.trim().toLowerCase().replaceAll(RegExp(r'/+$'), '');
-    final resolved = _instances.where((i) => norm(i.url) == norm(url)).firstOrNull ??
-        _instances
-            .where((i) => name.isNotEmpty && i.label == name)
-            .firstOrNull ??
-        (_instances.length == 1 ? _instances.first : _active);
+    String norm(String u) =>
+        u.trim().toLowerCase().replaceAll(RegExp(r'/+$'), '');
+    final resolved =
+        _instances.where((i) => norm(i.url) == norm(url)).firstOrNull ??
+            _instances
+                .where((i) => name.isNotEmpty && i.label == name)
+                .firstOrNull ??
+            (_instances.length == 1 ? _instances.first : _active);
     if (resolved == null) {
       toast(context, 'That machine is no longer saved.', danger: true);
       return;
@@ -1670,6 +1691,7 @@ class _DesktopShellState extends State<DesktopShell>
             _handleMobileBack();
           } else {
             setState(() {
+              _mobileHome = _MobileHome.agents;
               _mobileAgent = a;
               _pushMobileRoute(
                   _MobileRoute(home: _MobileHome.agents, agent: a));

@@ -120,15 +120,12 @@ extension _DesktopShellMobileExt on _DesktopShellState {
             _newSessionFlow();
           case MobileMenuPick.tasks:
             _goMobileHome(MobileHome.tasks);
-          case MobileMenuPick.agents:
-            _goMobileHome(MobileHome.agents);
           case MobileMenuPick.usage:
             _goMobileHome(MobileHome.settings, section: SettingsPage.usage);
           case MobileMenuPick.machines:
             _goMobileHome(MobileHome.settings, section: SettingsPage.general);
         }
       },
-      onAgent: (a) => _goMobileHome(MobileHome.agents, agent: a),
     );
   }
 

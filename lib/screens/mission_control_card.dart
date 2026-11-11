@@ -10,6 +10,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../motion.dart';
 import '../swr.dart';
+import 'shell_nav.dart' show sessionIsActive;
 
 /// Mission Control pinned at the top of the Chats list: what it is doing, one
 /// tap from opening it.
@@ -17,12 +18,14 @@ class MissionControlCard extends StatefulWidget {
   final DaemonClient client;
   final SessionInfo session;
   final VoidCallback onOpen;
+  final AgentLastMessage? lastMessage;
 
   const MissionControlCard({
     super.key,
     required this.client,
     required this.session,
     required this.onOpen,
+    this.lastMessage,
   });
 
   @override
@@ -94,7 +97,9 @@ class _MissionControlCardState extends State<MissionControlCard> {
         final sign = offset < 0 ? '−' : '+';
         final oh = offset.abs() ~/ 60;
         final om = offset.abs() % 60;
-        final tz = om == 0 ? 'UTC$sign$oh' : 'UTC$sign$oh:${om.toString().padLeft(2, '0')}';
+        final tz = om == 0
+            ? 'UTC$sign$oh'
+            : 'UTC$sign$oh:${om.toString().padLeft(2, '0')}';
         return 'Next wake $hh:$mm $tz';
       }
       return 'Wakes on';
@@ -105,33 +110,80 @@ class _MissionControlCardState extends State<MissionControlCard> {
   @override
   Widget build(BuildContext context) {
     if (!kMobile) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Material(
-          color: Colors.transparent,
+      final status = widget.session.status;
+      final waiting = status == 'waiting_for_input';
+      final working = !waiting && sessionIsActive(status);
+      final last = widget.lastMessage;
+      final line = last == null
+          ? 'Plans, routes and follows up on your work'
+          : (last.fromUser ? 'You: ${last.text}' : last.text);
+      return Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: widget.onOpen,
           borderRadius: BorderRadius.circular(8),
-          child: InkWell(
-            onTap: widget.onOpen,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              height: 32,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Row(children: [
-                const AgentMochi('mission-control', size: 18),
-                const SizedBox(width: 8),
-                Text('Mission Control', style: sans(13, color: AppColors.fg1)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: SwapText(_statusLine(),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 7, 10, 7),
+            child: Row(children: [
+              SizedBox.square(
+                dimension: 32,
+                child: Stack(clipBehavior: Clip.none, children: [
+                  Container(
+                    decoration: BoxDecoration(
+                        color: AppColors.surface2, shape: BoxShape.circle),
+                    alignment: Alignment.center,
+                    child: const AgentMochi('mission-control', size: 20),
+                  ),
+                  if (waiting || working)
+                    Positioned(
+                      right: -1,
+                      bottom: -1,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: waiting ? AppColors.run : AppColors.accent,
+                          shape: BoxShape.circle,
+                          border:
+                              Border.all(color: AppColors.windowBg, width: 2),
+                        ),
+                      ),
+                    ),
+                ]),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Mission Control',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(12, color: AppColors.fg4)),
-                  ),
+                        style: sans(13, weight: W.body, color: AppColors.fg1)),
+                    const SizedBox(height: 2),
+                    Row(children: [
+                      if (working) ...[
+                        Spinner(
+                            key: const ValueKey('mc-working'),
+                            size: 10,
+                            color: AppColors.run),
+                        const SizedBox(width: 5),
+                      ],
+                      Expanded(
+                        child: SwapText(waiting ? 'Waiting on you' : line,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(12,
+                                color:
+                                    waiting ? AppColors.run : AppColors.fg3)),
+                      ),
+                    ]),
+                  ],
                 ),
-              ]),
-            ),
+              ),
+            ]),
           ),
         ),
       );
@@ -145,9 +197,8 @@ class _MissionControlCardState extends State<MissionControlCard> {
         child: InkWell(
           onTap: widget.onOpen,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(
-                kMobile ? 18 : 14, kMobile ? 14 : 11, kMobile ? 12 : 10,
-                kMobile ? 14 : 11),
+            padding: EdgeInsets.fromLTRB(kMobile ? 18 : 14, kMobile ? 14 : 11,
+                kMobile ? 12 : 10, kMobile ? 14 : 11),
             child: Row(children: [
               const AgentMochi('mission-control', size: 30),
               const SizedBox(width: 12),

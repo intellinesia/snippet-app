@@ -259,15 +259,10 @@ class _AgentCardState extends State<AgentCard> {
     final open = working + queued + blocked;
     final done = _count({TaskStatus.done}, {'done'});
     final profile = _currentProfile;
-    final status = !agent.available
-        ? 'Paused'
-        : working > 0
-            ? 'Working'
-            : 'Available';
     final last = agent.lastMessage;
-    final line = agent.available && working == 0 && last != null
-        ? (last.fromUser ? 'You: ${last.text}' : last.text)
-        : status;
+    final line = last == null
+        ? 'No messages yet'
+        : (last.fromUser ? 'You: ${last.text}' : last.text);
     final (String, Color)? summary = !agent.available
         ? ('Paused', AppColors.fg3)
         : blocked > 0
@@ -281,40 +276,13 @@ class _AgentCardState extends State<AgentCard> {
     final summaryColor = summary?.$2 ?? AppColors.fg4;
     final nameSize = kMobile ? 15.5 : 13.0;
     final metaSize = kMobile ? 13.0 : 11.5;
-    final segments = [
-      (working, AppColors.run),
-      (queued, AppColors.surface3),
-      (blocked, AppColors.danger),
-      (done, AppColors.ok.withValues(alpha: 0.55)),
-    ].where((e) => e.$1 > 0).toList();
-    final barHeight = kMobile ? 4.0 : 3.0;
-    final bar = ClipRRect(
-      borderRadius: BorderRadius.circular(barHeight),
-      child: SizedBox(
-        height: barHeight,
-        child: segments.isEmpty
-            ? ColoredBox(
-                color: AppColors.surface2, child: const SizedBox.expand())
-            : Row(children: [
-                for (var j = 0; j < segments.length; j++) ...[
-                  if (j > 0) const SizedBox(width: 2),
-                  Expanded(
-                    flex: segments[j].$1,
-                    child: ColoredBox(
-                        color: segments[j].$2, child: const SizedBox.expand()),
-                  ),
-                ],
-              ]),
-      ),
-    );
     if (kMobile) {
+      final ring = agent.available && working > 0;
       final dot = !agent.available
           ? AppColors.fg4
           : blocked > 0
               ? AppColors.danger
-              : working > 0
-                  ? AppColors.run
-                  : null;
+              : null;
       return Pressable(
           kind: PressKind.row,
           child: InkWell(
@@ -343,6 +311,14 @@ class _AgentCardState extends State<AgentCard> {
                           alignment: Alignment.center,
                           child: AgentMochi(agent.id, size: 26),
                         ),
+                        if (ring)
+                          const Positioned(
+                              left: -3,
+                              top: -3,
+                              right: -3,
+                              bottom: -3,
+                              child:
+                                  WorkingRing(key: ValueKey('agent-working'))),
                         if (dot != null)
                           Positioned(
                             right: -1,
@@ -383,23 +359,36 @@ class _AgentCardState extends State<AgentCard> {
                                   overflow: TextOverflow.ellipsis,
                                   style: TS.meta(AppColors.fg3)),
                             ),
-                            if (profile != null) ...[
-                              const SizedBox(width: 6),
-                              AgentProviderMark(
-                                  client: widget.client, profile: profile),
-                            ],
                           ]),
                         ],
                       ),
                     ),
                   ),
-                  if (summary != null) ...[
+                  if (summary != null || profile != null) ...[
                     const SizedBox(width: 12),
-                    SwapText(summary.$1,
-                        style: TS.meta(summary.$2).copyWith(
-                            fontFeatures: const [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          height: 20,
+                          child: profile == null
+                              ? null
+                              : Center(
+                                  child: AgentProviderMark(
+                                      key: const ValueKey('agent-provider'),
+                                      client: widget.client,
+                                      profile: profile)),
+                        ),
+                        const SizedBox(height: 2),
+                        SwapText(summary?.$1 ?? '',
+                            style: TS
+                                .meta(summary?.$2 ?? AppColors.fg3)
+                                .copyWith(fontFeatures: const [
                               FontFeature.tabularFigures()
                             ])),
+                      ],
+                    ),
                   ],
                   const SizedBox(width: M.gutter),
                 ],
@@ -407,6 +396,12 @@ class _AgentCardState extends State<AgentCard> {
             ),
           ));
     }
+    final ring = agent.available && working > 0;
+    final dot = !agent.available
+        ? AppColors.fg4
+        : blocked > 0
+            ? AppColors.danger
+            : null;
     return GestureDetector(
       onSecondaryTapUp: (d) => _actions(d.globalPosition),
       child: Material(
@@ -420,61 +415,156 @@ class _AgentCardState extends State<AgentCard> {
           },
           borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 9),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Opacity(
-                      opacity: agent.available ? 1 : 0.5,
-                      child: AgentMochi(agent.id, size: 18),
+            padding: const EdgeInsets.fromLTRB(8, 7, 10, 7),
+            child: Row(children: [
+              Opacity(
+                opacity: agent.available ? 1 : 0.5,
+                child: SizedBox.square(
+                  dimension: 32,
+                  child: Stack(clipBehavior: Clip.none, children: [
+                    Container(
+                      decoration: BoxDecoration(
+                          color: AppColors.surface2, shape: BoxShape.circle),
+                      alignment: Alignment.center,
+                      child: AgentMochi(agent.id, size: 20),
                     ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      flex: 2,
-                      child: Text(name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(nameSize,
-                              weight: W.body,
-                              color: agent.available
-                                  ? AppColors.fg1
-                                  : AppColors.fg3)),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Row(children: [
-                        Flexible(
-                          child: Text(line,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: sans(metaSize, color: AppColors.fg4)),
+                    if (ring)
+                      const Positioned(
+                          left: -3,
+                          top: -3,
+                          right: -3,
+                          bottom: -3,
+                          child: WorkingRing(key: ValueKey('agent-working'))),
+                    if (dot != null)
+                      Positioned(
+                        right: -1,
+                        bottom: -1,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: dot,
+                            shape: BoxShape.circle,
+                            border:
+                                Border.all(color: AppColors.windowBg, width: 2),
+                          ),
                         ),
-                        if (profile != null) ...[
-                          const SizedBox(width: 5),
-                          AgentProviderMark(
-                              client: widget.client,
-                              profile: profile,
-                              size: 12),
-                        ],
-                      ]),
-                    ),
-                    const SizedBox(width: 8),
-                    if (summary != null)
-                      SwapText(summaryText,
-                          style: sans(metaSize,
-                              color: summaryColor, tabular: true)),
+                      ),
+                  ]),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(children: [
+                      Expanded(
+                        child: Text(name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(nameSize,
+                                weight: W.body,
+                                color: agent.available
+                                    ? AppColors.fg1
+                                    : AppColors.fg3)),
+                      ),
+                      if (profile != null) ...[
+                        const SizedBox(width: 6),
+                        AgentProviderMark(
+                            key: const ValueKey('agent-provider'),
+                            client: widget.client,
+                            profile: profile,
+                            size: 12),
+                      ],
+                    ]),
+                    const SizedBox(height: 2),
+                    Row(children: [
+                      Expanded(
+                        child: Text(line,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(metaSize, color: AppColors.fg3)),
+                      ),
+                      if (summary != null) ...[
+                        const SizedBox(width: 8),
+                        SwapText(summaryText,
+                            style: sans(metaSize,
+                                color: summaryColor, tabular: true)),
+                      ],
+                    ]),
                   ],
                 ),
-                const SizedBox(height: 7),
-                bar,
-              ],
-            ),
+              ),
+            ]),
           ),
         ),
       ),
     );
   }
+}
+
+/// A short accent arc turning round an avatar while its agent works.
+class WorkingRing extends StatefulWidget {
+  const WorkingRing({super.key});
+
+  @override
+  State<WorkingRing> createState() => _WorkingRingState();
+}
+
+class _WorkingRingState extends State<WorkingRing>
+    with SingleTickerProviderStateMixin {
+  late final _spin = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1400));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (reduceMotion(context)) {
+      _spin.stop();
+    } else if (!_spin.isAnimating) {
+      _spin.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        child: CustomPaint(
+          painter: _RingPainter(_spin, AppColors.accent),
+        ),
+      );
+}
+
+class _RingPainter extends CustomPainter {
+  _RingPainter(this.turn, this.color) : super(repaint: turn);
+
+  final Animation<double> turn;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = (Offset.zero & size).deflate(1);
+    final track = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = color.withValues(alpha: 0.18);
+    canvas.drawOval(rect, track);
+    final arc = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+    canvas.drawArc(
+        rect, turn.value * 2 * 3.141592653589793 - 1.5707963, 1.9, false, arc);
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter old) => old.color != color;
 }

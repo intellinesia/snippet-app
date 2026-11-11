@@ -8,6 +8,7 @@ import '../models.dart';
 import '../settled_sessions.dart';
 import '../crew_status.dart';
 import 'agent_rail.dart' show agentRailShown;
+import 'sidebar_mode.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -114,6 +115,9 @@ class SidebarState extends State<Sidebar> {
   // sidebar is presentational, so opening the drawer doesn't refetch.
   String _filterQuery = '';
   String _agentFilterQuery = '';
+
+  /// The phone home list shows agents instead of sessions; kept across launches.
+  bool get _agentsList => mobileAgentsList.value;
   final _machineKey = GlobalKey(); // anchors the desktop machine popover
   final GlobalKey<TasksPanelState> _tasksPanelKey =
       GlobalKey<TasksPanelState>();
@@ -214,6 +218,11 @@ class SidebarState extends State<Sidebar> {
       _bindCrewLive();
     }
     _pageController = PageController(initialPage: widget.mobileHome.index);
+    if (kMobile) {
+      mobileAgentsList.addListener(_onAgentsList);
+      loadMobileAgentsList();
+    }
+    if (!kMobile) sidebarAgentsFirst.addListener(_onAgentsList);
     if (widget.mobileHome != MobileHome.settings) {
       _lastMainHome = widget.mobileHome;
     }
@@ -265,6 +274,8 @@ class SidebarState extends State<Sidebar> {
 
   @override
   void dispose() {
+    mobileAgentsList.removeListener(_onAgentsList);
+    sidebarAgentsFirst.removeListener(_onAgentsList);
     Drafts.instance.removeListener(_onDrafts);
     _crewLive?.dispose();
     _pageController.dispose();
@@ -375,28 +386,45 @@ class SidebarState extends State<Sidebar> {
               child: !hasClient
                   ? _mobileUnavailable('Add a machine to begin.')
                   : Stack(children: [
-                      Positioned.fill(child: _sessionList()),
+                      Positioned.fill(
+                          child: _agentsList && !_selecting
+                              ? _agentList(widget.client!)
+                              : _sessionList()),
                       if (!_selecting) ...[
                         const Positioned(
                             left: 0, right: 0, bottom: 0, child: BottomFade()),
                         Positioned(
-                          left: 12,
-                          right: 12,
+                          left: M.gutter,
+                          right: M.gutter,
                           bottom: 12,
                           child: Row(children: [
                             Expanded(
-                              child: FloatingSearch(
-                                controller: _searchCtl,
-                                focusNode: _searchFocus,
-                                hint: 'Search sessions',
-                                onChanged: (v) =>
-                                    setState(() => _filterQuery = v),
-                              ),
+                              child: _agentsList
+                                  ? FloatingSearch(
+                                      key: const ValueKey('search-agents'),
+                                      controller: _agentSearchCtl,
+                                      focusNode: _searchFocus,
+                                      hint: 'Search agents',
+                                      onChanged: (v) =>
+                                          setState(() => _agentFilterQuery = v),
+                                    )
+                                  : FloatingSearch(
+                                      key: const ValueKey('search-sessions'),
+                                      controller: _searchCtl,
+                                      focusNode: _searchFocus,
+                                      hint: 'Search sessions',
+                                      onChanged: (v) =>
+                                          setState(() => _filterQuery = v),
+                                    ),
                             ),
                             const SizedBox(width: 8),
-                            AccentFab(
-                                tooltip: 'New session',
-                                onTap: widget.onNewSession),
+                            _agentsList
+                                ? AccentFab(
+                                    tooltip: 'New agent',
+                                    onTap: _openCreateAgent)
+                                : AccentFab(
+                                    tooltip: 'New session',
+                                    onTap: widget.onNewSession),
                           ]),
                         ),
                       ],
@@ -441,60 +469,15 @@ class SidebarState extends State<Sidebar> {
         if (client == null) {
           return _mobileUnavailable('Add a machine to see its agents.');
         }
-        // Drilled into one agent: same shared header as every other nested
-        // phone screen, with smooth slide-and-fade screen transition.
+        // The agent list lives on the home list; this is one agent's detail.
         final agent = widget.agent;
-        return AnimatedSwitcher(
-          duration: Motion.base,
-          switchInCurve: Motion.enter,
-          switchOutCurve: Motion.exit,
-          transitionBuilder: (child, anim) {
-            final isDetail = child.key == const ValueKey('agent-detail');
-            final dx = isDetail ? 0.08 : -0.08;
-            return FadeTransition(
-              opacity: anim,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: Offset(dx, 0),
-                  end: Offset.zero,
-                ).animate(anim),
-                child: child,
-              ),
-            );
-          },
-          child: agent != null
-              ? CoordinationAgentDetail(
-                  key: const ValueKey('agent-detail'),
-                  agent: agent,
-                  client: client,
-                  embedded: false,
-                  onClose: () => widget.onAgent(null),
-                )
-              : Column(
-                  key: const ValueKey('agents-list'),
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _mobileAgentsHeader(hasClient),
-                    Expanded(
-                      child: AgentsSidebarPanel(
-                        key: _agentsPanelKey,
-                        client: client,
-                        searchQuery: _agentFilterQuery,
-                        onSearchChanged: (v) => setState(() {
-                          _agentFilterQuery = v;
-                          if (_agentSearchCtl.text != v) {
-                            _agentSearchCtl.text = v;
-                          }
-                        }),
-                        onOpenAgent: (a) => widget.onAgent(a),
-                        onOpenMissionControl: widget.onOpenMissionControl,
-                        missionControl: _sessions
-                            ?.where((s) => isDedicatedMcSession(s.id))
-                            .firstOrNull,
-                      ),
-                    ),
-                  ],
-                ),
+        if (agent == null) return _mobileHomeBody(hasClient, MobileHome.chats);
+        return CoordinationAgentDetail(
+          key: const ValueKey('agent-detail'),
+          agent: agent,
+          client: client,
+          embedded: false,
+          onClose: () => widget.onAgent(null),
         );
 
       case MobileHome.settings:
@@ -579,6 +562,26 @@ class SidebarState extends State<Sidebar> {
     }
   }
 
+  void _onAgentsList() {
+    if (mounted) setState(() {});
+  }
+
+  Widget _agentList(DaemonClient client,
+          {SessionInfo? missionControl, VoidCallback? onOpenMissionControl}) =>
+      AgentsSidebarPanel(
+        key: _agentsPanelKey,
+        client: client,
+        missionControl: missionControl,
+        onOpenMissionControl: onOpenMissionControl,
+        searchQuery: _agentFilterQuery,
+        onSearchChanged: (v) => setState(() {
+          _agentFilterQuery = v;
+          if (_agentSearchCtl.text != v) _agentSearchCtl.text = v;
+        }),
+        onOpenAgent: (a) =>
+            kMobile ? widget.onAgent(a) : widget.onOpenAgent?.call(a),
+      );
+
   Future<void> _openCreateAgent([BuildContext? anchorCtx]) async {
     final client = widget.client;
     if (client == null) return;
@@ -628,17 +631,6 @@ class SidebarState extends State<Sidebar> {
       ]),
     );
   }
-
-  Widget _mobileAgentsHeader(bool hasClient) => MobileBackBar(
-        title: 'Agents',
-        menu: widget.onMobileMenu != null,
-        onBack: widget.onMobileMenu ?? () => Navigator.maybePop(context),
-        trailing: [
-          if (hasClient)
-            RoundBtn(
-                icon: 'plus', tooltip: 'New agent', onTap: _openCreateAgent),
-        ],
-      );
 
   /// The control at the right of every phone page header: the machine
   /// switcher.
@@ -1011,7 +1003,8 @@ class SidebarState extends State<Sidebar> {
             deriveCrew(_crew, widget.sessions ?? const <SessionInfo>[]));
     final mcBusy = mc != null &&
         (sessionIsActive(mc.status) || mc.status == 'waiting_for_input');
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    final sessionsBody =
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (hasClient || _crew.isNotEmpty) ...[
         if (!agentRailShown(context))
           Padding(
@@ -1128,6 +1121,19 @@ class SidebarState extends State<Sidebar> {
         ),
       ),
       if (hasClient && settledRows.isNotEmpty) _settledPinned(settledRows),
+    ]);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Expanded(
+        child: SidebarModeSwap(
+          // The narrow drawer has no switch, so it always lists sessions.
+          agentsFirst:
+              sidebarAgentsFirst.value && hasClient && agentRailShown(context),
+          sessions: sessionsBody,
+          agents: (_) => _agentList(widget.client!,
+              missionControl: mc,
+              onOpenMissionControl: widget.onOpenMissionControl),
+        ),
+      ),
       Container(
         decoration: BoxDecoration(
             border: Border(top: BorderSide(color: AppColors.line))),

@@ -1,10 +1,11 @@
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
 import '../mochi.dart';
-import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -15,6 +16,129 @@ BoxDecoration _floating(double radius) => BoxDecoration(
         BoxShadow(
             color: AppColors.fg1.withValues(alpha: 0.08), spreadRadius: 1),
       ],
+    );
+
+// Shared by the home list and the top bar so both follow the agents/sessions switch.
+final mobileAgentsList = ValueNotifier<bool>(false);
+const _agentsListPref = 'mobile_home_agents_list';
+
+Future<void> loadMobileAgentsList() async {
+  mobileAgentsList.value =
+      (await SharedPreferences.getInstance()).getBool(_agentsListPref) ?? false;
+}
+
+/// Blurs the home below the header and offers both lists.
+Future<void> showMobileListPicker(BuildContext anchor) {
+  final box = anchor.findRenderObject() as RenderBox?;
+  final top = box == null
+      ? 76.0
+      : box.localToGlobal(Offset(0, box.size.height)).dy + 16;
+  final screen = MediaQuery.sizeOf(anchor).width;
+  final width = (screen - 2 * M.gutter).clamp(0.0, 220.0);
+  final left = (screen - width) / 2;
+  return showGeneralDialog<void>(
+    context: anchor,
+    barrierDismissible: true,
+    barrierLabel: 'Close',
+    barrierColor: Colors.transparent,
+    transitionDuration: Motion.fast,
+    pageBuilder: (context, _, __) {
+      Widget option(String icon, String title, bool agents) {
+        final on = mobileAgentsList.value == agents;
+        return Semantics(
+          button: true,
+          selected: on,
+          label: title,
+          excludeSemantics: true,
+          child: GestureDetector(
+            key: ValueKey(agents ? 'list-pick-agents' : 'list-pick-sessions'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              HapticFeedback.selectionClick();
+              if (!on) setMobileAgentsList(agents);
+              Navigator.of(context).pop();
+            },
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: on ? AppColors.surface3 : Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: on
+                        ? AppColors.accent.withValues(alpha: 0.16)
+                        : AppColors.surface2,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: AppIcon(icon,
+                      size: 18, color: on ? AppColors.accent : AppColors.fg2),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(title,
+                      style: sans(15, weight: W.strong, color: AppColors.fg1)),
+                ),
+                if (on)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8, right: 4),
+                    child: AppIcon('check', size: 16, color: AppColors.accent),
+                  ),
+              ]),
+            ),
+          ),
+        );
+      }
+
+      return Stack(children: [
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: ColoredBox(color: AppColors.scrim),
+          ),
+        ),
+        Positioned(
+          top: top,
+          left: left,
+          width: width,
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: _composerLike(20),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                option('list', 'Sessions', false),
+                const SizedBox(height: 4),
+                option('agent', 'Agents', true),
+              ]),
+            ),
+          ),
+        ),
+      ]);
+    },
+    transitionBuilder: (_, a, __, child) => FadeTransition(
+      opacity: CurvedAnimation(parent: a, curve: Motion.enter),
+      child: child,
+    ),
+  );
+}
+
+void setMobileAgentsList(bool agents) {
+  FocusManager.instance.primaryFocus?.unfocus();
+  mobileAgentsList.value = agents;
+  SharedPreferences.getInstance()
+      .then((p) => p.setBool(_agentsListPref, agents));
+}
+
+// The chat composer's card, so the home search row reads as the same control.
+BoxDecoration _composerLike(double radius) => BoxDecoration(
+      color: AppColors.surface1,
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
     );
 
 class RoundBtn extends StatelessWidget {
@@ -99,18 +223,21 @@ class MobileTopBar extends StatelessWidget {
   final bool sessionsBusy;
 
   Widget _segment({
+    Key? key,
     required bool active,
     required Widget glyph,
     required String label,
     required VoidCallback onTap,
     VoidCallback? onActiveTap,
     bool dot = false,
+    bool flips = false,
   }) {
     return Semantics(
       button: true,
       selected: active,
       label: label,
       child: GestureDetector(
+        key: key,
         behavior: HitTestBehavior.opaque,
         onTap: active
             ? (onActiveTap == null
@@ -151,6 +278,10 @@ class MobileTopBar extends StatelessWidget {
               const SizedBox(width: 8),
               Text(label,
                   style: sans(15, weight: W.strong, color: AppColors.fg1)),
+              if (flips) ...[
+                const SizedBox(width: 6),
+                AppIcon('chevron-down', size: 14, color: AppColors.fg3),
+              ],
             ],
           ]),
         ),
@@ -182,13 +313,19 @@ class MobileTopBar extends StatelessWidget {
                 onActiveTap: onActions,
               ),
               const SizedBox(width: 2),
-              _segment(
-                active: !mission,
-                label: 'Sessions',
-                dot: sessionsBusy,
-                glyph: AppIcon('list',
-                    size: 18, color: mission ? AppColors.fg3 : AppColors.fg1),
-                onTap: onSessions,
+              ValueListenableBuilder<bool>(
+                valueListenable: mobileAgentsList,
+                builder: (context, agents, __) => _segment(
+                  key: const ValueKey('home-list-segment'),
+                  active: !mission,
+                  label: agents ? 'Agents' : 'Sessions',
+                  flips: true,
+                  onActiveTap: () => showMobileListPicker(context),
+                  dot: !agents && sessionsBusy,
+                  glyph: AppIcon(agents ? 'agent' : 'list',
+                      size: 18, color: mission ? AppColors.fg3 : AppColors.fg1),
+                  onTap: onSessions,
+                ),
               ),
             ]),
           ),
@@ -351,9 +488,11 @@ class MobileStackedTitleBar extends StatelessWidget {
     required this.title,
     this.onTap,
     this.tapHint,
+    this.subtitle,
   });
 
   final String title;
+  final String? subtitle;
   final VoidCallback? onTap;
   final String? tapHint;
 
@@ -375,18 +514,25 @@ class MobileStackedTitleBar extends StatelessWidget {
                 behavior: HitTestBehavior.opaque,
                 onTap: onTap,
                 child: Container(
-                  height: 40,
+                  height: subtitle == null ? 40 : 44,
                   constraints: const BoxConstraints(minWidth: 96),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: _floating(20),
+                  decoration: _floating(subtitle == null ? 20 : 22),
                   child: Center(
                     widthFactor: 1,
-                    child: Text(title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style:
-                            sans(15, weight: W.strong, color: AppColors.fg1)),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Text(title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: sans(subtitle == null ? 15 : 14,
+                              weight: W.strong, color: AppColors.fg1)),
+                      if (subtitle != null)
+                        Text(subtitle!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(12, color: AppColors.fg3)),
+                    ]),
                   ),
                 ),
               ),
@@ -413,23 +559,23 @@ class FloatingSearch extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         height: 50,
-        decoration: _floating(25),
+        decoration: _composerLike(25),
         padding: const EdgeInsets.only(left: 18, right: 8),
         child: Row(children: [
-          AppIcon('search', size: 17, color: AppColors.fg4),
+          AppIcon('search', size: 16, color: AppColors.fg4),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
               controller: controller,
               focusNode: focusNode,
               onChanged: onChanged,
-              style: sans(16, color: AppColors.fg1),
+              style: sans(15, color: AppColors.fg1),
               cursorColor: AppColors.accent,
               decoration: InputDecoration(
                 isCollapsed: true,
                 border: InputBorder.none,
                 hintText: hint,
-                hintStyle: sans(16, color: AppColors.fg4),
+                hintStyle: sans(15, color: AppColors.fg4),
               ),
             ),
           ),
@@ -475,7 +621,7 @@ class AccentFab extends StatelessWidget {
               decoration: BoxDecoration(
                   color: AppColors.accentFill, shape: BoxShape.circle),
               alignment: Alignment.center,
-              child: AppIcon(icon, size: 21, color: AppColors.accentFg),
+              child: AppIcon(icon, size: 20, color: AppColors.accentFg),
             ),
           ),
         ),
@@ -503,14 +649,13 @@ class BottomFade extends StatelessWidget {
       );
 }
 
-enum MobileMenuPick { newSession, tasks, agents, usage, machines }
+enum MobileMenuPick { newSession, tasks, usage, machines }
 
 Future<void> showMobileMenu(
   BuildContext context, {
   required DaemonClient? client,
   required String newSessionSubtitle,
   required void Function(MobileMenuPick pick) onPick,
-  required void Function(CoordinationAgent agent) onAgent,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -526,52 +671,23 @@ Future<void> showMobileMenu(
         Navigator.pop(sheet);
         onPick(p);
       },
-      onAgent: (a) {
-        Navigator.pop(sheet);
-        onAgent(a);
-      },
     ),
   );
 }
 
-class _MobileMenu extends StatefulWidget {
+class _MobileMenu extends StatelessWidget {
   const _MobileMenu({
     required this.client,
     required this.newSessionSubtitle,
     required this.onPick,
-    required this.onAgent,
   });
 
   final DaemonClient? client;
   final String newSessionSubtitle;
   final ValueChanged<MobileMenuPick> onPick;
-  final ValueChanged<CoordinationAgent> onAgent;
-
-  @override
-  State<_MobileMenu> createState() => _MobileMenuState();
-}
-
-class _MobileMenuState extends State<_MobileMenu> {
-  List<CoordinationAgent>? _agents;
-
-  @override
-  void initState() {
-    super.initState();
-    final c = widget.client;
-    if (c != null) {
-      c.coordinationAgents().then((a) {
-        if (mounted) {
-          setState(
-              () => _agents = a.where((x) => !x.isMissionControl).toList());
-        }
-      }).catchError((_) {
-        if (mounted) setState(() => _agents = const []);
-      });
-    }
-  }
 
   Widget _row(String icon, String label, MobileMenuPick pick) => InkWell(
-        onTap: () => widget.onPick(pick),
+        onTap: () => onPick(pick),
         child: SizedBox(
           height: M.minTarget + 8,
           child: Row(children: [
@@ -585,7 +701,6 @@ class _MobileMenuState extends State<_MobileMenu> {
 
   @override
   Widget build(BuildContext context) {
-    final agents = _agents ?? const <CoordinationAgent>[];
     final bottom = MediaQuery.paddingOf(context).bottom;
     return AppSheetSurface(
       child: Material(
@@ -596,13 +711,13 @@ class _MobileMenuState extends State<_MobileMenu> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (widget.client != null)
+                if (client != null)
                   Material(
                     color: AppColors.surface2,
                     borderRadius: BorderRadius.circular(R.lg),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
-                      onTap: () => widget.onPick(MobileMenuPick.newSession),
+                      onTap: () => onPick(MobileMenuPick.newSession),
                       child: Padding(
                         padding: const EdgeInsets.all(14),
                         child: Row(children: [
@@ -622,8 +737,8 @@ class _MobileMenuState extends State<_MobileMenu> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('New session', style: TS.rowTitle()),
-                                if (widget.newSessionSubtitle.isNotEmpty)
-                                  Text(widget.newSessionSubtitle,
+                                if (newSessionSubtitle.isNotEmpty)
+                                  Text(newSessionSubtitle,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TS.meta()),
@@ -636,46 +751,9 @@ class _MobileMenuState extends State<_MobileMenu> {
                       ),
                     ),
                   ),
-                if (agents.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, S.s20, 4, S.s4),
-                    child: Text('AGENTS', style: TS.overline()),
-                  ),
-                  SizedBox(
-                    height: 82,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        for (final a in agents)
-                          InkWell(
-                            borderRadius: BorderRadius.circular(R.lg),
-                            onTap: () => widget.onAgent(a),
-                            child: SizedBox(
-                              width: 80,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  AgentMochi(a.id, size: 36),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                      a.displayName.isEmpty
-                                          ? a.handle
-                                          : a.displayName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TS.meta(AppColors.fg2)),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
                 const SizedBox(height: S.s8),
-                if (widget.client != null) ...[
+                if (client != null) ...[
                   _row('task', 'Tasks', MobileMenuPick.tasks),
-                  _row('agent', 'Agents', MobileMenuPick.agents),
                   _row('analytics', 'Usage', MobileMenuPick.usage),
                 ],
                 _row('server', 'Machines', MobileMenuPick.machines),

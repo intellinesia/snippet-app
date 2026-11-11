@@ -151,6 +151,7 @@ class AgentsSidebarPanel extends StatefulWidget {
 
 class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   List<CoordinationAgent> agents = const [];
+  AgentLastMessage? _mcLast;
   DateTime? _shownAt;
 
   String? error;
@@ -163,6 +164,8 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     final cached = widget.client.cachedCoordinationAgents();
     if (cached != null) {
       agents = cached.where((a) => !a.isMissionControl).toList();
+      _mcLast =
+          cached.where((a) => a.isMissionControl).firstOrNull?.lastMessage;
     }
     refresh();
   }
@@ -201,6 +204,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         // Mission Control is excluded: it has its own pinned chat, so it is not
         // one of the workers this panel lists.
         agents = all.where((a) => !a.isMissionControl).toList();
+        _mcLast = all.where((a) => a.isMissionControl).firstOrNull?.lastMessage;
         error = null;
       });
     } catch (e) {
@@ -210,23 +214,8 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     }
   }
 
-  final TextEditingController _searchCtl = TextEditingController();
-  final FocusNode _searchFocus = FocusNode();
-  bool _searchOpen = false;
-  String _localQuery = '';
-
-  @override
-  void dispose() {
-    _searchCtl.dispose();
-    _searchFocus.dispose();
-    super.dispose();
-  }
-
   String get effectiveQuery {
-    if (widget.searchQuery != null) {
-      return widget.searchQuery!.trim();
-    }
-    return _localQuery.trim();
+    return (widget.searchQuery ?? '').trim();
   }
 
   bool _agentMatchesMetadata(CoordinationAgent a, String q) {
@@ -291,6 +280,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             key: const ValueKey('agents-mc-card'),
             client: widget.client,
             session: mc,
+            lastMessage: _mcLast,
             onOpen: onOpenMc,
           )
         : null;
@@ -429,33 +419,9 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
           ShellSectionHeader(
             label: 'Agents',
             actions: [
-              ShellSectionAction(
-                icon: 'search',
-                tooltip: 'Search agents',
-                onTap: () {
-                  setState(() {
-                    _searchOpen = !_searchOpen;
-                    if (!_searchOpen) {
-                      _searchCtl.clear();
-                      _localQuery = '';
-                      widget.onSearchChanged?.call('');
-                    }
-                  });
-                  if (_searchOpen) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) _searchFocus.requestFocus();
-                    });
-                  }
-                },
-              ),
               createBtn,
             ],
           ),
-          if (_searchOpen)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-              child: _desktopSearchBar(),
-            ),
           Expanded(
             child: PullToRefresh(
               onRefresh: refresh,
@@ -470,46 +436,6 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _desktopSearchBar() {
-    return Container(
-      height: 28,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.xs),
-      ),
-      child: Row(
-        children: [
-          AppIcon('search', size: 13, color: AppColors.fg3),
-          const SizedBox(width: 6),
-          Expanded(
-            child: TextField(
-              controller: _searchCtl,
-              focusNode: _searchFocus,
-              onChanged: (v) {
-                setState(() => _localQuery = v);
-                widget.onSearchChanged?.call(v);
-              },
-              style: sans(12, color: AppColors.fg1),
-              decoration: InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
-                hintText: 'Search agents…',
-                hintStyle: TS.meta(AppColors.fg4),
-              ),
-            ),
-          ),
-          if (_localQuery.isNotEmpty)
-            IconBtn('x', size: 20, iconSize: 10, tooltip: 'Clear', onTap: () {
-              _searchCtl.clear();
-              setState(() => _localQuery = '');
-              widget.onSearchChanged?.call('');
-            }),
         ],
       ),
     );
@@ -542,4 +468,3 @@ class _EmptyTeam extends StatelessWidget {
         ),
       );
 }
-
