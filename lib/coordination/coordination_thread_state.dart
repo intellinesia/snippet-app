@@ -9,17 +9,27 @@ import '../swr.dart';
 /// Cursor-backed state for one coordination thread. The daemon remains the
 /// source of truth; this class only owns paging, deduplication, and send state.
 class CoordinationThreadState extends ChangeNotifier {
-  CoordinationThreadState({required this.client, required this.threadId});
+  CoordinationThreadState({
+    required this.client,
+    required this.threadId,
+    this.refreshInterval = const Duration(seconds: 45),
+  });
+
+  final Duration refreshInterval;
 
   final DaemonClient client;
   final String threadId;
   final List<CoordinationEvent> events = [];
   StreamSubscription<dynamic>? _coordinationSubscription;
+  Timer? _refreshTimer;
 
   /// Attach to persisted coordination events. Reconnect callers should invoke
   /// [refresh] first, then call this method so replay closes any missed range.
   void attachLive() {
     _coordinationSubscription?.cancel();
+    _refreshTimer?.cancel();
+    _refreshTimer =
+        Timer.periodic(refreshInterval, (_) => unawaited(refresh()));
     _coordinationSubscription = client.deviceEvents.stream.listen((frame) {
       if (frame['kind'] == DeviceEventHub.reconnected) {
         unawaited(refresh());
@@ -38,6 +48,7 @@ class CoordinationThreadState extends ChangeNotifier {
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _coordinationSubscription?.cancel();
     super.dispose();
   }

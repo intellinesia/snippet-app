@@ -534,6 +534,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
   List<CoordinationEvent> _events = const [];
+  bool _agentBusy = false;
+  Timer? _busyCap;
+  static const _busyMax = Duration(minutes: 10);
   bool _loading = true;
   final bool _sending = false;
   String? _error;
@@ -597,12 +600,14 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       onChange: _sync,
     );
     _events = _thread.data ?? const [];
+    _updateBusy();
     _loading = _thread.data == null;
     if (_events.isNotEmpty) _jumpToBottom();
   }
 
   @override
   void dispose() {
+    _busyCap?.cancel();
     _thread.dispose();
     _amplitudeSub?.cancel();
     _recordingTimer?.cancel();
@@ -634,6 +639,34 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   // Sent but not yet in a fetched list; merged back so a refetch can't hide them.
   final List<CoordinationEvent> _unechoed = [];
 
+  static bool _isAck(CoordinationEvent e) => e.payload['auto'] == 'ack';
+
+  void _updateBusy() {
+    _busyCap?.cancel();
+    _busyCap = null;
+    CoordinationEvent? last;
+    for (final e in _events.reversed) {
+      if (!_isAck(e)) {
+        last = e;
+        break;
+      }
+    }
+    if (last == null || last.actorKind != 'human') {
+      _agentBusy = false;
+      return;
+    }
+    final sent = DateTime.tryParse(last.createdAt)?.toLocal() ?? DateTime.now();
+    final left = _busyMax - DateTime.now().difference(sent);
+    if (left <= Duration.zero) {
+      _agentBusy = false;
+      return;
+    }
+    _agentBusy = true;
+    _busyCap = Timer(left, () {
+      if (mounted) setState(() => _agentBusy = false);
+    });
+  }
+
   void _sync() {
     if (!mounted) return;
     final next = _thread.data;
@@ -651,6 +684,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     final first = _events.isEmpty;
     setState(() {
       if (merged != null) _events = merged;
+      _updateBusy();
       _loading = _thread.loading;
       _error =
           next == null && _thread.error != null ? '${_thread.error}' : null;
@@ -1322,13 +1356,36 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        itemCount: _events.length,
-        itemBuilder: (_, i) => _wideCap(_bubble(_events[i])),
+        itemCount: _events.length + (_agentBusy ? 1 : 0),
+        itemBuilder: (_, i) => _wideCap(
+            i == _events.length ? _workingRow() : _bubble(_events[i])),
       ),
     );
   }
 
+  Widget _workingRow() => Padding(
+        padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox.square(
+              dimension: 12,
+              child: CircularProgressIndicator(
+                  strokeWidth: 1.5, color: AppColors.fg3),
+            ),
+            const SizedBox(width: 8),
+            Text('Working...', style: sans(12, color: AppColors.fg3)),
+          ],
+        ),
+      );
+
   Widget _bubble(CoordinationEvent e) {
+    if (_isAck(e)) {
+      return Padding(
+        padding: const EdgeInsets.all(4),
+        child: Text(e.body, style: sans(12, color: AppColors.fg3)),
+      );
+    }
     // The local human is the only `human` actor, so everything else is the peer.
     final mine = e.actorKind == 'human';
     if (mine) {
@@ -1337,11 +1394,27 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         child: Bubble(mine: true, text: e.body, client: widget.client),
       );
     }
+    final origin = e.payload['origin_session'];
+    final aboutTask = e.payload['about_task'];
+    // Mission Control's session is its own inbox.
+    final fromTask = origin is String &&
+        origin.isNotEmpty &&
+        origin != 'inbox-${widget.agentId}' &&
+        origin != widget.agentId;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (fromTask)
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 2),
+              child: Text(
+                  aboutTask is String && aboutTask.isNotEmpty
+                      ? 'from task $aboutTask'
+                      : 'from a work session',
+                  style: sans(12, color: AppColors.fg3)),
+            ),
           Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 4),
             child: Row(

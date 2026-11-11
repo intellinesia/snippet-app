@@ -17,6 +17,7 @@ import 'screens/mission_control/mission_control_state.dart'
     show
         AmbientTurn,
         isAmbientResume,
+        quietAssistantEvent,
         parseAmbientTurn,
         parseAssignmentEnvelope,
         parseAutonomousRound,
@@ -820,6 +821,7 @@ class MacosNotch {
     for (final e in added) {
       final kind = e['kind'] as String? ?? '';
       if (kind == 'assistant_text' || kind == 'assistant') {
+        if (quietAssistantEvent(e)) continue;
         final text = ((e['text'] as String?) ?? '').trim();
         if (text.isNotEmpty) _mcTurnText = text;
       } else if (kind == 'user_question') {

@@ -258,6 +258,12 @@ bool _isQuietReply(String reply) {
           RegExp(r'nothing needs you', caseSensitive: false), ''));
 }
 
+/// An `assistant_text` the daemon flagged as "no reply needed". Older daemons
+/// send no flag, so callers fall back to [_isQuietReply].
+bool quietAssistantEvent(Map<String, dynamic> e) =>
+    (e['kind'] == 'assistant_text' || e['kind'] == 'assistant') &&
+    e['quiet'] == true;
+
 /// Runs of automated wakes that produced nothing for the user, keyed by the
 /// index of their first event. A wake counts only if its reply says so and it
 /// did nothing beyond scheduling the next look, so real news is never folded.
@@ -285,11 +291,13 @@ Map<int, QuietWakeRun> quietWakeRuns(List<Map<String, dynamic>> events) {
     var j = i + 1;
     var quiet = true;
     final reply = StringBuffer();
+    var flagged = false;
     while (j < events.length && !isInput(events[j])) {
       final next = events[j];
       switch (next['kind']) {
         case 'assistant_text':
           reply.writeln(next['text'] as String? ?? '');
+          if (quietAssistantEvent(next)) flagged = true;
         case 'tool_call' || 'tool_result':
           if (next['tool_name'] != 'schedule_wake') quiet = false;
         case 'turn_changes' || 'system_decision':
@@ -299,7 +307,9 @@ Map<int, QuietWakeRun> quietWakeRuns(List<Map<String, dynamic>> events) {
       }
       j++;
     }
-    if (quiet && _isQuietReply(reply.toString())) {
+    if (quiet &&
+        reply.toString().trim().isNotEmpty &&
+        (flagged || _isQuietReply(reply.toString()))) {
       start ??= i;
       wakes.add(QuietWake(time: round.time, reply: reply.toString().trim()));
     } else {
