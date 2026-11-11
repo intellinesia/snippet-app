@@ -52,10 +52,16 @@ class MissionEnvelope {
     required this.summary,
     this.isRecurring = false,
     this.isPlan = false,
+    this.review = '',
+    this.round = '',
   });
   final bool isReport;
   final bool isRecurring;
   final bool isPlan;
+
+  /// `findings` or `request` for a review envelope, otherwise empty.
+  final String review;
+  final String round;
   final String taskId;
   final String title;
   final String status;
@@ -82,11 +88,39 @@ MissionEnvelope? parseMissionEnvelope(String text) {
   final isPlan = t.startsWith('[task_plan]');
   final isReport = isRecurring || isPlan || t.contains('[mission_task_report]');
   final isTask = t.contains('[mission_control_task]');
-  if (!isReport && !isTask) return null;
+  final review = t.startsWith('[review_findings]')
+      ? 'findings'
+      : t.startsWith('[review_request]')
+          ? 'request'
+          : '';
+  if (!isReport && !isTask && review.isEmpty) return null;
   String field(String name) {
     final match =
         RegExp(r'^' + name + r':\s*(.*)$', multiLine: true).firstMatch(t);
     return match?.group(1)?.trim() ?? '';
+  }
+
+  if (review.isNotEmpty) {
+    // Older findings envelopes repeat the list inside the ledger; stop before it.
+    final start = t.indexOf('\nfindings:\n');
+    final rest = start >= 0 ? t.substring(start + '\nfindings:\n'.length) : '';
+    final end = RegExp(r'^\[(?:task_ledger|/review_findings)', multiLine: true)
+        .firstMatch(rest);
+    final findings = rest
+        .substring(0, end?.start ?? rest.length)
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.startsWith('- '))
+        .join('\n');
+    return MissionEnvelope(
+      isReport: true,
+      review: review,
+      round: field('round'),
+      taskId: field('task_id'),
+      title: field('title'),
+      status: 'message',
+      summary: findings,
+    );
   }
 
   // A task's scope may sit on the lines after `scope:` (the current envelope)

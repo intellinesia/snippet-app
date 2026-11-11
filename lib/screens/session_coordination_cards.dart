@@ -191,6 +191,19 @@ class MissionEnvelopeCard extends StatelessWidget {
             'update' => (Tone.neutral, 'info', 'Update'),
             _ => (Tone.accent, 'inbox', 'New task'),
           };
+    if (envelope.review.isNotEmpty) {
+      final findings = envelope.review == 'findings';
+      final round = envelope.round.isEmpty ? '' : ' · round ${envelope.round}';
+      return _ThreadCard(
+        icon: findings ? 'alert-triangle' : 'eye',
+        tone: findings ? Tone.run : Tone.accent,
+        kind: findings ? 'Review findings$round' : 'Review request$round',
+        reference: envelope.taskId.isEmpty ? null : _short(envelope.taskId),
+        title: envelope.title.isEmpty ? 'Task' : envelope.title,
+        status: findings ? 'Changes asked' : 'To review',
+        body: envelope.summary,
+      );
+    }
     if (envelope.isPlan) {
       final steps = parsePlanSteps(envelope.summary);
       final done = steps.where((s) => s.$2 == PlanStep.done).length;
