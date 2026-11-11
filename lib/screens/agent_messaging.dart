@@ -503,7 +503,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               selected: value == _filter,
             ),
         ],
-        const PopupMenuDivider(),
         appMenuRow<String>(
           value: 'actions',
           icon: 'more-horizontal',
