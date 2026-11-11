@@ -288,13 +288,12 @@ class _AgentCardState extends State<AgentCard> {
     final nameSize = kMobile ? 15.5 : 13.0;
     final metaSize = kMobile ? 13.0 : 11.5;
     if (kMobile) {
+      final ring = agent.available && working > 0;
       final dot = !agent.available
           ? AppColors.fg4
           : blocked > 0
               ? AppColors.danger
-              : working > 0
-                  ? AppColors.run
-                  : null;
+              : null;
       return Pressable(
           kind: PressKind.row,
           child: InkWell(
@@ -323,6 +322,14 @@ class _AgentCardState extends State<AgentCard> {
                           alignment: Alignment.center,
                           child: AgentMochi(agent.id, size: 26),
                         ),
+                        if (ring)
+                          const Positioned(
+                              left: -3,
+                              top: -3,
+                              right: -3,
+                              bottom: -3,
+                              child:
+                                  WorkingRing(key: ValueKey('agent-working'))),
                         if (dot != null)
                           Positioned(
                             right: -1,
@@ -357,13 +364,6 @@ class _AgentCardState extends State<AgentCard> {
                                   : AppColors.fg3)),
                           const SizedBox(height: 2),
                           Row(children: [
-                            if (agent.available && working > 0) ...[
-                              Spinner(
-                                  key: const ValueKey('agent-working'),
-                                  size: 11,
-                                  color: AppColors.run),
-                              const SizedBox(width: 6),
-                            ],
                             Flexible(
                               child: Text(line,
                                   maxLines: 1,
@@ -407,13 +407,12 @@ class _AgentCardState extends State<AgentCard> {
             ),
           ));
     }
+    final ring = agent.available && working > 0;
     final dot = !agent.available
         ? AppColors.fg4
         : blocked > 0
             ? AppColors.danger
-            : working > 0
-                ? AppColors.run
-                : null;
+            : null;
     return GestureDetector(
       onSecondaryTapUp: (d) => _actions(d.globalPosition),
       child: Material(
@@ -440,6 +439,13 @@ class _AgentCardState extends State<AgentCard> {
                       alignment: Alignment.center,
                       child: AgentMochi(agent.id, size: 20),
                     ),
+                    if (ring)
+                      const Positioned(
+                          left: -3,
+                          top: -3,
+                          right: -3,
+                          bottom: -3,
+                          child: WorkingRing(key: ValueKey('agent-working'))),
                     if (dot != null)
                       Positioned(
                         right: -1,
@@ -486,13 +492,6 @@ class _AgentCardState extends State<AgentCard> {
                     ]),
                     const SizedBox(height: 2),
                     Row(children: [
-                      if (agent.available && working > 0) ...[
-                        Spinner(
-                            key: const ValueKey('agent-working'),
-                            size: 10,
-                            color: AppColors.run),
-                        const SizedBox(width: 5),
-                      ],
                       Expanded(
                         child: Text(line,
                             maxLines: 1,
@@ -515,4 +514,68 @@ class _AgentCardState extends State<AgentCard> {
       ),
     );
   }
+}
+
+/// A short accent arc turning round an avatar while its agent works.
+class WorkingRing extends StatefulWidget {
+  const WorkingRing({super.key});
+
+  @override
+  State<WorkingRing> createState() => _WorkingRingState();
+}
+
+class _WorkingRingState extends State<WorkingRing>
+    with SingleTickerProviderStateMixin {
+  late final _spin = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1400));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (reduceMotion(context)) {
+      _spin.stop();
+    } else if (!_spin.isAnimating) {
+      _spin.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        child: CustomPaint(
+          painter: _RingPainter(_spin, AppColors.accent),
+        ),
+      );
+}
+
+class _RingPainter extends CustomPainter {
+  _RingPainter(this.turn, this.color) : super(repaint: turn);
+
+  final Animation<double> turn;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = (Offset.zero & size).deflate(1);
+    final track = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = color.withValues(alpha: 0.18);
+    canvas.drawOval(rect, track);
+    final arc = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+    canvas.drawArc(
+        rect, turn.value * 2 * 3.141592653589793 - 1.5707963, 1.9, false, arc);
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter old) => old.color != color;
 }

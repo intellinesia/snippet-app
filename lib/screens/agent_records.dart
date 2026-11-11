@@ -89,12 +89,45 @@ Future<int> agentInboxUnread(DaemonClient client, String agentId) async {
   return entries.where((e) => e.id > seen && e.fromKind != 'human').length;
 }
 
-/// The inbox or board body, to sit inside another screen.
+const agentInboxFilters = [
+  ('All', null),
+  ('Task offers', 'offer'),
+  ('Messages', 'message'),
+  ('Task rooms', 'room'),
+];
+
+const agentBoardFilters = [
+  ('All', null),
+  ('By task', 'by-task'),
+  ('By folder', 'by-folder'),
+  ('Waiting', 'waiting'),
+  ('Dispatched', 'dispatched'),
+  ('Reported', 'reported'),
+  ('Progress', 'progress'),
+  ('Notes', 'noted'),
+];
+
+/// The inbox or board body, to sit inside another screen. With [filterChips]
+/// off the host picks the filter and passes it as [filter].
 Widget agentRecordsBody(DaemonClient client, String agentId, String agentName,
-        {required bool board}) =>
+        {required bool board, String? filter, bool filterChips = true}) =>
     board
-        ? AgentBoardView(client: client, agentId: agentId, agentName: agentName)
-        : AgentInboxView(client: client, agentId: agentId, agentName: agentName);
+        ? AgentBoardView(
+            client: client,
+            agentId: agentId,
+            agentName: agentName,
+            filter: filter,
+            filterChips: filterChips)
+        : AgentInboxView(
+            client: client,
+            agentId: agentId,
+            agentName: agentName,
+            filter: filter,
+            filterChips: filterChips);
+
+void openAgentDesk(BuildContext context, DaemonClient client, String agentId,
+        String agentName) =>
+    _openSession(context, client, 'inbox-$agentId', '$agentName desk');
 
 /// An agent's Actions: a full page on a phone. Desktop shows [AgentActions]
 /// in the shell's right panel instead.
@@ -104,6 +137,7 @@ Future<void> openAgentActions(
   required String agentId,
   required String agentName,
   VoidCallback? onDeleted,
+  bool views = true,
 }) {
   if (kMobile) {
     return Navigator.of(context).push<void>(MaterialPageRoute(
@@ -127,6 +161,7 @@ Future<void> openAgentActions(
                     agentId: agentId,
                     agentName: agentName,
                     host: page,
+                    views: views,
                     onDeleted: () {
                       Navigator.of(page).pop();
                       onDeleted?.call();
@@ -158,9 +193,13 @@ class AgentActions extends StatefulWidget {
     this.dismiss,
     this.onDeleted,
     this.onAction,
+    this.views = true,
   });
 
   final ValueChanged<String>? onAction;
+
+  /// Off where the host already switches to the inbox, board and desk.
+  final bool views;
 
   final DaemonClient client;
   final String agentId;
@@ -219,6 +258,20 @@ class AgentActionsState extends State<AgentActions> {
     );
   }
 
+  ActionRow _memory() => ActionRow(
+        icon: kMobile ? 'book-marked' : 'brain',
+        label: 'Memory',
+        detail: 'What this agent remembers',
+        onTap: () => _run(
+            (host) => presentScreen(host,
+                builder: (_, close) => MemoryScreen(
+                    client: widget.client,
+                    embedded: true,
+                    onBack: close,
+                    initialKey: 'agent:${widget.agentId}')),
+            'memory'),
+      );
+
   @override
   Widget build(BuildContext context) {
     final client = widget.client;
@@ -227,6 +280,28 @@ class AgentActionsState extends State<AgentActions> {
     // In the desktop shell the header switcher covers Inbox and Board, and
     // naming and looks belong to the agent list, not the agent's own screen.
     final inShell = widget.onAction != null;
+    if (!widget.views) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ActionGroup(label: 'Agent', rows: [
+            _memory(),
+            _setting('wakes', 'calendar-clock', 'Wakes and reporting',
+                'When it wakes and who it tells'),
+            _setting('model', 'cpu', 'Inference profile', 'The model it runs on'),
+          ]),
+          ActionGroup(label: 'Appearance', rows: [
+            _setting('nickname', 'edit', 'Nickname', 'What it is called here'),
+            _setting('avatar', 'user', 'Avatar', 'Its face across the app'),
+            _setting('color', 'sparkles', 'Colour', 'Its colour across the app'),
+            _setting('delete', 'trash', 'Delete agent',
+                'Removes its identity and notes',
+                danger: true),
+          ]),
+        ],
+      );
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -256,19 +331,7 @@ class AgentActionsState extends State<AgentActions> {
           ),
         ]),
         ActionGroup(label: 'Agent', rows: [
-          ActionRow(
-            icon: kMobile ? 'book-marked' : 'brain',
-            label: 'Memory',
-            detail: 'What this agent remembers',
-            onTap: () => _run(
-                (host) => presentScreen(host,
-                    builder: (_, close) => MemoryScreen(
-                        client: client,
-                        embedded: true,
-                        onBack: close,
-                        initialKey: 'agent:$id')),
-                'memory'),
-          ),
+          _memory(),
           _setting('wakes', 'calendar-clock', 'Wakes and reporting',
               'When it wakes and who it tells'),
           _setting('model', 'cpu', 'Inference profile', 'The model it runs on'),
@@ -355,8 +418,12 @@ class _RecordList<T> extends StatefulWidget {
     required this.client,
     required this.liveOn,
     this.groupedFilters = const {},
+    this.filter,
+    this.filterChips = true,
   });
 
+  final String? filter;
+  final bool filterChips;
   final DaemonClient client;
   final SwrTrigger liveOn;
 
@@ -396,6 +463,7 @@ class _RecordListState<T> extends State<_RecordList<T>> {
   @override
   void initState() {
     super.initState();
+    if (!widget.filterChips) _filter = widget.filter;
     _scroll.addListener(_nearEnd);
     _reload();
     _live = Revalidator(
@@ -403,6 +471,14 @@ class _RecordListState<T> extends State<_RecordList<T>> {
         on: widget.liveOn,
         debounce: const Duration(seconds: 1),
         onRevalidate: ({required bool force}) => _pollHead());
+  }
+
+  @override
+  void didUpdateWidget(_RecordList<T> old) {
+    super.didUpdateWidget(old);
+    if (!widget.filterChips && widget.filter != _filter) {
+      _pickFilter(widget.filter);
+    }
   }
 
   @override
@@ -519,9 +595,10 @@ class _RecordListState<T> extends State<_RecordList<T>> {
           onChanged: _searchChanged,
         ),
       ),
-      SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.fromLTRB(_gutter, 0, _gutter, 6),
+      if (widget.filterChips)
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.fromLTRB(_gutter, 0, _gutter, 6),
         child: Row(children: [
           for (final (label, value) in widget.filters)
             _FilterChip(
@@ -910,8 +987,15 @@ void _openSession(BuildContext context, DaemonClient client, String id, String t
 /// people and other agents, and task room posts that name it.
 class AgentInboxView extends StatefulWidget {
   const AgentInboxView(
-      {super.key, required this.client, required this.agentId, required this.agentName});
+      {super.key,
+      required this.client,
+      required this.agentId,
+      required this.agentName,
+      this.filter,
+      this.filterChips = true});
 
+  final String? filter;
+  final bool filterChips;
   final DaemonClient client;
   final String agentId;
   final String agentName;
@@ -1051,12 +1135,9 @@ class _AgentInboxViewState extends State<AgentInboxView> {
       client: widget.client,
       liveOn: Swr.coordination,
       hint: 'Search everything sent to ${widget.agentName}',
-      filters: const [
-        ('All', null),
-        ('Task offers', 'offer'),
-        ('Messages', 'message'),
-        ('Task rooms', 'room'),
-      ],
+      filters: agentInboxFilters,
+      filter: widget.filter,
+      filterChips: widget.filterChips,
       load: ({before, query, filter}) => widget.client.agentInbox(
         widget.agentId,
         before: before,
@@ -1076,8 +1157,15 @@ class _AgentInboxViewState extends State<AgentInboxView> {
 /// progress its sessions reported.
 class AgentBoardView extends StatefulWidget {
   const AgentBoardView(
-      {super.key, required this.client, required this.agentId, required this.agentName});
+      {super.key,
+      required this.client,
+      required this.agentId,
+      required this.agentName,
+      this.filter,
+      this.filterChips = true});
 
+  final String? filter;
+  final bool filterChips;
   final DaemonClient client;
   final String agentId;
   final String agentName;
@@ -1310,16 +1398,9 @@ class _AgentBoardViewState extends State<AgentBoardView> {
           e['kind'] == 'agent_board' && e['agent'] == widget.agentId,
       hint: "Search ${widget.agentName}'s work",
       groupedFilters: const {'by-task', 'by-folder'},
-      filters: const [
-        ('All', null),
-        ('By task', 'by-task'),
-        ('By folder', 'by-folder'),
-        ('Waiting', 'waiting'),
-        ('Dispatched', 'dispatched'),
-        ('Reported', 'reported'),
-        ('Progress', 'progress'),
-        ('Notes', 'noted'),
-      ],
+      filters: agentBoardFilters,
+      filter: widget.filter,
+      filterChips: widget.filterChips,
       load: _load,
       idOf: (e) => e.id,
       timeOf: (e) => e.createdAt,

@@ -40,7 +40,7 @@ void main() {
     expect(find.byKey(const ValueKey('agent-working')), findsNothing);
   });
 
-  testWidgets('a working agent keeps its last message beside a spinner',
+  testWidgets('a working agent keeps its last message and gets the working ring',
       (t) async {
     await _pump(t,
         _agent(last: {'text': 'Claimed the plan task', 'from': 'agent'}, working: 1));

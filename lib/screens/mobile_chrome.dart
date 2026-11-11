@@ -495,9 +495,13 @@ class MobileStackedTitleBar extends StatelessWidget {
     required this.title,
     this.onTap,
     this.tapHint,
+    this.subtitle,
+    this.chevron = false,
   });
 
   final String title;
+  final String? subtitle;
+  final bool chevron;
   final VoidCallback? onTap;
   final String? tapHint;
 
@@ -519,18 +523,34 @@ class MobileStackedTitleBar extends StatelessWidget {
                 behavior: HitTestBehavior.opaque,
                 onTap: onTap,
                 child: Container(
-                  height: 40,
+                  height: subtitle == null ? 40 : 44,
                   constraints: const BoxConstraints(minWidth: 96),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: _floating(20),
+                  decoration: _floating(subtitle == null ? 20 : 22),
                   child: Center(
                     widthFactor: 1,
-                    child: Text(title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style:
-                            sans(15, weight: W.strong, color: AppColors.fg1)),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Row(mainAxisSize: MainAxisSize.min, children: [
+                        Flexible(
+                          child: Text(title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: sans(subtitle == null ? 15 : 14,
+                                  weight: W.strong, color: AppColors.fg1)),
+                        ),
+                        if (chevron) ...[
+                          const SizedBox(width: 4),
+                          AppIcon('chevron-down',
+                              size: 14, color: AppColors.fg3),
+                        ],
+                      ]),
+                      if (subtitle != null)
+                        Text(subtitle!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(12, color: AppColors.fg3)),
+                    ]),
                   ),
                 ),
               ),
