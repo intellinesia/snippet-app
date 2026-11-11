@@ -1136,6 +1136,10 @@ class CoordinationAgent {
   /// The profile its desk is running on right now, when the desk is live.
   final String? deskProfile;
 
+  /// The profile its desk is kept on apart from its tasks; null when the desk
+  /// shares [profile].
+  final String? deskModel;
+
   /// Per-agent ceiling before compaction; null follows the model's window.
   final int? maxContextTokens;
 
@@ -1147,6 +1151,9 @@ class CoordinationAgent {
             ? null
             : (j['profile'] as String).trim(),
         deskProfile = j['desk_profile'] as String?,
+        deskModel = (j['desk_model'] as String?)?.trim().isEmpty ?? true
+            ? null
+            : (j['desk_model'] as String).trim(),
         maxContextTokens = switch (j['max_context_tokens']) {
           final num n when n > 0 => n.toInt(),
           _ => null,

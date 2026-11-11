@@ -11,6 +11,7 @@ import '../motion.dart';
 import '../mochi.dart';
 import 'agent_wake_panel.dart';
 import 'agent_appearance.dart';
+import 'agent_model_page.dart';
 
 /// One agent on the phone's Agents page, in the Mission Control card's shape:
 /// who it is, whether it is working, and its task counts.
@@ -60,6 +61,12 @@ class _AgentCardState extends State<AgentCard> {
   }
 
   Future<void> _pickProfile(String name, {Offset? point}) async {
+    if (kMobile) {
+      await showAgentModelPage(context,
+          client: widget.client, agent: widget.agent, name: name);
+      widget.onChanged?.call();
+      return;
+    }
     ServerConfig cfg;
     try {
       cfg = await widget.client.getConfig();
@@ -68,23 +75,6 @@ class _AgentCardState extends State<AgentCard> {
     }
     if (!mounted || cfg.profiles.isEmpty) return;
     final current = _currentProfile;
-    if (kMobile) {
-      showAppSheet(context,
-          title: '$name works on',
-          child: SheetActions([
-            SheetAction('sparkles', 'Routing default', () {
-              Navigator.pop(context);
-              _setProfile(null);
-            }),
-            for (final p in cfg.profiles)
-              SheetAction('provider:${p.provider}',
-                  p.name == current ? '${p.name}  (current)' : p.name, () {
-                Navigator.pop(context);
-                _setProfile(p.name);
-              }),
-          ]));
-      return;
-    }
     final picked = await showAppMenu<String>(
       context,
       point: point,
@@ -140,7 +130,6 @@ class _AgentCardState extends State<AgentCard> {
           client: widget.client,
           owner: widget.agent.id,
           name: name,
-          agent: widget.agent,
           point: point,
           onChanged: widget.onChanged);
 

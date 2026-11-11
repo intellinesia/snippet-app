@@ -1383,6 +1383,16 @@ class DaemonClient {
     if (r.statusCode != 200) throw _err('set agent model', r);
   }
 
+  /// POST /agents/{id}/desk-profile — keep the agent's desk on its own
+  /// profile apart from its tasks, or null to share [setAgentProfile]'s again.
+  Future<void> setAgentDeskProfile(String agentId, String? profile) async {
+    final r = await _post(
+        _uri('/agents/${Uri.encodeComponent(agentId)}/desk-profile'),
+        headers: _json,
+        body: jsonEncode({'profile': profile}));
+    if (r.statusCode != 200) throw _err('set desk model', r);
+  }
+
   /// POST /agents/{id}/context — the agent's context ceiling before compaction.
   /// Null clears it back to the model's own window; the daemon refuses less
   /// than 16000.

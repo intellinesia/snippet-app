@@ -9,23 +9,18 @@ import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
 
-/// Wake schedule, keep-warm and context length for one agent, in a popover on
+/// Wake schedule and keep-warm for one agent, in a popover on
 /// desktop and a sheet on phones.
 Future<void> showAgentWakeSettings(
   BuildContext context, {
   required DaemonClient client,
   required String owner,
   required String name,
-  CoordinationAgent? agent,
   Offset? point,
   VoidCallback? onChanged,
 }) {
   final panel = AgentWakePanel(
-      client: client,
-      owner: owner,
-      name: name,
-      agent: agent,
-      onChanged: onChanged);
+      client: client, owner: owner, name: name, onChanged: onChanged);
   if (kMobile) {
     return showAppSheet(context, title: name, maxHeight: 640, child: panel);
   }
@@ -89,16 +84,12 @@ class AgentWakePanel extends StatefulWidget {
     required this.client,
     required this.owner,
     required this.name,
-    this.agent,
     this.onChanged,
   });
 
   final DaemonClient client;
   final String owner;
   final String name;
-
-  /// Present for a named agent; sessions have no context ceiling to set.
-  final CoordinationAgent? agent;
   final VoidCallback? onChanged;
 
   @override
@@ -112,7 +103,6 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
   List<TaskItem> _tasks = const [];
   KeepWarmEntry? _warm;
   KeepWarmLimits _warmLimits = const KeepWarmLimits();
-  int? _context;
   bool _loading = true;
   String? _error;
 
@@ -131,7 +121,6 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
   @override
   void initState() {
     super.initState();
-    _context = widget.agent?.maxContextTokens;
     _load();
   }
 
@@ -294,7 +283,9 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
     );
     if (picked != null && mounted) {
       setState(() => _reportTo = picked);
-      if (picked == 'task_room' && _taskId.text.trim().isEmpty && _tasks.isNotEmpty) {
+      if (picked == 'task_room' &&
+          _taskId.text.trim().isEmpty &&
+          _tasks.isNotEmpty) {
         final active = _tasks.where((t) => !t.status.isTerminal).toList();
         final first = active.isNotEmpty ? active.first : _tasks.first;
         setState(() => _taskId.text = first.id);
@@ -429,32 +420,6 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
     }
   }
 
-  Future<void> _editContext(BuildContext anchor) async {
-    final agent = widget.agent;
-    if (agent == null) return;
-    final text = await promptText(context,
-        title: 'Context length for ${widget.name}',
-        initial: _context == null ? '' : tokensLabel(_context!),
-        hint: 'For example 128k. Minimum 16k; empty uses the model window.',
-        anchored: true);
-    if (text == null || !mounted) return;
-    final next = text.trim().isEmpty ? null : parseTokens(text);
-    if (text.trim().isNotEmpty &&
-        (next == null || next < kMinAgentContextTokens)) {
-      toast(context, 'Enter at least 16k tokens, for example 128k',
-          danger: true);
-      return;
-    }
-    if (next == _context) return;
-    try {
-      await widget.client.setAgentContext(agent.id, next);
-      if (mounted) setState(() => _context = next);
-      widget.onChanged?.call();
-    } catch (e) {
-      _fail(e);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -478,10 +443,6 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
             child: Text(_error!, style: sans(12, color: AppColors.danger)),
           ),
         _wakeSection(),
-        if (widget.agent != null) ...[
-          _divider(),
-          _contextSection(),
-        ],
         _divider(),
         _warmSection(),
       ],
@@ -502,7 +463,8 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
           ],
           Expanded(
               child: Text(text,
-                  style: sans(13, weight: FontWeight.w600, color: AppColors.fg1))),
+                  style:
+                      sans(13, weight: FontWeight.w600, color: AppColors.fg1))),
           if (trailing != null) trailing,
         ]),
       );
@@ -519,8 +481,8 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
               const SizedBox(width: 4),
             ],
             Text(label,
-                style: sans(13,
-                    weight: FontWeight.w500, color: AppColors.accent)),
+                style:
+                    sans(13, weight: FontWeight.w500, color: AppColors.accent)),
           ]),
         ),
       );
@@ -560,8 +522,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
               style: sans(13, color: AppColors.fg3, height: 1.45)),
         ),
       if (w != null && !_editing) ...[
-        _line('Schedule',
-            w.scheduleText.isEmpty ? w.schedule : w.scheduleText,
+        _line('Schedule', w.scheduleText.isEmpty ? w.schedule : w.scheduleText,
             key: const ValueKey('wake-schedule')),
         if (w.brief.isNotEmpty) _line('Brief', w.brief),
         _line('Quiet hours', w.quietHours?.label ?? 'None'),
@@ -789,7 +750,8 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
             on: on,
             onChanged: _setWarm,
             label: 'Keep prompt cache warm',
-            sub: 'Pings the idle session so its cached prefix is not re-billed'),
+            sub:
+                'Pings the idle session so its cached prefix is not re-billed'),
       ),
       Padding(
         key: const ValueKey('warm-reason'),
@@ -822,48 +784,6 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
             ),
           ),
         ]),
-      ),
-    ]);
-  }
-
-  Widget _contextSection() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _head('Context length', icon: 'layers'),
-      Builder(
-        builder: (ctx) => GestureDetector(
-          onTap: () => _editContext(ctx),
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: S.s4, vertical: S.s4),
-            child: Row(children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Compact above',
-                        style: sans(13,
-                            weight: FontWeight.w500, color: AppColors.fg1)),
-                    const SizedBox(height: 3),
-                    Text(
-                      'Smaller ceilings compact sooner and cost less per turn',
-                      style: sans(13, color: AppColors.fg3, height: 1.38),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: S.s12),
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                Text(
-                  _context == null ? 'Model window' : tokensLabel(_context!),
-                  key: const ValueKey('context-value'),
-                  style: mono(13, color: AppColors.fg2),
-                ),
-                const SizedBox(width: 4),
-                AppIcon('chevron-right', size: 14, color: AppColors.fg4),
-              ]),
-            ]),
-          ),
-        ),
       ),
     ]);
   }

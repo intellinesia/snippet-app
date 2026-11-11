@@ -6,6 +6,7 @@ import '../shell_panel.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'agent_appearance.dart';
+import 'agent_model_page.dart';
 import 'agent_records.dart';
 import 'agent_wake_panel.dart';
 import 'memory_screen.dart';
@@ -54,16 +55,12 @@ ShellPanelRequest agentPanelRequest(
             builder: (a) => SingleChildScrollView(
                 padding: const EdgeInsets.all(S.s12),
                 child: AgentWakePanel(
-                    client: client,
-                    owner: agentId,
-                    name: agentName,
-                    agent: a)),
+                    client: client, owner: agentId, name: agentName)),
           ),
         'model' => _WithAgent(
             client: client,
             agentId: agentId,
-            builder: (a) =>
-                _ProfilePage(client: client, agent: a, onDone: close),
+            builder: (a) => AgentModelPage(client: client, agent: a),
           ),
         'nickname' => _WithAgent(
             client: client,
@@ -123,8 +120,7 @@ class _WithAgentState extends State<_WithAgent> {
     if (a != null) return widget.builder(a);
     if (_failed) {
       return Center(
-          child: Text("Couldn't load this agent",
-              style: TS.ui(AppColors.fg3)));
+          child: Text("Couldn't load this agent", style: TS.ui(AppColors.fg3)));
     }
     return Center(child: DelayedSpinner(size: 16));
   }
@@ -207,108 +203,6 @@ class _NicknamePageState extends State<_NicknamePage> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ProfilePage extends StatefulWidget {
-  const _ProfilePage(
-      {required this.client, required this.agent, required this.onDone});
-  final DaemonClient client;
-  final CoordinationAgent agent;
-  final VoidCallback onDone;
-
-  @override
-  State<_ProfilePage> createState() => _ProfilePageState();
-}
-
-class _ProfilePageState extends State<_ProfilePage> {
-  ServerConfig? _cfg;
-  bool _failed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.client.getConfig().then((c) {
-      if (mounted) setState(() => _cfg = c);
-    }).catchError((_) {
-      if (mounted) setState(() => _failed = true);
-    });
-  }
-
-  Future<void> _pick(String name) async {
-    if (name == (widget.agent.profile ?? '')) return widget.onDone();
-    try {
-      await widget.client
-          .setAgentProfile(widget.agent.id, name.isEmpty ? null : name);
-      if (!mounted) return;
-      toast(context, 'Model updated');
-      widget.onDone();
-    } catch (e) {
-      if (mounted) toast(context, '$e', danger: true);
-    }
-  }
-
-  Widget _row(String icon, String label, String? detail, bool selected,
-          VoidCallback onTap) =>
-      InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s8),
-          child: Row(children: [
-            AppIcon(icon, size: 16, color: AppColors.fg2),
-            const SizedBox(width: S.s12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TS.ui(AppColors.fg1)),
-                  if (detail != null)
-                    Text(detail,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TS.meta(AppColors.fg3)),
-                ],
-              ),
-            ),
-            if (selected) AppIcon('check', size: 14, color: AppColors.fg1),
-          ]),
-        ),
-      );
-
-  @override
-  Widget build(BuildContext context) {
-    final cfg = _cfg;
-    if (_failed) {
-      return Center(
-          child: Text("Couldn't load models", style: TS.ui(AppColors.fg3)));
-    }
-    if (cfg == null) return Center(child: DelayedSpinner(size: 16));
-    final current = widget.agent.profile;
-    final running = widget.agent.deskProfile;
-    final switching = running != null && current != null && running != current;
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: S.s8),
-      children: [
-        if (running != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s8),
-            child: Text(
-                switching
-                    ? 'Desk is on $running, moving to $current after this turn'
-                    : 'Desk is running on $running',
-                style: TS.meta(AppColors.fg3)),
-          ),
-        _row('sparkles', 'Routing default',
-            "Your Routing settings for desks", current == null,
-            () => _pick('')),
-        for (final p in cfg.profiles)
-          _row('provider:${p.provider}', p.name, '${p.provider} · ${p.model}',
-              p.name == current, () => _pick(p.name)),
-      ],
     );
   }
 }

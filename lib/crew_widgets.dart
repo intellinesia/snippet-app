@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'screens/agent_wake_panel.dart';
 import 'screens/agent_appearance.dart';
+import 'screens/agent_model_page.dart';
 import 'crew_status.dart';
 import 'mochi.dart';
 import 'models.dart';
@@ -167,7 +168,6 @@ Future<void> runCrewAgentAction(
         client: client,
         owner: agent.id,
         name: name,
-        agent: agent,
         point: point,
         onChanged: onDeleted);
   } else if (picked == 'model') {
@@ -196,6 +196,11 @@ Future<void> _pickCrewModel(
     String name,
     Offset? point,
     VoidCallback? onChanged) async {
+  if (kMobile) {
+    await showAgentModelPage(context, client: client, agent: agent, name: name);
+    onChanged?.call();
+    return;
+  }
   ServerConfig cfg;
   try {
     cfg = await client.getConfig();
@@ -208,51 +213,29 @@ Future<void> _pickCrewModel(
     toast(context, 'No models configured');
     return;
   }
-  String? picked;
-  if (kMobile) {
-    final c = Completer<String?>();
-    showAppSheet(context,
-        title: '$name works on',
-        child: SheetActions([
-          SheetAction('sparkles', 'Routing default', () {
-            Navigator.pop(context);
-            c.complete('');
-          }),
-          for (final p in cfg.profiles)
-            SheetAction('provider:${p.provider}',
-                p.name == agent.profile ? '${p.name}  (current)' : p.name, () {
-              Navigator.pop(context);
-              c.complete(p.name);
-            }),
-        ])).whenComplete(() {
-      if (!c.isCompleted) c.complete(null);
-    });
-    picked = await c.future;
-  } else {
-    picked = await showAppMenu<String>(
-      context,
-      point: point,
-      anchor: point == null ? context : null,
-      minWidth: 260,
-      maxWidth: 360,
-      items: [
-        appMenuHeading<String>('Works on'),
+  final picked = await showAppMenu<String>(
+    context,
+    point: point,
+    anchor: point == null ? context : null,
+    minWidth: 260,
+    maxWidth: 360,
+    items: [
+      appMenuHeading<String>('Works on'),
+      appMenuRow<String>(
+          value: '',
+          icon: 'sparkles',
+          label: 'Routing default',
+          description: "Your Routing settings for desks",
+          selected: agent.profile == null),
+      for (final p in cfg.profiles)
         appMenuRow<String>(
-            value: '',
-            icon: 'sparkles',
-            label: 'Routing default',
-            description: "Your Routing settings for desks",
-            selected: agent.profile == null),
-        for (final p in cfg.profiles)
-          appMenuRow<String>(
-              value: p.name,
-              icon: 'provider:${p.provider}',
-              label: p.name,
-              description: '${p.provider} \u00b7 ${p.model}',
-              selected: p.name == agent.profile),
-      ],
-    );
-  }
+            value: p.name,
+            icon: 'provider:${p.provider}',
+            label: p.name,
+            description: '${p.provider} \u00b7 ${p.model}',
+            selected: p.name == agent.profile),
+    ],
+  );
   if (picked == null || picked == (agent.profile ?? '')) return;
   try {
     await client.setAgentProfile(agent.id, picked.isEmpty ? null : picked);
