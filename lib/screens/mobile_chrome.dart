@@ -1,4 +1,3 @@
-import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -97,15 +96,9 @@ Future<void> showMobileListPicker(BuildContext anchor) {
 
       return Stack(children: [
         Positioned.fill(
-          top: top - 4,
           child: GestureDetector(
             onTap: () => Navigator.of(context).pop(),
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                child: ColoredBox(color: Colors.black.withValues(alpha: 0.35)),
-              ),
-            ),
+            child: ColoredBox(color: AppColors.scrim),
           ),
         ),
         Positioned(
@@ -496,12 +489,10 @@ class MobileStackedTitleBar extends StatelessWidget {
     this.onTap,
     this.tapHint,
     this.subtitle,
-    this.chevron = false,
   });
 
   final String title;
   final String? subtitle;
-  final bool chevron;
   final VoidCallback? onTap;
   final String? tapHint;
 
@@ -530,21 +521,12 @@ class MobileStackedTitleBar extends StatelessWidget {
                   child: Center(
                     widthFactor: 1,
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Row(mainAxisSize: MainAxisSize.min, children: [
-                        Flexible(
-                          child: Text(title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: sans(subtitle == null ? 15 : 14,
-                                  weight: W.strong, color: AppColors.fg1)),
-                        ),
-                        if (chevron) ...[
-                          const SizedBox(width: 4),
-                          AppIcon('chevron-down',
-                              size: 14, color: AppColors.fg3),
-                        ],
-                      ]),
+                      Text(title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: sans(subtitle == null ? 15 : 14,
+                              weight: W.strong, color: AppColors.fg1)),
                       if (subtitle != null)
                         Text(subtitle!,
                             maxLines: 1,

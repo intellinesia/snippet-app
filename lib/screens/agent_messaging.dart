@@ -1216,7 +1216,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       return MobileStackedTitleBar(
         title: widget.agentName,
         subtitle: _viewLine,
-        chevron: true,
         onTap: _openViewMenu,
         tapHint: 'Switch view',
       );
