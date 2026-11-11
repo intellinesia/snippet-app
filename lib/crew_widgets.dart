@@ -8,6 +8,7 @@ import 'screens/agent_appearance.dart';
 import 'screens/agent_model_page.dart';
 import 'crew_status.dart';
 import 'mochi.dart';
+import 'motion.dart' show WorkingDots;
 import 'models.dart';
 import 'platform.dart';
 import 'theme.dart';
@@ -450,7 +451,9 @@ class _CrewTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(13, weight: W.label, color: AppColors.fg1)),
-                  if (e.line.isNotEmpty)
+                  if (e.presenceWord != null)
+                    _presenceLine(e)
+                  else if (e.line.isNotEmpty)
                     Text(e.line,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -464,6 +467,27 @@ class _CrewTile extends StatelessWidget {
       ),
     );
   }
+}
+
+Widget _presenceLine(CrewEntry e) {
+  final color = crewColor(e.state);
+  return Row(children: [
+    Flexible(
+      child: Text.rich(
+        TextSpan(children: [
+          TextSpan(text: e.presenceWord, style: sans(12, color: color)),
+          if (e.presenceDetail != null)
+            TextSpan(text: ' ${e.presenceDetail}', style: mono(11, color: color)),
+        ]),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    ),
+    if (e.presenceDots) ...[
+      const SizedBox(width: 4),
+      WorkingDots(color: color, size: 4),
+    ],
+  ]);
 }
 
 class _NewAgentTile extends StatelessWidget {

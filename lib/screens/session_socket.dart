@@ -165,8 +165,9 @@ extension _SessionScreenSocketExt on _SessionScreenState {
         }
         // Throttle stream frames: store latest payload and flush at most
         // every 50ms to avoid rebuilding the full widget tree on every token.
-        _pendingLiveText = text;
-        _pendingLiveThinking = thinking;
+        final voice = j['voice'] == true;
+        _pendingLiveText = voice ? '' : text;
+        _pendingLiveThinking = voice ? text : thinking;
         _pendingLiveTextVisible = visible;
         if (_streamFlushTimer?.isActive ?? false) return;
         _streamFlushTimer =

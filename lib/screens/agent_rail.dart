@@ -7,6 +7,7 @@ import '../crew_status.dart';
 import '../crew_widgets.dart' show crewColor, showCrewAgentMenu;
 import '../mochi.dart';
 import '../models.dart';
+import '../presence.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../swr.dart';
@@ -141,8 +142,18 @@ class _AgentRailState extends State<AgentRail> {
 
   @override
   Widget build(BuildContext context) {
+    final presence = widget.client?.presence;
+    if (presence == null) return _buildRail(context, null);
+    return ListenableBuilder(
+      listenable: presence,
+      builder: (ctx, _) => _buildRail(ctx, presence),
+    );
+  }
+
+  Widget _buildRail(BuildContext context, PresenceStore? presence) {
     Theme.of(context);
-    final crew = deriveCrew(_agents, widget.sessions ?? const <SessionInfo>[]);
+    final crew = deriveCrew(_agents, widget.sessions ?? const <SessionInfo>[],
+        presence: presence);
     final client = widget.client;
     return Container(
       width: kAgentRailWidth,
@@ -223,7 +234,11 @@ String _agentTip(CrewEntry e) {
   final name = e.agent.displayName.trim().isEmpty
       ? e.agent.id
       : e.agent.displayName.trim();
-  return '$name\n${_stateWord(e.state)}';
+  final line = e.presenceWord == null
+      ? _stateWord(e.state)
+      : [e.presenceWord!, if (e.presenceDetail != null) e.presenceDetail!]
+          .join(' ');
+  return '$name\n$line';
 }
 
 class _RailTile extends StatefulWidget {

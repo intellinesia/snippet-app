@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/crew_status.dart';
 import 'package:snippet/crew_widgets.dart';
 import 'package:snippet/models.dart';
+import 'package:snippet/motion.dart' show WorkingDots;
+import 'package:snippet/presence.dart';
 import 'package:snippet/theme.dart';
 
 CoordinationAgent _a(String id, String name) =>
@@ -69,5 +71,48 @@ void main() {
     menu.complete();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Scout'), findsNothing);
+  });
+
+  testWidgets('crew tile shows Thinking with dots for a thinking presence',
+      (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(700, 400);
+    addTearDown(tester.view.reset);
+    final store = PresenceStore(null)
+      ..handle({
+        'kind': 'agent_presence',
+        'session': 's1',
+        'agent': 'a',
+        'state': 'thinking',
+        'since': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      });
+    final entries = deriveCrew([
+      _a('a', 'Scout')
+    ], [
+      SessionInfo.fromJson(
+          {'id': 's1', 'title': 'Doing it', 'status': 'running', 'running': true, 'agent_id': 'a'})
+    ], presence: store);
+    await tester.pumpWidget(MaterialApp(
+      theme: buildAppTheme(),
+      home: Scaffold(
+        body: Align(
+          alignment: Alignment.topLeft,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: CrewStack(entries: entries, onOpen: (_) {}),
+          ),
+        ),
+      ),
+    ));
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(find.byType(CrewStack)));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.textContaining('Thinking'), findsOneWidget);
+    expect(find.byType(WorkingDots), findsOneWidget);
+    expect(find.text('Doing it'), findsNothing);
+    await mouse.moveTo(const Offset(600, 380));
+    await tester.pump(const Duration(milliseconds: 500));
   });
 }

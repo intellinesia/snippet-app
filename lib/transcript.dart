@@ -1062,3 +1062,13 @@ class _SystemDivider extends StatelessWidget {
     );
   }
 }
+
+/// A reply the daemon flagged as not needing the user: the thinking style, dimmed.
+class QuietAside extends StatelessWidget {
+  const QuietAside({super.key, required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) =>
+      Opacity(opacity: 0.55, child: ThinkingMarkdown(data: text));
+}

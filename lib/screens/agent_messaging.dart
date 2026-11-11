@@ -22,6 +22,7 @@ import '../media_views.dart';
 import '../motion.dart';
 import '../desktop_pick.dart';
 import '../models.dart';
+import '../presence.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -1222,6 +1223,32 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   Widget _desktopStatusLine(String subtitle) {
+    final store = widget.client.presence;
+    return ListenableBuilder(
+      listenable: store,
+      builder: (_, __) {
+        final p = store.presenceForAgentId(widget.agentId);
+        if (p == null) return _plainStatusLine(subtitle);
+        final cut = subtitle.indexOf(' \u00b7 ');
+        final head = cut < 0 ? '' : '${subtitle.substring(0, cut)} \u00b7 ';
+        final dots = p.state == 'thinking' || p.state == 'typing';
+        return Row(children: [
+          Flexible(
+            child: Text('$head${PresenceStore.word(p)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TS.meta(AppColors.fg3)),
+          ),
+          if (dots) ...[
+            const SizedBox(width: 4),
+            WorkingDots(color: AppColors.fg3, size: 4),
+          ],
+        ]);
+      },
+    );
+  }
+
+  Widget _plainStatusLine(String subtitle) {
     final logo = widget.subtitle == null && _profileProvider != null;
     if (!logo) {
       return Text(subtitle,
