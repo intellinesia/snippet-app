@@ -1396,9 +1396,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     }
     final origin = e.payload['origin_session'];
     final aboutTask = e.payload['about_task'];
+    // Mission Control's session is its own inbox.
     final fromTask = origin is String &&
         origin.isNotEmpty &&
-        origin != 'inbox-${widget.agentId}';
+        origin != 'inbox-${widget.agentId}' &&
+        origin != widget.agentId;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
