@@ -74,6 +74,26 @@ void main() {
       expect(runs[0]!.end, 1);
     });
 
+    test('a quiet-flagged reply folds even when its text is not quiet', () {
+      final runs = quietWakeRuns([
+        _wake('09:58'),
+        {'kind': 'assistant_text', 'text': 'Checked the sync.', 'quiet': true},
+        _wake('10:58'),
+        _reply('Checked the sync.'),
+      ]);
+      expect(runs.keys, [0]);
+      expect(runs[0]!.end, 1);
+    });
+
+    test('quietAssistantEvent needs the flag', () {
+      expect(
+          quietAssistantEvent(
+              {'kind': 'assistant_text', 'text': 'x', 'quiet': true}),
+          isTrue);
+      expect(quietAssistantEvent({'kind': 'assistant_text', 'text': 'x'}),
+          isFalse);
+    });
+
     test('a user message splits a run', () {
       final runs = quietWakeRuns([
         _wake('09:58'),
