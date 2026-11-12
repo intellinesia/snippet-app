@@ -177,7 +177,7 @@ void main() {
 
       expect(
         find.text(
-            'Install the Devin CLI and run devin auth login on the machine running Snippet.'),
+            'Install the Devin CLI and run devin auth login on the machine running Snippet. Over SSH, add --force-manual-token-flow.'),
         findsOneWidget,
       );
 

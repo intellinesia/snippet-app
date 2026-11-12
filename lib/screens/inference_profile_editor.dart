@@ -1404,7 +1404,7 @@ class _CliAgentStatusState extends State<_CliAgentStatus> {
               AppColors.danger,
               '$_label isn\'t installed',
               _devin
-                  ? 'Install the Devin CLI and run devin auth login on the machine running Snippet.'
+                  ? 'Install the Devin CLI and run devin auth login on the machine running Snippet. Over SSH, add --force-manual-token-flow.'
                   : 'Install the $_label CLI (`$_command`) on the machine running snippet, then recheck.'
             )
           : !signedIn
@@ -1413,7 +1413,7 @@ class _CliAgentStatusState extends State<_CliAgentStatus> {
                   AppColors.run,
                   '$_label isn\'t signed in',
                   _devin
-                      ? 'Install the Devin CLI and run devin auth login on the machine running Snippet.'
+                      ? 'Install the Devin CLI and run devin auth login on the machine running Snippet. Over SSH, add --force-manual-token-flow.'
                       : 'Run `$_command` once on that machine and sign in, then recheck.'
                 )
               : (
