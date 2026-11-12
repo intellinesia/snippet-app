@@ -27,6 +27,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: 3.44.4
           cache: true
       - run: flutter pub get
       - name: Restore shared keystore
@@ -59,6 +60,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: 3.44.4
           cache: true
       - run: flutter pub get
       - run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
@@ -81,6 +83,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: 3.44.4
           cache: true
       - run: flutter pub get
       - run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
@@ -104,6 +107,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: 3.44.4
           cache: true
       - name: Install system dependencies
         run: |
