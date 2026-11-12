@@ -15,6 +15,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
 import '../api.dart';
+import '../chat/agent_details.dart';
 import '../chat/chat_style.dart';
 import '../composer/attachment_preview.dart';
 import '../composer/attachment_tile.dart';
@@ -32,6 +33,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../swr.dart';
 import '../pull_refresh.dart';
+import 'agent_panel.dart';
 import 'agent_records.dart';
 import 'agent_thread_cards.dart';
 import 'agent_view_switcher.dart';
@@ -363,7 +365,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   String? _fetchedProfile;
   String? _profileProvider;
   int? _openTaskCount;
-  final GlobalKey _headerKey = GlobalKey();
 
   void _loadLine() {
     widget.client.coordinationAgents().then((all) {
@@ -499,12 +500,26 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     );
   }
 
-  void _openActions() => openAgentActions(context,
+  void _openDetails() {
+    final panel = !kMobile ? ShellPanelScope.maybeOf(context) : null;
+    if (panel != null) {
+      panel.open(agentPanelRequest(
+        'details',
+        client: widget.client,
+        agentId: widget.agentId,
+        agentName: widget.agentName,
+        onDeleted: _closePage,
+      ));
+      return;
+    }
+    showAgentDetailsSheet(
+      context,
       client: widget.client,
       agentId: widget.agentId,
       agentName: widget.agentName,
-      views: false,
-      onDeleted: _closePage);
+      onDeleted: _closePage,
+    );
+  }
 
   List<(String, String?)> get _filters => switch (_view) {
         AgentView.inbox => agentInboxFilters,
@@ -520,77 +535,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     };
     final f = _filters.where((f) => f.$2 != null && f.$2 == _filter);
     return f.isEmpty ? view : '$view \u00b7 ${f.first.$1}';
-  }
-
-  /// The title menu: the views, the open view's filters, and the rest
-  /// of the agent behind More actions.
-  Future<void> _openViewMenu({BuildContext? anchor}) async {
-    final picked = await showAppMenu<String>(
-      context,
-      anchor: anchor,
-      below: anchor != null,
-      minWidth: 240,
-      items: [
-        for (final (v, icon, label) in const [
-          (AgentView.thread, 'message', 'Chat'),
-          (AgentView.inbox, 'inbox', 'Inbox'),
-          (AgentView.board, 'clipboard', 'Board'),
-        ])
-          appMenuRow<String>(
-            value: 'view:${v.name}',
-            icon: icon,
-            label: label,
-            trailing: v == AgentView.inbox && _unread > 0 ? '$_unread' : null,
-            selected: v == _view,
-          ),
-        appMenuRow<String>(
-            value: 'desk', icon: 'terminal', label: 'Desk session'),
-        if (_filters.isNotEmpty) ...[
-          const PopupMenuDivider(),
-          appMenuHeading<String>('Show'),
-          for (final (label, value) in _filters)
-            appMenuRow<String>(
-              value: 'filter:${value ?? ''}',
-              icon: switch (value) {
-                'offer' || 'dispatched' => 'send',
-                'message' => 'message',
-                'room' => 'users',
-                'by-task' => 'clipboard',
-                'by-folder' => 'folder',
-                'waiting' => 'clock',
-                'reported' => 'check-circle',
-                'progress' => 'activity',
-                'noted' => 'edit',
-                _ => 'list',
-              },
-              label: label,
-              selected: value == _filter,
-            ),
-        ],
-        appMenuRow<String>(
-          value: 'actions',
-          icon: 'more-horizontal',
-          label: 'More actions',
-          trailingWidget:
-              AppIcon('chevron-right', size: 14, color: AppColors.fg3),
-        ),
-      ],
-    );
-    if (picked == null || !mounted) return;
-    if (picked == 'actions') return _openActions();
-    if (picked == 'desk') {
-      return openAgentDesk(
-          context, widget.client, widget.agentId, widget.agentName);
-    }
-    if (picked.startsWith('view:')) {
-      final v = AgentView.values.byName(picked.substring(5));
-      if (v != _view) _setView(v);
-      return;
-    }
-    if (picked.startsWith('filter:')) {
-      final f = picked.substring(7);
-      setState(() => _filter = f.isEmpty ? null : f);
-    }
   }
   static const _maxAttachments = 10;
   Duration _maxRecordingDuration = const Duration(minutes: 3);
@@ -1470,15 +1414,13 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           : switcher;
     }
     return ChatHeader(
-      key: _headerKey,
       agentIds: [widget.agentId],
       title: widget.agentName,
       status: _view == AgentView.thread
           ? _headerStatus(subtitle)
           : ChatHeader.statusText(_viewLine),
-      onTitleTap: () => _openViewMenu(
-          anchor: kMobile ? null : _headerKey.currentContext),
-      titleHint: 'Switch view',
+      onTitleTap: _openDetails,
+      titleHint: 'Agent info',
       onBack: canPop ? _closePage : null,
       trailing: trailing,
     );
