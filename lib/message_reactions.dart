@@ -7,31 +7,20 @@ import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
-const kMessageReactions = <String>[
-  'check',
-  'eyes',
-  'thumbs_up',
-  'question',
-  'thinking',
-];
+/// Quick reactions offered on a message; any single emoji is accepted.
+const kMessageReactions = <String>['👍', '❤️', '😂', '👀', '✅', '🙏'];
 
-String messageReactionIcon(String name) => switch (name) {
-      'check' => 'check',
-      'eyes' => 'eye',
-      'thumbs_up' => 'thumbs-up',
-      'question' => 'help-circle',
-      'thinking' => 'brain',
-      _ => 'sparkles',
-    };
-
-String messageReactionLabel(String name) => switch (name) {
-      'check' => 'Check',
-      'eyes' => 'Eyes',
-      'thumbs_up' => 'Thumbs up',
-      'question' => 'Question',
-      'thinking' => 'Thinking',
+/// Agents react with names; show them as emoji so both merge into one chip.
+String messageReactionEmoji(String name) => switch (name) {
+      'check' => '✅',
+      'eyes' => '👀',
+      'thumbs_up' => '👍',
+      'question' => '❓',
+      'thinking' => '🤔',
       _ => name,
     };
+
+TextStyle _emojiStyle(double size) => TextStyle(fontSize: size, height: 1.1);
 
 class ReactionGroup {
   const ReactionGroup({
@@ -55,9 +44,10 @@ Map<String, List<ReactionGroup>> groupMessageReactions(
 ) {
   final raw = <String, Map<String, Set<String>>>{};
   for (final e in events) {
-    final name = e.reaction;
+    final reaction = e.reaction;
     final target = e.replyTo;
-    if (name == null || target == null) continue;
+    if (reaction == null || target == null) continue;
+    final name = messageReactionEmoji(reaction);
     final byName = raw.putIfAbsent(target, () => <String, Set<String>>{});
     final actors = byName.putIfAbsent(name, () => <String>{});
     final actor = '${e.actorKind}:${e.actorId.isEmpty ? e.eventId : e.actorId}';
@@ -237,8 +227,8 @@ class _ReactionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final active = group.mine;
-    return Tooltip(
-      message: messageReactionLabel(group.name),
+    return Semantics(
+      label: '${group.name} ${group.count}',
       child: Material(
         color: active ? AppColors.accentBg : AppColors.surface2,
         borderRadius: BorderRadius.circular(12),
@@ -257,11 +247,7 @@ class _ReactionChip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                AppIcon(
-                  messageReactionIcon(group.name),
-                  size: 13,
-                  color: active ? AppColors.accent : AppColors.fg2,
-                ),
+                Text(group.name, style: _emojiStyle(13)),
                 const SizedBox(width: 4),
                 Text(
                   '${group.count}',
@@ -281,7 +267,7 @@ class _ReactionChip extends StatelessWidget {
   }
 }
 
-/// Compact row offering `Reply` and the five icon reactions (never emoji).
+/// Compact row offering `Reply` and the quick emoji reactions.
 class MessageActionRow extends StatelessWidget {
   const MessageActionRow({
     super.key,
@@ -318,20 +304,17 @@ class MessageActionRow extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 4),
               color: AppColors.border2,
             ),
-            for (final name in kMessageReactions)
-              Tooltip(
-                message: messageReactionLabel(name),
+            for (final emoji in kMessageReactions)
+              Semantics(
+                button: true,
+                label: 'React $emoji',
                 child: InkWell(
                   borderRadius: BorderRadius.circular(8),
-                  onTap: () => onReact(name),
+                  onTap: () => onReact(emoji),
                   child: SizedBox.square(
                     dimension: btnSize,
                     child: Center(
-                      child: AppIcon(
-                        messageReactionIcon(name),
-                        size: iconSize,
-                        color: AppColors.fg2,
-                      ),
+                      child: Text(emoji, style: _emojiStyle(iconSize + 2)),
                     ),
                   ),
                 ),

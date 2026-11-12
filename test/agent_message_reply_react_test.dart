@@ -228,10 +228,8 @@ void main() {
         find.descendant(of: chips, matching: find.text('2')),
         findsOneWidget,
       );
-      expect(
-        find.descendant(of: chips, matching: find.byType(AppIcon)),
-        findsOneWidget,
-      );
+      // Agents' named `check` shows as its emoji.
+      expect(find.descendant(of: chips, matching: find.text('✅')), findsOneWidget);
 
       await t.pumpWidget(const SizedBox());
     } finally {
@@ -240,7 +238,7 @@ void main() {
   });
 
   testWidgets(
-      'long-press offers Reply and 5 icon reactions; Reply sets banner, clear and send pass reply_to',
+      'long-press offers Reply and the quick emoji reactions; Reply sets banner, clear and send pass reply_to',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
@@ -254,14 +252,12 @@ void main() {
 
       expect(find.byType(MessageActionRow), findsOneWidget);
       expect(find.text('Reply'), findsOneWidget);
-      // 1 reply icon + 5 reaction icons inside the action row, never emoji.
-      expect(
-        find.descendant(
-          of: find.byType(MessageActionRow),
-          matching: find.byType(AppIcon),
-        ),
-        findsNWidgets(6),
-      );
+      for (final emoji in kMessageReactions) {
+        expect(
+          find.descendant(of: find.byType(MessageActionRow), matching: find.text(emoji)),
+          findsOneWidget,
+        );
+      }
 
       // Tap Reply -> pending reply banner appears above composer.
       await t.tap(find.text('Reply'));
@@ -297,7 +293,7 @@ void main() {
     }
   });
 
-  testWidgets('desktop hover shows action row and sends icon reaction immediately',
+  testWidgets('desktop hover shows action row and sends an emoji reaction immediately',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     try {
@@ -319,12 +315,12 @@ void main() {
 
       expect(find.byType(MessageActionRow), findsOneWidget);
 
-      await t.tap(find.byTooltip('Eyes'));
+      await t.tap(find.descendant(of: find.byType(MessageActionRow), matching: find.text('👀')));
       await _pumpFrames(t);
 
       expect(client.sent.length, 1);
       expect(client.sent.single['reply_to'], 'm1');
-      expect(client.sent.single['reaction'], 'eyes');
+      expect(client.sent.single['reaction'], '👀');
       expect(client.sent.single['body'], '');
       expect(find.byType(MessageReactionChips), findsOneWidget);
 
