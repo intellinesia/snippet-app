@@ -6,6 +6,7 @@ import '../motion.dart';
 import '../platform.dart';
 import '../pull_refresh.dart';
 import '../settings_form.dart';
+import '../shell_panel.dart';
 import '../theme.dart';
 import '../desktop_layout.dart';
 import '../widgets.dart';
@@ -147,7 +148,9 @@ class _MemoryScreenState extends State<MemoryScreen> {
       ],
     );
     if (widget.embedded) {
-      final page = widget.initialKey != null || kMobile;
+      // Inside a shell pane the pane's own tint shows through, like Files.
+      final page = kMobile ||
+          (widget.initialKey != null && ShellPanelScope.maybeOf(context) == null);
       return Material(
         color: page ? AppColors.bg : Colors.transparent,
         child: page ? SafeArea(bottom: false, child: content) : content,

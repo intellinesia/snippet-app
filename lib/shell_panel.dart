@@ -99,7 +99,9 @@ class ShellPanelBody extends StatelessWidget {
           key: ValueKey(request.key),
           child: Builder(
               builder: (context) =>
-                  Material(child: request.builder(context, onClose))),
+                  Material(
+                      type: MaterialType.transparency,
+                      child: request.builder(context, onClose))),
         )
       ],
       onDidRemovePage: (_) => onClose(),
