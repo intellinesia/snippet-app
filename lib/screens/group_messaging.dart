@@ -1,0 +1,1326 @@
+import 'dart:async';
+
+import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../api.dart';
+import '../composer/composer_card.dart';
+import '../message_reactions.dart';
+import '../models.dart';
+import '../mochi.dart';
+import '../panel.dart';
+import '../platform.dart';
+import '../pull_refresh.dart';
+import '../swr.dart';
+import '../theme.dart';
+import '../widgets.dart';
+import 'mobile_chrome.dart';
+import 'shell_nav.dart';
+
+/// An `@token` in a group message: the boundary keeps `mail@fable` from
+/// counting as a mention.
+final RegExp _mentionToken =
+    RegExp(r'(?:^|[\s(\[{])@([A-Za-z0-9][A-Za-z0-9_-]*)');
+
+/// The `@id` tokens in [body] that name a member or `everyone`, in order.
+List<String> extractGroupMentions(String body, Set<String> memberIds) {
+  final out = <String>[];
+  for (final m in _mentionToken.allMatches(body)) {
+    final id = m.group(1)!;
+    if ((memberIds.contains(id) || id == 'everyone') && !out.contains(id)) {
+      out.add(id);
+    }
+  }
+  return out;
+}
+
+/// The `@query` fragment ending at the cursor, for the completion list.
+({int start, String query})? mentionQueryAt(String text, int cursor) {
+  if (cursor <= 0 || cursor > text.length) return null;
+  final before = text.substring(0, cursor);
+  final at = before.lastIndexOf('@');
+  if (at < 0) return null;
+  if (at > 0 && !' \t\n([{'.contains(before[at - 1])) return null;
+  final query = before.substring(at + 1);
+  if (query.isNotEmpty && !RegExp(r'^[A-Za-z0-9_-]*$').hasMatch(query)) {
+    return null;
+  }
+  return (start: at, query: query);
+}
+
+/// Text spans for a group message: `@member` and `@everyone` in accent.
+List<TextSpan> groupMentionSpans(String text, Set<String> memberIds) {
+  final spans = <TextSpan>[];
+  var at = 0;
+  for (final m in _mentionToken.allMatches(text)) {
+    final id = m.group(1)!;
+    if (!memberIds.contains(id) && id != 'everyone') continue;
+    final tokenStart = m.end - id.length - 1;
+    if (tokenStart > at) {
+      spans.add(TextSpan(text: text.substring(at, tokenStart)));
+    }
+    spans.add(TextSpan(
+      text: text.substring(tokenStart, m.end),
+      style: TextStyle(color: AppColors.accent, fontWeight: W.label),
+    ));
+    at = m.end;
+  }
+  if (at < text.length) spans.add(TextSpan(text: text.substring(at)));
+  return spans;
+}
+
+String groupMemberName(
+    GroupMember m, Map<String, CoordinationAgent> agents) {
+  if (m.isHuman) return 'You';
+  final a = agents[m.id];
+  if (a == null) return m.id;
+  final name = a.displayName.trim();
+  return name.isEmpty ? m.id : name;
+}
+
+/// Open a group thread, the same way openAgentThread opens a direct one.
+void openGroupThread(
+  BuildContext context, {
+  required DaemonClient client,
+  required GroupSummary group,
+}) {
+  if (kMobile) {
+    Widget page(BuildContext _) => GroupThreadScreen(
+          client: client,
+          group: group,
+          onClose: () => Navigator.pop(context),
+        );
+    Navigator.of(context).push<void>(
+        defaultTargetPlatform == TargetPlatform.iOS
+            ? CupertinoPageRoute(builder: page)
+            : MaterialPageRoute(builder: page));
+    return;
+  }
+  presentScreen(
+    context,
+    style: PanelStyle.drawer,
+    purpose: ShellPanelPurpose.conversation,
+    panelId: 'group:${group.id}',
+    originClient: client,
+    maxWidth: 720,
+    maxHeight: 720,
+    builder: (_, close) => GroupThreadScreen(
+      client: client,
+      group: group,
+      onClose: close,
+      showBack: false,
+    ),
+  );
+}
+
+/// The `Groups` section of the agents list: every group chat, plus the
+/// create action. Renders nothing until the groups endpoint answers, so a
+/// daemon that predates groups leaves the panel untouched.
+class GroupsSection extends StatefulWidget {
+  const GroupsSection({super.key, required this.client});
+
+  final DaemonClient client;
+
+  @override
+  State<GroupsSection> createState() => _GroupsSectionState();
+}
+
+class _GroupsSectionState extends State<GroupsSection> {
+  late final Swr<List<GroupSummary>> _groups;
+  List<GroupSummary> _items = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _groups = Swr<List<GroupSummary>>(
+      client: widget.client,
+      key: 'groups',
+      fetch: widget.client.groups,
+      // No revalidateOn: the list refreshes on open/create and app resume.
+      // Subscribing to device events here would open the events socket from
+      // every panel host, including tests with stub clients.
+      onChange: _sync,
+    );
+    _items = _groups.data ?? const [];
+  }
+
+  @override
+  void dispose() {
+    _groups.dispose();
+    super.dispose();
+  }
+
+  void _sync() {
+    if (!mounted) return;
+    setState(() => _items = _groups.data ?? const []);
+  }
+
+  Future<void> _create() async {
+    final group = await showCreateGroupSheet(context, client: widget.client);
+    if (group == null || !mounted) return;
+    openGroupThread(context, client: widget.client, group: group);
+    _groups.refresh();
+  }
+
+  Future<void> _open(GroupSummary group) async {
+    openGroupThread(context, client: widget.client, group: group);
+    _groups.refresh();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // A daemon without the groups routes errors here; the section stays out of
+    // the way rather than covering the agents list with a failure.
+    if (_groups.data == null) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ShellSectionHeader(
+          label: 'Groups',
+          actions: [
+            ShellSectionAction(
+              icon: 'plus',
+              tooltip: 'New group',
+              onTap: _create,
+            ),
+          ],
+        ),
+        for (final g in _items) _GroupRow(group: g, onTap: () => _open(g)),
+        if (_items.isEmpty)
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+                kMobile ? M.gutter : 20, 4, kMobile ? M.gutter : 20, 12),
+            child: Text('No groups yet.', style: TS.meta()),
+          ),
+      ],
+    );
+  }
+}
+
+class _GroupRow extends StatelessWidget {
+  const _GroupRow({required this.group, required this.onTap});
+
+  final GroupSummary group;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final agents = group.agentIds;
+    final name = group.title.trim().isEmpty ? 'Group' : group.title.trim();
+    final members = group.members.length;
+    final line = [
+      '$members ${members == 1 ? 'member' : 'members'}',
+      if (group.lead != null) 'lead ${group.lead}',
+    ].join(' · ');
+    final shown = agents.take(4).toList();
+    final extra = agents.length - shown.length;
+    final unread = group.unread;
+    if (kMobile) {
+      return Pressable(
+        kind: PressKind.row,
+        child: InkWell(
+          splashFactory: NoSplash.splashFactory,
+          highlightColor: Colors.transparent,
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 68),
+            child: Row(
+              children: [
+                const SizedBox(width: M.gutter),
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surface2,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: shown.isEmpty
+                            ? const AppIcon('users', size: 18)
+                            : AgentMochi(shown.first, size: 26),
+                      ),
+                      if (shown.length > 1 || extra > 0)
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            height: 18,
+                            constraints: const BoxConstraints(minWidth: 18),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface2,
+                              shape: BoxShape.circle,
+                              border:
+                                  Border.all(color: AppColors.bg, width: 1),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                                '${shown.length - 1 + (extra > 0 ? extra : 0)}',
+                                style: sans(9, color: AppColors.fg2)),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TS.rowTitle(AppColors.fg1)),
+                        const SizedBox(height: 2),
+                        Text(
+                            unread > 0 ? '$line · $unread unread' : line,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TS.meta(AppColors.fg3)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: M.gutter),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 7, 10, 7),
+          child: Row(children: [
+            SizedBox(
+              width: 32,
+              height: 32,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                        color: AppColors.surface2, shape: BoxShape.circle),
+                    alignment: Alignment.center,
+                    child: shown.isEmpty
+                        ? const AppIcon('users', size: 15)
+                        : AgentMochi(shown.first, size: 20),
+                  ),
+                  if (shown.length > 1 || extra > 0)
+                    Positioned(
+                      right: -4,
+                      bottom: -4,
+                      child: Container(
+                        width: 16,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface3,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: AppColors.windowBg, width: 1),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                            '${shown.length - 1 + (extra > 0 ? extra : 0)}',
+                            style: sans(8, color: AppColors.fg2)),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(children: [
+                    Expanded(
+                      child: Text(name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(13,
+                              weight: W.body, color: AppColors.fg1)),
+                    ),
+                    if (unread > 0) ...[
+                      const SizedBox(width: 6),
+                      Text('$unread',
+                          style: sans(11,
+                              color: AppColors.accent, tabular: true)),
+                    ],
+                  ]),
+                  const SizedBox(height: 2),
+                  Text(line,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(11, color: AppColors.fg3)),
+                ],
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// Create a group: a title, the agents in it, and an optional lead.
+Future<GroupSummary?> showCreateGroupSheet(
+  BuildContext context, {
+  required DaemonClient client,
+}) =>
+    showAppSheet<GroupSummary>(
+      context,
+      title: 'New group',
+      maxWidth: 380,
+      child: _CreateGroupSheet(client: client),
+    );
+
+class _CreateGroupSheet extends StatefulWidget {
+  const _CreateGroupSheet({required this.client});
+
+  final DaemonClient client;
+
+  @override
+  State<_CreateGroupSheet> createState() => _CreateGroupSheetState();
+}
+
+class _CreateGroupSheetState extends State<_CreateGroupSheet> {
+  final _title = TextEditingController();
+  List<CoordinationAgent> _agents = const [];
+  final Set<String> _selected = {};
+  String? _lead;
+  bool _loading = true;
+  bool _creating = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _title.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final all = await widget.client.coordinationAgents();
+      if (!mounted) return;
+      setState(() {
+        _agents = all
+            .where((a) => !a.isMissionControl && a.status != 'archived')
+            .toList()
+          ..sort((a, b) => a.displayName.compareTo(b.displayName));
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = '$e';
+        _loading = false;
+      });
+    }
+  }
+
+  String _name(CoordinationAgent a) {
+    final n = a.displayName.trim();
+    return n.isEmpty ? a.id : n;
+  }
+
+  Future<void> _create() async {
+    final title = _title.text.trim();
+    if (title.isEmpty || _selected.isEmpty || _creating) return;
+    setState(() {
+      _creating = true;
+      _error = null;
+    });
+    try {
+      final group = await widget.client.createGroup(
+        title: title,
+        members: _selected.toList(),
+        lead: _lead,
+      );
+      if (mounted) Navigator.pop(context, group);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = '$e';
+        _creating = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canCreate =
+        _title.text.trim().isNotEmpty && _selected.isNotEmpty && !_creating;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: _title,
+          autofocus: true,
+          cursorColor: AppColors.accent,
+          onChanged: (_) => setState(() {}),
+          style: TS.body(AppColors.fg1),
+          decoration: ComposerCard.decoration('Group name'),
+        ),
+        const SizedBox(height: 14),
+        if (_loading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(child: Spinner(size: 20)),
+          )
+        else if (_error != null && _agents.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(children: [
+              Text(_error!, style: TS.meta(AppColors.danger)),
+              const SizedBox(height: 8),
+              Btn('Retry', small: true, onTap: _load),
+            ]),
+          )
+        else if (_agents.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text('No agents available.', style: TS.meta()),
+          )
+        else ...[
+          Text('Agents', style: TS.label(AppColors.fg3)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final a in _agents)
+                _AgentPickChip(
+                  agent: a,
+                  name: _name(a),
+                  selected: _selected.contains(a.id),
+                  onTap: () => setState(() {
+                    if (!_selected.remove(a.id)) _selected.add(a.id);
+                    if (_lead != null && !_selected.contains(_lead)) {
+                      _lead = null;
+                    }
+                  }),
+                ),
+            ],
+          ),
+          if (_selected.length > 1) ...[
+            const SizedBox(height: 14),
+            Text('Lead', style: TS.label(AppColors.fg3)),
+            const SizedBox(height: 6),
+            DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _lead,
+                isExpanded: true,
+                hint: Text('No lead', style: TS.body(AppColors.fg3)),
+                items: [
+                  for (final id in _selected)
+                    DropdownMenuItem<String>(
+                      value: id,
+                      child: Text(
+                        _agents
+                                .where((a) => a.id == id)
+                                .map(_name)
+                                .firstOrNull ??
+                            id,
+                        style: TS.body(AppColors.fg1),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (v) => setState(() => _lead = v),
+              ),
+            ),
+          ],
+        ],
+        const SizedBox(height: 16),
+        if (_error != null && _agents.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(_error!, style: TS.meta(AppColors.danger)),
+          ),
+        Btn(_creating ? 'Creating…' : 'Create group',
+            full: true, disabled: !canCreate, onTap: _create),
+      ],
+    );
+  }
+}
+
+class _AgentPickChip extends StatelessWidget {
+  const _AgentPickChip({
+    required this.agent,
+    required this.name,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final CoordinationAgent agent;
+  final String name;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: Motion.fast,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.accentFill : AppColors.surface2,
+            borderRadius: BorderRadius.circular(16),
+            border:
+                Border.all(color: selected ? AppColors.accent : AppColors.line),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            AgentMochi(agent.id, size: 16),
+            const SizedBox(width: 6),
+            Text(name,
+                style: sans(12,
+                    weight: W.label,
+                    color: selected ? AppColors.accentFg : AppColors.fg1)),
+          ]),
+        ),
+      );
+}
+
+/// The members sheet: who is in the group, the lead, and add/remove.
+class GroupMembersSheet extends StatefulWidget {
+  const GroupMembersSheet({
+    super.key,
+    required this.client,
+    required this.group,
+    this.onChanged,
+  });
+
+  final DaemonClient client;
+  final GroupSummary group;
+
+  /// Called with the group as the daemon last returned it.
+  final ValueChanged<GroupSummary>? onChanged;
+
+  @override
+  State<GroupMembersSheet> createState() => _GroupMembersSheetState();
+}
+
+class _GroupMembersSheetState extends State<GroupMembersSheet> {
+  late GroupSummary _group = widget.group;
+  List<CoordinationAgent> _agents = const [];
+  Map<String, CoordinationAgent> _byId = const {};
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAgents();
+  }
+
+  Future<void> _loadAgents() async {
+    try {
+      final all = await widget.client.coordinationAgents();
+      if (!mounted) return;
+      setState(() {
+        _agents = all
+            .where((a) => !a.isMissionControl && a.status != 'archived')
+            .toList()
+          ..sort((a, b) => a.displayName.compareTo(b.displayName));
+        _byId = {for (final a in _agents) a.id: a};
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _update(Future<GroupSummary> Function() call) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final g = await call();
+      if (!mounted) return;
+      setState(() => _group = g);
+      widget.onChanged?.call(g);
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  String _name(String id, String kind) {
+    if (kind == 'human') return 'You';
+    final a = _byId[id];
+    if (a == null) return id;
+    final n = a.displayName.trim();
+    return n.isEmpty ? id : n;
+  }
+
+  List<CoordinationAgent> get _addable => [
+        for (final a in _agents)
+          if (!_group.agentIds.contains(a.id)) a,
+      ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final m in _group.members)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(children: [
+              if (m.isAgent)
+                AgentMochi(m.id, size: 22)
+              else
+                AppIcon('user', size: 18, color: AppColors.fg3),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_name(m.id, m.kind),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TS.body(AppColors.fg1)),
+                    if (m.id == _group.lead)
+                      Text('Lead', style: TS.caption(AppColors.accent)),
+                  ],
+                ),
+              ),
+              if (m.isAgent && m.id != _group.lead)
+                TextButton(
+                  onPressed: _busy
+                      ? null
+                      : () => _update(
+                          () => widget.client
+                              .updateGroup(_group.id, lead: m.id)),
+                  child: Text('Make lead', style: TS.label(AppColors.accent)),
+                ),
+              if (!m.isHuman)
+                IconBtn(
+                  'x',
+                  size: 24,
+                  iconSize: 13,
+                  tooltip: 'Remove',
+                  onTap: _busy
+                      ? null
+                      : () => _update(() => widget.client.updateGroup(_group.id,
+                          removeMembers: [m.id])),
+                ),
+            ]),
+          ),
+        if (_addable.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text('Add agents', style: TS.label(AppColors.fg3)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final a in _addable)
+                _AgentPickChip(
+                  agent: a,
+                  name: () {
+                    final n = a.displayName.trim();
+                    return n.isEmpty ? a.id : n;
+                  }(),
+                  selected: false,
+                  onTap: _busy
+                      ? () {}
+                      : () => _update(() => widget.client
+                          .updateGroup(_group.id, addMembers: [a.id])),
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// A group conversation: agents and the local human, with `@` mentions.
+/// Built on the same structure as AgentThreadScreen — a [Swr] feed
+/// revalidated on coordination pushes, bubbles, pull to refresh — but the
+/// roster, sender names and mentions are the group's own.
+class GroupThreadScreen extends StatefulWidget {
+  const GroupThreadScreen({
+    super.key,
+    required this.client,
+    required this.group,
+    this.onClose,
+    this.embedded = false,
+    this.showBack = true,
+  });
+
+  final DaemonClient client;
+  final GroupSummary group;
+  final VoidCallback? onClose;
+
+  /// Nested under a host that already draws `NavBackRow`.
+  final bool embedded;
+  final bool showBack;
+
+  @override
+  State<GroupThreadScreen> createState() => _GroupThreadScreenState();
+}
+
+class _GroupThreadScreenState extends State<GroupThreadScreen> {
+  void _closePage() {
+    if (widget.onClose != null) {
+      widget.onClose!();
+    } else {
+      Navigator.of(context).maybePop();
+    }
+  }
+
+  late GroupSummary _group = widget.group;
+  late final Swr<List<CoordinationEvent>> _thread;
+  final _input = TextEditingController();
+  final _inputFocus = FocusNode();
+  final _scroll = ScrollController();
+  List<CoordinationEvent> _events = const [];
+  bool _loading = true;
+  bool _sending = false;
+  String? _error;
+
+  /// Sent but not yet in a fetched list; merged back so a refetch can't hide.
+  final List<CoordinationEvent> _pending = [];
+
+  Map<String, CoordinationAgent> _agents = const {};
+
+  /// The `@query` under the cursor, when the completion list should show.
+  ({int start, String query})? _mention;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAgents();
+    _thread = Swr<List<CoordinationEvent>>(
+      client: widget.client,
+      key: 'group-thread:${widget.group.id}',
+      fetch: () => widget.client.groupEvents(widget.group.id),
+      revalidateOn: Swr.coordination,
+      onChange: _sync,
+    );
+    _events = _thread.data ?? const [];
+    _loading = _thread.data == null;
+    if (_events.isNotEmpty) _jumpToBottom();
+    _input.addListener(_onInputChanged);
+    _inputFocus.addListener(_onInputChanged);
+  }
+
+  @override
+  void dispose() {
+    _thread.dispose();
+    _input.removeListener(_onInputChanged);
+    _input.dispose();
+    _inputFocus.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadAgents() async {
+    try {
+      final all = await widget.client.coordinationAgents();
+      if (!mounted) return;
+      setState(() => _agents = {for (final a in all) a.id: a});
+    } catch (_) {}
+  }
+
+  /// Member agent ids plus `everyone`, for mentions and highlighting.
+  Set<String> get _mentionIds => {
+        for (final m in _group.members)
+          if (m.isAgent) m.id,
+        'everyone',
+      };
+
+  void _onInputChanged() {
+    final sel = _input.selection;
+    final next = sel.isValid && sel.isCollapsed
+        ? mentionQueryAt(_input.text, sel.baseOffset)
+        : null;
+    if (next?.query != _mention?.query || next?.start != _mention?.start) {
+      setState(() => _mention = next);
+    }
+  }
+
+  List<({String id, String label, String? name})> get _mentionCandidates {
+    final q = _mention?.query.toLowerCase() ?? '';
+    final out = <({String id, String label, String? name})>[];
+    void add(String id, String label, String? name) {
+      if (q.isNotEmpty &&
+          !id.toLowerCase().contains(q) &&
+          !(name ?? '').toLowerCase().contains(q)) {
+        return;
+      }
+      out.add((id: id, label: label, name: name));
+    }
+
+    for (final m in _group.members) {
+      if (!m.isAgent) continue;
+      final a = _agents[m.id];
+      final display = a?.displayName.trim() ?? '';
+      add(m.id, display.isEmpty ? m.id : display, m.id);
+    }
+    add('everyone', 'everyone', 'the whole group');
+    return out.take(8).toList();
+  }
+
+  void _applyMention(String id) {
+    final m = _mention;
+    if (m == null) return;
+    final text = _input.text;
+    final cursor = _input.selection.baseOffset.clamp(0, text.length);
+    final insert = '@$id ';
+    final next = text.replaceRange(m.start, cursor, insert);
+    _input.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: m.start + insert.length),
+    );
+    setState(() => _mention = null);
+    _inputFocus.requestFocus();
+  }
+
+  Future<void> _load({bool silent = false}) => _thread.refresh();
+
+  void _sync() {
+    if (!mounted) return;
+    final next = _thread.data;
+    if (next != null) {
+      final ids = {for (final e in next) e.eventId};
+      final keys = {for (final e in next) e.idempotencyKey};
+      _pending.removeWhere((p) =>
+          ids.contains(p.eventId) || keys.contains(p.idempotencyKey));
+    }
+    final merged = next == null ? null : [...next, ..._pending];
+    final hadNew = merged != null && merged.length > _events.length;
+    final first = _events.isEmpty;
+    setState(() {
+      if (merged != null) _events = merged;
+      _loading = _thread.loading;
+      _error =
+          next == null && _thread.error != null ? '${_thread.error}' : null;
+    });
+    if (hadNew) _jumpToBottom(animated: !first);
+  }
+
+  void _jumpToBottom({bool animated = false}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.hasClients) {
+        if (animated) {
+          _scroll.animateTo(
+            _scroll.position.maxScrollExtent,
+            duration: Motion.fast,
+            curve: Motion.enter,
+          );
+        } else {
+          _scroll.jumpTo(_scroll.position.maxScrollExtent);
+        }
+      }
+    });
+  }
+
+  Future<void> _send() async {
+    final body = _input.text.trim();
+    if (body.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    try {
+      final mentions = extractGroupMentions(_input.text, _mentionIds);
+      final ev = await widget.client.postGroup(
+        widget.group.id,
+        body: body,
+        mentions: mentions.isEmpty ? null : mentions,
+      );
+      if (!mounted) return;
+      _pending.add(ev);
+      _input.clear();
+      setState(() => _mention = null);
+      _thread.refresh();
+      _jumpToBottom();
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _openMembers() async {
+    await showAppSheet<void>(
+      context,
+      title: _title,
+      maxWidth: 380,
+      child: GroupMembersSheet(
+        client: widget.client,
+        group: _group,
+        onChanged: (g) {
+          if (mounted) setState(() => _group = g);
+        },
+      ),
+    );
+  }
+
+  String get _title =>
+      _group.title.trim().isEmpty ? 'Group' : _group.title.trim();
+
+  String get _subtitle {
+    final n = _group.members.length;
+    return '$n ${n == 1 ? 'member' : 'members'}';
+  }
+
+  Widget _memberMochis() {
+    final agents = _group.agentIds;
+    if (agents.isEmpty) return const AppIcon('users', size: 18);
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      for (var i = 0; i < agents.length && i < 4; i++) ...[
+        if (i > 0) const SizedBox(width: 2),
+        AgentMochi(agents[i], size: 18),
+      ],
+      if (agents.length > 4) ...[
+        const SizedBox(width: 2),
+        Text('+${agents.length - 4}', style: TS.caption(AppColors.fg3)),
+      ],
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hideChrome = widget.embedded;
+    return Material(
+      color: readingBg,
+      child: SafeArea(
+        top: !hideChrome,
+        bottom: false,
+        child: Column(
+          children: [
+            if (!hideChrome) _header(),
+            Expanded(child: _body()),
+            _composer(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _header() {
+    if (kMobile) {
+      return MobileStackedTitleBar(
+        title: _title,
+        subtitle: _subtitle,
+        onTap: _openMembers,
+        tapHint: 'Members',
+      );
+    }
+    final canGoBack = !widget.embedded &&
+        widget.showBack &&
+        (widget.onClose != null || Navigator.of(context).canPop());
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppColors.bg,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      child: Row(
+        children: [
+          if (canGoBack)
+            IconBtn(
+              'chevron-left',
+              size: 28,
+              iconSize: 16,
+              tooltip: 'Back',
+              onTap: _closePage,
+            ),
+          const SizedBox(width: 4),
+          _memberMochis(),
+          const SizedBox(width: 8),
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _openMembers,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TS.rowTitle(AppColors.fg1)),
+                  Text(_subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TS.meta(AppColors.fg3)),
+                ],
+              ),
+            ),
+          ),
+          if (!widget.embedded && widget.onClose != null)
+            IconBtn(
+              'x',
+              size: 28,
+              iconSize: 16,
+              tooltip: 'Close',
+              onTap: widget.onClose!,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _body() {
+    if (_loading) {
+      return const Center(child: Spinner(size: 24));
+    }
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppIcon('alert-circle', size: 24, color: AppColors.danger),
+              const SizedBox(height: 10),
+              Text(_error!,
+                  textAlign: TextAlign.center,
+                  style: sans(13, color: AppColors.danger)),
+              const SizedBox(height: 14),
+              Btn('Retry', small: true, onTap: () => _load(silent: false)),
+            ],
+          ),
+        ),
+      );
+    }
+    final visible = [
+      for (final e in _events)
+        if (!isReactionEvent(e) && e.body.isNotEmpty) e
+    ];
+    if (visible.isEmpty) {
+      return PullToRefresh(
+        onRefresh: () => _load(silent: true),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: MediaQuery.sizeOf(context).height * 0.45,
+              child: Center(
+                child: EmptyState(
+                  icon: 'users',
+                  title: _title,
+                  body: 'Say hello — everyone in the group sees it.',
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return PullToRefresh(
+      onRefresh: () => _load(silent: true),
+      child: ListView.builder(
+        controller: _scroll,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        itemCount: visible.length,
+        itemBuilder: (_, i) => _wideCap(_bubble(visible[i])),
+      ),
+    );
+  }
+
+  Widget _bubble(CoordinationEvent e) {
+    if (e.payload['auto'] == 'ack') {
+      return Padding(
+        padding: const EdgeInsets.all(4),
+        child: Text(e.body, style: sans(12, color: AppColors.fg3)),
+      );
+    }
+    final mine = e.actorKind == 'human';
+    final body = _mentionText(e.body);
+    if (mine) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(14, 9, 14, 10),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: DefaultTextStyle.merge(
+              textWidthBasis: TextWidthBasis.longestLine,
+              child: body,
+            ),
+          ),
+        ),
+      );
+    }
+    final name = groupMemberName(
+        GroupMember.fromJson({'kind': 'agent', 'id': e.actorId}), _agents);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AgentMochi(e.actorId, size: 15),
+                const SizedBox(width: 5),
+                Text(name,
+                    style:
+                        sans(11, weight: W.label, color: AppColors.accent)),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: body,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _mentionText(String body) => SelectionArea(
+        child: Text.rich(
+          TextSpan(
+            style: TS.reading(AppColors.fg1),
+            children: groupMentionSpans(body, _mentionIds),
+          ),
+        ),
+      );
+
+  Widget _wideCap(Widget child) => kMobile
+      ? child
+      : Center(
+          child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 740),
+              child: SizedBox(width: double.infinity, child: child)));
+
+  Widget _composer() {
+    final mq = MediaQuery.of(context);
+    final keyboard = mq.viewInsets.bottom;
+    return AnimatedPadding(
+      duration: Motion.fast,
+      curve: Motion.enter,
+      padding: EdgeInsets.only(bottom: keyboard),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          kMobile ? M.gutter : (widget.embedded ? kComposerGutter : 20),
+          8,
+          kMobile ? M.gutter : (widget.embedded ? kComposerGutter : 20),
+          10 + (keyboard > 0 ? 8 : mq.padding.bottom),
+        ),
+        child: _wideCap(
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_mention != null && _mentionCandidates.isNotEmpty)
+                _mentionList(),
+              ComposerCard(
+                field: CallbackShortcuts(
+                  bindings: {
+                    const SingleActivator(LogicalKeyboardKey.enter): () {
+                      if (!kMobile) _send();
+                    },
+                    const SingleActivator(LogicalKeyboardKey.enter,
+                        meta: true): _send,
+                    const SingleActivator(LogicalKeyboardKey.enter,
+                        control: true): _send,
+                  },
+                  child: TextField(
+                    controller: _input,
+                    focusNode: _inputFocus,
+                    minLines: 1,
+                    maxLines: 8,
+                    cursorColor: AppColors.accent,
+                    onSubmitted: (_) {
+                      if (!kMobile) _send();
+                    },
+                    style: TS.body(AppColors.fg1),
+                    decoration:
+                        ComposerCard.decoration('Message the group…'),
+                  ),
+                ),
+                send: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _input,
+                  builder: (_, val, __) {
+                    final canSend = val.text.trim().isNotEmpty && !_sending;
+                    return ComposerSendButton(
+                      enabled: canSend,
+                      sending: _sending,
+                      onTap: canSend ? _send : null,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _mentionList() {
+    final candidates = _mentionCandidates;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final c in candidates)
+            InkWell(
+              onTap: () => _applyMention(c.id),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(children: [
+                  if (c.id == 'everyone')
+                    AppIcon('users', size: 16, color: AppColors.fg3)
+                  else
+                    AgentMochi(c.id, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(c.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TS.body(AppColors.fg1)),
+                  ),
+                  if (c.name != null && c.name != c.label)
+                    Text('@${c.id}', style: TS.meta(AppColors.fg3)),
+                ]),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

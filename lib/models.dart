@@ -1309,6 +1309,52 @@ class DirectThreadSummary {
   bool get hasUnread => unread > 0;
 }
 
+/// One participant in a group chat: an agent, or the local human.
+class GroupMember {
+  /// `agent` or `human`.
+  final String kind;
+  final String id;
+
+  GroupMember.fromJson(Map<String, dynamic> j)
+      : kind = j['kind'] as String? ?? '',
+        id = j['id'] as String? ?? '';
+
+  bool get isAgent => kind == 'agent';
+  bool get isHuman => kind == 'human';
+}
+
+/// A group chat: agents plus the local human, with a shared event thread.
+class GroupSummary {
+  final String id;
+  final String title;
+  final List<GroupMember> members;
+
+  /// The agent that speaks for the group; null when unset.
+  final String? lead;
+  final String? lastEventAt;
+  final int unread;
+  final String createdAt;
+
+  GroupSummary.fromJson(Map<String, dynamic> j)
+      : id = j['id'] as String? ?? '',
+        title = j['title'] as String? ?? '',
+        members = ((j['members'] as List?) ?? const [])
+            .whereType<Map>()
+            .map((e) => GroupMember.fromJson(Map<String, dynamic>.from(e)))
+            .toList(),
+        lead = (j['lead'] as String?)?.isEmpty ?? true
+            ? null
+            : (j['lead'] as String),
+        lastEventAt = j['last_event_at'] as String?,
+        unread = (j['unread'] as num?)?.toInt() ?? 0,
+        createdAt = j['created_at'] as String? ?? '';
+
+  List<String> get agentIds =>
+      [for (final m in members) if (m.isAgent) m.id];
+
+  bool get hasUnread => unread > 0;
+}
+
 class CoordinationEvent {
   final String eventId;
   final String threadId;
