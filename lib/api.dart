@@ -37,6 +37,15 @@ class QuestionAnswerConflict implements Exception {
   String toString() => message;
 }
 
+class TaskVerdictConflict implements Exception {
+  const TaskVerdictConflict(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 /// Talks to one snippet `serve` daemon. The token is passed as a `?token=` query
 /// param on every request (matching the daemon's auth) and the session id (a
 /// path with a `/`) is URL-encoded automatically by [Uri].
@@ -2075,6 +2084,29 @@ class DaemonClient {
     );
     if (r.statusCode != 200) throw _err('set task status', r);
     return TaskItem.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  /// POST /coordination/tasks/{id}/verdict — approve or send back a task in review.
+  Future<TaskStatus> submitTaskVerdict(
+    String taskId,
+    String verdict, [
+    List<String> findings = const [],
+  ]) async {
+    final r = await _post(
+      _uri('/coordination/tasks/${Uri.encodeComponent(taskId)}/verdict'),
+      headers: _json,
+      body: jsonEncode({
+        'verdict': verdict,
+        'findings': findings,
+      }),
+    );
+    if (r.statusCode == 409) {
+      throw TaskVerdictConflict(DaemonClient.errorDetail(r.body));
+    }
+    if (r.statusCode != 200) throw _err('submit task verdict', r);
+    final j = jsonDecode(r.body);
+    final raw = j is Map ? j['status'] as String? : (j is String ? j : null);
+    return TaskStatus.parse(raw);
   }
 
   /// GET /coordination/tasks/{id}/links — edges in BOTH directions, plus the
