@@ -24,6 +24,7 @@ import 'screens/mission_control/mission_control_state.dart'
         parseBoardMessage,
         parseCoordinationReply,
         parseDirectMessage,
+        parseGroupMessage,
         parseMissionEnvelope,
         parseParentMessage,
         parseRoutingNote,
@@ -74,7 +75,9 @@ class MacosNotch {
     if (_initialized || !kMacOS) return;
     _initialized = true;
     LiveCaptionFeed.instance.text.addListener(() {
-      _channel.invokeMethod<void>('liveCaption', {'text': LiveCaptionFeed.instance.text.value ?? ''}).catchError((Object _) {});
+      _channel.invokeMethod<void>('liveCaption', {
+        'text': LiveCaptionFeed.instance.text.value ?? ''
+      }).catchError((Object _) {});
     });
     _channel.setMethodCallHandler((call) async {
       switch (call.method) {
@@ -566,6 +569,7 @@ class MacosNotch {
             parseWorkerQuestion(text) != null ||
             parseBoardMessage(text) != null ||
             parseDirectMessage(text) != null ||
+            parseGroupMessage(text) != null ||
             parseCoordinationReply(text) != null ||
             parseParentMessage(text) != null ||
             parseAssignmentEnvelope(text) != null) {

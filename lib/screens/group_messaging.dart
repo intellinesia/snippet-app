@@ -112,6 +112,26 @@ void openGroupThread(
   );
 }
 
+/// Confirm, then delete the group. Returns whether it was deleted.
+Future<bool> confirmDeleteGroup(
+    BuildContext context, DaemonClient client, GroupSummary group) async {
+  final name = group.title.trim().isEmpty ? 'this group' : group.title.trim();
+  final ok = await confirmAction(context,
+      title: 'Delete $name?',
+      body: 'This removes the group chat and its messages for everyone in it. '
+          'The agents stay. This can\'t be undone.',
+      confirmLabel: 'Delete group');
+  if (!ok || !context.mounted) return false;
+  try {
+    await client.deleteGroup(group.id);
+    if (context.mounted) toast(context, 'Deleted $name');
+    return true;
+  } catch (e) {
+    if (context.mounted) toast(context, '$e', danger: true);
+    return false;
+  }
+}
+
 /// Create a group chat, then open it. Returns the group, or null if cancelled.
 Future<GroupSummary?> createAndOpenGroup(
     BuildContext context, DaemonClient client) async {
@@ -122,10 +142,12 @@ Future<GroupSummary?> createAndOpenGroup(
 }
 
 class GroupRow extends StatelessWidget {
-  const GroupRow({super.key, required this.group, required this.onTap});
+  const GroupRow(
+      {super.key, required this.group, required this.onTap, this.onLongPress});
 
   final GroupSummary group;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -146,6 +168,7 @@ class GroupRow extends StatelessWidget {
           splashFactory: NoSplash.splashFactory,
           highlightColor: Colors.transparent,
           onTap: onTap,
+          onLongPress: onLongPress,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 68),
             child: Row(
@@ -222,6 +245,7 @@ class GroupRow extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 7, 10, 7),
@@ -533,6 +557,7 @@ class GroupMembersSheet extends StatefulWidget {
     required this.client,
     required this.group,
     this.onChanged,
+    this.onDeleted,
   });
 
   final DaemonClient client;
@@ -540,6 +565,7 @@ class GroupMembersSheet extends StatefulWidget {
 
   /// Called with the group as the daemon last returned it.
   final ValueChanged<GroupSummary>? onChanged;
+  final VoidCallback? onDeleted;
 
   @override
   State<GroupMembersSheet> createState() => _GroupMembersSheetState();
@@ -637,15 +663,13 @@ class _GroupMembersSheetState extends State<GroupMembersSheet> {
                   child: Text('Make lead', style: TS.label(AppColors.accent)),
                 ),
               if (!m.isHuman)
-                IconBtn(
-                  'x',
-                  size: 24,
-                  iconSize: 13,
-                  tooltip: 'Remove',
-                  onTap: _busy
+                TextButton(
+                  key: ValueKey('remove-${m.id}'),
+                  onPressed: _busy
                       ? null
                       : () => _update(() => widget.client
                           .updateGroup(_group.id, removeMembers: [m.id])),
+                  child: Text('Remove', style: TS.label(AppColors.danger)),
                 ),
             ]),
           ),
@@ -673,6 +697,21 @@ class _GroupMembersSheetState extends State<GroupMembersSheet> {
             ],
           ),
         ],
+        const SizedBox(height: 16),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextAction('Delete group',
+              icon: 'trash',
+              danger: true,
+              onTap: _busy
+                  ? null
+                  : () async {
+                      if (await confirmDeleteGroup(
+                          context, widget.client, _group)) {
+                        widget.onDeleted?.call();
+                      }
+                    }),
+        ),
       ],
     );
   }
@@ -894,6 +933,11 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         group: _group,
         onChanged: (g) {
           if (mounted) setState(() => _group = g);
+        },
+        onDeleted: () {
+          if (!mounted) return;
+          Navigator.of(context).pop();
+          _closePage();
         },
       ),
     );
