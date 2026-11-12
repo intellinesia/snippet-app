@@ -155,6 +155,8 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   List<CoordinationAgent> agents = const [];
   AgentLastMessage? _mcLast;
   DateTime? _shownAt;
+  Map<String, int> _unread = const {};
+  String? _selectedKey;
 
   String? error;
   bool loading = true;
@@ -253,6 +255,14 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     } finally {
       if (mounted) setState(() => loading = false);
     }
+    try {
+      final threads = await widget.client.directThreads();
+      if (!mounted) return;
+      setState(() => _unread = {
+            for (final t in threads)
+              if (t.peerKind == 'agent' && t.unread > 0) t.peerId: t.unread,
+          });
+    } catch (_) {}
   }
 
   String get effectiveQuery {
@@ -408,14 +418,23 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
               key: ValueKey('agent-card-${e.id}'),
               client: widget.client,
               agent: e,
-              onOpen: () => widget.onOpenAgent?.call(e),
+              unread: _unread[e.id] ?? 0,
+              selected: _selectedKey == 'agent-${e.id}',
+              onOpen: () {
+                setState(() => _selectedKey = 'agent-${e.id}');
+                widget.onOpenAgent?.call(e);
+              },
               onDelete: () => _deleteAgent(e),
               onChanged: refresh,
             )
           : GroupRow(
               key: ValueKey('group-row-${(e as GroupSummary).id}'),
               group: e,
-              onTap: () => _openGroup(e),
+              selected: _selectedKey == 'group-${e.id}',
+              onTap: () {
+                setState(() => _selectedKey = 'group-${e.id}');
+                _openGroup(e);
+              },
               onLongPress: () async {
                 if (await confirmDeleteGroup(context, widget.client, e)) {
                   _groups.refresh();
@@ -427,6 +446,47 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         since: _shownAt,
         child: child,
       );
+    }
+
+    // Phone roster sections: Needs you, Working, Recent. Groups join the same
+    // sections — an unread group needs attention like an unanswered question.
+    int sectionOf(Object item) {
+      if (item is CoordinationAgent) {
+        if (item.needsYou > 0) return 0;
+        final p = agentRosterPresence(item, widget.client.presence);
+        return p != null && p.state != 'idle' ? 1 : 2;
+      }
+      return item is GroupSummary && item.unread > 0 ? 0 : 2;
+    }
+
+    Widget separator() => Container(
+        height: 1,
+        margin: const EdgeInsets.only(left: 88),
+        color: AppColors.line);
+
+    List<Widget> mobileRows() {
+      if (q.isNotEmpty) {
+        return [
+          for (var i = 0; i < entries.length; i++) ...[
+            if (i > 0) separator(),
+            row(i),
+          ],
+        ];
+      }
+      final buckets = [
+        for (var s = 0; s < 3; s++)
+          [for (var i = 0; i < entries.length; i++) if (sectionOf(entries[i].item) == s) i],
+      ];
+      return [
+        for (var s = 0; s < 3; s++)
+          if (buckets[s].isNotEmpty) ...[
+            _RosterHeader(_sectionLabels[s]),
+            for (var j = 0; j < buckets[s].length; j++) ...[
+              if (j > 0) separator(),
+              row(buckets[s][j]),
+            ],
+          ],
+      ];
     }
 
     final Widget? emptyState = entries.isNotEmpty || (loading && agents.isEmpty)
@@ -448,20 +508,25 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     if (kMobile) {
       return PullToRefresh(
         onRefresh: refresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(0, 8, 0, 88),
-          children: [
-            if (mcCard != null)
-              Padding(
-                  padding: const EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 8),
-                  child: mcCard),
-            for (var i = 0; i < entries.length; i++) row(i),
-            if (emptyState != null)
-              Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: M.gutter),
-                  child: emptyState),
-          ],
+        child: ListenableBuilder(
+          listenable: widget.client.presence,
+          builder: (context, _) => ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(0, 8, 0, 88),
+            children: [
+              if (mcCard != null)
+                Padding(
+                    padding:
+                        const EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 8),
+                    child: mcCard),
+              ...mobileRows(),
+              if (emptyState != null)
+                Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: M.gutter),
+                    child: emptyState),
+            ],
+          ),
         ),
       );
     }
@@ -499,6 +564,24 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       ),
     );
   }
+}
+
+const _sectionLabels = ['Needs you', 'Working', 'Recent'];
+
+/// A phone roster section label, inset toward the text column.
+class _RosterHeader extends StatelessWidget {
+  const _RosterHeader(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(36, 14, 16, 4),
+        child: Text(label,
+            style: TS.label(AppColors.fg3),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis),
+      );
 }
 
 class _EmptySearch extends StatelessWidget {
