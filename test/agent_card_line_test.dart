@@ -14,19 +14,26 @@ class _Client extends DaemonClient {
   DeviceEventHub get deviceEvents => _events;
 }
 
-CoordinationAgent _agent({Map<String, dynamic>? last, int working = 0}) =>
+CoordinationAgent _agent(
+        {Map<String, dynamic>? last,
+        Map<String, dynamic>? presence,
+        int needsYou = 0}) =>
     CoordinationAgent.fromJson({
       'id': 'growth',
       'display_name': 'Growth Advisor',
       'handle': 'growth',
-      'task_counts': {'in_progress': working},
+      'needs_you': needsYou,
+      if (presence != null) 'presence': presence,
       if (last != null) 'last_message': last,
     });
 
-Future<void> _pump(WidgetTester t, CoordinationAgent a) async {
+Future<void> _pump(WidgetTester t, CoordinationAgent a,
+    {int unread = 0}) async {
   debugDefaultTargetPlatformOverride = TargetPlatform.android;
   await t.pumpWidget(MaterialApp(
-      home: Scaffold(body: AgentCard(client: _Client(), agent: a, onOpen: () {}))));
+      home: Scaffold(
+          body: AgentCard(
+              client: _Client(), agent: a, onOpen: () {}, unread: unread))));
   await t.pump();
   debugDefaultTargetPlatformOverride = null;
 }
@@ -40,12 +47,33 @@ void main() {
     expect(find.byKey(const ValueKey('agent-working')), findsNothing);
   });
 
-  testWidgets('a working agent keeps its last message and gets the working ring',
+  testWidgets('a working agent shows its presence line and the state ring',
       (t) async {
-    await _pump(t,
-        _agent(last: {'text': 'Claimed the plan task', 'from': 'agent'}, working: 1));
-    expect(find.text('Claimed the plan task'), findsOneWidget);
-    expect(find.text('Working'), findsNothing);
+    await _pump(t, _agent(
+        last: {'text': 'Claimed the plan task', 'from': 'agent'},
+        presence: {'state': 'working', 'detail': 'cargo test'}));
+    expect(find.text('Working · cargo test'), findsOneWidget);
+    expect(find.text('Claimed the plan task'), findsNothing);
     expect(find.byKey(const ValueKey('agent-working')), findsOneWidget);
+  });
+
+  testWidgets('an idle agent falls back to its last message', (t) async {
+    await _pump(t, _agent(
+        last: {'text': 'Claimed the plan task', 'from': 'agent'},
+        presence: {'state': 'idle'}));
+    expect(find.text('Claimed the plan task'), findsOneWidget);
+    expect(find.byKey(const ValueKey('agent-working')), findsNothing);
+  });
+
+  testWidgets('a waiting agent asks for you', (t) async {
+    await _pump(t,
+        _agent(presence: {'state': 'waiting', 'detail': 'user'}));
+    expect(find.text('Waiting on you'), findsOneWidget);
+    expect(find.byKey(const ValueKey('agent-working')), findsOneWidget);
+  });
+
+  testWidgets('unread shows the dot left of the avatar', (t) async {
+    await _pump(t, _agent(), unread: 2);
+    expect(find.byKey(const ValueKey('agent-unread-dot')), findsOneWidget);
   });
 }
