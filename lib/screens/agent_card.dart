@@ -2,26 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api.dart';
-import '../crew_widgets.dart' show AgentProviderMark;
 import '../models.dart';
 import '../platform.dart';
+import '../presence.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import '../motion.dart';
 import '../mochi.dart';
 import 'agent_reach_panel.dart';
 import 'agent_wake_panel.dart';
 import 'agent_appearance.dart';
 import 'agent_profile_panel.dart';
 
-/// One agent on the phone's Agents page, in the Mission Control card's shape:
-/// who it is, whether it is working, and its task counts.
+/// One agent as a roster row: Mochi with a presence ring, name, time and a
+/// two-line preview (what it is doing, else its last message).
 class AgentCard extends StatefulWidget {
   final DaemonClient client;
   final CoordinationAgent agent;
   final VoidCallback onOpen;
   final VoidCallback? onDelete;
   final VoidCallback? onChanged;
+
+  /// Unread direct messages; shows the dot left of the avatar.
+  final int unread;
+
+  /// Desktop only: the open agent's row sits on a grey selected surface.
+  final bool selected;
 
   const AgentCard({
     super.key,
@@ -30,6 +35,8 @@ class AgentCard extends StatefulWidget {
     required this.onOpen,
     this.onDelete,
     this.onChanged,
+    this.unread = 0,
+    this.selected = false,
   });
 
   @override
@@ -159,352 +166,193 @@ class _AgentCardState extends State<AgentCard> {
     }
   }
 
-  List<TaskItem> _tasks = const [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  @override
-  void didUpdateWidget(AgentCard old) {
-    super.didUpdateWidget(old);
-    if (old.client != widget.client || old.agent.id != widget.agent.id) _load();
-  }
-
-  Future<void> _load() async {
-    if (widget.agent.taskCounts != null) return;
-    final id = widget.agent.id;
-    try {
-      final tasks = await widget.client.tasks(agentId: id, limit: 100);
-      if (mounted) setState(() => _tasks = tasks);
-    } catch (_) {}
-  }
-
-  int _count(Set<TaskStatus> statuses, Set<String> keys) =>
-      widget.agent.taskCounts != null
-          ? widget.agent.tasksIn(keys)
-          : _tasks.where((t) => statuses.contains(t.status)).length;
-
   @override
   Widget build(BuildContext context) {
     final agent = widget.agent;
     final name =
         agent.displayName.trim().isEmpty ? agent.id : agent.displayName;
-    final working = _count({TaskStatus.inProgress}, {'in_progress'});
-    final queued = _count({TaskStatus.todo}, {'todo'});
-    final blocked =
-        _count({TaskStatus.blocked, TaskStatus.failed}, {'blocked', 'failed'});
-    final open = working + queued + blocked;
-    final done = _count({TaskStatus.done}, {'done'});
-    final profile = agent.profile;
+    return ListenableBuilder(
+      listenable: widget.client.presence,
+      builder: (context, _) => _row(context, name),
+    );
+  }
+
+  Widget _row(BuildContext context, String name) {
+    final agent = widget.agent;
+    final p = agentRosterPresence(agent, widget.client.presence);
+    final ringColor = agentPresenceRingColor(p?.state);
     final last = agent.lastMessage;
-    final line = last == null
-        ? 'No messages yet'
-        : (last.fromUser ? 'You: ${last.text}' : last.text);
-    final (String, Color)? summary = !agent.available
-        ? ('Paused', AppColors.fg3)
-        : blocked > 0
-            ? ('$blocked blocked', AppColors.danger)
-            : open > 0
-                ? ('$open open', AppColors.fg3)
-                : done > 0
-                    ? ('$done done', AppColors.fg3)
-                    : null;
-    final summaryText = summary?.$1 ?? '';
-    final summaryColor = summary?.$2 ?? AppColors.fg4;
-    final nameSize = kMobile ? 15.5 : 13.0;
-    final metaSize = kMobile ? 13.0 : 11.5;
-    if (kMobile) {
-      final ring = agent.available && working > 0;
-      final dot = !agent.available
-          ? AppColors.fg4
-          : blocked > 0
-              ? AppColors.danger
-              : null;
-      return Pressable(
-          kind: PressKind.row,
-          child: InkWell(
-            splashFactory: NoSplash.splashFactory,
-            highlightColor: Colors.transparent,
-            onTap: widget.onOpen,
-            onLongPress: () {
-              HapticFeedback.selectionClick();
-              _actions(null);
-            },
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 68),
-              child: Row(
-                children: [
-                  const SizedBox(width: M.gutter),
-                  Opacity(
-                    opacity: agent.available ? 1 : 0.5,
-                    child: SizedBox.square(
-                      dimension: 40,
-                      child: Stack(clipBehavior: Clip.none, children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.surface2,
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: AgentMochi(agent.id, size: 26),
-                        ),
-                        if (ring)
-                          const Positioned(
-                              left: -3,
-                              top: -3,
-                              right: -3,
-                              bottom: -3,
-                              child:
-                                  WorkingRing(key: ValueKey('agent-working'))),
-                        if (dot != null)
-                          Positioned(
-                            right: -1,
-                            bottom: -1,
-                            child: Container(
-                              width: 12,
-                              height: 12,
-                              decoration: BoxDecoration(
-                                color: dot,
-                                shape: BoxShape.circle,
-                                border:
-                                    Border.all(color: AppColors.bg, width: 2),
-                              ),
-                            ),
-                          ),
-                      ]),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TS.rowTitle(agent.available
-                                  ? AppColors.fg1
-                                  : AppColors.fg3)),
-                          const SizedBox(height: 2),
-                          Row(children: [
-                            Flexible(
-                              child: Text(line,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TS.meta(AppColors.fg3)),
-                            ),
-                          ]),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (summary != null || profile != null) ...[
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          height: 20,
-                          child: profile == null
-                              ? null
-                              : Center(
-                                  child: AgentProviderMark(
-                                      key: const ValueKey('agent-provider'),
-                                      client: widget.client,
-                                      profile: profile)),
-                        ),
-                        const SizedBox(height: 2),
-                        SwapText(summary?.$1 ?? '',
-                            style: TS
-                                .meta(summary?.$2 ?? AppColors.fg3)
-                                .copyWith(fontFeatures: const [
-                              FontFeature.tabularFigures()
-                            ])),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(width: M.gutter),
-                ],
+    final preview = agentPresencePreview(p) ??
+        (last == null
+            ? (agent.available ? 'No messages yet' : 'Paused')
+            : (last.fromUser ? 'You: ${last.text}' : last.text));
+    final at = last?.at ?? agent.presence?.since;
+    final timeText = at == null
+        ? ''
+        : relativeTime(at.millisecondsSinceEpoch ~/ 1000);
+    final content = Row(children: [
+      SizedBox(
+        width: kMobile ? 14 : 12,
+        child: Center(
+          child: widget.unread > 0
+              ? Container(
+                  key: const ValueKey('agent-unread-dot'),
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                      color: AppColors.accent, shape: BoxShape.circle),
+                )
+              : null,
+        ),
+      ),
+      _avatar(agent.id, kMobile ? 50 : 40, ringColor,
+          available: agent.available),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(children: [
+              Expanded(
+                child: Text(name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TS.rowTitle(agent.available
+                        ? AppColors.fg1
+                        : AppColors.fg3)),
               ),
-            ),
-          ));
-    }
-    final ring = agent.available && working > 0;
-    final dot = !agent.available
-        ? AppColors.fg4
-        : blocked > 0
-            ? AppColors.danger
-            : null;
-    return GestureDetector(
-      onSecondaryTapUp: (d) => _actions(d.globalPosition),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+              if (timeText.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Text(timeText,
+                    maxLines: 1, style: TS.meta(AppColors.fg3)),
+                const SizedBox(width: 2),
+                AppIcon('chevron-right',
+                    size: kMobile ? 11 : 10, color: AppColors.fg4),
+              ],
+            ]),
+            const SizedBox(height: 2),
+            Text(preview,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: sans(kMobile ? 14 : 12,
+                    color: AppColors.fg3, height: 1.3)),
+          ],
+        ),
+      ),
+    ]);
+    if (kMobile) {
+      return Pressable(
+        kind: PressKind.row,
         child: InkWell(
+          splashFactory: NoSplash.splashFactory,
+          highlightColor: Colors.transparent,
           onTap: widget.onOpen,
           onLongPress: () {
             HapticFeedback.selectionClick();
             _actions(null);
           },
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 7, 10, 7),
-            child: Row(children: [
-              Opacity(
-                opacity: agent.available ? 1 : 0.5,
-                child: SizedBox.square(
-                  dimension: 32,
-                  child: Stack(clipBehavior: Clip.none, children: [
-                    Container(
-                      decoration: BoxDecoration(
-                          color: AppColors.surface2, shape: BoxShape.circle),
-                      alignment: Alignment.center,
-                      child: AgentMochi(agent.id, size: 20),
-                    ),
-                    if (ring)
-                      const Positioned(
-                          left: -3,
-                          top: -3,
-                          right: -3,
-                          bottom: -3,
-                          child: WorkingRing(key: ValueKey('agent-working'))),
-                    if (dot != null)
-                      Positioned(
-                        right: -1,
-                        bottom: -1,
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            color: dot,
-                            shape: BoxShape.circle,
-                            border:
-                                Border.all(color: AppColors.windowBg, width: 2),
-                          ),
-                        ),
-                      ),
-                  ]),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(children: [
-                      Expanded(
-                        child: Text(name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(nameSize,
-                                weight: W.body,
-                                color: agent.available
-                                    ? AppColors.fg1
-                                    : AppColors.fg3)),
-                      ),
-                      if (profile != null) ...[
-                        const SizedBox(width: 6),
-                        AgentProviderMark(
-                            key: const ValueKey('agent-provider'),
-                            client: widget.client,
-                            profile: profile,
-                            size: 12),
-                      ],
-                    ]),
-                    const SizedBox(height: 2),
-                    Row(children: [
-                      Expanded(
-                        child: Text(line,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(metaSize, color: AppColors.fg3)),
-                      ),
-                      if (summary != null) ...[
-                        const SizedBox(width: 8),
-                        SwapText(summaryText,
-                            style: sans(metaSize,
-                                color: summaryColor, tabular: true)),
-                      ],
-                    ]),
-                  ],
-                ),
-              ),
-            ]),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 74),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
+              child: content,
+            ),
           ),
         ),
+      );
+    }
+    return HoverSurface(
+      selected: widget.selected,
+      radius: 8,
+      onTap: widget.onOpen,
+      onLongPress: () {
+        HapticFeedback.selectionClick();
+        _actions(null);
+      },
+      onSecondaryTapDown: (d) => _actions(d.globalPosition),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 58),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        alignment: Alignment.centerLeft,
+        child: content,
       ),
     );
   }
-}
 
-/// A short accent arc turning round an avatar while its agent works.
-class WorkingRing extends StatefulWidget {
-  const WorkingRing({super.key});
-
-  @override
-  State<WorkingRing> createState() => _WorkingRingState();
-}
-
-class _WorkingRingState extends State<WorkingRing>
-    with SingleTickerProviderStateMixin {
-  late final _spin = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1400));
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (reduceMotion(context)) {
-      _spin.stop();
-    } else if (!_spin.isAnimating) {
-      _spin.repeat();
-    }
+  Widget _avatar(String id, double size, Color? ringColor,
+      {required bool available}) {
+    return Opacity(
+      opacity: available ? 1 : 0.5,
+      child: SizedBox.square(
+        dimension: size,
+        child: Stack(clipBehavior: Clip.none, children: [
+          Center(
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                  color: AppColors.surface2, shape: BoxShape.circle),
+              alignment: Alignment.center,
+              child: AgentMochi(id, size: size * 0.76),
+            ),
+          ),
+          if (ringColor != null)
+            Positioned(
+              left: -3,
+              top: -3,
+              right: -3,
+              bottom: -3,
+              child: DecoratedBox(
+                key: const ValueKey('agent-working'),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: ringColor, width: 2),
+                ),
+              ),
+            ),
+        ]),
+      ),
+    );
   }
 
-  @override
-  void dispose() {
-    _spin.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => IgnorePointer(
-        child: CustomPaint(
-          painter: _RingPainter(_spin, AppColors.accent),
-        ),
-      );
 }
 
-class _RingPainter extends CustomPainter {
-  _RingPainter(this.turn, this.color) : super(repaint: turn);
-
-  final Animation<double> turn;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = (Offset.zero & size).deflate(1);
-    final track = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..color = color.withValues(alpha: 0.18);
-    canvas.drawOval(rect, track);
-    final arc = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round
-      ..color = color;
-    canvas.drawArc(
-        rect, turn.value * 2 * 3.141592653589793 - 1.5707963, 1.9, false, arc);
+/// Presence for roster rows: live device events win over the /agents snapshot.
+({String state, String detail})? agentRosterPresence(
+    CoordinationAgent agent, PresenceStore? live) {
+  final p = live?.presenceForAgentId(agent.id);
+  if (p != null) {
+    return (
+      state: p.state == 'tool' || p.state == 'running' ? 'working' : p.state,
+      detail: p.detail,
+    );
   }
+  final w = agent.presence;
+  if (w == null) return null;
+  return (state: w.state, detail: w.detail);
+}
 
-  @override
-  bool shouldRepaint(_RingPainter old) => old.color != color;
+/// The 2 px ring round a roster avatar, by presence state.
+Color? agentPresenceRingColor(String? state) => switch (state) {
+      'working' => AppColors.ok,
+      'waiting' => AppColors.run,
+      'blocked' => AppColors.danger,
+      'thinking' || 'typing' || 'reviewing' => AppColors.accent,
+      _ => null,
+    };
+
+/// The second roster line while the agent owes the user something or is
+/// mid-task; null falls back to the last message.
+String? agentPresencePreview(({String state, String detail})? p) {
+  final detail = p?.detail ?? '';
+  return switch (p?.state) {
+    'working' => detail.isEmpty ? 'Working' : 'Working · $detail',
+    'waiting' => detail.isEmpty || detail == 'user'
+        ? 'Waiting on you'
+        : 'Waiting on $detail',
+    'blocked' => 'Blocked',
+    'reviewing' => 'In review',
+    _ => null,
+  };
 }
