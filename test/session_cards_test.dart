@@ -1,18 +1,32 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/api.dart';
+import 'package:snippet/mochi.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
+import 'package:snippet/widgets.dart';
+import 'package:snippet/screens/session_list_row.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/screens/sidebar.dart';
 
 class _Client extends DaemonClient {
   _Client() : super('https://daemon.invalid', 'test');
 
+  final DeviceEventHub _deviceEvents = DeviceEventHub.local();
+
   @override
-  late final DeviceEventHub deviceEvents = DeviceEventHub.local();
+  DeviceEventHub get deviceEvents => _deviceEvents;
+
+  @override
+  Future<ServerConfig> getConfig({bool force = false}) async =>
+      ServerConfig.fromJson({
+        'profiles': [
+          {'name': 'claude', 'provider': 'claude-code'},
+        ],
+      });
 }
 
 final _now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -21,7 +35,9 @@ SessionInfo _s(String id, String title, String status,
         {String folder = '/home/dev/code/snippet-mobile',
         String? branch,
         Map<String, dynamic>? changes,
-        int? since}) =>
+        int? since,
+        String? agentId,
+        String? profile}) =>
     SessionInfo.fromJson({
       'id': id,
       'title': title,
@@ -31,6 +47,8 @@ SessionInfo _s(String id, String title, String status,
       if (branch != null) 'branch': branch,
       if (changes != null) 'changes': changes,
       if (since != null) 'running_since': since,
+      if (agentId != null) 'agent_id': agentId,
+      if (profile != null) 'profile': profile,
     });
 
 Future<void> _pump(WidgetTester tester, Size size, TargetPlatform p,
@@ -186,6 +204,160 @@ void main() {
       expect(mid, inExclusiveRange(0, full));
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Old chat'), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('working row shows Working and no time', (tester) async {
+    try {
+      await _pump(tester, const Size(300, 520), TargetPlatform.macOS,
+          sessions: [
+            _s('a', 'Running task', 'running', since: _now - 60),
+            _s('b', 'Idle task', 'idle'),
+          ]);
+      final workingRow = find.ancestor(
+          of: find.text('Running task'), matching: find.byType(SessionListRow));
+      expect(
+          find.descendant(of: workingRow, matching: find.byType(WorkingDots)),
+          findsOneWidget);
+      expect(
+          find.descendant(of: workingRow, matching: find.text('Working')),
+          findsOneWidget);
+      expect(
+          find.descendant(of: workingRow, matching: find.text('10m')),
+          findsNothing);
+
+      final idleRow = find.ancestor(
+          of: find.text('Idle task'), matching: find.byType(SessionListRow));
+      expect(
+          find.descendant(of: idleRow, matching: find.text('Working')),
+          findsNothing);
+      expect(
+          find.descendant(of: idleRow, matching: find.text('10m')),
+          findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('tapping a group header hides and restores its rows',
+      (tester) async {
+    try {
+      await _pump(tester, const Size(300, 520), TargetPlatform.macOS);
+      expect(find.text('Redo voice settings subpage'), findsOneWidget);
+      expect(find.text('Richer session cards'), findsOneWidget);
+      expect(
+          find.bySemanticsLabel('snippet-mobile, 2 sessions, expanded'),
+          findsOneWidget);
+
+      await tester.tap(find.text('snippet-mobile'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Redo voice settings subpage'), findsNothing);
+      expect(find.text('Richer session cards'), findsNothing);
+      expect(
+          find.bySemanticsLabel('snippet-mobile, 2 sessions, collapsed'),
+          findsOneWidget);
+
+      await tester.tap(find.text('snippet-mobile'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Redo voice settings subpage'), findsOneWidget);
+      expect(find.text('Richer session cards'), findsOneWidget);
+      expect(
+          find.bySemanticsLabel('snippet-mobile, 2 sessions, expanded'),
+          findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('group header chevron shows on desktop hover only',
+      (tester) async {
+    try {
+      await _pump(tester, const Size(300, 520), TargetPlatform.macOS);
+      final header = find.widgetWithText(SessionGroupHeader, 'snippet-mobile');
+      AnimatedOpacity chevronOpacity() => tester.widget<AnimatedOpacity>(
+          find.descendant(of: header, matching: find.byType(AnimatedOpacity)));
+      expect(chevronOpacity().opacity, 0);
+
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(gesture.removePointer);
+      await gesture.addPointer(location: Offset.zero);
+      await gesture.moveTo(tester.getCenter(header));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(chevronOpacity().opacity, 1);
+
+      await gesture.moveTo(const Offset(0, 500));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(chevronOpacity().opacity, 0);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('leading mark renders AgentMochi, ProviderLogo, or fg4 dot',
+      (tester) async {
+    try {
+      await _pump(tester, const Size(300, 520), TargetPlatform.macOS,
+          sessions: [
+            _s('a', 'Agent chat', 'idle', agentId: 'scout'),
+            _s('b', 'Provider chat', 'idle', profile: 'claude'),
+            _s('c', 'Unknown profile chat', 'idle', profile: 'custom-profile'),
+          ]);
+
+      final agentRow = find.ancestor(
+          of: find.text('Agent chat'), matching: find.byType(SessionListRow));
+      final mochi = tester.widget<AgentMochi>(
+          find.descendant(of: agentRow, matching: find.byType(AgentMochi)));
+      expect(mochi.agentId, 'scout');
+      expect(mochi.size, 14);
+
+      final providerRow = find.ancestor(
+          of: find.text('Provider chat'),
+          matching: find.byType(SessionListRow));
+      final logo = tester.widget<ProviderLogo>(
+          find.descendant(of: providerRow, matching: find.byType(ProviderLogo)));
+      expect(logo.provider, 'claude-code');
+      expect(logo.size, 14);
+
+      final fallbackRow = find.ancestor(
+          of: find.text('Unknown profile chat'),
+          matching: find.byType(SessionListRow));
+      expect(
+          find.descendant(
+              of: fallbackRow, matching: find.text('custom-profile')),
+          findsNothing);
+      final dot = find.descendant(
+        of: fallbackRow,
+        matching: find.byWidgetPredicate((w) =>
+            w is Container &&
+            w.constraints?.maxWidth == 6 &&
+            w.constraints?.maxHeight == 6),
+      );
+      expect(dot, findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('phone header shows chevron always, needsYou color, and 16px mark',
+      (tester) async {
+    try {
+      await _pump(tester, const Size(390, 700), TargetPlatform.android,
+          sessions: [
+            _s('a', 'Needs input chat', 'waiting_for_input', agentId: 'scout'),
+          ]);
+      final header = find.widgetWithText(SessionGroupHeader, 'snippet-mobile');
+      final opacity = tester.widget<AnimatedOpacity>(
+          find.descendant(of: header, matching: find.byType(AnimatedOpacity)));
+      expect(opacity.opacity, 1);
+
+      final label = tester.widget<Text>(
+          find.descendant(of: header, matching: find.text('snippet-mobile')));
+      expect(label.style?.color, AppColors.run);
+
+      final mochi = tester.widget<AgentMochi>(find.byType(AgentMochi));
+      expect(mochi.size, 16);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
