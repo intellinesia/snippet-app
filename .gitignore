@@ -83,3 +83,6 @@ GoogleService-Info.plist
 test/preview/goldens/
 test/**/failures/
 test/**/goldens*/
+
+# Throwaway screen renders; never commit them.
+/previews_*/
