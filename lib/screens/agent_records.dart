@@ -293,8 +293,8 @@ class AgentActionsState extends State<AgentActions> {
           ]),
           ActionGroup(label: 'Appearance', rows: [
             _setting('nickname', 'edit', 'Nickname', 'What it is called here'),
-            _setting('avatar', 'user', 'Avatar', 'Its face across the app'),
-            _setting('color', 'sparkles', 'Colour', 'Its colour across the app'),
+            _setting('appearance', 'sparkles', 'Appearance',
+                'Avatar and colour across the app'),
             _setting('delete', 'trash', 'Delete agent',
                 'Removes its identity and notes',
                 danger: true),
@@ -337,8 +337,8 @@ class AgentActionsState extends State<AgentActions> {
           _setting('model', 'cpu', 'Inference profile', 'The model it runs on'),
           if (!inShell) ...[
             _setting('nickname', 'edit', 'Nickname', 'What it is called here'),
-            _setting('avatar', 'user', 'Avatar', 'Its face across the app'),
-            _setting('color', 'sparkles', 'Colour', 'Its colour across the app'),
+            _setting('appearance', 'sparkles', 'Appearance',
+                'Avatar and colour across the app'),
           ],
           _setting('delete', 'trash', 'Delete agent',
               'Removes its identity and notes',

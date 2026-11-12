@@ -60,6 +60,7 @@ import 'package:xterm/xterm.dart';
 import 'files.dart';
 import 'processes.dart';
 import 'git.dart';
+import 'agent_wake_panel.dart';
 import 'lanes.dart';
 import 'memory_screen.dart';
 import 'desk_memory.dart';

@@ -6,7 +6,7 @@ import '../shell_panel.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'agent_appearance.dart';
-import 'agent_model_page.dart';
+import 'agent_profile_panel.dart';
 import 'agent_records.dart';
 import 'agent_wake_panel.dart';
 import 'memory_screen.dart';
@@ -23,8 +23,7 @@ String _pageTitle(String action) => switch (action) {
       'wakes' => 'Wakes',
       'model' => 'Inference profile',
       'nickname' => 'Nickname',
-      'avatar' => 'Avatar',
-      _ => 'Colour',
+      _ => 'Appearance',
     };
 
 /// One agent action as a right-panel page. Each page loads the agent record
@@ -60,7 +59,10 @@ ShellPanelRequest agentPanelRequest(
         'model' => _WithAgent(
             client: client,
             agentId: agentId,
-            builder: (a) => AgentModelPage(client: client, agent: a),
+            builder: (a) => SingleChildScrollView(
+                padding: const EdgeInsets.all(S.s12),
+                child: AgentProfilePanel(
+                    client: client, agent: a, name: agentName)),
           ),
         'nickname' => _WithAgent(
             client: client,
@@ -73,12 +75,7 @@ ShellPanelRequest agentPanelRequest(
             child: Align(
               alignment: Alignment.topLeft,
               child: AgentAppearancePicker(
-                  client: client,
-                  agentId: agentId,
-                  part: action == 'avatar'
-                      ? AgentAppearancePart.avatar
-                      : AgentAppearancePart.colour,
-                  onDone: close),
+                  client: client, agentId: agentId, onDone: close),
             ),
           ),
       },
