@@ -788,24 +788,27 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 
   Widget _sidebarTop() {
     return SizedBox(
-      height: 46,
+      height: 44,
       child: Row(children: [
         if (kMacOS) ...[
           AnimatedContainer(
               duration: reduceMotion(context) ? Duration.zero : Motion.page,
               curve: Curves.easeInOutCubic,
               width: _railOn ? 78 - kAgentRailWidth : 78),
-          const Spacer(),
         ] else
-          const SizedBox(width: 10),
+          const SizedBox(width: 14),
+        const Spacer(),
         IconBtn('sidebar',
             size: 28,
-            iconSize: 15,
+            iconSize: 16,
             tooltip: kMacOS ? 'Hide sidebar (⌘B)' : 'Hide sidebar (Ctrl+B)',
             onTap: _toggleSidebar),
-        if (!kMacOS) const Spacer(),
         const SizedBox(width: 6),
-        const SidebarModeSwitch(),
+        IconBtn('square-pen',
+            size: 28,
+            iconSize: 16,
+            tooltip: 'New session',
+            onTap: _newSessionFlow),
         const SizedBox(width: 10),
       ]),
     );
@@ -825,79 +828,60 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 
   Widget _sidebarFooter() {
     final healthy = _active == null ? null : _health[_active!.url];
-    // With the agent rail on, usage and settings sit at its foot instead.
-    final rail = _railOn;
+    final live = [
+      for (final s in _sessions ?? const <SessionInfo>[])
+        if (!s.settled) s,
+    ].length;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 2, 8, 10),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       child: Row(children: [
-        if (!rail) _usageButton(28),
         Expanded(
-          child: Material(
+          child: HoverSurface(
             key: _topMachineKey,
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(7),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(7),
-              onTap: _instances.isEmpty ? _addInstanceFlow : _openTopMachines,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 1),
-                        child: Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color:
-                                healthy == true ? AppColors.ok : AppColors.fg4,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                            _active == null
-                                ? 'Add machine'
-                                : (_active!.label.isNotEmpty
-                                    ? _active!.label
-                                    : _active!.name),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(13, color: AppColors.fg2)),
-                      ),
-                    ]),
-              ),
+            radius: 8,
+            onTap: _instances.isEmpty ? _addInstanceFlow : _openTopMachines,
+            child: Container(
+              height: 28,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: healthy == true ? AppColors.ok : AppColors.fg4,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                      _active == null
+                          ? 'Add machine'
+                          : (_active!.label.isNotEmpty
+                              ? _active!.label
+                              : _active!.name),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, color: AppColors.fg2)),
+                ),
+                const SizedBox(width: 8),
+                Text('$live live', style: sans(12, color: AppColors.fg4)),
+              ]),
             ),
           ),
         ),
-        if (!rail) _settingsButton(28),
-        Builder(
-          builder: (ctx) => IconBtn('task',
-              size: 28,
-              iconSize: 16,
-              tooltip: 'Tasks',
-              onTap: _client == null ? null : () => _openTasksPopover(ctx)),
+        const SizedBox(width: 6),
+        ListenableBuilder(
+          listenable: AmbientController.instance,
+          builder: (_, __) => AmbientController.instance.status.running
+              ? Row(mainAxisSize: MainAxisSize.min, children: [
+                  const _ListeningPill(),
+                  const SizedBox(width: 6),
+                ])
+              : const SizedBox.shrink(),
         ),
-        IconBtn('search',
-            size: 28,
-            iconSize: 16,
-            tooltip: 'Search or jump (\u2318K)',
-            onTap: _openCommandPalette),
+        _settingsButton(28),
       ]),
-    );
-  }
-
-  Future<void> _openTasksPopover(BuildContext anchor) {
-    final client = _client;
-    if (client == null) return Future.value();
-    return showTasksPopover(
-      anchor,
-      client,
-      onExpand: () => _openTasksTab(client, _active?.url ?? ''),
-      onOpenTask: (task) => _openTaskTab(client, _active?.url ?? '', task),
     );
   }
 
@@ -947,4 +931,45 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onRename: _renameInstance,
         onRemove: _removeInstance,
       );
+}
+
+/// The `.lis` pill: shown in the sidebar footer while ambient listening is on.
+class _ListeningPill extends StatelessWidget {
+  const _ListeningPill();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget bar(double h) => Container(
+        width: 2,
+        height: h,
+        decoration: BoxDecoration(
+            color: AppColors.ok, borderRadius: BorderRadius.circular(1)));
+    return Tooltip(
+      message: 'Ambient voice is listening',
+      child: Container(
+        height: 26,
+        padding: const EdgeInsets.symmetric(horizontal: 9),
+        decoration: BoxDecoration(
+          color: AppColors.ok.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          SizedBox(
+            height: 12,
+            child: Row(children: [
+              bar(5),
+              const SizedBox(width: 2),
+              bar(11),
+              const SizedBox(width: 2),
+              bar(7),
+              const SizedBox(width: 2),
+              bar(9),
+            ]),
+          ),
+          const SizedBox(width: 6),
+          Text('Listening', style: sans(12, color: AppColors.ok)),
+        ]),
+      ),
+    );
+  }
 }

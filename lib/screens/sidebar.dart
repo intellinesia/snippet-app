@@ -6,7 +6,6 @@ import '../api.dart';
 import '../drafts.dart';
 import '../models.dart';
 import '../settled_sessions.dart';
-import '../crew_status.dart';
 import 'agent_rail.dart' show agentRailShown;
 import 'sidebar_mode.dart';
 import '../platform.dart';
@@ -24,7 +23,6 @@ import 'tasks/tasks_panel.dart';
 import '../pull_refresh.dart';
 import '../motion.dart';
 import '../mochi.dart';
-import '../swr.dart';
 import 'mobile_bottom_bar.dart';
 import 'mobile_chrome.dart';
 export 'sidebar_mobile.dart';
@@ -168,31 +166,7 @@ class SidebarState extends State<Sidebar> {
   Map<String, String> _profileProviders = const {};
   String? _providersFor;
 
-  List<CoordinationAgent> _crew = const [];
-  DateTime? _crewAt;
-  Revalidator? _crewLive;
-
-  Future<void> _loadCrew() async {
-    final client = widget.client;
-    if (client == null || kMobile) return;
-    final now = DateTime.now();
-    if (_crewAt != null && now.difference(_crewAt!).inSeconds < 60) return;
-    _crewAt = now;
-    try {
-      try {
-        final a = await client.coordinationAgents();
-        if (mounted) {
-          setState(() => _crew = a
-              .where(
-                  (x) => x.status != 'archived' && x.kind != 'mission_control')
-              .toList());
-        }
-      } catch (_) {}
-    } catch (_) {}
-  }
-
   Future<void> _loadProviders() async {
-    _loadCrew();
     final client = widget.client;
     if (client == null) return;
     final key = '${client.baseUrl}|${widget.sessions?.length}';
@@ -207,29 +181,11 @@ class SidebarState extends State<Sidebar> {
     } catch (_) {}
   }
 
-  void _bindCrewLive() {
-    _crewLive?.dispose();
-    final client = widget.client;
-    _crewLive = client == null
-        ? null
-        : Revalidator(
-            client: client,
-            on: (e) => Swr.coordination(e) || Swr.sessionStatus(e),
-            debounce: const Duration(seconds: 2),
-            onRevalidate: ({required bool force}) {
-              _crewAt = null;
-              _loadCrew();
-            });
-  }
-
   @override
   void initState() {
     super.initState();
     Drafts.instance.addListener(_onDrafts);
     _loadProviders();
-    if (!kMobile) {
-      _bindCrewLive();
-    }
     _pageController = PageController(initialPage: widget.mobileHome.index);
     if (kMobile) {
       mobileAgentsList.addListener(_onAgentsList);
@@ -244,10 +200,6 @@ class SidebarState extends State<Sidebar> {
   @override
   void didUpdateWidget(covariant Sidebar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.client != widget.client) {
-      _crewAt = null;
-      if (!kMobile) _bindCrewLive();
-    }
     if (oldWidget.client != widget.client ||
         (widget.sessions ?? const <SessionInfo>[]).any((s) =>
             (s.profile ?? '').isNotEmpty &&
@@ -290,7 +242,6 @@ class SidebarState extends State<Sidebar> {
     mobileAgentsList.removeListener(_onAgentsList);
     sidebarAgentsFirst.removeListener(_onAgentsList);
     Drafts.instance.removeListener(_onDrafts);
-    _crewLive?.dispose();
     _pageController.dispose();
     _renameCtl.dispose();
     _renameFocus.dispose();
@@ -772,16 +723,21 @@ class SidebarState extends State<Sidebar> {
               padding:
                   EdgeInsets.fromLTRB(kMobile ? 4 : 10, 0, kMobile ? 4 : 10, 0),
               child: Row(children: [
-                Text('Settled', style: TS.label(AppColors.fg3)),
+                Text('Settled',
+                    style: TS.label(kMobile ? AppColors.fg3 : AppColors.fg4)),
                 const SizedBox(width: 8),
-                Text('${rows.length}', style: TS.meta()),
+                Text('${rows.length}',
+                    style: kMobile
+                        ? TS.meta()
+                        : mono(11, color: AppColors.fg4)),
                 const Spacer(),
                 AnimatedRotation(
                   turns: open ? 0.25 : 0,
                   duration: Motion.base,
                   curve: Curves.easeOutCubic,
-                  child:
-                      AppIcon('chevron-right', size: 13, color: AppColors.fg3),
+                  child: AppIcon('chevron-right',
+                      size: 13,
+                      color: kMobile ? AppColors.fg3 : AppColors.fg4),
                 ),
               ]),
             ),
@@ -1006,7 +962,10 @@ class SidebarState extends State<Sidebar> {
     final maxHeight = MediaQuery.sizeOf(context).height * (kMobile ? 0.5 : 0.4);
     return AnimatedContainer(
       duration: Motion.base,
-      margin: EdgeInsets.symmetric(horizontal: kMobile ? M.gutter : 4),
+      margin: EdgeInsets.only(
+          left: kMobile ? M.gutter : 8,
+          right: kMobile ? M.gutter : 8,
+          bottom: kMobile ? 0 : 6),
       decoration: BoxDecoration(
           border: Border(
               top: BorderSide(
@@ -1032,6 +991,138 @@ class SidebarState extends State<Sidebar> {
     );
   }
 
+  /// `.sctl`: the Sessions|Agents segment over the palette/search field.
+  Widget _sidebarControls({required bool agentsFirst}) {
+    final agentsAvailable = widget.client != null && agentRailShown(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 2, 10, 6),
+      child: Column(children: [
+        Container(
+          height: 28,
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Row(children: [
+            _segCell('Sessions', !agentsFirst,
+                const ValueKey('sidebar-mode-sessions'),
+                () => setSidebarAgentsFirst(false)),
+            const SizedBox(width: 2),
+            _segCell(
+                'Agents',
+                agentsFirst,
+                const ValueKey('sidebar-mode-agents'),
+                agentsAvailable ? () => setSidebarAgentsFirst(true) : null),
+          ]),
+        ),
+        const SizedBox(height: 8),
+        _sidebarSearch(agentsFirst: agentsFirst),
+      ]),
+    );
+  }
+
+  Widget _segCell(String label, bool on, Key key, VoidCallback? onTap) =>
+      Expanded(
+        child: Semantics(
+          button: true,
+          selected: on,
+          label: label,
+          child: GestureDetector(
+            key: key,
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: AnimatedContainer(
+              duration: Motion.quick,
+              height: 24,
+              decoration: BoxDecoration(
+                color: on ? AppColors.surface2 : Colors.transparent,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              alignment: Alignment.center,
+              child: Text(label,
+                  style: sans(12,
+                      color: on ? AppColors.fg1 : AppColors.fg4)),
+            ),
+          ),
+        ),
+      );
+
+  /// The `.search` field: a palette opener when one is wired, else the
+  /// inline filter for whichever list is showing.
+  Widget _sidebarSearch({required bool agentsFirst}) {
+    final palette = widget.onOpenPalette;
+    if (palette != null) {
+      return _searchBox(
+        onTap: palette,
+        child: Row(children: [
+          AppIcon('search', size: 14, color: AppColors.fg4),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text('Search', style: sans(12, color: AppColors.fg4)),
+          ),
+          Text(kMacOS ? '⌘K' : 'Ctrl+K',
+              style: mono(11, color: AppColors.fg4)),
+        ]),
+      );
+    }
+    final ctl = agentsFirst ? _agentSearchCtl : _desktopChatsSearchCtl;
+    final focus = agentsFirst ? _agentSearchFocus : _desktopChatsSearchFocus;
+    return _searchBox(
+      child: Row(children: [
+        AppIcon('search', size: 14, color: AppColors.fg4),
+        const SizedBox(width: 8),
+        Expanded(
+          child: TextField(
+            controller: ctl,
+            focusNode: focus,
+            onChanged: (v) => setState(() =>
+                agentsFirst ? _agentFilterQuery = v : _filterQuery = v),
+            style: sans(12, color: AppColors.fg1),
+            decoration: InputDecoration(
+              isCollapsed: true,
+              border: InputBorder.none,
+              hintText: agentsFirst ? 'Search agents' : 'Search chats',
+              hintStyle: sans(12, color: AppColors.fg4),
+            ),
+          ),
+        ),
+        if (ctl.text.isNotEmpty)
+          IconBtn('x', size: 20, iconSize: 10, tooltip: 'Clear', onTap: () {
+            ctl.clear();
+            setState(() =>
+                agentsFirst ? _agentFilterQuery = '' : _filterQuery = '');
+          }),
+      ]),
+    );
+  }
+
+  Widget _searchBox({VoidCallback? onTap, required Widget child}) {
+    final box = Container(
+      height: 28,
+      padding: const EdgeInsets.symmetric(horizontal: 9),
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: child,
+    );
+    if (onTap == null) return box;
+    return Tooltip(
+      message: kMacOS ? 'Search or jump (⌘K)' : 'Search or jump (Ctrl+K)',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: box,
+        ),
+      ),
+    );
+  }
+
   /// Desktop sidebar as a single recency-ordered chat stream. Workspace is
   /// metadata on each row, never a grouping or sort key.
   Widget _sectionedSidebar() {
@@ -1046,119 +1137,10 @@ class SidebarState extends State<Sidebar> {
     final mc = all.where((s) => isDedicatedMcSession(s.id)).firstOrNull;
     _chatsShownAt ??= DateTime.now();
     final rows = _groupedRows(list, attentionFirst: false);
-    final mcSelected = mc != null && mc.id == widget.selectedSessionId;
-    final mcWaiting = mc != null && mc.status == 'waiting_for_input';
-    String crewLine() => _crew.isEmpty
-        ? 'Standing by'
-        : crewSummary(deriveCrew(
-            _crew, widget.sessions ?? const <SessionInfo>[],
-            presence: widget.client?.presence));
-    final mcBusy = mc != null &&
-        (sessionIsActive(mc.status) || mc.status == 'waiting_for_input');
+    final agentsFirst =
+        sidebarAgentsFirst.value && hasClient && agentRailShown(context);
     final sessionsBody =
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (hasClient || _crew.isNotEmpty) ...[
-        if (!agentRailShown(context))
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-            child: HoverSurface(
-              selected: mcSelected,
-              radius: 8,
-              onTap: hasClient ? widget.onOpenMissionControl : null,
-              child: Container(
-                height: 46,
-                padding: const EdgeInsets.only(left: 6, right: 2),
-                child: Row(children: [
-                  MochiIcon(color: AppColors.accent, size: 22),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Mission Control',
-                            style: sans(13,
-                                weight: W.label,
-                                color: mcSelected
-                                    ? AppColors.fg1
-                                    : AppColors.fg2)),
-                        Row(children: [
-                          if (mcBusy && !mcWaiting) ...[
-                            SessionStateIcon(
-                              status: 'running',
-                              icon: 'activity',
-                              size: 11,
-                              activeColor: AppColors.accent,
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                          Expanded(
-                            child: ListenableBuilder(
-                              listenable:
-                                  widget.client?.presence ?? _noPresence,
-                              builder: (_, __) => Text(
-                                  mcWaiting
-                                      ? 'Waiting on you'
-                                      : mcBusy
-                                          ? 'Working'
-                                          : crewLine(),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: sans(12,
-                                      color: mcWaiting
-                                          ? AppColors.run
-                                          : mcBusy
-                                              ? AppColors.fg1
-                                              : AppColors.fg4)),
-                            ),
-                          ),
-                        ]),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                ]),
-              ),
-            ),
-          ),
-        if (widget.onOpenPalette == null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
-            child: Container(
-              height: 32,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                color: AppColors.surface1,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.line),
-              ),
-              child: Row(children: [
-                AppIcon('search', size: 14, color: AppColors.fg4),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextField(
-                    controller: _desktopChatsSearchCtl,
-                    focusNode: _desktopChatsSearchFocus,
-                    onChanged: (v) => setState(() => _filterQuery = v),
-                    style: sans(13, color: AppColors.fg1),
-                    decoration: InputDecoration(
-                      isCollapsed: true,
-                      border: InputBorder.none,
-                      hintText: 'Search chats',
-                      hintStyle: sans(13, color: AppColors.fg4),
-                    ),
-                  ),
-                ),
-                if (_desktopChatsSearchCtl.text.isNotEmpty)
-                  IconBtn('x', size: 20, iconSize: 10, tooltip: 'Clear',
-                      onTap: () {
-                    _desktopChatsSearchCtl.clear();
-                    setState(() => _filterQuery = '');
-                  }),
-              ]),
-            ),
-          ),
-      ],
       Expanded(
         child: PullToRefresh(
           onRefresh: () async => widget.onRefreshSessions(),
@@ -1179,11 +1161,11 @@ class SidebarState extends State<Sidebar> {
       if (hasClient && settledRows.isNotEmpty) _settledPinned(settledRows),
     ]);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (hasClient) _sidebarControls(agentsFirst: agentsFirst),
       Expanded(
         child: SidebarModeSwap(
           // The narrow drawer has no switch, so it always lists sessions.
-          agentsFirst:
-              sidebarAgentsFirst.value && hasClient && agentRailShown(context),
+          agentsFirst: agentsFirst,
           sessions: sessionsBody,
           agents: (_) => _agentList(widget.client!,
               missionControl: mc,
@@ -1482,4 +1464,3 @@ class SidebarState extends State<Sidebar> {
       );
 }
 
-final _noPresence = ValueNotifier<int>(0);
