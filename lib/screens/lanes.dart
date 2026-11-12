@@ -552,6 +552,7 @@ class LaneTranscriptScreen extends StatelessWidget {
       readOnly: true,
       acceptDrops: false,
       live: true,
+      embedded: ShellPanelScope.maybeOf(context) != null,
     );
   }
 }
