@@ -143,11 +143,18 @@ Future<GroupSummary?> createAndOpenGroup(
 
 class GroupRow extends StatelessWidget {
   const GroupRow(
-      {super.key, required this.group, required this.onTap, this.onLongPress});
+      {super.key,
+      required this.group,
+      required this.onTap,
+      this.onLongPress,
+      this.selected = false});
 
   final GroupSummary group;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+
+  /// Desktop only: the open group sits on a grey selected surface.
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -157,10 +164,59 @@ class GroupRow extends StatelessWidget {
     final line = [
       '$members ${members == 1 ? 'member' : 'members'}',
       if (group.lead != null) 'lead ${group.lead}',
+      if (group.unread > 0) '${group.unread} unread',
     ].join(' · ');
-    final shown = agents.take(4).toList();
-    final extra = agents.length - shown.length;
-    final unread = group.unread;
+    final at = DateTime.tryParse(group.lastEventAt ?? '');
+    final timeText = at == null
+        ? ''
+        : relativeTime(at.millisecondsSinceEpoch ~/ 1000);
+    final content = Row(children: [
+      SizedBox(
+        width: kMobile ? 14 : 12,
+        child: Center(
+          child: group.unread > 0
+              ? Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                      color: AppColors.accent, shape: BoxShape.circle),
+                )
+              : null,
+        ),
+      ),
+      _avatar(agents.isEmpty ? null : agents.first, agents.length),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(children: [
+              Expanded(
+                child: Text(name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TS.rowTitle(AppColors.fg1)),
+              ),
+              if (timeText.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Text(timeText,
+                    maxLines: 1, style: TS.meta(AppColors.fg3)),
+                const SizedBox(width: 2),
+                AppIcon('chevron-right',
+                    size: kMobile ? 11 : 10, color: AppColors.fg4),
+              ],
+            ]),
+            const SizedBox(height: 2),
+            Text(line,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: sans(kMobile ? 14 : 12,
+                    color: AppColors.fg3, height: 1.3)),
+          ],
+        ),
+      ),
+    ]);
     if (kMobile) {
       return Pressable(
         kind: PressKind.row,
@@ -170,154 +226,63 @@ class GroupRow extends StatelessWidget {
           onTap: onTap,
           onLongPress: onLongPress,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 68),
-            child: Row(
-              children: [
-                const SizedBox(width: M.gutter),
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.surface2,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: shown.isEmpty
-                            ? const AppIcon('users', size: 18)
-                            : AgentMochi(shown.first, size: 26),
-                      ),
-                      if (shown.length > 1 || extra > 0)
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: Container(
-                            height: 18,
-                            constraints: const BoxConstraints(minWidth: 18),
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface2,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.bg, width: 1),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                                '${shown.length - 1 + (extra > 0 ? extra : 0)}',
-                                style: sans(9, color: AppColors.fg2)),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TS.rowTitle(AppColors.fg1)),
-                        const SizedBox(height: 2),
-                        Text(unread > 0 ? '$line · $unread unread' : line,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TS.meta(AppColors.fg3)),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: M.gutter),
-              ],
+            constraints: const BoxConstraints(minHeight: 74),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
+              child: content,
             ),
           ),
         ),
       );
     }
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: onTap,
-        onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 7, 10, 7),
-          child: Row(children: [
-            SizedBox(
-              width: 32,
-              height: 32,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                        color: AppColors.surface2, shape: BoxShape.circle),
-                    alignment: Alignment.center,
-                    child: shown.isEmpty
-                        ? const AppIcon('users', size: 15)
-                        : AgentMochi(shown.first, size: 20),
-                  ),
-                  if (shown.length > 1 || extra > 0)
-                    Positioned(
-                      right: -4,
-                      bottom: -4,
-                      child: Container(
-                        width: 16,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: AppColors.surface3,
-                          shape: BoxShape.circle,
-                          border:
-                              Border.all(color: AppColors.windowBg, width: 1),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                            '${shown.length - 1 + (extra > 0 ? extra : 0)}',
-                            style: sans(8, color: AppColors.fg2)),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(children: [
-                    Expanded(
-                      child: Text(name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              sans(13, weight: W.body, color: AppColors.fg1)),
-                    ),
-                    if (unread > 0) ...[
-                      const SizedBox(width: 6),
-                      Text('$unread',
-                          style:
-                              sans(11, color: AppColors.accent, tabular: true)),
-                    ],
-                  ]),
-                  const SizedBox(height: 2),
-                  Text(line,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(11, color: AppColors.fg3)),
-                ],
-              ),
-            ),
-          ]),
-        ),
+    return HoverSurface(
+      selected: selected,
+      radius: 8,
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 58),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        alignment: Alignment.centerLeft,
+        child: content,
       ),
+    );
+  }
+
+  Widget _avatar(String? first, int total) {
+    final size = kMobile ? 50.0 : 40.0;
+    final inner = size * 0.76;
+    final extra = total - 1;
+    return SizedBox.square(
+      dimension: size,
+      child: Stack(clipBehavior: Clip.none, children: [
+        Container(
+          decoration: BoxDecoration(
+              color: AppColors.surface2, shape: BoxShape.circle),
+          alignment: Alignment.center,
+          child: first == null
+              ? AppIcon('users', size: inner * 0.55, color: AppColors.fg3)
+              : AgentMochi(first, size: inner),
+        ),
+        if (extra > 0)
+          Positioned(
+            right: -3,
+            bottom: -3,
+            child: Container(
+              height: 18,
+              constraints: const BoxConstraints(minWidth: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: AppColors.surface3,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.bg, width: 1),
+              ),
+              alignment: Alignment.center,
+              child: Text('$extra',
+                  style: sans(9, color: AppColors.fg2, tabular: true)),
+            ),
+          ),
+      ]),
     );
   }
 }
