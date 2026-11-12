@@ -42,6 +42,21 @@ String projectLabel(SessionInfo s) {
   return lastPathSegment(f, ifEmpty: f);
 }
 
+bool sessionNeedsYou(SessionInfo s) =>
+    !s.settled &&
+    (s.status == 'waiting_for_input' ||
+        s.status == 'in_review' ||
+        s.attention != null);
+
+({String label, String icon}) _attentionState(SessionInfo s) {
+  final type = '${s.attention?['type'] ?? ''}'.toLowerCase();
+  if (type == 'question') return (label: 'Question', icon: 'help-circle');
+  if (type == 'in_review' || type == 'review' || s.status == 'in_review') {
+    return (label: 'In review', icon: 'list');
+  }
+  return (label: 'Needs input', icon: 'message');
+}
+
 /// Project name as a collapsible list section header.
 class SessionGroupHeader extends StatefulWidget {
   const SessionGroupHeader(
@@ -51,6 +66,7 @@ class SessionGroupHeader extends StatefulWidget {
     this.collapsed = false,
     this.onToggle,
     this.needsYou = false,
+    this.chevronRight = false,
   });
 
   final String label;
@@ -58,6 +74,7 @@ class SessionGroupHeader extends StatefulWidget {
   final bool collapsed;
   final VoidCallback? onToggle;
   final bool needsYou;
+  final bool chevronRight;
 
   @override
   State<SessionGroupHeader> createState() => _SessionGroupHeaderState();
@@ -68,46 +85,61 @@ class _SessionGroupHeaderState extends State<SessionGroupHeader> {
 
   @override
   Widget build(BuildContext context) {
-    final labelColor = widget.needsYou ? AppColors.run : AppColors.fg3;
+    final labelColor = widget.needsYou ? AppColors.run : AppColors.fg4;
     final countStyle = TS.caption(AppColors.fg4).copyWith(
         fontFamily: monoFamily,
+        fontSize: 11,
+        fontWeight: W.body,
         fontFeatures: const [FontFeature.tabularFigures()]);
     final still = reduceMotion(context);
+    final turns = widget.chevronRight
+        ? (widget.collapsed ? 0.0 : 0.25)
+        : (widget.collapsed ? -0.25 : 0.0);
     final chevron = AnimatedOpacity(
       opacity: kMobile || _hover ? 1 : 0,
       duration: still ? Duration.zero : Motion.quick,
       child: AnimatedRotation(
-        turns: widget.collapsed ? -0.25 : 0,
+        turns: turns,
         duration: still ? Duration.zero : Motion.base,
         curve: Curves.easeOutCubic,
-        child: AppIcon('chevron-down', size: 12, color: AppColors.fg4),
+        child: AppIcon(
+          widget.chevronRight ? 'chevron-right' : 'chevron-down',
+          size: 11,
+          color: AppColors.fg4,
+        ),
       ),
     );
 
-    final row = Container(
-      height: kMobile ? M.minTarget : 30,
-      alignment: Alignment.bottomLeft,
-      padding: EdgeInsets.fromLTRB(
-          kMobile ? 4 : 10, 0, kMobile ? 4 : 10, kMobile ? 6 : 4),
-      child: Row(children: [
-        Expanded(
-          child: Row(children: [
-            Flexible(
-              child: Text(widget.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TS.label(labelColor)),
-            ),
-            if (widget.count != null) ...[
-              const SizedBox(width: 6),
-              Text('${widget.count}', maxLines: 1, style: countStyle),
-            ],
-          ]),
-        ),
-        const SizedBox(width: 6),
-        chevron,
-      ]),
-    );
+    final labelRow = Row(children: [
+      Expanded(
+        child: Row(children: [
+          Flexible(
+            child: Text(widget.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TS.label(labelColor)),
+          ),
+          if (widget.count != null) ...[
+            const SizedBox(width: 6),
+            Text('${widget.count}', maxLines: 1, style: countStyle),
+          ],
+        ]),
+      ),
+      const SizedBox(width: 6),
+      chevron,
+    ]);
+
+    final row = kMobile
+        ? Padding(
+            padding: const EdgeInsets.fromLTRB(0, 16, 0, 4),
+            child: labelRow,
+          )
+        : Container(
+            height: 30,
+            alignment: Alignment.bottomLeft,
+            padding: const EdgeInsets.fromLTRB(10, 0, 10, 4),
+            child: labelRow,
+          );
 
     final countPart = widget.count == null
         ? ''
@@ -151,6 +183,8 @@ class SessionListRow extends StatelessWidget {
     this.checked = false,
     this.draft = false,
     this.divider = false,
+    this.showProject = false,
+    this.unread = false,
     this.renameField,
     this.leading,
   });
@@ -164,6 +198,8 @@ class SessionListRow extends StatelessWidget {
   final bool checked;
   final bool draft;
   final bool divider;
+  final bool showProject;
+  final bool unread;
 
   /// Replaces the title while renaming.
   final Widget? renameField;
@@ -175,30 +211,36 @@ class SessionListRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = session;
     final settled = s.settled;
-    final waiting = !settled && s.status == 'waiting_for_input';
-    final working = !settled && !waiting && sessionIsActive(s.status);
-    final title = s.title.trim().isEmpty ? '(untitled)' : s.title;
+    final needsYou = sessionNeedsYou(s);
+    final working = !settled && !needsYou && sessionIsActive(s.status);
+    final untitled = s.title.trim().isEmpty;
+    final title = untitled ? '(untitled)' : s.title;
     final left = settled ? settledDaysLeft(s) : null;
     final timeText = settled
         ? (left == null ? 'Settled' : '${left}d left')
         : draft
             ? 'Draft'
             : relativeTime(s.lastActive);
-    final titleStyle = settled
+    final titleStyle = settled || untitled
         ? TS.rowTitle(AppColors.fg3).copyWith(fontWeight: W.body)
         : TS.rowTitle(AppColors.fg1).copyWith(fontWeight: W.label);
+    final timeColor = draft && !settled
+        ? AppColors.accent
+        : unread
+            ? AppColors.fg1
+            : AppColors.fg4;
     final lineH = kMobile ? 22.0 : 18.0;
     final diff = sessionDiff(s);
     final branch = s.branch?.trim() ?? '';
-    final hasMeta = waiting || branch.isNotEmpty || diff != null;
+    final attn = needsYou ? _attentionState(s) : null;
+    final hasMeta = showProject || needsYou || branch.isNotEmpty || diff != null;
 
-    final stateLabel = waiting
-        ? 'Needs input'
-        : working
+    final stateLabel = attn?.label ??
+        (working
             ? 'Working'
             : settled
                 ? 'Settled'
-                : null;
+                : null);
 
     final content = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,46 +281,50 @@ class SessionListRow extends StatelessWidget {
                   ] else if (renameField == null && timeText.isNotEmpty) ...[
                     const SizedBox(width: 8),
                     Text(timeText,
-                        maxLines: 1,
-                        style: TS.meta(draft && !settled
-                            ? AppColors.accent
-                            : AppColors.fg3)),
+                        maxLines: 1, style: TS.caption(timeColor)),
                   ],
                 ]),
               ),
+              if (hasMeta) const SizedBox(height: 2),
               if (hasMeta)
                 SizedBox(
                   height: kMobile ? 18 : 16,
                   child: Row(children: [
-                    if (waiting) ...[
-                      const _StateLabel(),
-                      if (branch.isNotEmpty || diff != null)
-                        const SizedBox(width: 10),
+                    if (attn != null) ...[
+                      _StateLabel(state: attn),
+                      if (showProject || branch.isNotEmpty || diff != null)
+                        const SizedBox(width: 8),
                     ],
-                    if (branch.isNotEmpty)
-                      Flexible(
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          AppIcon('git-branch',
-                              size: kMobile ? 13 : 12, color: AppColors.fg3),
+                    if (showProject)
+                      _ProjectChip(label: projectLabel(s))
+                    else ...[
+                      if (branch.isNotEmpty)
+                        Expanded(
+                          child: Row(children: [
+                            AppIcon('git-branch',
+                                size: 11, color: AppColors.fg4),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(branch,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TS.meta()),
+                            ),
+                          ]),
+                        )
+                      else if (diff != null)
+                        const Spacer(),
+                      if (diff != null) ...[
+                        if (branch.isNotEmpty) const SizedBox(width: 8),
+                        if (diff.added > 0)
+                          Text('+${compactCount(diff.added)}',
+                              maxLines: 1, style: TS.meta(AppColors.ok)),
+                        if (diff.added > 0 && diff.removed > 0)
                           const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(branch,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TS.meta()),
-                          ),
-                        ]),
-                      ),
-                    if (diff != null) ...[
-                      if (branch.isNotEmpty) const SizedBox(width: 8),
-                      if (diff.added > 0)
-                        Text('+${compactCount(diff.added)}',
-                            maxLines: 1, style: TS.meta(AppColors.ok)),
-                      if (diff.added > 0 && diff.removed > 0)
-                        const SizedBox(width: 5),
-                      if (diff.removed > 0)
-                        Text('-${compactCount(diff.removed)}',
-                            maxLines: 1, style: TS.meta(AppColors.danger)),
+                        if (diff.removed > 0)
+                          Text('-${compactCount(diff.removed)}',
+                              maxLines: 1, style: TS.meta(AppColors.danger)),
+                      ],
                     ],
                   ]),
                 ),
@@ -318,9 +364,9 @@ class SessionListRow extends StatelessWidget {
                   onLongPress: onLongPress == null ? null : longPress,
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 56),
+                      constraints: const BoxConstraints(minHeight: M.minTarget),
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Align(
                             alignment: Alignment.centerLeft, child: content),
                       ),
@@ -328,7 +374,6 @@ class SessionListRow extends StatelessWidget {
                     if (divider)
                       Container(
                           height: 1,
-                          margin: const EdgeInsets.only(left: 4),
                           color: checked ? Colors.transparent : AppColors.line),
                   ]),
                 ),
@@ -359,17 +404,57 @@ class SessionListRow extends StatelessWidget {
 }
 
 class _StateLabel extends StatelessWidget {
-  const _StateLabel();
+  const _StateLabel({required this.state});
+
+  final ({String label, String icon}) state;
 
   @override
   Widget build(BuildContext context) {
     final color = AppColors.run;
-    final size = kMobile ? 11.0 : 10.0;
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      AppIcon('message', size: size + 1, color: color),
-      const SizedBox(width: 5),
-      Text('Needs input', maxLines: 1, style: TS.meta(color)),
+      AppIcon(state.icon, size: 11, color: color),
+      const SizedBox(width: 4),
+      Text(state.label, maxLines: 1, style: TS.meta(color)),
     ]);
+  }
+}
+
+class _ProjectChip extends StatelessWidget {
+  const _ProjectChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final trimmed = label.trim();
+    final letter =
+        trimmed.isEmpty ? '?' : trimmed.characters.first.toUpperCase();
+    return Flexible(
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+          width: 13,
+          height: 13,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.surface3,
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: Text(
+            letter,
+            style: codeMono(9, color: AppColors.fg3, height: 1.0),
+          ),
+        ),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TS.meta(),
+          ),
+        ),
+      ]),
+    );
   }
 }
 
