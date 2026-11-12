@@ -24,6 +24,17 @@ class DownloadCancelled implements Exception {
   String toString() => 'Download cancelled.';
 }
 
+/// Thrown by [DaemonClient.answerAgentQuestion] when the daemon reports the
+/// session is no longer waiting for the answer (HTTP 409).
+class QuestionAnswerConflict implements Exception {
+  const QuestionAnswerConflict(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 /// Talks to one snippet `serve` daemon. The token is passed as a `?token=` query
 /// param on every request (matching the daemon's auth) and the session id (a
 /// path with a `/`) is URL-encoded automatically by [Uri].
@@ -1629,6 +1640,33 @@ class DaemonClient {
     }
     return CoordinationEvent.fromJson(
         jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  /// POST /coordination/direct/answer — answer a question an agent relayed
+  /// into the thread. Returns the human answer event's id. Throws
+  /// [QuestionAnswerConflict] on 409 (the session stopped waiting).
+  Future<String> answerAgentQuestion({
+    required String session,
+    required String questionEventId,
+    required String text,
+    required Map<String, dynamic> answers,
+  }) async {
+    final r = await _post(
+      _uri('/coordination/direct/answer'),
+      headers: _json,
+      body: jsonEncode({
+        'session': session,
+        'question_event_id': questionEventId,
+        'text': text,
+        'answers': answers,
+      }),
+    );
+    if (r.statusCode == 409) {
+      throw QuestionAnswerConflict(DaemonClient.errorDetail(r.body));
+    }
+    if (r.statusCode != 200) throw _err('answer agent question', r);
+    final j = jsonDecode(r.body);
+    return j is Map ? '${j['event_id'] ?? ''}' : '';
   }
 
   /// GET /coordination/direct/messages — one page of a direct conversation.

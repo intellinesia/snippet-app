@@ -11,6 +11,7 @@ import '../tool_activity.dart';
 import '../transcript.dart';
 import '../transcript_card.dart';
 import '../widgets.dart';
+import 'agent_questions_card.dart';
 import 'artifact_viewer.dart';
 import 'presented_file_card.dart';
 
@@ -35,6 +36,7 @@ Widget? agentThreadEventCard(
   CoordinationEvent e, {
   required DaemonClient client,
   required String agentId,
+  List<CoordinationEvent> events = const [],
 }) {
   final payload = e.payload;
   final attachment = payload['attachment'];
@@ -47,6 +49,14 @@ Widget? agentThreadEventCard(
   }
   final question = payload['question'];
   if (question is Map) {
+    if (question['questions'] is List) {
+      return AgentQuestionsCard(
+        event: e,
+        question: question,
+        client: client,
+        events: events,
+      );
+    }
     return _questionCard(e, question, answer: payload['answer']);
   }
   final approval = payload['approval'];

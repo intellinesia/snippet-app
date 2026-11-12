@@ -1647,6 +1647,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                     e,
                     client: widget.client,
                     agentId: widget.agentId,
+                    events: _events,
                   ) ??
                   Bubble(mine: false, text: e.body, onLongPress: openActions),
               if (chips != null)
