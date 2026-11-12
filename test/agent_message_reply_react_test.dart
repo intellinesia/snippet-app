@@ -141,7 +141,8 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  test('CoordinationEvent getters and sendAgentMessage serialize reply_to and reaction',
+  test(
+      'CoordinationEvent getters and sendAgentMessage serialize reply_to and reaction',
       () async {
     final ev = CoordinationEvent.fromJson({
       'event_id': 'e9',
@@ -229,7 +230,8 @@ void main() {
         findsOneWidget,
       );
       // Agents' named `check` shows as its emoji.
-      expect(find.descendant(of: chips, matching: find.text('✅')), findsOneWidget);
+      expect(
+          find.descendant(of: chips, matching: find.text('✅')), findsOneWidget);
 
       await t.pumpWidget(const SizedBox());
     } finally {
@@ -250,11 +252,16 @@ void main() {
       await t.longPress(find.text('Ready for review on branch feat/x.'));
       await _pumpFrames(t);
 
-      expect(find.byType(MessageActionRow), findsOneWidget);
+      expect(find.byType(MessageActionsView), findsOneWidget);
       expect(find.text('Reply'), findsOneWidget);
-      for (final emoji in kMessageReactions) {
+      expect(find.text('Copy'), findsOneWidget);
+      for (final emoji in [
+        ...kMessageReactions,
+        for (final (e, _) in kMoreReactions) e
+      ]) {
         expect(
-          find.descendant(of: find.byType(MessageActionRow), matching: find.text(emoji)),
+          find.descendant(
+              of: find.byType(MessageActionsView), matching: find.text(emoji)),
           findsOneWidget,
         );
       }
@@ -293,7 +300,7 @@ void main() {
     }
   });
 
-  testWidgets('desktop hover shows action row and sends an emoji reaction immediately',
+  testWidgets('desktop hover shows nothing; holding opens the view and reacts',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     try {
@@ -302,27 +309,54 @@ void main() {
       ]);
       await _open(t, client, size: const Size(1280, 800));
 
-      expect(find.byType(MessageActionRow), findsNothing);
-
       final gesture = await t.createGesture(kind: PointerDeviceKind.mouse);
       await gesture.addPointer(location: Offset.zero);
       addTearDown(gesture.removePointer);
       await t.pump();
-
       await gesture
           .moveTo(t.getCenter(find.text('Finished running benchmarks.')));
       await _pumpFrames(t);
+      expect(find.byType(MessageActionsView), findsNothing);
 
-      expect(find.byType(MessageActionRow), findsOneWidget);
+      await t.longPress(find.text('Finished running benchmarks.'),
+          kind: PointerDeviceKind.mouse);
+      await _pumpFrames(t);
+      expect(find.byType(MessageActionsView), findsOneWidget);
 
-      await t.tap(find.descendant(of: find.byType(MessageActionRow), matching: find.text('👀')));
+      await t.tap(find.descendant(
+          of: find.byType(MessageActionsView), matching: find.text('👀')));
       await _pumpFrames(t);
 
       expect(client.sent.length, 1);
       expect(client.sent.single['reply_to'], 'm1');
       expect(client.sent.single['reaction'], '👀');
       expect(client.sent.single['body'], '');
+      expect(find.byType(MessageActionsView), findsNothing);
       expect(find.byType(MessageReactionChips), findsOneWidget);
+
+      await t.pumpWidget(const SizedBox());
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('holding a message lets me react with a niche emoji', (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    try {
+      final client = _FakeClient([
+        _ev('m1', 1, 'agent', 'Finished running benchmarks.'),
+      ]);
+      await _open(t, client);
+
+      await t.longPress(find.text('Finished running benchmarks.'));
+      await _pumpFrames(t);
+      expect(find.text('Ship it'), findsOneWidget);
+
+      await t.tap(find.text('🚀'));
+      await _pumpFrames(t);
+
+      expect(client.sent.single['reaction'], '🚀');
+      expect(find.byType(MessageActionsView), findsNothing);
 
       await t.pumpWidget(const SizedBox());
     } finally {

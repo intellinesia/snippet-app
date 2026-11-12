@@ -1624,7 +1624,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: MessageBubbleInteractive(
-            mine: true,
+            text: e.body,
             onReply: () => _startReply(e),
             onReact: (name) => unawaited(_sendReaction(e, name)),
             builder: (_, openActions) => Column(
@@ -1661,7 +1661,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: MessageBubbleInteractive(
-          mine: false,
+          text: e.body,
           onReply: () => _startReply(e),
           onReact: (name) => unawaited(_sendReaction(e, name)),
           builder: (_, openActions) => Column(
