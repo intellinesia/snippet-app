@@ -591,8 +591,22 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
     backdropTimer = Timer.scheduledTimer(withTimeInterval: 0.75, repeats: true) { [weak self] _ in
       self?.updateBackdropTransparency()
     }
+    setMenuMochiAnimating(false)
+  }
+
+  /// Every status-item image change makes AppKit re-snapshot the item
+  /// (`_updateReplicants`), which profiled at ~40% of the main thread at
+  /// 30 fps. Animate only while ambient is listening or speaking, at 12 fps.
+  private func setMenuMochiAnimating(_ animating: Bool) {
+    if !animating {
+      menuMochiTimer?.invalidate()
+      menuMochiTimer = nil
+      statusItem?.button?.image = MochiRenderer.makeMenuBarFrame(playTime: 0).1
+      return
+    }
+    guard menuMochiTimer == nil else { return }
     var lastMochiIdx = -1
-    menuMochiTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
+    let timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 12.0, repeats: true) { [weak self] _ in
       guard let self = self else { return }
       let (idx, img) = MochiRenderer.makeMenuBarFrame(playTime: CACurrentMediaTime())
       if idx != lastMochiIdx {
@@ -600,9 +614,8 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
         self.statusItem?.button?.image = img
       }
     }
-    if let timer = menuMochiTimer {
-      RunLoop.main.add(timer, forMode: .common)
-    }
+    RunLoop.main.add(timer, forMode: .common)
+    menuMochiTimer = timer
   }
 
   deinit {
@@ -777,6 +790,7 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
     } else {
       ambientMenuItem?.title = "Ambient Voice: Listening (⌥⇧Space)"
     }
+    setMenuMochiAnimating(active)
     notchHUD?.updateAmbient(
       active: active,
       userSpeaking: userSpeaking,
@@ -2023,9 +2037,16 @@ final class NotchHUDController {
 
     let needsWaveTimer = !conversationExpanded && (ambientActive || assistantSpeaking || userSpeaking || hasNotif)
     if needsWaveTimer {
+      // Idle listening only needs a slow sway; speech gets the full rate.
+      let interval = (assistantSpeaking || userSpeaking || hasNotif) ? 1.0 / 30.0 : 1.0 / 10.0
+      if let existing = waveTimer, abs(existing.timeInterval - interval) > 0.001 {
+        existing.invalidate()
+        waveTimer = nil
+      }
       if waveTimer == nil {
-        let timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
-          self?.hudView.stepAnimation()
+        let step = CGFloat(0.08 * 60.0 * interval)
+        let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+          self?.hudView.stepAnimation(step: step)
         }
         RunLoop.main.add(timer, forMode: .common)
         waveTimer = timer
@@ -2656,8 +2677,8 @@ final class NotchHUDView: NSView, NSTextFieldDelegate {
 
   private var liveCaption: String?
 
-  func stepAnimation() {
-    phase += 0.08
+  func stepAnimation(step: CGFloat = 0.08) {
+    phase += step
     if notifTitle != nil && !conversationExpanded {
       setNeedsDisplay(NSRect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: 3))
     }
