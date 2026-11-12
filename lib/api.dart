@@ -1493,6 +1493,32 @@ class DaemonClient {
     if (r.statusCode != 200) throw _err('set context length', r);
   }
 
+  /// GET /agents/{id}/now: live agent snapshot, or null when unsupported.
+  Future<AgentNow?> agentNow(String agentId) async {
+    final r = await _get(_uri('/agents/${Uri.encodeComponent(agentId)}/now'));
+    if (r.statusCode == 404) return null;
+    if (r.statusCode != 200) throw _err('load agent status', r);
+    return AgentNow.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  /// POST /agents/{id}/sessions/{sessionId}/release: free a held seat.
+  Future<void> releaseAgentSeat(String agentId, String sessionId) async {
+    final r = await _post(_uri(
+        '/agents/${Uri.encodeComponent(agentId)}/sessions/${Uri.encodeComponent(sessionId)}/release'));
+    if (r.statusCode != 200 && r.statusCode != 204) {
+      throw _err('release session', r);
+    }
+  }
+
+  /// POST /agents/{id}/status: pause or resume an agent (`active` | `paused`).
+  Future<void> setAgentStatus(String agentId, String status) async {
+    final r = await _post(
+        _uri('/agents/${Uri.encodeComponent(agentId)}/status'),
+        headers: _json,
+        body: jsonEncode({'status': status}));
+    if (r.statusCode != 200) throw _err('update agent status', r);
+  }
+
   String _ownerPath(String prefix, String owner) =>
       '$prefix/${owner.split('/').map(Uri.encodeComponent).join('/')}';
 
@@ -2232,4 +2258,162 @@ class DaemonClient {
     } catch (_) {}
     return body.trim();
   }
+}
+
+class AgentNow {
+  const AgentNow({
+    required this.agentId,
+    this.presence,
+    this.currentTask,
+    this.sessions = const [],
+    this.counts = const AgentNowCounts(),
+    this.board = const [],
+  });
+
+  final String agentId;
+  final AgentNowPresence? presence;
+  final AgentNowTask? currentTask;
+  final List<AgentNowSession> sessions;
+  final AgentNowCounts counts;
+  final List<AgentNowBoardRow> board;
+
+  factory AgentNow.fromJson(Map<String, dynamic> j) => AgentNow(
+        agentId: j['agent_id'] as String? ?? '',
+        presence: j['presence'] is Map
+            ? AgentNowPresence.fromJson(
+                Map<String, dynamic>.from(j['presence'] as Map))
+            : null,
+        currentTask: j['current_task'] is Map
+            ? AgentNowTask.fromJson(
+                Map<String, dynamic>.from(j['current_task'] as Map))
+            : null,
+        sessions: ((j['sessions'] as List?) ?? const [])
+            .whereType<Map>()
+            .map((e) => AgentNowSession.fromJson(Map<String, dynamic>.from(e)))
+            .toList(),
+        counts: j['counts'] is Map
+            ? AgentNowCounts.fromJson(
+                Map<String, dynamic>.from(j['counts'] as Map))
+            : const AgentNowCounts(),
+        board: ((j['board'] as List?) ?? const [])
+            .whereType<Map>()
+            .map((e) => AgentNowBoardRow.fromJson(Map<String, dynamic>.from(e)))
+            .toList(),
+      );
+}
+
+class AgentNowPresence {
+  const AgentNowPresence({
+    required this.state,
+    required this.detail,
+    required this.since,
+    required this.session,
+  });
+
+  final String state;
+  final String detail;
+  final String since;
+  final String session;
+
+  factory AgentNowPresence.fromJson(Map<String, dynamic> j) =>
+      AgentNowPresence(
+        state: j['state'] as String? ?? '',
+        detail: j['detail'] as String? ?? '',
+        since: j['since'] as String? ?? '',
+        session: j['session'] as String? ?? '',
+      );
+}
+
+class AgentNowTask {
+  const AgentNowTask({
+    required this.id,
+    required this.title,
+    required this.status,
+    required this.step,
+    required this.since,
+    required this.verifyMode,
+  });
+
+  final String id;
+  final String title;
+  final String status;
+  final String step;
+  final String since;
+  final String verifyMode;
+
+  factory AgentNowTask.fromJson(Map<String, dynamic> j) => AgentNowTask(
+        id: j['id'] as String? ?? '',
+        title: j['title'] as String? ?? '',
+        status: j['status'] as String? ?? '',
+        step: j['step'] as String? ?? '',
+        since: j['since'] as String? ?? '',
+        verifyMode: j['verify_mode'] as String? ?? '',
+      );
+}
+
+class AgentNowSession {
+  const AgentNowSession({
+    required this.session,
+    required this.taskId,
+    required this.taskTitle,
+    required this.taskStatus,
+    required this.holder,
+    required this.since,
+    required this.lastProgressAt,
+    required this.stale,
+  });
+
+  final String session;
+  final String taskId;
+  final String taskTitle;
+  final String taskStatus;
+  final bool holder;
+  final String since;
+  final String lastProgressAt;
+  final bool stale;
+
+  factory AgentNowSession.fromJson(Map<String, dynamic> j) => AgentNowSession(
+        session: j['session'] as String? ?? '',
+        taskId: j['task_id'] as String? ?? '',
+        taskTitle: j['task_title'] as String? ?? '',
+        taskStatus: j['task_status'] as String? ?? '',
+        holder: j['holder'] as bool? ?? false,
+        since: j['since'] as String? ?? '',
+        lastProgressAt: j['last_progress_at'] as String? ?? '',
+        stale: j['stale'] as bool? ?? false,
+      );
+}
+
+class AgentNowCounts {
+  const AgentNowCounts({
+    this.openTasks = 0,
+    this.inReview = 0,
+    this.inboxUnread = 0,
+    this.sessions = 0,
+  });
+
+  final int openTasks;
+  final int inReview;
+  final int inboxUnread;
+  final int sessions;
+
+  factory AgentNowCounts.fromJson(Map<String, dynamic> j) => AgentNowCounts(
+        openTasks: (j['open_tasks'] as num?)?.toInt() ?? 0,
+        inReview: (j['in_review'] as num?)?.toInt() ?? 0,
+        inboxUnread: (j['inbox_unread'] as num?)?.toInt() ?? 0,
+        sessions: (j['sessions'] as num?)?.toInt() ?? 0,
+      );
+}
+
+class AgentNowBoardRow {
+  const AgentNowBoardRow({required this.at, required this.summary});
+
+  final String at;
+  final String summary;
+
+  factory AgentNowBoardRow.fromJson(Map<String, dynamic> j) =>
+      AgentNowBoardRow(
+        at: j['at'] as String? ?? '',
+        summary: j['summary'] as String? ?? '',
+      );
 }
