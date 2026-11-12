@@ -703,6 +703,27 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         child: AutonomyPanel(client: widget.client, embedded: true));
   }
 
+  void _openWakes() {
+    final name = _title.trim().isEmpty ? widget.sessionId : _title.trim();
+    if (!kMobile) {
+      presentScreen(context,
+          style: PanelStyle.drawer,
+          purpose: ShellPanelPurpose.wakes,
+          panelId: widget.sessionId,
+          originClient: widget.client,
+          originSessionId: widget.sessionId,
+          builder: (_, close) => SingleChildScrollView(
+              padding: const EdgeInsets.all(S.s12),
+              child: AgentWakePanel(
+                  client: widget.client,
+                  owner: widget.sessionId,
+                  name: name)));
+      return;
+    }
+    showAgentWakeSettings(context,
+        client: widget.client, owner: widget.sessionId, name: name);
+  }
+
   void _openRecurring() {
     // Desktop: the shell owns the panes and opens this as a right-pane readout,
     // the same shape Tasks/Lanes/Checkpoints get. A session cannot toggle a pane
@@ -956,6 +977,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       autoSettle: _isMissionControl || widget.readOnly ? null : !_keepAwake,
       onAutoSettle: _setAutoSettle,
       onAutonomy: _isMissionControl ? () => navigate!(_openAutonomy) : null,
+      onWakes: () => run(_openWakes),
       onSetGoal: (text) {
         _send({'kind': 'set_goal', 'value': text});
         _toast('Goal set — the agent will drive toward it');

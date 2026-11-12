@@ -1199,6 +1199,7 @@ class _SessionActionsPanel extends StatefulWidget {
   final VoidCallback onLanes;
   final VoidCallback? onGiveWork;
   final VoidCallback? onAutonomy;
+  final VoidCallback? onWakes;
   final bool hideShell;
   final VoidCallback onTerm;
   final VoidCallback onGit;
@@ -1225,6 +1226,7 @@ class _SessionActionsPanel extends StatefulWidget {
     required this.onLanes,
     this.onGiveWork,
     this.onAutonomy,
+    this.onWakes,
     this.hideShell = false,
     required this.onTerm,
     required this.onGit,
@@ -1387,6 +1389,12 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
             label: 'Automated wakes',
             detail: 'Keeps the work moving while you are away',
             onTap: widget.onAutonomy),
+      if (widget.onWakes != null)
+        _row(
+            icon: 'calendar-clock',
+            label: 'Wakes and keep warm',
+            detail: 'Scheduled wakes and prompt cache',
+            onTap: widget.onWakes),
       if (_autoSettleRow() case final row?) row,
     ];
     final shortcuts = <Widget>[
@@ -1511,6 +1519,12 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
             label: 'Lanes',
             detail: 'Background work running in parallel',
             onTap: widget.onLanes),
+      if (widget.onWakes != null)
+        _row(
+            icon: 'calendar-clock',
+            label: 'Wakes and keep warm',
+            detail: 'Scheduled wakes and prompt cache',
+            onTap: widget.onWakes),
       _row(
           icon: 'scheduled',
           label: 'Scheduled',

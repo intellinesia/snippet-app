@@ -23,6 +23,7 @@ enum ShellPanelPurpose {
   deliverables,
   pullRequests,
   autonomy,
+  wakes,
   memory,
   generic,
 }
@@ -56,6 +57,7 @@ class ShellPanelRequest {
         ShellPanelPurpose.deliverables => 'Artifacts & files',
         ShellPanelPurpose.pullRequests => id.isEmpty ? 'Pull requests' : '#$id',
         ShellPanelPurpose.autonomy => 'Automated wakes',
+        ShellPanelPurpose.wakes => 'Wakes and keep warm',
         ShellPanelPurpose.lanes => id.isEmpty ? 'Delegated lanes' : 'Lane',
         ShellPanelPurpose.recurring => 'Scheduled jobs',
         ShellPanelPurpose.file => id.split('/').last,

@@ -73,7 +73,7 @@ void main() {
     ]) {
       expect(find.text(label), findsWidgets, reason: label);
     }
-    for (final label in ['Nickname', 'Avatar', 'Colour']) {
+    for (final label in ['Nickname', 'Appearance']) {
       expect(find.text(label), findsNothing, reason: label);
     }
     await tester.tap(find.text('Inference profile').last);

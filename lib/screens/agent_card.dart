@@ -11,7 +11,7 @@ import '../motion.dart';
 import '../mochi.dart';
 import 'agent_wake_panel.dart';
 import 'agent_appearance.dart';
-import 'agent_model_page.dart';
+import 'agent_profile_panel.dart';
 
 /// One agent on the phone's Agents page, in the Mission Control card's shape:
 /// who it is, whether it is working, and its task counts.
@@ -36,71 +36,15 @@ class AgentCard extends StatefulWidget {
 }
 
 class _AgentCardState extends State<AgentCard> {
-  bool _profileSet = false;
-  String? _profile;
-
-  String? get _currentProfile => _profileSet ? _profile : widget.agent.profile;
-
-  Future<void> _setProfile(String? profile) async {
-    final before = (_profileSet, _profile);
-    setState(() {
-      _profileSet = true;
-      _profile = profile;
-    });
-    try {
-      await widget.client.setAgentProfile(widget.agent.id, profile);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _profileSet = before.$1;
-        _profile = before.$2;
-      });
-      ScaffoldMessenger.maybeOf(context)
-          ?.showSnackBar(SnackBar(content: Text('$e')));
-    }
-  }
-
-  Future<void> _pickProfile(String name, {Offset? point}) async {
-    if (kMobile) {
-      await showAgentModelPage(context,
-          client: widget.client, agent: widget.agent, name: name);
-      widget.onChanged?.call();
-      return;
-    }
-    ServerConfig cfg;
-    try {
-      cfg = await widget.client.getConfig();
-    } catch (e) {
-      return;
-    }
-    if (!mounted || cfg.profiles.isEmpty) return;
-    final current = _currentProfile;
-    final picked = await showAppMenu<String>(
-      context,
-      point: point,
-      anchor: point == null ? context : null,
-      minWidth: 260,
-      maxWidth: 360,
-      items: [
-        appMenuHeading<String>('Works on'),
-        appMenuRow<String>(
-            value: '',
-            icon: 'sparkles',
-            label: 'Routing default',
-            description: "Your Routing settings for desks",
-            selected: current == null),
-        for (final p in cfg.profiles)
-          appMenuRow<String>(
-              value: p.name,
-              icon: 'provider:${p.provider}',
-              label: p.name,
-              description: '${p.provider} · ${p.model}',
-              selected: p.name == current),
-      ],
-    );
-    if (picked == null || picked == (current ?? '')) return;
-    _setProfile(picked.isEmpty ? null : picked);
-  }
+  Future<void> _pickProfile(String name, {Offset? point}) =>
+      showAgentProfileSettings(
+        context,
+        client: widget.client,
+        agent: widget.agent,
+        name: name,
+        point: point,
+        onChanged: widget.onChanged,
+      );
 
   String get _nicknameLabel =>
       widget.agent.nickname == null ? 'Set nickname' : 'Edit nickname';
@@ -146,17 +90,12 @@ class _AgentCardState extends State<AgentCard> {
               SheetAction('edit', _nicknameLabel, () {
                 Navigator.pop(context);
                 _editNickname();
-              }, tile: true),
-            SheetAction('sparkles', 'Avatar', () {
+              }, detail: 'What it is called here'),
+            SheetAction('sparkles', 'Appearance', () {
               Navigator.pop(context);
-              showAgentAppearance(context, widget.client, widget.agent.id, name,
-                  AgentAppearancePart.avatar);
-            }, tile: true),
-            SheetAction('sparkles', 'Colour', () {
-              Navigator.pop(context);
-              showAgentAppearance(context, widget.client, widget.agent.id, name,
-                  AgentAppearancePart.colour);
-            }, tile: true),
+              showAgentAppearance(
+                  context, widget.client, widget.agent.id, name);
+            }, detail: 'Avatar and colour across the app'),
             if (!widget.agent.isMissionControl)
               SheetAction('calendar-clock', 'Wakes and reporting', () {
                 Navigator.pop(context);
@@ -184,8 +123,8 @@ class _AgentCardState extends State<AgentCard> {
       items: [
         if (!widget.agent.isMissionControl)
           appMenuItem(value: 'nickname', icon: 'edit', label: _nicknameLabel),
-        appMenuItem(value: 'avatar', icon: 'sparkles', label: 'Change avatar'),
-        appMenuItem(value: 'color', icon: 'sparkles', label: 'Change colour'),
+        appMenuItem(
+            value: 'appearance', icon: 'sparkles', label: 'Appearance'),
         if (!widget.agent.isMissionControl)
           appMenuItem(
               value: 'model', icon: 'cpu', label: 'Change inference profile'),
@@ -206,15 +145,8 @@ class _AgentCardState extends State<AgentCard> {
     if (picked == 'nickname' && mounted) _editNickname(point: point);
     if (picked == 'wakes' && mounted) _openWakes(name, point);
     if (picked == 'model' && mounted) _pickProfile(name, point: point);
-    if ((picked == 'color' || picked == 'avatar') && mounted) {
-      showAgentAppearance(
-          context,
-          widget.client,
-          widget.agent.id,
-          name,
-          picked == 'avatar'
-              ? AgentAppearancePart.avatar
-              : AgentAppearancePart.colour,
+    if (picked == 'appearance' && mounted) {
+      showAgentAppearance(context, widget.client, widget.agent.id, name,
           point: point);
     }
   }
@@ -258,7 +190,7 @@ class _AgentCardState extends State<AgentCard> {
         _count({TaskStatus.blocked, TaskStatus.failed}, {'blocked', 'failed'});
     final open = working + queued + blocked;
     final done = _count({TaskStatus.done}, {'done'});
-    final profile = _currentProfile;
+    final profile = agent.profile;
     final last = agent.lastMessage;
     final line = last == null
         ? 'No messages yet'

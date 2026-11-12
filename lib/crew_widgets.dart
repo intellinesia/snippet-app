@@ -5,12 +5,11 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'screens/agent_wake_panel.dart';
 import 'screens/agent_appearance.dart';
-import 'screens/agent_model_page.dart';
+import 'screens/agent_profile_panel.dart';
 import 'crew_status.dart';
 import 'mochi.dart';
 import 'motion.dart' show WorkingDots;
 import 'models.dart';
-import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -112,8 +111,7 @@ Future<void> showCrewAgentMenu(
           value: 'nickname',
           icon: 'edit',
           label: agent.nickname == null ? 'Set nickname' : 'Edit nickname'),
-      appMenuItem(value: 'avatar', icon: 'sparkles', label: 'Change avatar'),
-      appMenuItem(value: 'color', icon: 'sparkles', label: 'Change colour'),
+      appMenuItem(value: 'appearance', icon: 'sparkles', label: 'Appearance'),
       appMenuItem(
           value: 'model', icon: 'cpu', label: 'Change inference profile'),
       appMenuItem(
@@ -127,8 +125,8 @@ Future<void> showCrewAgentMenu(
       client: client, agent: agent, point: point, onDeleted: onDeleted);
 }
 
-/// One agent action by name: nickname, color, wakes, model or delete. The crew
-/// menu and the agent page's Actions both go through here.
+/// One agent action by name: nickname, appearance, wakes, model or delete. The
+/// crew menu and the agent page's Actions both go through here.
 Future<void> runCrewAgentAction(
   BuildContext context,
   String picked, {
@@ -154,16 +152,8 @@ Future<void> runCrewAgentAction(
     } catch (e) {
       if (context.mounted) toast(context, '$e', danger: true);
     }
-  } else if (picked == 'color' || picked == 'avatar') {
-    await showAgentAppearance(
-        context,
-        client,
-        agent.id,
-        name,
-        picked == 'avatar'
-            ? AgentAppearancePart.avatar
-            : AgentAppearancePart.colour,
-        point: point);
+  } else if (picked == 'appearance') {
+    await showAgentAppearance(context, client, agent.id, name, point: point);
   } else if (picked == 'wakes') {
     await showAgentWakeSettings(context,
         client: client,
@@ -172,7 +162,12 @@ Future<void> runCrewAgentAction(
         point: point,
         onChanged: onDeleted);
   } else if (picked == 'model') {
-    await _pickCrewModel(context, client, agent, name, point, onDeleted);
+    await showAgentProfileSettings(context,
+        client: client,
+        agent: agent,
+        name: name,
+        point: point,
+        onChanged: onDeleted);
   } else if (picked == 'delete') {
     final ok = await confirmAction(context,
         title: 'Delete $name?',
@@ -187,63 +182,6 @@ Future<void> runCrewAgentAction(
     } catch (e) {
       if (context.mounted) toast(context, '$e', danger: true);
     }
-  }
-}
-
-Future<void> _pickCrewModel(
-    BuildContext context,
-    DaemonClient client,
-    CoordinationAgent agent,
-    String name,
-    Offset? point,
-    VoidCallback? onChanged) async {
-  if (kMobile) {
-    await showAgentModelPage(context, client: client, agent: agent, name: name);
-    onChanged?.call();
-    return;
-  }
-  ServerConfig cfg;
-  try {
-    cfg = await client.getConfig();
-  } catch (e) {
-    if (context.mounted) toast(context, '$e', danger: true);
-    return;
-  }
-  if (!context.mounted) return;
-  if (cfg.profiles.isEmpty) {
-    toast(context, 'No models configured');
-    return;
-  }
-  final picked = await showAppMenu<String>(
-    context,
-    point: point,
-    anchor: point == null ? context : null,
-    minWidth: 260,
-    maxWidth: 360,
-    items: [
-      appMenuHeading<String>('Works on'),
-      appMenuRow<String>(
-          value: '',
-          icon: 'sparkles',
-          label: 'Routing default',
-          description: "Your Routing settings for desks",
-          selected: agent.profile == null),
-      for (final p in cfg.profiles)
-        appMenuRow<String>(
-            value: p.name,
-            icon: 'provider:${p.provider}',
-            label: p.name,
-            description: '${p.provider} \u00b7 ${p.model}',
-            selected: p.name == agent.profile),
-    ],
-  );
-  if (picked == null || picked == (agent.profile ?? '')) return;
-  try {
-    await client.setAgentProfile(agent.id, picked.isEmpty ? null : picked);
-    if (context.mounted) toast(context, 'Model updated');
-    onChanged?.call();
-  } catch (e) {
-    if (context.mounted) toast(context, '$e', danger: true);
   }
 }
 

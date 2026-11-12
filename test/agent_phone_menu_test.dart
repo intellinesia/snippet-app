@@ -118,6 +118,7 @@ void main() {
       'Memory',
       'Inference profile',
       'Nickname',
+      'Avatar and colour across the app',
       'Delete agent'
     ]) {
       expect(find.text(row), findsOneWidget, reason: row);

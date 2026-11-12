@@ -398,7 +398,9 @@ class RightTab {
           ShellPanelPurpose.deliverables => 'image',
           ShellPanelPurpose.memory => 'book-marked',
           ShellPanelPurpose.pullRequests => 'pull-request',
-          ShellPanelPurpose.recurring => 'calendar-clock',
+          ShellPanelPurpose.recurring ||
+          ShellPanelPurpose.wakes =>
+            'calendar-clock',
           ShellPanelPurpose.autonomy => 'activity',
           ShellPanelPurpose.file => 'file',
           ShellPanelPurpose.task || ShellPanelPurpose.tasks => 'task',
