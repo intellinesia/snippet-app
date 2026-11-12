@@ -740,7 +740,8 @@ class SidebarState extends State<Sidebar> {
           body: searching
               ? 'Nothing matches "${_filterQuery.trim()}". Try a title, project or branch.'
               : 'Start one and it shows up here with its project, status and changes.',
-          action: searching || widget.client == null
+          // On phone the bottom bar's pill is the one new-session action.
+          action: searching || widget.client == null || kMobile
               ? null
               : Btn('New session',
                   icon: 'plus', small: !kMobile, onTap: widget.onNewSession),

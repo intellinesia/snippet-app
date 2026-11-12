@@ -136,6 +136,7 @@ void main() {
       await _pump(tester, const Size(390, 700), TargetPlatform.android,
           sessions: const []);
       expect(find.text('No sessions yet'), findsOneWidget);
+      // Only the bottom bar's pill, no second button in the empty state.
       expect(find.text('New session'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
