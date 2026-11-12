@@ -850,7 +850,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
         ),
         attach:
             ComposerIconButton('plus', tooltip: 'Attach', onTap: _onAttachTap),
-        trailing: _modelChip,
+        trailing: _inboxAgentId(widget.sessionId) == null ? _modelChip : null,
         mic: kCanRecord
             ? ComposerIconButton(_isRecording ? 'mic-off' : 'mic',
                 tooltip: 'Record',
