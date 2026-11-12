@@ -20,9 +20,9 @@ bool shouldRestoreShellTab(OpenTabDescriptor tab, {required bool mobile}) =>
 /// Which top-level place the phone home is showing. The floating action bar
 /// switches this; desktop keeps its sidebar rail instead, so this is phone-only.
 enum MobileHome {
-  chats('Chats', 'chat-thread'),
+  chats('Sessions', 'chat'),
   tasks('Tasks', 'task'),
-  agents('Agents', 'agent'),
+  agents('Agents', 'users'),
   settings('Settings', 'settings');
 
   const MobileHome(this.label, this.icon);
