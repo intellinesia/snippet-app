@@ -496,7 +496,7 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
     final generation = _attachmentGeneration;
     final draftKey = _draftKey;
     for (var i = 0; i < entries.length; i++) {
-      final p = items[i];
+      final p = picked[i];
       final a = entries[i];
       try {
         final bytes = await p.readBytes();
