@@ -40,6 +40,8 @@ class _WakesScreenState extends State<WakesScreen> {
     _future = _load();
   }
 
+  Map<String, String> _sessionTitles = const {};
+
   Future<(WakeList, KeepWarmList?, List<CoordinationAgent>)> _load() async {
     final c = widget.client;
     final wakes = await c.wakes();
@@ -49,6 +51,15 @@ class _WakesScreenState extends State<WakesScreen> {
         .catchError((_) => null);
     final agents =
         await c.coordinationAgents().catchError((_) => <CoordinationAgent>[]);
+    if (warm?.entries.any((e) => e.enabled && e.ownerKind == 'session') ??
+        false) {
+      final sessions =
+          await c.sessions().catchError((_) => <SessionInfo>[]);
+      _sessionTitles = {
+        for (final s in sessions)
+          if (s.title.trim().isNotEmpty) s.id: s.title.trim()
+      };
+    }
     return (wakes, warm, agents);
   }
 
@@ -185,19 +196,35 @@ class _WakesScreenState extends State<WakesScreen> {
 
   Widget _warmRow(
       BuildContext context, KeepWarmEntry e, List<CoordinationAgent> agents) {
-    final name = _name(e.owner, agents);
+    final session = e.ownerKind == 'session';
+    final name = session
+        ? (_sessionTitles[e.owner] ??
+            _sessionTitles[e.sessionId] ??
+            'Untitled conversation')
+        : _name(e.owner, agents);
+    final reason = e.reason;
+    final sub = [
+      if (session) 'Conversation',
+      if (reason != null)
+        reason == 'quiet hours'
+            ? 'Paused for quiet hours'
+            : '${reason[0].toUpperCase()}${reason.substring(1)}'
+      else if (e.lastWarmAt != null)
+        'Warmed ${wakeWhen(e.lastWarmAt!)}'
+      else
+        'Every ${e.intervalMinutes} min',
+    ].join(' · ');
     return Builder(
       builder: (ctx) => ListRow(
         key: ValueKey('warm-${e.owner}'),
         title: name,
-        subtitle: e.reason ??
-            (e.lastWarmAt != null
-                ? 'Warmed ${wakeWhen(e.lastWarmAt!)}'
-                : 'Every ${e.intervalMinutes} min'),
+        subtitle: sub,
         leading: AppIcon('gauge', size: 19, color: AppColors.fg3),
-        trailing:
-            Text('${e.warms} warms', style: TS.meta()),
-        onTap: () => _open(ctx, e.owner, name, agents),
+        trailing: e.warms > 0
+            ? Text('${e.warms} warm${e.warms == 1 ? '' : 's'}',
+                style: TS.meta())
+            : null,
+        onTap: session ? null : () => _open(ctx, e.owner, name, agents),
       ),
     );
   }
