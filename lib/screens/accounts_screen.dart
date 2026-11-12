@@ -11,12 +11,82 @@ import '../settings_form.dart';
 import '../widgets.dart';
 import 'shell_nav.dart';
 
+enum _SignIn { deviceCode, pasteToken, linkAndCode }
+
+class _AccountKind {
+  const _AccountKind({
+    required this.title,
+    required this.footer,
+    required this.signIn,
+    this.mainRemovable = true,
+    this.allowPasteFallback = false,
+    this.pasteTitle,
+    this.pastePromptHint,
+    this.pasteFieldHint,
+    this.pasteEmptyError,
+  });
+
+  final String title;
+  final String footer;
+  final _SignIn signIn;
+  final bool mainRemovable;
+  final bool allowPasteFallback;
+  final String? pasteTitle;
+  final String? pastePromptHint;
+  final String? pasteFieldHint;
+  final String? pasteEmptyError;
+}
+
+const Map<String, _AccountKind> _kinds = {
+  'chatgpt': _AccountKind(
+    title: 'ChatGPT',
+    footer: 'Sign in with another ChatGPT subscription.',
+    signIn: _SignIn.deviceCode,
+  ),
+  'xai': _AccountKind(
+    title: 'xAI / SuperGrok',
+    footer: 'Sign in with another SuperGrok subscription.',
+    signIn: _SignIn.deviceCode,
+  ),
+  'claude-code': _AccountKind(
+    title: 'Claude Code',
+    footer: 'Run claude setup-token on a machine signed in to the other '
+        'subscription and paste the token.',
+    signIn: _SignIn.pasteToken,
+    mainRemovable: false,
+    pasteTitle: 'Add Claude Code account',
+    pastePromptHint: 'Token from claude setup-token',
+    pasteFieldHint: 'sk-ant-…',
+    pasteEmptyError: 'Paste the token from claude setup-token.',
+  ),
+  'devin': _AccountKind(
+    title: 'Devin',
+    footer: 'Sign in to each Devin account from here. The Devin CLI login on '
+        'this machine, if any, shows as main.',
+    signIn: _SignIn.linkAndCode,
+    mainRemovable: false,
+    allowPasteFallback: true,
+    pasteTitle: 'Add Devin account',
+    pastePromptHint: 'windsurf_api_key or credentials.toml',
+    pasteFieldHint: 'windsurf_api_key or credentials.toml',
+    pasteEmptyError: 'Paste the windsurf_api_key from credentials.toml.',
+  ),
+};
+
+String accountProviderTitle(String provider) =>
+    _kinds[provider]?.title ?? provider;
+
 class AccountsScreen extends StatefulWidget {
   const AccountsScreen(
-      {super.key, required this.client, this.embedded = false, this.onBack});
+      {super.key,
+      required this.client,
+      this.embedded = false,
+      this.onBack,
+      this.launchExternal});
   final DaemonClient client;
   final bool embedded;
   final VoidCallback? onBack;
+  final Future<void> Function(Uri uri)? launchExternal;
 
   @override
   State<AccountsScreen> createState() => _AccountsScreenState();
@@ -30,14 +100,24 @@ class _AccountsScreenState extends State<AccountsScreen> {
   Timer? _poll;
   String? _selectedKey;
   String? _addProvider;
+  bool _pasteKey = false;
   bool _renaming = false;
-  ({String provider, String id, Map<String, dynamic> result})? _pendingSignIn;
+  ({String provider, String id, String label, Map<String, dynamic> result})?
+      _pendingSignIn;
   final _nameField = TextEditingController();
   final _token = TextEditingController();
   final _label = TextEditingController();
+  final _code = TextEditingController();
   String? _addError;
 
-  static const _providers = ['chatgpt', 'xai', 'claude-code', 'devin'];
+  static final List<String> _providers =
+      List.unmodifiable(_kinds.keys);
+
+  Iterable<String> get _displayProviders => [
+        ..._providers,
+        for (final p in _accounts.keys)
+          if (!_kinds.containsKey(p)) p,
+      ];
 
   @override
   void initState() {
@@ -51,7 +131,23 @@ class _AccountsScreenState extends State<AccountsScreen> {
     _nameField.dispose();
     _token.dispose();
     _label.dispose();
+    _code.dispose();
     super.dispose();
+  }
+
+  Uri? _parseUri(Object? raw) {
+    final s = '${raw ?? ''}'.trim();
+    return s.isEmpty ? null : Uri.tryParse(s);
+  }
+
+  Future<void> _openExternal(Uri uri) async {
+    try {
+      if (widget.launchExternal != null) {
+        await widget.launchExternal!(uri);
+      } else {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {}
   }
 
   Future<void> _load() async {
@@ -99,15 +195,14 @@ class _AccountsScreenState extends State<AccountsScreen> {
   void _message(String text) => toast(context, text, danger: true);
 
   Future<void> _add(String provider) async {
-    final claude = provider == 'claude-code';
-    final pasted = provider == 'claude-code' || provider == 'devin';
+    final kind = _kinds[provider];
+    if (kind == null) return;
+    final pasted = kind.signIn == _SignIn.pasteToken;
     String? token;
     if (pasted) {
       token = await promptText(context,
-          title: claude ? 'Add Claude Code account' : 'Add Devin account',
-          hint: claude
-              ? 'Token from claude setup-token'
-              : 'windsurf_api_key or credentials.toml',
+          title: kind.pasteTitle ?? 'Add ${kind.title} account',
+          hint: kind.pastePromptHint,
           saveLabel: 'Next');
       if (token == null || token.isEmpty || !mounted) return;
     }
@@ -124,6 +219,22 @@ class _AccountsScreenState extends State<AccountsScreen> {
       }
       final id = result['id'] as String?;
       if (id == null || !mounted) return;
+      if (result['needs_code'] == true || kind.signIn == _SignIn.linkAndCode) {
+        final uri = _parseUri(result['verification_uri']);
+        if (uri != null) await _openExternal(uri);
+        if (!mounted) return;
+        setState(() => _busy = false);
+        final code = await promptText(context,
+            title: 'Paste the ${kind.title} code',
+            hint: 'Code from the sign-in page',
+            saveLabel: 'Finish');
+        if (code == null || code.isEmpty || !mounted) return;
+        setState(() => _busy = true);
+        await widget.client.completeAccount(provider, id, code,
+            label: label.isEmpty ? null : label);
+        await _load();
+        return;
+      }
       await _signIn(provider, id, result);
     } catch (e) {
       if (mounted) _message('$e');
@@ -158,7 +269,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
 
   Future<void> _signIn(
       String provider, String id, Map<String, dynamic> result) async {
-    final uri = Uri.tryParse('${result['verification_uri'] ?? ''}');
+    final uri = _parseUri(result['verification_uri']);
     _watchSignIn(provider, id);
     await showAppSheet<void>(context,
         title: 'Finish sign-in',
@@ -183,8 +294,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 if (uri != null)
                   Btn('Open sign-in page',
                       full: true,
-                      onTap: () =>
-                          launchUrl(uri, mode: LaunchMode.externalApplication)),
+                      onTap: () => _openExternal(uri)),
                 const SizedBox(height: 8),
                 Btn('Done',
                     full: true,
@@ -228,41 +338,35 @@ class _AccountsScreenState extends State<AccountsScreen> {
         provider);
   }
 
-  String _title(String provider) => switch (provider) {
-        'chatgpt' => 'ChatGPT',
-        'xai' => 'xAI / SuperGrok',
-        'devin' => 'Devin',
-        _ => 'Claude Code'
-      };
+  String _title(String provider) => accountProviderTitle(provider);
 
-  String _footer(String provider) => switch (provider) {
-        'chatgpt' => 'Sign in with another ChatGPT subscription.',
-        'xai' => 'Sign in with another SuperGrok subscription.',
-        'devin' =>
-          'Uses the Devin CLI login on this machine as main. Add more '
-              'accounts with their windsurf_api_key from '
-              '~/.local/share/devin/credentials.toml.',
-        _ => 'Run claude setup-token on a machine signed in to the other '
-            'subscription and paste the token.'
-      };
+  String? _footer(String provider) => _kinds[provider]?.footer;
+
+  bool _canRemove(String provider, Account account) =>
+      (_kinds[provider]?.mainRemovable ?? true) || account.id != 'main';
+
+  bool _usesPaste(_AccountKind kind) =>
+      kind.signIn == _SignIn.pasteToken ||
+      (kind.allowPasteFallback && _pasteKey);
 
   List<Widget> _groups() => [
         const SettingsNote(
             'When an account reaches its 5-hour or weekly limit, Snippet '
             'moves to the next one in this order.'),
         const SizedBox(height: 18),
-        for (final provider in ['chatgpt', 'xai', 'claude-code', 'devin'])
+        for (final provider in _displayProviders)
           SettingsGroup(
             header: _title(provider),
             footer: _footer(provider),
             children: [
               for (var i = 0; i < (_accounts[provider] ?? const <Account>[]).length; i++)
                 _row(provider, _accounts[provider]!, i),
-              SettingsRow(
-                label: 'Add account',
-                leading: AppIcon('plus', size: 16, color: AppColors.fg3),
-                onTap: _busy ? null : () => _add(provider),
-              ),
+              if (_kinds.containsKey(provider))
+                SettingsRow(
+                  label: 'Add account',
+                  leading: AppIcon('plus', size: 16, color: AppColors.fg3),
+                  onTap: _busy ? null : () => _add(provider),
+                ),
             ],
           ),
       ];
@@ -273,16 +377,21 @@ class _AccountsScreenState extends State<AccountsScreen> {
       _selectedKey = key;
       _renaming = false;
       _addProvider = null;
+      _pasteKey = false;
+      _addError = null;
       _pendingSignIn = null;
     });
   }
 
   void _startAdd(String provider) {
+    if (!_kinds.containsKey(provider)) return;
     _poll?.cancel();
     _token.clear();
     _label.clear();
+    _code.clear();
     setState(() {
       _addProvider = provider;
+      _pasteKey = false;
       _addError = null;
       _pendingSignIn = null;
     });
@@ -290,19 +399,80 @@ class _AccountsScreenState extends State<AccountsScreen> {
 
   void _cancelAdd() => setState(() {
         _addProvider = null;
+        _pasteKey = false;
         _addError = null;
       });
 
   Future<void> _submitAdd() async {
     final provider = _addProvider;
     if (provider == null || _busy) return;
-    final claude = provider == 'claude-code';
-    final pasted = provider == 'claude-code' || provider == 'devin';
+    final kind = _kinds[provider];
+    if (kind == null) return;
+    final pasted = _usesPaste(kind);
     final token = _token.text.trim();
     if (pasted && token.isEmpty) {
-      setState(() => _addError = claude
-          ? 'Paste the token from claude setup-token.'
-          : 'Paste the windsurf_api_key from credentials.toml.');
+      setState(() => _addError = kind.pasteEmptyError ?? 'Paste a token.');
+      return;
+    }
+    final label = _label.text.trim();
+    setState(() {
+      _busy = true;
+      _addError = null;
+    });
+    try {
+      final result = await widget.client.addAccount(provider,
+          label: label, token: pasted ? token : null);
+      if (!mounted) return;
+      if (pasted) {
+        setState(() {
+          _addProvider = null;
+          _pasteKey = false;
+        });
+        await _load();
+        return;
+      }
+      final id = result['id'] as String?;
+      final needsCode =
+          result['needs_code'] == true || kind.signIn == _SignIn.linkAndCode;
+      _code.clear();
+      setState(() {
+        _addProvider = null;
+        _pasteKey = false;
+        if (id != null) {
+          _pendingSignIn = (
+            provider: provider,
+            id: id,
+            label: label,
+            result: result,
+          );
+        }
+      });
+      if (id != null) {
+        if (needsCode) {
+          final uri = _parseUri(result['verification_uri']);
+          if (uri != null) unawaited(_openExternal(uri));
+        } else {
+          _watchSignIn(provider, id);
+        }
+      }
+    } catch (e) {
+      if (mounted) setState(() => _addError = '$e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _submitComplete(
+      ({
+        String provider,
+        String id,
+        String label,
+        Map<String, dynamic> result
+      }) pending) async {
+    if (_busy) return;
+    final code = _code.text.trim();
+    if (code.isEmpty) {
+      setState(() => _addError = 'Paste the code from the sign-in page.');
       return;
     }
     setState(() {
@@ -310,22 +480,18 @@ class _AccountsScreenState extends State<AccountsScreen> {
       _addError = null;
     });
     try {
-      final result = await widget.client.addAccount(provider,
-          label: _label.text.trim(), token: pasted ? token : null);
+      await widget.client.completeAccount(
+        pending.provider,
+        pending.id,
+        code,
+        label: pending.label.isEmpty ? null : pending.label,
+      );
       if (!mounted) return;
-      if (pasted) {
-        setState(() => _addProvider = null);
-        await _load();
-        return;
-      }
-      final id = result['id'] as String?;
       setState(() {
+        _pendingSignIn = null;
         _addProvider = null;
-        if (id != null) {
-          _pendingSignIn = (provider: provider, id: id, result: result);
-        }
       });
-      if (id != null) _watchSignIn(provider, id);
+      await _load();
     } catch (e) {
       if (mounted) setState(() => _addError = '$e');
     } finally {
@@ -348,7 +514,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
     if (pending != null) return _signInPage(pending);
     final key = _selectedKey;
     if (key != null) {
-      for (final p in _providers) {
+      for (final p in _displayProviders) {
         final list = _accounts[p] ?? const <Account>[];
         for (var i = 0; i < list.length; i++) {
           if ('$p/${list[i].id}' == key) return _accountPage(p, list, i);
@@ -361,17 +527,18 @@ class _AccountsScreenState extends State<AccountsScreen> {
         subtitle: 'Signed-in providers and their usage limits.',
       ),
       const SizedBox(height: S.s8),
-      for (final provider in _providers)
+      for (final provider in _displayProviders)
         SettingsGroup(
           header: _title(provider),
           children: [
             for (final account in _accounts[provider] ?? const <Account>[])
               _listRow(provider, account),
-            SettingsRow(
-              label: 'Add account',
-              leading: AppIcon('plus', size: 14, color: AppColors.fg3),
-              onTap: _busy ? null : () => _startAdd(provider),
-            ),
+            if (_kinds.containsKey(provider))
+              SettingsRow(
+                label: 'Add account',
+                leading: AppIcon('plus', size: 14, color: AppColors.fg3),
+                onTap: _busy ? null : () => _startAdd(provider),
+              ),
           ],
         ),
       Padding(
@@ -411,13 +578,14 @@ class _AccountsScreenState extends State<AccountsScreen> {
       SettingsBack(label, onTap: onTap);
 
   Widget _addPage(String provider) {
-    final claude = provider == 'claude-code';
-    final pasted = provider == 'claude-code' || provider == 'devin';
+    final kind = _kinds[provider];
+    if (kind == null) return const SizedBox.shrink();
+    final pasted = _usesPaste(kind);
     return SettingsColumn(children: [
       SettingsHeader(
         back: _backTo('Accounts', _cancelAdd),
-        title: 'Add ${_title(provider)} account',
-        subtitle: _footer(provider),
+        title: 'Add ${kind.title} account',
+        subtitle: kind.footer,
         actions: [
           Btn(
               pasted
@@ -435,14 +603,10 @@ class _AccountsScreenState extends State<AccountsScreen> {
           if (pasted)
             SettingsRow(
               label: 'Token',
-              sub: claude
-                  ? 'Paste the token from claude setup-token.'
-                  : 'Paste the windsurf_api_key from credentials.toml.',
+              sub: kind.pasteEmptyError,
               trailing: SettingsField(
                   controller: _token,
-                  hint: claude
-                      ? 'sk-ant-…'
-                      : 'windsurf_api_key or credentials.toml',
+                  hint: kind.pasteFieldHint,
                   mono: true,
                   obscure: true,
                   width: 260),
@@ -455,38 +619,85 @@ class _AccountsScreenState extends State<AccountsScreen> {
           ),
         ],
       ),
+      if (kind.allowPasteFallback)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Btn(
+            _pasteKey ? 'Use browser sign-in instead' : 'Paste a key instead',
+            variant: BtnVariant.ghost,
+            small: true,
+            disabled: _busy,
+            onTap: () => setState(() {
+              _pasteKey = !_pasteKey;
+              _addError = null;
+            }),
+          ),
+        ),
     ]);
   }
 
   Widget _signInPage(
-      ({String provider, String id, Map<String, dynamic> result}) pending) {
-    final uri = Uri.tryParse('${pending.result['verification_uri'] ?? ''}');
+      ({String provider, String id, String label, Map<String, dynamic> result})
+          pending) {
+    final uri = _parseUri(pending.result['verification_uri']);
+    final needsCode = pending.result['needs_code'] == true ||
+        _kinds[pending.provider]?.signIn == _SignIn.linkAndCode;
     return SettingsColumn(children: [
       SettingsHeader(
         back: _backTo('Accounts', () {
           _poll?.cancel();
-          setState(() => _pendingSignIn = null);
+          setState(() {
+            _pendingSignIn = null;
+            _addError = null;
+          });
         }),
         title: 'Finish sign-in',
         subtitle: '${_title(pending.provider)} · waiting for the sign-in page',
         actions: [
-          if (uri != null)
+          if (uri != null && !needsCode)
             Btn('Open sign-in page',
                 small: true,
-                onTap: () =>
-                    launchUrl(uri, mode: LaunchMode.externalApplication)),
+                onTap: () => _openExternal(uri)),
+          if (needsCode)
+            Btn(_busy ? 'Finishing…' : 'Finish',
+                small: true,
+                disabled: _busy,
+                onTap: () => _submitComplete(pending)),
         ],
       ),
       const SizedBox(height: S.s8),
       SettingsGroup(
-        footer: 'Snippet picks the account up once you finish.',
+        footer: needsCode
+            ? _addError
+            : 'Snippet picks the account up once you finish.',
         children: [
-          SettingsRow(
-            label: 'Code',
-            sub: 'Enter this code on the sign-in page.',
-            trailing: SelectableText('${pending.result['user_code'] ?? ''}',
-                style: mono(16, color: AppColors.fg1)),
-          ),
+          if (needsCode && uri != null)
+            SettingsRow(
+              label: 'Sign-in page',
+              sub: '$uri',
+              trailing: Btn('Open sign-in page',
+                  variant: BtnVariant.surface,
+                  small: true,
+                  onTap: () => _openExternal(uri)),
+            ),
+          if (needsCode)
+            SettingsRow(
+              label: 'Code',
+              sub: 'Paste the code from the sign-in page.',
+              trailing: SettingsField(
+                  controller: _code,
+                  hint: 'Code from the sign-in page',
+                  mono: true,
+                  width: 260,
+                  onSubmitted: (_) => _submitComplete(pending)),
+            )
+          else
+            SettingsRow(
+              label: 'Code',
+              sub: 'Enter this code on the sign-in page.',
+              trailing: SelectableText('${pending.result['user_code'] ?? ''}',
+                  style: mono(16, color: AppColors.fg1)),
+            ),
         ],
       ),
     ]);
@@ -495,8 +706,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
   Widget _accountPage(String provider, List<Account> accounts, int index) {
     final account = accounts[index];
     final name = account.label.isEmpty ? account.id : account.label;
-    final canRemove =
-        !((provider == 'claude-code' || provider == 'devin') && account.id == 'main');
+    final canRemove = _canRemove(provider, account);
     final limited = account.limitedUntil;
     final limitedLabel = limited == null ? null : rateResetLabel(limited);
     final usage = account.usage;
@@ -592,8 +802,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final limited = account.limitedUntil;
     final limitedLabel = limited == null ? null : rateResetLabel(limited);
     final usage = account.usage;
-    final canRemove =
-        !((provider == 'claude-code' || provider == 'devin') && account.id == 'main');
+    final canRemove = _canRemove(provider, account);
     return SettingsRow(
       label: name,
       labelWidget: Column(

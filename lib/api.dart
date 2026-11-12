@@ -660,6 +660,16 @@ class DaemonClient {
         if (token != null) 'token': token
       });
 
+  Future<Map<String, dynamic>> completeAccount(
+          String provider, String id, String code,
+          {String? label}) =>
+      _accountPost('complete', {
+        'provider': provider,
+        'id': id,
+        'code': code,
+        if (label != null && label.isNotEmpty) 'label': label
+      });
+
   Future<Map<String, dynamic>> removeAccount(String provider, String id) =>
       _accountPost('remove', {'provider': provider, 'id': id});
 
