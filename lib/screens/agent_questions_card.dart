@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../chat/chat_style.dart';
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -19,12 +20,14 @@ class AgentQuestionsCard extends StatefulWidget {
     required this.question,
     required this.client,
     this.events = const [],
+    this.chatStyle = false,
   });
 
   final CoordinationEvent event;
   final Map<dynamic, dynamic> question;
   final DaemonClient client;
   final List<CoordinationEvent> events;
+  final bool chatStyle;
 
   @override
   State<AgentQuestionsCard> createState() => _AgentQuestionsCardState();
@@ -364,6 +367,15 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     final st = _resolve();
     final closed = st.closed || (_locked && !st.answered);
     final interactive = !st.answered && !closed && !_sending;
+    if (widget.chatStyle) {
+      return _buildChatCard(
+        qs,
+        answered: st.answered,
+        closed: closed,
+        interactive: interactive,
+        answers: st.answers,
+      );
+    }
     return TranscriptCard(
       kind: 'Question',
       icon: 'help-circle',
@@ -383,6 +395,394 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
               answered: st.answered,
               interactive: interactive,
               answers: st.answers,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChatCard(
+    List<Map<String, dynamic>> qs, {
+    required bool answered,
+    required bool closed,
+    required bool interactive,
+    required Map<String, dynamic>? answers,
+  }) {
+    final status = answered ? 'Answered' : (closed ? 'Closed' : null);
+    final label = status == null ? 'Question' : 'Question \u00b7 $status';
+    final hasFreeText = qs.any((q) => _kindOf(q) == 'free_text');
+    final showFooter = !answered && !(closed && _error == null);
+    var primaryAssigned = false;
+    bool claimPrimary() {
+      if (primaryAssigned) return false;
+      primaryAssigned = true;
+      return true;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: ChatColors.card,
+        borderRadius: BorderRadius.circular(ChatColors.radius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const AppIcon('help-circle', size: 13, color: ChatColors.meta),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TS.caption(ChatColors.meta),
+                ),
+              ),
+            ],
+          ),
+          for (var i = 0; i < qs.length; i++) ...[
+            SizedBox(height: i == 0 ? 6 : 12),
+            _chatSection(
+              qs[i],
+              i,
+              answered: answered,
+              interactive: interactive,
+              answers: answers,
+              claimPrimary: claimPrimary,
+            ),
+          ],
+          if (showFooter) ...[
+            if (!hasFreeText || _error != null) const SizedBox(height: 12),
+            _chatFooter(interactive, showSendButton: !hasFreeText || qs.length > 1, primary: claimPrimary()),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _chatSection(
+    Map<String, dynamic> q,
+    int i, {
+    required bool answered,
+    required bool interactive,
+    required Map<String, dynamic>? answers,
+    required bool Function() claimPrimary,
+  }) {
+    final header = '${q['header'] ?? ''}'.trim();
+    final text = '${q['text'] ?? ''}'.trim();
+    final titleText = header.isNotEmpty ? header : text;
+    final bodyText = header.isNotEmpty ? text : '';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (titleText.isNotEmpty)
+          Text(
+            titleText,
+            style: sans(
+              kMobile ? 15 : 13,
+              weight: W.title,
+              color: ChatColors.receivedText,
+            ),
+          ),
+        if (bodyText.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            bodyText,
+            style: chatText(mine: false).copyWith(color: ChatColors.meta),
+          ),
+        ],
+        const SizedBox(height: 8),
+        _chatInputFor(
+          q,
+          i,
+          answered: answered,
+          interactive: interactive,
+          answers: answers,
+          claimPrimary: claimPrimary,
+        ),
+      ],
+    );
+  }
+
+  Widget _chatFooter(
+    bool interactive, {
+    required bool showSendButton,
+    required bool primary,
+  }) {
+    final canSend = interactive && _allAnswered;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (showSendButton)
+          _chatPillButton(
+            'Send',
+            primary: primary && canSend,
+            enabled: canSend,
+            onTap: _send,
+          ),
+        if (_error != null) ...[
+          if (showSendButton) const SizedBox(height: 6),
+          Text(
+            _error!,
+            style: TS.caption(AppColors.danger),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _chatInputFor(
+    Map<String, dynamic> q,
+    int i, {
+    required bool answered,
+    required bool interactive,
+    required Map<String, dynamic>? answers,
+    required bool Function() claimPrimary,
+  }) {
+    final key = _key(q, i);
+    final kind = _kindOf(q);
+    final choices = _choicesFor(q);
+    final isChoice =
+        kind == 'single_choice' ||
+        kind == 'multi_choice' ||
+        kind == 'yes_no' ||
+        kind == 'confirm';
+    if (answered) {
+      if (!isChoice) {
+        final v = _answerFor(q, i, answers);
+        final s = v == null ? '' : (v is List ? v.join(', ') : '$v');
+        if (s.isEmpty) return const SizedBox.shrink();
+        return Text(
+          s,
+          style: chatText(mine: false).copyWith(color: ChatColors.meta),
+        );
+      }
+      final multi = kind == 'multi_choice';
+      final tokens = _tokens(_answerFor(q, i, answers), multi: multi);
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final c in choices)
+            _chatChoicePill(
+              c,
+              selected: _choiceMatches(c, tokens),
+              primary: _choiceMatches(c, tokens) && claimPrimary(),
+              readOnly: true,
+              onTap: null,
+            ),
+        ],
+      );
+    }
+    if (isChoice) {
+      final multi = kind == 'multi_choice';
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (var j = 0; j < choices.length; j++)
+            () {
+              final c = choices[j];
+              final selected = multi
+                  ? (_multi[key]?.contains(c.value) ?? false)
+                  : _single[key] == c.value;
+              final wantsPrimary = selected ||
+                  (c.recommended && !multi && _single[key] == null) ||
+                  ((kind == 'yes_no' || kind == 'confirm') &&
+                      j == 0 &&
+                      _single[key] == null);
+              return _chatChoicePill(
+                c,
+                selected: selected,
+                primary: wantsPrimary && claimPrimary(),
+                readOnly: false,
+                onTap: interactive ? () => _pick(i, c, multi) : null,
+              );
+            }(),
+        ],
+      );
+    }
+    return _chatPillField(
+      controller: _controllerFor(key),
+      enabled: interactive,
+      showInlineSend: _questions.length == 1,
+      canSend: interactive && _allAnswered,
+      primarySend: claimPrimary(),
+    );
+  }
+
+  Widget _chatChoicePill(
+    _QChoice c, {
+    required bool selected,
+    required bool primary,
+    required bool readOnly,
+    VoidCallback? onTap,
+  }) {
+    final bg = primary ? ChatColors.action : ChatColors.cardButton;
+    final fg = primary ? ChatColors.onAction : ChatColors.receivedText;
+    final pill = Container(
+      height: kMobile ? 36 : 30,
+      padding: EdgeInsets.symmetric(horizontal: kMobile ? 16 : 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border: selected && !primary
+            ? Border.all(color: ChatColors.meta, width: 1)
+            : null,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            c.label,
+            style: sans(kMobile ? 15 : 13, weight: W.label, color: fg),
+          ),
+          if (readOnly && selected) ...[
+            const SizedBox(width: 6),
+            Text(
+              'Chosen',
+              style: TS.caption(fg.withValues(alpha: 0.8)),
+            ),
+          ] else if (!readOnly && c.recommended) ...[
+            const SizedBox(width: 6),
+            Text(
+              'recommended',
+              style: TS.caption(fg.withValues(alpha: 0.8)),
+            ),
+          ],
+        ],
+      ),
+    );
+    final Widget item = c.description.isEmpty
+        ? pill
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              pill,
+              const SizedBox(height: 2),
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Text(
+                  c.description,
+                  style: chatText(mine: false).copyWith(color: ChatColors.meta),
+                ),
+              ),
+            ],
+          );
+    if (readOnly || onTap == null) return item;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: item,
+    );
+  }
+
+  Widget _chatPillButton(
+    String label, {
+    required bool primary,
+    required bool enabled,
+    required VoidCallback onTap,
+  }) {
+    final bg = primary ? ChatColors.action : ChatColors.cardButton;
+    final fg = primary ? ChatColors.onAction : ChatColors.receivedText;
+    return Opacity(
+      opacity: enabled ? 1 : 0.5,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: enabled ? onTap : null,
+        child: Container(
+          height: kMobile ? 36 : 30,
+          padding: EdgeInsets.symmetric(horizontal: kMobile ? 16 : 12),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          alignment: Alignment.center,
+          width: double.infinity,
+          child: Text(
+            label,
+            style: sans(kMobile ? 15 : 13, weight: W.label, color: fg),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _chatPillField({
+    required TextEditingController controller,
+    required bool enabled,
+    required bool showInlineSend,
+    required bool canSend,
+    required bool primarySend,
+  }) {
+    return Container(
+      constraints: BoxConstraints(minHeight: kMobile ? 36 : 30),
+      padding: EdgeInsets.fromLTRB(
+        kMobile ? 14 : 12,
+        0,
+        showInlineSend ? 4 : (kMobile ? 14 : 12),
+        0,
+      ),
+      decoration: BoxDecoration(
+        color: ChatColors.cardButton,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              enabled: enabled,
+              minLines: 1,
+              maxLines: 4,
+              onSubmitted: canSend ? (_) => _send() : null,
+              style: sans(
+                kMobile ? 15 : 13,
+                color: ChatColors.receivedText,
+              ),
+              decoration: InputDecoration(
+                isCollapsed: true,
+                contentPadding: EdgeInsets.symmetric(vertical: kMobile ? 8 : 6),
+                border: InputBorder.none,
+                hintText: 'Write your answer',
+                hintStyle: sans(kMobile ? 15 : 13, color: ChatColors.meta),
+              ),
+            ),
+          ),
+          if (showInlineSend) ...[
+            const SizedBox(width: 6),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: canSend ? _send : null,
+              child: Opacity(
+                opacity: canSend ? 1 : 0.5,
+                child: Container(
+                  height: kMobile ? 28 : 24,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: primarySend && canSend
+                        ? ChatColors.action
+                        : ChatColors.card,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Send',
+                    style: sans(
+                      kMobile ? 13 : 12,
+                      weight: W.label,
+                      color: primarySend && canSend
+                          ? ChatColors.onAction
+                          : ChatColors.receivedText,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ],
