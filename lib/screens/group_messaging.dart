@@ -16,7 +16,7 @@ import '../pull_refresh.dart';
 import '../swr.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import 'mobile_chrome.dart';
+import '../chat/chat_style.dart';
 
 /// An `@token` in a group message: the boundary keeps `mail@fable` from
 /// counting as a mention.
@@ -951,19 +951,18 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     return '$n ${n == 1 ? 'member' : 'members'}';
   }
 
-  Widget _memberMochis() {
-    final agents = _group.agentIds;
-    if (agents.isEmpty) return const AppIcon('users', size: 18);
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      for (var i = 0; i < agents.length && i < 4; i++) ...[
-        if (i > 0) const SizedBox(width: 2),
-        AgentMochi(agents[i], size: 18),
-      ],
-      if (agents.length > 4) ...[
-        const SizedBox(width: 2),
-        Text('+${agents.length - 4}', style: TS.caption(AppColors.fg3)),
-      ],
-    ]);
+  String _agentName(String id) => groupMemberName(
+      GroupMember.fromJson({'kind': 'agent', 'id': id}), _agents);
+
+  String? _typingStatus() {
+    final store = widget.client.presence;
+    for (final id in _group.agentIds) {
+      final p = store.presenceForAgentId(id);
+      if (p != null && (p.state == 'typing' || p.state == 'thinking')) {
+        return '${_agentName(id)} is typing';
+      }
+    }
+    return null;
   }
 
   @override
@@ -976,8 +975,20 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         bottom: false,
         child: Column(
           children: [
-            if (!hideChrome) _header(),
-            Expanded(child: _body()),
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(child: _body(hideChrome: hideChrome)),
+                  if (!hideChrome)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: _header(),
+                    ),
+                ],
+              ),
+            ),
             _composer(),
           ],
         ),
@@ -986,71 +997,158 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   }
 
   Widget _header() {
-    if (kMobile) {
-      return MobileStackedTitleBar(
-        title: _title,
-        subtitle: _subtitle,
-        onTap: _openMembers,
-        tapHint: 'Members',
-      );
-    }
-    final canGoBack = !widget.embedded &&
-        widget.showBack &&
-        (widget.onClose != null || Navigator.of(context).canPop());
-    return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: AppColors.bg,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
-      ),
-      child: Row(
-        children: [
-          if (canGoBack)
-            IconBtn(
-              'chevron-left',
-              size: 28,
-              iconSize: 16,
-              tooltip: 'Back',
-              onTap: _closePage,
-            ),
-          const SizedBox(width: 4),
-          _memberMochis(),
-          const SizedBox(width: 8),
-          Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _openMembers,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TS.rowTitle(AppColors.fg1)),
-                  Text(_subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TS.meta(AppColors.fg3)),
-                ],
+    final canPop = Navigator.maybeOf(context)?.canPop() ?? false;
+    final canGoBack = kMobile
+        ? (widget.onClose != null || canPop)
+        : (!widget.embedded &&
+            widget.showBack &&
+            (widget.onClose != null || canPop));
+    final membersBtn = ChatGlassButton(
+      icon: 'users',
+      tooltip: 'Members',
+      onTap: _openMembers,
+    );
+    final trailing = !kMobile && !widget.embedded && widget.onClose != null
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              membersBtn,
+              const SizedBox(width: 6),
+              ChatGlassButton(
+                icon: 'x',
+                tooltip: 'Close',
+                onTap: widget.onClose!,
               ),
-            ),
-          ),
-          if (!widget.embedded && widget.onClose != null)
-            IconBtn(
-              'x',
-              size: 28,
-              iconSize: 16,
-              tooltip: 'Close',
-              onTap: widget.onClose!,
-            ),
-        ],
+            ],
+          )
+        : membersBtn;
+    return ListenableBuilder(
+      listenable: widget.client.presence,
+      builder: (_, __) => ChatHeader(
+        agentIds: _group.agentIds.take(2).toList(),
+        title: _title,
+        status: ChatHeader.statusText(_typingStatus() ?? _subtitle),
+        onTitleTap: _openMembers,
+        titleHint: 'Members',
+        onBack: canGoBack ? _closePage : null,
+        trailing: trailing,
       ),
     );
   }
 
-  Widget _body() {
+  static const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  static const _months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  static DateTime? _eventTime(CoordinationEvent e) =>
+      DateTime.tryParse(e.createdAt)?.toLocal();
+
+  static (String, String) _dayTimeStamp(DateTime t) {
+    final now = DateTime.now();
+    final days = DateTime(now.year, now.month, now.day)
+        .difference(DateTime(t.year, t.month, t.day))
+        .inDays;
+    final day = switch (days) {
+      0 => 'Today',
+      1 => 'Yesterday',
+      > 1 && < 7 => _weekdays[t.weekday - 1],
+      _ => t.year == now.year
+          ? '${t.day} ${_months[t.month - 1]}'
+          : '${t.day} ${_months[t.month - 1]} ${t.year}',
+    };
+    final hour = t.hour.toString().padLeft(2, '0');
+    final minute = t.minute.toString().padLeft(2, '0');
+    return (day, '$hour:$minute');
+  }
+
+  String? _systemText(CoordinationEvent e) {
+    final body = e.body.trim();
+    if (e.payload['auto'] == 'ack') return body.isEmpty ? null : body;
+    final kind = e.payload['kind'];
+    if (e.actorKind == 'system' ||
+        kind == 'system' ||
+        kind == 'handoff' ||
+        kind == 'handoff_note' ||
+        e.eventType == 'group.system' ||
+        e.eventType == 'group.handoff' ||
+        e.eventType.startsWith('system.')) {
+      return body.isEmpty ? null : body;
+    }
+    if (e.eventType == 'task.lease_transferred') {
+      if (body.isNotEmpty) return body;
+      final from =
+          _agentName(e.payload['from_agent_id']?.toString() ?? e.actorId);
+      final toId = e.payload['to_agent_id']?.toString() ?? '';
+      return toId.isEmpty
+          ? '$from passed the turn'
+          : '$from passed the turn to ${_agentName(toId)}';
+    }
+    return null;
+  }
+
+  String? _readByLine(CoordinationEvent e) {
+    final ids = <String>[];
+    final readBy = e.payload['read_by'];
+    if (readBy is List) {
+      for (final item in readBy) {
+        final s = item?.toString().trim() ?? '';
+        if (s.isNotEmpty && s != 'human' && s != 'local' && !ids.contains(s)) {
+          ids.add(s);
+        }
+      }
+    }
+    final deliveries = e.payload['deliveries'];
+    if (deliveries is Map) {
+      for (final entry in deliveries.entries) {
+        final k = entry.key.toString().trim();
+        final v = entry.value;
+        if (k.isNotEmpty &&
+            k != 'human' &&
+            k != 'local' &&
+            v is Map &&
+            v['read_at'] != null &&
+            !ids.contains(k)) {
+          ids.add(k);
+        }
+      }
+    } else if (deliveries is List) {
+      for (final item in deliveries) {
+        if (item is Map && item['read_at'] != null) {
+          final k =
+              (item['recipient_id'] ?? item['agent_id'] ?? '').toString().trim();
+          if (k.isNotEmpty &&
+              k != 'human' &&
+              k != 'local' &&
+              !ids.contains(k)) {
+            ids.add(k);
+          }
+        }
+      }
+    }
+    if (ids.isEmpty) return null;
+    final names = [for (final id in ids) _agentName(id)];
+    if (names.length == 1) return 'Read by ${names.first}';
+    if (names.length == 2) return 'Read by ${names[0]} and ${names[1]}';
+    return 'Read by ${names.sublist(0, names.length - 1).join(', ')} and ${names.last}';
+  }
+
+  Widget _body({required bool hideChrome}) {
+    final topPad = hideChrome ? 12.0 : ChatHeader.overlap;
     if (_loading) {
       return const Center(child: Spinner(size: 24));
     }
@@ -1075,13 +1173,16 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     }
     final visible = [
       for (final e in _events)
-        if (!isReactionEvent(e) && e.body.isNotEmpty) e
+        if (!isReactionEvent(e) &&
+            (e.body.isNotEmpty || _systemText(e) != null))
+          e
     ];
     if (visible.isEmpty) {
       return PullToRefresh(
         onRefresh: () => _load(silent: true),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.only(top: topPad),
           children: [
             SizedBox(
               height: MediaQuery.sizeOf(context).height * 0.45,
@@ -1097,82 +1198,143 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         ),
       );
     }
+    final runs = chatRuns<CoordinationEvent>(
+      visible,
+      sender: (e) => e.actorKind == 'human' ? 'human' : e.actorId,
+      at: _eventTime,
+      breaks: (e) => _systemText(e) != null,
+    );
+    int? lastHumanIndex;
+    for (var i = visible.length - 1; i >= 0; i--) {
+      if (visible[i].actorKind == 'human' && _systemText(visible[i]) == null) {
+        lastHumanIndex = i;
+        break;
+      }
+    }
     return PullToRefresh(
       onRefresh: () => _load(silent: true),
       child: ListView.builder(
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        padding: EdgeInsets.fromLTRB(16, topPad, 16, 16),
         itemCount: visible.length,
-        itemBuilder: (_, i) => _wideCap(_bubble(visible[i])),
+        itemBuilder: (_, i) {
+          final e = visible[i];
+          final run = runs[i];
+          final at = _eventTime(e);
+          final prevAt = i > 0 ? _eventTime(visible[i - 1]) : null;
+          final showStamp = at != null &&
+              (prevAt == null ||
+                  !_sameDay(prevAt, at) ||
+                  (run.first &&
+                      at.difference(prevAt).abs() >=
+                          const Duration(minutes: 15)));
+          final stamp = showStamp ? _dayTimeStamp(at) : null;
+          final readLine = i == lastHumanIndex ? _readByLine(e) : null;
+          return _wideCap(
+            _item(
+              e,
+              index: i,
+              run: run,
+              stamp: stamp,
+              readLine: readLine,
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _bubble(CoordinationEvent e) {
-    if (e.payload['auto'] == 'ack') {
+  Widget _senderAvatar(String actorId) {
+    final size = ChatBubbleRow.avatarSize;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: ChatColors.cardButton,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: AgentMochi(actorId, size: size * 0.6),
+    );
+  }
+
+  Widget _item(
+    CoordinationEvent e, {
+    required int index,
+    required ({bool first, bool last}) run,
+    required (String, String)? stamp,
+    required String? readLine,
+  }) {
+    final sys = _systemText(e);
+    final topGap =
+        index == 0 ? 0.0 : (run.first ? ChatColors.groupGap : ChatColors.runGap);
+    if (sys != null) {
       return Padding(
-        padding: const EdgeInsets.all(4),
-        child: Text(e.body, style: sans(12, color: AppColors.fg3)),
-      );
-    }
-    final mine = e.actorKind == 'human';
-    final body = _mentionText(e.body);
-    if (mine) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(14, 9, 14, 10),
-            decoration: BoxDecoration(
-              color: AppColors.surface2,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: DefaultTextStyle.merge(
-              textWidthBasis: TextWidthBasis.longestLine,
-              child: body,
-            ),
-          ),
+        padding: EdgeInsets.only(top: topGap),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (stamp != null) ChatSystemLine(stamp.$2, bold: stamp.$1),
+            ChatSystemLine(sys),
+          ],
         ),
       );
     }
-    final name = groupMemberName(
-        GroupMember.fromJson({'kind': 'agent', 'id': e.actorId}), _agents);
+    final mine = e.actorKind == 'human';
+    final bubble = ChatBubble(
+      mine: mine,
+      tail: run.last,
+      child: _mentionText(e.body, mine: mine),
+    );
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.only(top: topGap),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment:
+            mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AgentMochi(e.actorId, size: 15),
-                const SizedBox(width: 5),
-                Text(name,
-                    style: sans(11, weight: W.label, color: AppColors.accent)),
-              ],
+          if (stamp != null) ChatSystemLine(stamp.$2, bold: stamp.$1),
+          if (!mine && run.first)
+            ChatSenderName(
+              _agentName(e.actorId),
+              indent: ChatBubbleRow.avatarSize + 6,
             ),
+          ChatBubbleRow(
+            mine: mine,
+            avatar: !mine && run.last ? _senderAvatar(e.actorId) : null,
+            avatarSlot: !mine && !run.last,
+            child: bubble,
           ),
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: body,
-          ),
+          if (readLine != null)
+            ChatSystemLine(readLine, align: Alignment.centerRight),
         ],
       ),
     );
   }
 
-  Widget _mentionText(String body) => SelectionArea(
-        child: Text.rich(
-          TextSpan(
-            style: TS.reading(AppColors.fg1),
-            children: groupMentionSpans(body, _mentionIds),
-          ),
+  Widget _mentionText(String body, {required bool mine}) {
+    final mentionStyle = mine
+        ? TextStyle(
+            color: ChatColors.sentText,
+            fontWeight: weightFor(W.strong),
+          )
+        : TextStyle(
+            color: ChatColors.receivedText,
+            fontWeight: FontWeight.w500,
+          );
+    return SelectionArea(
+      child: Text.rich(
+        TextSpan(
+          style: chatText(mine: mine),
+          children: [
+            for (final s in groupMentionSpans(body, _mentionIds))
+              s.style == null ? s : TextSpan(text: s.text, style: mentionStyle),
+          ],
         ),
-      );
+      ),
+    );
+  }
 
   Widget _wideCap(Widget child) => kMobile
       ? child
@@ -1190,9 +1352,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       padding: EdgeInsets.only(bottom: keyboard),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          kMobile ? M.gutter : (widget.embedded ? kComposerGutter : 20),
+          16,
           8,
-          kMobile ? M.gutter : (widget.embedded ? kComposerGutter : 20),
+          16,
           10 + (keyboard > 0 ? 8 : mq.padding.bottom),
         ),
         child: _wideCap(
