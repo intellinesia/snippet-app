@@ -31,6 +31,7 @@ import '../widgets.dart';
 import '../swr.dart';
 import '../pull_refresh.dart';
 import 'agent_records.dart';
+import 'agent_thread_cards.dart';
 import 'agent_view_switcher.dart';
 import 'mobile_chrome.dart';
 import '../mochi.dart';
@@ -1642,7 +1643,12 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                   padding: const EdgeInsets.only(left: 4, bottom: 2),
                   child: quotedLine,
                 ),
-              Bubble(mine: false, text: e.body, onLongPress: openActions),
+              agentThreadEventCard(
+                    e,
+                    client: widget.client,
+                    agentId: widget.agentId,
+                  ) ??
+                  Bubble(mine: false, text: e.body, onLongPress: openActions),
               if (chips != null)
                 Padding(
                   padding: const EdgeInsets.only(left: 4),

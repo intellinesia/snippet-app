@@ -496,9 +496,16 @@ class FileChip extends StatelessWidget {
 class VoiceNote extends StatefulWidget {
   final DaemonClient client;
   final String path;
+  final String? url;
+  final Duration? duration;
   final Widget? transcript;
   const VoiceNote(
-      {super.key, required this.client, required this.path, this.transcript});
+      {super.key,
+      required this.client,
+      this.path = '',
+      this.url,
+      this.duration,
+      this.transcript});
 
   @override
   State<VoiceNote> createState() => _VoiceNoteState();
@@ -513,6 +520,22 @@ class _VoiceNoteState extends State<VoiceNote> {
   Duration _duration = Duration.zero;
   String? _error;
 
+  @override
+  void initState() {
+    super.initState();
+    final d = widget.duration;
+    if (d != null && d > Duration.zero) _duration = d;
+  }
+
+  @override
+  void didUpdateWidget(covariant VoiceNote oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final d = widget.duration;
+    if (_duration == Duration.zero && d != null && d > Duration.zero) {
+      _duration = d;
+    }
+  }
+
   Future<void> _toggle() async {
     final player = _player ?? _attach();
     try {
@@ -522,7 +545,11 @@ class _VoiceNoteState extends State<VoiceNote> {
         await player.resume();
       } else {
         setState(() => _loading = true);
-        await player.play(UrlSource(widget.client.fileUrl(widget.path)));
+        final u = widget.url;
+        final src = (u != null && u.isNotEmpty)
+            ? u
+            : widget.client.fileUrl(widget.path);
+        await player.play(UrlSource(src));
       }
     } catch (e) {
       if (mounted) setState(() => _error = "Couldn't play this voice note");
@@ -622,7 +649,7 @@ class _VoiceNoteState extends State<VoiceNote> {
                             height: 22,
                             child: CustomPaint(
                               painter: _NoteWave(
-                                seed: widget.path.hashCode,
+                                seed: (widget.url ?? widget.path).hashCode,
                                 progress: progress,
                                 played: AppColors.fg1,
                                 rest: AppColors.fg4.withValues(alpha: 0.5),
