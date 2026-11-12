@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/models.dart';
 import 'package:snippet/screens/agent_wake_panel.dart';
 import 'package:snippet/screens/wakes_screen.dart';
 import 'package:snippet/theme.dart';
@@ -113,5 +114,24 @@ void main() {
     expect(find.byKey(const ValueKey('wake-scout')), findsOneWidget);
     expect(find.byKey(const ValueKey('warm-scout')), findsOneWidget);
     expect(find.textContaining('Session was busy'), findsOneWidget);
+  });
+
+  phone('a conversation kept warm shows its title and a readable reason',
+      (tester) async {
+    const id = 'snippet-mobile-8f8d/conversations/abc';
+    final c = FakeWakeClient(
+      warmState: KeepWarmEntry.fromJson(keepWarmJson(
+          owner: id,
+          ownerKind: 'session',
+          sessionId: id,
+          skipped: 'quiet hours')),
+    )..sessionList = [
+        SessionInfo.fromJson({'id': id, 'title': 'Wave 2 merge'})
+      ];
+    await _pump(tester, WakesScreen(client: c, embedded: true), scroll: false);
+    expect(find.text('Wave 2 merge'), findsOneWidget);
+    expect(find.text('Conversation · Paused for quiet hours'), findsOneWidget);
+    expect(find.textContaining('snippet-mobile-8f8d'), findsNothing);
+    expect(find.text('0 warms'), findsNothing);
   });
 }

@@ -51,11 +51,14 @@ Map<String, dynamic> keepWarmJson({
   bool enabled = true,
   String? skipped,
   String? provider,
+  String owner = 'scout',
+  String ownerKind = 'agent',
+  String sessionId = 'inbox-scout',
 }) =>
     {
-      'owner': 'scout',
-      'owner_kind': 'agent',
-      'session_id': 'inbox-scout',
+      'owner': owner,
+      'owner_kind': ownerKind,
+      'session_id': sessionId,
       'enabled': enabled,
       'interval_minutes': 4,
       'max_idle_hours': 2,
@@ -100,6 +103,12 @@ class FakeWakeClient extends DaemonClient {
   }) : super('https://daemon.invalid', 'test');
 
   WakeSchedule? wakeState;
+  List<SessionInfo> sessionList = const [];
+
+  @override
+  Future<List<SessionInfo>> sessions({String? folder, int? limit}) async =>
+      sessionList;
+
   KeepWarmEntry? warmState;
   List<WakeRun>? runs;
   final puts = <Map<String, dynamic>>[];
@@ -162,7 +171,10 @@ class FakeWakeClient extends DaemonClient {
   @override
   Future<List<TaskItem>> recentTasks(
           {required String status, required int limit}) async =>
-      (await tasks()).where((t) => t.status.wire == status).take(limit).toList();
+      (await tasks())
+          .where((t) => t.status.wire == status)
+          .take(limit)
+          .toList();
 
   @override
   Future<List<TaskItem>> tasks({
