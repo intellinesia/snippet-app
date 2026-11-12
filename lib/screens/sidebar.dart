@@ -997,10 +997,10 @@ class SidebarState extends State<Sidebar> {
     final rows = _groupedRows(list, attentionFirst: false);
     final mcSelected = mc != null && mc.id == widget.selectedSessionId;
     final mcWaiting = mc != null && mc.status == 'waiting_for_input';
-    final crewLine = _crew.isEmpty
+    String crewLine() => _crew.isEmpty
         ? 'Standing by'
-        : crewSummary(
-            deriveCrew(_crew, widget.sessions ?? const <SessionInfo>[]));
+        : crewSummary(deriveCrew(_crew, widget.sessions ?? const <SessionInfo>[],
+            presence: widget.client?.presence));
     final mcBusy = mc != null &&
         (sessionIsActive(mc.status) || mc.status == 'waiting_for_input');
     final sessionsBody =
@@ -1041,20 +1041,24 @@ class SidebarState extends State<Sidebar> {
                             const SizedBox(width: 4),
                           ],
                           Expanded(
-                            child: Text(
-                                mcWaiting
-                                    ? 'Waiting on you'
-                                    : mcBusy
-                                        ? 'Working'
-                                        : crewLine,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: sans(12,
-                                    color: mcWaiting
-                                        ? AppColors.run
-                                        : mcBusy
-                                            ? AppColors.fg1
-                                            : AppColors.fg4)),
+                            child: ListenableBuilder(
+                              listenable:
+                                  widget.client?.presence ?? _noPresence,
+                              builder: (_, __) => Text(
+                                  mcWaiting
+                                      ? 'Waiting on you'
+                                      : mcBusy
+                                          ? 'Working'
+                                          : crewLine(),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: sans(12,
+                                      color: mcWaiting
+                                          ? AppColors.run
+                                          : mcBusy
+                                              ? AppColors.fg1
+                                              : AppColors.fg4)),
+                            ),
                           ),
                         ]),
                       ],
@@ -1425,3 +1429,5 @@ class SidebarState extends State<Sidebar> {
         onRemove: (inst) => widget.onRemoveInstance(inst),
       );
 }
+
+final _noPresence = ValueNotifier<int>(0);

@@ -1274,11 +1274,19 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     final subtitle = (widget.subtitle ?? _fetchedLine ?? '').trim();
     if (kMobile) {
       // Back is the system gesture (iOS gets it from the Cupertino route).
-      return MobileStackedTitleBar(
-        title: widget.agentName,
-        subtitle: _viewLine,
-        onTap: _openViewMenu,
-        tapHint: 'Switch view',
+      final store = widget.client.presence;
+      return ListenableBuilder(
+        listenable: store,
+        builder: (_, __) {
+          final p = store.presenceForAgentId(widget.agentId);
+          return MobileStackedTitleBar(
+            title: widget.agentName,
+            subtitle:
+                p == null ? _viewLine : '$_viewLine \u00b7 ${PresenceStore.word(p)}',
+            onTap: _openViewMenu,
+            tapHint: 'Switch view',
+          );
+        },
       );
     }
     final canGoBack = !widget.embedded &&
