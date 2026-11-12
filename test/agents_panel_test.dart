@@ -14,11 +14,8 @@ import 'package:snippet/widgets.dart';
 /// The agents panel must read like every other sidebar panel.
 ///
 /// It did not: it drew its own 15px title while Terminals, Git Diff and the file
-/// tree all render the shared `ShellSectionHeader`, and its row names were
-/// hard-coded `W.label` while the canonical `ShellNavRow` is
-/// `selected ? W.label : W.body`. So an idle agent was heavier than an idle
-/// session in the same rail — which is what "looks like it had bold font"
-/// describes. `flutter analyze` cannot see any of it.
+/// tree all render the shared `ShellSectionHeader`. `flutter analyze` cannot
+/// see any of it.
 class _FakeAgentsClient extends DaemonClient {
   _FakeAgentsClient() : super('https://daemon.invalid', 'test-token');
 
@@ -76,16 +73,14 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('an idle agent name is not heavier than an idle session row',
+  testWidgets('an agent name renders at the roster weight cap',
       (tester) async {
     await asDesktop(() async {
       await pumpPanel(tester);
 
       final name = tester.widget<Text>(find.text('Ada'));
-      final style = name.style!;
-      expect(style.fontWeight, W.body,
-          reason: 'the canonical ShellNavRow is '
-              '`selected ? W.label : W.body`; an idle row must be 400');
+      expect(name.style!.fontWeight, W.title,
+          reason: 'roster names are weight 500, the cap');
     });
   });
 
@@ -241,6 +236,11 @@ class _CustomAgentsClient extends DaemonClient {
   final List<CoordinationAgent> _agents;
   _CustomAgentsClient(this._agents)
       : super('https://daemon.invalid', 'test-token');
+
+  final _deviceEvents = DeviceEventHub.local();
+
+  @override
+  DeviceEventHub get deviceEvents => _deviceEvents;
 
   @override
   Future<List<CoordinationAgent>> coordinationAgents() async => _agents;

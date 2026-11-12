@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../crew_status.dart';
-import '../crew_widgets.dart' show crewColor, showCrewAgentMenu;
+import '../crew_widgets.dart' show showCrewAgentMenu;
 import '../mochi.dart';
 import '../models.dart';
 import '../presence.dart';
@@ -12,6 +12,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../swr.dart';
 import '../widgets.dart' show AppIcon;
+import 'agent_card.dart' show agentPresenceRingColor;
 import 'agents_sidebar_panel.dart' show showCreateAgentDialog;
 import 'mission_control/mission_control_state.dart' show isDedicatedMcSession;
 import 'shell_nav.dart' show sessionIsActive;
@@ -189,6 +190,7 @@ class _AgentRailState extends State<AgentRail> {
                     key: ValueKey('rail-agent-${e.agent.id}'),
                     selected: widget.selectedAgentId == e.agent.id,
                     state: e.state,
+                    dotColor: _dotColor(e),
                     unread: _unread[e.agent.id] ?? 0,
                     tooltip: _agentTip(e),
                     onTap: () => widget.onOpenAgent(e.agent),
@@ -224,6 +226,21 @@ class _AgentRailState extends State<AgentRail> {
   }
 }
 
+/// The tile's state dot: the live presence colour when there is one, else
+/// the crew fallback (needs you amber, working green, idle none).
+Color? _dotColor(CrewEntry e) {
+  final p = e.presence;
+  if (p != null && p.active) {
+    return agentPresenceRingColor(
+        p.state == 'tool' || p.state == 'running' ? 'working' : p.state);
+  }
+  return switch (e.state) {
+    CrewState.needsYou => AppColors.run,
+    CrewState.working => AppColors.ok,
+    CrewState.standingBy => null,
+  };
+}
+
 String _stateWord(CrewState s) => switch (s) {
       CrewState.needsYou => 'Needs you',
       CrewState.working => 'Working',
@@ -250,6 +267,7 @@ class _RailTile extends StatefulWidget {
     this.onMenu,
     this.selected = false,
     this.state = CrewState.standingBy,
+    this.dotColor,
     this.unread = 0,
     this.dashed = false,
   });
@@ -260,6 +278,9 @@ class _RailTile extends StatefulWidget {
   final void Function(BuildContext, Offset)? onMenu;
   final bool selected;
   final CrewState state;
+
+  /// Overrides the state-derived dot colour (presence wins).
+  final Color? dotColor;
   final int unread;
   final bool dashed;
 
@@ -273,8 +294,12 @@ class _RailTileState extends State<_RailTile> {
   @override
   Widget build(BuildContext context) {
     final sel = widget.selected;
-    final dot =
-        widget.state == CrewState.standingBy ? null : crewColor(widget.state);
+    final dot = widget.dotColor ??
+        switch (widget.state) {
+          CrewState.needsYou => AppColors.run,
+          CrewState.working => AppColors.ok,
+          CrewState.standingBy => null,
+        };
     final bg = sel
         ? AppColors.surface3
         : _hover
@@ -312,7 +337,7 @@ class _RailTileState extends State<_RailTile> {
                   width: 3,
                   height: sel ? 18 : (_hover ? 8 : 0),
                   decoration: BoxDecoration(
-                    color: AppColors.accent,
+                    color: AppColors.fg3,
                     borderRadius: const BorderRadius.horizontal(
                         right: Radius.circular(3)),
                   ),
@@ -332,7 +357,7 @@ class _RailTileState extends State<_RailTile> {
                       borderRadius: BorderRadius.circular(sel ? 12 : 10),
                       border: Border.all(
                         color: sel
-                            ? AppColors.accent.withValues(alpha: 0.85)
+                            ? AppColors.lineStrong
                             : widget.dashed
                                 ? AppColors.line
                                 : Colors.transparent,
@@ -366,13 +391,12 @@ class _RailTileState extends State<_RailTile> {
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: AppColors.accentFill,
+                          color: AppColors.fg2,
                           borderRadius: BorderRadius.circular(8),
                           border:
                               Border.all(color: AppColors.windowBg, width: 2),
                         ),
-                        child:
-                            Text(count, style: TS.caption(AppColors.accentFg)),
+                        child: Text(count, style: TS.caption(AppColors.bg)),
                       ),
                     ),
                 ]),
