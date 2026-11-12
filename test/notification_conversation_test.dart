@@ -28,13 +28,13 @@ class ThreadClient extends DaemonClient {
         }),
       ];
   @override
-  Future<List<CoordinationEvent>> agentThread(
+  Future<DirectThreadPage> agentThreadPage(
           {required String peerId,
           String actorKind = 'human',
           String actorId = 'local',
           int afterSequence = 0,
           int limit = 100}) async =>
-      [];
+      const DirectThreadPage(events: []);
   @override
   Future<void> markAgentThreadRead(
       {required String peerId,

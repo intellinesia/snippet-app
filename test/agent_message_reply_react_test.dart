@@ -46,14 +46,14 @@ class _FakeClient extends DaemonClient {
   DeviceEventHub get deviceEvents => _events;
 
   @override
-  Future<List<CoordinationEvent>> agentThread({
+  Future<DirectThreadPage> agentThreadPage({
     required String peerId,
     String actorKind = 'human',
     String actorId = 'local',
     int afterSequence = 0,
     int limit = 100,
   }) async =>
-      List<CoordinationEvent>.of(thread);
+      DirectThreadPage(events: List<CoordinationEvent>.of(thread));
 
   @override
   Future<List<CoordinationAgent>> coordinationAgents() async => const [];

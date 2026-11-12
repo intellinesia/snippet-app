@@ -1681,7 +1681,7 @@ class DaemonClient {
   ///
   /// The thread is derived from the pair server-side, so a client never needs to
   /// know or remember a thread id.
-  Future<List<CoordinationEvent>> agentThread({
+  Future<DirectThreadPage> agentThreadPage({
     required String peerId,
     String actorKind = 'human',
     String actorId = 'local',
@@ -1697,11 +1697,26 @@ class DaemonClient {
       'limit': '$limit',
     }));
     if (r.statusCode != 200) throw _err('read agent thread', r);
-    final events = (jsonDecode(r.body) as Map<String, dynamic>)['events'];
-    return ((events as List?) ?? const [])
-        .map((e) => CoordinationEvent.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return DirectThreadPage.fromJson(
+        jsonDecode(r.body) as Map<String, dynamic>);
   }
+
+  /// GET /coordination/direct/messages — events only, for older callers.
+  Future<List<CoordinationEvent>> agentThread({
+    required String peerId,
+    String actorKind = 'human',
+    String actorId = 'local',
+    int afterSequence = 0,
+    int limit = 100,
+  }) async =>
+      (await agentThreadPage(
+        peerId: peerId,
+        actorKind: actorKind,
+        actorId: actorId,
+        afterSequence: afterSequence,
+        limit: limit,
+      ))
+          .events;
 
   /// GET /coordination/direct/threads — conversations with unread counts.
   Future<List<DirectThreadSummary>> directThreads({

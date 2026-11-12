@@ -54,6 +54,16 @@ class _Client extends DaemonClient {
       thread;
 
   @override
+  Future<DirectThreadPage> agentThreadPage({
+    required String peerId,
+    String actorKind = 'human',
+    String actorId = 'local',
+    int afterSequence = 0,
+    int limit = 100,
+  }) async =>
+      DirectThreadPage(events: thread);
+
+  @override
   Future<List<ArtifactInfo>> artifacts(String session) async => artifactList;
 }
 

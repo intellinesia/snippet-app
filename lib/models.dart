@@ -1407,6 +1407,49 @@ class CoordinationEvent {
       (payload['to'] as List?)?.whereType<String>().toList() ?? const [];
 }
 
+class MessageDelivery {
+  final DateTime? deliveredAt;
+  final DateTime? readAt;
+
+  const MessageDelivery({this.deliveredAt, this.readAt});
+
+  factory MessageDelivery.fromJson(Map<String, dynamic> j) => MessageDelivery(
+        deliveredAt: _deliveryTime(j['delivered_at']),
+        readAt: _deliveryTime(j['read_at']),
+      );
+}
+
+DateTime? _deliveryTime(Object? value) =>
+    value is String ? DateTime.tryParse(value) : null;
+
+class DirectThreadPage {
+  final List<CoordinationEvent> events;
+  final Map<String, MessageDelivery> deliveries;
+
+  const DirectThreadPage({required this.events, this.deliveries = const {}});
+
+  factory DirectThreadPage.fromJson(Map<String, dynamic> j) {
+    final deliveries = <String, MessageDelivery>{};
+    final raw = j['deliveries'];
+    if (raw is Map) {
+      for (final entry in raw.entries) {
+        final key = entry.key;
+        final value = entry.value;
+        if (key is String && value is Map) {
+          deliveries[key] =
+              MessageDelivery.fromJson(value.cast<String, dynamic>());
+        }
+      }
+    }
+    return DirectThreadPage(
+      events: ((j['events'] as List?) ?? const [])
+          .map((e) => CoordinationEvent.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      deliveries: deliveries,
+    );
+  }
+}
+
 /// A task tracked by Mission Control.
 class MissionControlTask {
   final String id;
