@@ -333,7 +333,7 @@ class ChatGlassButton extends StatelessWidget {
                         borderRadius: BorderRadius.circular(9)),
                     alignment: Alignment.center,
                     child: Text('${badge!}',
-                        style: sans(10.5,
+                        style: sans(11,
                             weight: W.label, color: ChatColors.onAction)),
                   ),
                 ),

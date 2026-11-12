@@ -512,6 +512,16 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         AgentView.thread => const [],
       };
 
+  String get _viewLine {
+    final view = switch (_view) {
+      AgentView.thread => 'Chat',
+      AgentView.inbox => 'Inbox',
+      AgentView.board => 'Board',
+    };
+    final f = _filters.where((f) => f.$2 != null && f.$2 == _filter);
+    return f.isEmpty ? view : '$view \u00b7 ${f.first.$1}';
+  }
+
   /// The title menu: the views, the open view's filters, and the rest
   /// of the agent behind More actions.
   Future<void> _openViewMenu({BuildContext? anchor}) async {
@@ -1463,7 +1473,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       key: _headerKey,
       agentIds: [widget.agentId],
       title: widget.agentName,
-      status: _headerStatus(subtitle),
+      status: _view == AgentView.thread
+          ? _headerStatus(subtitle)
+          : ChatHeader.statusText(_viewLine),
       onTitleTap: () => _openViewMenu(
           anchor: kMobile ? null : _headerKey.currentContext),
       titleHint: 'Switch view',

@@ -87,7 +87,8 @@ void main() {
     await _settle(t);
 
     expect(find.byType(AgentViewSwitcher), findsNothing);
-    expect(find.text('Chat'), findsOneWidget);
+    // The chat view's header shows presence, not the view name.
+    expect(find.text('Chat'), findsNothing);
 
     await t.tap(find.text('Growth').first);
     await _settle(t);
