@@ -4,10 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
+import 'package:snippet/chat/agent_details.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/agent_messaging.dart';
 import 'package:snippet/screens/agent_view_switcher.dart';
 import 'package:snippet/swr.dart';
+import 'package:snippet/wake_models.dart';
 
 class _Client extends DaemonClient {
   _Client() : super('https://daemon.invalid', 'test-token');
@@ -26,6 +28,24 @@ class _Client extends DaemonClient {
           int afterSequence = 0,
           int limit = 100}) async =>
       const DirectThreadPage(events: []);
+
+  @override
+  Future<AgentNow?> agentNow(String agentId) async => null;
+
+  @override
+  Future<AgentReach> agentReach(String agentId) async =>
+      const AgentReach(policy: {}, channels: {});
+
+  @override
+  Future<KeepWarmEntry?> keepWarmFor(String owner) async => null;
+
+  @override
+  Future<List<MemoryScope>> memoryScopes() async => const [];
+
+  @override
+  Future<List<TaskItem>> tasks(
+          {String? status, String? agentId, int? limit}) async =>
+      const [];
 
   @override
   Future<List<CoordinationAgent>> coordinationAgents() async => [
@@ -61,13 +81,6 @@ Future<void> _settle(WidgetTester t) async {
   }
 }
 
-Future<void> _pick(WidgetTester t, String label) async {
-  await t.tap(find.text('Growth').first);
-  await _settle(t);
-  await t.tap(find.text(label).last);
-  await _settle(t);
-}
-
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -75,7 +88,7 @@ void main() {
   });
   tearDown(() => debugDefaultTargetPlatformOverride = null);
 
-  testWidgets('the phone title switches views and filters and opens actions',
+  testWidgets('the phone title opens the agent details sheet with tabs and actions',
       (t) async {
     t.view.physicalSize = const Size(390, 844) * 3;
     t.view.devicePixelRatio = 3;
@@ -87,33 +100,33 @@ void main() {
     await _settle(t);
 
     expect(find.byType(AgentViewSwitcher), findsNothing);
-    // The chat view's header shows presence, not the view name.
     expect(find.text('Chat'), findsNothing);
 
     await t.tap(find.text('Growth').first);
     await _settle(t);
-    for (final row in ['Inbox', 'Board', 'Desk session', 'More actions']) {
-      expect(find.text(row), findsOneWidget, reason: row);
+
+    expect(find.byType(AgentDetails), findsOneWidget);
+    for (final label in ['Desk', 'Tasks', 'More', 'Info', 'Inbox', 'Board']) {
+      expect(find.text(label), findsWidgets, reason: label);
     }
-    expect(find.text('Show'), findsNothing);
+    expect(find.text('Call'), findsNothing);
+
     await t.tap(find.text('Board'));
     await _settle(t);
-
-    expect(find.text('Board'), findsOneWidget);
-    expect(find.text('By task'), findsNothing, reason: 'no chips row');
     expect(client.boardCalls.last, (null, false, null));
 
-    await _pick(t, 'Waiting');
-    expect(find.text('Board · Waiting'), findsOneWidget);
+    await t.tap(find.text('Waiting'));
+    await _settle(t);
     expect(client.boardCalls.last, (null, true, null));
 
-    await _pick(t, 'Inbox');
-    expect(find.text('Inbox'), findsOneWidget);
-    await _pick(t, 'Task rooms');
-    expect(find.text('Inbox · Task rooms'), findsOneWidget);
+    await t.tap(find.text('Inbox'));
+    await _settle(t);
+    await t.tap(find.text('Task rooms'));
+    await _settle(t);
     expect(client.inboxKinds.last, 'room');
 
-    await _pick(t, 'More actions');
+    await t.tap(find.text('More'));
+    await _settle(t);
     expect(find.text('Actions'), findsOneWidget);
     for (final row in [
       'Memory',
@@ -125,7 +138,6 @@ void main() {
       expect(find.text(row), findsOneWidget, reason: row);
     }
     expect(find.text('Desk session'), findsNothing);
-    expect(find.text('Board'), findsNothing);
     debugDefaultTargetPlatformOverride = null;
   });
 }
