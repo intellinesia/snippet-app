@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -20,10 +21,7 @@ class ColdTab extends StatelessWidget {
   final int? resumeTokens;
   final ValueChanged<String> onPick;
   const ColdTab(
-      {super.key,
-      required this.mode,
-      this.resumeTokens,
-      required this.onPick});
+      {super.key, required this.mode, this.resumeTokens, required this.onPick});
 
   Future<void> _changeMode(BuildContext context) async {
     final picked = await showAppMenu<String>(
@@ -43,28 +41,26 @@ class ColdTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens =
-        resumeTokens == null ? null : '~${_tokens(resumeTokens!)}';
+    final tokens = resumeTokens == null ? null : '~${_tokens(resumeTokens!)}';
     final label = switch (mode) {
-      'lean' => 'Cold · resumes lean',
+      'lean' => 'Cache cold · resumes lean',
       'full' => tokens == null
-          ? 'Cold · resumes full'
-          : 'Cold · resumes full · $tokens',
-      _ => tokens == null ? 'Cold' : 'Cold · $tokens to re-read',
+          ? 'Cache cold · resumes full'
+          : 'Cache cold · resumes full, $tokens',
+      _ => 'Cache cold · resume',
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      height: kMobile ? 36 : 30,
+      padding: const EdgeInsets.only(left: 12, right: 2),
       decoration: BoxDecoration(
         color: AppColors.surface2,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(10)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
         border: Border(
-            bottom: BorderSide(
-                color: AppColors.fg1.withValues(alpha: 0.08))),
+            bottom: BorderSide(color: AppColors.fg1.withValues(alpha: 0.08))),
       ),
       child: Row(children: [
         AppIcon('clock', size: 13, color: AppColors.fg3),
-        const SizedBox(width: 7),
+        const SizedBox(width: 8),
         Expanded(
           child: Text(label,
               maxLines: 1,
@@ -72,15 +68,34 @@ class ColdTab extends StatelessWidget {
               style: sans(12, color: AppColors.fg3)),
         ),
         if (mode == 'ask') ...[
-          Btn('Full',
-              small: true,
-              variant: BtnVariant.secondary,
+          _Choice('Lean', strong: true, onTap: () => onPick('lean')),
+          _Choice(tokens == null ? 'Full' : 'Full $tokens',
               onTap: () => onPick('full')),
-          const SizedBox(width: 6),
-          Btn('Lean', small: true, onTap: () => onPick('lean')),
         ] else
-          TextAction('Change', onTap: () => _changeMode(context)),
+          _Choice('Change', onTap: () => _changeMode(context)),
       ]),
     );
   }
+}
+
+class _Choice extends StatelessWidget {
+  final String label;
+  final bool strong;
+  final VoidCallback onTap;
+  const _Choice(this.label, {this.strong = false, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Center(
+            child: Text(label,
+                style: sans(12,
+                    weight: FontWeight.w500,
+                    color: strong ? AppColors.accent : AppColors.fg2)),
+          ),
+        ),
+      );
 }

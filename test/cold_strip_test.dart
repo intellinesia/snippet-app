@@ -11,8 +11,7 @@ Widget _tab(String mode, void Function(String) onPick,
         body: Center(
           child: SizedBox(
             width: 360,
-            child: ColdTab(
-                mode: mode, resumeTokens: tokens, onPick: onPick),
+            child: ColdTab(mode: mode, resumeTokens: tokens, onPick: onPick),
           ),
         ),
       ),
@@ -25,14 +24,14 @@ void main() {
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     final picks = <String>[];
     await tester.pumpWidget(_tab('ask', picks.add));
-    expect(find.textContaining('Cold · ~152k to re-read'), findsOneWidget);
+    expect(find.text('Cache cold · resume'), findsOneWidget);
     expect(find.text('Lean'), findsOneWidget);
-    expect(find.text('Full'), findsOneWidget);
+    expect(find.text('Full ~152k'), findsOneWidget);
     final size = tester.getSize(find.byType(ColdTab));
     expect(size.width, lessThanOrEqualTo(360));
     expect(size.height, lessThanOrEqualTo(32));
     await tester.tap(find.text('Lean'));
-    await tester.tap(find.text('Full'));
+    await tester.tap(find.text('Full ~152k'));
     expect(picks, ['lean', 'full']);
     debugDefaultTargetPlatformOverride = null;
   });
@@ -43,7 +42,7 @@ void main() {
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     final picks = <String>[];
     await tester.pumpWidget(_tab('lean', picks.add));
-    expect(find.text('Cold · resumes lean'), findsOneWidget);
+    expect(find.text('Cache cold · resumes lean'), findsOneWidget);
     expect(find.text('Change'), findsOneWidget);
     await tester.tap(find.text('Change'));
     await tester.pumpAndSettle();
@@ -60,8 +59,7 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     await tester.pumpWidget(_tab('full', (_) {}));
-    expect(find.textContaining('Cold · resumes full · ~152k'),
-        findsOneWidget);
+    expect(find.text('Cache cold · resumes full, ~152k'), findsOneWidget);
     expect(find.text('Change'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
