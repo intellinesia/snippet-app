@@ -86,7 +86,7 @@ class _SessionGroupHeaderState extends State<SessionGroupHeader> {
   @override
   Widget build(BuildContext context) {
     final labelColor = widget.needsYou ? AppColors.run : AppColors.fg4;
-    final countStyle = TS.caption(AppColors.fg4).copyWith(
+    final countStyle = TS.caption(labelColor).copyWith(
         fontFamily: monoFamily,
         fontSize: 11,
         fontWeight: W.body,
@@ -277,11 +277,13 @@ class SessionListRow extends StatelessWidget {
                     const WorkingDots(),
                     const SizedBox(width: 5),
                     Text('Working',
-                        maxLines: 1, style: TS.caption(AppColors.accent)),
+                        maxLines: 1,
+                        style: (kMobile ? TS.meta : TS.caption)(AppColors.accent)),
                   ] else if (renameField == null && timeText.isNotEmpty) ...[
                     const SizedBox(width: 8),
                     Text(timeText,
-                        maxLines: 1, style: TS.caption(timeColor)),
+                        maxLines: 1,
+                        style: (kMobile ? TS.meta : TS.caption)(timeColor)),
                   ],
                 ]),
               ),
