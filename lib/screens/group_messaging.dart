@@ -17,7 +17,6 @@ import '../swr.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'mobile_chrome.dart';
-import 'shell_nav.dart';
 
 /// An `@token` in a group message: the boundary keeps `mail@fable` from
 /// counting as a mention.
@@ -71,8 +70,7 @@ List<TextSpan> groupMentionSpans(String text, Set<String> memberIds) {
   return spans;
 }
 
-String groupMemberName(
-    GroupMember m, Map<String, CoordinationAgent> agents) {
+String groupMemberName(GroupMember m, Map<String, CoordinationAgent> agents) {
   if (m.isHuman) return 'You';
   final a = agents[m.id];
   if (a == null) return m.id;
@@ -92,10 +90,9 @@ void openGroupThread(
           group: group,
           onClose: () => Navigator.pop(context),
         );
-    Navigator.of(context).push<void>(
-        defaultTargetPlatform == TargetPlatform.iOS
-            ? CupertinoPageRoute(builder: page)
-            : MaterialPageRoute(builder: page));
+    Navigator.of(context).push<void>(defaultTargetPlatform == TargetPlatform.iOS
+        ? CupertinoPageRoute(builder: page)
+        : MaterialPageRoute(builder: page));
     return;
   }
   presentScreen(
@@ -115,92 +112,17 @@ void openGroupThread(
   );
 }
 
-/// The `Groups` section of the agents list: every group chat, plus the
-/// create action. Renders nothing until the groups endpoint answers, so a
-/// daemon that predates groups leaves the panel untouched.
-class GroupsSection extends StatefulWidget {
-  const GroupsSection({super.key, required this.client});
-
-  final DaemonClient client;
-
-  @override
-  State<GroupsSection> createState() => _GroupsSectionState();
+/// Create a group chat, then open it. Returns the group, or null if cancelled.
+Future<GroupSummary?> createAndOpenGroup(
+    BuildContext context, DaemonClient client) async {
+  final group = await showCreateGroupSheet(context, client: client);
+  if (group == null || !context.mounted) return null;
+  openGroupThread(context, client: client, group: group);
+  return group;
 }
 
-class _GroupsSectionState extends State<GroupsSection> {
-  late final Swr<List<GroupSummary>> _groups;
-  List<GroupSummary> _items = const [];
-
-  @override
-  void initState() {
-    super.initState();
-    _groups = Swr<List<GroupSummary>>(
-      client: widget.client,
-      key: 'groups',
-      fetch: widget.client.groups,
-      // No revalidateOn: the list refreshes on open/create and app resume.
-      // Subscribing to device events here would open the events socket from
-      // every panel host, including tests with stub clients.
-      onChange: _sync,
-    );
-    _items = _groups.data ?? const [];
-  }
-
-  @override
-  void dispose() {
-    _groups.dispose();
-    super.dispose();
-  }
-
-  void _sync() {
-    if (!mounted) return;
-    setState(() => _items = _groups.data ?? const []);
-  }
-
-  Future<void> _create() async {
-    final group = await showCreateGroupSheet(context, client: widget.client);
-    if (group == null || !mounted) return;
-    openGroupThread(context, client: widget.client, group: group);
-    _groups.refresh();
-  }
-
-  Future<void> _open(GroupSummary group) async {
-    openGroupThread(context, client: widget.client, group: group);
-    _groups.refresh();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // A daemon without the groups routes errors here; the section stays out of
-    // the way rather than covering the agents list with a failure.
-    if (_groups.data == null) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ShellSectionHeader(
-          label: 'Groups',
-          actions: [
-            ShellSectionAction(
-              icon: 'plus',
-              tooltip: 'New group',
-              onTap: _create,
-            ),
-          ],
-        ),
-        for (final g in _items) _GroupRow(group: g, onTap: () => _open(g)),
-        if (_items.isEmpty)
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-                kMobile ? M.gutter : 20, 4, kMobile ? M.gutter : 20, 12),
-            child: Text('No groups yet.', style: TS.meta()),
-          ),
-      ],
-    );
-  }
-}
-
-class _GroupRow extends StatelessWidget {
-  const _GroupRow({required this.group, required this.onTap});
+class GroupRow extends StatelessWidget {
+  const GroupRow({super.key, required this.group, required this.onTap});
 
   final GroupSummary group;
   final VoidCallback onTap;
@@ -256,8 +178,7 @@ class _GroupRow extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: AppColors.surface2,
                               shape: BoxShape.circle,
-                              border:
-                                  Border.all(color: AppColors.bg, width: 1),
+                              border: Border.all(color: AppColors.bg, width: 1),
                             ),
                             alignment: Alignment.center,
                             child: Text(
@@ -281,8 +202,7 @@ class _GroupRow extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: TS.rowTitle(AppColors.fg1)),
                         const SizedBox(height: 2),
-                        Text(
-                            unread > 0 ? '$line · $unread unread' : line,
+                        Text(unread > 0 ? '$line · $unread unread' : line,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TS.meta(AppColors.fg3)),
@@ -330,8 +250,8 @@ class _GroupRow extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: AppColors.surface3,
                           shape: BoxShape.circle,
-                          border: Border.all(
-                              color: AppColors.windowBg, width: 1),
+                          border:
+                              Border.all(color: AppColors.windowBg, width: 1),
                         ),
                         alignment: Alignment.center,
                         child: Text(
@@ -353,14 +273,14 @@ class _GroupRow extends StatelessWidget {
                       child: Text(name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(13,
-                              weight: W.body, color: AppColors.fg1)),
+                          style:
+                              sans(13, weight: W.body, color: AppColors.fg1)),
                     ),
                     if (unread > 0) ...[
                       const SizedBox(width: 6),
                       Text('$unread',
-                          style: sans(11,
-                              color: AppColors.accent, tabular: true)),
+                          style:
+                              sans(11, color: AppColors.accent, tabular: true)),
                     ],
                   ]),
                   const SizedBox(height: 2),
@@ -712,9 +632,8 @@ class _GroupMembersSheetState extends State<GroupMembersSheet> {
                 TextButton(
                   onPressed: _busy
                       ? null
-                      : () => _update(
-                          () => widget.client
-                              .updateGroup(_group.id, lead: m.id)),
+                      : () => _update(() =>
+                          widget.client.updateGroup(_group.id, lead: m.id)),
                   child: Text('Make lead', style: TS.label(AppColors.accent)),
                 ),
               if (!m.isHuman)
@@ -725,8 +644,8 @@ class _GroupMembersSheetState extends State<GroupMembersSheet> {
                   tooltip: 'Remove',
                   onTap: _busy
                       ? null
-                      : () => _update(() => widget.client.updateGroup(_group.id,
-                          removeMembers: [m.id])),
+                      : () => _update(() => widget.client
+                          .updateGroup(_group.id, removeMembers: [m.id])),
                 ),
             ]),
           ),
@@ -910,8 +829,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     if (next != null) {
       final ids = {for (final e in next) e.eventId};
       final keys = {for (final e in next) e.idempotencyKey};
-      _pending.removeWhere((p) =>
-          ids.contains(p.eventId) || keys.contains(p.idempotencyKey));
+      _pending.removeWhere(
+          (p) => ids.contains(p.eventId) || keys.contains(p.idempotencyKey));
     }
     final merged = next == null ? null : [...next, ..._pending];
     final hadNew = merged != null && merged.length > _events.length;
@@ -1189,8 +1108,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                 AgentMochi(e.actorId, size: 15),
                 const SizedBox(width: 5),
                 Text(name,
-                    style:
-                        sans(11, weight: W.label, color: AppColors.accent)),
+                    style: sans(11, weight: W.label, color: AppColors.accent)),
               ],
             ),
           ),
@@ -1246,8 +1164,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                     const SingleActivator(LogicalKeyboardKey.enter): () {
                       if (!kMobile) _send();
                     },
-                    const SingleActivator(LogicalKeyboardKey.enter,
-                        meta: true): _send,
+                    const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+                        _send,
                     const SingleActivator(LogicalKeyboardKey.enter,
                         control: true): _send,
                   },
@@ -1261,8 +1179,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                       if (!kMobile) _send();
                     },
                     style: TS.body(AppColors.fg1),
-                    decoration:
-                        ComposerCard.decoration('Message the group…'),
+                    decoration: ComposerCard.decoration('Message the group…'),
                   ),
                 ),
                 send: ValueListenableBuilder<TextEditingValue>(
