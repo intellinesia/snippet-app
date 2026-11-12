@@ -12,9 +12,13 @@ import '../widgets.dart';
 class ChatColors {
   static bool get light => AppColors.bg.computeLuminance() > 0.18;
 
-  static const blue = Color(0xFF0A84FF);
-  static const sent = Color(0xFF0A84FF);
-  static const sentText = Color(0xFFFFFFFF);
+  /// Primary actions only (one per view): the theme accent, never a fixed hue.
+  static Color get action => AppColors.accent;
+  static Color get onAction => AppColors.accentFg;
+  @Deprecated('Use action')
+  static Color get blue => action;
+  static Color get sent => const Color(0xFF0A84FF);
+  static Color get sentText => const Color(0xFFFFFFFF);
   static Color get received =>
       light ? const Color(0xFFE9E9EB) : const Color(0xFF26262A);
   static Color get receivedText =>
@@ -52,9 +56,9 @@ MarkdownStyleSheet chatMarkdownStyle(BuildContext context, {required bool mine})
     strong: prose.copyWith(fontWeight: weightFor(W.strong)),
     em: prose.copyWith(fontStyle: FontStyle.italic),
     a: prose.copyWith(
-        color: mine ? ChatColors.sentText : ChatColors.blue,
+        color: mine ? ChatColors.sentText : ChatColors.action,
         decoration: TextDecoration.underline,
-        decorationColor: (mine ? ChatColors.sentText : ChatColors.blue).withValues(alpha: 0.5)),
+        decorationColor: (mine ? ChatColors.sentText : ChatColors.action).withValues(alpha: 0.5)),
     listBullet: soft,
     blockquote: soft.copyWith(fontStyle: FontStyle.italic),
     h1: prose.copyWith(fontSize: ChatColors.fontSize + 3, fontWeight: weightFor(W.strong)),
@@ -265,7 +269,7 @@ class ChatSystemLine extends StatelessWidget {
                 child: GestureDetector(
                   onTap: action!.$2,
                   child: Text(action!.$1,
-                      style: style.copyWith(color: ChatColors.blue)),
+                      style: style.copyWith(color: ChatColors.action)),
                 ),
               ),
             ],
@@ -324,12 +328,12 @@ class ChatGlassButton extends StatelessWidget {
                         const BoxConstraints(minWidth: 17, minHeight: 17),
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
-                        color: ChatColors.blue,
+                        color: ChatColors.action,
                         borderRadius: BorderRadius.circular(9)),
                     alignment: Alignment.center,
                     child: Text('${badge!}',
                         style: sans(10.5,
-                            weight: W.label, color: ChatColors.sentText)),
+                            weight: W.label, color: ChatColors.onAction)),
                   ),
                 ),
             ]),
