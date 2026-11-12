@@ -9,6 +9,7 @@ import 'package:web_socket_channel/io.dart' as ws_io;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'response_cache.dart';
+import 'presence.dart';
 import 'swr.dart';
 import 'mochi.dart';
 import 'models.dart';
@@ -252,6 +253,7 @@ class DaemonClient {
   /// the notification watcher so the session list can update live even when
   /// OS banners are off.
   late final DeviceEventHub deviceEvents = DeviceEventHub(events);
+  late final PresenceStore presence = PresenceStore(deviceEvents.stream);
   final SwrCache swr = SwrCache();
 
   WebSocketChannel events() {

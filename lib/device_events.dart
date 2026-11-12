@@ -8,6 +8,10 @@ class DeviceEvent {
   final String session;
   final String status;
   final String queueId;
+  final String agent;
+  final String state;
+  final String detail;
+  final int since;
   final Map<String, dynamic>? notification;
 
   const DeviceEvent({
@@ -16,6 +20,10 @@ class DeviceEvent {
     this.session = '',
     this.status = '',
     this.queueId = '',
+    this.agent = '',
+    this.state = '',
+    this.detail = '',
+    this.since = 0,
     this.notification,
   });
 
@@ -27,6 +35,10 @@ class DeviceEvent {
       session: raw['session']?.toString() ?? '',
       status: raw['status']?.toString() ?? '',
       queueId: raw['queue_id']?.toString() ?? '',
+      agent: raw['agent']?.toString() ?? '',
+      state: raw['state']?.toString() ?? '',
+      detail: raw['detail']?.toString() ?? '',
+      since: raw['since'] is num ? (raw['since'] as num).toInt() : 0,
       notification: raw['notification'] is Map<String, dynamic>
           ? raw['notification'] as Map<String, dynamic>
           : null,

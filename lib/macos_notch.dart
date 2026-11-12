@@ -247,6 +247,7 @@ class MacosNotch {
             if (wire == 'stream') {
               final append = j['append'] == true;
               final chunk = (j['text'] as String?) ?? '';
+              if (j['voice'] == true) return;
               _mcLiveStreamText = append ? _mcLiveStreamText + chunk : chunk;
               if (_activeSessionId == 'mission-control') {
                 _activeState = _mcState;
@@ -454,6 +455,7 @@ class MacosNotch {
           if (wire == 'stream') {
             final append = j['append'] == true;
             final chunk = (j['text'] as String?) ?? '';
+            if (j['voice'] == true) return;
             _liveStreamText = append ? _liveStreamText + chunk : chunk;
             _emitSessionMessages();
             return;
@@ -572,6 +574,7 @@ class MacosNotch {
         messages
             .add({'role': 'user', 'text': text, 'meta': '', 'type': 'message'});
       } else if (kind == 'assistant_text' || kind == 'assistant') {
+        if (quietAssistantEvent(e)) continue;
         var text = ((e['text'] as String?) ?? '').trim();
         final idx = state.events.indexOf(e);
         if (idx > 0) {

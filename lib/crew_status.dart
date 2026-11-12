@@ -1,4 +1,5 @@
 import 'models.dart';
+import 'presence.dart';
 
 enum CrewState { needsYou, working, standingBy }
 
@@ -8,6 +9,7 @@ class CrewEntry {
     required this.state,
     required this.sessions,
     required this.lead,
+    this.presence,
   });
 
   final CoordinationAgent agent;
@@ -20,6 +22,32 @@ class CrewEntry {
   /// one, else the latest.
   final SessionInfo? lead;
 
+  final Presence? presence;
+
+  /// Presence word for a working agent: Thinking, Typing, Running, Waiting.
+  String? get presenceWord {
+    final p = presence;
+    if (p == null || state != CrewState.working) return null;
+    return switch (p.state) {
+      'thinking' => 'Thinking',
+      'typing' => 'Typing',
+      'tool' => 'Running',
+      'waiting' => p.detail == 'user' || p.detail.isEmpty
+          ? 'Waiting on you'
+          : 'Waiting on ${p.detail}',
+      _ => null,
+    };
+  }
+
+  String? get presenceDetail {
+    final p = presence;
+    if (p == null || p.state != 'tool' || p.detail.isEmpty) return null;
+    return p.detail;
+  }
+
+  bool get presenceDots =>
+      presence != null && (presence!.state == 'thinking' || presence!.state == 'typing');
+
   int get extra => sessions.length > 1 ? sessions.length - 1 : 0;
 
   Map<String, dynamic>? get attention =>
@@ -31,7 +59,10 @@ class CrewEntry {
   /// last message, else what it last finished.
   String get line => switch (state) {
         CrewState.needsYou => _askText,
-        CrewState.working => _title(lead),
+        CrewState.working => presenceWord == null
+            ? _title(lead)
+            : [presenceWord!, if (presenceDetail != null) presenceDetail!]
+                .join(' '),
         CrewState.standingBy => _lastText ??
             (lead == null ? 'Standing by' : 'Finished ${_title(lead)}'),
       };
@@ -61,7 +92,8 @@ String? crewOwner(SessionInfo s) {
 /// Status comes only from sessions: any waiting -> needs you, else any running
 /// -> working, else standing by. Nothing is read from the agent itself.
 List<CrewEntry> deriveCrew(
-    List<CoordinationAgent> agents, List<SessionInfo> sessions) {
+    List<CoordinationAgent> agents, List<SessionInfo> sessions,
+    {PresenceStore? presence}) {
   final by = <String, List<SessionInfo>>{};
   for (final s in sessions) {
     final id = crewOwner(s);
@@ -73,15 +105,18 @@ List<CrewEntry> deriveCrew(
       ..sort((x, y) => y.lastActive.compareTo(x.lastActive));
     final asking = ss.where((s) => s.needsInput).firstOrNull;
     final running = ss.where((s) => s.running).firstOrNull;
+    final p = presence?.presenceForAgent(a.id, ss);
+    final waitingOnUser = p != null && p.state == 'waiting' && p.detail == 'user';
     out.add(CrewEntry(
       agent: a,
-      state: asking != null
+      state: asking != null || waitingOnUser
           ? CrewState.needsYou
           : running != null
               ? CrewState.working
               : CrewState.standingBy,
       sessions: ss,
       lead: asking ?? running ?? ss.firstOrNull,
+      presence: p,
     ));
   }
   return out;

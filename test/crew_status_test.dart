@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/crew_status.dart';
 import 'package:snippet/models.dart';
+import 'package:snippet/presence.dart';
 
 SessionInfo s(String id,
         {String? agent,
@@ -24,6 +25,7 @@ CoordinationAgent a(String id) =>
     CoordinationAgent.fromJson({'id': id, 'display_name': id});
 
 void main() {
+  presenceCases();
   test('status is derived from sessions only', () {
     final crew = deriveCrew([
       a('r'),
@@ -63,5 +65,31 @@ void main() {
     expect(crew[0].sessions.map((x) => x.id), ['s2', 's1']);
     expect(crew[0].extra, 1);
     expect(crew[1].state, CrewState.standingBy);
+  });
+}
+
+void presenceCases() {
+  final now = DateTime.fromMillisecondsSinceEpoch(1010 * 1000);
+  PresenceStore store(Map<String, dynamic> f) =>
+      PresenceStore(null, () => now)..handle({'kind': 'agent_presence', 'agent': 'w', 'since': 1005, ...f});
+
+  test('tool presence shows Running with detail on a working agent', () {
+    final p = store({'session': 's2', 'state': 'tool', 'detail': 'bash'});
+    final e = deriveCrew([a('w')], [s('s2', worker: 'w', run: true)], presence: p).single;
+    expect(e.presenceWord, 'Running');
+    expect(e.presenceDetail, 'bash');
+    expect(e.line, 'Running bash');
+  });
+
+  test('waiting on user presence makes the agent needsYou', () {
+    final p = store({'session': 's2', 'state': 'waiting', 'detail': 'user'});
+    final e = deriveCrew([a('w')], [s('s2', worker: 'w', run: true)], presence: p).single;
+    expect(e.state, CrewState.needsYou);
+  });
+
+  test('without presence the line is the session title', () {
+    final e = deriveCrew([a('w')], [s('s2', worker: 'w', run: true)]).single;
+    expect(e.line, 's2');
+    expect(e.presenceWord, isNull);
   });
 }

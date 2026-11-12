@@ -376,7 +376,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
               key,
               Padding(
                   padding: const EdgeInsets.only(top: 4, bottom: 4),
-                  child: Bubble(mine: false, text: reply)));
+                  child: e['quiet'] == true
+                      ? QuietAside(text: reply)
+                      : Bubble(mine: false, text: reply)));
         case 'agent_message':
           endTools(key);
           final voiceNote = e['outbound'] == true

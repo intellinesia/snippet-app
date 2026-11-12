@@ -8,6 +8,7 @@ import 'api.dart';
 import 'crew_status.dart';
 import 'models.dart';
 import 'notifications.dart' show onNotifTap;
+import 'presence.dart' show PresenceStore;
 import 'plain_text.dart';
 import 'platform.dart';
 import 'screens/tasks/task_common.dart' show openTaskInTab;
@@ -75,9 +76,11 @@ class NotchHome {
       return;
     }
     _timer?.cancel();
+    _client?.presence.removeListener(_push);
     _client = client;
     _last = '';
     if (client == null) return;
+    client.presence.addListener(_push);
     _push();
     _timer = Timer.periodic(const Duration(seconds: 10), (_) => _push());
   }
@@ -109,6 +112,7 @@ class NotchHome {
         now: DateTime.now(),
         targets: _targets,
         recent: _recent,
+        presence: client.presence,
       );
       final encoded = jsonEncode(json);
       if (encoded == _last) return;
@@ -270,13 +274,15 @@ Map<String, dynamic> buildModel({
   required DateTime now,
   required Map<String, NotchTarget> targets,
   List<NotchNote> recent = const [],
+  PresenceStore? presence,
 }) {
   targets.clear();
   final crew = deriveCrew(
       agents
           .where((a) => !a.isMissionControl && a.status != 'archived')
           .toList(),
-      sessions);
+      sessions,
+      presence: presence);
   final asked = {
     for (final e in crew.where((e) => e.state == CrewState.needsYou))
       if (e.lead != null) e.lead!.id
