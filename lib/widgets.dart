@@ -1456,15 +1456,16 @@ class _AudioTranscriptCardState extends State<AudioTranscriptCard> {
 /// vs no-bar is the primary you/agent distinction.
 /// A reply's long-press sheet on phones: copy it whole, or open it to select.
 void _messageActions(BuildContext context, String text) {
+  final preview = text.replaceAll(RegExp(r'\s+'), ' ').trim();
   showAppSheet(context,
       title: 'Message',
-      subtitle: '',
+      subtitle: preview.length > 60 ? '${preview.substring(0, 60)}\u2026' : preview,
       child: SheetActions([
         SheetAction('clipboard', 'Copy', () {
           Navigator.pop(context);
           Clipboard.setData(ClipboardData(text: text));
           toast(context, 'Copied');
-        }, tile: true),
+        }, detail: 'Copy the whole message'),
         SheetAction('edit', 'Select text', () {
           Navigator.pop(context);
           showAppSheet(context,
@@ -1480,7 +1481,7 @@ void _messageActions(BuildContext context, String text) {
                   ),
                 ),
               ));
-        }, tile: true),
+        }, detail: 'Open it to select part of the text'),
       ]));
 }
 
