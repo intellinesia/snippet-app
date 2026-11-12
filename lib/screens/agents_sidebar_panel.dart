@@ -12,6 +12,7 @@ import 'mission_control_card.dart';
 import 'shell_nav.dart';
 import '../pull_refresh.dart';
 import '../motion.dart';
+import '../swr.dart';
 
 /// The agent team, as a sidebar panel — the reference app's "People with
 /// access" slot, holding our agents instead of collaborators.
@@ -158,10 +159,19 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   String? error;
   bool loading = true;
   bool busy = false;
+  late final Swr<List<GroupSummary>> _groups;
 
   @override
   void initState() {
     super.initState();
+    _groups = Swr<List<GroupSummary>>(
+      client: widget.client,
+      key: 'groups',
+      fetch: widget.client.groups,
+      onChange: () {
+        if (mounted) setState(() {});
+      },
+    );
     final cached = widget.client.cachedCoordinationAgents();
     if (cached != null) {
       agents = cached.where((a) => !a.isMissionControl).toList();
@@ -191,7 +201,37 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     }
   }
 
+  @override
+  void dispose() {
+    _groups.dispose();
+    super.dispose();
+  }
+
+  /// The + menu: create an agent or a group chat.
+  Future<void> openCreateMenu(BuildContext anchor, {bool above = true}) async {
+    final pick = await showAnchoredPanel<String>(
+      anchor,
+      width: 240,
+      maxHeight: 160,
+      above: above,
+      alignRight: true,
+      child: const _CreateMenu(),
+    );
+    if (!mounted || pick == null) return;
+    if (pick == 'agent') {
+      await _openCreateAgent(anchor.mounted ? anchor : context);
+    } else if (await createAndOpenGroup(context, widget.client) != null) {
+      _groups.refresh();
+    }
+  }
+
+  void _openGroup(GroupSummary g) {
+    openGroupThread(context, client: widget.client, group: g);
+    _groups.refresh();
+  }
+
   Future<void> refresh() async {
+    _groups.refresh();
     if (mounted) {
       setState(() {
         loading = true;
@@ -332,20 +372,59 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     final createBtn = Builder(
       builder: (ctx) => ShellSectionAction(
         icon: 'plus',
-        tooltip: 'Create agent',
-        onTap: busy ? null : () => _openCreateAgent(ctx),
+        tooltip: 'New agent or group',
+        onTap: busy ? null : () => openCreateMenu(ctx, above: false),
       ),
     );
 
     if (agents.isNotEmpty) _shownAt ??= DateTime.now();
     final ordered = (q.isEmpty
         ? [...agents]
-        : agents.where((a) => _agentMatchesMetadata(a, q)).toList())
-      ..sort((a, b) {
-        if (a.available != b.available) return a.available ? -1 : 1;
-        return a.displayName.compareTo(b.displayName);
+        : agents.where((a) => _agentMatchesMetadata(a, q)).toList());
+    final groups = (_groups.data ?? const <GroupSummary>[])
+        .where((g) => q.isEmpty || g.title.toLowerCase().contains(q))
+        .toList();
+    final entries = <({Object item, DateTime? at, String name})>[
+      for (final a in ordered)
+        (item: a, at: a.lastMessage?.at, name: a.displayName.toLowerCase()),
+      for (final g in groups)
+        (
+          item: g,
+          at: DateTime.tryParse(g.lastEventAt ?? g.createdAt),
+          name: g.title.toLowerCase()
+        ),
+    ]..sort((a, b) {
+        if (a.at != b.at) {
+          if (a.at == null) return 1;
+          if (b.at == null) return -1;
+          return b.at!.compareTo(a.at!);
+        }
+        return a.name.compareTo(b.name);
       });
-    final Widget? emptyState = ordered.isNotEmpty || (loading && agents.isEmpty)
+    Widget row(int i) {
+      final e = entries[i].item;
+      final Widget child = e is CoordinationAgent
+          ? AgentCard(
+              key: ValueKey('agent-card-${e.id}'),
+              client: widget.client,
+              agent: e,
+              onOpen: () => widget.onOpenAgent?.call(e),
+              onDelete: () => _deleteAgent(e),
+              onChanged: refresh,
+            )
+          : GroupRow(
+              key: ValueKey('group-row-${(e as GroupSummary).id}'),
+              group: e,
+              onTap: () => _openGroup(e));
+      return Appear(
+        key: ValueKey('appear-${child.key}'),
+        index: i,
+        since: _shownAt,
+        child: child,
+      );
+    }
+
+    final Widget? emptyState = entries.isNotEmpty || (loading && agents.isEmpty)
         ? null
         : error != null && agents.isEmpty
             ? Padding(
@@ -372,47 +451,18 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
               Padding(
                   padding: const EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 8),
                   child: mcCard),
-            for (var i = 0; i < ordered.length; i++)
-              Appear(
-                key: ValueKey('appear-agent-${ordered[i].id}'),
-                index: i,
-                since: _shownAt,
-                child: AgentCard(
-                  key: ValueKey('agent-card-${ordered[i].id}'),
-                  client: widget.client,
-                  agent: ordered[i],
-                  onOpen: () => widget.onOpenAgent?.call(ordered[i]),
-                  onDelete: () => _deleteAgent(ordered[i]),
-                  onChanged: refresh,
-                ),
-              ),
+            for (var i = 0; i < entries.length; i++) row(i),
             if (emptyState != null)
               Padding(
                   padding: const EdgeInsets.symmetric(horizontal: M.gutter),
                   child: emptyState),
-            Padding(
-                padding: const EdgeInsets.symmetric(horizontal: M.gutter),
-                child: GroupsSection(client: widget.client)),
           ],
         ),
       );
     }
 
     final desktopChildren = [
-      for (var i = 0; i < ordered.length; i++)
-        Appear(
-          key: ValueKey('appear-agent-${ordered[i].id}'),
-          index: i,
-          since: _shownAt,
-          child: AgentCard(
-            key: ValueKey('agent-card-${ordered[i].id}'),
-            client: widget.client,
-            agent: ordered[i],
-            onOpen: () => widget.onOpenAgent?.call(ordered[i]),
-            onDelete: () => _deleteAgent(ordered[i]),
-            onChanged: refresh,
-          ),
-        ),
+      for (var i = 0; i < entries.length; i++) row(i),
     ];
 
     return Container(
@@ -436,7 +486,6 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                   if (mcCard != null) mcCard,
                   ...desktopChildren,
                   if (emptyState != null) emptyState,
-                  GroupsSection(client: widget.client),
                 ],
               ),
             ),
@@ -471,5 +520,33 @@ class _EmptyTeam extends StatelessWidget {
           'sessions it is working in.',
           style: sans(12, color: AppColors.fg3, height: 1.5),
         ),
+      );
+}
+
+class _CreateMenu extends StatelessWidget {
+  const _CreateMenu();
+
+  Widget _item(BuildContext context, String value, String icon, String label) =>
+      InkWell(
+        key: ValueKey('create-$value'),
+        onTap: () => Navigator.of(context).pop(value),
+        child: Container(
+          constraints: BoxConstraints(minHeight: kMobile ? M.minTarget : 34),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Row(children: [
+            AppIcon(icon, size: 16, color: AppColors.fg2),
+            const SizedBox(width: 10),
+            Expanded(child: Text(label, style: TS.body(AppColors.fg1))),
+          ]),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          _item(context, 'agent', 'bot', 'New agent'),
+          _item(context, 'group', 'users', 'New group chat'),
+        ]),
       );
 }

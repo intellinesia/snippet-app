@@ -14,8 +14,7 @@ import 'package:snippet/screens/mission_control_card.dart';
 import 'package:snippet/theme.dart';
 
 class _FakeTestClient extends DaemonClient {
-  _FakeTestClient(this._agents)
-      : super('https://daemon.invalid', 'test-token');
+  _FakeTestClient(this._agents) : super('https://daemon.invalid', 'test-token');
 
   @override
   late final DeviceEventHub deviceEvents = DeviceEventHub.local();
@@ -48,7 +47,10 @@ class _FakeTestClient extends DaemonClient {
   @override
   Future<List<TaskItem>> recentTasks(
           {required String status, required int limit}) async =>
-      (await tasks()).where((t) => t.status.wire == status).take(limit).toList();
+      (await tasks())
+          .where((t) => t.status.wire == status)
+          .take(limit)
+          .toList();
 
   @override
   Future<List<TaskItem>> tasks(
@@ -56,9 +58,8 @@ class _FakeTestClient extends DaemonClient {
       [];
 }
 
-Finder _field(String hint) => find.byWidgetPredicate(
-    (w) => w is TextField && w.decoration?.hintText == hint);
-
+Finder _field(String hint) => find
+    .byWidgetPredicate((w) => w is TextField && w.decoration?.hintText == hint);
 
 void main() {
   test('agent icon maps to strokeRoundedBot', () {
@@ -66,9 +67,7 @@ void main() {
     expect(hugeIconFor('bot'), HugeIcons.strokeRoundedBot);
   });
 
-  testWidgets(
-      'each phone page has its search and its own New',
-      (tester) async {
+  testWidgets('each phone page has its search and its own New', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     SharedPreferences.setMockInitialValues({});
     try {
@@ -196,7 +195,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(CreateAgentForm), findsNothing);
-      await tester.tap(find.byTooltip('New agent'));
+      await tester.tap(find.byTooltip('New agent or group'));
+      await tester.pumpAndSettle();
+      expect(find.text('New group chat'), findsOneWidget);
+      await tester.tap(find.text('New agent'));
       await tester.pumpAndSettle();
       expect(find.byType(CreateAgentForm), findsOneWidget);
       // Phone sheets have no close X; tapping the scrim dismisses.
@@ -209,7 +211,12 @@ void main() {
       // 4. Settings has no New of its own.
       await tester.pumpWidget(buildTestWidget(home: MobileHome.settings));
       await tester.pumpAndSettle();
-      for (final tip in ['New session', 'New task', 'New agent', 'Create']) {
+      for (final tip in [
+        'New session',
+        'New task',
+        'New agent or group',
+        'Create'
+      ]) {
         expect(find.byTooltip(tip).hitTestable(), findsNothing);
       }
       expect(find.text('WORKSPACE'), findsNothing);
@@ -385,6 +392,4 @@ void main() {
     expect(find.text('Agent Mailbox'), findsNothing);
     expect(find.text('inbox-builder'), findsNothing);
   });
-
 }
-

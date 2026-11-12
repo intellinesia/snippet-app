@@ -108,7 +108,9 @@ void main() {
       await pumpPanel(tester);
 
       expect(find.byType(CreateAgentForm), findsNothing);
-      await tester.tap(find.byTooltip('Create agent'));
+      await tester.tap(find.byTooltip('New agent or group'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('create-agent')));
       await tester.pumpAndSettle();
 
       // The SAME form Mission Control's directory presents, so the two cannot
@@ -151,7 +153,9 @@ void main() {
           ),
         ));
         await tester.pumpAndSettle();
-        await tester.tap(find.byTooltip('Create agent'));
+        await tester.tap(find.byTooltip('New agent or group'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('create-agent')));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
         final popup =
@@ -178,8 +182,8 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Describe the agent you want it to become.'),
             findsOneWidget);
-        await tester.enterText(
-            find.byType(TextField).first, '  Review security issues in repos  ');
+        await tester.enterText(find.byType(TextField).first,
+            '  Review security issues in repos  ');
         await tester.tap(find.text('Build agent'));
         await tester.pumpAndSettle();
         await tester.pump(const Duration(seconds: 3));

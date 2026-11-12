@@ -419,9 +419,12 @@ class SidebarState extends State<Sidebar> {
                             ),
                             const SizedBox(width: 8),
                             _agentsList
-                                ? AccentFab(
-                                    tooltip: 'New agent',
-                                    onTap: _openCreateAgent)
+                                ? Builder(
+                                    builder: (fab) => AccentFab(
+                                        tooltip: 'New agent or group',
+                                        onTap: () => _agentsPanelKey
+                                            .currentState
+                                            ?.openCreateMenu(fab)))
                                 : AccentFab(
                                     tooltip: 'New session',
                                     onTap: widget.onNewSession),
@@ -581,16 +584,6 @@ class SidebarState extends State<Sidebar> {
         onOpenAgent: (a) =>
             kMobile ? widget.onAgent(a) : widget.onOpenAgent?.call(a),
       );
-
-  Future<void> _openCreateAgent([BuildContext? anchorCtx]) async {
-    final client = widget.client;
-    if (client == null) return;
-    if (_agentsPanelKey.currentState != null) {
-      await _agentsPanelKey.currentState!.openCreateAgent(anchorCtx);
-    } else {
-      await showCreateAgentDialog(context, client, anchorContext: anchorCtx);
-    }
-  }
 
   /// The Chats header: the destination name on the left, icon buttons on
   /// the right for search, new chat, Mission Control and machine avatar.
@@ -999,7 +992,8 @@ class SidebarState extends State<Sidebar> {
     final mcWaiting = mc != null && mc.status == 'waiting_for_input';
     String crewLine() => _crew.isEmpty
         ? 'Standing by'
-        : crewSummary(deriveCrew(_crew, widget.sessions ?? const <SessionInfo>[],
+        : crewSummary(deriveCrew(
+            _crew, widget.sessions ?? const <SessionInfo>[],
             presence: widget.client?.presence));
     final mcBusy = mc != null &&
         (sessionIsActive(mc.status) || mc.status == 'waiting_for_input');
