@@ -17,7 +17,8 @@ class ChatColors {
   static Color get onAction => AppColors.accentFg;
   @Deprecated('Use action')
   static Color get blue => action;
-  static Color get sent => const Color(0xFF0A84FF);
+  // Grey, not accent: the accent stays for the few main actions.
+  static Color get sent => const Color(0xFF3A3A3C);
   static Color get sentText => const Color(0xFFFFFFFF);
   static Color get received =>
       light ? const Color(0xFFE9E9EB) : const Color(0xFF26262A);
