@@ -1,10 +1,10 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
+import '../glass.dart';
 import '../mochi.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -107,14 +107,16 @@ Future<void> showMobileListPicker(BuildContext anchor) {
           width: width,
           child: Material(
             type: MaterialType.transparency,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: _composerLike(20),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                option('list', 'Sessions', false),
-                const SizedBox(height: 4),
-                option('agent', 'Agents', true),
-              ]),
+            child: Glass(
+              radius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  option('list', 'Sessions', false),
+                  const SizedBox(height: 4),
+                  option('agent', 'Agents', true),
+                ]),
+              ),
             ),
           ),
         ),
@@ -133,13 +135,6 @@ void setMobileAgentsList(bool agents) {
   SharedPreferences.getInstance()
       .then((p) => p.setBool(_agentsListPref, agents));
 }
-
-// The chat composer's card, so the home search row reads as the same control.
-BoxDecoration _composerLike(double radius) => BoxDecoration(
-      color: AppColors.surface1,
-      borderRadius: BorderRadius.circular(radius),
-      border: Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
-    );
 
 class RoundBtn extends StatelessWidget {
   const RoundBtn({
@@ -175,25 +170,27 @@ class RoundBtn extends StatelessWidget {
                     HapticFeedback.selectionClick();
                     onTap!();
                   },
-            child: Container(
-              width: size,
-              height: size,
-              decoration: _floating(size / 2),
-              alignment: Alignment.center,
-              child: Stack(clipBehavior: Clip.none, children: [
-                child ?? AppIcon(icon!, size: iconSize, color: AppColors.fg2),
-                if (badge)
-                  Positioned(
-                    right: -3,
-                    top: -3,
-                    child: Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                          color: AppColors.accent, shape: BoxShape.circle),
+            child: Glass(
+              radius: null,
+              child: Container(
+                width: size,
+                height: size,
+                alignment: Alignment.center,
+                child: Stack(clipBehavior: Clip.none, children: [
+                  child ?? AppIcon(icon!, size: iconSize, color: AppColors.fg2),
+                  if (badge)
+                    Positioned(
+                      right: -3,
+                      top: -3,
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                            color: AppColors.accent, shape: BoxShape.circle),
+                      ),
                     ),
-                  ),
-              ]),
+                ]),
+              ),
             ),
           ),
         ),
@@ -557,39 +554,41 @@ class FloatingSearch extends StatelessWidget {
   final FocusNode? focusNode;
 
   @override
-  Widget build(BuildContext context) => Container(
-        height: 50,
-        decoration: _composerLike(25),
-        padding: const EdgeInsets.only(left: 18, right: 8),
-        child: Row(children: [
-          AppIcon('search', size: 16, color: AppColors.fg4),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              onChanged: onChanged,
-              style: sans(15, color: AppColors.fg1),
-              cursorColor: AppColors.accent,
-              decoration: InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
-                hintText: hint,
-                hintStyle: sans(15, color: AppColors.fg4),
+  Widget build(BuildContext context) => Glass(
+        radius: BorderRadius.circular(22),
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.only(left: 18, right: 8),
+          child: Row(children: [
+            AppIcon('search', size: 16, color: AppColors.fg4),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                onChanged: onChanged,
+                style: TS.ui(AppColors.fg1),
+                cursorColor: AppColors.accent,
+                decoration: InputDecoration(
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  hintText: hint,
+                  hintStyle: TS.ui(AppColors.fg4),
+                ),
               ),
             ),
-          ),
-          ListenableBuilder(
-            listenable: controller,
-            builder: (_, __) => controller.text.isEmpty
-                ? const SizedBox(width: 8)
-                : IconBtn('x', size: 36, iconSize: 16, tooltip: 'Clear',
-                    onTap: () {
-                    controller.clear();
-                    onChanged('');
-                  }),
-          ),
-        ]),
+            ListenableBuilder(
+              listenable: controller,
+              builder: (_, __) => controller.text.isEmpty
+                  ? const SizedBox(width: 8)
+                  : IconBtn('x', size: 36, iconSize: 16, tooltip: 'Clear',
+                      onTap: () {
+                      controller.clear();
+                      onChanged('');
+                    }),
+            ),
+          ]),
+        ),
       );
 }
 
@@ -616,8 +615,8 @@ class AccentFab extends StatelessWidget {
               onTap();
             },
             child: Container(
-              width: 50,
-              height: 50,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                   color: AppColors.accentFill, shape: BoxShape.circle),
               alignment: Alignment.center,

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../glass.dart';
 import '../mochi.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -29,9 +30,8 @@ class ChatColors {
   static Color get cardButton =>
       light ? const Color(0xFFE5E5EA) : const Color(0xFF2C2C2E);
   static const meta = Color(0xFF8E8E93);
-  static Color get glass => light
-      ? const Color(0xF2F2F2F7)
-      : const Color(0xCC2C2C2E);
+  static Color get glass =>
+      light ? const Color(0xF2F2F2F7) : const Color(0xCC2C2C2E);
 
   static double get fontSize => kMobile ? 16 : 13.5;
   static double get radius => kMobile ? 18 : 16;
@@ -48,7 +48,8 @@ TextStyle chatText({required bool mine}) => sans(ChatColors.fontSize,
     height: 1.3, color: mine ? ChatColors.sentText : ChatColors.receivedText);
 
 /// Markdown inside a bubble: the base sheet recoloured for the bubble fill.
-MarkdownStyleSheet chatMarkdownStyle(BuildContext context, {required bool mine}) {
+MarkdownStyleSheet chatMarkdownStyle(BuildContext context,
+    {required bool mine}) {
   final base = mine ? markdownStyle(context) : agentMarkdownStyle(context);
   final prose = chatText(mine: mine);
   final soft = prose.copyWith(color: prose.color!.withValues(alpha: 0.72));
@@ -59,12 +60,16 @@ MarkdownStyleSheet chatMarkdownStyle(BuildContext context, {required bool mine})
     a: prose.copyWith(
         color: mine ? ChatColors.sentText : ChatColors.action,
         decoration: TextDecoration.underline,
-        decorationColor: (mine ? ChatColors.sentText : ChatColors.action).withValues(alpha: 0.5)),
+        decorationColor: (mine ? ChatColors.sentText : ChatColors.action)
+            .withValues(alpha: 0.5)),
     listBullet: soft,
     blockquote: soft.copyWith(fontStyle: FontStyle.italic),
-    h1: prose.copyWith(fontSize: ChatColors.fontSize + 3, fontWeight: weightFor(W.strong)),
-    h2: prose.copyWith(fontSize: ChatColors.fontSize + 2, fontWeight: weightFor(W.strong)),
-    h3: prose.copyWith(fontSize: ChatColors.fontSize + 1, fontWeight: weightFor(W.strong)),
+    h1: prose.copyWith(
+        fontSize: ChatColors.fontSize + 3, fontWeight: weightFor(W.strong)),
+    h2: prose.copyWith(
+        fontSize: ChatColors.fontSize + 2, fontWeight: weightFor(W.strong)),
+    h3: prose.copyWith(
+        fontSize: ChatColors.fontSize + 1, fontWeight: weightFor(W.strong)),
   );
 }
 
@@ -128,9 +133,8 @@ class _BubblePainter extends CustomPainter {
     final h = size.height;
     final r = math.min(radius, h / 2);
     if (!tail) {
-      final body = mine
-          ? Rect.fromLTWH(0, 0, w - t, h)
-          : Rect.fromLTWH(t, 0, w - t, h);
+      final body =
+          mine ? Rect.fromLTWH(0, 0, w - t, h) : Rect.fromLTWH(t, 0, w - t, h);
       canvas.drawRRect(
           RRect.fromRectAndRadius(body, Radius.circular(r)), paint);
       return;
@@ -192,9 +196,8 @@ class ChatBubbleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (_, box) {
-        final max = box.maxWidth.isFinite
-            ? box.maxWidth * ChatColors.maxShare
-            : 520.0;
+        final max =
+            box.maxWidth.isFinite ? box.maxWidth * ChatColors.maxShare : 520.0;
         final bubble = ConstrainedBox(
             constraints: BoxConstraints(maxWidth: max), child: child);
         if (mine) {
@@ -206,10 +209,7 @@ class ChatBubbleRow extends StatelessWidget {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            SizedBox(
-                width: avatarSize,
-                height: avatarSize,
-                child: avatar),
+            SizedBox(width: avatarSize, height: avatarSize, child: avatar),
             const SizedBox(width: 6),
             Flexible(child: bubble),
           ],
@@ -311,14 +311,17 @@ class ChatGlassButton extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
             child: Stack(clipBehavior: Clip.none, children: [
-              Container(
-                width: size,
-                height: size,
-                decoration:
-                    BoxDecoration(color: ChatColors.glass, shape: BoxShape.circle),
-                alignment: Alignment.center,
-                child: AppIcon(icon,
-                    size: kMobile ? 18 : 15, color: ChatColors.receivedText),
+              Glass(
+                radius: null,
+                child: SizedBox(
+                  width: size,
+                  height: size,
+                  child: Center(
+                    child: AppIcon(icon,
+                        size: kMobile ? 18 : 15,
+                        color: ChatColors.receivedText),
+                  ),
+                ),
               ),
               if (badge != null && badge! > 0)
                 Positioned(
@@ -394,8 +397,7 @@ class ChatHeader extends StatelessWidget {
   Widget _avatar() {
     final big = kMobile ? 54.0 : 32.0;
     if (agentIds.length < 2) {
-      return _MochiDisc(
-          id: agentIds.isEmpty ? '' : agentIds.first, size: big);
+      return _MochiDisc(id: agentIds.isEmpty ? '' : agentIds.first, size: big);
     }
     final s = kMobile ? 44.0 : 28.0;
     return SizedBox(
@@ -404,30 +406,31 @@ class ChatHeader extends StatelessWidget {
       child: Stack(children: [
         Positioned(left: 0, child: _MochiDisc(id: agentIds[0], size: s)),
         Positioned(
-            right: 0,
-            child: _MochiDisc(id: agentIds[1], size: s, ring: true)),
+            right: 0, child: _MochiDisc(id: agentIds[1], size: s, ring: true)),
       ]),
     );
   }
 
-  Widget _pill() => Container(
-        padding: EdgeInsets.symmetric(
-            horizontal: kMobile ? 11 : 10, vertical: kMobile ? 4 : 3),
-        decoration: BoxDecoration(
-            color: ChatColors.glass, borderRadius: BorderRadius.circular(999)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Flexible(
-            child: Text(title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(kMobile ? 13 : 12,
-                    weight: W.label, color: ChatColors.receivedText)),
-          ),
-          if (onTitleTap != null) ...[
-            const SizedBox(width: 3),
-            AppIcon('chevron-right', size: kMobile ? 11 : 10, color: ChatColors.meta),
-          ],
-        ]),
+  Widget _pill() => Glass(
+        radius: BorderRadius.circular(999),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+              horizontal: kMobile ? 11 : 10, vertical: kMobile ? 4 : 3),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Flexible(
+              child: Text(title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(kMobile ? 13 : 12,
+                      weight: W.label, color: ChatColors.receivedText)),
+            ),
+            if (onTitleTap != null) ...[
+              const SizedBox(width: 3),
+              AppIcon('chevron-right',
+                  size: kMobile ? 11 : 10, color: ChatColors.meta),
+            ],
+          ]),
+        ),
       );
 
   Widget _back() => Semantics(
@@ -438,22 +441,24 @@ class ChatHeader extends StatelessWidget {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onBack,
-            child: Container(
-              height: 40,
-              constraints: const BoxConstraints(minWidth: 40),
-              padding: EdgeInsets.symmetric(
-                  horizontal: backCount != null && backCount! > 0 ? 12 : 0),
-              decoration: BoxDecoration(
-                  color: ChatColors.glass, borderRadius: BorderRadius.circular(20)),
-              alignment: Alignment.center,
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                AppIcon('chevron-left', size: 18, color: ChatColors.receivedText),
-                if (backCount != null && backCount! > 0) ...[
-                  const SizedBox(width: 2),
-                  Text('${backCount!}',
-                      style: sans(15, color: ChatColors.receivedText)),
-                ],
-              ]),
+            child: Glass(
+              radius: BorderRadius.circular(20),
+              child: Container(
+                height: 40,
+                constraints: const BoxConstraints(minWidth: 40),
+                padding: EdgeInsets.symmetric(
+                    horizontal: backCount != null && backCount! > 0 ? 12 : 0),
+                alignment: Alignment.center,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  AppIcon('chevron-left',
+                      size: 18, color: ChatColors.receivedText),
+                  if (backCount != null && backCount! > 0) ...[
+                    const SizedBox(width: 2),
+                    Text('${backCount!}',
+                        style: sans(15, color: ChatColors.receivedText)),
+                  ],
+                ]),
+              ),
             ),
           ),
         ),
@@ -498,8 +503,7 @@ class ChatHeader extends StatelessWidget {
           child: Stack(children: [
             Align(alignment: Alignment.topCenter, child: centre),
             if (onBack != null || leading != null)
-              Positioned(
-                  left: 0, top: 0, child: leading ?? _back()),
+              Positioned(left: 0, top: 0, child: leading ?? _back()),
             if (trailing != null)
               Positioned(right: 0, top: 0, child: trailing!),
           ]),

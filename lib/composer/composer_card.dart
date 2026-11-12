@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../glass.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -61,14 +62,12 @@ class ComposerCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(radius),
-          border: highlight
-              ? Border.all(color: AppColors.accent, width: 1.5)
-              : Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
-        ),
+  Widget build(BuildContext context) {
+    final card = Glass(
+      radius: BorderRadius.circular(radius),
+      tint: AppColors.surface1.withValues(alpha: 0.78),
+      border: !highlight,
+      child: Container(
         padding: _padding,
         child: LayoutBuilder(
           builder: (context, box) => ValueListenableBuilder<TextEditingValue>(
@@ -105,7 +104,17 @@ class ComposerCard extends StatelessWidget {
             },
           ),
         ),
-      );
+      ),
+    );
+    if (!highlight) return card;
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: AppColors.accent, width: 1.5),
+      ),
+      child: card,
+    );
+  }
 }
 
 class ComposerIconButton extends StatelessWidget {
