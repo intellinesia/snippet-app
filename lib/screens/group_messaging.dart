@@ -10,8 +10,10 @@ import '../composer/composer_card.dart';
 import '../message_reactions.dart';
 import '../models.dart';
 import '../mochi.dart';
+import '../chat/agent_details.dart';
 import '../panel.dart';
 import '../platform.dart';
+import 'agent_panel.dart';
 import '../pull_refresh.dart';
 import '../swr.dart';
 import '../theme.dart';
@@ -924,22 +926,30 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   }
 
   Future<void> _openMembers() async {
-    await showAppSheet<void>(
-      context,
-      title: _title,
-      maxWidth: 380,
-      child: GroupMembersSheet(
+    void onChanged(GroupSummary g) {
+      if (mounted) setState(() => _group = g);
+    }
+
+    void onDeleted() {
+      if (mounted) _closePage();
+    }
+
+    final panel = !kMobile ? ShellPanelScope.maybeOf(context) : null;
+    if (panel != null) {
+      panel.open(groupDetailsPanelRequest(
         client: widget.client,
         group: _group,
-        onChanged: (g) {
-          if (mounted) setState(() => _group = g);
-        },
-        onDeleted: () {
-          if (!mounted) return;
-          Navigator.of(context).pop();
-          _closePage();
-        },
-      ),
+        onChanged: onChanged,
+        onDeleted: onDeleted,
+      ));
+      return;
+    }
+    await showAgentDetailsSheet(
+      context,
+      client: widget.client,
+      group: _group,
+      onGroupChanged: onChanged,
+      onGroupDeleted: onDeleted,
     );
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../chat/agent_details.dart';
 import '../models.dart';
 import '../shell_panel.dart';
 import '../theme.dart';
@@ -35,8 +36,28 @@ ShellPanelRequest agentPanelRequest(
   required DaemonClient client,
   required String agentId,
   required String agentName,
-}) =>
-    ShellPanelRequest(
+  AgentDetailsTab initialTab = AgentDetailsTab.info,
+  VoidCallback? onCall,
+  VoidCallback? onDeleted,
+}) {
+  if (action == 'details') {
+    return ShellPanelRequest(
+      purpose: ShellPanelPurpose.agent,
+      id: agentId,
+      client: client,
+      title: agentName,
+      builder: (_, close) => AgentDetails(
+        client: client,
+        agentId: agentId,
+        agentName: agentName,
+        initialTab: initialTab,
+        onCall: onCall,
+        onClose: close,
+        onDeleted: onDeleted,
+      ),
+    );
+  }
+  return ShellPanelRequest(
       purpose: ShellPanelPurpose.agent,
       id: '$agentId:$action',
       client: client,
@@ -84,6 +105,27 @@ ShellPanelRequest agentPanelRequest(
             ),
           ),
       },
+    );
+}
+
+ShellPanelRequest groupDetailsPanelRequest({
+  required DaemonClient client,
+  required GroupSummary group,
+  ValueChanged<GroupSummary>? onChanged,
+  VoidCallback? onDeleted,
+}) =>
+    ShellPanelRequest(
+      purpose: ShellPanelPurpose.agent,
+      id: 'group:${group.id}',
+      client: client,
+      title: group.title.trim().isEmpty ? 'Group' : group.title.trim(),
+      builder: (_, close) => AgentDetails(
+        client: client,
+        group: group,
+        onClose: close,
+        onGroupChanged: onChanged,
+        onGroupDeleted: onDeleted,
+      ),
     );
 
 class _WithAgent extends StatefulWidget {
