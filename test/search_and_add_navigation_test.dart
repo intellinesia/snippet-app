@@ -7,6 +7,7 @@ import 'package:snippet/api.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/create_agent_form.dart';
+import 'package:snippet/screens/mobile_bottom_bar.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/screens/sidebar.dart';
 import 'package:snippet/screens/mobile_chrome.dart';
@@ -162,7 +163,10 @@ void main() {
       await tester.tap(find.byTooltip('Search'));
       await tester.pumpAndSettle();
       expect(_field('Search sessions'), findsOneWidget);
-      expect(find.text('Tasks'), findsNothing);
+      expect(
+          find.descendant(
+              of: find.byType(MobileBottomBar), matching: find.text('Sessions')),
+          findsNothing);
       await tester.enterText(_field('Search sessions'), 'Nonexistent');
       await tester.pumpAndSettle();
       expect(find.text('No matching sessions'), findsOneWidget);
@@ -172,7 +176,10 @@ void main() {
       await tester.tap(find.byTooltip('Close search'));
       await tester.pumpAndSettle();
       expect(_field('Search sessions'), findsNothing);
-      expect(find.text('Tasks'), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byType(MobileBottomBar), matching: find.text('Sessions')),
+          findsOneWidget);
 
       // 2. Tasks is a tab of its own, with its own New.
       await tester.pumpWidget(buildTestWidget(home: MobileHome.tasks));
@@ -207,7 +214,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(CreateAgentForm), findsNothing);
-      await tester.tap(find.text('Agents'));
+      await tester.tap(find.descendant(
+          of: find.byType(MobileBottomBar), matching: find.text('Agents')));
       await tester.pumpAndSettle();
       expect(currentHome, MobileHome.agents);
       await tester.tap(find.byTooltip('New agent or group'));
@@ -220,6 +228,8 @@ void main() {
       await tester.tapAt(const Offset(20, 20));
       await tester.pumpAndSettle();
       setMobileAgentsList(false);
+      await tester.tap(find.descendant(
+          of: find.byType(MobileBottomBar), matching: find.text('Sessions')));
       await tester.pumpAndSettle();
       expect(find.text('Feature Setup'), findsOneWidget);
 

@@ -43,7 +43,7 @@ void main() {
     );
   }
 
-  testWidgets('the four tabs render and tapping Agents reports the home', (
+  testWidgets('the three tabs render and tapping Agents reports the home', (
     tester,
   ) async {
     MobileHome? picked;
@@ -52,9 +52,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    for (final label in ['Chats', 'Tasks', 'Agents', 'Settings']) {
+    for (final label in ['Sessions', 'Agents', 'Settings']) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
+    expect(find.text('Tasks'), findsNothing);
     expect(find.byTooltip('New session'), findsOneWidget);
     expect(find.byTooltip('Search'), findsOneWidget);
 
@@ -66,7 +67,8 @@ void main() {
   testWidgets('Tasks and Settings show only the tab capsule', (tester) async {
     await tester.pumpWidget(harness(home: MobileHome.tasks));
     await tester.pumpAndSettle();
-    expect(find.text('Chats'), findsOneWidget);
+    expect(find.text('Sessions'), findsOneWidget);
+    expect(find.text('Tasks'), findsNothing);
     expect(find.byTooltip('New session'), findsNothing);
     expect(find.byTooltip('Search'), findsNothing);
 
@@ -87,14 +89,14 @@ void main() {
     await tester.tap(find.byTooltip('Search'));
     await tester.pumpAndSettle();
     expect(find.byType(TextField), findsOneWidget);
-    expect(find.text('Tasks'), findsNothing);
+    expect(find.text('Sessions'), findsNothing);
     expect(find.byTooltip('New session'), findsNothing);
 
     await tester.enterText(find.byType(TextField), 'abc');
     await tester.tap(find.byTooltip('Close search'));
     await tester.pumpAndSettle();
     expect(find.byType(TextField), findsNothing);
-    expect(find.text('Tasks'), findsOneWidget);
+    expect(find.text('Sessions'), findsOneWidget);
     expect(find.byTooltip('Search'), findsOneWidget);
     expect(s.controller.text, isEmpty);
     expect(cleared, isTrue);
