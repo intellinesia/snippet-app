@@ -903,6 +903,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                   if (_attachments.isNotEmpty) _attachmentBar(),
                   if (_mentionQuery != null && !_isMissionControl)
                     _mentionList(),
+                  if (!kMobile) _contextBar(),
                   if (top != null) top,
                   Swap(
                     stateKey: (_isRecording || _recordingPath != null)
@@ -916,6 +917,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                           )
                         : _composerCard(running),
                   ),
+                  if (!kMobile) _contextFooter(),
                 ]),
           ),
         ),
@@ -1038,5 +1040,241 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     );
   }
 
+  Widget _contextBar() {
+    final lanes = _state?.lanes ?? const <LaneInfo>[];
+    return SessionContextBar(
+      laneCount: lanes.length,
+      laneRunning: lanes.any((l) => l.running),
+      onTapLanes: _showLanes,
+      termCount: _terms.length,
+      termRunning: _terms.any((t) => t.alive),
+      onTapTerms: _openTerm,
+    );
+  }
+
+  Widget _contextFooter() {
+    final s = _state;
+    if (s == null) return const SizedBox.shrink();
+    return SessionContextFooter(
+      contextWindow: s.contextWindow,
+      lastPromptTokens: s.lastPromptTokens,
+      cacheReadTokens: s.cacheReadTokens,
+      rateSecondary: s.rateSecondary,
+    );
+  }
+
   // ---- event → widget (pairs tool_call with its tool_result) ----
+}
+
+class SessionContextBar extends StatelessWidget {
+  const SessionContextBar({
+    super.key,
+    required this.laneCount,
+    required this.laneRunning,
+    required this.onTapLanes,
+    required this.termCount,
+    required this.termRunning,
+    required this.onTapTerms,
+  });
+
+  final int laneCount;
+  final bool laneRunning;
+  final VoidCallback onTapLanes;
+  final int termCount;
+  final bool termRunning;
+  final VoidCallback onTapTerms;
+
+  @override
+  Widget build(BuildContext context) {
+    if (laneCount == 0 && termCount == 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          if (laneCount > 0)
+            _ContextChip(
+              icon: 'layers',
+              label: 'Lanes $laneCount',
+              running: laneRunning,
+              onTap: onTapLanes,
+            ),
+          if (laneCount > 0 && termCount > 0) const SizedBox(width: 6),
+          if (termCount > 0)
+            _ContextChip(
+              icon: 'terminal',
+              label: '$termCount ${termCount == 1 ? 'terminal' : 'terminals'}',
+              running: termRunning,
+              onTap: onTapTerms,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ContextChip extends StatelessWidget {
+  const _ContextChip({
+    required this.icon,
+    required this.label,
+    required this.running,
+    required this.onTap,
+  });
+
+  final String icon;
+  final String label;
+  final bool running;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: AppColors.surface1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: AppColors.line),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            height: 24,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 9),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppIcon(icon, size: 12, color: AppColors.fg3),
+                  const SizedBox(width: 6),
+                  Text(label, style: TS.caption(AppColors.fg3)),
+                  if (running) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.ok,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+class SessionContextFooter extends StatelessWidget {
+  const SessionContextFooter({
+    super.key,
+    required this.contextWindow,
+    required this.lastPromptTokens,
+    required this.cacheReadTokens,
+    this.rateSecondary,
+  });
+
+  final int contextWindow;
+  final int lastPromptTokens;
+  final int cacheReadTokens;
+  final RateWindow? rateSecondary;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <Widget>[];
+    if (contextWindow > 0 && lastPromptTokens > 0) {
+      final frac = (lastPromptTokens / contextWindow).clamp(0.0, 1.0);
+      items.add(_ContextRingStat(
+        fraction: frac,
+        label: '${(frac * 100).round()}% context',
+      ));
+    }
+    if (cacheReadTokens > 0) {
+      items.add(Text('${fmtSi(cacheReadTokens)} cached',
+          style: TS.caption(AppColors.fg4)));
+    }
+    final secondary = rateSecondary;
+    if (secondary != null && secondary.isReported && !secondary.isExpired) {
+      final frac = (secondary.usedPercent / 100).clamp(0.0, 1.0);
+      final pct = secondary.usedPercent.clamp(0, 100).round();
+      final win = limitWindowLabel(secondary);
+      items.add(_ContextRingStat(
+        fraction: frac,
+        label: '$pct% ${win == '7d' ? 'this week' : win}',
+      ));
+    }
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 6, 4, 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0) const SizedBox(width: 12),
+            items[i],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ContextRingStat extends StatelessWidget {
+  const _ContextRingStat({required this.fraction, required this.label});
+
+  final double fraction;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox.square(
+            dimension: 11,
+            child: CustomPaint(
+              painter: _ContextRingPainter(
+                fraction: fraction,
+                fill: AppColors.fg3,
+                track: AppColors.surface3,
+              ),
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(label, style: TS.caption(AppColors.fg4)),
+        ],
+      );
+}
+
+class _ContextRingPainter extends CustomPainter {
+  const _ContextRingPainter({
+    required this.fraction,
+    required this.fill,
+    required this.track,
+  });
+
+  final double fraction;
+  final Color fill;
+  final Color track;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.shortestSide / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    canvas.drawCircle(center, radius, Paint()..color = track);
+    if (fraction > 0) {
+      canvas.drawArc(
+        rect,
+        -math.pi / 2,
+        2 * math.pi * fraction,
+        true,
+        Paint()..color = fill,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ContextRingPainter old) =>
+      old.fraction != fraction || old.fill != fill || old.track != track;
 }

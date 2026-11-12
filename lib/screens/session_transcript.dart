@@ -107,7 +107,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       final open = _toolRunOpen[toolKey] ?? false;
       out.add(KeyedSubtree(
         key: ValueKey(toolKey),
-        child: ToolRun(
+        child: CollapsedActivity(
           List.of(run),
           running: running,
           open: open,
@@ -115,8 +115,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             if (!mounted) return;
             _setState(() {
               _toolRunOpen[toolKey] = nextOpen;
-              // The transcript is normally cached between event updates. Rebuild
-              // it now so ToolRun receives the new open value immediately.
+              // Rebuild cached transcript so CollapsedActivity reflects open immediately.
               _transcriptDirty = true;
             });
           },
@@ -1011,5 +1010,121 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     } catch (e) {
       _toast('$e');
     }
+  }
+}
+
+class CollapsedActivity extends StatefulWidget {
+  final List<Widget> rows;
+  final bool running;
+  final bool open;
+  final ValueChanged<bool>? onOpenChanged;
+
+  const CollapsedActivity(
+    this.rows, {
+    super.key,
+    this.running = false,
+    this.open = false,
+    this.onOpenChanged,
+  });
+
+  @override
+  State<CollapsedActivity> createState() => _CollapsedActivityState();
+}
+
+class _CollapsedActivityState extends State<CollapsedActivity> {
+  bool _localOpen = false;
+
+  bool get _open => widget.onOpenChanged != null ? widget.open : _localOpen;
+
+  void _toggle() {
+    if (widget.onOpenChanged != null) {
+      widget.onOpenChanged!(!widget.open);
+    } else {
+      setState(() => _localOpen = !_localOpen);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Theme.of(context);
+    final steps = [
+      for (final r in widget.rows.whereType<DenseToolRow>())
+        ToolStep(tool: r.tool, args: r.args, result: r.result),
+    ];
+    final text = activitySummary(steps);
+    final summary = text.isEmpty ? 'Activity' : text;
+    final failures = steps.where((s) => !s.running && s.failed).length;
+    final isRunning =
+        widget.running && (steps.isEmpty || steps.any((s) => s.running));
+    final open = _open;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: S.s4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _toggle,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: kMobile ? 32 : 24),
+              child: Row(
+                children: [
+                  AppIcon('activity', size: 13, color: AppColors.fg4),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      summary,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TS.caption(AppColors.fg4),
+                    ),
+                  ),
+                  if (failures > 0 && !isRunning) ...[
+                    const SizedBox(width: 6),
+                    Text('$failures failed',
+                        style: TS.caption(AppColors.danger)),
+                  ],
+                  const SizedBox(width: 6),
+                  if (isRunning)
+                    const WorkingDots(size: 4)
+                  else
+                    AnimatedRotation(
+                      turns: open ? 0.25 : 0,
+                      duration: Motion.fast,
+                      child: AppIcon('chevron-right',
+                          size: 12, color: AppColors.fg4),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: Motion.fast,
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: open
+                ? Padding(
+                    padding: const EdgeInsets.only(top: S.s2, bottom: S.s4),
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          left: 7.5,
+                          top: 14,
+                          bottom: 14,
+                          width: 1,
+                          child: ColoredBox(color: AppColors.border2),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: widget.rows,
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+        ],
+      ),
+    );
   }
 }
