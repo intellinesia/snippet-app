@@ -415,7 +415,12 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
           : GroupRow(
               key: ValueKey('group-row-${(e as GroupSummary).id}'),
               group: e,
-              onTap: () => _openGroup(e));
+              onTap: () => _openGroup(e),
+              onLongPress: () async {
+                if (await confirmDeleteGroup(context, widget.client, e)) {
+                  _groups.refresh();
+                }
+              });
       return Appear(
         key: ValueKey('appear-${child.key}'),
         index: i,

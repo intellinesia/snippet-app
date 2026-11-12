@@ -286,6 +286,11 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             addEvent(key, DirectMessageCard(message: direct));
             break;
           }
+          final group = parseGroupMessage(text);
+          if (group != null) {
+            addEvent(key, GroupMessageCard(message: group));
+            break;
+          }
           final reply = parseCoordinationReply(text);
           if (reply != null) {
             addEvent(key, DirectMessageCard(message: reply));
@@ -302,8 +307,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           }
           final routingNote = parseRoutingNote(text);
           if (routingNote != null) {
-            final prevSwitched = idx > 0 &&
-                events[idx - 1]['kind'] == 'profile_switched';
+            final prevSwitched =
+                idx > 0 && events[idx - 1]['kind'] == 'profile_switched';
             if (!prevSwitched) {
               addEvent(key, NoteLine(routingNote, icon: 'transfer'));
             }
@@ -311,7 +316,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           }
           if (text.trimLeft().startsWith('<ambient_context_alert')) {
             addEvent(
-                key, const NoteLine('Voice classifier flagged out-of-context speech'));
+                key,
+                const NoteLine(
+                    'Voice classifier flagged out-of-context speech'));
             break;
           }
           if (text.trimLeft().startsWith('<ambient_check_in')) {
@@ -417,10 +424,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             }
             break;
           }
-          addEvent(
-              key,
-              NoteLine(msg,
-                  error: true, label: 'Model error', count: count));
+          addEvent(key,
+              NoteLine(msg, error: true, label: 'Model error', count: count));
         case 'profile_switched':
           endTools(key);
           addEvent(

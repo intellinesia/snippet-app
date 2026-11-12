@@ -201,9 +201,8 @@ String _readableStall(String summary) {
       .replaceAll('waiting_for_input', 'waiting for input');
   final last = RegExp(r';?\s*its last message was:\s*').firstMatch(rest);
   final state = (last == null ? rest : rest.substring(0, last.start)).trim();
-  final lead = state.isEmpty
-      ? ''
-      : ' ${state[0].toUpperCase()}${state.substring(1)}.';
+  final lead =
+      state.isEmpty ? '' : ' ${state[0].toUpperCase()}${state.substring(1)}.';
   final said = last == null ? '' : rest.substring(last.end).trim();
   return 'No progress for ${head.group(1)} min.$lead'
       '${said.isEmpty ? '' : '\n\nIts last message:\n\n$said'}';
@@ -282,7 +281,8 @@ Map<int, QuietWakeRun> quietWakeRuns(List<Map<String, dynamic>> events) {
 
   while (i < events.length) {
     final e = events[i];
-    final round = isInput(e) ? parseAutonomousRound(e['text'] as String? ?? '') : null;
+    final round =
+        isInput(e) ? parseAutonomousRound(e['text'] as String? ?? '') : null;
     if (round == null || round.due.isNotEmpty) {
       close(i - 1);
       i++;
@@ -395,7 +395,8 @@ String _roundTime(String raw) {
 
 AutonomousRound? parseAutonomousRound(String text) {
   final t = text.trim();
-  if (!t.startsWith('[automated_wake]') && !t.startsWith('[autonomous_round]')) {
+  if (!t.startsWith('[automated_wake]') &&
+      !t.startsWith('[autonomous_round]')) {
     return null;
   }
   final lines = t.split('\n');
@@ -424,8 +425,9 @@ AutonomousRound? parseAutonomousRound(String text) {
 
   return AutonomousRound(
     time: _roundTime(field('time')),
-    firstRound: (field('last wake').isEmpty ? field('last round') : field('last wake'))
-        .startsWith('never'),
+    firstRound:
+        (field('last wake').isEmpty ? field('last round') : field('last wake'))
+            .startsWith('never'),
     quiet: field('quiet hours').startsWith('yes'),
     changed: [
       ...section('Changed since last wake'),
@@ -433,7 +435,10 @@ AutonomousRound? parseAutonomousRound(String text) {
     ].map(_taskLine).toList(),
     open: section('Open work').map(_taskLine).toList(),
     due: [...section('Wake-ups due now'), ...section('Follow-ups due now')],
-    scheduled: [...section('Wake-ups scheduled'), ...section('Follow-ups scheduled')],
+    scheduled: [
+      ...section('Wake-ups scheduled'),
+      ...section('Follow-ups scheduled')
+    ],
   );
 }
 
@@ -565,6 +570,81 @@ DirectMessage? parseDirectMessage(String text) {
     body: body,
     messageKind: field('kind'),
     urgent: field('urgency').startsWith('urgent'),
+  );
+}
+
+/// A group chat post, or the notice that this agent joined a group, delivered
+/// into an agent's desk.
+class GroupMessage {
+  const GroupMessage({
+    required this.threadId,
+    required this.title,
+    required this.fromId,
+    required this.fromKind,
+    required this.body,
+    this.added = false,
+    this.members = const [],
+    this.lead = '',
+    this.mentions = const [],
+    this.replyExpected = false,
+  });
+  final String threadId;
+  final String title;
+  final String fromId;
+  final String fromKind;
+  final String body;
+  final bool added;
+  final List<String> members;
+  final String lead;
+  final List<String> mentions;
+  final bool replyExpected;
+
+  String get fromLabel {
+    if (fromKind == 'human' || fromId == 'human' || fromId == 'local') {
+      return 'You';
+    }
+    return fromId.isEmpty ? 'someone' : fromId;
+  }
+}
+
+GroupMessage? parseGroupMessage(String text) {
+  final t = text.trim();
+  final tag = t.startsWith('[group_added]')
+      ? 'group_added'
+      : t.startsWith('[group_message]')
+          ? 'group_message'
+          : null;
+  if (tag == null) return null;
+  final end = t.lastIndexOf('[/$tag]');
+  final head = t.substring(0, end > 0 ? end : t.length);
+  final bodyMarker = head.indexOf('\nbody: ');
+  final fields = bodyMarker >= 0 ? head.substring(0, bodyMarker) : head;
+  String field(String name) {
+    final match =
+        RegExp(r'^' + name + r':\s*(.*)$', multiLine: true).firstMatch(fields);
+    return match?.group(1)?.trim() ?? '';
+  }
+
+  List<String> list(String name) => [
+        for (final s in field(name).split(','))
+          if (s.trim().isNotEmpty) s.trim(),
+      ];
+  final from = field('from');
+  final split = from.indexOf(':');
+  final lead = field('lead');
+  return GroupMessage(
+    threadId: field('thread_id'),
+    title: field('title'),
+    fromKind: split > 0 ? from.substring(0, split) : '',
+    fromId: split > 0 ? from.substring(split + 1) : from,
+    body: bodyMarker >= 0
+        ? head.substring(bodyMarker + '\nbody: '.length).trim()
+        : '',
+    added: tag == 'group_added',
+    members: list('members'),
+    lead: lead == 'none' ? '' : lead,
+    mentions: list('mentions'),
+    replyExpected: field('reply_expected') == 'true',
   );
 }
 
@@ -719,34 +799,47 @@ class AmbientTurn {
   final String expects;
 }
 
-String _unescapeXml(String s) =>
-    s.replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&quot;', '"').replaceAll('&amp;', '&');
+String _unescapeXml(String s) => s
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&amp;', '&');
 
 String? voiceClassifierNote(String agentId, String body) {
   if (agentId != 'voice classifier' && agentId != 'ambient mode') return null;
   final text = body.trim();
-  final mode = RegExp(r'^Ambient mode is now (\w+) \((.*)\)\.?$').firstMatch(text);
+  final mode =
+      RegExp(r'^Ambient mode is now (\w+) \((.*)\)\.?$').firstMatch(text);
   if (mode != null) {
-    final reason = (mode.group(2) ?? '').replaceFirst(RegExp(r'^mission_control:\s*'), '');
-    final label = mode.group(1) == 'active' ? 'Voice conversation started' : 'Back to passive listening';
+    final reason =
+        (mode.group(2) ?? '').replaceFirst(RegExp(r'^mission_control:\s*'), '');
+    final label = mode.group(1) == 'active'
+        ? 'Voice conversation started'
+        : 'Back to passive listening';
     return reason.isEmpty ? label : '$label · $reason';
   }
   return 'Noted for later: $text';
 }
 
 AmbientTurn? parseAmbientTurn(String text) {
-  final match = RegExp(r'^\s*<ambient_turn([^>]*)>([\s\S]*?)</ambient_turn>\s*$').firstMatch(text);
+  final match =
+      RegExp(r'^\s*<ambient_turn([^>]*)>([\s\S]*?)</ambient_turn>\s*$')
+          .firstMatch(text);
   if (match == null) return null;
   final attrs = <String, String>{
-    for (final m in RegExp(r'(\w+)="([^"]*)"').allMatches(match.group(1) ?? '')) m.group(1)!: _unescapeXml(m.group(2) ?? ''),
+    for (final m in RegExp(r'(\w+)="([^"]*)"').allMatches(match.group(1) ?? ''))
+      m.group(1)!: _unescapeXml(m.group(2) ?? ''),
   };
   final raw = match.group(2) ?? '';
-  final contextBlock = RegExp(r'<context>([\s\S]*?)</context>').firstMatch(raw)?.group(1) ?? '';
+  final contextBlock =
+      RegExp(r'<context>([\s\S]*?)</context>').firstMatch(raw)?.group(1) ?? '';
   final context = [
     for (final line in _unescapeXml(contextBlock).split('\n'))
-      if (line.trim().isNotEmpty) line.replaceFirst(RegExp(r'^\[earlier, not sent\]\s*'), '').trim(),
+      if (line.trim().isNotEmpty)
+        line.replaceFirst(RegExp(r'^\[earlier, not sent\]\s*'), '').trim(),
   ];
-  final body = _unescapeXml(raw.replaceAll(RegExp(r'<(recent_speech|context)>[\s\S]*?</\1>'), ''));
+  final body = _unescapeXml(
+      raw.replaceAll(RegExp(r'<(recent_speech|context)>[\s\S]*?</\1>'), ''));
   return AmbientTurn(
     device: attrs['device'] ?? '',
     at: DateTime.tryParse(attrs['at'] ?? '')?.toLocal(),
@@ -765,11 +858,16 @@ AmbientTurn? parseAmbientTurn(String text) {
   );
 }
 
-List<String> _idList(String? raw) =>
-    [for (final s in (raw ?? '').split(',')) if (s.trim().isNotEmpty) s.trim()];
+List<String> _idList(String? raw) => [
+      for (final s in (raw ?? '').split(','))
+        if (s.trim().isNotEmpty) s.trim()
+    ];
 
-String _spokenKey(String s) =>
-    s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9 ]'), '').replaceAll(RegExp(r' +'), ' ').trim();
+String _spokenKey(String s) => s
+    .toLowerCase()
+    .replaceAll(RegExp(r'[^a-z0-9 ]'), '')
+    .replaceAll(RegExp(r' +'), ' ')
+    .trim();
 
 /// Ambient turn ids whose words a later continuation repeats in full, so the
 /// earlier bubble can be dropped.
@@ -782,7 +880,8 @@ Set<String> supersededAmbientTurns(Iterable<String> texts) {
     final key = _spokenKey(turn.text);
     for (final parent in turn.continuationOf) {
       final prev = byId[parent];
-      if (prev != null && prev.isNotEmpty && key.startsWith(prev)) out.add(parent);
+      if (prev != null && prev.isNotEmpty && key.startsWith(prev))
+        out.add(parent);
     }
     for (final id in turn.ids) {
       byId[id] = key;
@@ -791,7 +890,8 @@ Set<String> supersededAmbientTurns(Iterable<String> texts) {
   return out;
 }
 
-bool isAmbientResume(String text) => text.trimLeft().startsWith('<ambient_resume');
+bool isAmbientResume(String text) =>
+    text.trimLeft().startsWith('<ambient_resume');
 
 /// Daemon-written routing instructions (`[routing] …`) sent to the model when a
 /// profile hits its usage limit or resets. Returns a clean one-line status for
@@ -823,7 +923,8 @@ String userQuestionLead(Map<String, dynamic> e) {
   final text = missionControlQuestionText(
       {...e, 'questions': list is List ? list : const []});
   if (text.isEmpty) return 'Needs your input';
-  final more = list is List && list.length > 1 ? ' (+${list.length - 1} more)' : '';
+  final more =
+      list is List && list.length > 1 ? ' (+${list.length - 1} more)' : '';
   return '$text$more';
 }
 

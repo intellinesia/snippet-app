@@ -1911,6 +1911,12 @@ class DaemonClient {
     return GroupSummary.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
+  /// DELETE /groups/{id} — delete the group and its posts.
+  Future<void> deleteGroup(String id) async {
+    final r = await _delete(_uri('/groups/${Uri.encodeComponent(id)}'));
+    if (r.statusCode != 200) throw _err('delete group', r);
+  }
+
   /// GET /groups/{id}/events — one page of a group's event thread.
   Future<List<CoordinationEvent>> groupEvents(
     String id, {

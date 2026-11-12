@@ -7,6 +7,7 @@ import '../widgets.dart';
 import 'mission_control/mission_control_state.dart'
     show
         QuietWakeRun,
+        GroupMessage,
         AmbientTurn,
         AssignmentEnvelope,
         AutonomousRound,
@@ -381,15 +382,52 @@ class DirectMessageCard extends StatelessWidget {
       );
     }
     final typed = message.messageKind.replaceAll('_', ' ');
-    final label = typed.isEmpty ? '' : '${typed[0].toUpperCase()}${typed.substring(1)}';
+    final label =
+        typed.isEmpty ? '' : '${typed[0].toUpperCase()}${typed.substring(1)}';
     return _ThreadCard(
       icon: message.isReply ? 'corner-down-right' : 'message',
       tone: message.urgent ? Tone.danger : Tone.accent,
       kind: message.isReply ? 'Reply from $who' : 'Message from $who',
       status: message.urgent
           ? (label.isEmpty ? 'Urgent' : '$label, urgent')
-          : (label.isNotEmpty ? label : (message.isReply ? 'Reply' : 'Message')),
+          : (label.isNotEmpty
+              ? label
+              : (message.isReply ? 'Reply' : 'Message')),
       body: message.body,
+    );
+  }
+}
+
+class GroupMessageCard extends StatelessWidget {
+  const GroupMessageCard({super.key, required this.message});
+  final GroupMessage message;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = message;
+    final group = m.title.isEmpty ? 'a group' : m.title;
+    if (m.added) {
+      return _ThreadCard(
+        icon: 'users',
+        tone: Tone.accent,
+        kind: 'Added to $group',
+        status: 'Group',
+        body: [
+          if (m.members.isNotEmpty) m.members.join(', '),
+          if (m.lead.isNotEmpty) 'lead ${m.lead}',
+        ].join(' · '),
+      );
+    }
+    return _ThreadCard(
+      icon: 'users',
+      tone: m.replyExpected ? Tone.run : Tone.accent,
+      kind: '${m.fromLabel} in $group',
+      status: m.replyExpected
+          ? 'Reply expected'
+          : (m.mentions.isNotEmpty
+              ? 'Mentioned ${m.mentions.join(', ')}'
+              : 'Group'),
+      body: m.body,
     );
   }
 }
