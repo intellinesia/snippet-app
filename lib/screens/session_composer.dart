@@ -106,19 +106,28 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     _scheduleBottom();
   }
 
-  /// A cold session needs a resume choice before its next turn; the message
-  /// stays in the field until it is made in the strip.
+  /// A cold session in 'ask' mode needs a resume choice before its next turn;
+  /// 'lean'/'full' let the daemon resume, so the send only waits on the check.
   Future<bool> _resolveCold() async {
     if (_cold != null) {
-      toast(context, 'Choose Lean or Full first.');
-      return false;
+      if (_resumeMode == 'ask') {
+        toast(context, 'Choose Lean or Full first.');
+        return false;
+      }
+      return true;
     }
     final seen = _warmSeenAt;
     if (seen != null && DateTime.now().difference(seen).inSeconds < 240) {
       return true;
     }
     await _checkCold();
-    return _cold == null;
+    if (!mounted) return false;
+    if (_resumeMode != 'ask') return true;
+    if (_cold != null) {
+      toast(context, 'Choose Lean or Full first.');
+      return false;
+    }
+    return true;
   }
 
   /// Send the composer's text to a selected agent as a direct message.
@@ -865,7 +874,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     );
   }
 
-  Widget _inputBar(bool running) {
+  Widget _inputBar(bool running, {Widget? top}) {
     final mq = MediaQuery.of(context);
     final keyboard = mq.viewInsets.bottom;
     return AnimatedPadding(
@@ -894,6 +903,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                   if (_attachments.isNotEmpty) _attachmentBar(),
                   if (_mentionQuery != null && !_isMissionControl)
                     _mentionList(),
+                  if (top != null) top,
                   Swap(
                     stateKey: (_isRecording || _recordingPath != null)
                         ? 'recorder'

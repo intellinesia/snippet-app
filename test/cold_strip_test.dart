@@ -1,22 +1,69 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/composer/cold_strip.dart';
 import 'package:snippet/transcript.dart';
 
-void main() {
-  testWidgets('cold strip offers lean and full', (tester) async {
-    var lean = 0, full = 0;
-    await tester.pumpWidget(MaterialApp(
+Widget _tab(String mode, void Function(String) onPick,
+        {int? tokens = 152000}) =>
+    MaterialApp(
       home: Scaffold(
-        body: ColdStrip(
-            resumeTokens: 152000, onLean: () => lean++, onFull: () => full++),
+        body: Center(
+          child: SizedBox(
+            width: 360,
+            child: ColdTab(
+                mode: mode, resumeTokens: tokens, onPick: onPick),
+          ),
+        ),
       ),
-    ));
-    expect(find.text('Cold'), findsOneWidget);
-    expect(find.textContaining('~152k tokens'), findsOneWidget);
+    );
+
+void main() {
+  testWidgets('ask mode offers lean and full and reports picks',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final picks = <String>[];
+    await tester.pumpWidget(_tab('ask', picks.add));
+    expect(find.textContaining('Cold · ~152k to re-read'), findsOneWidget);
+    expect(find.text('Lean'), findsOneWidget);
+    expect(find.text('Full'), findsOneWidget);
+    final size = tester.getSize(find.byType(ColdTab));
+    expect(size.width, lessThanOrEqualTo(360));
+    expect(size.height, lessThanOrEqualTo(32));
     await tester.tap(find.text('Lean'));
     await tester.tap(find.text('Full'));
-    expect((lean, full), (1, 1));
+    expect(picks, ['lean', 'full']);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('lean mode shows the persisted mode and a change menu',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final picks = <String>[];
+    await tester.pumpWidget(_tab('lean', picks.add));
+    expect(find.text('Cold · resumes lean'), findsOneWidget);
+    expect(find.text('Change'), findsOneWidget);
+    await tester.tap(find.text('Change'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ask'), findsOneWidget);
+    expect(find.text('Lean'), findsOneWidget);
+    expect(find.text('Full'), findsOneWidget);
+    await tester.tap(find.text('Full'));
+    await tester.pumpAndSettle();
+    expect(picks, ['full']);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('full mode shows the token count', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    await tester.pumpWidget(_tab('full', (_) {}));
+    expect(find.textContaining('Cold · resumes full · ~152k'),
+        findsOneWidget);
+    expect(find.text('Change'), findsOneWidget);
+    debugDefaultTargetPlatformOverride = null;
   });
 
   testWidgets('lean continuation shows a divider', (tester) async {

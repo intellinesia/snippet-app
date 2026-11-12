@@ -1218,6 +1218,11 @@ class _SessionActionsPanel extends StatefulWidget {
   final bool hideCheckpoints;
   final bool? autoSettle;
   final ValueChanged<bool>? onAutoSettle;
+
+  /// The session's persisted cold-resume mode ('ask'/'lean'/'full'), when the
+  /// session is allowed to change it.
+  final String? resumeMode;
+  final ValueChanged<String>? onResumeMode;
   const _SessionActionsPanel({
     required this.session,
     required this.onSetGoal,
@@ -1245,6 +1250,8 @@ class _SessionActionsPanel extends StatefulWidget {
     this.hideCheckpoints = false,
     this.autoSettle,
     this.onAutoSettle,
+    this.resumeMode,
+    this.onResumeMode,
   });
 
   @override
@@ -1254,6 +1261,7 @@ class _SessionActionsPanel extends StatefulWidget {
 class _SessionActionsPanelState extends State<_SessionActionsPanel> {
   String? _open;
   late bool? _auto = widget.autoSettle;
+  late String? _resume = widget.resumeMode;
   late final TextEditingController _goalCtl = TextEditingController();
 
   @override
@@ -1379,6 +1387,42 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
     );
   }
 
+  Widget? _resumeModeRow() {
+    final mode = _resume;
+    if (mode == null || widget.onResumeMode == null) return null;
+    void pick(String m) {
+      setState(() => _resume = m);
+      widget.onResumeMode!(m);
+    }
+
+    return _row(
+      icon: 'clock',
+      label: 'Cold resume',
+      detail: 'How a cold session picks up its history',
+      value: _modeLabel(mode),
+      id: 'resume',
+      child: Row(children: [
+        for (final m in const ['ask', 'lean', 'full'])
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: Btn(
+              _modeLabel(m),
+              small: true,
+              variant:
+                  m == mode ? BtnVariant.primary : BtnVariant.secondary,
+              onTap: () => pick(m),
+            ),
+          ),
+      ]),
+    );
+  }
+
+  static String _modeLabel(String mode) => switch (mode) {
+        'lean' => 'Lean',
+        'full' => 'Full',
+        _ => 'Ask',
+      };
+
   Widget _mobileBuild(HarnessState? s, bool goalOn, List<Widget> workRows,
       List<Widget> historyRows) {
     final sessionRows = <Widget>[
@@ -1396,6 +1440,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
             detail: 'Scheduled wakes and prompt cache',
             onTap: widget.onWakes),
       if (_autoSettleRow() case final row?) row,
+      if (_resumeModeRow() case final row?) row,
     ];
     final shortcuts = <Widget>[
       _shortcut('git-branch', 'Git', widget.onGit),
@@ -1531,6 +1576,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
           detail: 'Recurring jobs on this machine',
           onTap: widget.onRecurring),
       if (_autoSettleRow() case final row?) row,
+      if (_resumeModeRow() case final row?) row,
     ];
 
     final workspaceRows = <Widget>[

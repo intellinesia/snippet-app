@@ -766,16 +766,49 @@ class _SessionScreenState extends State<SessionScreen>
   // Set while the prompt cache has lapsed and the next turn's resume is unchosen.
   Map<String, dynamic>? _cold;
 
+  // The session's persisted cold-resume mode: 'ask', 'lean' or 'full'.
+  String _resumeMode = 'ask';
+
   Future<void> _checkCold() async {
     if (widget.readOnly) return;
     final info = await widget.client.sessionCache(widget.sessionId);
     if (!mounted || info == null) return;
     final cold = info['cold'] == true ? info : null;
-    if ((cold == null) != (_cold == null)) setState(() => _cold = cold);
+    final mode = info['resume_mode'];
+    if ((cold == null) != (_cold == null) ||
+        (mode is String && mode != _resumeMode)) {
+      setState(() {
+        _cold = cold;
+        if (mode is String) _resumeMode = mode;
+      });
+    }
   }
 
-  void _chooseResume(bool lean) {
-    if (lean) _send({'kind': 'continue_lean'});
+  /// Persist the session's cold-resume mode, restoring the previous one when
+  /// the daemon refuses. Returns whether the pick stuck.
+  Future<bool> _setResumeMode(String mode) async {
+    final before = _resumeMode;
+    setState(() => _resumeMode = mode);
+    try {
+      await widget.client.setResumeMode(widget.sessionId, mode);
+      return true;
+    } catch (e) {
+      if (mounted) {
+        setState(() => _resumeMode = before);
+        toast(context, "Couldn't change cold resume: $e", danger: true);
+      }
+      return false;
+    }
+  }
+
+  /// A pick from the composer's cold tab. From 'ask' it also finishes the
+  /// resume — lean continues immediately, full re-reads — and the tab
+  /// collapses; from 'lean'/'full' the Change menu only persists, and the
+  /// daemon resumes on the next turn.
+  Future<void> _onColdPick(String mode) async {
+    final wasAsk = _resumeMode == 'ask';
+    if (!await _setResumeMode(mode) || !mounted || !wasAsk) return;
+    if (mode == 'lean') _send({'kind': 'continue_lean'});
     _warmSeenAt = DateTime.now();
     setState(() => _cold = null);
   }
@@ -800,7 +833,13 @@ class _SessionScreenState extends State<SessionScreen>
       final me = list.where((x) => x.id == widget.sessionId).firstOrNull;
       _keepAwake = me?.keepAwake ?? false;
       final now = me?.settled ?? false;
-      if (now != _settled) setState(() => _settled = now);
+      final mode = me?.resumeMode;
+      if (now != _settled || (mode != null && mode != _resumeMode)) {
+        setState(() {
+          _settled = now;
+          if (mode != null) _resumeMode = mode;
+        });
+      }
     }).catchError((_) {});
   }
 
@@ -1618,21 +1657,23 @@ class _SessionScreenState extends State<SessionScreen>
                                     onSend: _sendDecision),
                               ),
                             )),
-                          if (!widget.readOnly && _cold != null && !running)
-                            _centerWide(
-                                ColdStrip(
-                                    resumeTokens:
-                                        (_cold!['resume_tokens'] as num?)
-                                            ?.toInt(),
-                                    onLean: () => _chooseResume(true),
-                                    onFull: () => _chooseResume(false)),
-                                extra: 2 * kComposerGutter),
                           if (!widget.readOnly && _settled)
                             _centerWide(_settledNotice(),
                                 extra: 2 * kComposerGutter),
                           if (!widget.readOnly &&
                               !(waiting && s?.pendingQuestion != null))
-                            _centerWide(_inputBar(running), extra: 2 * kComposerGutter),
+                            _centerWide(
+                                _inputBar(running,
+                                    top: !running && _cold != null
+                                        ? ColdTab(
+                                            mode: _resumeMode,
+                                            resumeTokens:
+                                                (_cold!['resume_tokens']
+                                                        as num?)
+                                                    ?.toInt(),
+                                            onPick: _onColdPick)
+                                        : null),
+                                extra: 2 * kComposerGutter),
                         ]);
                   }),
                   ),

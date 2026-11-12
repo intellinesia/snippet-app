@@ -1,60 +1,85 @@
 import 'package:flutter/material.dart';
 
-import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
 String _tokens(int n) => n >= 1000 ? '${(n / 1000).round()}k' : '$n';
 
-/// Shown above the composer while a session's prompt cache has lapsed: the next
-/// turn either re-reads the whole history or continues lean from a handover.
-class ColdStrip extends StatelessWidget {
+String _modeLabel(String mode) => switch (mode) {
+      'lean' => 'Lean',
+      'full' => 'Full',
+      _ => 'Ask',
+    };
+
+/// Slim tab attached to the top edge of the composer while a session's prompt
+/// cache has lapsed. In 'ask' mode it offers the one-off Lean/Full choice; in
+/// 'lean'/'full' it shows the persisted mode and a Change menu.
+class ColdTab extends StatelessWidget {
+  /// The session's persisted resume mode: 'ask', 'lean' or 'full'.
+  final String mode;
   final int? resumeTokens;
-  final VoidCallback onLean;
-  final VoidCallback onFull;
-  const ColdStrip(
-      {super.key, this.resumeTokens, required this.onLean, required this.onFull});
+  final ValueChanged<String> onPick;
+  const ColdTab(
+      {super.key,
+      required this.mode,
+      this.resumeTokens,
+      required this.onPick});
+
+  Future<void> _changeMode(BuildContext context) async {
+    final picked = await showAppMenu<String>(
+      context,
+      anchor: context,
+      alignEnd: true,
+      minWidth: 180,
+      maxWidth: 220,
+      items: [
+        for (final m in const ['ask', 'lean', 'full'])
+          appMenuItem<String>(
+              value: m, label: _modeLabel(m), selected: m == mode),
+      ],
+    );
+    if (picked != null) onPick(picked);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final full = resumeTokens == null
-        ? 'Full re-reads the history'
-        : 'Full re-reads ~${_tokens(resumeTokens!)} tokens';
+    final tokens =
+        resumeTokens == null ? null : '~${_tokens(resumeTokens!)}';
+    final label = switch (mode) {
+      'lean' => 'Cold · resumes lean',
+      'full' => tokens == null
+          ? 'Cold · resumes full'
+          : 'Cold · resumes full · $tokens',
+      _ => tokens == null ? 'Cold' : 'Cold · $tokens to re-read',
+    };
     return Container(
-      margin: EdgeInsets.fromLTRB(
-          kMobile ? M.gutter : 20, 6, kMobile ? M.gutter : 20, 0),
-      padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surface2,
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(10)),
+        border: Border(
+            bottom: BorderSide(
+                color: AppColors.fg1.withValues(alpha: 0.08))),
       ),
       child: Row(children: [
-        Container(
-          width: 30,
-          height: 30,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-              color: AppColors.surface3, borderRadius: BorderRadius.circular(9)),
-          child: AppIcon('clock', size: 15, color: AppColors.fg2),
-        ),
-        const SizedBox(width: 10),
+        AppIcon('clock', size: 13, color: AppColors.fg3),
+        const SizedBox(width: 7),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Cold', style: sans(13, weight: W.label, color: AppColors.fg1)),
-              Text(full,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(12, color: AppColors.fg4)),
-            ],
-          ),
+          child: Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(12, color: AppColors.fg3)),
         ),
-        const SizedBox(width: 8),
-        Btn('Full', small: true, variant: BtnVariant.secondary, onTap: onFull),
-        const SizedBox(width: 6),
-        Btn('Lean', small: true, onTap: onLean),
+        if (mode == 'ask') ...[
+          Btn('Full',
+              small: true,
+              variant: BtnVariant.secondary,
+              onTap: () => onPick('full')),
+          const SizedBox(width: 6),
+          Btn('Lean', small: true, onTap: () => onPick('lean')),
+        ] else
+          TextAction('Change', onTap: () => _changeMode(context)),
       ]),
     );
   }
