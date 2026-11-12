@@ -120,7 +120,7 @@ class AmbientStream {
       } else if (t == 'err') {
         onStreamError?.call(h, code);
       }
-    } else if (t == 'tts_start' || t == 'tts_end' || t == 'tts_stop') {
+    } else if (t == 'tts_start' || t == 'tts_end' || t == 'tts_stop' || t == 'probe') {
       onTts?.call(msg);
     }
   }

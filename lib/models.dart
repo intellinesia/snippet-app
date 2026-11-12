@@ -167,6 +167,9 @@ class SessionInfo {
 
   /// Opts the session out of automatic settling.
   final bool keepAwake;
+
+  /// How a cold session resumes its history: 'ask', 'lean' or 'full'.
+  final String resumeMode;
   final int? settledAt;
   final int idleSecs;
   final String cache;
@@ -232,6 +235,7 @@ class SessionInfo {
         profile = j['profile'] as String?,
         settled = j['settled'] == true,
         keepAwake = j['keep_awake'] == true,
+        resumeMode = j['resume_mode'] as String? ?? 'ask',
         settledAt = (j['settled_at'] as num?)?.toInt(),
         idleSecs = (j['idle_secs'] as num?)?.toInt() ?? 0,
         cache = j['cache'] as String? ?? 'warm',
@@ -276,6 +280,7 @@ class SessionInfo {
         profile: profile,
         settled: settled,
         keepAwake: keepAwake,
+        resumeMode: resumeMode,
         settledAt: settledAt,
         idleSecs: idleSecs,
         cache: cache,
@@ -304,6 +309,7 @@ class SessionInfo {
     required this.profile,
     this.settled = false,
     this.keepAwake = false,
+    this.resumeMode = 'ask',
     this.settledAt,
     this.idleSecs = 0,
     this.cache = 'warm',
@@ -1309,6 +1315,52 @@ class DirectThreadSummary {
   bool get hasUnread => unread > 0;
 }
 
+/// One participant in a group chat: an agent, or the local human.
+class GroupMember {
+  /// `agent` or `human`.
+  final String kind;
+  final String id;
+
+  GroupMember.fromJson(Map<String, dynamic> j)
+      : kind = j['kind'] as String? ?? '',
+        id = j['id'] as String? ?? '';
+
+  bool get isAgent => kind == 'agent';
+  bool get isHuman => kind == 'human';
+}
+
+/// A group chat: agents plus the local human, with a shared event thread.
+class GroupSummary {
+  final String id;
+  final String title;
+  final List<GroupMember> members;
+
+  /// The agent that speaks for the group; null when unset.
+  final String? lead;
+  final String? lastEventAt;
+  final int unread;
+  final String createdAt;
+
+  GroupSummary.fromJson(Map<String, dynamic> j)
+      : id = j['id'] as String? ?? '',
+        title = j['title'] as String? ?? '',
+        members = ((j['members'] as List?) ?? const [])
+            .whereType<Map>()
+            .map((e) => GroupMember.fromJson(Map<String, dynamic>.from(e)))
+            .toList(),
+        lead = (j['lead'] as String?)?.isEmpty ?? true
+            ? null
+            : (j['lead'] as String),
+        lastEventAt = j['last_event_at'] as String?,
+        unread = (j['unread'] as num?)?.toInt() ?? 0,
+        createdAt = j['created_at'] as String? ?? '';
+
+  List<String> get agentIds =>
+      [for (final m in members) if (m.isAgent) m.id];
+
+  bool get hasUnread => unread > 0;
+}
+
 class CoordinationEvent {
   final String eventId;
   final String threadId;
@@ -1353,6 +1405,49 @@ class CoordinationEvent {
 
   List<String> get addressedTo =>
       (payload['to'] as List?)?.whereType<String>().toList() ?? const [];
+}
+
+class MessageDelivery {
+  final DateTime? deliveredAt;
+  final DateTime? readAt;
+
+  const MessageDelivery({this.deliveredAt, this.readAt});
+
+  factory MessageDelivery.fromJson(Map<String, dynamic> j) => MessageDelivery(
+        deliveredAt: _deliveryTime(j['delivered_at']),
+        readAt: _deliveryTime(j['read_at']),
+      );
+}
+
+DateTime? _deliveryTime(Object? value) =>
+    value is String ? DateTime.tryParse(value) : null;
+
+class DirectThreadPage {
+  final List<CoordinationEvent> events;
+  final Map<String, MessageDelivery> deliveries;
+
+  const DirectThreadPage({required this.events, this.deliveries = const {}});
+
+  factory DirectThreadPage.fromJson(Map<String, dynamic> j) {
+    final deliveries = <String, MessageDelivery>{};
+    final raw = j['deliveries'];
+    if (raw is Map) {
+      for (final entry in raw.entries) {
+        final key = entry.key;
+        final value = entry.value;
+        if (key is String && value is Map) {
+          deliveries[key] =
+              MessageDelivery.fromJson(value.cast<String, dynamic>());
+        }
+      }
+    }
+    return DirectThreadPage(
+      events: ((j['events'] as List?) ?? const [])
+          .map((e) => CoordinationEvent.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      deliveries: deliveries,
+    );
+  }
 }
 
 /// A task tracked by Mission Control.

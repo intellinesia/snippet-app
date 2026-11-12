@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -19,23 +20,35 @@ class _StreamTurn {
   bool ended = false;
   int? carry;
   int lastPlayed = -1;
-  DateTime lastFrame = DateTime.now();
-  DateTime lastProgress = DateTime.now();
+  DateTime lastFrame = clock.now();
+  DateTime lastProgress = clock.now();
   bool locallyPaused = false;
   DateTime? pauseStarted;
   DateTime? speechEndedAt;
   Timer? pauseTimer;
   int pauseGeneration = 0;
+  Duration pauseLimit = const Duration(seconds: 3);
+}
+
+class _Probe {
+  const _Probe({required this.seq, required this.turn, required this.startedAt});
+  final int seq;
+  final int turn;
+  final DateTime startedAt;
 }
 
 class AmbientVoice {
-  AmbientVoice({required this.baseUrl, required this.token, required this.device});
+  AmbientVoice({required this.baseUrl, required this.token, required this.device, AmbientSink? sink})
+      : _sink = sink ?? AmbientSink();
+  static const _probeWindow = Duration(milliseconds: 1500);
+  static const _pauseCap = Duration(seconds: 3);
+  static const _maxPause = Duration(milliseconds: 4500);
   final String baseUrl;
   final String token;
   final String device;
   final ValueNotifier<bool> speaking = ValueNotifier(false);
   final ValueNotifier<AmbientStateEvent?> state = ValueNotifier(null);
-  final AmbientSink _sink = AmbientSink();
+  final AmbientSink _sink;
 
   WebSocketChannel? _channel;
   StreamSubscription<dynamic>? _sub;
@@ -47,6 +60,7 @@ class AmbientVoice {
   final Set<int> _streamDead = {};
   Timer? _streamTick;
   bool _ticking = false;
+  final Map<int, _Probe> _probeInFlight = {};
 
   bool get _busy => _streams.isNotEmpty;
 
@@ -114,9 +128,60 @@ class AmbientVoice {
         if (turn <= 0 || _streamDead.contains(turn)) return;
         _adoptStream(turn).ended = true;
         _streamChanged();
+      case 'probe':
+        _onProbe(msg);
       case 'tts_stop':
         unawaited(stopStream(turn));
     }
+  }
+
+  void _onProbe(Map<String, dynamic> msg) {
+    final seq = (msg['seq'] as num?)?.toInt() ?? 0;
+    final turn = (msg['turn'] as num?)?.toInt() ?? 0;
+    switch (msg['phase']) {
+      case 'begin':
+        _probeInFlight[seq] = _Probe(seq: seq, turn: turn, startedAt: clock.now());
+      case 'verdict':
+        final probe = _probeInFlight.remove(seq);
+        if (probe == null) return;
+        final go = msg['go'];
+        if (go == false) {
+          for (final e in _streams.entries) {
+            final st = e.value;
+            if (!st.locallyPaused || st.speechEndedAt == null) continue;
+            unawaited(_resumeLocal(st, e.key, st.pauseGeneration));
+          }
+        } else if (go == true) {
+          _armProbeSafety(probe);
+        }
+    }
+  }
+
+  void _armProbeSafety(_Probe probe) {
+    final delay = _probeRemaining(probe);
+    for (final e in _streams.entries) {
+      final st = e.value;
+      if (!st.locallyPaused) continue;
+      final generation = st.pauseGeneration;
+      st.pauseTimer?.cancel();
+      st.pauseTimer = Timer(delay, () => _resumeLocal(st, e.key, generation));
+    }
+  }
+
+  _Probe? _pendingProbe() {
+    _Probe? probe;
+    final now = clock.now();
+    for (final p in _probeInFlight.values) {
+      if (now.difference(p.startedAt) >= _probeWindow) continue;
+      if (probe == null || p.startedAt.isAfter(probe.startedAt)) probe = p;
+    }
+    return probe;
+  }
+
+  Duration _probeRemaining(_Probe probe) {
+    final left = _probeWindow - clock.now().difference(probe.startedAt);
+    if (left < Duration.zero) return Duration.zero;
+    return left > _probeWindow ? _probeWindow : left;
   }
 
   _StreamTurn _adoptStream(int turn) => _streams.putIfAbsent(turn, _StreamTurn.new);
@@ -140,7 +205,7 @@ class AmbientVoice {
     }
     if (data.isEmpty) return;
     st.bytes += data.length;
-    st.lastFrame = DateTime.now();
+    st.lastFrame = clock.now();
     unawaited(_sink.enqueueFrame(turn, data).catchError((Object _) {}));
   }
 
@@ -169,7 +234,7 @@ class AmbientVoice {
       final played = _playedMap(pos);
       final heard = pos['turn'] as int? ?? -1;
       final active = pos['active'] == 1;
-      final now = DateTime.now();
+      final now = clock.now();
       final quietLimit = (_duplex?.open ?? false) ? const Duration(seconds: 8) : const Duration(seconds: 3);
       for (final e in _streams.entries.toList()) {
         final turn = e.key, st = e.value;
@@ -214,18 +279,19 @@ class AmbientVoice {
     for (final entry in _streams.entries.toList()) {
       final st = entry.value;
       if (voiced) {
+        if (st.speechEndedAt != null) st.pauseTimer?.cancel();
         st.speechEndedAt = null;
-        st.pauseTimer?.cancel();
         if (canPause && !st.locallyPaused) {
           st.locallyPaused = true;
-          st.pauseStarted = DateTime.now();
+          st.pauseStarted = clock.now();
           st.pauseGeneration++;
+          st.pauseLimit = _pauseCap;
           final generation = st.pauseGeneration;
-          Timer(const Duration(seconds: 3), () => _resumeLocal(st, entry.key, generation));
+          Timer(st.pauseLimit, () => _resumeLocal(st, entry.key, generation));
           await _sink.pauseTts();
         }
       } else if (st.locallyPaused && st.speechEndedAt == null) {
-        st.speechEndedAt = DateTime.now();
+        st.speechEndedAt = clock.now();
         final generation = st.pauseGeneration;
         st.pauseTimer = Timer(const Duration(milliseconds: 900), () => _resumeLocal(st, entry.key, generation));
       }
@@ -234,7 +300,16 @@ class AmbientVoice {
 
   Future<void> _resumeLocal(_StreamTurn st, int turn, int generation) async {
     if (!st.locallyPaused || st.pauseGeneration != generation || _streamDead.contains(turn)) return;
-    if (st.speechEndedAt == null && DateTime.now().difference(st.pauseStarted!) < const Duration(seconds: 3)) return;
+    final probe = _pendingProbe();
+    if (probe != null) {
+      final wait = _probeRemaining(probe);
+      st.pauseLimit = _pauseCap + wait;
+      if (st.pauseLimit.compareTo(_maxPause) > 0) st.pauseLimit = _maxPause;
+      st.pauseTimer?.cancel();
+      st.pauseTimer = Timer(wait, () => _resumeLocal(st, turn, generation));
+      return;
+    }
+    if (st.speechEndedAt == null && clock.now().difference(st.pauseStarted!) < st.pauseLimit) return;
     st.locallyPaused = false;
     st.pauseTimer?.cancel();
     await _sink.resumeTts();
@@ -242,6 +317,11 @@ class AmbientVoice {
   }
 
   Future<void> stopStream([int turn = 0]) async {
+    if (turn == 0) {
+      _probeInFlight.clear();
+    } else {
+      _probeInFlight.removeWhere((_, p) => p.turn == turn || p.turn == 0);
+    }
     // The daemon sends up to three stops per interrupt; a late one must not cut the reply that replaced this turn.
     if (turn != 0 && !_streams.containsKey(turn)) {
       _streamDead.add(turn);
@@ -276,6 +356,7 @@ class AmbientVoice {
 
   Future<void> dispose() async {
     _closed = true;
+    _probeInFlight.clear();
     _retry?.cancel();
     _streamTick?.cancel();
     final duplex = _duplex;

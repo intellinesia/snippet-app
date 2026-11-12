@@ -532,7 +532,7 @@ void notificationBackgroundResponse(NotificationResponse response) async {
     final plugin = FlutterLocalNotificationsPlugin();
     await plugin.initialize(
         settings: const InitializationSettings(
-            android: AndroidInitializationSettings('@mipmap/ic_launcher')));
+            android: AndroidInitializationSettings('ic_stat_snippet')));
     if (response.id != null) await plugin.cancel(id: response.id!);
   }
 }
@@ -561,7 +561,7 @@ Future<void> _initializeAndroidNotifications(
     FlutterLocalNotificationsPlugin plugin) async {
   await plugin.initialize(
     settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher')),
+        android: AndroidInitializationSettings('ic_stat_snippet')),
     onDidReceiveBackgroundNotificationResponse: notificationBackgroundResponse,
   );
 }
@@ -583,7 +583,7 @@ Future<void> initNotifications() async {
     _listenForBackgroundCancels();
     await _mainNotif.initialize(
       settings: const InitializationSettings(
-          android: AndroidInitializationSettings('@mipmap/ic_launcher')),
+          android: AndroidInitializationSettings('ic_stat_snippet')),
       onDidReceiveBackgroundNotificationResponse:
           notificationBackgroundResponse,
       onDidReceiveNotificationResponse: (resp) async {

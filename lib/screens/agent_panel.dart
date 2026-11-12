@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'agent_appearance.dart';
 import 'agent_profile_panel.dart';
+import 'agent_reach_panel.dart';
 import 'agent_records.dart';
 import 'agent_wake_panel.dart';
 import 'memory_screen.dart';
@@ -14,13 +15,14 @@ import 'shell_models.dart' show RightTab;
 
 /// The agent actions that open as right-panel tabs. `desk` opens a session tab
 /// and `delete` a confirm.
-const agentPanelPages = ['inbox', 'board', 'memory', 'wakes', 'model'];
+const agentPanelPages = ['inbox', 'board', 'memory', 'wakes', 'reach', 'model'];
 
 String _pageTitle(String action) => switch (action) {
       'inbox' => 'Inbox',
       'board' => 'Board',
       'memory' => 'Memory',
       'wakes' => 'Wakes',
+      'reach' => 'How it reaches you',
       'model' => 'Inference profile',
       'nickname' => 'Nickname',
       _ => 'Appearance',
@@ -56,6 +58,9 @@ ShellPanelRequest agentPanelRequest(
                 child: AgentWakePanel(
                     client: client, owner: agentId, name: agentName)),
           ),
+        'reach' => SingleChildScrollView(
+            padding: const EdgeInsets.all(S.s12),
+            child: AgentReachPanel(client: client, agentId: agentId)),
         'model' => _WithAgent(
             client: client,
             agentId: agentId,

@@ -90,6 +90,15 @@ class PresenceStore extends ChangeNotifier {
         final s => s,
       };
 
+  /// Chat-header status: activity detail never leaves the wire shape.
+  static String chatWord(Presence p) => switch (p.state) {
+        'running' || 'tool' => 'working',
+        'waiting' => p.detail.isEmpty || p.detail == 'user'
+            ? 'waiting on you'
+            : 'waiting on ${p.detail}',
+        _ => '',
+      };
+
   // Hold the shared socket only while something is watching presence.
   @override
   void addListener(VoidCallback listener) {

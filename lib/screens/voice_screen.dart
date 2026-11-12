@@ -299,8 +299,18 @@ class _VoiceScreenState extends State<VoiceScreen> {
   static String _when(int ms) {
     final t = DateTime.fromMillisecondsSinceEpoch(ms);
     const m = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return '${m[t.month - 1]} ${t.day}, ${_clock(t)}';
   }
@@ -385,7 +395,8 @@ class _VoiceScreenState extends State<VoiceScreen> {
               label: _retentionLabel(r.retentionDays),
               selected: r.retentionDays,
               items: [
-                for (final d in days.where((d) => d > 0)) (d, _retentionLabel(d)),
+                for (final d in days.where((d) => d > 0))
+                  (d, _retentionLabel(d)),
                 (0, 'Forever'),
               ],
               onSelected: (d) =>
@@ -430,11 +441,87 @@ class _VoiceScreenState extends State<VoiceScreen> {
 
   AmbientSettings? _ambient;
 
+  AmbientTuning? _tuning;
+
   Future<void> _loadAmbient() async {
     try {
       final a = await widget.client.getAmbientSettings();
       if (mounted) setState(() => _ambient = a);
     } catch (_) {}
+    try {
+      final t = await widget.client.ambientTuning();
+      if (mounted) setState(() => _tuning = t);
+    } catch (_) {}
+  }
+
+  Future<void> _setTuning(String profile, {int? minutes}) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final t = await widget.client.setAmbientTuning(profile, minutes: minutes);
+      if (mounted) setState(() => _tuning = t);
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Widget _attentionGroup(AmbientTuning t) {
+    final until = t.expiresAt == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(t.expiresAt! * 1000);
+    final hm = until == null
+        ? null
+        : '${until.hour.toString().padLeft(2, '0')}:${until.minute.toString().padLeft(2, '0')}';
+    final by = t.setBy == null
+        ? null
+        : (t.setBy == 'user' ? 'Set by you' : 'Set by ${t.setBy}');
+    final sub = [
+      ambientProfileDetail(t.profile),
+      if (by != null) by,
+      if (t.reason != null && t.reason!.isNotEmpty && t.setBy != 'user')
+        '"${t.reason}"',
+    ].where((x) => x.isNotEmpty).join(' · ');
+    final profiles = [
+      ...AmbientTuning.profiles,
+      if (!AmbientTuning.profiles.contains(t.profile)) t.profile,
+    ];
+    const lengths = [0, 30, 60, 120, 240];
+    String lengthLabel(int m) => m == 0
+        ? 'Until changed'
+        : m < 60
+            ? '$m minutes'
+            : '${m ~/ 60} hour${m == 60 ? '' : 's'}';
+    return SettingsGroup(
+      header: 'Attention',
+      footer:
+          'How the microphone treats speech. Mission Control also changes it when you say who is around.',
+      children: [
+        SettingsRow(
+          label: 'Profile',
+          sub: sub.isEmpty ? null : sub,
+          trailing: SettingsPopup<String>(
+            label: ambientProfileLabel(t.profile),
+            selected: t.profile,
+            items: [for (final p in profiles) (p, ambientProfileLabel(p))],
+            onSelected: (p) => _setTuning(p),
+          ),
+        ),
+        if (t.profile != 'alone')
+          SettingsRow(
+            label: 'Lasts',
+            sub: hm == null ? null : 'Back to Alone at $hm',
+            trailing: SettingsPopup<int>(
+              label: hm == null ? 'Until changed' : 'Until $hm',
+              selected: hm == null ? 0 : -1,
+              items: [for (final m in lengths) (m, lengthLabel(m))],
+              onSelected: (m) =>
+                  _setTuning(t.profile, minutes: m == 0 ? null : m),
+            ),
+          ),
+      ],
+    );
   }
 
   Future<void> _saveAmbient({
@@ -514,8 +601,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
     final rime = a.ttsProvider == 'rime';
     final usesDeepgram = flux || !rime;
     Widget key(String label, bool set, String hint,
-            Future<void> Function(String) save,
-            {bool optional = false}) =>
+            Future<void> Function(String) save, {bool optional = false}) =>
         InlineKeyRow(
             label: label,
             keySet: set,
@@ -576,7 +662,10 @@ class _VoiceScreenState extends State<VoiceScreen> {
               trailing: SettingsPopup<String>(
                 label: a.rimeModel == 'coda' ? 'Coda' : 'Mist v3 (fastest)',
                 selected: a.rimeModel,
-                items: const [('mistv3', 'Mist v3 (fastest)'), ('coda', 'Coda')],
+                items: const [
+                  ('mistv3', 'Mist v3 (fastest)'),
+                  ('coda', 'Coda')
+                ],
                 onSelected: (m) => _saveAmbient(
                     rimeModel: m,
                     rimeVoice: m == 'coda' ? 'lyra' : 'cove',
@@ -604,8 +693,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
                             voices: list,
                             selected: a.rimeVoice);
                         if (v != null && mounted) {
-                          await _saveAmbient(
-                              rimeVoice: v, done: 'Voice saved');
+                          await _saveAmbient(rimeVoice: v, done: 'Voice saved');
                         }
                       },
               ),
@@ -686,6 +774,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
                 (k) => _saveAmbient(rimeKey: k, done: 'Rime key saved')),
           ],
         ),
+      if (_tuning != null) _attentionGroup(_tuning!),
       SettingsGroup(
         header: 'Conversation',
         footer: 'A wake phrase starts a conversation, even in Passive mode.',

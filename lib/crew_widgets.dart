@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'screens/agent_reach_panel.dart';
 import 'screens/agent_wake_panel.dart';
 import 'screens/agent_appearance.dart';
 import 'screens/agent_profile_panel.dart';
@@ -116,6 +117,7 @@ Future<void> showCrewAgentMenu(
           value: 'model', icon: 'cpu', label: 'Change inference profile'),
       appMenuItem(
           value: 'wakes', icon: 'calendar-clock', label: 'Wakes and reporting'),
+      appMenuItem(value: 'reach', icon: 'bell', label: 'How it reaches you'),
       appMenuItem(
           value: 'delete', icon: 'trash', label: 'Delete agent', danger: true),
     ],
@@ -161,6 +163,9 @@ Future<void> runCrewAgentAction(
         name: name,
         point: point,
         onChanged: onDeleted);
+  } else if (picked == 'reach') {
+    await showAgentReachSettings(context,
+        client: client, agentId: agent.id, name: name, point: point);
   } else if (picked == 'model') {
     await showAgentProfileSettings(context,
         client: client,
@@ -415,7 +420,8 @@ Widget _presenceLine(CrewEntry e) {
         TextSpan(children: [
           TextSpan(text: e.presenceWord, style: sans(12, color: color)),
           if (e.presenceDetail != null)
-            TextSpan(text: ' ${e.presenceDetail}', style: mono(11, color: color)),
+            TextSpan(
+                text: ' ${e.presenceDetail}', style: mono(11, color: color)),
         ]),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,

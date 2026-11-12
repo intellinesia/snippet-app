@@ -976,6 +976,9 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       hideCheckpoints: _isMissionControl,
       autoSettle: _isMissionControl || widget.readOnly ? null : !_keepAwake,
       onAutoSettle: _setAutoSettle,
+      resumeMode:
+          _isMissionControl || widget.readOnly ? null : _resumeMode,
+      onResumeMode: (m) => _setResumeMode(m),
       onAutonomy: _isMissionControl ? () => navigate!(_openAutonomy) : null,
       onWakes: () => run(_openWakes),
       onSetGoal: (text) {
