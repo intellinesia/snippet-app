@@ -1101,12 +1101,48 @@ class AgentLastMessage {
 
   static AgentLastMessage? tryParse(Object? j) {
     if (j is! Map) return null;
+    // Reactions arrive as messages with an empty body; they are chips on the
+    // target, never a roster preview.
+    if ('${j['reaction'] ?? ''}'.isNotEmpty || j['kind'] == 'reaction') {
+      return null;
+    }
     final text = '${j['text'] ?? ''}'.trim();
     if (text.isEmpty) return null;
     return AgentLastMessage(
       text: text,
       fromUser: j['from'] == 'user',
       at: DateTime.tryParse('${j['at'] ?? ''}'),
+    );
+  }
+}
+
+/// The daemon's rollup of an agent's live state across its sessions
+/// (`GET /agents` `presence`). Optional: absent on older daemons.
+class AgentPresence {
+  const AgentPresence({
+    required this.state,
+    this.detail = '',
+    this.since,
+    this.session = '',
+  });
+
+  /// idle | thinking | typing | working | waiting | blocked | reviewing
+  final String state;
+  final String detail;
+  final DateTime? since;
+  final String session;
+
+  bool get active => state.isNotEmpty && state != 'idle';
+
+  static AgentPresence? tryParse(Object? j) {
+    if (j is! Map) return null;
+    final state = '${j['state'] ?? ''}'.trim();
+    if (state.isEmpty) return null;
+    return AgentPresence(
+      state: state,
+      detail: '${j['detail'] ?? ''}'.trim(),
+      since: DateTime.tryParse('${j['since'] ?? ''}'),
+      session: '${j['session'] ?? ''}',
     );
   }
 }
@@ -1124,6 +1160,12 @@ class CoordinationAgent {
   /// The newest message to or from this agent, across its direct thread and
   /// sessions. Null when there is none or the daemon predates it.
   final AgentLastMessage? lastMessage;
+
+  /// Live state rolled up across the agent's sessions; null on older daemons.
+  final AgentPresence? presence;
+
+  /// Open questions plus tasks awaiting the user's verdict; 0 when absent.
+  final int needsYou;
 
   /// What the UI shows: the nickname when one is set, else the name.
   String get displayName => nickname ?? fullName;
@@ -1175,6 +1217,8 @@ class CoordinationAgent {
             .whereType<String>()
             .toList(),
         lastMessage = AgentLastMessage.tryParse(j['last_message']),
+        presence = AgentPresence.tryParse(j['presence']),
+        needsYou = (j['needs_you'] as num?)?.toInt() ?? 0,
         taskCounts = j['task_counts'] is Map
             ? {
                 for (final e in (j['task_counts'] as Map).entries)
