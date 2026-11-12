@@ -645,7 +645,7 @@ class DaemonClient {
     if (r.statusCode != 200) throw _err('load accounts', r);
     final json = jsonDecode(r.body) as Map<String, dynamic>;
     return {
-      for (final provider in ['chatgpt', 'xai', 'claude-code'])
+      for (final provider in ['chatgpt', 'xai', 'claude-code', 'devin'])
         provider: ((json[provider] as List?) ?? [])
             .map((a) => Account.fromJson((a as Map).cast<String, dynamic>()))
             .toList()

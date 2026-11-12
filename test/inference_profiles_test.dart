@@ -3,7 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/models.dart';
+import 'package:snippet/screens/accounts_screen.dart';
+import 'package:snippet/screens/inference_profile_editor.dart';
 import 'package:snippet/screens/inference_profiles.dart';
+import 'package:snippet/screens/usage.dart';
 import 'package:snippet/screens/vault.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/widgets.dart';
@@ -131,4 +134,110 @@ void main() {
     expect(find.text('••••••'), findsNothing);
     expect(find.textContaining('••'), findsNothing);
   });
+
+  test('Devin provider logo, usability, and usage label match spec', () {
+    expect(providerLogoAsset('devin'), 'assets/providers/devin.svg');
+    expect(providerLogoAsset('windsurf'), 'assets/providers/devin.svg');
+    expect(providerLogoIsColour('devin'), isFalse);
+    expect(usageProviderTitle('devin'), 'Devin');
+
+    final profile = InferenceProfile.fromJson({
+      'name': 'devin-swe',
+      'provider': 'devin',
+      'model': 'swe-2',
+      'has_key': false,
+    });
+    expect(profile.usable, isTrue);
+  });
+
+  testWidgets(
+    'Devin CLI status card, add page, and non-removable main account render',
+    (tester) async {
+      tester.view.physicalSize = const Size(1280, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final client = _DummyDevinDaemon();
+
+      await tester.pumpWidget(MaterialApp(
+        theme: buildAppTheme(),
+        home: Scaffold(
+          body: InferenceProfileEditor(
+            client: client,
+            embedded: true,
+            existing: InferenceProfile.fromJson({
+              'name': 'devin',
+              'provider': 'devin',
+              'model': 'swe-2',
+            }),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+            'Install the Devin CLI and run devin auth login on the machine running Snippet.'),
+        findsOneWidget,
+      );
+
+      await tester.pumpWidget(MaterialApp(
+        theme: buildAppTheme(),
+        home: Scaffold(
+          body: AccountsScreen(client: client, embedded: true),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('DEVIN'), findsOneWidget);
+      expect(find.text('devin-main'), findsOneWidget);
+      await tester.tap(find.text('devin-main'));
+      await tester.pumpAndSettle();
+      expect(find.text('Devin'), findsOneWidget);
+      expect(find.text('Remove account'), findsNothing);
+
+      await tester.tap(find.text('Accounts'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add account').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add Devin account'), findsOneWidget);
+      expect(
+          find.text('windsurf_api_key or credentials.toml'), findsOneWidget);
+      await tester.tap(find.text('Add account'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Paste the windsurf_api_key from credentials.toml.'),
+        findsNWidgets(2),
+      );
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.linux),
+  );
+}
+
+class _DummyDevinDaemon extends _FakeDaemon {
+  @override
+  Future<Map<String, dynamic>> reasoningSpec(
+          String provider, String model) async =>
+      const {'options': <String>[]};
+
+  @override
+  Future<Map<String, dynamic>> cliAgentStatus(String provider) async => {
+        'installed': false,
+        'signed_in': false,
+      };
+
+  @override
+  Future<Map<String, List<Account>>> getAccounts() async => {
+        'chatgpt': const [],
+        'xai': const [],
+        'claude-code': const [],
+        'devin': [
+          Account.fromJson({
+            'id': 'main',
+            'label': 'devin-main',
+            'active': true,
+          }),
+        ],
+      };
 }

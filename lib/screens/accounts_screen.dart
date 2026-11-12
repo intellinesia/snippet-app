@@ -37,7 +37,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
   final _label = TextEditingController();
   String? _addError;
 
-  static const _providers = ['chatgpt', 'xai', 'claude-code'];
+  static const _providers = ['chatgpt', 'xai', 'claude-code', 'devin'];
 
   @override
   void initState() {
@@ -100,11 +100,14 @@ class _AccountsScreenState extends State<AccountsScreen> {
 
   Future<void> _add(String provider) async {
     final claude = provider == 'claude-code';
+    final pasted = provider == 'claude-code' || provider == 'devin';
     String? token;
-    if (claude) {
+    if (pasted) {
       token = await promptText(context,
-          title: 'Add Claude Code account',
-          hint: 'Token from claude setup-token',
+          title: claude ? 'Add Claude Code account' : 'Add Devin account',
+          hint: claude
+              ? 'Token from claude setup-token'
+              : 'windsurf_api_key or credentials.toml',
           saveLabel: 'Next');
       if (token == null || token.isEmpty || !mounted) return;
     }
@@ -115,7 +118,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
     try {
       final result =
           await widget.client.addAccount(provider, label: label, token: token);
-      if (claude) {
+      if (pasted) {
         await _load();
         return;
       }
@@ -228,12 +231,17 @@ class _AccountsScreenState extends State<AccountsScreen> {
   String _title(String provider) => switch (provider) {
         'chatgpt' => 'ChatGPT',
         'xai' => 'xAI / SuperGrok',
+        'devin' => 'Devin',
         _ => 'Claude Code'
       };
 
   String _footer(String provider) => switch (provider) {
         'chatgpt' => 'Sign in with another ChatGPT subscription.',
         'xai' => 'Sign in with another SuperGrok subscription.',
+        'devin' =>
+          'Uses the Devin CLI login on this machine as main. Add more '
+              'accounts with their windsurf_api_key from '
+              '~/.local/share/devin/credentials.toml.',
         _ => 'Run claude setup-token on a machine signed in to the other '
             'subscription and paste the token.'
       };
@@ -243,7 +251,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
             'When an account reaches its 5-hour or weekly limit, Snippet '
             'moves to the next one in this order.'),
         const SizedBox(height: 18),
-        for (final provider in ['chatgpt', 'xai', 'claude-code'])
+        for (final provider in ['chatgpt', 'xai', 'claude-code', 'devin'])
           SettingsGroup(
             header: _title(provider),
             footer: _footer(provider),
@@ -289,9 +297,12 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final provider = _addProvider;
     if (provider == null || _busy) return;
     final claude = provider == 'claude-code';
+    final pasted = provider == 'claude-code' || provider == 'devin';
     final token = _token.text.trim();
-    if (claude && token.isEmpty) {
-      setState(() => _addError = 'Paste the token from claude setup-token.');
+    if (pasted && token.isEmpty) {
+      setState(() => _addError = claude
+          ? 'Paste the token from claude setup-token.'
+          : 'Paste the windsurf_api_key from credentials.toml.');
       return;
     }
     setState(() {
@@ -300,9 +311,9 @@ class _AccountsScreenState extends State<AccountsScreen> {
     });
     try {
       final result = await widget.client.addAccount(provider,
-          label: _label.text.trim(), token: claude ? token : null);
+          label: _label.text.trim(), token: pasted ? token : null);
       if (!mounted) return;
-      if (claude) {
+      if (pasted) {
         setState(() => _addProvider = null);
         await _load();
         return;
@@ -401,6 +412,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
 
   Widget _addPage(String provider) {
     final claude = provider == 'claude-code';
+    final pasted = provider == 'claude-code' || provider == 'devin';
     return SettingsColumn(children: [
       SettingsHeader(
         back: _backTo('Accounts', _cancelAdd),
@@ -408,7 +420,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
         subtitle: _footer(provider),
         actions: [
           Btn(
-              claude
+              pasted
                   ? (_busy ? 'Adding…' : 'Add account')
                   : (_busy ? 'Starting…' : 'Sign in'),
               small: true,
@@ -420,13 +432,17 @@ class _AccountsScreenState extends State<AccountsScreen> {
       SettingsGroup(
         footer: _addError,
         children: [
-          if (claude)
+          if (pasted)
             SettingsRow(
               label: 'Token',
-              sub: 'Paste the token from claude setup-token.',
+              sub: claude
+                  ? 'Paste the token from claude setup-token.'
+                  : 'Paste the windsurf_api_key from credentials.toml.',
               trailing: SettingsField(
                   controller: _token,
-                  hint: 'sk-ant-…',
+                  hint: claude
+                      ? 'sk-ant-…'
+                      : 'windsurf_api_key or credentials.toml',
                   mono: true,
                   obscure: true,
                   width: 260),
@@ -479,7 +495,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
   Widget _accountPage(String provider, List<Account> accounts, int index) {
     final account = accounts[index];
     final name = account.label.isEmpty ? account.id : account.label;
-    final canRemove = !(provider == 'claude-code' && account.id == 'main');
+    final canRemove =
+        !((provider == 'claude-code' || provider == 'devin') && account.id == 'main');
     final limited = account.limitedUntil;
     final limitedLabel = limited == null ? null : rateResetLabel(limited);
     final usage = account.usage;
@@ -575,7 +592,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final limited = account.limitedUntil;
     final limitedLabel = limited == null ? null : rateResetLabel(limited);
     final usage = account.usage;
-    final canRemove = !(provider == 'claude-code' && account.id == 'main');
+    final canRemove =
+        !((provider == 'claude-code' || provider == 'devin') && account.id == 'main');
     return SettingsRow(
       label: name,
       labelWidget: Column(

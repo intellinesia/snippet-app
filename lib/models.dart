@@ -82,7 +82,7 @@ class InferenceProfile {
   /// so a keyless one is still usable; don't gate it on [hasKey].
   bool get usable =>
       hasKey ||
-      const {'chatgpt', 'xai', 'grok', 'claude-code', 'antigravity'}
+      const {'chatgpt', 'xai', 'grok', 'claude-code', 'antigravity', 'devin'}
           .contains(provider);
 }
 
