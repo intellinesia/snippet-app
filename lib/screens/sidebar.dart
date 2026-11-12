@@ -129,6 +129,7 @@ class SidebarState extends State<Sidebar> {
   bool _selecting = false;
   static bool _settledOpen = false;
   final Set<String> _selected = {};
+  final Set<String> _collapsedGroups = {};
 
   /// Phone search: a filter field at the top of each tab.
   final TextEditingController _searchCtl = TextEditingController();
@@ -872,14 +873,26 @@ class SidebarState extends State<Sidebar> {
       final first = rows.first;
       var label = projectLabel(first);
       if ((labelCount[label] ?? 0) > 1) label = _projectPath(first);
-      out.add(SessionGroupHeader(label));
-      for (var i = 0; i < rows.length; i++) {
-        out.add(Appear(
-          key: ValueKey('chat-${rows[i].id}'),
-          index: n++,
-          since: _chatsShownAt,
-          child: _listRow(rows[i], divider: kMobile && i + 1 < rows.length),
-        ));
+      final collapsed = _collapsedGroups.contains(k);
+      final needsYou = rows.any((s) => s.status == 'waiting_for_input');
+      out.add(SessionGroupHeader(
+        label,
+        count: rows.length,
+        collapsed: collapsed,
+        needsYou: needsYou,
+        onToggle: () => setState(() {
+          if (!_collapsedGroups.remove(k)) _collapsedGroups.add(k);
+        }),
+      ));
+      if (!collapsed) {
+        for (var i = 0; i < rows.length; i++) {
+          out.add(Appear(
+            key: ValueKey('chat-${rows[i].id}'),
+            index: n++,
+            since: _chatsShownAt,
+            child: _listRow(rows[i], divider: kMobile && i + 1 < rows.length),
+          ));
+        }
       }
     }
     return out;
@@ -903,17 +916,22 @@ class SidebarState extends State<Sidebar> {
     return '$lead${tail.join('/')}';
   }
 
-  Widget? _agentBadge(SessionInfo s) {
+  Widget _agentBadge(SessionInfo s) {
+    final size = kMobile ? 16.0 : 14.0;
     final agent = s.displayAgentId?.trim() ?? '';
-    if (agent.isNotEmpty) return AgentMochi(agent, size: 14);
+    if (agent.isNotEmpty) return AgentMochi(agent, size: size);
     final profile = s.profile ?? '';
-    if (profile.isEmpty) return null;
-    final provider = _profileProviders[profile];
-    if (provider != null) return ProviderLogo(provider, size: 14);
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 72),
-      child: Text(profile,
-          maxLines: 1, overflow: TextOverflow.ellipsis, style: TS.meta()),
+    final provider = profile.isEmpty ? null : _profileProviders[profile];
+    if (provider != null && providerLogoAsset(provider) != null) {
+      return ProviderLogo(provider, size: size);
+    }
+    return Container(
+      width: 6,
+      height: 6,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.fg4,
+      ),
     );
   }
 
@@ -927,7 +945,7 @@ class SidebarState extends State<Sidebar> {
       draft: !renaming && _hasDraft(s),
       divider: divider,
       renameField: renaming ? _inlineRenameField(s, compact: !kMobile) : null,
-      badge: _agentBadge(s),
+      leading: _agentBadge(s),
       onTap: renaming
           ? null
           : () => _selecting

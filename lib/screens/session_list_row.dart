@@ -42,29 +42,103 @@ String projectLabel(SessionInfo s) {
   return lastPathSegment(f, ifEmpty: f);
 }
 
-/// Project name as a list section header.
-class SessionGroupHeader extends StatelessWidget {
-  const SessionGroupHeader(this.label, {super.key});
+/// Project name as a collapsible list section header.
+class SessionGroupHeader extends StatefulWidget {
+  const SessionGroupHeader(
+    this.label, {
+    super.key,
+    this.count,
+    this.collapsed = false,
+    this.onToggle,
+    this.needsYou = false,
+  });
+
   final String label;
+  final int? count;
+  final bool collapsed;
+  final VoidCallback? onToggle;
+  final bool needsYou;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-        header: true,
-        child: Container(
-          height: kMobile ? 40 : 30,
-          alignment: Alignment.bottomLeft,
-          padding: EdgeInsets.fromLTRB(
-              kMobile ? 4 : 10, 0, kMobile ? 4 : 10, kMobile ? 4 : 2),
-          child: Text(label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TS.label(AppColors.fg3)),
-        ),
-      );
+  State<SessionGroupHeader> createState() => _SessionGroupHeaderState();
 }
 
-/// A session as a two-line list row: state dot + title + time, then branch,
-/// diff and agent badge.
+class _SessionGroupHeaderState extends State<SessionGroupHeader> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final labelColor = widget.needsYou ? AppColors.run : AppColors.fg3;
+    final countStyle = TS.caption(AppColors.fg4).copyWith(
+        fontFamily: monoFamily,
+        fontFeatures: const [FontFeature.tabularFigures()]);
+    final still = reduceMotion(context);
+    final chevron = AnimatedOpacity(
+      opacity: kMobile || _hover ? 1 : 0,
+      duration: still ? Duration.zero : Motion.quick,
+      child: AnimatedRotation(
+        turns: widget.collapsed ? -0.25 : 0,
+        duration: still ? Duration.zero : Motion.base,
+        curve: Curves.easeOutCubic,
+        child: AppIcon('chevron-down', size: 12, color: AppColors.fg4),
+      ),
+    );
+
+    final row = Container(
+      height: kMobile ? M.minTarget : 30,
+      alignment: Alignment.bottomLeft,
+      padding: EdgeInsets.fromLTRB(
+          kMobile ? 4 : 10, 0, kMobile ? 4 : 10, kMobile ? 6 : 4),
+      child: Row(children: [
+        Expanded(
+          child: Row(children: [
+            Flexible(
+              child: Text(widget.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TS.label(labelColor)),
+            ),
+            if (widget.count != null) ...[
+              const SizedBox(width: 6),
+              Text('${widget.count}', maxLines: 1, style: countStyle),
+            ],
+          ]),
+        ),
+        const SizedBox(width: 6),
+        chevron,
+      ]),
+    );
+
+    final countPart = widget.count == null
+        ? ''
+        : ', ${widget.count} ${widget.count == 1 ? 'session' : 'sessions'}';
+    final statePart = widget.onToggle == null
+        ? ''
+        : ', ${widget.collapsed ? 'collapsed' : 'expanded'}';
+
+    return Semantics(
+      container: true,
+      header: true,
+      button: widget.onToggle != null,
+      expanded: widget.onToggle != null ? !widget.collapsed : null,
+      label: '${widget.label}$countPart$statePart',
+      child: ExcludeSemantics(
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _hover = true),
+          onExit: (_) => setState(() => _hover = false),
+          child: HoverSurface(
+            radius: 8,
+            onTap: widget.onToggle,
+            child: row,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A session as a two-line list row: leading mark + title + time/working,
+/// then status, branch and diff.
 class SessionListRow extends StatelessWidget {
   const SessionListRow({
     super.key,
@@ -78,7 +152,7 @@ class SessionListRow extends StatelessWidget {
     this.draft = false,
     this.divider = false,
     this.renameField,
-    this.badge,
+    this.leading,
   });
 
   final SessionInfo session;
@@ -94,8 +168,8 @@ class SessionListRow extends StatelessWidget {
   /// Replaces the title while renaming.
   final Widget? renameField;
 
-  /// Agent or provider mark shown at the end of the second line.
-  final Widget? badge;
+  /// Leading agent, provider or neutral mark aligned with the title line.
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -112,12 +186,11 @@ class SessionListRow extends StatelessWidget {
             : relativeTime(s.lastActive);
     final titleStyle = settled
         ? TS.rowTitle(AppColors.fg3).copyWith(fontWeight: W.body)
-        : TS.rowTitle(AppColors.fg1);
+        : TS.rowTitle(AppColors.fg1).copyWith(fontWeight: W.label);
     final lineH = kMobile ? 22.0 : 18.0;
     final diff = sessionDiff(s);
     final branch = s.branch?.trim() ?? '';
-    final hasMeta =
-        waiting || branch.isNotEmpty || diff != null || badge != null;
+    final hasMeta = waiting || branch.isNotEmpty || diff != null;
 
     final stateLabel = waiting
         ? 'Needs input'
@@ -130,6 +203,14 @@ class SessionListRow extends StatelessWidget {
     final content = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (leading != null) ...[
+          SizedBox(
+            width: kMobile ? 20 : 16,
+            height: lineH,
+            child: Center(child: leading),
+          ),
+          SizedBox(width: kMobile ? 12 : 9),
+        ],
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -152,6 +233,9 @@ class SessionListRow extends StatelessWidget {
                   if (renameField == null && working) ...[
                     const SizedBox(width: 8),
                     const WorkingDots(),
+                    const SizedBox(width: 5),
+                    Text('Working',
+                        maxLines: 1, style: TS.caption(AppColors.accent)),
                   ] else if (renameField == null && timeText.isNotEmpty) ...[
                     const SizedBox(width: 8),
                     Text(timeText,
@@ -166,45 +250,35 @@ class SessionListRow extends StatelessWidget {
                 SizedBox(
                   height: kMobile ? 18 : 16,
                   child: Row(children: [
-                    Expanded(
-                      child: Row(children: [
-                        if (waiting) ...[
-                          const _StateLabel(),
-                          if (branch.isNotEmpty || diff != null)
-                            const SizedBox(width: 10),
-                        ],
-                        if (branch.isNotEmpty)
+                    if (waiting) ...[
+                      const _StateLabel(),
+                      if (branch.isNotEmpty || diff != null)
+                        const SizedBox(width: 10),
+                    ],
+                    if (branch.isNotEmpty)
+                      Flexible(
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          AppIcon('git-branch',
+                              size: kMobile ? 13 : 12, color: AppColors.fg3),
+                          const SizedBox(width: 4),
                           Flexible(
-                            child:
-                                Row(mainAxisSize: MainAxisSize.min, children: [
-                              AppIcon('git-branch',
-                                  size: kMobile ? 13 : 12,
-                                  color: AppColors.fg3),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(branch,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TS.meta()),
-                              ),
-                            ]),
+                            child: Text(branch,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TS.meta()),
                           ),
-                        if (diff != null) ...[
-                          if (branch.isNotEmpty) const SizedBox(width: 8),
-                          if (diff.added > 0)
-                            Text('+${compactCount(diff.added)}',
-                                maxLines: 1, style: TS.meta(AppColors.ok)),
-                          if (diff.added > 0 && diff.removed > 0)
-                            const SizedBox(width: 5),
-                          if (diff.removed > 0)
-                            Text('-${compactCount(diff.removed)}',
-                                maxLines: 1, style: TS.meta(AppColors.danger)),
-                        ],
-                      ]),
-                    ),
-                    if (badge != null) ...[
-                      const SizedBox(width: 8),
-                      badge!,
+                        ]),
+                      ),
+                    if (diff != null) ...[
+                      if (branch.isNotEmpty) const SizedBox(width: 8),
+                      if (diff.added > 0)
+                        Text('+${compactCount(diff.added)}',
+                            maxLines: 1, style: TS.meta(AppColors.ok)),
+                      if (diff.added > 0 && diff.removed > 0)
+                        const SizedBox(width: 5),
+                      if (diff.removed > 0)
+                        Text('-${compactCount(diff.removed)}',
+                            maxLines: 1, style: TS.meta(AppColors.danger)),
                     ],
                   ]),
                 ),
