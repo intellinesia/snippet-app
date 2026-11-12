@@ -135,7 +135,8 @@ class _PaneResizeHandleState extends State<PaneResizeHandle> {
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          // Subtle inside divider line that blends into the background until hovered
+          // On a fill like the sidebar's border; bare, the wallpaper shows through.
+          Positioned.fill(child: ColoredBox(color: AppColors.windowBg)),
           Positioned.fill(
             child: ColoredBox(
               color: _hover
