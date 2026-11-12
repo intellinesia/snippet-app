@@ -539,13 +539,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   final Map<String, GlobalKey> _messageKeys = {};
   CoordinationEvent? _replyTo;
   List<CoordinationEvent> _events = const [];
-  bool _agentBusy = false;
-  Timer? _busyCap;
-  static const _busyMax = Duration(minutes: 10);
+  Map<String, MessageDelivery> _deliveries = const {};
   bool _loading = true;
   final bool _sending = false;
   String? _error;
-  late final Swr<List<CoordinationEvent>> _thread;
+  late final Swr<DirectThreadPage> _thread;
 
   final List<_AgentAttachment> _attachments = [];
 
@@ -597,22 +595,21 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     super.initState();
     _loadLine();
     _loadUnread();
-    _thread = Swr<List<CoordinationEvent>>(
+    _thread = Swr<DirectThreadPage>(
       client: widget.client,
       key: 'agent-thread:${widget.agentId}',
-      fetch: () => widget.client.agentThread(peerId: widget.agentId),
+      fetch: () => widget.client.agentThreadPage(peerId: widget.agentId),
       revalidateOn: Swr.coordination,
       onChange: _sync,
     );
-    _events = _thread.data ?? const [];
-    _updateBusy();
+    _events = _thread.data?.events ?? const [];
+    _deliveries = _thread.data?.deliveries ?? const {};
     _loading = _thread.data == null;
     if (_events.isNotEmpty) _jumpToBottom();
   }
 
   @override
   void dispose() {
-    _busyCap?.cancel();
     _thread.dispose();
     _amplitudeSub?.cancel();
     _recordingTimer?.cancel();
@@ -647,9 +644,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
 
   static bool _isAck(CoordinationEvent e) => e.payload['auto'] == 'ack';
 
-  void _updateBusy() {
-    _busyCap?.cancel();
-    _busyCap = null;
+  bool get _typing {
     CoordinationEvent? last;
     for (final e in _events.reversed) {
       if (!_isAck(e) && !isReactionEvent(e)) {
@@ -657,41 +652,31 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         break;
       }
     }
-    if (last == null || last.actorKind != 'human') {
-      _agentBusy = false;
-      return;
-    }
-    final sent = DateTime.tryParse(last.createdAt)?.toLocal() ?? DateTime.now();
-    final left = _busyMax - DateTime.now().difference(sent);
-    if (left <= Duration.zero) {
-      _agentBusy = false;
-      return;
-    }
-    _agentBusy = true;
-    _busyCap = Timer(left, () {
-      if (mounted) setState(() => _agentBusy = false);
-    });
+    if (last == null || last.actorKind != 'human') return false;
+    if (_deliveries[last.eventId]?.readAt == null) return false;
+    final p = widget.client.presence.presenceForAgentId(widget.agentId);
+    return p?.state == 'running' || p?.state == 'tool';
   }
 
   void _sync() {
     if (!mounted) return;
     final next = _thread.data;
     if (next != null) {
-      final keys = {for (final e in next) e.idempotencyKey};
+      final keys = {for (final e in next.events) e.idempotencyKey};
       final bodies = {
-        for (final e in next)
+        for (final e in next.events)
           if (e.actorKind == 'human' && !isReactionEvent(e)) e.payload['body']
       };
       _unechoed.removeWhere((p) =>
           keys.contains(p.idempotencyKey) ||
           (!isReactionEvent(p) && bodies.contains(p.payload['body'])));
     }
-    final merged = next == null ? null : [...next, ..._unechoed];
+    final merged = next == null ? null : [...next.events, ..._unechoed];
     final hadNew = merged != null && merged.length > _events.length;
     final first = _events.isEmpty;
     setState(() {
       if (merged != null) _events = merged;
-      _updateBusy();
+      if (next != null) _deliveries = next.deliveries;
       _loading = _thread.loading;
       _error =
           next == null && _thread.error != null ? '${_thread.error}' : null;
@@ -1328,12 +1313,19 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       builder: (_, __) {
         final p = store.presenceForAgentId(widget.agentId);
         if (p == null) return _plainStatusLine(subtitle);
-        final cut = subtitle.indexOf(' \u00b7 ');
-        final head = cut < 0 ? '' : '${subtitle.substring(0, cut)} \u00b7 ';
+        final status = _typing ? 'typing…' : PresenceStore.chatWord(p);
         final dots = p.state == 'thinking' || p.state == 'typing';
+        if (status.isEmpty && !dots) return _plainStatusLine(subtitle);
+        final cut = subtitle.indexOf(' \u00b7 ');
+        final head = cut < 0 ? '' : subtitle.substring(0, cut);
+        final text = status.isEmpty
+            ? subtitle
+            : head.isEmpty
+                ? status
+                : '$head \u00b7 $status';
         return Row(children: [
           Flexible(
-            child: Text('$head${PresenceStore.word(p)}',
+            child: Text(text,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TS.meta(AppColors.fg3)),
@@ -1378,10 +1370,15 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         listenable: store,
         builder: (_, __) {
           final p = store.presenceForAgentId(widget.agentId);
+          final chatWord = p == null ? '' : PresenceStore.chatWord(p);
+          final line = _typing
+              ? '$_viewLine \u00b7 typing…'
+              : chatWord.isEmpty
+                  ? _viewLine
+                  : '$_viewLine \u00b7 $chatWord';
           return MobileStackedTitleBar(
             title: widget.agentName,
-            subtitle:
-                p == null ? _viewLine : '$_viewLine \u00b7 ${PresenceStore.word(p)}',
+            subtitle: line,
             onTap: _openViewMenu,
             tapHint: 'Switch view',
           );
@@ -1495,41 +1492,100 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     final reactionsByTarget = groupMessageReactions(_events);
     return PullToRefresh(
       onRefresh: () => _load(silent: true),
-      child: ListView.builder(
-        controller: _scroll,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        itemCount: visible.length + (_agentBusy ? 1 : 0),
-        itemBuilder: (_, i) {
-          if (i == visible.length) return _wideCap(_workingRow());
-          final ev = visible[i];
-          return _wideCap(
-            _bubble(
-              ev,
-              byId: byId,
-              reactions: reactionsByTarget[ev.eventId] ?? const [],
-            ),
+      child: ListenableBuilder(
+        listenable: widget.client.presence,
+        builder: (_, __) {
+          final typing = _typing;
+          return ListView.builder(
+            controller: _scroll,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            itemCount: visible.length + (typing ? 1 : 0),
+            itemBuilder: (_, i) {
+              if (i == visible.length) return _wideCap(_typingRow());
+              final ev = visible[i];
+              return _wideCap(
+                _bubble(
+                  ev,
+                  byId: byId,
+                  reactions: reactionsByTarget[ev.eventId] ?? const [],
+                ),
+              );
+            },
           );
         },
       ),
     );
   }
 
-  Widget _workingRow() => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+  Widget _typingRow() => Padding(
+        key: const Key('agentTypingRow'),
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox.square(
-              dimension: 12,
-              child: CircularProgressIndicator(
-                  strokeWidth: 1.5, color: AppColors.fg3),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AgentMochi(widget.agentId, size: 15),
+                  const SizedBox(width: 5),
+                  Text(
+                    widget.agentName,
+                    style: sans(11, weight: W.label, color: AppColors.accent),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(width: 8),
-            Text('Working...', style: sans(12, color: AppColors.fg3)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.surface1,
+                borderRadius: BorderRadius.circular(kMobile ? 18 : 20),
+              ),
+              child: const _TypingDots(key: Key('agentTypingDots')),
+            ),
           ],
         ),
       );
+
+  String _timeLabel(CoordinationEvent e) {
+    final at = DateTime.tryParse(e.createdAt)?.toLocal();
+    if (at == null) return '';
+    final hour = at.hour.toString().padLeft(2, '0');
+    final minute = at.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  Widget _messageMeta(CoordinationEvent e, {required bool mine}) {
+    final delivery = _deliveries[e.eventId];
+    final read = delivery?.readAt != null;
+    final delivered = read || delivery?.deliveredAt != null;
+    final time = _timeLabel(e);
+    return Align(
+      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Padding(
+        padding: EdgeInsets.only(
+            top: 2, left: mine ? 0 : 4, right: mine ? 4 : 0),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (time.isNotEmpty)
+              Text(time, style: sans(11, color: AppColors.fg3)),
+            if (mine) ...[
+              if (time.isNotEmpty) const SizedBox(width: 4),
+              Icon(
+                delivered ? Icons.done_all : Icons.done,
+                size: 14,
+                color: read ? AppColors.accent : AppColors.fg3,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _bubble(
     CoordinationEvent e, {
@@ -1537,12 +1593,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     List<ReactionGroup> reactions = const [],
   }) {
     if (isReactionEvent(e)) return const SizedBox.shrink();
-    if (_isAck(e)) {
-      return Padding(
-        padding: const EdgeInsets.all(4),
-        child: Text(e.body, style: sans(12, color: AppColors.fg3)),
-      );
-    }
+    if (_isAck(e)) return const SizedBox.shrink();
     // The local human is the only `human` actor, so everything else is the peer.
     final mine = e.actorKind == 'human';
     final replyToId = e.replyTo;
@@ -1589,6 +1640,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                   client: widget.client,
                   onLongPress: openActions,
                 ),
+                _messageMeta(e, mine: true),
                 if (chips != null) chips,
               ],
             ),
@@ -1643,6 +1695,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                   child: quotedLine,
                 ),
               Bubble(mine: false, text: e.body, onLongPress: openActions),
+              _messageMeta(e, mine: false),
               if (chips != null)
                 Padding(
                   padding: const EdgeInsets.only(left: 4),
@@ -1971,4 +2024,71 @@ class _AgentAttachment {
     required this.isAudio,
     this.localPath,
   }) : uploading = true;
+}
+
+class _TypingDots extends StatefulWidget {
+  const _TypingDots({super.key});
+
+  @override
+  State<_TypingDots> createState() => _TypingDotsState();
+}
+
+class _TypingDotsState extends State<_TypingDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 600));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _c.stop();
+    } else if (!_c.isAnimating) {
+      _c.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final still = MediaQuery.disableAnimationsOf(context);
+    return Semantics(
+      label: 'Typing',
+      excludeSemantics: true,
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (_, __) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < 3; i++) ...[
+              if (i > 0) const SizedBox(width: 4),
+              _dot(i, still),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dot(int i, bool still) {
+    final phase = still ? 0.5 : (_c.value + i / 3) % 1;
+    final pulse = phase < 0.5 ? phase * 2 : 2 - phase * 2;
+    return Transform.translate(
+      offset: Offset(0, still ? 0 : -2 * pulse),
+      child: Container(
+        width: 6,
+        height: 6,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.fg3
+              .withValues(alpha: still ? 0.8 : 0.35 + 0.65 * pulse),
+        ),
+      ),
+    );
+  }
 }

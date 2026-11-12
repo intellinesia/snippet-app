@@ -19,13 +19,13 @@ class _Client extends DaemonClient {
   DeviceEventHub get deviceEvents => _events;
 
   @override
-  Future<List<CoordinationEvent>> agentThread(
+  Future<DirectThreadPage> agentThreadPage(
           {required String peerId,
           String actorKind = 'human',
           String actorId = 'local',
           int afterSequence = 0,
           int limit = 100}) async =>
-      [];
+      const DirectThreadPage(events: []);
 
   @override
   Future<List<CoordinationAgent>> coordinationAgents() async => [
