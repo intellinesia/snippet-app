@@ -1587,6 +1587,8 @@ class DaemonClient {
     String fromId = 'local',
     String? idempotencyKey,
     String? originSession,
+    String? replyTo,
+    String? reaction,
   }) async {
     final payload = <String, dynamic>{
       'from_kind': fromKind,
@@ -1600,6 +1602,12 @@ class DaemonClient {
     }
     if (originSession != null && originSession.isNotEmpty) {
       payload['origin_session'] = originSession;
+    }
+    if (replyTo != null && replyTo.isNotEmpty) {
+      payload['reply_to'] = replyTo;
+    }
+    if (reaction != null && reaction.isNotEmpty) {
+      payload['reaction'] = reaction;
     }
     final r = await _post(
       _uri('/coordination/direct/messages'),

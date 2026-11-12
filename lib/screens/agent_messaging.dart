@@ -19,6 +19,7 @@ import '../composer/attachment_tile.dart';
 import '../composer/composer_card.dart';
 import '../composer_strip.dart';
 import '../media_views.dart';
+import '../message_reactions.dart';
 import '../motion.dart';
 import '../desktop_pick.dart';
 import '../models.dart';
@@ -533,7 +534,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   Duration _maxRecordingDuration = const Duration(minutes: 3);
 
   final _input = TextEditingController();
+  final _inputFocus = FocusNode();
   final _scroll = ScrollController();
+  final Map<String, GlobalKey> _messageKeys = {};
+  CoordinationEvent? _replyTo;
   List<CoordinationEvent> _events = const [];
   bool _agentBusy = false;
   Timer? _busyCap;
@@ -631,6 +635,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       } catch (_) {}
     }
     _input.dispose();
+    _inputFocus.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -647,7 +652,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     _busyCap = null;
     CoordinationEvent? last;
     for (final e in _events.reversed) {
-      if (!_isAck(e)) {
+      if (!_isAck(e) && !isReactionEvent(e)) {
         last = e;
         break;
       }
@@ -675,10 +680,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       final keys = {for (final e in next) e.idempotencyKey};
       final bodies = {
         for (final e in next)
-          if (e.actorKind == 'human') e.payload['body']
+          if (e.actorKind == 'human' && !isReactionEvent(e)) e.payload['body']
       };
       _unechoed.removeWhere((p) =>
-          keys.contains(p.idempotencyKey) || bodies.contains(p.payload['body']));
+          keys.contains(p.idempotencyKey) ||
+          (!isReactionEvent(p) && bodies.contains(p.payload['body'])));
     }
     final merged = next == null ? null : [...next, ..._unechoed];
     final hadNew = merged != null && merged.length > _events.length;
@@ -1163,13 +1169,18 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     }
     if (body.isEmpty) return;
     final typed = _input.text;
+    final replyTarget = _replyTo;
+    final replyToId = replyTarget?.eventId;
     final key = 'local-${DateTime.now().microsecondsSinceEpoch}';
     final pending = CoordinationEvent.fromJson({
       'event_id': key,
       'event_type': 'direct_message.sent',
       'actor_kind': 'human',
       'actor_id': 'local',
-      'payload': {'body': body},
+      'payload': {
+        'body': body,
+        if (replyToId != null && replyToId.isNotEmpty) 'reply_to': replyToId,
+      },
       'idempotency_key': key,
       'created_at': DateTime.now().toUtc().toIso8601String(),
     });
@@ -1178,13 +1189,66 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     _attachments.clear();
     _discardRecording();
     _unechoed.add(pending);
-    setState(() => _events = [..._events, pending]);
+    setState(() {
+      _replyTo = null;
+      _events = [..._events, pending];
+    });
     _jumpToBottom(animated: true);
     try {
       await widget.client.sendAgentMessage(
         toAgentId: widget.agentId,
         body: body,
         idempotencyKey: key,
+        replyTo: replyToId,
+      );
+      if (!mounted) return;
+      await _load(silent: true);
+    } catch (e) {
+      _unechoed.removeWhere((p) => p.eventId == key);
+      if (!mounted) return;
+      setState(() {
+        _replyTo ??= replyTarget;
+        _events = [
+          for (final ev in _events)
+            if (ev.eventId != key) ev
+        ];
+      });
+      if (_input.text.isEmpty) _input.text = typed;
+      toast(context, '$e', danger: true);
+    }
+  }
+
+  Future<void> _sendReaction(CoordinationEvent target, String reaction) async {
+    if (target.eventId.isEmpty) return;
+    final already = _events.any((e) =>
+        e.actorKind == 'human' &&
+        e.replyTo == target.eventId &&
+        e.reaction == reaction);
+    if (already) return;
+    final key = 'local-react-${DateTime.now().microsecondsSinceEpoch}';
+    final pending = CoordinationEvent.fromJson({
+      'event_id': key,
+      'event_type': 'direct_message.sent',
+      'actor_kind': 'human',
+      'actor_id': 'local',
+      'payload': {
+        'body': '',
+        'kind': 'reaction',
+        'reply_to': target.eventId,
+        'reaction': reaction,
+      },
+      'idempotency_key': key,
+      'created_at': DateTime.now().toUtc().toIso8601String(),
+    });
+    _unechoed.add(pending);
+    setState(() => _events = [..._events, pending]);
+    try {
+      await widget.client.sendAgentMessage(
+        toAgentId: widget.agentId,
+        body: '',
+        idempotencyKey: key,
+        replyTo: target.eventId,
+        reaction: reaction,
       );
       if (!mounted) return;
       await _load(silent: true);
@@ -1195,9 +1259,44 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             for (final ev in _events)
               if (ev.eventId != key) ev
           ]);
-      if (_input.text.isEmpty) _input.text = typed;
       toast(context, '$e', danger: true);
     }
+  }
+
+  void _startReply(CoordinationEvent target) {
+    setState(() => _replyTo = target);
+    _inputFocus.requestFocus();
+  }
+
+  GlobalKey _keyForEvent(String eventId) =>
+      _messageKeys.putIfAbsent(eventId, GlobalKey.new);
+
+  void _scrollToMessage(String eventId) {
+    final visible = [
+      for (final e in _events)
+        if (!isReactionEvent(e)) e
+    ];
+    final ctx = _messageKeys[eventId]?.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        alignment: 0.3,
+        duration: reduceMotion(context) ? Duration.zero : Motion.fast,
+        curve: Motion.enter,
+      );
+      return;
+    }
+    if (!_scroll.hasClients || visible.isEmpty) return;
+    final idx = visible.indexWhere((e) => e.eventId == eventId);
+    if (idx < 0) return;
+    final fraction = (idx / visible.length).clamp(0.0, 1.0);
+    _scroll.jumpTo(_scroll.position.maxScrollExtent * fraction);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final after = _messageKeys[eventId]?.currentContext;
+      if (after != null) {
+        Scrollable.ensureVisible(after, alignment: 0.3);
+      }
+    });
   }
 
   @override
@@ -1364,7 +1463,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         ),
       );
     }
-    if (_events.isEmpty) {
+    final visible = [
+      for (final e in _events)
+        if (!isReactionEvent(e)) e
+    ];
+    if (visible.isEmpty) {
       return PullToRefresh(
         onRefresh: () => _load(silent: true),
         child: ListView(
@@ -1385,15 +1488,29 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         ),
       );
     }
+    final byId = {
+      for (final e in visible)
+        if (e.eventId.isNotEmpty) e.eventId: e
+    };
+    final reactionsByTarget = groupMessageReactions(_events);
     return PullToRefresh(
       onRefresh: () => _load(silent: true),
       child: ListView.builder(
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        itemCount: _events.length + (_agentBusy ? 1 : 0),
-        itemBuilder: (_, i) => _wideCap(
-            i == _events.length ? _workingRow() : _bubble(_events[i])),
+        itemCount: visible.length + (_agentBusy ? 1 : 0),
+        itemBuilder: (_, i) {
+          if (i == visible.length) return _wideCap(_workingRow());
+          final ev = visible[i];
+          return _wideCap(
+            _bubble(
+              ev,
+              byId: byId,
+              reactions: reactionsByTarget[ev.eventId] ?? const [],
+            ),
+          );
+        },
       ),
     );
   }
@@ -1414,7 +1531,12 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         ),
       );
 
-  Widget _bubble(CoordinationEvent e) {
+  Widget _bubble(
+    CoordinationEvent e, {
+    Map<String, CoordinationEvent> byId = const {},
+    List<ReactionGroup> reactions = const [],
+  }) {
+    if (isReactionEvent(e)) return const SizedBox.shrink();
     if (_isAck(e)) {
       return Padding(
         padding: const EdgeInsets.all(4),
@@ -1423,10 +1545,55 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     }
     // The local human is the only `human` actor, so everything else is the peer.
     final mine = e.actorKind == 'human';
+    final replyToId = e.replyTo;
+    final quotedTarget = replyToId == null ? null : byId[replyToId];
+    final quotedLine = replyToId == null
+        ? null
+        : QuotedReplyLine(
+            text: quotedTarget != null
+                ? quotePreviewText(quotedTarget.body)
+                : replyToId,
+            mine: mine,
+            onTap: quotedTarget != null
+                ? () => _scrollToMessage(quotedTarget.eventId)
+                : null,
+          );
+    final chips = reactions.isEmpty
+        ? null
+        : MessageReactionChips(
+            reactions: reactions,
+            mine: mine,
+            onReact: (name) => unawaited(_sendReaction(e, name)),
+          );
+    final rowKey = e.eventId.isEmpty ? null : _keyForEvent(e.eventId);
     if (mine) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Bubble(mine: true, text: e.body, client: widget.client),
+      return KeyedSubtree(
+        key: rowKey,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: MessageBubbleInteractive(
+            mine: true,
+            onReply: () => _startReply(e),
+            onReact: (name) => unawaited(_sendReaction(e, name)),
+            builder: (_, openActions) => Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (quotedLine != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2, right: 4),
+                    child: quotedLine,
+                  ),
+                Bubble(
+                  mine: true,
+                  text: e.body,
+                  client: widget.client,
+                  onLongPress: openActions,
+                ),
+                if (chips != null) chips,
+              ],
+            ),
+          ),
+        ),
       );
     }
     final origin = e.payload['origin_session'];
@@ -1436,36 +1603,54 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         origin.isNotEmpty &&
         origin != 'inbox-${widget.agentId}' &&
         origin != widget.agentId;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (fromTask)
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 2),
-              child: Text(
-                  aboutTask is String && aboutTask.isNotEmpty
-                      ? 'from task $aboutTask'
-                      : 'from a work session',
-                  style: sans(12, color: AppColors.fg3)),
-            ),
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AgentMochi(widget.agentId, size: 15),
-                const SizedBox(width: 5),
-                Text(
-                  widget.agentName,
-                  style: sans(11, weight: W.label, color: AppColors.accent),
+    return KeyedSubtree(
+      key: rowKey,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: MessageBubbleInteractive(
+          mine: false,
+          onReply: () => _startReply(e),
+          onReact: (name) => unawaited(_sendReaction(e, name)),
+          builder: (_, openActions) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (fromTask)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 2),
+                  child: Text(
+                      aboutTask is String && aboutTask.isNotEmpty
+                          ? 'from task $aboutTask'
+                          : 'from a work session',
+                      style: sans(12, color: AppColors.fg3)),
                 ),
-              ],
-            ),
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AgentMochi(widget.agentId, size: 15),
+                    const SizedBox(width: 5),
+                    Text(
+                      widget.agentName,
+                      style: sans(11, weight: W.label, color: AppColors.accent),
+                    ),
+                  ],
+                ),
+              ),
+              if (quotedLine != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 2),
+                  child: quotedLine,
+                ),
+              Bubble(mine: false, text: e.body, onLongPress: openActions),
+              if (chips != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: chips,
+                ),
+            ],
           ),
-          Bubble(mine: false, text: e.body),
-        ],
+        ),
       ),
     );
   }
@@ -1623,6 +1808,15 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
 
   Widget _composerCard() => ComposerCard(
         text: _input,
+        banner: _replyTo == null
+            ? null
+            : PendingReplyBanner(
+                author: _replyTo!.actorKind == 'human'
+                    ? 'yourself'
+                    : widget.agentName,
+                text: quotePreviewText(_replyTo!.body),
+                onClear: () => setState(() => _replyTo = null),
+              ),
         field: CallbackShortcuts(
           bindings: {
             const SingleActivator(LogicalKeyboardKey.enter): () {
@@ -1634,6 +1828,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           },
           child: TextField(
             controller: _input,
+            focusNode: _inputFocus,
             minLines: 1,
             maxLines: 8,
             cursorColor: AppColors.accent,

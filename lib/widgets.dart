@@ -1493,6 +1493,10 @@ class Bubble extends StatelessWidget {
   /// bubbles use the default per-message selection container.
   final bool selectable;
 
+  /// Override the built-in mobile/desktop long-press copy affordance when a
+  /// caller supplies its own message action bar.
+  final VoidCallback? onLongPress;
+
   /// When given, a sent message's attachments render as real media (image
   /// thumbnails, file cards, playable voice notes) instead of count pills.
   final DaemonClient? client;
@@ -1501,6 +1505,7 @@ class Bubble extends StatelessWidget {
     required this.mine,
     required this.text,
     this.selectable = true,
+    this.onLongPress,
     this.client,
   });
   @override
@@ -1568,17 +1573,22 @@ class Bubble extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.only(right: 8, top: 4, bottom: 4),
         child: Pressable(
-          enabled: shown.isNotEmpty,
+          enabled: shown.isNotEmpty || onLongPress != null,
           scale: 0.98,
           delay: const Duration(milliseconds: 160),
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onLongPress: shown.isEmpty
-                ? null
-                : () {
+            onLongPress: onLongPress != null
+                ? () {
                     HapticFeedback.selectionClick();
-                    _messageActions(context, shown);
-                  },
+                    onLongPress!();
+                  }
+                : (shown.isEmpty
+                    ? null
+                    : () {
+                        HapticFeedback.selectionClick();
+                        _messageActions(context, shown);
+                      }),
             child: agentContent,
           ),
         ),
@@ -1590,9 +1600,11 @@ class Bubble extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: Padding(
           padding: const EdgeInsets.only(right: 8, top: 4, bottom: 4),
-          child: selectable && shown.isNotEmpty
-              ? _LongPressCopy(text: shown, child: agent)
-              : agent,
+          child: onLongPress != null
+              ? GestureDetector(onLongPress: onLongPress, child: agent)
+              : (selectable && shown.isNotEmpty
+                  ? _LongPressCopy(text: shown, child: agent)
+                  : agent),
         ),
       );
     }
@@ -2393,6 +2405,9 @@ const _lucide = <String, IconData>{
   'shield-check': LucideIcons.shieldCheck,
   'lock': LucideIcons.lockKeyhole,
   'calendar-clock': LucideIcons.calendarClock,
+  'reply': LucideIcons.reply,
+  'thumbs-up': LucideIcons.thumbsUp,
+  'help-circle': LucideIcons.circleHelp,
 };
 
 String? providerLogoAsset(String? provider) {
