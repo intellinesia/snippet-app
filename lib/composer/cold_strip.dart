@@ -50,13 +50,13 @@ class ColdTab extends StatelessWidget {
       _ => 'Cache cold · resume',
     };
     return Container(
-      height: kMobile ? 36 : 30,
+      height: kMobile ? 32 : 28,
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      transform: Matrix4.translationValues(0, 1, 0),
       padding: const EdgeInsets.only(left: 12, right: 2),
       decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-        border: Border(
-            bottom: BorderSide(color: AppColors.fg1.withValues(alpha: 0.08))),
+        color: AppColors.surface1,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
       ),
       child: Row(children: [
         AppIcon('clock', size: 13, color: AppColors.fg3),
