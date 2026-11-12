@@ -108,7 +108,11 @@ void main() {
       (tester) async {
     try {
       await _pump(tester, const Size(390, 700), TargetPlatform.android);
-      expect(find.text('snippet-mobile'), findsOneWidget);
+      expect(
+          find.widgetWithText(SessionGroupHeader, 'Needs you'), findsOneWidget);
+      expect(find.widgetWithText(SessionGroupHeader, 'snippet-mobile'),
+          findsOneWidget);
+      expect(find.text('snippet-mobile'), findsNWidgets(2));
       expect(find.text('~/code/snippet-mobile'), findsNothing);
       expect(find.bySemanticsLabel(RegExp('^Needs input')), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('^Working')), findsOneWidget);
@@ -311,7 +315,7 @@ void main() {
       final mochi = tester.widget<AgentMochi>(
           find.descendant(of: agentRow, matching: find.byType(AgentMochi)));
       expect(mochi.agentId, 'scout');
-      expect(mochi.size, 14);
+      expect(mochi.size, 17);
 
       final providerRow = find.ancestor(
           of: find.text('Provider chat'),
@@ -319,7 +323,7 @@ void main() {
       final logo = tester.widget<ProviderLogo>(
           find.descendant(of: providerRow, matching: find.byType(ProviderLogo)));
       expect(logo.provider, 'claude-code');
-      expect(logo.size, 14);
+      expect(logo.size, 15);
 
       final fallbackRow = find.ancestor(
           of: find.text('Unknown profile chat'),
@@ -341,24 +345,25 @@ void main() {
     }
   });
 
-  testWidgets('phone header shows chevron always, needsYou color, and 16px mark',
+  testWidgets(
+      'phone header shows chevron always, Needs you group color, and 20px mark',
       (tester) async {
     try {
       await _pump(tester, const Size(390, 700), TargetPlatform.android,
           sessions: [
             _s('a', 'Needs input chat', 'waiting_for_input', agentId: 'scout'),
           ]);
-      final header = find.widgetWithText(SessionGroupHeader, 'snippet-mobile');
+      final header = find.widgetWithText(SessionGroupHeader, 'Needs you');
       final opacity = tester.widget<AnimatedOpacity>(
           find.descendant(of: header, matching: find.byType(AnimatedOpacity)));
       expect(opacity.opacity, 1);
 
       final label = tester.widget<Text>(
-          find.descendant(of: header, matching: find.text('snippet-mobile')));
+          find.descendant(of: header, matching: find.text('Needs you')));
       expect(label.style?.color, AppColors.run);
 
       final mochi = tester.widget<AgentMochi>(find.byType(AgentMochi));
-      expect(mochi.size, 16);
+      expect(mochi.size, 20);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

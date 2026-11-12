@@ -24,9 +24,9 @@ class MobileBarSearch {
   final ValueChanged<String> onChanged;
 }
 
-/// Phone bottom bar: the primary-action pill, the four-home tab capsule and the
-/// search circle. One shared instance sits above the PageView so it stays put
-/// across tabs; pages clear it with [onHeightChanged]-driven padding.
+/// Phone bottom bar: the primary-action pill, the three-home tab capsule and
+/// the search circle. One shared instance sits above the PageView so it stays
+/// put across tabs; pages clear it with [onHeightChanged]-driven padding.
 class MobileBottomBar extends StatefulWidget {
   const MobileBottomBar({
     super.key,
@@ -191,6 +191,7 @@ class _MobileBottomBarState extends State<MobileBottomBar> {
                       '${widget.workingCount} working',
                       style: TS.caption(AppColors.fg3),
                     ),
+                    const SizedBox(width: 10),
                   ],
                 ],
               ),
@@ -213,13 +214,19 @@ class _MobileBottomBarState extends State<MobileBottomBar> {
     );
   }
 
+  static const _tabs = [
+    MobileHome.chats,
+    MobileHome.agents,
+    MobileHome.settings,
+  ];
+
   Widget _tabCapsule() {
     return Glass(
       radius: BorderRadius.circular(24),
       child: Container(
         height: 48,
         padding: const EdgeInsets.all(3),
-        child: Row(children: [for (final h in MobileHome.values) _tab(h)]),
+        child: Row(children: [for (final h in _tabs) _tab(h)]),
       ),
     );
   }

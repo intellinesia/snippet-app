@@ -24,6 +24,7 @@ import 'tasks/tasks_panel.dart';
 import '../pull_refresh.dart';
 import '../motion.dart';
 import '../mochi.dart';
+import '../ambient/controller.dart';
 import '../swr.dart';
 import 'mobile_bottom_bar.dart';
 import 'mobile_chrome.dart';
@@ -69,6 +70,8 @@ class Sidebar extends StatefulWidget {
   final CoordinationAgent? agent;
   final ValueChanged<CoordinationAgent?> onAgent;
   final VoidCallback? onSettingsClose;
+  final bool listening;
+  final int? mcAttention;
 
   const Sidebar({
     super.key,
@@ -105,6 +108,8 @@ class Sidebar extends StatefulWidget {
     required this.agent,
     required this.onAgent,
     this.onSettingsClose,
+    this.listening = false,
+    this.mcAttention,
   });
   @override
   State<Sidebar> createState() => SidebarState();
@@ -119,7 +124,7 @@ class SidebarState extends State<Sidebar> {
 
   /// The phone home list shows agents instead of sessions; kept across launches.
   bool get _agentsList => mobileAgentsList.value;
-  final _machineKey = GlobalKey(); // anchors the desktop machine popover
+
   final GlobalKey<TasksPanelState> _tasksPanelKey =
       GlobalKey<TasksPanelState>();
   final GlobalKey<SettingsPanelState> _mobileSettingsKey =
@@ -409,20 +414,18 @@ class SidebarState extends State<Sidebar> {
     final destination = home ?? widget.mobileHome;
     switch (destination) {
       case MobileHome.chats:
-        // The header STAYS while searching. It names the machine whose chats are
-        // being filtered — hiding it exactly when you are narrowing a machine's
-        // chats took away the context you were filtering against.
+        final showAgents = agentsMirror || _agentsList;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (_selecting || widget.mobileTopBar == null)
-              _mobileChatsHeader(hasClient)
-            else
-              widget.mobileTopBar!,
+            _mobileChatsHeader(
+              hasClient,
+              title: showAgents ? 'Agents' : 'Sessions',
+            ),
             Expanded(
               child: !hasClient
                   ? _mobileUnavailable('Add a machine to begin.')
-                  : _agentsList && !_selecting
+                  : showAgents && !_selecting
                       ? _agentList(widget.client!, mirror: agentsMirror)
                       : _sessionList(),
             ),
@@ -610,7 +613,8 @@ class SidebarState extends State<Sidebar> {
             widget.mobileHome != MobileHome.agents)) {
       return null;
     }
-    return _agentsList
+    final showAgents = _agentsList || widget.mobileHome == MobileHome.agents;
+    return showAgents
         ? MobileBarSearch(
             controller: _agentSearchCtl,
             focusNode: _searchFocus,
@@ -625,13 +629,22 @@ class SidebarState extends State<Sidebar> {
           );
   }
 
-  /// The Chats header: the destination name on the left, icon buttons on
-  /// the right for search, new chat, Mission Control and machine avatar.
-  Widget _mobileChatsHeader(bool hasClient) {
+  int get _mcAttentionCount {
+    final override = widget.mcAttention;
+    if (override != null) return override;
+    var count = 0;
+    for (final s in widget.sessions ?? const <SessionInfo>[]) {
+      if (isDedicatedMcSession(s.id) &&
+          (s.needsInput || s.attention != null)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  Widget _mobileChatsHeader(bool hasClient, {String title = 'Sessions'}) {
     if (_selecting) {
       final n = _selected.length;
-      // Same footprint as the title row, so entering selection doesn't jump
-      // the list; Delete lives in the bottom bar.
       return Padding(
         padding: const EdgeInsets.fromLTRB(S.s4, 16, M.gutter, 6),
         child: SizedBox(
@@ -655,82 +668,120 @@ class SidebarState extends State<Sidebar> {
         ),
       );
     }
-    return Padding(
-      padding: EdgeInsets.fromLTRB(M.gutter, 16, M.gutter, 6),
-      child: Row(children: [
-        Text('Chats', style: TS.pageTitle()),
-        const Spacer(),
-        ..._headerTrailing(hasClient),
-      ]),
+    return ListenableBuilder(
+      listenable: AmbientController.instance,
+      builder: (context, _) {
+        final listeningOn =
+            widget.listening || AmbientController.instance.running;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: Row(children: [
+                _mcHeaderButton(),
+                const Spacer(),
+                if (listeningOn) ...[
+                  _listeningPill(),
+                  const SizedBox(width: 10),
+                ],
+                RoundBtn(
+                  icon: 'ellipsis',
+                  tooltip: 'More',
+                  size: 40,
+                  iconSize: 18,
+                  onTap: widget.onMobileMenu,
+                ),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
+              child: Text(
+                title,
+                style: sans(28, weight: W.strong, color: AppColors.fg1)
+                    .copyWith(letterSpacing: -0.5),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  /// The control at the right of every phone page header: the machine
-  /// switcher.
-  List<Widget> _headerTrailing(bool hasClient) => [_machineAvatarButton()];
+  Widget _mcHeaderButton() {
+    final count = _mcAttentionCount;
+    return Stack(clipBehavior: Clip.none, children: [
+      RoundBtn(
+        tooltip: 'Mission Control',
+        size: 40,
+        onTap: widget.onOpenMissionControl,
+        child: MochiIcon(color: AppColors.fg1, size: 22),
+      ),
+      if (count > 0)
+        Positioned(
+          right: -2,
+          top: -2,
+          child: IgnorePointer(
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: AppColors.fg1,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '$count',
+                style:
+                    sans(11, weight: W.label, color: AppColors.bg, height: 1),
+              ),
+            ),
+          ),
+        ),
+    ]);
+  }
+
+  Widget _listeningPill() {
+    const heights = [5.0, 11.0, 7.0, 9.0];
+    return Container(
+      height: 26,
+      padding: const EdgeInsets.symmetric(horizontal: 9),
+      decoration: BoxDecoration(
+        color: AppColors.ok.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        SizedBox(
+          height: 12,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              for (var i = 0; i < heights.length; i++) ...[
+                if (i > 0) const SizedBox(width: 2),
+                Container(
+                  width: 2,
+                  height: heights[i],
+                  decoration: BoxDecoration(
+                    color: AppColors.ok,
+                    borderRadius: BorderRadius.circular(1),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text('Listening', style: sans(12, color: AppColors.ok, height: 1)),
+      ]),
+    );
+  }
 
   Widget _mobileSettingsHeader() => MobileBackBar(
         title: 'Settings',
         onBack: () => Navigator.maybePop(context),
       );
-
-  /// Machine switcher, as a small round button: the machine's initial plus a
-  /// reachability dot, matching the desktop window bar's avatar so the two read
-  /// as the same control.
-  Widget _machineAvatarButton() {
-    final a = widget.active;
-    final ok = a == null ? null : widget.health[a.url];
-    final initial = a == null || a.label.trim().isEmpty
-        ? '+'
-        : a.label.trim().characters.first.toUpperCase();
-    return Tooltip(
-      message: a == null ? 'Add machine' : 'Switch machine',
-      child: Material(
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap:
-              widget.instances.isEmpty ? widget.onAddInstance : _openMachines,
-          child: SizedBox(
-            width: M.minTarget,
-            height: M.minTarget,
-            child: Center(
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 30,
-                    height: 30,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface2,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(initial,
-                        style: sans(13, weight: W.title, color: AppColors.fg1)),
-                  ),
-                  Positioned(
-                    right: -1,
-                    bottom: -1,
-                    child: Container(
-                      width: 9,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        color: ok == true ? AppColors.ok : AppColors.fg4,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.bg, width: 1.5),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _emptySessions({bool searching = false}) => Padding(
         padding: EdgeInsets.only(top: kMobile ? 72 : 32),
@@ -854,36 +905,99 @@ class SidebarState extends State<Sidebar> {
     final children = <Widget>[
       ..._groupedRows(split.main, attentionFirst: true),
     ];
-    if (children.isEmpty && split.settled.isEmpty) {
+    if (split.settled.isNotEmpty) {
+      final settledOpen = _settledOpen || _filterQuery.trim().isNotEmpty;
+      children.add(SessionGroupHeader(
+        'Settled',
+        count: split.settled.length,
+        collapsed: !settledOpen,
+        chevronRight: true,
+        onToggle: () => setState(() => _settledOpen = !_settledOpen),
+      ));
+      children.add(Reveal(
+        show: settledOpen,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < split.settled.length; i++)
+              _listRow(split.settled[i],
+                  divider: kMobile && i + 1 < split.settled.length),
+          ],
+        ),
+      ));
+    }
+    if (children.isEmpty) {
       children.add(_emptySessions(searching: _filterQuery.trim().isNotEmpty));
     }
-    final list = PullToRefresh(
+    return PullToRefresh(
       onRefresh: () async => widget.onRefreshSessions(),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(M.gutter, 4, M.gutter,
-            split.settled.isEmpty ? _scrollBottomPad : 16),
+        padding: EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, _scrollBottomPad),
         children: children,
       ),
     );
-    if (split.settled.isEmpty) return list;
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Expanded(child: list),
-      _settledPinned(split.settled),
-    ]);
   }
 
-  /// Rows under their project's header. Groups follow the recency of their
-  /// newest session; on phones a group holding a chat that needs input leads,
-  /// and inside a group input-needed then working chats come first.
+  static const _needsYouGroupKey = '__needs_you__';
+
+  /// Rows under their project's header, with cross-project Needs you first on
+  /// phone when not filtering.
   List<Widget> _groupedRows(List<SessionInfo> sorted,
       {required bool attentionFirst}) {
     if (sorted.isEmpty) return const [];
+    final pin = attentionFirst && _filterQuery.trim().isEmpty;
+    final out = <Widget>[];
+    _chatsShownAt ??= DateTime.now();
+    var n = 0;
+
+    final List<SessionInfo> groupedSource;
+    if (pin) {
+      final needsYouRows = [
+        for (final s in sorted)
+          if (sessionNeedsYou(s)) s,
+      ];
+      groupedSource = [
+        for (final s in sorted)
+          if (!sessionNeedsYou(s)) s,
+      ];
+      if (needsYouRows.isNotEmpty) {
+        final collapsed = _collapsedGroups.contains(_needsYouGroupKey);
+        out.add(SessionGroupHeader(
+          'Needs you',
+          count: needsYouRows.length,
+          collapsed: collapsed,
+          needsYou: true,
+          onToggle: () => setState(() {
+            if (!_collapsedGroups.remove(_needsYouGroupKey)) {
+              _collapsedGroups.add(_needsYouGroupKey);
+            }
+          }),
+        ));
+        if (!collapsed) {
+          for (var i = 0; i < needsYouRows.length; i++) {
+            out.add(Appear(
+              key: ValueKey('chat-${needsYouRows[i].id}'),
+              index: n++,
+              since: _chatsShownAt,
+              child: _listRow(
+                needsYouRows[i],
+                divider: kMobile && i + 1 < needsYouRows.length,
+                showProject: true,
+              ),
+            ));
+          }
+        }
+      }
+    } else {
+      groupedSource = sorted;
+    }
+
+    if (groupedSource.isEmpty) return out;
     final byFolder = <String, List<SessionInfo>>{};
-    for (final s in sorted) {
+    for (final s in groupedSource) {
       byFolder.putIfAbsent(projectKey(s), () => []).add(s);
     }
-    final pin = attentionFirst && _filterQuery.trim().isEmpty;
     int rank(SessionInfo s) => !pin
         ? 0
         : s.status == 'waiting_for_input'
@@ -891,20 +1005,12 @@ class SidebarState extends State<Sidebar> {
             : sessionIsActive(s.status)
                 ? 1
                 : 2;
-    var keys = byFolder.keys.toList();
-    if (pin) {
-      bool needs(String k) =>
-          byFolder[k]!.any((s) => s.status == 'waiting_for_input');
-      keys = [...keys.where(needs), ...keys.where((k) => !needs(k))];
-    }
+    final keys = byFolder.keys.toList();
     final labelCount = <String, int>{};
     for (final k in keys) {
       final l = projectLabel(byFolder[k]!.first);
       labelCount[l] = (labelCount[l] ?? 0) + 1;
     }
-    _chatsShownAt ??= DateTime.now();
-    final out = <Widget>[];
-    var n = 0;
     for (final k in keys) {
       final rows = [
         for (var r = 0; r <= 2; r++)
@@ -914,7 +1020,7 @@ class SidebarState extends State<Sidebar> {
       var label = projectLabel(first);
       if ((labelCount[label] ?? 0) > 1) label = _projectPath(first);
       final collapsed = _collapsedGroups.contains(k);
-      final needsYou = rows.any((s) => s.status == 'waiting_for_input');
+      final needsYou = rows.any(sessionNeedsYou);
       out.add(SessionGroupHeader(
         label,
         count: rows.length,
@@ -957,13 +1063,14 @@ class SidebarState extends State<Sidebar> {
   }
 
   Widget _agentBadge(SessionInfo s) {
-    final size = kMobile ? 16.0 : 14.0;
     final agent = s.displayAgentId?.trim() ?? '';
-    if (agent.isNotEmpty) return AgentMochi(agent, size: size);
+    if (agent.isNotEmpty) {
+      return AgentMochi(agent, size: kMobile ? 20.0 : 17.0);
+    }
     final profile = s.profile ?? '';
     final provider = profile.isEmpty ? null : _profileProviders[profile];
     if (provider != null && providerLogoAsset(provider) != null) {
-      return ProviderLogo(provider, size: size);
+      return ProviderLogo(provider, size: kMobile ? 18.0 : 15.0);
     }
     return Container(
       width: 6,
@@ -975,7 +1082,8 @@ class SidebarState extends State<Sidebar> {
     );
   }
 
-  Widget _listRow(SessionInfo s, {bool divider = false}) {
+  Widget _listRow(SessionInfo s,
+      {bool divider = false, bool showProject = false}) {
     final renaming = _renamingId == s.id;
     return SessionListRow(
       session: s,
@@ -984,6 +1092,7 @@ class SidebarState extends State<Sidebar> {
       checked: _selected.contains(s.id),
       draft: !renaming && _hasDraft(s),
       divider: divider,
+      showProject: showProject,
       renameField: renaming ? _inlineRenameField(s, compact: !kMobile) : null,
       leading: _agentBadge(s),
       onTap: renaming
@@ -1458,28 +1567,7 @@ class SidebarState extends State<Sidebar> {
     widget.onRefreshSessions();
   }
 
-  // ---- machines ----
 
-  /// Machine list: bottom sheet on phones, a popover anchored to the block on
-  /// desktop. Same rows + "Add machine" footer either way.
-  Future<void> _openMachines() => showSidebarMachinesPicker(
-        context,
-        anchorKey: _machineKey,
-        instances: widget.instances,
-        active: widget.active,
-        health: widget.health,
-        onSelect: widget.onSelectInstance,
-        onAdd: widget.onAddInstance,
-        onManage: _machineActions,
-        onRefreshHealth: widget.onRefreshHealth,
-      );
-
-  void _machineActions(Instance i) => showManageMachineSheet(
-        context: context,
-        instance: i,
-        onRename: (inst, name) => widget.onRenameInstance(inst, name),
-        onRemove: (inst) => widget.onRemoveInstance(inst),
-      );
 }
 
 final _noPresence = ValueNotifier<int>(0);
