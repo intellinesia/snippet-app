@@ -8,10 +8,6 @@ String _limitLabel(Duration d) => d.inSeconds % 60 == 0
 
 extension _SessionScreenRecorderExt on _SessionScreenState {
   Future<void> _onAttachTap() async {
-    if (_maxAttachments - _attachments.length <= 0) {
-      _toast('Up to $_maxAttachments attachments.');
-      return;
-    }
     if (!kMobile) {
       _pickFiles();
       return;
@@ -258,10 +254,6 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
 
   /// Attach this take and start the next one, so a thought can continue.
   Future<void> _recordMore() async {
-    if (_maxAttachments - _attachments.length <= 0) {
-      _toast('Attachment limit reached.');
-      return;
-    }
     if (await _confirmRecording()) await _startRecording();
   }
 
@@ -331,7 +323,7 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
       onStop: () => unawaited(_stopRecording()),
       onSend: () => unawaited(_sendMessage()),
       onSeek: reviewing ? (f) => unawaited(_seekRecording(f, total)) : null,
-      onMore: reviewing && _attachments.length < _maxAttachments - 1
+      onMore: reviewing
           ? () => unawaited(_recordMore())
           : null,
     );
@@ -492,14 +484,7 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
                 Future<Uint8List> Function() readBytes
               })>
           picked) async {
-    final remaining = _maxAttachments - _attachments.length;
-    if (remaining <= 0) return;
-    var items = picked;
-    if (items.length > remaining) {
-      items = items.take(remaining).toList();
-      _toast('Added $remaining (max $_maxAttachments).');
-    }
-    final entries = items
+    final entries = picked
         .map((p) => _Attachment(
             name: p.name,
             isImage: _isImageName(p.name),
