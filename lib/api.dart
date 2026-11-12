@@ -797,6 +797,14 @@ class DaemonClient {
     if (r.statusCode != 200) throw _err('update keep awake', r);
   }
 
+  /// Persist how a cold session resumes: 'ask', 'lean' or 'full'.
+  Future<void> setResumeMode(String sessionId, String mode) async {
+    final r = await _post(_uri('/session/resume_mode'),
+        headers: _json,
+        body: jsonEncode({'session': sessionId, 'mode': mode}));
+    if (r.statusCode != 200) throw _err('update resume mode', r);
+  }
+
   Future<void> renameSession(String sessionId, String title) async {
     final r = await _post(_uri('/session/rename'),
         headers: _json,
