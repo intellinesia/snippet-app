@@ -14,11 +14,21 @@ class NewSessionDraft extends StatefulWidget {
     required this.machineLabel,
     required this.onStart,
     this.folder,
+    this.source,
+    this.recentSessions,
+    this.onOpenSession,
   });
 
   final DaemonClient client;
   final String machineLabel;
   final String? folder;
+
+  /// The session this draft was opened from, for folder/branch/profile prefill.
+  final SessionInfo? source;
+
+  /// Pool the Recent row filters by folder; fetched from the daemon when null.
+  final List<SessionInfo>? recentSessions;
+  final ValueChanged<String>? onOpenSession;
   final Future<void> Function(
           String folder, WorkspaceMode mode, String? profile, String text)
       onStart;
@@ -38,14 +48,17 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
   List<InferenceProfile> _profiles = const [];
   String? _profile;
   bool _starting = false;
+  List<SessionInfo>? _recentPool;
 
   @override
   void initState() {
     super.initState();
-    _folder = widget.folder;
+    final sourceFolder = widget.source?.projectFolder ?? '';
+    _folder = widget.folder ?? (sourceFolder.isEmpty ? null : sourceFolder);
     _input.addListener(() => setState(() {}));
     _loadRepo();
     _loadProfiles();
+    _loadRecents();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focus.requestFocus();
     });
@@ -62,10 +75,14 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
     try {
       final cfg = await widget.client.getConfig();
       if (!mounted) return;
+      final wanted = widget.source?.profile;
       setState(() {
         _profiles = cfg.profiles;
-        _profile = cfg.active ??
-            cfg.profiles.where((p) => p.active).firstOrNull?.name;
+        _profile = wanted != null &&
+                cfg.profiles.any((p) => p.name == wanted)
+            ? wanted
+            : cfg.active ??
+                cfg.profiles.where((p) => p.active).firstOrNull?.name;
       });
     } catch (_) {}
   }
@@ -84,14 +101,38 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
       if (!mounted || _folder != f) return;
       final main = r.worktrees.where((w) => w.path == r.repo).firstOrNull ??
           r.worktrees.firstOrNull;
+      final srcBranch = widget.source?.branch ?? '';
       setState(() {
         _isRepo = r.repo != null;
-        _branch = main?.branch;
+        _branch = srcBranch.isNotEmpty ? srcBranch : main?.branch;
         if (!_isRepo) _mode = WorkspaceMode.folder;
       });
     } catch (_) {
       if (mounted) setState(() => _isRepo = false);
     }
+  }
+
+  Future<void> _loadRecents() async {
+    if (widget.recentSessions != null ||
+        widget.onOpenSession == null ||
+        _recentPool != null) {
+      return;
+    }
+    try {
+      final all = await widget.client.sessions();
+      if (mounted) setState(() => _recentPool = all);
+    } catch (_) {}
+  }
+
+  List<SessionInfo> get _recents {
+    final pool = widget.recentSessions ?? _recentPool ?? const <SessionInfo>[];
+    final f = _folder;
+    if (f == null || f.isEmpty) return const [];
+    final matches = pool
+        .where((s) => s.projectFolder == f || s.folder == f)
+        .toList()
+      ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
+    return matches.take(4).toList();
   }
 
   Future<void> _pickFolder() async {
@@ -174,6 +215,56 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
         ),
       );
 
+  Widget _recentMark(SessionInfo s) {
+    final agent = s.displayAgentId?.trim() ?? '';
+    if (agent.isNotEmpty) return AgentMochi(agent, size: 14);
+    final provider = _profiles
+        .where((p) => p.name == s.profile)
+        .firstOrNull
+        ?.provider;
+    if (provider != null && providerLogoAsset(provider) != null) {
+      return ProviderLogo(provider, size: 14);
+    }
+    return Container(
+      width: 6,
+      height: 6,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.fg4,
+      ),
+    );
+  }
+
+  Widget _recentChip(SessionInfo s) {
+    final radius = BorderRadius.circular(10);
+    return Material(
+      color: AppColors.surface1,
+      shape: RoundedRectangleBorder(
+        borderRadius: radius,
+        side: BorderSide(color: AppColors.line),
+      ),
+      child: InkWell(
+        borderRadius: radius,
+        onTap: () => widget.onOpenSession?.call(s.id),
+        child: Container(
+          height: 30,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            _recentMark(s),
+            const SizedBox(width: 6),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 200),
+              child: Text(s.title.isEmpty ? '(untitled)' : s.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TS.label(AppColors.fg2)),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget _worktreeToggle() {
     final on = _mode == WorkspaceMode.worktree;
     return Material(
@@ -240,7 +331,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                   const SizedBox(height: 10),
                   Text('What are we making?',
                       style: sans(26, spacing: -0.5, color: AppColors.fg1)),
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 24),
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 660),
                     child: Container(
@@ -346,6 +437,23 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                       ),
                     ),
                   ),
+                  if (widget.onOpenSession != null && _recents.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 6,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(right: 2),
+                          child: Text('Recent',
+                              style: TS.caption(AppColors.fg4)),
+                        ),
+                        for (final s in _recents) _recentChip(s),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
