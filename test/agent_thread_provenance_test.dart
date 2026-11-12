@@ -91,6 +91,8 @@ void main() {
     ]);
     expect(find.text('from task task-42'), findsOneWidget);
     expect(find.text('from a work session'), findsOneWidget);
+    // Direct chat header has one AgentMochi; agent bubbles have no per-message name.
+    expect(find.text('Growth'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
     debugDefaultTargetPlatformOverride = null;
   });
