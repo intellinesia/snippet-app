@@ -2418,6 +2418,7 @@ String? providerLogoAsset(String? provider) {
     'openai' || 'chatgpt' || 'codex' || 'openai-compatible' => 'openai',
     'gemini' || 'google' => 'gemini',
     'antigravity' => 'antigravity',
+    'devin' || 'windsurf' => 'devin',
     'xai' || 'grok' => 'xai',
     'openrouter' => 'openrouter',
     'opencode-zen' || 'opencode-go' || 'opencode' => 'opencode',

@@ -645,7 +645,7 @@ class DaemonClient {
     if (r.statusCode != 200) throw _err('load accounts', r);
     final json = jsonDecode(r.body) as Map<String, dynamic>;
     return {
-      for (final provider in ['chatgpt', 'xai', 'claude-code'])
+      for (final provider in ['chatgpt', 'xai', 'claude-code', 'devin'])
         provider: ((json[provider] as List?) ?? [])
             .map((a) => Account.fromJson((a as Map).cast<String, dynamic>()))
             .toList()
@@ -658,6 +658,16 @@ class DaemonClient {
         'provider': provider,
         if (label != null && label.isNotEmpty) 'label': label,
         if (token != null) 'token': token
+      });
+
+  Future<Map<String, dynamic>> completeAccount(
+          String provider, String id, String code,
+          {String? label}) =>
+      _accountPost('complete', {
+        'provider': provider,
+        'id': id,
+        'code': code,
+        if (label != null && label.isNotEmpty) 'label': label
       });
 
   Future<Map<String, dynamic>> removeAccount(String provider, String id) =>

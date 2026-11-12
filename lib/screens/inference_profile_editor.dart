@@ -25,6 +25,7 @@ const _providers = [
   ('chatgpt', 'ChatGPT'),
   ('claude-code', 'Claude Code'),
   ('antigravity', 'Antigravity'),
+  ('devin', 'Devin'),
 ];
 
 String _providerLabel(String p) =>
@@ -131,6 +132,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
   bool get _isXai => _provider == 'xai';
   bool get _isClaudeCode => _provider == 'claude-code';
   bool get _isAntigravity => _provider == 'antigravity';
+  bool get _isDevin => _provider == 'devin';
 
   @override
   void initState() {
@@ -603,7 +605,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
         signOut: (c) => c.xaiLogout(),
       );
     }
-    if (_isClaudeCode || _isAntigravity) {
+    if (_isClaudeCode || _isAntigravity || _isDevin) {
       return _CliAgentStatus(
           key: ValueKey(_provider), client: widget.client, provider: _provider);
     }
@@ -720,7 +722,9 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                       ? 'sonnet'
                       : _isAntigravity
                           ? 'gemini-3.8-flash-high'
-                          : 'claude-sonnet-4.5',
+                          : _isDevin
+                              ? 'swe-2'
+                              : 'claude-sonnet-4.5',
               suffix: _loadingModels
                   ? const SizedBox(
                       width: 16,
@@ -1009,7 +1013,9 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                       ? 'sonnet'
                       : _isAntigravity
                           ? 'gemini-3.8-flash-high'
-                          : 'claude-sonnet-4.5',
+                          : _isDevin
+                              ? 'swe-2'
+                              : 'claude-sonnet-4.5',
               suffix: _loadingModels
                   ? const SizedBox(
                       width: 16,
@@ -1335,8 +1341,10 @@ class _CliAgentStatusState extends State<_CliAgentStatus> {
   bool _loading = true;
 
   bool get _claude => widget.provider == 'claude-code';
-  String get _label => _claude ? 'Claude Code' : 'Antigravity';
-  String get _command => _claude ? 'claude' : 'agy';
+  bool get _devin => widget.provider == 'devin';
+  String get _label =>
+      _claude ? 'Claude Code' : _devin ? 'Devin' : 'Antigravity';
+  String get _command => _claude ? 'claude' : _devin ? 'devin' : 'agy';
 
   @override
   void initState() {
@@ -1402,7 +1410,9 @@ class _CliAgentStatusState extends State<_CliAgentStatus> {
                   'alert-triangle',
                   AppColors.run,
                   '$_label isn\'t signed in',
-                  'Run `$_command` once on that machine and sign in, then recheck.'
+                  _devin
+                      ? 'Add a Devin account under Accounts, or run devin auth login on the machine running Snippet (over SSH add --force-manual-token-flow).'
+                      : 'Run `$_command` once on that machine and sign in, then recheck.'
                 )
               : (
                   'check',

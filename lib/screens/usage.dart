@@ -18,6 +18,7 @@ String usageProviderTitle(String id) => switch (id.toLowerCase()) {
       'xai' || 'grok' => 'xAI',
       'openrouter' => 'OpenRouter',
       'antigravity' => 'Antigravity',
+      'devin' => 'Devin',
       _ => id.isEmpty ? 'Provider' : id,
     };
 
