@@ -36,8 +36,18 @@ String _clock(DateTime t) =>
 
 const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 String _dayLabel(DateTime t) {
@@ -47,8 +57,7 @@ String _dayLabel(DateTime t) {
       .inDays;
   if (days == 0) return 'Today';
   if (days == 1) return 'Yesterday';
-  final date =
-      '${_weekdays[t.weekday - 1]} ${t.day} ${_months[t.month - 1]}';
+  final date = '${_weekdays[t.weekday - 1]} ${t.day} ${_months[t.month - 1]}';
   return t.year == now.year ? date : '$date ${t.year}';
 }
 
@@ -64,7 +73,9 @@ String _plain(String text) => text
 
 String _folder(String path) {
   final parts = path.split('/').where((p) => p.isNotEmpty).toList();
-  return parts.length <= 2 ? parts.join('/') : parts.sublist(parts.length - 2).join('/');
+  return parts.length <= 2
+      ? parts.join('/')
+      : parts.sublist(parts.length - 2).join('/');
 }
 
 void _presentRecords(BuildContext host, String title, String agentName,
@@ -74,16 +85,14 @@ void _presentRecords(BuildContext host, String title, String agentName,
         maxWidth: 720,
         maxHeight: 820,
         builder: (_, close) => _RecordsPage(
-            title: title,
-            subtitle: agentName,
-            onClose: close,
-            child: view()));
+            title: title, subtitle: agentName, onClose: close, child: view()));
 
 /// Entries that arrived since the inbox was last opened, as the inbox itself
 /// marks them. Capped at one page.
 Future<int> agentInboxUnread(DaemonClient client, String agentId) async {
   final seen =
-      (await SharedPreferences.getInstance()).getInt('inbox_seen_$agentId') ?? 0;
+      (await SharedPreferences.getInstance()).getInt('inbox_seen_$agentId') ??
+          0;
   if (seen <= 0) return 0;
   final entries = await client.agentInbox(agentId, limit: _pageSize);
   return entries.where((e) => e.id > seen && e.fromKind != 'human').length;
@@ -222,8 +231,8 @@ class AgentActionsState extends State<AgentActions> {
     super.initState();
     widget.client.coordinationAgents().then((all) {
       if (!mounted) return;
-      setState(() =>
-          _agent = all.where((a) => a.id == widget.agentId).firstOrNull);
+      setState(
+          () => _agent = all.where((a) => a.id == widget.agentId).firstOrNull);
     }).catchError((_) {});
   }
 
@@ -234,12 +243,10 @@ class AgentActionsState extends State<AgentActions> {
     action(widget.host!);
   }
 
-  void _openRecords(String name, String title, Widget Function() view) =>
-      _run((host) => _presentRecords(host, title, widget.agentName, view),
-          name);
+  void _openRecords(String name, String title, Widget Function() view) => _run(
+      (host) => _presentRecords(host, title, widget.agentName, view), name);
 
-  ActionRow _setting(
-      String action, String icon, String label, String detail,
+  ActionRow _setting(String action, String icon, String label, String detail,
       {bool danger = false}) {
     final agent = _agent;
     return ActionRow(
@@ -289,7 +296,10 @@ class AgentActionsState extends State<AgentActions> {
             _memory(),
             _setting('wakes', 'calendar-clock', 'Wakes and reporting',
                 'When it wakes and who it tells'),
-            _setting('model', 'cpu', 'Inference profile', 'The model it runs on'),
+            _setting('reach', 'bell', 'How it reaches you',
+                'Notifications and where each kind goes'),
+            _setting(
+                'model', 'cpu', 'Inference profile', 'The model it runs on'),
           ]),
           ActionGroup(label: 'Appearance', rows: [
             _setting('nickname', 'edit', 'Nickname', 'What it is called here'),
@@ -307,20 +317,28 @@ class AgentActionsState extends State<AgentActions> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ActionGroup(label: 'Work', rows: [
-          if (!inShell) ActionRow(
-            icon: 'inbox',
-            label: 'Inbox',
-            detail: 'Everything sent to this agent',
-            onTap: () => _openRecords('inbox', 'Inbox',
-                () => AgentInboxView(client: client, agentId: id, agentName: name)),
-          ),
-          if (!inShell) ActionRow(
-            icon: 'clipboard',
-            label: 'Board',
-            detail: 'What it dispatched, reported and noted',
-            onTap: () => _openRecords('board', 'Board',
-                () => AgentBoardView(client: client, agentId: id, agentName: name)),
-          ),
+          if (!inShell)
+            ActionRow(
+              icon: 'inbox',
+              label: 'Inbox',
+              detail: 'Everything sent to this agent',
+              onTap: () => _openRecords(
+                  'inbox',
+                  'Inbox',
+                  () => AgentInboxView(
+                      client: client, agentId: id, agentName: name)),
+            ),
+          if (!inShell)
+            ActionRow(
+              icon: 'clipboard',
+              label: 'Board',
+              detail: 'What it dispatched, reported and noted',
+              onTap: () => _openRecords(
+                  'board',
+                  'Board',
+                  () => AgentBoardView(
+                      client: client, agentId: id, agentName: name)),
+            ),
           ActionRow(
             icon: 'terminal',
             label: 'Desk session',
@@ -334,6 +352,8 @@ class AgentActionsState extends State<AgentActions> {
           _memory(),
           _setting('wakes', 'calendar-clock', 'Wakes and reporting',
               'When it wakes and who it tells'),
+          _setting('reach', 'bell', 'How it reaches you',
+              'Notifications and where each kind goes'),
           _setting('model', 'cpu', 'Inference profile', 'The model it runs on'),
           if (!inShell) ...[
             _setting('nickname', 'edit', 'Nickname', 'What it is called here'),
@@ -511,7 +531,10 @@ class _RecordListState<T> extends State<_RecordList<T>> {
   }
 
   Future<void> _pollHead() async {
-    if (!mounted || !TickerMode.valuesOf(context).enabled || _loading || _items.isEmpty) {
+    if (!mounted ||
+        !TickerMode.valuesOf(context).enabled ||
+        _loading ||
+        _items.isEmpty) {
       return;
     }
     final generation = _generation;
@@ -586,7 +609,8 @@ class _RecordListState<T> extends State<_RecordList<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final content = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    final content =
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
         padding: EdgeInsets.fromLTRB(_gutter, kMobile ? 12 : 10, _gutter, 8),
         child: ListSearchField(
@@ -599,15 +623,15 @@ class _RecordListState<T> extends State<_RecordList<T>> {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: EdgeInsets.fromLTRB(_gutter, 0, _gutter, 6),
-        child: Row(children: [
-          for (final (label, value) in widget.filters)
-            _FilterChip(
-              label: label,
-              selected: value == _filter,
-              onTap: () => _pickFilter(value),
-            ),
-        ]),
-      ),
+          child: Row(children: [
+            for (final (label, value) in widget.filters)
+              _FilterChip(
+                label: label,
+                selected: value == _filter,
+                onTap: () => _pickFilter(value),
+              ),
+          ]),
+        ),
       Expanded(child: _list()),
     ]);
     if (kMobile) return content;
@@ -624,8 +648,8 @@ class _RecordListState<T> extends State<_RecordList<T>> {
         child: SizedBox(
           width: 18,
           height: 18,
-          child: CircularProgressIndicator(
-              strokeWidth: 2, color: AppColors.fg3),
+          child:
+              CircularProgressIndicator(strokeWidth: 2, color: AppColors.fg3),
         ),
       );
     }
@@ -739,8 +763,8 @@ class _Notice extends StatelessWidget {
             if (action != null)
               TextButton(
                 onPressed: onAction,
-                child: Text(action!,
-                    style: sans(_body, color: AppColors.accent)),
+                child:
+                    Text(action!, style: sans(_body, color: AppColors.accent)),
               ),
           ]),
         ),
@@ -761,8 +785,7 @@ class _StateTag extends StatelessWidget {
           borderRadius: BorderRadius.circular(R.xs),
         ),
         child: Text(label,
-            maxLines: 1,
-            style: sans(_meta, weight: W.label, color: color)),
+            maxLines: 1, style: sans(_meta, weight: W.label, color: color)),
       );
 }
 
@@ -798,9 +821,8 @@ class _RecordRow extends StatelessWidget {
           hoverColor: AppColors.surface1,
           child: Stack(children: [
             Padding(
-              padding: EdgeInsets.fromLTRB(
-                  _gutter + (kMobile ? 12 : 12), kMobile ? 10 : 8,
-                  _gutter, kMobile ? 10 : 8),
+              padding: EdgeInsets.fromLTRB(_gutter + (kMobile ? 12 : 12),
+                  kMobile ? 10 : 8, _gutter, kMobile ? 10 : 8),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -972,7 +994,8 @@ String _fullTime(String raw) {
   return t == null ? '' : '${_dayLabel(t)}, ${_clock(t)}';
 }
 
-void _openSession(BuildContext context, DaemonClient client, String id, String title) {
+void _openSession(
+    BuildContext context, DaemonClient client, String id, String title) {
   final tab = openSessionInTab;
   if (!kMobile && tab != null) {
     tab(client, id, title);
@@ -1215,7 +1238,9 @@ class _AgentBoardViewState extends State<AgentBoardView> {
         'reported' => ('check-circle', 'Reported', AppColors.ok),
         'progress' => (
             'activity',
-            e.summary.startsWith(_automatic) ? 'Progress, automatic' : 'Progress',
+            e.summary.startsWith(_automatic)
+                ? 'Progress, automatic'
+                : 'Progress',
             AppColors.fg2
           ),
         'noted' => ('file-text', 'Note', AppColors.fg2),
@@ -1230,7 +1255,8 @@ class _AgentBoardViewState extends State<AgentBoardView> {
         : e.summary;
     final id = e.correlationId;
     if (id != null && text.startsWith(id)) {
-      text = text.substring(id.length).replaceFirst(RegExp(r'^\s*[—:-]\s*'), '');
+      text =
+          text.substring(id.length).replaceFirst(RegExp(r'^\s*[—:-]\s*'), '');
       if (text.isNotEmpty) text = text[0].toUpperCase() + text.substring(1);
     }
     return text;
@@ -1268,8 +1294,11 @@ class _AgentBoardViewState extends State<AgentBoardView> {
       ],
       actions: [
         if (session != null)
-          ('Open session',
-              () => _openSession(context, widget.client, session, widget.agentName)),
+          (
+            'Open session',
+            () =>
+                _openSession(context, widget.client, session, widget.agentName)
+          ),
       ],
     );
   }
@@ -1304,7 +1333,8 @@ class _AgentBoardViewState extends State<AgentBoardView> {
           builder: (context, snap) {
             final data = snap.data;
             if (data == null) {
-              return Text(snap.hasError ? 'Could not load this log.' : 'Loading',
+              return Text(
+                  snap.hasError ? 'Could not load this log.' : 'Loading',
                   style: sans(_body, color: AppColors.fg3));
             }
             return BoardLog(entries: data);
@@ -1394,8 +1424,7 @@ class _AgentBoardViewState extends State<AgentBoardView> {
   Widget build(BuildContext context) {
     return _RecordList<BoardEntry>(
       client: widget.client,
-      liveOn: (e) =>
-          e['kind'] == 'agent_board' && e['agent'] == widget.agentId,
+      liveOn: (e) => e['kind'] == 'agent_board' && e['agent'] == widget.agentId,
       hint: "Search ${widget.agentName}'s work",
       groupedFilters: const {'by-task', 'by-folder'},
       filters: agentBoardFilters,
@@ -1426,7 +1455,8 @@ class BoardLog extends StatelessWidget {
         : e.summary;
     final id = e.correlationId;
     if (id != null && text.startsWith(id)) {
-      text = text.substring(id.length).replaceFirst(RegExp(r'^\s*[—:-]\s*'), '');
+      text =
+          text.substring(id.length).replaceFirst(RegExp(r'^\s*[—:-]\s*'), '');
       if (text.isNotEmpty) text = text[0].toUpperCase() + text.substring(1);
     }
     return text.replaceAllMapped(

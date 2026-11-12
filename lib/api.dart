@@ -16,6 +16,8 @@ import 'models.dart';
 import 'goal_models.dart';
 import 'wake_models.dart';
 import 'github_models.dart';
+import 'reach_models.dart';
+export 'reach_models.dart';
 
 class DownloadCancelled implements Exception {
   const DownloadCancelled();
@@ -110,7 +112,6 @@ class DaemonClient {
           Duration timeout = _timeout}) =>
       _http.delete(uri, headers: headers, body: body).timeout(timeout);
 
-
   Future<bool> health({Duration timeout = const Duration(seconds: 2)}) async {
     try {
       final r = await _get(_uri('/health'), timeout: timeout);
@@ -124,7 +125,8 @@ class DaemonClient {
     final q = <String, String>{};
     if (folder != null) q['folder'] = folder;
     if (limit != null) q['limit'] = '$limit';
-    final r = await _get(_uri('/sessions', q.isEmpty ? null : q), timeout: _long);
+    final r =
+        await _get(_uri('/sessions', q.isEmpty ? null : q), timeout: _long);
     if (r.statusCode != 200) throw _err('list sessions', r);
     final list = jsonDecode(r.body) as List;
     return list
@@ -256,7 +258,8 @@ class DaemonClient {
   /// POST /ambient/call/{id}/track|ignore|stop. Returns the HTTP status so the
   /// caller can treat 404/409 (already resolved) as a dismissal.
   Future<int> ambientCallAction(String callId, String action) async {
-    final r = await _post(_uri('/ambient/call/${Uri.encodeComponent(callId)}/$action'));
+    final r = await _post(
+        _uri('/ambient/call/${Uri.encodeComponent(callId)}/$action'));
     return r.statusCode;
   }
 
@@ -437,7 +440,8 @@ class DaemonClient {
   /// ChatGPT Plus/Pro/Team device-code sign-in — same shape as xAI.
   Future<({String userCode, String verificationUri})>
       chatgptLoginBegin() async {
-    final r = await _post(_uri('/chatgpt/login'), headers: _json, timeout: _long);
+    final r =
+        await _post(_uri('/chatgpt/login'), headers: _json, timeout: _long);
     if (r.statusCode != 200) throw _err('chatgpt login', r);
     final j = jsonDecode(r.body) as Map<String, dynamic>;
     return (
@@ -454,9 +458,11 @@ class DaemonClient {
 
   Future<Map<String, dynamic>> reasoningSpec(
       String provider, String model) async {
-    final r = await _get(_uri('/reasoning', {'provider': provider, 'model': model}));
+    final r =
+        await _get(_uri('/reasoning', {'provider': provider, 'model': model}));
     if (r.statusCode != 200) {
-      throw Exception(r.body.isEmpty ? 'HTTP ${r.statusCode}' : errorDetail(r.body));
+      throw Exception(
+          r.body.isEmpty ? 'HTTP ${r.statusCode}' : errorDetail(r.body));
     }
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
@@ -464,7 +470,8 @@ class DaemonClient {
   Future<Map<String, dynamic>> cliAgentStatus(String provider) async {
     final r = await _get(_uri('/cli-agent/status', {'provider': provider}));
     if (r.statusCode != 200) {
-      throw Exception(r.body.isEmpty ? 'HTTP ${r.statusCode}' : errorDetail(r.body));
+      throw Exception(
+          r.body.isEmpty ? 'HTTP ${r.statusCode}' : errorDetail(r.body));
     }
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
@@ -511,7 +518,9 @@ class DaemonClient {
           if (maxSeconds != null) 'max_seconds': maxSeconds,
         }));
     if (r.statusCode != 200) {
-      throw r.statusCode == 400 ? errorDetail(r.body) : _err('save voice settings', r);
+      throw r.statusCode == 400
+          ? errorDetail(r.body)
+          : _err('save voice settings', r);
     }
     invalidateConfig();
     return VoiceSettings.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
@@ -605,7 +614,9 @@ class DaemonClient {
           if (stt != null) 'stt': stt,
         }));
     if (r.statusCode != 200) {
-      throw r.statusCode == 400 ? errorDetail(r.body) : _err('save ambient settings', r);
+      throw r.statusCode == 400
+          ? errorDetail(r.body)
+          : _err('save ambient settings', r);
     }
     return AmbientSettings.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
@@ -700,10 +711,12 @@ class DaemonClient {
       {String? provider}) async {
     final r = await _post(_uri('/accounts/$action'),
         headers: _json,
-        body:
-            jsonEncode({if (provider != null) 'provider': provider, ...body}), timeout: _long);
+        body: jsonEncode({if (provider != null) 'provider': provider, ...body}),
+        timeout: _long);
     if (r.statusCode != 200) {
-      throw r.statusCode == 400 ? errorDetail(r.body) : _err('$action account', r);
+      throw r.statusCode == 400
+          ? errorDetail(r.body)
+          : _err('$action account', r);
     }
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
@@ -800,8 +813,7 @@ class DaemonClient {
   /// Persist how a cold session resumes: 'ask', 'lean' or 'full'.
   Future<void> setResumeMode(String sessionId, String mode) async {
     final r = await _post(_uri('/session/resume_mode'),
-        headers: _json,
-        body: jsonEncode({'session': sessionId, 'mode': mode}));
+        headers: _json, body: jsonEncode({'session': sessionId, 'mode': mode}));
     if (r.statusCode != 200) throw _err('update resume mode', r);
   }
 
@@ -815,7 +827,8 @@ class DaemonClient {
   Future<Map<String, dynamic>> exec(String sessionId, String command) async {
     final r = await _post(_uri('/session/exec'),
         headers: _json,
-        body: jsonEncode({'session': sessionId, 'command': command}), timeout: _long);
+        body: jsonEncode({'session': sessionId, 'command': command}),
+        timeout: _long);
     if (r.statusCode != 200) throw _err('run command', r);
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
@@ -830,8 +843,8 @@ class DaemonClient {
       'content': content,
       if (prevHash != null) 'prev_hash': prevHash,
     };
-    final r = await _post(_uri('/fs/write'),
-        headers: _json, body: jsonEncode(body));
+    final r =
+        await _post(_uri('/fs/write'), headers: _json, body: jsonEncode(body));
     if (r.statusCode == 200 || r.statusCode == 409) {
       return jsonDecode(r.body) as Map<String, dynamic>;
     }
@@ -885,8 +898,7 @@ class DaemonClient {
       final sink = output.openWrite();
       var received = 0;
       try {
-        await for (final chunk
-            in response.stream.timeout(_long)) {
+        await for (final chunk in response.stream.timeout(_long)) {
           if (isCancelled?.call() ?? false) throw const DownloadCancelled();
           sink.add(chunk);
           received += chunk.length;
@@ -1034,7 +1046,6 @@ class DaemonClient {
 
   String _ghError(http.Response r) => errorDetail(r.body);
 
-
   /// GET /github/prs — open, mine, review or closed.
   Future<({List<PrSummary> prs, String? next})> githubPrPage(
       String session, String filter,
@@ -1059,7 +1070,8 @@ class DaemonClient {
       (await githubPrPage(session, filter, limit: 60)).prs;
 
   Future<PrDetail> githubPr(String session, int number) async {
-    final r = await _get(_uri('/github/pr', {'session': session, 'number': '$number'}));
+    final r = await _get(
+        _uri('/github/pr', {'session': session, 'number': '$number'}));
     if (r.statusCode != 200) throw _ghError(r);
     return PrDetail.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
@@ -1112,7 +1124,8 @@ class DaemonClient {
   }
 
   Future<String> githubCommitDiff(String session, String sha) async {
-    final r = await _get(_uri('/github/commit/diff', {'session': session, 'sha': sha}));
+    final r = await _get(
+        _uri('/github/commit/diff', {'session': session, 'sha': sha}));
     if (r.statusCode != 200) throw _ghError(r);
     return (jsonDecode(r.body) as Map<String, dynamic>)['diff'] as String? ??
         '';
@@ -1125,7 +1138,8 @@ class DaemonClient {
           'session': session,
           if (title != null) 'title': title,
           if (body != null) 'body': body,
-        }), timeout: _long);
+        }),
+        timeout: _long);
     if (r.statusCode != 200) throw _ghError(r);
     return (jsonDecode(r.body) as Map<String, dynamic>)['url'] as String? ?? '';
   }
@@ -1196,7 +1210,8 @@ class DaemonClient {
           'admin': admin,
           'delete_branch': deleteBranch,
           if (branch != null) 'branch': branch,
-        }), timeout: _long);
+        }),
+        timeout: _long);
     if (r.statusCode != 200) throw _ghError(r);
   }
 
@@ -1228,7 +1243,8 @@ class DaemonClient {
           'session': session,
           'id': id,
           if (version != null) 'version': version,
-        }), timeout: _long);
+        }),
+        timeout: _long);
     if (r.statusCode != 200) throw _err('zip artifact', r);
     return (jsonDecode(r.body) as Map<String, dynamic>)['path'] as String;
   }
@@ -1236,7 +1252,9 @@ class DaemonClient {
   /// POST /zip — zip files or folders on the daemon; returns the zip's path.
   Future<String> zipFiles(String name, List<String> paths) async {
     final r = await _post(_uri('/zip'),
-        headers: _json, body: jsonEncode({'name': name, 'paths': paths}), timeout: _long);
+        headers: _json,
+        body: jsonEncode({'name': name, 'paths': paths}),
+        timeout: _long);
     if (r.statusCode != 200) throw _err('zip files', r);
     return (jsonDecode(r.body) as Map<String, dynamic>)['path'] as String;
   }
@@ -1283,7 +1301,8 @@ class DaemonClient {
 
   /// GET /memory/history — newest commits of a memory repo.
   Future<List<MemoryCommit>> memoryHistory(String key, {int limit = 50}) async {
-    final r = await _get(_uri('/memory/history', {'key': key, 'limit': '$limit'}));
+    final r =
+        await _get(_uri('/memory/history', {'key': key, 'limit': '$limit'}));
     if (r.statusCode != 200) throw _err('memory history', r);
     return (jsonDecode(r.body) as List)
         .map((e) => MemoryCommit.fromJson(e as Map<String, dynamic>))
@@ -1379,25 +1398,59 @@ class DaemonClient {
 
   /// POST /agents/{id}/color — the agent's Mochi colour, or null for the default.
   Future<void> setAgentColor(String agentId, String? color) async {
-    final r = await _post(
-        _uri('/agents/${Uri.encodeComponent(agentId)}/color'),
-        headers: _json,
-        body: jsonEncode({'color': color}));
+    final r = await _post(_uri('/agents/${Uri.encodeComponent(agentId)}/color'),
+        headers: _json, body: jsonEncode({'color': color}));
     if (r.statusCode != 200) throw _err('set agent colour', r);
     setRememberedAgentColor(agentId, color);
   }
 
   /// POST /agents/{id}/shape: the agent's mascot shape, or null for the default.
   Future<void> setAgentShape(String agentId, String? shape) async {
-    final r = await _post(
-        _uri('/agents/${Uri.encodeComponent(agentId)}/shape'),
-        headers: _json,
-        body: jsonEncode({'shape': shape}));
+    final r = await _post(_uri('/agents/${Uri.encodeComponent(agentId)}/shape'),
+        headers: _json, body: jsonEncode({'shape': shape}));
     if (r.statusCode != 200) throw _err('set agent shape', r);
     setRememberedAgentShape(agentId, shape);
   }
 
   /// POST /agents/{id}/nickname — a short name shown instead of the name, or null to clear it.
+  /// GET /agents/{id}/reach: which channels a message kind tries, in order.
+  Future<AgentReach> agentReach(String agentId) async {
+    final r = await _get(_uri('/agents/${Uri.encodeComponent(agentId)}/reach'));
+    if (r.statusCode != 200) throw _err('load reach policy', r);
+    return AgentReach.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  /// PUT /agents/{id}/reach with a partial `policy` and/or `channels`.
+  Future<AgentReach> setAgentReach(String agentId,
+      {Map<String, List<String>>? policy,
+      Map<String, Map<String, bool>>? channels}) async {
+    final r = await _put(_uri('/agents/${Uri.encodeComponent(agentId)}/reach'),
+        headers: _json,
+        body: jsonEncode({
+          if (policy != null) 'policy': policy,
+          if (channels != null) 'channels': channels,
+        }));
+    if (r.statusCode != 200) throw _err('save reach policy', r);
+    return AgentReach.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  /// GET /ambient/tuning: the listening device's attention profile.
+  Future<AmbientTuning> ambientTuning() async {
+    final r = await _get(_uri('/ambient/tuning'));
+    if (r.statusCode != 200) throw _err('load attention profile', r);
+    return AmbientTuning.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  /// POST /ambient/tuning: pick a profile, standing or for [minutes].
+  Future<AmbientTuning> setAmbientTuning(String profile, {int? minutes}) async {
+    final r = await _post(_uri('/ambient/tuning'),
+        headers: _json,
+        body: jsonEncode(
+            {'profile': profile, if (minutes != null) 'minutes': minutes}));
+    if (r.statusCode != 200) throw _err('set attention profile', r);
+    return AmbientTuning.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
   Future<void> setAgentNickname(String agentId, String? nickname) async {
     final r = await _post(
         _uri('/agents/${Uri.encodeComponent(agentId)}/nickname'),
@@ -1541,7 +1594,8 @@ class DaemonClient {
       if (before != null) 'before': '$before',
       if (outstanding) 'outstanding': 'true',
     };
-    final r = await _get(_uri('/agents/${Uri.encodeComponent(agentId)}/board', query));
+    final r = await _get(
+        _uri('/agents/${Uri.encodeComponent(agentId)}/board', query));
     if (r.statusCode != 200) throw _err('load agent board', r);
     final j = jsonDecode(r.body) as Map<String, dynamic>;
     return BoardPage(
@@ -1578,7 +1632,8 @@ class DaemonClient {
       if (kind != null && kind.isNotEmpty) 'kind': kind,
       if (before != null) 'before': '$before',
     };
-    final r = await _get(_uri('/agents/${Uri.encodeComponent(agentId)}/inbox', query));
+    final r = await _get(
+        _uri('/agents/${Uri.encodeComponent(agentId)}/inbox', query));
     if (r.statusCode != 200) throw _err('load agent inbox', r);
     final entries = (jsonDecode(r.body) as Map<String, dynamic>)['entries'];
     return ((entries as List?) ?? const [])
@@ -1829,8 +1884,7 @@ class DaemonClient {
     if (r.statusCode != 200 && r.statusCode != 201) {
       throw _err('create group', r);
     }
-    return GroupSummary.fromJson(
-        jsonDecode(r.body) as Map<String, dynamic>);
+    return GroupSummary.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
   /// PUT /groups/{id} — rename, change the lead, or add/remove members.
@@ -1854,8 +1908,7 @@ class DaemonClient {
       }),
     );
     if (r.statusCode != 200) throw _err('update group', r);
-    return GroupSummary.fromJson(
-        jsonDecode(r.body) as Map<String, dynamic>);
+    return GroupSummary.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
   /// GET /groups/{id}/events — one page of a group's event thread.
@@ -2021,7 +2074,8 @@ class DaemonClient {
   /// GET /coordination/tasks/{id}/links — edges in BOTH directions, plus the
   /// blockers resolved from the reverse edge.
   Future<TaskLinks> taskLinks(String id) async {
-    final r = await _get(_uri('/coordination/tasks/${Uri.encodeComponent(id)}/links'));
+    final r = await _get(
+        _uri('/coordination/tasks/${Uri.encodeComponent(id)}/links'));
     if (r.statusCode != 200) throw _err('task links', r);
     return TaskLinks.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
@@ -2042,7 +2096,8 @@ class DaemonClient {
 
   /// GET /coordination/tasks/{id}/agents — the roster, active members first.
   Future<List<TaskAgent>> taskAgents(String id) async {
-    final r = await _get(_uri('/coordination/tasks/${Uri.encodeComponent(id)}/agents'));
+    final r = await _get(
+        _uri('/coordination/tasks/${Uri.encodeComponent(id)}/agents'));
     if (r.statusCode != 200) throw _err('task agents', r);
     final list = jsonDecode(r.body) as List;
     return list
@@ -2052,7 +2107,8 @@ class DaemonClient {
 
   /// GET /coordination/tasks/{id}/turns — who held the turn, oldest first.
   Future<List<TaskTurn>> taskTurns(String id) async {
-    final r = await _get(_uri('/coordination/tasks/${Uri.encodeComponent(id)}/turns'));
+    final r = await _get(
+        _uri('/coordination/tasks/${Uri.encodeComponent(id)}/turns'));
     if (r.statusCode != 200) throw _err('task turns', r);
     final list = jsonDecode(r.body) as List;
     return list
@@ -2122,8 +2178,8 @@ class DaemonClient {
       'delivery': goal ? 'goal' : 'message',
     };
     if (planPath != null) body['plan_path'] = planPath;
-    final r = await _post(_uri('/recurring'),
-        headers: _json, body: jsonEncode(body));
+    final r =
+        await _post(_uri('/recurring'), headers: _json, body: jsonEncode(body));
     if (r.statusCode != 200) throw _err('create recurring job', r);
     return RecurringJob.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }

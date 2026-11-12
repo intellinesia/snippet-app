@@ -9,6 +9,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../motion.dart';
 import '../mochi.dart';
+import 'agent_reach_panel.dart';
 import 'agent_wake_panel.dart';
 import 'agent_appearance.dart';
 import 'agent_profile_panel.dart';
@@ -123,8 +124,7 @@ class _AgentCardState extends State<AgentCard> {
       items: [
         if (!widget.agent.isMissionControl)
           appMenuItem(value: 'nickname', icon: 'edit', label: _nicknameLabel),
-        appMenuItem(
-            value: 'appearance', icon: 'sparkles', label: 'Appearance'),
+        appMenuItem(value: 'appearance', icon: 'sparkles', label: 'Appearance'),
         if (!widget.agent.isMissionControl)
           appMenuItem(
               value: 'model', icon: 'cpu', label: 'Change inference profile'),
@@ -133,6 +133,7 @@ class _AgentCardState extends State<AgentCard> {
               value: 'wakes',
               icon: 'calendar-clock',
               label: 'Wakes and reporting'),
+        appMenuItem(value: 'reach', icon: 'bell', label: 'How it reaches you'),
         if (widget.onDelete != null)
           appMenuItem(
               value: 'delete',
@@ -144,6 +145,13 @@ class _AgentCardState extends State<AgentCard> {
     if (picked == 'delete') widget.onDelete?.call();
     if (picked == 'nickname' && mounted) _editNickname(point: point);
     if (picked == 'wakes' && mounted) _openWakes(name, point);
+    if (picked == 'reach' && mounted) {
+      showAgentReachSettings(context,
+          client: widget.client,
+          agentId: widget.agent.id,
+          name: name,
+          point: point);
+    }
     if (picked == 'model' && mounted) _pickProfile(name, point: point);
     if (picked == 'appearance' && mounted) {
       showAgentAppearance(context, widget.client, widget.agent.id, name,
