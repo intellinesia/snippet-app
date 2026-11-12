@@ -1341,6 +1341,16 @@ class CoordinationEvent {
 
   String get body => payload['body'] is String ? payload['body'] as String : '';
 
+  String? get replyTo => switch (payload['reply_to']) {
+        final String s when s.isNotEmpty => s,
+        _ => null,
+      };
+
+  String? get reaction => switch (payload['reaction']) {
+        final String s when s.isNotEmpty => s,
+        _ => null,
+      };
+
   List<String> get addressedTo =>
       (payload['to'] as List?)?.whereType<String>().toList() ?? const [];
 }
