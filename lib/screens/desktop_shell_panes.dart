@@ -798,17 +798,12 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         ] else
           const SizedBox(width: 14),
         const Spacer(),
-        IconBtn('sidebar',
-            size: 28,
-            iconSize: 16,
+        _TbBtn(
+            icon: 'sidebar',
             tooltip: kMacOS ? 'Hide sidebar (⌘B)' : 'Hide sidebar (Ctrl+B)',
             onTap: _toggleSidebar),
         const SizedBox(width: 6),
-        IconBtn('square-pen',
-            size: 28,
-            iconSize: 16,
-            tooltip: 'New session',
-            onTap: _newSessionFlow),
+        _TbBtn(icon: 'square-pen', tooltip: 'New session', onTap: _newSessionFlow),
         const SizedBox(width: 10),
       ]),
     );
@@ -839,6 +834,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           child: HoverSurface(
             key: _topMachineKey,
             radius: 8,
+            hoverColor: AppColors.surface2,
             onTap: _instances.isEmpty ? _addInstanceFlow : _openTopMachines,
             child: Container(
               height: 28,
@@ -880,7 +876,10 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                 ])
               : const SizedBox.shrink(),
         ),
-        _settingsButton(28),
+        _TbBtn(
+            icon: 'settings',
+            tooltip: 'Settings',
+            onTap: _openShellSettings),
       ]),
     );
   }
@@ -931,6 +930,50 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onRename: _renameInstance,
         onRemove: _removeInstance,
       );
+}
+
+/// The `.tb` button in the `.stop` strip: 28px, fg3 icon, surface2 hover.
+class _TbBtn extends StatefulWidget {
+  const _TbBtn(
+      {required this.icon, required this.tooltip, required this.onTap});
+  final String icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  State<_TbBtn> createState() => _TbBtnState();
+}
+
+class _TbBtnState extends State<_TbBtn> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: widget.tooltip,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: _hover ? AppColors.surface2 : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: AppIcon(widget.icon,
+                  size: 16, color: _hover ? AppColors.fg1 : AppColors.fg3),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The `.lis` pill: shown in the sidebar footer while ambient listening is on.
