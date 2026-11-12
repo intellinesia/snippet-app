@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
 import 'package:snippet/approval_code.dart';
+import 'package:snippet/chat/chat_style.dart';
 import 'package:snippet/media_views.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/mochi.dart';
@@ -127,7 +128,7 @@ void main() {
     expect(find.text('0:05'), findsOneWidget);
     expect(find.bySemanticsLabel('Play voice note'), findsOneWidget);
     expect(find.byType(AgentMochi), findsWidgets);
-    expect(find.byType(Bubble), findsNothing);
+    expect(find.byType(ChatBubble), findsNothing);
     final note = t.widget<VoiceNote>(find.byType(VoiceNote));
     expect(
       note.url,
@@ -177,7 +178,7 @@ void main() {
     expect(find.byType(ArtifactRow), findsOneWidget);
     expect(find.text('Harness Map'), findsOneWidget);
     expect(find.textContaining('Document · v2'), findsOneWidget);
-    expect(find.byType(Bubble), findsNothing);
+    expect(find.byType(ChatBubble), findsNothing);
 
     await t.tap(find.text('Harness Map'));
     await t.pump();
@@ -220,7 +221,7 @@ void main() {
     expect(find.text('Production cluster'), findsOneWidget);
     expect(find.text('Chosen'), findsOneWidget);
     expect(find.text('Answered'), findsOneWidget);
-    expect(find.byType(Bubble), findsNothing);
+    expect(find.byType(ChatBubble), findsNothing);
     await t.pumpWidget(const SizedBox());
     debugDefaultTargetPlatformOverride = null;
   });
@@ -266,7 +267,7 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('plain body still renders Bubble for both human and agent',
+  testWidgets('plain body still renders ChatBubble for both human and agent',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     await _open(t, [
@@ -274,10 +275,10 @@ void main() {
       _ev(2, 'agent', 'All clear, no errors found.'),
     ]);
 
-    expect(find.byType(Bubble), findsNWidgets(2));
+    expect(find.byType(ChatBubble), findsNWidgets(2));
     expect(find.text('Can you check the logs?'), findsOneWidget);
     expect(find.text('All clear, no errors found.'), findsOneWidget);
-    final bubbles = t.widgetList<Bubble>(find.byType(Bubble)).toList();
+    final bubbles = t.widgetList<ChatBubble>(find.byType(ChatBubble)).toList();
     expect(bubbles[0].mine, isTrue);
     expect(bubbles[1].mine, isFalse);
     await t.pumpWidget(const SizedBox());
@@ -313,7 +314,7 @@ void main() {
     expect(card, findsOneWidget);
     expect(find.text('Yes'), findsOneWidget);
     expect(find.text('No'), findsOneWidget);
-    expect(t.getSize(card).width, lessThanOrEqualTo(740));
+    expect(t.getSize(card).width, lessThanOrEqualTo(440));
     await t.pumpWidget(const SizedBox());
     debugDefaultTargetPlatformOverride = null;
   });

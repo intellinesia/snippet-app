@@ -8,12 +8,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
+import 'package:snippet/chat/chat_style.dart';
 import 'package:snippet/composer/composer_card.dart';
 import 'package:snippet/message_reactions.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/agent_messaging.dart';
 import 'package:snippet/swr.dart';
-import 'package:snippet/widgets.dart';
 
 CoordinationEvent _ev(
   String id,
@@ -208,8 +208,8 @@ void main() {
 
       await _open(t, client);
 
-      // Only the 2 real messages render as Bubble widgets; the 2 reactions fold.
-      expect(find.byType(Bubble), findsNWidgets(2));
+      // Only the 2 real messages render as ChatBubble widgets; the 2 reactions fold.
+      expect(find.byType(ChatBubble), findsNWidgets(2));
 
       // The reply renders a QuotedReplyLine with the target message text.
       final quoted = find.byType(QuotedReplyLine);
@@ -384,7 +384,7 @@ void main() {
       expect(
         find.ancestor(
           of: find.text('Initial spec note at top of thread.'),
-          matching: find.byType(Bubble),
+          matching: find.byType(ChatBubble),
         ),
         findsNothing,
       );
@@ -395,7 +395,7 @@ void main() {
       expect(
         find.ancestor(
           of: find.text('Initial spec note at top of thread.'),
-          matching: find.byType(Bubble),
+          matching: find.byType(ChatBubble),
         ),
         findsOneWidget,
       );
