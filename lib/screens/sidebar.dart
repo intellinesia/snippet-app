@@ -25,6 +25,7 @@ import '../pull_refresh.dart';
 import '../motion.dart';
 import '../mochi.dart';
 import '../swr.dart';
+import 'mobile_bottom_bar.dart';
 import 'mobile_chrome.dart';
 export 'sidebar_mobile.dart';
 
@@ -126,6 +127,11 @@ class SidebarState extends State<Sidebar> {
   SettingsPage? _pendingSettingsCreate;
   final GlobalKey<AgentsSidebarPanelState> _agentsPanelKey =
       GlobalKey<AgentsSidebarPanelState>();
+
+  /// The Agents tab with no agent open mirrors the Chats list; its panel needs
+  /// its own key or it collides with the Chats page's in the PageView.
+  final GlobalKey<AgentsSidebarPanelState> _agentsMirrorKey =
+      GlobalKey<AgentsSidebarPanelState>();
   bool _selecting = false;
   static bool _settledOpen = false;
   final Set<String> _selected = {};
@@ -136,6 +142,12 @@ class SidebarState extends State<Sidebar> {
   final FocusNode _searchFocus = FocusNode();
   final TextEditingController _agentSearchCtl = TextEditingController();
   final FocusNode _agentSearchFocus = FocusNode();
+
+  /// Measured height of the shared bottom bar; scroll views pad by it so the
+  /// last row clears the glass.
+  double _barHeight = 0;
+  double get _bottomClearance => _barHeight + M.gutter;
+  double get _scrollBottomPad => _selecting ? 24.0 : _bottomClearance;
 
   /// Desktop search in section headers.
   final TextEditingController _desktopChatsSearchCtl = TextEditingController();
@@ -336,6 +348,29 @@ class SidebarState extends State<Sidebar> {
                     ),
                 ],
               ),
+              if (!_selecting)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: MobileBottomBar(
+                    home: widget.mobileHome,
+                    onHome: widget.onMobileHome,
+                    onNewSession: widget.onNewSession,
+                    onNewAgentOrGroup: (ctx) => (_agentsPanelKey.currentState ??
+                            _agentsMirrorKey.currentState)
+                        ?.openCreateMenu(ctx),
+                    workingCount: widget.mobileHome == MobileHome.chats
+                        ? _workingCount
+                        : 0,
+                    search: _barSearch(),
+                    onHeightChanged: (h) {
+                      if (mounted && h != _barHeight) {
+                        setState(() => _barHeight = h);
+                      }
+                    },
+                  ),
+                ),
             ]),
           ),
         ],
@@ -369,7 +404,8 @@ class SidebarState extends State<Sidebar> {
   /// Each destination gets the whole surface below the bar. Chats keeps a head
   /// for its title and context controls; Agents and Settings own their own
   /// headers, so they render directly.
-  Widget _mobileHomeBody(bool hasClient, [MobileHome? home]) {
+  Widget _mobileHomeBody(bool hasClient,
+      [MobileHome? home, bool agentsMirror = false]) {
     final destination = home ?? widget.mobileHome;
     switch (destination) {
       case MobileHome.chats:
@@ -386,53 +422,9 @@ class SidebarState extends State<Sidebar> {
             Expanded(
               child: !hasClient
                   ? _mobileUnavailable('Add a machine to begin.')
-                  : Stack(children: [
-                      Positioned.fill(
-                          child: _agentsList && !_selecting
-                              ? _agentList(widget.client!)
-                              : _sessionList()),
-                      if (!_selecting) ...[
-                        const Positioned(
-                            left: 0, right: 0, bottom: 0, child: BottomFade()),
-                        Positioned(
-                          left: M.gutter,
-                          right: M.gutter,
-                          bottom: 12,
-                          child: Row(children: [
-                            Expanded(
-                              child: _agentsList
-                                  ? FloatingSearch(
-                                      key: const ValueKey('search-agents'),
-                                      controller: _agentSearchCtl,
-                                      focusNode: _searchFocus,
-                                      hint: 'Search agents',
-                                      onChanged: (v) =>
-                                          setState(() => _agentFilterQuery = v),
-                                    )
-                                  : FloatingSearch(
-                                      key: const ValueKey('search-sessions'),
-                                      controller: _searchCtl,
-                                      focusNode: _searchFocus,
-                                      hint: 'Search sessions',
-                                      onChanged: (v) =>
-                                          setState(() => _filterQuery = v),
-                                    ),
-                            ),
-                            const SizedBox(width: 8),
-                            _agentsList
-                                ? Builder(
-                                    builder: (fab) => AccentFab(
-                                        tooltip: 'New agent or group',
-                                        onTap: () => _agentsPanelKey
-                                            .currentState
-                                            ?.openCreateMenu(fab)))
-                                : AccentFab(
-                                    tooltip: 'New session',
-                                    onTap: widget.onNewSession),
-                          ]),
-                        ),
-                      ],
-                    ]),
+                  : _agentsList && !_selecting
+                      ? _agentList(widget.client!, mirror: agentsMirror)
+                      : _sessionList(),
             ),
             if (_selecting) _mobileSelectionActions(),
           ],
@@ -458,11 +450,14 @@ class SidebarState extends State<Sidebar> {
               ],
             ),
             Expanded(
-              child: TasksPanel(
-                key: _tasksPanelKey,
-                client: client,
-                trailing: const [],
-                phoneHeader: false,
+              child: Padding(
+                padding: EdgeInsets.only(bottom: _scrollBottomPad),
+                child: TasksPanel(
+                  key: _tasksPanelKey,
+                  client: client,
+                  trailing: const [],
+                  phoneHeader: false,
+                ),
               ),
             ),
           ],
@@ -475,13 +470,18 @@ class SidebarState extends State<Sidebar> {
         }
         // The agent list lives on the home list; this is one agent's detail.
         final agent = widget.agent;
-        if (agent == null) return _mobileHomeBody(hasClient, MobileHome.chats);
-        return CoordinationAgentDetail(
-          key: const ValueKey('agent-detail'),
-          agent: agent,
-          client: client,
-          embedded: false,
-          onClose: () => widget.onAgent(null),
+        if (agent == null) {
+          return _mobileHomeBody(hasClient, MobileHome.chats, true);
+        }
+        return Padding(
+          padding: EdgeInsets.only(bottom: _scrollBottomPad),
+          child: CoordinationAgentDetail(
+            key: const ValueKey('agent-detail'),
+            agent: agent,
+            client: client,
+            embedded: false,
+            onClose: () => widget.onAgent(null),
+          ),
         );
 
       case MobileHome.settings:
@@ -498,7 +498,9 @@ class SidebarState extends State<Sidebar> {
           );
         }
         final section = widget.settingsSection;
-        return AnimatedSwitcher(
+        return Padding(
+          padding: EdgeInsets.only(bottom: _scrollBottomPad),
+          child: AnimatedSwitcher(
           duration: Motion.base,
           switchInCurve: Motion.enter,
           switchOutCurve: Motion.exit,
@@ -562,6 +564,7 @@ class SidebarState extends State<Sidebar> {
                     ),
                   ],
                 ),
+          ),
         );
     }
   }
@@ -571,13 +574,17 @@ class SidebarState extends State<Sidebar> {
   }
 
   Widget _agentList(DaemonClient client,
-          {SessionInfo? missionControl, VoidCallback? onOpenMissionControl}) =>
+          {SessionInfo? missionControl,
+          VoidCallback? onOpenMissionControl,
+          bool mirror = false}) =>
       AgentsSidebarPanel(
-        key: _agentsPanelKey,
+        key: mirror ? _agentsMirrorKey : _agentsPanelKey,
         client: client,
         missionControl: missionControl,
         onOpenMissionControl: onOpenMissionControl,
         searchQuery: _agentFilterQuery,
+        bottomPadding: _scrollBottomPad,
+        groupsKey: mirror ? 'groups-mirror' : null,
         onSearchChanged: (v) => setState(() {
           _agentFilterQuery = v;
           if (_agentSearchCtl.text != v) _agentSearchCtl.text = v;
@@ -585,6 +592,38 @@ class SidebarState extends State<Sidebar> {
         onOpenAgent: (a) =>
             kMobile ? widget.onAgent(a) : widget.onOpenAgent?.call(a),
       );
+
+  /// Sessions the pill counts as working: awake, not waiting, actually running.
+  int get _workingCount => [
+        for (final s in widget.sessions ?? const <SessionInfo>[])
+          if (!s.settled &&
+              s.status != 'waiting_for_input' &&
+              sessionIsActive(s.status))
+            s,
+      ].length;
+
+  /// The bar's search field: same controllers, focus node, hints and filter
+  /// callbacks the per-page FloatingSearch used, on Chats and Agents only.
+  MobileBarSearch? _barSearch() {
+    if (_selecting ||
+        (widget.mobileHome != MobileHome.chats &&
+            widget.mobileHome != MobileHome.agents)) {
+      return null;
+    }
+    return _agentsList
+        ? MobileBarSearch(
+            controller: _agentSearchCtl,
+            focusNode: _searchFocus,
+            hint: 'Search agents',
+            onChanged: (v) => setState(() => _agentFilterQuery = v),
+          )
+        : MobileBarSearch(
+            controller: _searchCtl,
+            focusNode: _searchFocus,
+            hint: 'Search sessions',
+            onChanged: (v) => setState(() => _filterQuery = v),
+          );
+  }
 
   /// The Chats header: the destination name on the left, icon buttons on
   /// the right for search, new chat, Mission Control and machine avatar.
@@ -821,8 +860,8 @@ class SidebarState extends State<Sidebar> {
       onRefresh: () async => widget.onRefreshSessions(),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(
-            M.gutter, 4, M.gutter, split.settled.isEmpty ? 120 : 16),
+        padding: EdgeInsets.fromLTRB(M.gutter, 4, M.gutter,
+            split.settled.isEmpty ? _scrollBottomPad : 16),
         children: children,
       ),
     );
@@ -987,7 +1026,7 @@ class SidebarState extends State<Sidebar> {
             ),
           ),
         ),
-        if (kMobile) const SizedBox(height: 76),
+        if (kMobile) SizedBox(height: _scrollBottomPad),
       ]),
     );
   }

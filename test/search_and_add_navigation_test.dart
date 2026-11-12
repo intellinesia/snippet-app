@@ -158,13 +158,21 @@ void main() {
       await tester.pumpAndSettle();
       expect(newSessionCalled, isTrue);
 
-      // The filter sits under the header, always visible.
+      // The search circle swaps the tab row for the filter field.
+      await tester.tap(find.byTooltip('Search'));
+      await tester.pumpAndSettle();
+      expect(_field('Search sessions'), findsOneWidget);
+      expect(find.text('Tasks'), findsNothing);
       await tester.enterText(_field('Search sessions'), 'Nonexistent');
       await tester.pumpAndSettle();
       expect(find.text('No matching sessions'), findsOneWidget);
       await tester.tap(find.byTooltip('Clear').first);
       await tester.pumpAndSettle();
       expect(find.text('Feature Setup'), findsOneWidget);
+      await tester.tap(find.byTooltip('Close search'));
+      await tester.pumpAndSettle();
+      expect(_field('Search sessions'), findsNothing);
+      expect(find.text('Tasks'), findsOneWidget);
 
       // 2. Tasks is a tab of its own, with its own New.
       await tester.pumpWidget(buildTestWidget(home: MobileHome.tasks));
@@ -187,14 +195,21 @@ void main() {
               .getBool('mobile_home_agents_list'),
           isTrue);
 
+      await tester.tap(find.byTooltip('Search'));
+      await tester.pumpAndSettle();
       await tester.enterText(_field('Search agents'), 'review');
       await tester.pumpAndSettle();
       expect(find.text('Snippet'), findsNothing);
       expect(find.text('Reviewer'), findsOneWidget);
       await tester.tap(find.byTooltip('Clear').first);
       await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Close search'));
+      await tester.pumpAndSettle();
 
       expect(find.byType(CreateAgentForm), findsNothing);
+      await tester.tap(find.text('Agents'));
+      await tester.pumpAndSettle();
+      expect(currentHome, MobileHome.agents);
       await tester.tap(find.byTooltip('New agent or group'));
       await tester.pumpAndSettle();
       expect(find.text('New group chat'), findsOneWidget);
@@ -299,6 +314,8 @@ void main() {
       expect(find.text('Session Title 2'), findsOneWidget);
 
       // Search reaches past the visible rows to every matching chat.
+      await tester.tap(find.byTooltip('Search'));
+      await tester.pumpAndSettle();
       await tester.enterText(_field('Search sessions'), 'Title 13');
       await tester.pumpAndSettle();
       expect(find.text('Session Title 13'), findsOneWidget);

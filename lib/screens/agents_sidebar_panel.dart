@@ -126,6 +126,8 @@ class AgentsSidebarPanel extends StatefulWidget {
     this.trailingHeader,
     this.searchQuery,
     this.onSearchChanged,
+    this.bottomPadding,
+    this.groupsKey,
   });
 
   final DaemonClient client;
@@ -147,6 +149,13 @@ class AgentsSidebarPanel extends StatefulWidget {
   /// Notifies parent when local search text changes.
   final ValueChanged<String>? onSearchChanged;
 
+  /// Phone list bottom padding; defaults to clearing the old floating bar.
+  final double? bottomPadding;
+
+  /// SWR scope for the groups list; mirrors of this panel need their own so
+  /// two mounted instances don't share one entry's notifications.
+  final String? groupsKey;
+
   @override
   State<AgentsSidebarPanel> createState() => AgentsSidebarPanelState();
 }
@@ -166,7 +175,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     super.initState();
     _groups = Swr<List<GroupSummary>>(
       client: widget.client,
-      key: 'groups',
+      key: widget.groupsKey ?? 'groups',
       fetch: widget.client.groups,
       onChange: () {
         if (mounted) setState(() {});
@@ -450,7 +459,8 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         onRefresh: refresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(0, 8, 0, 88),
+          padding: EdgeInsets.fromLTRB(
+              0, 8, 0, widget.bottomPadding ?? 88),
           children: [
             if (mcCard != null)
               Padding(
