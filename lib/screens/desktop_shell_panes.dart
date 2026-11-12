@@ -1,6 +1,13 @@
 part of 'desktop_shell.dart';
 
 extension _DesktopShellPanesExt on _DesktopShellState {
+  SessionInfo? _draftSource(String? folder) {
+    if (folder == null || folder.isEmpty) return null;
+    return _sessions
+        ?.where((s) => s.projectFolder == folder || s.folder == folder)
+        .firstOrNull;
+  }
+
   Widget _tabBody(_ShellTab t, {required bool primary, bool? visible}) =>
       kMobile
           ? _originTabBody(t, primary: primary, visible: visible ?? primary)
@@ -32,6 +39,12 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         client: t.client,
         machineLabel: _active?.label ?? '',
         folder: t.draftFolder,
+        source: _draftSource(t.draftFolder),
+        recentSessions: _sessions,
+        onOpenSession: (id) {
+          final s = _sessions?.where((s) => s.id == id).firstOrNull;
+          _openSession(id, s?.title ?? '', s?.profile);
+        },
         onStart: (folder, mode, profile, text) =>
             _startDraft(t, folder, mode, profile, text),
       );
