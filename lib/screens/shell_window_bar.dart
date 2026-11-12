@@ -49,6 +49,7 @@ class TopWorkspaceTabChip extends StatelessWidget {
   final VoidCallback? onClose;
   final GlobalKey? chipKey;
   final String? provider;
+  final int attentionCount;
 
   const TopWorkspaceTabChip({
     super.key,
@@ -60,6 +61,7 @@ class TopWorkspaceTabChip extends StatelessWidget {
     this.onClose,
     this.chipKey,
     this.provider,
+    this.attentionCount = 0,
   });
 
   @override
@@ -67,6 +69,33 @@ class TopWorkspaceTabChip extends StatelessWidget {
     final title = tab.title.isEmpty ? '(untitled)' : tab.title;
     final working = status == 'running' || status == 'waiting_for_input';
     final showClose = canClose && onClose != null && isActive;
+    // Mission Control is the pinned icon-only tab: Mochi plus the attention
+    // count, no title or status dot (v5 `.tab[data-go=mc]`).
+    if (tab.isMissionControl) {
+      return GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: Motion.quick,
+          key: chipKey,
+          height: 30,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.surface2 : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(
+                color: isActive ? AppColors.line : Colors.transparent),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            MochiIcon(color: AppColors.fg1, size: 18),
+            if (attentionCount > 0) ...[
+              const SizedBox(width: 6),
+              Text('$attentionCount',
+                  style: mono(11, color: AppColors.fg4)),
+            ],
+          ]),
+        ),
+      );
+    }
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -83,9 +112,7 @@ class TopWorkspaceTabChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (tab.isMissionControl)
-              MochiIcon(color: AppColors.accent, size: 14)
-            else if (tab.isPrs)
+            if (tab.isPrs)
               AppIcon('pull-request', size: 13, color: AppColors.ok)
             else if (provider != null)
               ProviderLogo(provider, size: 12)
@@ -277,6 +304,7 @@ class MainTabsStrip extends StatelessWidget {
   final VoidCallback onNewSession;
   final GlobalKey Function(String key) chipKeyFor;
   final String? Function(ShellTab)? providerFor;
+  final int mcAttentionCount;
 
   const MainTabsStrip({
     super.key,
@@ -290,6 +318,7 @@ class MainTabsStrip extends StatelessWidget {
     required this.onNewSession,
     required this.chipKeyFor,
     this.providerFor,
+    this.mcAttentionCount = 0,
   });
 
   @override
@@ -319,6 +348,8 @@ class MainTabsStrip extends StatelessWidget {
               onTap: () => onActivateTab(tabs[i]),
               onClose: () => onCloseTab(tabs[i]),
               chipKey: chipKeyFor(tabs[i].key),
+              attentionCount:
+                  tabs[i].isMissionControl ? mcAttentionCount : 0,
             ),
           ),
           const SizedBox(width: 2),
