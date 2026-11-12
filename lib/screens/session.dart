@@ -1664,7 +1664,7 @@ class _SessionScreenState extends State<SessionScreen>
                               !(waiting && s?.pendingQuestion != null))
                             _centerWide(
                                 _inputBar(running,
-                                    top: !running && _cold != null
+                                    top: !running && !_settled && _cold != null
                                         ? ColdTab(
                                             mode: _resumeMode,
                                             resumeTokens:
