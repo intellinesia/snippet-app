@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'agent_card.dart';
 import 'create_agent_form.dart';
+import 'group_messaging.dart';
 import 'mission_control_card.dart';
 import 'shell_nav.dart';
 import '../pull_refresh.dart';
@@ -389,6 +390,9 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
               Padding(
                   padding: const EdgeInsets.symmetric(horizontal: M.gutter),
                   child: emptyState),
+            Padding(
+                padding: const EdgeInsets.symmetric(horizontal: M.gutter),
+                child: GroupsSection(client: widget.client)),
           ],
         ),
       );
@@ -432,6 +436,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                   if (mcCard != null) mcCard,
                   ...desktopChildren,
                   if (emptyState != null) emptyState,
+                  GroupsSection(client: widget.client),
                 ],
               ),
             ),

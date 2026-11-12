@@ -1737,6 +1737,109 @@ class DaemonClient {
         jsonDecode(r.body) as Map<String, dynamic>);
   }
 
+  /// GET /groups — the group chats the local user belongs to.
+  Future<List<GroupSummary>> groups() async {
+    final r = await _get(_uri('/groups'));
+    if (r.statusCode != 200) throw _err('list groups', r);
+    final list = jsonDecode(r.body);
+    return [
+      if (list is List)
+        for (final e in list)
+          if (e is Map) GroupSummary.fromJson(Map<String, dynamic>.from(e))
+    ];
+  }
+
+  /// POST /groups — create a group chat. [members] are agent ids; the local
+  /// human is implied.
+  Future<GroupSummary> createGroup({
+    required String title,
+    required List<String> members,
+    String? lead,
+  }) async {
+    final r = await _post(
+      _uri('/groups'),
+      headers: _json,
+      body: jsonEncode({
+        'title': title,
+        'members': members,
+        if (lead != null && lead.isNotEmpty) 'lead': lead,
+      }),
+    );
+    if (r.statusCode != 200 && r.statusCode != 201) {
+      throw _err('create group', r);
+    }
+    return GroupSummary.fromJson(
+        jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  /// PUT /groups/{id} — rename, change the lead, or add/remove members.
+  Future<GroupSummary> updateGroup(
+    String id, {
+    String? title,
+    String? lead,
+    List<String>? addMembers,
+    List<String>? removeMembers,
+  }) async {
+    final r = await _put(
+      _uri('/groups/${Uri.encodeComponent(id)}'),
+      headers: _json,
+      body: jsonEncode({
+        if (title != null) 'title': title,
+        if (lead != null) 'lead': lead,
+        if (addMembers != null && addMembers.isNotEmpty)
+          'add_members': addMembers,
+        if (removeMembers != null && removeMembers.isNotEmpty)
+          'remove_members': removeMembers,
+      }),
+    );
+    if (r.statusCode != 200) throw _err('update group', r);
+    return GroupSummary.fromJson(
+        jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  /// GET /groups/{id}/events — one page of a group's event thread.
+  Future<List<CoordinationEvent>> groupEvents(
+    String id, {
+    int after = 0,
+    int limit = 100,
+  }) async {
+    final r = await _get(_uri('/groups/${Uri.encodeComponent(id)}/events', {
+      'after': '$after',
+      'limit': '$limit',
+    }));
+    if (r.statusCode != 200) throw _err('read group events', r);
+    final list = jsonDecode(r.body);
+    return [
+      if (list is List)
+        for (final e in list)
+          if (e is Map) CoordinationEvent.fromJson(Map<String, dynamic>.from(e))
+    ];
+  }
+
+  /// POST /groups/{id}/post — append a message to a group thread.
+  ///
+  /// [mentions] carries the `@id` tokens the sender addressed; `everyone`
+  /// addresses the whole group.
+  Future<CoordinationEvent> postGroup(
+    String id, {
+    required String body,
+    List<String>? mentions,
+  }) async {
+    final r = await _post(
+      _uri('/groups/${Uri.encodeComponent(id)}/post'),
+      headers: _json,
+      body: jsonEncode({
+        'body': body,
+        if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
+      }),
+    );
+    if (r.statusCode != 200 && r.statusCode != 201 && r.statusCode != 202) {
+      throw _err('post group message', r);
+    }
+    return CoordinationEvent.fromJson(
+        jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
   /// GET /goals — [status] is open, closed, cancelled or all.
   Future<List<Goal>> goals({String status = 'open'}) async {
     final r = await _get(_uri('/goals', {'status': status}));
