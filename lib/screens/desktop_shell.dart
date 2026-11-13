@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -49,6 +48,7 @@ import 'mission_board_panel.dart';
 import 'pull_requests.dart';
 import 'session_list_row.dart' show sessionNeedsYou;
 import 'session_side_panel.dart';
+import 'desktop_settings_page.dart';
 import 'settings_panel.dart';
 import 'shell_card_tab_strip.dart';
 import 'shell_main_pane.dart';
@@ -1881,5 +1881,4 @@ class _DesktopShellState extends State<DesktopShell>
 }
 
 typedef _MachineList = MachineList;
-typedef _SettingsPanel = SettingsPanel;
 typedef _SettingsPage = SettingsPage;

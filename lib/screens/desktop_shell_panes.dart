@@ -118,6 +118,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       );
     }
     return SessionScreen(
+      onTogglePanel: _togglePanel,
       key: ValueKey('body-${t.key}'),
       client: t.client,
       sessionId: t.sessionId!,
@@ -592,60 +593,24 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     final c = _client;
     if (c == null) return;
     final inst = _active;
-    showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Close settings',
-      barrierColor: Colors.black.withValues(alpha: 0.38),
-      transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (ctx, a1, a2) {
-        final size = MediaQuery.sizeOf(ctx);
-        return Center(
-          child: SizedBox(
-            width: (size.width - 80).clamp(320.0, 1000.0),
-            height: (size.height - 80).clamp(360.0, 700.0),
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: AppColors.bg,
-                borderRadius: BorderRadius.circular(R.lg),
-              ),
-              foregroundDecoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(R.lg),
-                border: Border.all(color: AppColors.border2),
-              ),
-              child: _SettingsPanel(
-                client: c,
-                instances: _instances,
-                active: inst,
-                onRemove: _removeInstance,
-                onRename: _renameInstance,
-                onSelect: _selectInstance,
-                onAdd: _onInstanceAdded,
-                onClose: () => Navigator.of(ctx).maybePop(),
-                initialPage: page,
-              ),
-            ),
-          ),
-        );
-      },
-      transitionBuilder: (ctx, anim, a2, child) {
-        final t = CurvedAnimation(
-            parent: anim,
-            curve: Curves.easeOutCubic,
-            reverseCurve: Curves.easeInCubic);
-        return BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 6 * t.value, sigmaY: 6 * t.value),
-          child: FadeTransition(
-            opacity: t,
-            child: ScaleTransition(
-              scale: Tween(begin: 0.97, end: 1.0).animate(t),
-              child: child,
-            ),
-          ),
-        );
-      },
-    );
+    Navigator.of(context).push<void>(PageRouteBuilder<void>(
+      transitionDuration: Motion.base,
+      reverseTransitionDuration: Motion.fast,
+      pageBuilder: (ctx, a1, a2) => DesktopSettingsPage(
+        client: c,
+        instances: _instances,
+        active: inst,
+        onRemove: _removeInstance,
+        onRename: _renameInstance,
+        onSelect: _selectInstance,
+        onAdd: _onInstanceAdded,
+        onBack: () => Navigator.of(ctx).maybePop(),
+        initialSection: page,
+      ),
+      transitionsBuilder: (ctx, anim, a2, child) => FadeTransition(
+          opacity: CurvedAnimation(parent: anim, curve: Motion.enter),
+          child: child),
+    ));
   }
 
   Widget _tabStrip(VoidCallback? onMenu) => CardTabStrip(
