@@ -546,4 +546,18 @@ void main() {
 
     await _disposeSession(tester);
   });
+
+  testWidgets('Desktop session header title has Session menu tooltip and opens menu on click',
+      (tester) async {
+    await _pumpSession(tester, platform: TargetPlatform.linux);
+
+    expect(find.byTooltip('Session menu'), findsOneWidget);
+    await tester.tap(find.text('Test Session'));
+    await tester.pumpAndSettle();
+    expect(find.text('Actions'), findsOneWidget);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
+    await _disposeSession(tester);
+  });
 }

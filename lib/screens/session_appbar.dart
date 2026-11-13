@@ -1234,21 +1234,27 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         running ? (mins >= 1 ? 'Working ${mins}m' : 'Working') : null;
     final detailStyle = sans(12, color: AppColors.fg3);
     return Column(mainAxisSize: MainAxisSize.min, children: [
-      GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => _openActions(s),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Flexible(
-              child: Text(title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(14, weight: W.label, color: AppColors.fg1)),
+      Tooltip(
+        message: 'Session menu',
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _openActions(s),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Flexible(
+                  child: Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(14, weight: W.label, color: AppColors.fg1)),
+                ),
+                const SizedBox(width: 5),
+                AppIcon('chevron-down', size: 10, color: AppColors.fg3),
+              ]),
             ),
-            const SizedBox(width: 5),
-            AppIcon('chevron-down', size: 10, color: AppColors.fg3),
-          ]),
+          ),
         ),
       ),
       if (working != null || detail.isNotEmpty)
