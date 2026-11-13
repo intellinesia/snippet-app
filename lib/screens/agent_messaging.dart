@@ -1818,17 +1818,26 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
 
     final Widget content = MessageBubbleInteractive(
       text: e.body,
+      mine: mine,
       onReply: () => _startReply(e),
       onReact: (name) => unawaited(_sendReaction(e, name)),
-      builder: (_, __) {
+      focusBuilder: (_) =>
+          card ??
+          ChatBubble(
+            mine: mine,
+            tail: tail,
+            child: _bubbleBody(e, mine: mine),
+          ),
+      builder: (_, __, bubbleKey) {
         if (card != null) {
+          final keyedCard = KeyedSubtree(key: bubbleKey, child: card);
           final cappedCard = kMobile
-              ? ChatBubbleRow(mine: false, child: card)
+              ? ChatBubbleRow(mine: false, child: keyedCard)
               : Align(
                   alignment: Alignment.centerLeft,
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 440),
-                    child: card,
+                    child: keyedCard,
                   ),
                 );
           return Column(
@@ -1860,10 +1869,13 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                       bottom: 2, left: mine ? 0 : 4, right: mine ? 4 : 0),
                   child: quotedLine,
                 ),
-              ChatBubble(
-                mine: mine,
-                tail: tail,
-                child: _bubbleBody(e, mine: mine),
+              KeyedSubtree(
+                key: bubbleKey,
+                child: ChatBubble(
+                  mine: mine,
+                  tail: tail,
+                  child: _bubbleBody(e, mine: mine),
+                ),
               ),
               if (chips != null)
                 Padding(

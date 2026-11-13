@@ -1,7 +1,11 @@
+import 'dart:math' as math;
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'dialog_widgets.dart';
+import 'chat/message_focus_overlay.dart';
 import 'media_views.dart';
 import 'models.dart';
 import 'platform.dart';
@@ -306,33 +310,45 @@ class ReactAction extends MessageAction {
 Future<void> showMessageActionsSheet(
   BuildContext context, {
   required String text,
-  required VoidCallback onReply,
-  required ValueChanged<String> onReact,
+  VoidCallback? onReply,
+  ValueChanged<String>? onReact,
 }) async {
   final picked = await showAppSheet<MessageAction>(
     context,
     title: 'Message',
     maxWidth: 400,
     maxHeight: 640,
-    child: MessageActionsView(text: text),
+    child: MessageActionsView(
+      text: text,
+      showReply: onReply != null,
+      showReactions: onReact != null,
+    ),
   );
   switch (picked) {
     case ReplyAction():
-      onReply();
+      onReply?.call();
     case ReactAction(:final emoji):
-      onReact(emoji);
+      onReact?.call(emoji);
     case null:
   }
 }
 
 class MessageActionsView extends StatelessWidget {
-  const MessageActionsView({super.key, required this.text});
+  const MessageActionsView({
+    super.key,
+    required this.text,
+    this.showReply = true,
+    this.showReactions = true,
+  });
   final String text;
+  final bool showReply;
+  final bool showReactions;
 
   @override
   Widget build(BuildContext context) {
     void pick(MessageAction a) => Navigator.of(context).pop(a);
     final preview = quotePreviewText(text);
+    final hasCopy = text.trim().isNotEmpty;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Column(
@@ -353,90 +369,94 @@ class MessageActionsView extends StatelessWidget {
                 style: sans(13, color: AppColors.fg2),
               ),
             ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _SheetAction(
-                  icon: 'reply',
-                  label: 'Reply',
-                  onTap: () => pick(ReplyAction()),
-                ),
-              ),
-              if (text.trim().isNotEmpty) ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _SheetAction(
-                    icon: 'copy',
-                    label: 'Copy',
-                    onTap: () {
-                      Clipboard.setData(ClipboardData(text: text));
-                      toast(context, 'Copied');
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              for (final emoji in kMessageReactions)
-                Semantics(
-                  button: true,
-                  label: 'React $emoji',
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => pick(ReactAction(emoji)),
-                    child: SizedBox.square(
-                      dimension: 48,
-                      child: Center(
-                        child: Text(emoji, style: _emojiStyle(26)),
-                      ),
+          if (showReply || hasCopy) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (showReply)
+                  Expanded(
+                    child: _SheetAction(
+                      icon: 'reply',
+                      label: 'Reply',
+                      onTap: () => pick(ReplyAction()),
                     ),
                   ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text('More', style: sans(12, weight: W.label, color: AppColors.fg3)),
-          const SizedBox(height: 8),
-          LayoutBuilder(builder: (context, c) {
-            final cols = (c.maxWidth / 76).floor().clamp(3, 6);
-            final w = c.maxWidth / cols;
-            return Wrap(
+                if (showReply && hasCopy) const SizedBox(width: 8),
+                if (hasCopy)
+                  Expanded(
+                    child: _SheetAction(
+                      icon: 'copy',
+                      label: 'Copy',
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: text));
+                        toast(context, 'Copied');
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ],
+          if (showReactions) ...[
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                for (final (emoji, meaning) in kMoreReactions)
+                for (final emoji in kMessageReactions)
                   Semantics(
                     button: true,
-                    label: 'React $emoji, $meaning',
+                    label: 'React $emoji',
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       onTap: () => pick(ReactAction(emoji)),
-                      child: SizedBox(
-                        width: w,
-                        height: 64,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(emoji, style: _emojiStyle(24)),
-                            const SizedBox(height: 4),
-                            Text(
-                              meaning,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: sans(11, color: AppColors.fg3),
-                            ),
-                          ],
+                      child: SizedBox.square(
+                        dimension: 48,
+                        child: Center(
+                          child: Text(emoji, style: _emojiStyle(26)),
                         ),
                       ),
                     ),
                   ),
               ],
-            );
-          }),
+            ),
+            const SizedBox(height: 12),
+            Text('More', style: sans(12, weight: W.label, color: AppColors.fg3)),
+            const SizedBox(height: 8),
+            LayoutBuilder(builder: (context, c) {
+              final cols = (c.maxWidth / 76).floor().clamp(3, 6);
+              final w = c.maxWidth / cols;
+              return Wrap(
+                children: [
+                  for (final (emoji, meaning) in kMoreReactions)
+                    Semantics(
+                      button: true,
+                      label: 'React $emoji, $meaning',
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: () => pick(ReactAction(emoji)),
+                        child: SizedBox(
+                          width: w,
+                          height: 64,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(emoji, style: _emojiStyle(24)),
+                              const SizedBox(height: 4),
+                              Text(
+                                meaning,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: sans(11, color: AppColors.fg3),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            }),
+          ],
         ],
       ),
     );
@@ -475,33 +495,275 @@ class _SheetAction extends StatelessWidget {
   }
 }
 
-/// Holding a message opens the actions view; there is no hover row.
-class MessageBubbleInteractive extends StatelessWidget {
+/// Holding a message opens the focused overlay (phone) or actions sheet
+/// (desktop); on phone, swiping right replies.
+class MessageBubbleInteractive extends StatefulWidget {
   const MessageBubbleInteractive({
     super.key,
     required this.text,
-    required this.onReply,
-    required this.onReact,
+    this.mine = false,
+    this.onReply,
+    this.onReact,
+    this.focusBuilder,
     required this.builder,
   });
 
   final String text;
-  final VoidCallback onReply;
-  final ValueChanged<String> onReact;
-  final Widget Function(BuildContext context, VoidCallback openActions) builder;
+  final bool mine;
+  final VoidCallback? onReply;
+  final ValueChanged<String>? onReact;
+  final WidgetBuilder? focusBuilder;
+  final Widget Function(
+      BuildContext context, VoidCallback openActions, GlobalKey bubbleKey) builder;
+
+  @override
+  State<MessageBubbleInteractive> createState() =>
+      _MessageBubbleInteractiveState();
+}
+
+class _MessageBubbleInteractiveState extends State<MessageBubbleInteractive>
+    with SingleTickerProviderStateMixin {
+  static const double _swipeTrigger = 56.0;
+  static const double _swipeMax = 72.0;
+
+  final GlobalKey _bubbleKey = GlobalKey();
+  final GlobalKey _contentKey = GlobalKey();
+  late final AnimationController _spring;
+
+  double _dragOffset = 0;
+  double _springStart = 0;
+  double? _downGlobalX;
+  bool _crossedThreshold = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _spring = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    )..addListener(() {
+        setState(() {
+          _dragOffset = _springStart *
+              (1.0 - Curves.easeOutCubic.transform(_spring.value));
+        });
+      });
+  }
+
+  @override
+  void dispose() {
+    _spring.dispose();
+    super.dispose();
+  }
+
+  double _applyResistance(double fingerDx) {
+    if (fingerDx <= 0) return 0;
+    if (fingerDx <= 40) return fingerDx;
+    return 40.0 +
+        (_swipeMax - 40.0) * (1.0 - math.exp(-(fingerDx - 40.0) / 32.0));
+  }
+
+  void _updateDrag(double globalX) {
+    final fingerDx = globalX - (_downGlobalX ?? globalX);
+    final next = _applyResistance(fingerDx);
+    if (!_crossedThreshold && next >= _swipeTrigger) {
+      _crossedThreshold = true;
+      HapticFeedback.selectionClick();
+    } else if (_crossedThreshold && next < _swipeTrigger) {
+      _crossedThreshold = false;
+    }
+    setState(() => _dragOffset = next);
+  }
+
+  void _endDrag() {
+    final triggered = _dragOffset >= _swipeTrigger;
+    _downGlobalX = null;
+    _crossedThreshold = false;
+    if (triggered) widget.onReply?.call();
+    if (_dragOffset <= 0 || reduceMotion(context)) {
+      if (_dragOffset != 0) setState(() => _dragOffset = 0);
+      return;
+    }
+    _springStart = _dragOffset;
+    _spring.forward(from: 0);
+  }
+
+  void _open() {
+    if (!kMobile) {
+      HapticFeedback.selectionClick();
+      showMessageActionsSheet(
+        context,
+        text: widget.text,
+        onReply: widget.onReply,
+        onReact: widget.onReact,
+      );
+      return;
+    }
+    final targetCtx = _bubbleKey.currentContext ?? _contentKey.currentContext;
+    final box = targetCtx?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final rect = box.localToGlobal(Offset.zero) & box.size;
+    final react = widget.onReact;
+    showMessageFocusOverlay(
+      context,
+      bubbleRect: rect,
+      bubbleBuilder: widget.focusBuilder ??
+          (ctx) => widget.builder(ctx, () {}, GlobalKey()),
+      mine: widget.mine,
+      text: widget.text,
+      onReply: widget.onReply,
+      onReact: react,
+      quickReactions: react != null ? kMessageReactions : const [],
+      moreReactions: react != null ? kMoreReactions : const [],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    void open() {
-      HapticFeedback.selectionClick();
-      showMessageActionsSheet(context,
-          text: text, onReply: onReply, onReact: onReact);
-    }
+    final canSwipe = kMobile && widget.onReply != null;
+    final gestures = <Type, GestureRecognizerFactory>{
+      LongPressGestureRecognizer:
+          GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+        () => LongPressGestureRecognizer(debugOwner: this),
+        (r) => r.onLongPress = _open,
+      ),
+      if (canSwipe)
+        _SwipeRightReplyRecognizer:
+            GestureRecognizerFactoryWithHandlers<_SwipeRightReplyRecognizer>(
+          () => _SwipeRightReplyRecognizer(debugOwner: this),
+          (r) {
+            r.onDown = (d) {
+              _spring.stop();
+              _downGlobalX = d.globalPosition.dx;
+            };
+            r.onStart = (d) {
+              _spring.stop();
+              _downGlobalX ??= d.globalPosition.dx;
+              _updateDrag(d.globalPosition.dx);
+            };
+            r.onUpdate = (d) => _updateDrag(d.globalPosition.dx);
+            r.onEnd = (_) => _endDrag();
+            r.onCancel = _endDrag;
+          },
+        ),
+    };
 
-    return GestureDetector(
+    final child = KeyedSubtree(
+      key: _contentKey,
+      child: widget.builder(context, _open, _bubbleKey),
+    );
+    final progress = (_dragOffset / _swipeTrigger).clamp(0.0, 1.0);
+    final armed = _dragOffset >= _swipeTrigger;
+
+    return RawGestureDetector(
       behavior: HitTestBehavior.translucent,
-      onLongPress: open,
-      child: builder(context, open),
+      gestures: gestures,
+      child: Stack(
+        alignment: Alignment.centerLeft,
+        clipBehavior: Clip.none,
+        children: [
+          if (progress > 0.001)
+            Positioned(
+              left: 4,
+              child: Opacity(
+                opacity: progress,
+                child: Transform.scale(
+                  scale: 0.5 + 0.5 * progress,
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: armed ? AppColors.accentBg : AppColors.surface2,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      LucideIcons.cornerUpLeft,
+                      size: 16,
+                      color: armed ? AppColors.accent : AppColors.fg3,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          Transform.translate(
+            offset: Offset(_dragOffset, 0),
+            child: child,
+          ),
+        ],
+      ),
     );
   }
+}
+
+/// Only claims clearly-horizontal rightward drags away from the left screen edge.
+class _SwipeRightReplyRecognizer extends HorizontalDragGestureRecognizer {
+  _SwipeRightReplyRecognizer({super.debugOwner});
+
+  static const double _edgeGuard = 24.0;
+
+  final Map<int, Offset> _downPositions = <int, Offset>{};
+  Offset _lastTotal = Offset.zero;
+  bool _accepted = false;
+
+  @override
+  bool isPointerAllowed(PointerEvent event) {
+    if (event is PointerDownEvent && event.position.dx < _edgeGuard) {
+      return false;
+    }
+    return super.isPointerAllowed(event);
+  }
+
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    _downPositions[event.pointer] = event.position;
+    _lastTotal = Offset.zero;
+    super.addAllowedPointer(event);
+  }
+
+  @override
+  void acceptGesture(int pointer) {
+    _accepted = true;
+    super.acceptGesture(pointer);
+  }
+
+  @override
+  void rejectGesture(int pointer) {
+    _accepted = false;
+    _downPositions.remove(pointer);
+    super.rejectGesture(pointer);
+  }
+
+  @override
+  void didStopTrackingLastPointer(int pointer) {
+    _accepted = false;
+    _downPositions.remove(pointer);
+    super.didStopTrackingLastPointer(pointer);
+  }
+
+  @override
+  void handleEvent(PointerEvent event) {
+    if (!_accepted && event is PointerMoveEvent) {
+      final start = _downPositions[event.pointer];
+      if (start != null) {
+        final total = event.position - start;
+        _lastTotal = total;
+        final slop = gestureSettings?.touchSlop ?? kTouchSlop;
+        if (total.dx < -slop ||
+            (total.dy.abs() > slop && total.dy.abs() * 1.2 >= total.dx)) {
+          resolve(GestureDisposition.rejected);
+          return;
+        }
+      }
+    }
+    super.handleEvent(event);
+  }
+
+  @override
+  bool hasSufficientGlobalDistanceToAccept(
+    PointerDeviceKind pointerDeviceKind,
+    double? deviceTouchSlop,
+  ) =>
+      _lastTotal.dx > _lastTotal.dy.abs() * 1.5 &&
+      super.hasSufficientGlobalDistanceToAccept(
+          pointerDeviceKind, deviceTouchSlop);
 }
