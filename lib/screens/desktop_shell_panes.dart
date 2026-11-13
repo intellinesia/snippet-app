@@ -118,6 +118,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     }
     return SessionScreen(
       onTogglePanel: _togglePanel,
+      onDeskInfo: t.isMissionControl ? _showAgentInfo : null,
       deskActions: primary
           ? () => Row(
               mainAxisSize: MainAxisSize.min, children: _headerTools(t))
@@ -576,7 +577,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       mainAxisSize: MainAxisSize.min,
       children: [
         ...tools,
-        if (_activeAgent != null) ...[
+        if (_activeTab?.readout?.agent != null) ...[
           if (tools.isNotEmpty) const SizedBox(width: 4),
           Tooltip(
             message: _panelHidden ? 'Show panel' : 'Hide panel',

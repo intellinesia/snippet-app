@@ -252,9 +252,10 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
         _InfoCard(children: [
           _CopyRow(label: 'Agent ID', value: widget.agentId),
         ]),
-        _InfoCard(children: [
-          _DangerRow(label: 'Delete agent', onTap: _deleteAgent),
-        ]),
+        if (widget.agentId != 'mission-control')
+          _InfoCard(children: [
+            _DangerRow(label: 'Delete agent', onTap: _deleteAgent),
+          ]),
       ],
     );
   }

@@ -446,7 +446,11 @@ class _DesktopShellState extends State<DesktopShell>
   /// An agent tab's panel holds only the pages opened from its Actions menu.
   bool _agentPanelHidden = true;
 
-  CoordinationAgent? get _activeAgent => _activeTab?.readout?.agent;
+  CoordinationAgent? _mcAgent;
+
+  CoordinationAgent? get _activeAgent =>
+      _activeTab?.readout?.agent ??
+      (!kMobile && _activeTab?.isMissionControl == true ? _mcAgent : null);
 
   bool get _panelHidden =>
       _activeAgent != null ? _agentPanelHidden : _sidePanelHidden;
@@ -469,6 +473,7 @@ class _DesktopShellState extends State<DesktopShell>
     final a = _activeAgent;
     if (tab == null || a == null) return;
     final name = a.displayName.trim().isEmpty ? a.id : a.displayName.trim();
+    if (action == 'delete' && a.id == 'mission-control') return;
     if (action == 'desk') {
       _openSession('inbox-${a.id}', '$name desk', null);
     } else if (action == 'delete') {
@@ -1315,7 +1320,10 @@ class _DesktopShellState extends State<DesktopShell>
     }
     _loadTabProviders(c);
     final statusRevision = _liveStatus.revision;
-    unawaited(c.coordinationAgents().then((_) {}, onError: (_) {}));
+    unawaited(c.coordinationAgents().then((all) {
+      final mc = all.where((a) => a.id == 'mission-control').firstOrNull;
+      if (mounted && mc != null) setState(() => _mcAgent = mc);
+    }, onError: (_) {}));
     setState(() => _sessionsLoading = true);
     try {
       final s = await c.sessions(limit: 60);

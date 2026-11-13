@@ -57,6 +57,7 @@ import '../composer/attachment_preview.dart';
 import '../composer/attachment_tile.dart';
 import '../composer/composer_card.dart';
 import '../media_views.dart';
+import '../chat/chat_style.dart' show ChatHeader;
 import 'agent_messaging.dart';
 import 'package:xterm/xterm.dart';
 import 'files.dart';
@@ -160,6 +161,9 @@ class SessionScreen extends StatefulWidget {
   /// Desktop: toggle the shell's right panel from the floating header.
   final VoidCallback? onTogglePanel;
 
+  /// Desktop Mission Control: the header title opens the docked agent info.
+  final VoidCallback? onDeskInfo;
+
   /// Desktop: the shell's actions menu, shown in the header instead of the sheet.
   final Widget Function()? deskActions;
 
@@ -214,6 +218,7 @@ class SessionScreen extends StatefulWidget {
       this.onTerminalHost,
       this.onOpenScheduled,
       this.onTogglePanel,
+      this.onDeskInfo,
       this.deskActions,
       this.acceptDrops = true,
       this.live,
@@ -1638,7 +1643,7 @@ class _SessionScreenState extends State<SessionScreen>
                                                   _glassHeader
                                                       ? GlassTopFrame.inset + 12
                                                       : (_deskHeader
-                                                          ? _kDeskHeaderH + 8
+                                                          ? _deskHeaderHeight + 8
                                                           : 16),
                                                   kMobile ? M.gutter : 20,
                                                   _glassHeader
@@ -1679,7 +1684,7 @@ class _SessionScreenState extends State<SessionScreen>
                                           );
                                           return _deskHeader
                                               ? TopFadeMask(
-                                                  clear: _kDeskHeaderH - 8,
+                                                  clear: _deskHeaderHeight - 8,
                                                   child: list)
                                               : list;
                                         })),

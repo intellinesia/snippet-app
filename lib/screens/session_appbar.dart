@@ -1186,7 +1186,23 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   // transcript. The tab strip carries the title; the phone keeps its own chrome.
   bool get _deskHeader => !kMobile && !widget.readOnly;
 
+  double get _deskHeaderHeight =>
+      _isMissionControl ? ChatHeader.overlap - 8 : _kDeskHeaderH;
+
   Widget _deskHeaderBar(HarnessState? s, bool running) {
+    if (_isMissionControl) {
+      return ChatHeader(
+        agentIds: const ['mission-control'],
+        title: 'Mission Control',
+        status: ChatHeader.statusText(running ? 'Working' : 'Active'),
+        onTitleTap: widget.onDeskInfo,
+        titleHint: 'Info',
+        trailing: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: _mcHeaderActions(s),
+        ),
+      );
+    }
     final actions = _isMissionControl
         ? _mcHeaderActions(s)
         : _sessionHeaderActions(s);
