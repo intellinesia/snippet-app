@@ -32,6 +32,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../swr.dart';
 import '../pull_refresh.dart';
+import 'agent_questions_card.dart';
 import 'agent_records.dart';
 import 'agent_thread_cards.dart';
 import 'agent_view_switcher.dart';
@@ -1799,6 +1800,20 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     // The local human is the only `human` actor, so everything else is the peer.
     final mine = e.actorKind == 'human';
     final at = _eventTime(e);
+    final answerLine = questionAnswerSystemLine(e);
+    if (answerLine != null) {
+      return KeyedSubtree(
+        key: e.eventId.isEmpty ? null : _keyForEvent(e.eventId),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (showStamp && at != null)
+              ChatSystemLine(_clockLabel(at), bold: _dayLabel(at)),
+            ChatSystemLine(answerLine),
+          ],
+        ),
+      );
+    }
     final replyToId = e.replyTo;
     final quotedTarget = replyToId == null ? null : byId[replyToId];
     final quotedLine = replyToId == null

@@ -5,6 +5,7 @@ import '../api.dart';
 import '../crew_widgets.dart' show AgentProviderMark;
 import '../models.dart';
 import '../platform.dart';
+import '../presence.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../motion.dart';
@@ -13,6 +14,92 @@ import 'agent_reach_panel.dart';
 import 'agent_wake_panel.dart';
 import 'agent_appearance.dart';
 import 'agent_profile_panel.dart';
+
+/// Which section of the phone's Agents page an agent belongs to.
+enum AgentGroup { needsYou, working, recent }
+
+/// Group an agent for the phone list: waiting on the boss, busy, or recent.
+AgentGroup agentGroupFor(CoordinationAgent agent, {Presence? presence}) {
+  final p = presence;
+  final waitingYou = p != null &&
+      p.state == 'waiting' &&
+      (p.detail.isEmpty || p.detail == 'user');
+  final blocked = agent.tasksIn({'blocked', 'failed'});
+  if (agent.available && (waitingYou || blocked > 0)) {
+    return AgentGroup.needsYou;
+  }
+  final open = agent.tasksIn({'in_progress', 'todo'});
+  if (agent.available && (open > 0 || (p?.active ?? false))) {
+    return AgentGroup.working;
+  }
+  return AgentGroup.recent;
+}
+
+final _uuidToken = RegExp(
+    r'\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b');
+
+/// Strip raw ids out of an agent's last-message text so the status line never
+/// shows `group:<uuid>`, task uuids or other ids. A `group:` reference becomes
+/// the group's title when known, otherwise it is dropped.
+String cleanAgentStatusText(String text,
+    {Map<String, String> groupTitles = const {}}) {
+  var t = text;
+  t = t.replaceAllMapped(
+      RegExp(r'\bgroup:([0-9A-Za-z][0-9A-Za-z-]*)', caseSensitive: false),
+      (m) {
+    final title = groupTitles[m[1] ?? '']?.trim() ?? '';
+    return title.isEmpty ? '' : title;
+  });
+  t = t.replaceAll(RegExp(r'\btask\s+' + _uuidToken.pattern), '');
+  t = t.replaceAll(_uuidToken, '');
+  t = t
+      .replaceAll(RegExp(r'\s{2,}'), ' ')
+      .replaceAll(RegExp(r'\s*·\s*'), ' · ')
+      .replaceAll(RegExp(r'^[\s·\-–—:,→]+'), '')
+      .replaceAll(RegExp(r'[\s·\-–—:,→]+$'), '')
+      .trim();
+  return t;
+}
+
+/// The readable second line under an agent's name on the phone list.
+String agentStatusLine(CoordinationAgent agent,
+    {Presence? presence, Map<String, String> groupTitles = const {}}) {
+  final last = agent.lastMessage;
+  var context = last == null
+      ? ''
+      : cleanAgentStatusText(last.text, groupTitles: groupTitles);
+  if (last?.fromUser ?? false) {
+    if (context.isNotEmpty) context = 'You: $context';
+  } else if (context.endsWith('?')) {
+    context = 'Asked: $context';
+  }
+  return switch (agentGroupFor(agent, presence: presence)) {
+    AgentGroup.needsYou =>
+      context.isEmpty ? 'Waiting on you' : 'Waiting on you · $context',
+    AgentGroup.working => context.isEmpty ? 'Working' : context,
+    AgentGroup.recent => context.isEmpty ? 'No messages yet' : context,
+  };
+}
+
+/// v5 row time: 'now', HH:mm today, weekday this week, 'd MMM' older.
+String agentRowTime(DateTime? at, {DateTime? now}) {
+  if (at == null) return '';
+  final n = now ?? DateTime.now();
+  if (!at.isAfter(n.subtract(const Duration(minutes: 1)))) return 'now';
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  if (at.year == n.year && at.month == n.month && at.day == n.day) {
+    return '${at.hour.toString().padLeft(2, '0')}:'
+        '${at.minute.toString().padLeft(2, '0')}';
+  }
+  if (n.difference(at).inDays < 7) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days[at.weekday - 1];
+  }
+  return '${at.day} ${months[at.month - 1]}';
+}
 
 /// One agent on the phone's Agents page, in the Mission Control card's shape:
 /// who it is, whether it is working, and its task counts.
@@ -23,6 +110,9 @@ class AgentCard extends StatefulWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onChanged;
 
+  /// Group id → title, so `group:<id>` refs in the status line can be named.
+  final Map<String, String>? groupTitles;
+
   const AgentCard({
     super.key,
     required this.client,
@@ -30,6 +120,7 @@ class AgentCard extends StatefulWidget {
     required this.onOpen,
     this.onDelete,
     this.onChanged,
+    this.groupTitles,
   });
 
   @override
@@ -187,6 +278,15 @@ class _AgentCardState extends State<AgentCard> {
           ? widget.agent.tasksIn(keys)
           : _tasks.where((t) => statuses.contains(t.status)).length;
 
+  Widget _agentAvatar(CoordinationAgent agent, double size) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+            color: AppColors.surface2, shape: BoxShape.circle),
+        alignment: Alignment.center,
+        child: AgentMochi(agent.id, size: size * 0.58),
+      );
+
   @override
   Widget build(BuildContext context) {
     final agent = widget.agent;
@@ -217,12 +317,16 @@ class _AgentCardState extends State<AgentCard> {
     final nameSize = kMobile ? 15.5 : 13.0;
     final metaSize = kMobile ? 13.0 : 11.5;
     if (kMobile) {
-      final ring = agent.available && working > 0;
-      final dot = !agent.available
-          ? AppColors.fg4
-          : blocked > 0
-              ? AppColors.danger
-              : null;
+      final presence = widget.client.presence.presenceForAgentId(agent.id);
+      final group = agentGroupFor(agent, presence: presence);
+      final ringColor = switch (group) {
+        AgentGroup.needsYou => AppColors.accent,
+        AgentGroup.working => AppColors.fg3,
+        AgentGroup.recent => null,
+      };
+      final status = agentStatusLine(agent,
+          presence: presence, groupTitles: widget.groupTitles ?? const {});
+      final time = agentRowTime(agent.lastMessage?.at);
       return Pressable(
           kind: PressKind.row,
           child: InkWell(
@@ -233,105 +337,60 @@ class _AgentCardState extends State<AgentCard> {
               HapticFeedback.selectionClick();
               _actions(null);
             },
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 68),
-              child: Row(
-                children: [
-                  const SizedBox(width: M.gutter),
-                  Opacity(
-                    opacity: agent.available ? 1 : 0.5,
-                    child: SizedBox.square(
-                      dimension: 40,
-                      child: Stack(clipBehavior: Clip.none, children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.surface2,
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: AgentMochi(agent.id, size: 26),
-                        ),
-                        if (ring)
-                          const Positioned(
-                              left: -3,
-                              top: -3,
-                              right: -3,
-                              bottom: -3,
-                              child:
-                                  WorkingRing(key: ValueKey('agent-working'))),
-                        if (dot != null)
-                          Positioned(
-                            right: -1,
-                            bottom: -1,
-                            child: Container(
-                              width: 12,
-                              height: 12,
+            child: Opacity(
+              opacity: agent.available ? 1 : 0.55,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: M.gutter, vertical: 8),
+                child: Row(children: [
+                  SizedBox.square(
+                    dimension: 52,
+                    child: Center(
+                      child: ringColor == null
+                          ? _agentAvatar(agent, 48)
+                          : Container(
+                              key: const ValueKey('agent-ring'),
+                              width: 52,
+                              height: 52,
                               decoration: BoxDecoration(
-                                color: dot,
                                 shape: BoxShape.circle,
                                 border:
-                                    Border.all(color: AppColors.bg, width: 2),
+                                    Border.all(color: ringColor, width: 2),
                               ),
+                              alignment: Alignment.center,
+                              child: _agentAvatar(agent, 48),
                             ),
-                          ),
-                      ]),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TS.rowTitle(agent.available
-                                  ? AppColors.fg1
-                                  : AppColors.fg3)),
-                          const SizedBox(height: 2),
-                          Row(children: [
-                            Flexible(
-                              child: Text(line,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TS.meta(AppColors.fg3)),
-                            ),
-                          ]),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (summary != null || profile != null) ...[
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        SizedBox(
-                          height: 20,
-                          child: profile == null
-                              ? null
-                              : Center(
-                                  child: AgentProviderMark(
-                                      key: const ValueKey('agent-provider'),
-                                      client: widget.client,
-                                      profile: profile)),
-                        ),
+                        Row(children: [
+                          Expanded(
+                            child: Text(name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TS.rowTitle(agent.available
+                                    ? AppColors.fg1
+                                    : AppColors.fg3)),
+                          ),
+                          if (time.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Text(time, style: TS.meta()),
+                          ],
+                        ]),
                         const SizedBox(height: 2),
-                        SwapText(summary?.$1 ?? '',
-                            style: TS
-                                .meta(summary?.$2 ?? AppColors.fg3)
-                                .copyWith(fontFeatures: const [
-                              FontFeature.tabularFigures()
-                            ])),
+                        Text(status,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(13, color: AppColors.fg3)),
                       ],
                     ),
-                  ],
-                  const SizedBox(width: M.gutter),
-                ],
+                  ),
+                ]),
               ),
             ),
           ));

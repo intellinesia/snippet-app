@@ -46,6 +46,6 @@ void main() {
         _agent(last: {'text': 'Claimed the plan task', 'from': 'agent'}, working: 1));
     expect(find.text('Claimed the plan task'), findsOneWidget);
     expect(find.text('Working'), findsNothing);
-    expect(find.byKey(const ValueKey('agent-working')), findsOneWidget);
+    expect(find.byKey(const ValueKey('agent-ring')), findsOneWidget);
   });
 }

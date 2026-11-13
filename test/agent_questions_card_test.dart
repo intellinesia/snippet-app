@@ -112,9 +112,9 @@ void main() {
     expect(find.text('Which deployment target?'), findsOneWidget);
     expect(find.text('Anything else?'), findsOneWidget);
     expect(find.text('Staging'), findsOneWidget);
-    expect(find.text('recommended'), findsOneWidget);
+    expect(find.text('Recommended'), findsOneWidget);
 
-    final send = find.widgetWithText(Btn, 'Send');
+    final send = find.widgetWithText(Btn, 'Answer');
     expect(send, findsOneWidget);
     expect(t.widget<Btn>(send).disabled, isTrue);
 
@@ -161,11 +161,10 @@ void main() {
       ),
     );
 
-    expect(find.text('Answered'), findsOneWidget);
-    expect(find.text('Chosen'), findsOneWidget);
-    expect(find.text('looks good'), findsOneWidget);
+    expect(find.text('Answered: Production'), findsOneWidget);
+    expect(find.text('Answered: looks good'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
-    expect(find.widgetWithText(Btn, 'Send'), findsNothing);
+    expect(find.widgetWithText(Btn, 'Answer'), findsNothing);
     expect(client.calls, isEmpty);
     debugDefaultTargetPlatformOverride = null;
   });
@@ -190,12 +189,12 @@ void main() {
 
     await t.enterText(find.byType(TextField), 'ship it');
     await t.pump();
-    await t.tap(find.widgetWithText(Btn, 'Send'));
+    await t.tap(find.widgetWithText(Btn, 'Answer'));
     await t.pump();
 
     expect(find.text('This question is no longer waiting'), findsOneWidget);
     expect(t.widget<AppField>(find.byType(AppField)).enabled, isFalse);
-    expect(t.widget<Btn>(find.widgetWithText(Btn, 'Send')).disabled, isTrue);
+    expect(t.widget<Btn>(find.widgetWithText(Btn, 'Answer')).disabled, isTrue);
     debugDefaultTargetPlatformOverride = null;
   });
 

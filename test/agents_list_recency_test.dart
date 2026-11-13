@@ -52,8 +52,11 @@ void main() {
     await tester.pumpWidget(MaterialApp(
         home: Scaffold(body: AgentsSidebarPanel(client: _Client()))));
     await tester.pumpAndSettle();
+    // v5 groups the phone list; everything here is Recent, agents newest
+    // first, then groups.
+    expect(find.text('Recent'), findsOneWidget);
     final ys = [
-      for (final t in ['Bravo', 'Crew', 'Alpha', 'Charlie'])
+      for (final t in ['Bravo', 'Alpha', 'Charlie', 'Crew'])
         tester.getTopLeft(find.text(t)).dy
     ];
     expect(ys, [...ys]..sort());

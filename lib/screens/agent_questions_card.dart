@@ -171,9 +171,11 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
 
   /// The answer event for this question, if one exists later in the thread,
   /// plus whether the question went stale (a later agent event, no answer).
-  ({Map<String, dynamic>? answers, bool answered, bool closed}) _resolve() {
+  ({Map<String, dynamic>? answers, bool answered, bool closed, String? body})
+      _resolve() {
     final id = widget.event.eventId;
     Map<String, dynamic>? answers;
+    String? body;
     var answered = false;
     var closed = false;
     var seen = id.isEmpty;
@@ -186,6 +188,8 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
         answered = true;
         final a = e.payload['answers'];
         if (a is Map) answers = a.cast<String, dynamic>();
+        final b = e.body.trim();
+        if (b.isNotEmpty) body = b;
         continue;
       }
       if (e.actorKind != 'human') closed = true;
@@ -194,7 +198,19 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
       answered = true;
       answers = _sentAnswers;
     }
-    return (answers: answers, answered: answered, closed: closed && !answered);
+    return (
+      answers: answers,
+      answered: answered,
+      closed: closed && !answered,
+      body: body,
+    );
+  }
+
+  static const _kSkipped = 'user skipped the question';
+
+  bool _wasSkipped(Map<String, dynamic>? answers, String? body) {
+    if (body != null && body.contains(_kSkipped)) return true;
+    return answers?.values.any((v) => '$v' == _kSkipped) ?? false;
   }
 
   Object? _answerFor(
@@ -299,18 +315,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     return t.isNotEmpty ? t : widget.event.body.trim();
   }
 
-  Future<void> _send() async {
-    if (_sending || _locked) return;
-    final qs = _questions;
-    final drafts = [for (var i = 0; i < qs.length; i++) _draft(qs[i], i)];
-    if (drafts.any((d) => d == null)) return;
-    final answers = <String, dynamic>{};
-    final parts = <String>[];
-    for (var i = 0; i < qs.length; i++) {
-      final d = drafts[i]!;
-      answers[_key(qs[i], i)] = d.value;
-      parts.add('${_questionText(qs[i])}\n→ ${d.text}');
-    }
+  Future<void> _post(Map<String, dynamic> answers, List<String> parts) async {
     final session = '${widget.question['session'] ?? ''}';
     setState(() {
       _sending = true;
@@ -346,6 +351,36 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     }
   }
 
+  Future<void> _send() async {
+    if (_sending || _locked) return;
+    final qs = _questions;
+    final drafts = [for (var i = 0; i < qs.length; i++) _draft(qs[i], i)];
+    if (drafts.any((d) => d == null)) return;
+    final answers = <String, dynamic>{};
+    final parts = <String>[];
+    for (var i = 0; i < qs.length; i++) {
+      final d = drafts[i]!;
+      answers[_key(qs[i], i)] = d.value;
+      parts.add('${_questionText(qs[i])}\n→ ${d.text}');
+    }
+    await _post(answers, parts);
+  }
+
+  /// Skip the whole ask: every question gets the skip marker so the agent
+  /// stops waiting, without a bubble echoing the question text back.
+  Future<void> _skip() async {
+    if (_sending || _locked) return;
+    final qs = _questions;
+    final answers = <String, dynamic>{
+      for (var i = 0; i < qs.length; i++) _key(qs[i], i): _kSkipped,
+    };
+    final parts = [
+      for (var i = 0; i < qs.length; i++)
+        '${_questionText(qs[i])}\n→ $_kSkipped',
+    ];
+    await _post(answers, parts);
+  }
+
   void _pick(int i, _QChoice c, bool multi) {
     final key = _key(_questions[i], i);
     setState(() {
@@ -364,11 +399,10 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     final st = _resolve();
     final closed = st.closed || (_locked && !st.answered);
     final interactive = !st.answered && !closed && !_sending;
-    return TranscriptCard(
-      kind: 'Question',
-      icon: 'help-circle',
-      tone: st.answered ? Tone.ok : (closed ? Tone.neutral : Tone.accent),
-      status: st.answered ? 'Answered' : (closed ? 'Closed' : null),
+    final skipped = st.answered && _wasSkipped(st.answers, st.body);
+    return QuestionCardV5(
+      meta: st.answered ? null : (closed ? 'Closed' : null),
+      count: qs.length,
       footer: st.answered || (closed && _error == null)
           ? null
           : _footer(interactive),
@@ -383,6 +417,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
               answered: st.answered,
               interactive: interactive,
               answers: st.answers,
+              skipped: skipped,
             ),
           ],
         ],
@@ -396,6 +431,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     required bool answered,
     required bool interactive,
     required Map<String, dynamic>? answers,
+    required bool skipped,
   }) {
     final header = '${q['header'] ?? ''}'.trim();
     final text = '${q['text'] ?? ''}'.trim();
@@ -406,33 +442,69 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
           Text(
             header,
             style: sans(
-              TranscriptCard.bodySize,
-              weight: W.label,
-              height: 1.4,
-              color: AppColors.fg1,
+              TranscriptCard.metaSize,
+              color: AppColors.fg3,
             ),
           ),
-        if (text.isNotEmpty) ...[
+        if (text.isNotEmpty || _questionText(q).isNotEmpty) ...[
           if (header.isNotEmpty) const SizedBox(height: S.s4),
           Text(
-            text,
+            text.isNotEmpty ? text : _questionText(q),
             style: sans(
-              TranscriptCard.bodySize,
-              height: 1.4,
-              color: AppColors.fg2,
+              kMobile ? 15 : TranscriptCard.bodySize,
+              height: 1.45,
+              color: AppColors.fg1,
             ),
           ),
         ],
         const SizedBox(height: S.s8),
-        _inputFor(
-          q,
-          i,
-          answered: answered,
-          interactive: interactive,
-          answers: answers,
-        ),
+        if (answered)
+          _answeredBlock(q, i, answers, skipped)
+        else
+          _inputFor(q, i, interactive: interactive),
       ],
     );
+  }
+
+  /// The collapsed answer line: the choice in fg3, or a centred 'Skipped'.
+  Widget _answeredBlock(Map<String, dynamic> q, int i,
+      Map<String, dynamic>? answers, bool skipped) {
+    if (skipped) {
+      return Align(
+        alignment: Alignment.center,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Text('Skipped',
+              style: sans(TranscriptCard.metaSize, color: AppColors.fg3)),
+        ),
+      );
+    }
+    final label = _answeredLabel(q, i, answers);
+    if (label.isEmpty) return const SizedBox.shrink();
+    return Text('Answered: $label',
+        style: sans(TranscriptCard.metaSize, color: AppColors.fg3));
+  }
+
+  /// How an answered question reads in the collapsed card.
+  String _answeredLabel(
+      Map<String, dynamic> q, int i, Map<String, dynamic>? answers) {
+    final v = _answerFor(q, i, answers);
+    if (v == null) return '';
+    if ('$v' == _kSkipped) return _kSkipped;
+    final kind = _kindOf(q);
+    if (kind == 'single_choice' ||
+        kind == 'multi_choice' ||
+        kind == 'yes_no' ||
+        kind == 'confirm') {
+      final tokens = _tokens(v, multi: kind == 'multi_choice');
+      final labels = [
+        for (final c in _choicesFor(q))
+          if (_choiceMatches(c, tokens)) c.label,
+      ];
+      if (labels.isNotEmpty) return labels.join(', ');
+      return tokens.join(', ');
+    }
+    return v is List ? v.join(', ') : '$v';
   }
 
   Widget _footer(bool interactive) {
@@ -440,7 +512,21 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Btn('Send', full: true, icon: 'send', disabled: !canSend, onTap: _send),
+        Row(children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: interactive ? _skip : null,
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: Text('Skip',
+                  style: sans(TranscriptCard.metaSize,
+                      weight: W.label, color: AppColors.fg3)),
+            ),
+          ),
+          const Spacer(),
+          Btn('Answer', small: true, disabled: !canSend, onTap: _send),
+        ]),
         if (_error != null) ...[
           const SizedBox(height: S.s6),
           Text(
@@ -455,50 +541,11 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
   Widget _inputFor(
     Map<String, dynamic> q,
     int i, {
-    required bool answered,
     required bool interactive,
-    required Map<String, dynamic>? answers,
   }) {
     final key = _key(q, i);
     final kind = _kindOf(q);
     final choices = _choicesFor(q);
-    final isChoice =
-        kind == 'single_choice' ||
-        kind == 'multi_choice' ||
-        kind == 'yes_no' ||
-        kind == 'confirm';
-    if (answered) {
-      if (!isChoice) {
-        final v = _answerFor(q, i, answers);
-        final s = v == null ? '' : (v is List ? v.join(', ') : '$v');
-        if (s.isEmpty) return const SizedBox.shrink();
-        return Text(
-          s,
-          style: sans(
-            TranscriptCard.bodySize,
-            height: 1.4,
-            color: AppColors.fg1,
-          ),
-        );
-      }
-      final multi = kind == 'multi_choice';
-      final tokens = _tokens(_answerFor(q, i, answers), multi: multi);
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (var j = 0; j < choices.length; j++) ...[
-            if (j > 0) const SizedBox(height: S.s6),
-            _choiceRow(
-              choices[j],
-              selected: _choiceMatches(choices[j], tokens),
-              multi: multi,
-              readOnly: true,
-              onTap: null,
-            ),
-          ],
-        ],
-      );
-    }
     switch (kind) {
       case 'single_choice':
       case 'multi_choice':
@@ -508,13 +555,13 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
           children: [
             for (var j = 0; j < choices.length; j++) ...[
               if (j > 0) const SizedBox(height: S.s6),
-              _choiceRow(
+              _optionRow(
                 choices[j],
+                j + 1,
                 selected: multi
                     ? (_multi[key]?.contains(choices[j].value) ?? false)
                     : _single[key] == choices[j].value,
                 multi: multi,
-                readOnly: false,
                 onTap: interactive ? () => _pick(i, choices[j], multi) : null,
               ),
             ],
@@ -557,93 +604,76 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     }
   }
 
-  Widget _choiceRow(
-    _QChoice c, {
+  /// A v5 option row: number, label, optional description, Recommended tag.
+  Widget _optionRow(
+    _QChoice c,
+    int n, {
     required bool selected,
     required bool multi,
-    required bool readOnly,
     VoidCallback? onTap,
   }) {
-    final mark = multi
-        ? Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              color: selected ? AppColors.accentFill : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(
-                color: selected ? AppColors.accentFill : AppColors.lineStrong,
-                width: 1.5,
-              ),
-            ),
-            child: selected
-                ? AppIcon('check', size: 11, color: AppColors.accentFg)
-                : null,
-          )
-        : SelectCheck(selected, size: 16);
     final body = Container(
-      padding: kMobile
-          ? const EdgeInsets.fromLTRB(12, 10, 12, 10)
-          : const EdgeInsets.fromLTRB(10, 8, 10, 8),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
-        color: selected ? AppColors.accentBg : AppColors.surface2,
-        borderRadius: BorderRadius.circular(kMobile ? 12 : R.md),
+        color: selected ? AppColors.surface3 : AppColors.surface2,
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: selected ? AppColors.accent : AppColors.border2,
-          width: selected ? 1.2 : 1,
+          color: selected ? AppColors.accentLine : AppColors.border,
+          width: 1,
         ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(padding: const EdgeInsets.only(top: 2), child: mark),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    Text(
-                      c.label,
-                      style: sans(
-                        kMobile ? 14 : 13,
-                        weight: W.label,
-                        color: selected ? AppColors.fg1 : AppColors.fg2,
-                      ),
-                    ),
-                    if (selected) const Tag('Chosen', tone: Tone.accent),
-                    if (!readOnly && c.recommended)
-                      Text(
-                        'recommended',
-                        style: sans(
-                          TranscriptCard.metaSize,
-                          color: AppColors.fg3,
-                        ),
-                      ),
-                  ],
+      child: Row(children: [
+        SizedBox(
+          width: 20,
+          child: Text('$n', style: mono(11, color: AppColors.fg3)),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                c.label,
+                style: sans(
+                  kMobile ? 15 : 13,
+                  weight: W.label,
+                  color: AppColors.fg1,
                 ),
-                if (c.description.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    c.description,
-                    style: sans(
-                      kMobile ? 13 : 12,
-                      height: 1.4,
-                      color: AppColors.fg3,
-                    ),
+              ),
+              if (c.description.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  c.description,
+                  style: sans(
+                    kMobile ? 13 : 12,
+                    height: 1.4,
+                    color: AppColors.fg3,
                   ),
-                ],
+                ),
               ],
-            ),
+            ],
           ),
+        ),
+        if (c.recommended)
+          Text('Recommended',
+              style: sans(TranscriptCard.metaSize, color: AppColors.fg3)),
+        if (selected || multi) ...[
+          const SizedBox(width: 8),
+          if (selected)
+            AppIcon('check', size: 14, color: AppColors.accent)
+          else
+            Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: AppColors.lineStrong, width: 1.5),
+              ),
+            ),
         ],
-      ),
+      ]),
     );
-    if (readOnly || onTap == null) return body;
+    if (onTap == null) return body;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -677,6 +707,86 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
           child: Text(
             label,
             style: TS.label(selected ? AppColors.accent : AppColors.fg2),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The centred line a relayed-question answer collapses to in the thread, or
+/// null when [e] is an ordinary message. The question card already shows the
+/// answer, so the composed "question\n→ answer" text must not echo as a bubble.
+String? questionAnswerSystemLine(CoordinationEvent e) {
+  if (e.actorKind != 'human') return null;
+  final auto = '${e.payload['auto'] ?? ''}';
+  if (auto != 'answer' && e.payload['answer_to'] == null) return null;
+  final answers = e.payload['answers'];
+  final skipped = e.body.contains('user skipped the question') ||
+      (answers is Map &&
+          answers.values.any((v) => '$v' == 'user skipped the question'));
+  return skipped ? 'Skipped' : 'Answered';
+}
+
+/// The v5 question card frame: accent help icon, "Question", an optional
+/// right-side meta (or "1 of N" from [count]), body content and a footer.
+class QuestionCardV5 extends StatelessWidget {
+  const QuestionCardV5({
+    super.key,
+    required this.child,
+    this.meta,
+    this.count,
+    this.footer,
+  });
+
+  final Widget child;
+  final String? meta;
+  final int? count;
+  final Widget? footer;
+
+  @override
+  Widget build(BuildContext context) {
+    final side = meta != null && meta!.isNotEmpty
+        ? meta!
+        : (count == null ? '' : count! > 1 ? '$count questions' : '1 of 1');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Material(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(kMobile ? 16 : 12),
+        clipBehavior: Clip.antiAlias,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(kMobile ? 16 : 12),
+          ),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(children: [
+                AppIcon('help-circle',
+                    size: 13, color: AppColors.accent),
+                const SizedBox(width: 6),
+                Text('Question',
+                    style: sans(kMobile ? 12.5 : 11.5,
+                        weight: W.label, color: AppColors.fg2)),
+                const Spacer(),
+                if (side.isNotEmpty)
+                  Text(side,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(kMobile ? 12.5 : 11.5,
+                          color: AppColors.fg3)),
+              ]),
+              const SizedBox(height: S.s8),
+              child,
+              if (footer != null) ...[
+                const SizedBox(height: S.s8),
+                footer!,
+              ],
+            ],
           ),
         ),
       ),

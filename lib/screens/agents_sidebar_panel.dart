@@ -334,8 +334,11 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             onOpen: onOpenMc,
           )
         : null;
+    // The phone's v5 header avatar is the Mission Control entry point, so the
+    // pinned card only shows on desktop.
+    final showMcCard = mcCard != null && !kMobile;
 
-    if (loading && agents.isEmpty && mcCard == null) {
+    if (loading && agents.isEmpty && !showMcCard) {
       return Container(
         color: kMobile ? AppColors.bg : Colors.transparent,
         alignment: Alignment.center,
@@ -344,7 +347,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             : Spinner(size: 20, color: AppColors.fg3),
       );
     }
-    if (error != null && agents.isEmpty && mcCard == null) {
+    if (error != null && agents.isEmpty && !showMcCard) {
       if (kMobile) {
         return Material(
           color: kMobile ? AppColors.bg : Colors.transparent,
@@ -393,6 +396,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     final groups = (_groups.data ?? const <GroupSummary>[])
         .where((g) => q.isEmpty || g.title.toLowerCase().contains(q))
         .toList();
+    final groupTitles = {for (final g in groups) g.id: g.title};
     final entries = <({Object item, DateTime? at, String name})>[
       for (final a in ordered)
         (item: a, at: a.lastMessage?.at, name: a.displayName.toLowerCase()),
@@ -410,26 +414,31 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         }
         return a.name.compareTo(b.name);
       });
+    Widget agentTile(CoordinationAgent a) => AgentCard(
+          key: ValueKey('agent-card-${a.id}'),
+          client: widget.client,
+          agent: a,
+          groupTitles: groupTitles,
+          onOpen: () => widget.onOpenAgent?.call(a),
+          onDelete: () => _deleteAgent(a),
+          onChanged: refresh,
+        );
+
+    Widget groupTile(GroupSummary g) => GroupRow(
+          key: ValueKey('group-row-${g.id}'),
+          group: g,
+          onTap: () => _openGroup(g),
+          onLongPress: () async {
+            if (await confirmDeleteGroup(context, widget.client, g)) {
+              _groups.refresh();
+            }
+          },
+        );
+
     Widget row(int i) {
       final e = entries[i].item;
-      final Widget child = e is CoordinationAgent
-          ? AgentCard(
-              key: ValueKey('agent-card-${e.id}'),
-              client: widget.client,
-              agent: e,
-              onOpen: () => widget.onOpenAgent?.call(e),
-              onDelete: () => _deleteAgent(e),
-              onChanged: refresh,
-            )
-          : GroupRow(
-              key: ValueKey('group-row-${(e as GroupSummary).id}'),
-              group: e,
-              onTap: () => _openGroup(e),
-              onLongPress: () async {
-                if (await confirmDeleteGroup(context, widget.client, e)) {
-                  _groups.refresh();
-                }
-              });
+      final Widget child =
+          e is CoordinationAgent ? agentTile(e) : groupTile(e as GroupSummary);
       return Appear(
         key: ValueKey('appear-${child.key}'),
         index: i,
@@ -457,21 +466,98 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     if (kMobile) {
       return PullToRefresh(
         onRefresh: refresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-              0, 8, 0, widget.bottomPadding ?? 88),
-          children: [
-            if (mcCard != null)
-              Padding(
-                  padding: const EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 8),
-                  child: mcCard),
-            for (var i = 0; i < entries.length; i++) row(i),
+        child: ListenableBuilder(
+          listenable: widget.client.presence,
+          builder: (context, _) {
+            final children = <Widget>[];
+            Widget hairline() => Container(
+                height: 1,
+                margin: const EdgeInsets.symmetric(horizontal: M.gutter),
+                color: AppColors.border);
+            if (q.isEmpty) {
+              final sorted = [...ordered]
+                ..sort((a, b) {
+                  final x = a.lastMessage?.at;
+                  final y = b.lastMessage?.at;
+                  if (x != y) {
+                    if (x == null) return 1;
+                    if (y == null) return -1;
+                    return y.compareTo(x);
+                  }
+                  return a.displayName
+                      .toLowerCase()
+                      .compareTo(b.displayName.toLowerCase());
+                });
+              final buckets = <AgentGroup, List<Widget>>{
+                for (final g in AgentGroup.values) g: <Widget>[],
+              };
+              var i = 0;
+              for (final a in sorted) {
+                final tile = agentTile(a);
+                buckets[agentGroupFor(a,
+                    presence: widget.client.presence
+                        .presenceForAgentId(a.id))]!
+                    .add(Appear(
+                        key: ValueKey('appear-${tile.key}-$i'),
+                        index: i++,
+                        since: _shownAt,
+                        child: tile));
+              }
+              for (final g in groups) {
+                final tile = groupTile(g);
+                (g.hasUnread
+                        ? buckets[AgentGroup.needsYou]!
+                        : buckets[AgentGroup.recent]!)
+                    .add(Appear(
+                        key: ValueKey('appear-${tile.key}-$i'),
+                        index: i++,
+                        since: _shownAt,
+                        child: tile));
+              }
+              final sectionDefs = <(AgentGroup, String, Color)>[
+                (AgentGroup.needsYou, 'Needs you', AppColors.accent),
+                (AgentGroup.working, 'Working', AppColors.fg3),
+                (AgentGroup.recent, 'Recent', AppColors.fg3),
+              ];
+              final totalRows =
+                  buckets.values.fold(0, (s, l) => s + l.length);
+              var rowCount = 0;
+              for (final (grp, label, color) in sectionDefs) {
+                final rows = buckets[grp]!;
+                if (rows.isEmpty) continue;
+                children.add(Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                      M.gutter, 14, M.gutter, 4),
+                  child: Text(label,
+                      style: sans(13, weight: W.label, color: color)),
+                ));
+                for (final r in rows) {
+                  children.add(r);
+                  rowCount++;
+                  if (rowCount < totalRows) {
+                    children.add(hairline());
+                  }
+                }
+              }
+            } else {
+              for (var i = 0; i < entries.length; i++) {
+                children.add(row(i));
+                if (i < entries.length - 1) {
+                  children.add(hairline());
+                }
+              }
+            }
             if (emptyState != null)
-              Padding(
+              children.add(Padding(
                   padding: const EdgeInsets.symmetric(horizontal: M.gutter),
-                  child: emptyState),
-          ],
+                  child: emptyState));
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                  0, 8, 0, widget.bottomPadding ?? 88),
+              children: children,
+            );
+          },
         ),
       );
     }
