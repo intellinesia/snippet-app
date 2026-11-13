@@ -119,6 +119,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     return SessionScreen(
       onTogglePanel: _togglePanel,
       onDeskInfo: t.isMissionControl ? _showAgentInfo : null,
+      onOpenTasks: _openTasksTab,
       deskActions: primary
           ? () => Row(
               mainAxisSize: MainAxisSize.min, children: _headerTools(t))
@@ -777,6 +778,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             icon: 'sidebar',
             tooltip: kMacOS ? 'Hide sidebar (⌘B)' : 'Hide sidebar (Ctrl+B)',
             onTap: _toggleSidebar),
+        const SizedBox(width: 6),
+        _TbBtn(icon: 'list', tooltip: 'Tasks', onTap: _openTasksTab),
         const SizedBox(width: 6),
         _TbBtn(icon: 'square-pen', tooltip: 'New session', onTap: _newSessionFlow),
         const SizedBox(width: 10),

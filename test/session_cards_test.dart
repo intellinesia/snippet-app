@@ -248,7 +248,7 @@ void main() {
     }
   });
 
-  testWidgets('tapping a group header hides and restores its rows',
+  testWidgets('folder group headers are plain labels that do not collapse',
       (tester) async {
     try {
       await _pump(tester, const Size(300, 520), TargetPlatform.macOS,
@@ -256,103 +256,20 @@ void main() {
             _s('a', 'Redo voice settings subpage', 'idle', branch: 'main'),
             _s('b', 'Richer session cards', 'running', branch: 'cards'),
           ]);
-      expect(find.text('Redo voice settings subpage'), findsOneWidget);
-      expect(find.text('Richer session cards'), findsOneWidget);
-      expect(
-          find.bySemanticsLabel('snippet-mobile, 2 sessions, expanded'),
-          findsOneWidget);
-
-      await tester.tap(find.text('snippet-mobile'));
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Redo voice settings subpage'), findsNothing);
-      expect(find.text('Richer session cards'), findsNothing);
-      expect(
-          find.bySemanticsLabel('snippet-mobile, 2 sessions, collapsed'),
-          findsOneWidget);
-
-      await tester.tap(find.text('snippet-mobile'));
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Redo voice settings subpage'), findsOneWidget);
-      expect(find.text('Richer session cards'), findsOneWidget);
-      expect(
-          find.bySemanticsLabel('snippet-mobile, 2 sessions, expanded'),
-          findsOneWidget);
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
-
-  testWidgets('group header chevron shows on desktop hover only',
-      (tester) async {
-    try {
-      await _pump(tester, const Size(300, 520), TargetPlatform.macOS);
       final header = find.widgetWithText(SessionGroupHeader, 'snippet-mobile');
-      AnimatedOpacity chevronOpacity() => tester.widget<AnimatedOpacity>(
-          find.descendant(of: header, matching: find.byType(AnimatedOpacity)));
-      expect(chevronOpacity().opacity, 0);
-
-      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
-      addTearDown(gesture.removePointer);
-      await gesture.addPointer(location: Offset.zero);
-      await gesture.moveTo(tester.getCenter(header));
-      await tester.pump(const Duration(milliseconds: 200));
-      expect(chevronOpacity().opacity, 1);
-
-      await gesture.moveTo(const Offset(0, 500));
-      await tester.pump(const Duration(milliseconds: 200));
-      expect(chevronOpacity().opacity, 0);
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
-
-  testWidgets('leading mark renders AgentMochi, ProviderLogo, or fg4 dot',
-      (tester) async {
-    try {
-      await _pump(tester, const Size(300, 520), TargetPlatform.macOS,
-          sessions: [
-            _s('a', 'Agent chat', 'idle', agentId: 'scout'),
-            _s('b', 'Provider chat', 'idle', profile: 'claude'),
-            _s('c', 'Unknown profile chat', 'idle', profile: 'custom-profile'),
-          ]);
-
-      final agentRow = find.ancestor(
-          of: find.text('Agent chat'), matching: find.byType(SessionListRow));
-      final mochi = tester.widget<AgentMochi>(
-          find.descendant(of: agentRow, matching: find.byType(AgentMochi)));
-      expect(mochi.agentId, 'scout');
-      expect(mochi.size, 17);
-
-      final providerRow = find.ancestor(
-          of: find.text('Provider chat'),
-          matching: find.byType(SessionListRow));
-      final logo = tester.widget<ProviderLogo>(
-          find.descendant(of: providerRow, matching: find.byType(ProviderLogo)));
-      expect(logo.provider, 'claude-code');
-      expect(logo.size, 15);
-
-      final fallbackRow = find.ancestor(
-          of: find.text('Unknown profile chat'),
-          matching: find.byType(SessionListRow));
-      expect(
-          find.descendant(
-              of: fallbackRow, matching: find.text('custom-profile')),
+      expect(find.descendant(of: header, matching: find.byType(AnimatedOpacity)),
           findsNothing);
-      final dot = find.descendant(
-        of: fallbackRow,
-        matching: find.byWidgetPredicate((w) =>
-            w is Container &&
-            w.constraints?.maxWidth == 6 &&
-            w.constraints?.maxHeight == 6),
-      );
-      expect(dot, findsOneWidget);
+      await tester.tap(find.text('snippet-mobile'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Redo voice settings subpage'), findsOneWidget);
+      expect(find.text('Richer session cards'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
   });
 
   testWidgets(
-      'phone header shows chevron always, Needs you group color, and 20px mark',
+      'phone Needs you header colour and 20px mark',
       (tester) async {
     try {
       await _pump(tester, const Size(390, 700), TargetPlatform.android,
@@ -360,9 +277,6 @@ void main() {
             _s('a', 'Needs input chat', 'waiting_for_input', agentId: 'scout'),
           ]);
       final header = find.widgetWithText(SessionGroupHeader, 'Needs you');
-      final opacity = tester.widget<AnimatedOpacity>(
-          find.descendant(of: header, matching: find.byType(AnimatedOpacity)));
-      expect(opacity.opacity, 1);
 
       final label = tester.widget<Text>(
           find.descendant(of: header, matching: find.text('Needs you')));

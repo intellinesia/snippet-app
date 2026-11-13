@@ -164,6 +164,9 @@ class SessionScreen extends StatefulWidget {
   /// Desktop Mission Control: the header title opens the docked agent info.
   final VoidCallback? onDeskInfo;
 
+  /// Desktop: open the Tasks board as a tab instead of a pushed page.
+  final VoidCallback? onOpenTasks;
+
   /// Desktop: the shell's actions menu, shown in the header instead of the sheet.
   final Widget Function()? deskActions;
 
@@ -219,6 +222,7 @@ class SessionScreen extends StatefulWidget {
       this.onOpenScheduled,
       this.onTogglePanel,
       this.onDeskInfo,
+      this.onOpenTasks,
       this.deskActions,
       this.acceptDrops = true,
       this.live,

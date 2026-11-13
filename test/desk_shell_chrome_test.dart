@@ -279,9 +279,9 @@ void main() {
     // Back and Forward chevrons are always visible in the top bar.
     expect(find.byTooltip('Back'), findsOneWidget);
     expect(find.byTooltip('Forward'), findsOneWidget);
-    expect(find.text('Tasks'), findsOneWidget);
+    expect(find.byTooltip('Tasks'), findsWidgets);
 
-    await tester.tap(find.text('Tasks'));
+    await tester.tap(find.byTooltip('Tasks').first);
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.byType(TaskKanban), findsOneWidget);
 

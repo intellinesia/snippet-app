@@ -376,28 +376,11 @@ class FileGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!isDir) {
-      final badge = fileBadgeFor(name);
-      if (badge != null) {
-        final (label, color) = badge;
-        final box = size + 2;
-        return Container(
-          width: box,
-          height: box,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.22),
-            borderRadius: BorderRadius.circular(box * 0.26),
-          ),
-          child: Text(label,
-              maxLines: 1,
-              style: mono(label.length > 2 ? box * 0.36 : box * 0.46,
-                  weight: W.strong, height: 1, spacing: -0.3, color: color)),
-        );
-      }
+    final color = AppColors.fg3;
+    if (isDir) {
+      return Icon(open ? LucideIcons.folderOpen : LucideIcons.folder,
+          size: size, color: color);
     }
-    final (icon, color) =
-        isDir ? folderIconFor(name, open: open) : fileIconFor(name);
-    return Icon(icon, size: size, color: color);
+    return Icon(fileIconFor(name).$1, size: size, color: color);
   }
 }

@@ -1251,7 +1251,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               size: 30,
               iconSize: 15,
               tooltip: 'Tasks',
-              onTap: () => openTasksPage(context, widget.client)),
+              onTap: widget.onOpenTasks ??
+                  () => openTasksPage(context, widget.client)),
           widget.deskActions?.call() ??
               Builder(
                 builder: (ctx) => IconBtn('more-horizontal',
