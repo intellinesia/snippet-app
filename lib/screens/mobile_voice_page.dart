@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../ambient/ambient_model.dart';
+import '../ambient/live_caption.dart';
 import '../ambient/controller.dart';
 import '../ambient/voice.dart';
 import '../api.dart';
@@ -93,6 +94,8 @@ class _MobileVoicePageState extends State<MobileVoicePage>
   @override
   void initState() {
     super.initState();
+    LiveCaptionFeed.instance.text.addListener(_feedChanged);
+    LiveCaptionFeed.instance.lastFinal.addListener(_feedChanged);
     final c = widget.client;
     if (c != null) {
       _loadRecent();
@@ -119,8 +122,14 @@ class _MobileVoicePageState extends State<MobileVoicePage>
     if (mounted) setState(() {});
   }
 
+  void _feedChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
+    LiveCaptionFeed.instance.text.removeListener(_feedChanged);
+    LiveCaptionFeed.instance.lastFinal.removeListener(_feedChanged);
     _recentLive?.dispose();
     _pulse.dispose();
     _m.removeListener(_changed);
@@ -163,7 +172,12 @@ class _MobileVoicePageState extends State<MobileVoicePage>
   @override
   Widget build(BuildContext context) {
     final reduce = reduceMotion(context);
-    final heard = _recent.isNotEmpty ? _recent.first.text.trim() : '';
+    final liveHeard = LiveCaptionFeed.instance.text.value;
+    final heard = liveHeard ??
+        LiveCaptionFeed.instance.lastFinal.value ??
+        (_recent.isNotEmpty ? _recent.first.text.trim() : '');
+    final heardColor =
+        liveHeard != null ? AppColors.fg1 : AppColors.fg2;
     final reply = widget.replyText?.trim() ?? '';
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -323,7 +337,7 @@ class _MobileVoicePageState extends State<MobileVoicePage>
                                 textAlign: TextAlign.center,
                                 maxLines: 3,
                                 overflow: TextOverflow.ellipsis,
-                                style: sans(22, color: AppColors.fg1),
+                                style: sans(22, color: heardColor),
                               ),
                             ),
                           ],
