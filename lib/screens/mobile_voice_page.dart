@@ -18,6 +18,28 @@ import 'mobile_chrome.dart';
 
 final ValueNotifier<AmbientStateEvent?> _emptyVoiceState = ValueNotifier(null);
 
+/// Opens Voice, first turning ambient on and starting to listen on this phone
+/// when it is off.
+Future<void> startMobileVoice(BuildContext context, DaemonClient client) async {
+  if (AmbientController.instance.running) {
+    return openMobileVoicePage(context, client: client);
+  }
+  final m = AmbientModel(client);
+  try {
+    await m.load();
+    await m.press();
+    final err = m.error;
+    if (!context.mounted) return;
+    if (err != null) {
+      toast(context, err);
+      return;
+    }
+    await openMobileVoicePage(context, client: client);
+  } finally {
+    m.dispose();
+  }
+}
+
 Future<void> openMobileVoicePage(
   BuildContext context, {
   DaemonClient? client,

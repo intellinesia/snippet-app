@@ -1357,6 +1357,9 @@ class GroupSummary {
   final int unread;
   final String createdAt;
 
+  /// The newest post, as "You: …" or "agent: …"; null when the group is empty.
+  final String? preview;
+
   GroupSummary.fromJson(Map<String, dynamic> j)
       : id = j['id'] as String? ?? '',
         title = j['title'] as String? ?? '',
@@ -1369,7 +1372,16 @@ class GroupSummary {
             : (j['lead'] as String),
         lastEventAt = j['last_event_at'] as String?,
         unread = (j['unread'] as num?)?.toInt() ?? 0,
-        createdAt = j['created_at'] as String? ?? '';
+        createdAt = j['created_at'] as String? ?? '',
+        preview = _groupPreview(j['last_message']);
+
+  static String? _groupPreview(Object? m) {
+    if (m is! Map) return null;
+    final body = '${m['body'] ?? ''}'.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (body.isEmpty) return null;
+    final from = m['from_kind'] == 'human' ? 'You' : '${m['from_id'] ?? ''}';
+    return from.isEmpty ? body : '$from: $body';
+  }
 
   List<String> get agentIds =>
       [for (final m in members) if (m.isAgent) m.id];

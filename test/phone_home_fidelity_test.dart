@@ -106,7 +106,7 @@ Widget _phoneHarness({
 }
 
 void main() {
-  testWidgets('phone header renders MC button, badge, Listening pill, New session and inline search',
+  testWidgets('phone header renders MC button with voice ring, badge, New session and inline search',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
@@ -119,7 +119,9 @@ void main() {
         onOpenMissionControl: () => mcTapped++,
         onNewSession: () => moreTapped++,
       ));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
 
       expect(find.text('Ignored shell bar'), findsNothing);
       expect(find.byType(MobileSearchHeader), findsOneWidget);
@@ -129,29 +131,29 @@ void main() {
               of: find.byType(MobileSearchHeader),
               matching: find.text('Sessions')),
           findsNothing);
-      expect(find.text('Listening'), findsOneWidget);
+      expect(find.text('Listening'), findsNothing);
       expect(find.text('2'), findsOneWidget);
 
       final mcMochi = tester.widget<MochiIcon>(find.byType(MochiIcon));
       expect(mcMochi.size, 22);
-      expect(mcMochi.color, AppColors.fg1);
+      expect(mcMochi.color, AppColors.ok);
 
-      await tester.tap(find.byTooltip('Mission Control'));
+      await tester.tap(find.byTooltip('Mission Control, voice on'));
       await tester.tap(find.byTooltip('New session'));
       await tester.pump();
       expect(mcTapped, 1);
       expect(moreTapped, 1);
 
-      // Badge and Listening pill hide when count is 0 and listening is off.
+      // Badge and voice ring clear when count is 0 and listening is off.
       await tester.pumpWidget(_phoneHarness(
         sessions: [_session('s1', 'Work', 'idle')],
         listening: false,
         mcAttention: 0,
       ));
       await tester.pumpAndSettle();
-      expect(find.text('Listening'), findsNothing);
       expect(find.text('2'), findsNothing);
-      expect(find.byTooltip('Start voice'), findsOneWidget);
+      expect(find.byTooltip('Mission Control'), findsOneWidget);
+      expect(find.byTooltip('Start voice'), findsNothing);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

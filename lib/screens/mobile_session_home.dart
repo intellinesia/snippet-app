@@ -18,9 +18,7 @@ class MobileSearchHeader extends StatelessWidget {
     required this.onChanged,
     this.mcBadgeCount = 0,
     this.onMc,
-    this.onMic,
     this.listening = false,
-    this.onListening,
     this.trailing = const [],
   });
 
@@ -30,9 +28,7 @@ class MobileSearchHeader extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final int mcBadgeCount;
   final VoidCallback? onMc;
-  final VoidCallback? onMic;
   final bool listening;
-  final VoidCallback? onListening;
   final List<Widget> trailing;
 
   @override
@@ -41,19 +37,19 @@ class MobileSearchHeader extends StatelessWidget {
         child: SizedBox(
           height: 44,
           child: Row(children: [
-            RoundBtn(
-              tooltip: 'Mission Control',
-              size: 40,
-              badgeCount: mcBadgeCount,
-              onTap: onMc,
-              child: MochiIcon(color: AppColors.fg1, size: 22),
+            LiveRing(
+              live: listening,
+              child: RoundBtn(
+                tooltip: listening ? 'Mission Control, voice on' : 'Mission Control',
+                size: 40,
+                badgeCount: mcBadgeCount,
+                onTap: onMc,
+                child: MochiIcon(
+                    color: listening ? AppColors.ok : AppColors.fg1, size: 22),
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(child: _field()),
-            if (listening) ...[
-              const SizedBox(width: 8),
-              ListeningPill(onTap: onListening),
-            ],
             for (final t in trailing) ...[const SizedBox(width: 10), t],
           ]),
         ),
@@ -92,9 +88,6 @@ class MobileSearchHeader extends StatelessWidget {
                 controller.clear();
                 onChanged('');
               })
-            else if (onMic != null && !listening)
-              IconBtn('mic',
-                  size: 32, iconSize: 16, tooltip: 'Start voice', onTap: onMic),
           ]),
         ),
       );
@@ -315,4 +308,77 @@ class _Tag extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: sans(11, color: AppColors.fg3)),
       );
+}
+
+/// A breathing ring that marks a control as live, such as Mission Control
+/// while ambient voice is on.
+class LiveRing extends StatefulWidget {
+  const LiveRing({super.key, required this.live, required this.child});
+
+  final bool live;
+  final Widget child;
+
+  @override
+  State<LiveRing> createState() => _LiveRingState();
+}
+
+class _LiveRingState extends State<LiveRing>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1600));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(covariant LiveRing oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _sync();
+  }
+
+  void _sync() {
+    if (widget.live && !reduceMotion(context)) {
+      if (!_c.isAnimating) _c.repeat(reverse: true);
+    } else {
+      _c.stop();
+      _c.value = widget.live ? 1 : 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.live) return widget.child;
+    return AnimatedBuilder(
+      animation: _c,
+      child: widget.child,
+      builder: (context, child) {
+        final t = Curves.easeInOut.transform(_c.value);
+        return DecoratedBox(
+          position: DecorationPosition.foreground,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+                color: AppColors.ok.withValues(alpha: 0.45 + 0.5 * t),
+                width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.ok.withValues(alpha: 0.10 + 0.22 * t),
+                blurRadius: 6 + 8 * t,
+              ),
+            ],
+          ),
+          child: child,
+        );
+      },
+    );
+  }
 }

@@ -171,6 +171,7 @@ class GroupRow extends StatelessWidget {
       '$members ${members == 1 ? 'member' : 'members'}',
       if (group.lead != null) 'lead ${group.lead}',
     ].join(' · ');
+    final sub = group.preview ?? line;
     final shown = agents.take(4).toList();
     final extra = agents.length - shown.length;
     final unread = group.unread;
@@ -234,7 +235,7 @@ class GroupRow extends StatelessWidget {
                       ],
                     ]),
                     const SizedBox(height: 2),
-                    Text(unread > 0 ? '$unread unread · $line' : line,
+                    Text(sub,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: sans(13,
@@ -317,7 +318,7 @@ class GroupRow extends StatelessWidget {
                     ],
                   ]),
                   const SizedBox(height: 2),
-                  Text(line,
+                  Text(sub,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(11, color: AppColors.fg3)),

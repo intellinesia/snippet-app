@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../ambient/controller.dart';
 import '../api.dart';
 import '../glass.dart';
 import '../mochi.dart';
@@ -388,6 +389,23 @@ class _MobileMissionBarState extends State<MobileMissionBar> {
             ),
           ),
           const SizedBox(width: 10),
+          if (widget.client != null) ...[
+            ListenableBuilder(
+              listenable: AmbientController.instance,
+              builder: (context, _) {
+                final live = AmbientController.instance.running;
+                return RoundBtn(
+                  tooltip: live ? 'Voice call' : 'Start voice',
+                  size: 40,
+                  onTap: () => startMobileVoice(context, widget.client!),
+                  child: AppIcon('phone',
+                      size: 18,
+                      color: live ? AppColors.ok : AppColors.fg1),
+                );
+              },
+            ),
+            const SizedBox(width: 10),
+          ],
           RoundBtn(
             icon: 'task',
             tooltip: 'Tasks',

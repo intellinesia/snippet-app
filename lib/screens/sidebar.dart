@@ -23,8 +23,6 @@ import '../pull_refresh.dart';
 import '../motion.dart';
 import '../mochi.dart';
 import '../ambient/controller.dart';
-import '../ambient/ambient_model.dart';
-import 'mobile_voice_page.dart' show openMobileVoicePage;
 import 'mobile_bottom_bar.dart';
 import 'mobile_chrome.dart';
 import 'mobile_session_home.dart';
@@ -716,25 +714,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       );
 
   /// The bar's search field filters the list in place, on Chats and Agents.
-  /// Turns ambient on, starts listening on this phone, then opens Voice.
-  Future<void> _startVoice() async {
-    final client = widget.client;
-    if (client == null) return;
-    final m = AmbientModel(client);
-    try {
-      await m.load();
-      await m.press();
-      final err = m.error;
-      if (!mounted) return;
-      if (err != null) {
-        toast(context, err);
-        return;
-      }
-      await openMobileVoicePage(context, client: client);
-    } finally {
-      m.dispose();
-    }
-  }
 
   int get _mcAttentionCount {
     final override = widget.mcAttention;
@@ -793,8 +772,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           mcBadgeCount: _mcAttentionCount,
           onMc: widget.onOpenMissionControl,
           listening: listeningOn,
-          onListening: () => openMobileVoicePage(context, client: widget.client),
-          onMic: agents || !hasClient ? null : _startVoice,
           trailing: [
             if (agents)
               Builder(
