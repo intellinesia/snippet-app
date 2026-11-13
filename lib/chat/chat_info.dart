@@ -344,10 +344,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     return DockedInfoNav(
       push: _pushNested,
       pop: _popNested,
-      child: Navigator(
-        key: _navKey,
-        onGenerateRoute: (settings) => _NestedPageRoute(builder: info),
-      ),
+      child: _DockedNavigator(navKey: _navKey, root: info),
     );
   }
 }
@@ -385,21 +382,6 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   Map<String, CoordinationAgent> _byId = const {};
   bool _busy = false;
   final _navKey = GlobalKey<NavigatorState>();
-  // The nested navigator's root page is built once; this rebuilds it.
-  final _rev = ValueNotifier(0);
-
-  @override
-  void setState(VoidCallback fn) {
-    super.setState(fn);
-    _rev.value++;
-  }
-
-  @override
-  void dispose() {
-    _rev.dispose();
-    super.dispose();
-  }
-
   @override
   void initState() {
     super.initState();
@@ -630,12 +612,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   @override
   Widget build(BuildContext context) {
     if (!widget.docked) return _frame();
-    return Navigator(
-      key: _navKey,
-      onGenerateRoute: (_) => _NestedPageRoute(
-          builder: (_) => ValueListenableBuilder<int>(
-              valueListenable: _rev, builder: (_, __, ___) => _frame())),
-    );
+    return _DockedNavigator(navKey: _navKey, root: (_) => _frame());
   }
 
   Widget _frame() {
@@ -1149,6 +1126,42 @@ class _NestedPage extends StatelessWidget {
 
 /// Slide-from-right route for [_NestedPage]; the first route (no title) is the
 /// info page itself. Nothing is painted, so the panel stays see-through.
+/// The docked panel's own navigator. Its root route is built once, so the
+/// latest [root] is handed to it on every rebuild or the info page goes stale.
+class _DockedNavigator extends StatefulWidget {
+  const _DockedNavigator({required this.navKey, required this.root});
+  final GlobalKey<NavigatorState> navKey;
+  final WidgetBuilder root;
+
+  @override
+  State<_DockedNavigator> createState() => _DockedNavigatorState();
+}
+
+class _DockedNavigatorState extends State<_DockedNavigator> {
+  late final _root = ValueNotifier<WidgetBuilder>(widget.root);
+
+  @override
+  void didUpdateWidget(_DockedNavigator old) {
+    super.didUpdateWidget(old);
+    _root.value = widget.root;
+  }
+
+  @override
+  void dispose() {
+    _root.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Navigator(
+        key: widget.navKey,
+        onGenerateRoute: (_) => _NestedPageRoute(
+            builder: (_) => ValueListenableBuilder<WidgetBuilder>(
+                valueListenable: _root,
+                builder: (ctx, root, _) => root(ctx))),
+      );
+}
+
 class _NestedPageRoute extends PageRoute<void> {
   _NestedPageRoute({this.title, required this.builder});
 
