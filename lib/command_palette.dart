@@ -524,24 +524,6 @@ class _PaletteState extends State<_Palette> {
             AppIcon(item.icon,
                 size: 15, color: selected ? AppColors.fg1 : AppColors.fg3),
             const SizedBox(width: 10),
-            if (!kMobile) ...[
-              Expanded(
-                child: Text(item.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13, color: AppColors.fg1)),
-              ),
-              if (item.subtitle.isNotEmpty)
-                Flexible(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 12),
-                    child: Text(item.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(12, color: AppColors.fg4)),
-                  ),
-                ),
-            ] else
             Expanded(
               child: Text.rich(
                 TextSpan(children: [
@@ -550,7 +532,7 @@ class _PaletteState extends State<_Palette> {
                       style: sans(13, color: AppColors.fg1)),
                   if (item.subtitle.isNotEmpty)
                     TextSpan(
-                        text: '   ${item.subtitle}',
+                        text: '  ${item.subtitle}',
                         style: sans(12, color: AppColors.fg4)),
                 ]),
                 maxLines: 1,

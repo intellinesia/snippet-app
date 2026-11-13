@@ -287,12 +287,12 @@ Future<bool> confirmAction(
     result = await showDialog<bool>(
       context: context,
       barrierColor: AppColors.scrim,
-      builder: (ctx) => _DialogFrame(
+      builder: (ctx) => ModalGlass(child: _DialogFrame(
         title: title,
         icon: danger ? 'alert-triangle' : null,
         iconColor: AppColors.danger,
         child: content(ctx),
-      ),
+      )),
     );
   }
   return result == true;
@@ -330,7 +330,7 @@ Future<String?> promptText(BuildContext context,
     return showDialog<String>(
       context: context,
       barrierColor: AppColors.scrim,
-      builder: (_) => _DialogFrame(title: title, maxWidth: 380, child: field),
+      builder: (_) => ModalGlass(child: _DialogFrame(title: title, maxWidth: 380, child: field)),
     );
   }
   return showAppSheet<String>(context, title: title, child: field);
@@ -594,7 +594,7 @@ Future<T?> showAppSheet<T>(BuildContext context,
     return showDialog<T>(
       context: context,
       barrierColor: AppColors.scrim,
-      builder: (ctx) => _DialogFrame(
+      builder: (ctx) => ModalGlass(child: _DialogFrame(
         title: title,
         maxWidth: maxWidth,
         maxHeight: maxHeight,
@@ -603,7 +603,7 @@ Future<T?> showAppSheet<T>(BuildContext context,
           padding: const EdgeInsets.only(bottom: 4),
           child: child,
         ),
-      ),
+      )),
     );
   }
   return showModalBottomSheet<T>(

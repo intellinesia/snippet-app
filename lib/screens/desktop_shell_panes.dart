@@ -705,11 +705,13 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             parent: anim,
             curve: Curves.easeOutCubic,
             reverseCurve: Curves.easeInCubic);
-        return FadeTransition(
-          opacity: t,
-          child: ScaleTransition(
-            scale: Tween(begin: 0.97, end: 1.0).animate(t),
-            child: child,
+        return ModalGlass(
+          child: FadeTransition(
+            opacity: t,
+            child: ScaleTransition(
+              scale: Tween(begin: 0.97, end: 1.0).animate(t),
+              child: child,
+            ),
           ),
         );
       },

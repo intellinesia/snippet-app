@@ -180,3 +180,38 @@ class TopFadeMask extends StatelessWidget {
         child: child,
       );
 }
+
+/// Blurs the window behind a centred desktop modal, fading with its route.
+class ModalGlass extends StatelessWidget {
+  const ModalGlass({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final anim = ModalRoute.of(context)?.animation;
+    if (anim == null || !Glass.enabled || _phone(context)) return child;
+    return Stack(fit: StackFit.passthrough, children: [
+      Positioned.fill(
+        child: IgnorePointer(
+          child: AnimatedBuilder(
+            animation: anim,
+            builder: (_, __) {
+              final t = anim.value;
+              if (t < 0.01) return const SizedBox.shrink();
+              return BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 14 * t, sigmaY: 14 * t),
+                child: const SizedBox.expand(),
+              );
+            },
+          ),
+        ),
+      ),
+      child,
+    ]);
+  }
+
+  static bool _phone(BuildContext context) =>
+      MediaQuery.sizeOf(context).width < 700 ||
+      const {TargetPlatform.android, TargetPlatform.iOS}
+          .contains(Theme.of(context).platform);
+}

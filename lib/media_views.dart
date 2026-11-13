@@ -515,91 +515,118 @@ class VoiceNote extends StatefulWidget {
   State<VoiceNote> createState() => _VoiceNoteState();
 }
 
-class _VoiceNoteState extends State<VoiceNote> {
+/// One player for every voice note, so playback survives the transcript
+/// rebuilding the card, and starting another note stops the last.
+class VoicePlayback extends ChangeNotifier {
+  VoicePlayback._();
+  static final instance = VoicePlayback._();
+
   AudioPlayer? _player;
-  final List<StreamSubscription<dynamic>> _subs = [];
-  bool _playing = false;
-  bool _loading = false;
-  Duration _position = Duration.zero;
-  Duration _duration = Duration.zero;
-  String? _error;
+  String? source;
+  bool playing = false;
+  bool loading = false;
+  Duration position = Duration.zero;
+  Duration duration = Duration.zero;
+  String? failed;
+
+  AudioPlayer _ensure() {
+    final existing = _player;
+    if (existing != null) return existing;
+    final p = AudioPlayer();
+    p.onPlayerStateChanged.listen((s) {
+      playing = s == PlayerState.playing;
+      if (s == PlayerState.completed) position = Duration.zero;
+      notifyListeners();
+    });
+    p.onPositionChanged.listen((d) {
+      position = d;
+      notifyListeners();
+    });
+    p.onDurationChanged.listen((d) {
+      duration = d;
+      notifyListeners();
+    });
+    return _player = p;
+  }
+
+  Future<void> toggle(String src) async {
+    final p = _ensure();
+    try {
+      if (source == src && playing) {
+        await p.pause();
+      } else if (source == src && p.state == PlayerState.paused) {
+        await p.resume();
+      } else {
+        await p.stop();
+        source = src;
+        failed = null;
+        position = Duration.zero;
+        duration = Duration.zero;
+        loading = true;
+        notifyListeners();
+        await p.play(UrlSource(src));
+      }
+    } catch (_) {
+      failed = src;
+    } finally {
+      loading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> seek(String src, double fraction) async {
+    final p = _player;
+    if (p == null || source != src || duration == Duration.zero) return;
+    await p.seek(duration * fraction.clamp(0.0, 1.0));
+  }
+}
+
+class _VoiceNoteState extends State<VoiceNote> {
+  VoicePlayback get _pb => VoicePlayback.instance;
+
+  String get _src {
+    final u = widget.url;
+    return (u != null && u.isNotEmpty) ? u : widget.client.fileUrl(widget.path);
+  }
+
+  bool get _mine => _pb.source == _src;
+  bool get _playing => _mine && _pb.playing;
+  bool get _loading => _mine && _pb.loading;
+  Duration get _position => _mine ? _pb.position : Duration.zero;
+  Duration get _duration {
+    if (_mine && _pb.duration > Duration.zero) return _pb.duration;
+    final d = widget.duration;
+    return d != null && d > Duration.zero ? d : Duration.zero;
+  }
+
+  String? get _error =>
+      _pb.failed == _src ? "Couldn't play this voice note" : null;
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void initState() {
     super.initState();
-    final d = widget.duration;
-    if (d != null && d > Duration.zero) _duration = d;
-  }
-
-  @override
-  void didUpdateWidget(covariant VoiceNote oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final d = widget.duration;
-    if (_duration == Duration.zero && d != null && d > Duration.zero) {
-      _duration = d;
-    }
-  }
-
-  Future<void> _toggle() async {
-    final player = _player ?? _attach();
-    try {
-      if (_playing) {
-        await player.pause();
-      } else if (player.state == PlayerState.paused) {
-        await player.resume();
-      } else {
-        setState(() => _loading = true);
-        final u = widget.url;
-        final src = (u != null && u.isNotEmpty)
-            ? u
-            : widget.client.fileUrl(widget.path);
-        await player.play(UrlSource(src));
-      }
-    } catch (e) {
-      if (mounted) setState(() => _error = "Couldn't play this voice note");
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  AudioPlayer _attach() {
-    final player = AudioPlayer();
-    _subs
-      ..add(player.onPlayerStateChanged.listen((s) {
-        if (!mounted) return;
-        setState(() {
-          _playing = s == PlayerState.playing;
-          if (s == PlayerState.completed) _position = Duration.zero;
-        });
-      }))
-      ..add(player.onPositionChanged.listen((p) {
-        if (mounted) setState(() => _position = p);
-      }))
-      ..add(player.onDurationChanged.listen((d) {
-        if (mounted) setState(() => _duration = d);
-      }));
-    return _player = player;
+    _pb.addListener(_changed);
   }
 
   @override
   void dispose() {
-    for (final sub in _subs) {
-      sub.cancel();
-    }
-    _player?.dispose();
+    _pb.removeListener(_changed);
     super.dispose();
   }
+
+  Future<void> _toggle() => _pb.toggle(_src);
+
+  Future<void> _seekTo(double fraction) => _pb.seek(_src, fraction);
 
   static String _clock(Duration d) {
     final s = d.inSeconds.clamp(0, 359999);
     return '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
   }
 
-  Future<void> _seekTo(double fraction) async {
-    final player = _player;
-    if (player == null || _duration == Duration.zero) return;
-    await player.seek(_duration * fraction.clamp(0.0, 1.0));
-  }
 
   Widget _mobile(double progress) {
     final active = _playing || _position > Duration.zero;

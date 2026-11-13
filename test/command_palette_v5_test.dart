@@ -37,7 +37,7 @@ void main() {
     ];
     expect([...ys]..sort(), ys);
     expect(find.textContaining('↑↓'), findsOneWidget);
-    expect(find.text('repo'), findsOneWidget);
+    expect(find.textContaining('repo', findRichText: true), findsOneWidget);
     expect(find.textContaining('esc'), findsOneWidget);
     expect(find.textContaining('new tab'), findsNothing);
     debugDefaultTargetPlatformOverride = null;

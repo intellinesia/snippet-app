@@ -1,5 +1,6 @@
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
+import 'glass.dart';
 
 import 'platform.dart';
 import 'shell_panel.dart';
@@ -111,7 +112,9 @@ Future<T?> presentScreen<T>(
                   .animate(curved),
               child: child,
             );
-      return transition;
+      return style == PanelStyle.dialog
+          ? ModalGlass(child: transition)
+          : transition;
     },
   );
 }
@@ -149,10 +152,13 @@ Future<T?> showModal<T>(
     ),
     transitionBuilder: (ctx, anim, _, child) {
       final curved = CurvedAnimation(parent: anim, curve: Motion.enter);
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-            scale: Tween(begin: 0.98, end: 1.0).animate(curved), child: child),
+      return ModalGlass(
+        child: FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+              scale: Tween(begin: 0.98, end: 1.0).animate(curved),
+              child: child),
+        ),
       );
     },
   );

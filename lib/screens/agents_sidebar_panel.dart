@@ -227,7 +227,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   Future<void> openCreateMenu(BuildContext anchor, {bool above = true}) async {
     final pick = await showAnchoredPanel<String>(
       anchor,
-      width: 288,
+      width: kMobile ? 288 : 260,
       maxHeight: 200,
       above: above,
       alignRight: true,
@@ -733,8 +733,52 @@ class _CreateMenu extends StatelessWidget {
         ),
       );
 
+  // Desktop: the same row as appMenuRow, so it reads like every other menu.
+  Widget _row(BuildContext context, String value, String icon, String title,
+          String subtitle) =>
+      InkWell(
+        key: ValueKey('create-$value'),
+        onTap: () => Navigator.of(context).pop(value),
+        splashFactory: NoSplash.splashFactory,
+        hoverColor: AppColors.hover,
+        highlightColor: AppColors.hover,
+        borderRadius: BorderRadius.circular(R.sm),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          child: Row(children: [
+            AppIcon(icon, size: 15, color: AppColors.fg3),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TS.ui(AppColors.fg1)),
+                  const SizedBox(height: 1),
+                  Text(subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TS.caption()),
+                ],
+              ),
+            ),
+          ]),
+        ),
+      );
+
   @override
-  Widget build(BuildContext context) => Column(
+  Widget build(BuildContext context) => !kMobile
+      ? Column(mainAxisSize: MainAxisSize.min, children: [
+          _row(context, 'agent', 'bot', 'New agent',
+              'A specialist with its own model and memory'),
+          _row(context, 'group', 'users', 'New group',
+              'Several agents in one conversation'),
+        ])
+      : Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           _item(
