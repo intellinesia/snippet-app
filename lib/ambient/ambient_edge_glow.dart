@@ -34,6 +34,9 @@ class AmbientEdgeGlow extends StatefulWidget {
   final bool? overrideAssistantSpeaking;
   final Color? overrideColor;
 
+  /// Set while the voice popover is open, which shows the same state itself.
+  static final suppressed = ValueNotifier<bool>(false);
+
   @override
   State<AmbientEdgeGlow> createState() => _AmbientEdgeGlowState();
 }
@@ -64,6 +67,7 @@ class _AmbientEdgeGlowState extends State<AmbientEdgeGlow>
     );
 
     _ambient.addListener(_onAmbientChanged);
+    AmbientEdgeGlow.suppressed.addListener(_onVoiceStateChanged);
     _syncVoiceListenable();
 
     _updateAnimationState(animate: false);
@@ -142,21 +146,21 @@ class _AmbientEdgeGlowState extends State<AmbientEdgeGlow>
 
   void _updateAnimationState({required bool animate}) {
     final active = _isActive;
-    if (active) {
-      if (_fadeController.value < 1.0 && !_fadeController.isAnimating) {
-        if (animate) {
-          _fadeController.forward();
-        } else {
-          _fadeController.value = 1.0;
-        }
+    final shown = active && !AmbientEdgeGlow.suppressed.value;
+    final st = _fadeController.status;
+    if (shown) {
+      if (!animate) {
+        _fadeController.value = 1.0;
+      } else if (st != AnimationStatus.forward &&
+          st != AnimationStatus.completed) {
+        _fadeController.forward();
       }
     } else {
-      if (_fadeController.value > 0.0 && !_fadeController.isAnimating) {
-        if (animate) {
-          _fadeController.reverse();
-        } else {
-          _fadeController.value = 0.0;
-        }
+      if (!animate) {
+        _fadeController.value = 0.0;
+      } else if (st != AnimationStatus.reverse &&
+          st != AnimationStatus.dismissed) {
+        _fadeController.reverse();
       }
     }
 
@@ -171,9 +175,9 @@ class _AmbientEdgeGlowState extends State<AmbientEdgeGlow>
       }
     }
 
-    if (active && !_cycleController.isAnimating) {
+    if (shown && !_cycleController.isAnimating) {
       _cycleController.repeat();
-    } else if (!active && _fadeController.value == 0.0) {
+    } else if (!shown && _fadeController.value == 0.0) {
       _cycleController.stop();
     }
 
@@ -188,6 +192,7 @@ class _AmbientEdgeGlowState extends State<AmbientEdgeGlow>
   @override
   void dispose() {
     _ambient.removeListener(_onAmbientChanged);
+    AmbientEdgeGlow.suppressed.removeListener(_onVoiceStateChanged);
     _voiceListenable?.removeListener(_onVoiceHolderChanged);
     _currentVoice?.speaking.removeListener(_onVoiceStateChanged);
     _currentVoice?.state.removeListener(_onVoiceStateChanged);

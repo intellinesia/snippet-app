@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../ambient/ambient_edge_glow.dart';
 import '../../../ambient/ambient_model.dart';
 import '../../../ambient/live_caption.dart';
 import '../../../ambient/controller.dart';
@@ -325,6 +326,7 @@ class _AmbientStageState extends State<AmbientStage>
   @override
   void initState() {
     super.initState();
+    if (!kMobile) scheduleMicrotask(() => AmbientEdgeGlow.suppressed.value = true);
     _loadRecent();
     _recentLive = Revalidator(
         client: widget.client,
@@ -351,6 +353,8 @@ class _AmbientStageState extends State<AmbientStage>
 
   @override
   void dispose() {
+    // Deferred: the glow sits above this route and the tree is locked here.
+    if (!kMobile) scheduleMicrotask(() => AmbientEdgeGlow.suppressed.value = false);
     _recentLive?.dispose();
     _dragC.dispose();
     _m.removeListener(_changed);
@@ -561,6 +565,15 @@ class _AmbientStageState extends State<AmbientStage>
               onToggle: _toggle,
               onClose: _close,
               recent: _recentAll,
+              orb: _Orb(
+                size: 112,
+                color: ambientStateColor(_m.settings, _m.status),
+                alive: _live,
+                level: _live &&
+                        (_m.status.speaking || _m.status.assistantSpeaking)
+                    ? 1
+                    : 0,
+              ),
               error: kIsWeb ? null : (_m.error ?? _m.status.error),
             );
           },

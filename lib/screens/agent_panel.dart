@@ -6,7 +6,6 @@ import '../shell_panel.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../chat/chat_info.dart' show AgentInfoPanel;
-import 'tasks/tasks_panel.dart' show openTasksPage;
 import 'agent_appearance.dart';
 import 'agent_profile_panel.dart';
 import 'agent_reach_panel.dart';
@@ -316,8 +315,6 @@ class AgentSidePanel extends StatelessWidget {
                   name: agentName,
                   agent: agent,
                   docked: true,
-                  onOpenTasks: () => openTasksPage(context, client,
-                      agentIds: {agentId}),
                   onOpenInbox: () => onAction('inbox'),
                   onOpenBoard: () => onAction('board'),
                   onOpenDesk: () => onAction('desk'),

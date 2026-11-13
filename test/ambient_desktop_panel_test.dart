@@ -45,14 +45,14 @@ void main() {
       ),
     ));
     expect(find.text('Listening'), findsOneWidget);
-    expect(find.text('Pause'), findsOneWidget);
+    expect(find.text('End'), findsOneWidget);
     expect(find.byKey(const ValueKey('ambient-caption')), findsOneWidget);
     expect(find.text('“hello panel”'), findsOneWidget);
     expect(find.text('turn on the lights'), findsOneWidget);
     expect(find.text('command'), findsOneWidget);
     expect(find.text('second line'), findsOneWidget);
     expect(find.text('5m'), findsNWidgets(2));
-    await tester.tap(find.text('Pause'));
+    await tester.tap(find.text('End'));
     expect(toggled, 1);
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 10));

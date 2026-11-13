@@ -1717,9 +1717,12 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         borderRadius: BorderRadius.circular(R.lg),
         border: Border.all(color: AppColors.line),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: rows,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: rows,
+        ),
       ),
     );
   }

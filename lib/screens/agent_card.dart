@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import '../api.dart';
 import '../clock.dart';
-import '../crew_widgets.dart' show AgentProviderMark;
 import '../models.dart';
 import '../platform.dart';
 import '../presence.dart';
@@ -297,12 +296,8 @@ class _AgentCardState extends State<AgentCard> {
     final name =
         agent.displayName.trim().isEmpty ? agent.id : agent.displayName;
     final working = _count({TaskStatus.inProgress}, {'in_progress'});
-    final queued = _count({TaskStatus.todo}, {'todo'});
     final blocked =
         _count({TaskStatus.blocked, TaskStatus.failed}, {'blocked', 'failed'});
-    final open = working + queued + blocked;
-    final done = _count({TaskStatus.done}, {'done'});
-    final profile = agent.profile;
     final last = agent.lastMessage;
     final line = last == null
         ? 'No messages yet'
@@ -311,11 +306,7 @@ class _AgentCardState extends State<AgentCard> {
         ? ('Paused', AppColors.fg3)
         : blocked > 0
             ? ('$blocked blocked', AppColors.danger)
-            : open > 0
-                ? ('$open open', AppColors.fg3)
-                : done > 0
-                    ? ('$done done', AppColors.fg3)
-                    : null;
+            : null;
     final summaryText = summary?.$1 ?? '';
     final summaryColor = summary?.$2 ?? AppColors.fg4;
     final nameSize = kMobile ? 15.5 : 13.0;
@@ -399,6 +390,7 @@ class _AgentCardState extends State<AgentCard> {
             ),
           ));
     }
+    final deskTime = agentRowTime(last?.at);
     final ring = agent.available && working > 0;
     final dot = !agent.available
         ? AppColors.fg4
@@ -473,13 +465,11 @@ class _AgentCardState extends State<AgentCard> {
                                     ? AppColors.fg1
                                     : AppColors.fg3)),
                       ),
-                      if (profile != null) ...[
+                      if (deskTime.isNotEmpty) ...[
                         const SizedBox(width: 6),
-                        AgentProviderMark(
-                            key: const ValueKey('agent-provider'),
-                            client: widget.client,
-                            profile: profile,
-                            size: 12),
+                        Text(deskTime,
+                            style: sans(metaSize,
+                                color: AppColors.fg4, tabular: true)),
                       ],
                     ]),
                     const SizedBox(height: 2),

@@ -164,8 +164,12 @@ class SettingsGroup extends StatelessWidget {
             borderRadius: BorderRadius.circular(kMobile ? 14 : 10),
             border: Border.all(color: AppColors.line),
           ),
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
+          // Ink must paint inside the clip, not on a Material further up.
+          child: Material(
+            type: MaterialType.transparency,
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
+          ),
         ),
         if (footer != null)
           Padding(

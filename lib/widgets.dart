@@ -2373,6 +2373,7 @@ const _lucide = <String, IconData>{
   'mic': LucideIcons.mic,
   'volume': LucideIcons.volume2,
   'mic-off': LucideIcons.micOff,
+  'phone-off': LucideIcons.phoneOff,
   'shield': LucideIcons.shield,
   'goal': LucideIcons.goal,
   'folder': LucideIcons.folder,

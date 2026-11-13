@@ -299,7 +299,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
   Widget build(BuildContext context) {
     final agent = widget.agent;
     final actions = <_CircleAction>[
-      if (widget.onOpenTasks != null)
+      if (widget.onOpenTasks != null && !widget.docked)
         _CircleAction('task', 'Tasks', () {
           if (!widget.docked) _close();
           widget.onOpenTasks!();
@@ -571,10 +571,14 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s4),
           child: Row(children: [
-            if (m.isAgent)
-              AgentMochi(m.id, size: 26)
-            else
-              AppIcon('user', size: 20, color: AppColors.fg3),
+            SizedBox.square(
+              dimension: 26,
+              child: Center(
+                child: m.isAgent
+                    ? AgentMochi(m.id, size: 26)
+                    : AppIcon('user', size: 20, color: AppColors.fg3),
+              ),
+            ),
             const SizedBox(width: S.s12),
             Expanded(
               child: Column(
@@ -618,7 +622,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   Widget _frame() {
     final title = _group.title.trim().isEmpty ? 'Group' : _group.title.trim();
     final actions = <_CircleAction>[
-      if (widget.onOpenTasks != null)
+      if (widget.onOpenTasks != null && !widget.docked)
         _CircleAction('task', 'Tasks', () {
           if (!widget.docked) _close();
           widget.onOpenTasks!();
@@ -898,13 +902,13 @@ class _InfoCard extends StatelessWidget {
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(bottom: S.s12),
+  // A Material of its own so row hover ink is clipped to the rounded card.
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: S.s12),
+        child: Material(
+        color: AppColors.surface2.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: AppColors.surface2.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(16),
-        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -915,6 +919,7 @@ class _InfoCard extends StatelessWidget {
               children[i],
             ],
           ],
+        ),
         ),
       );
 }

@@ -23,6 +23,7 @@ class AmbientDesktopPanel extends StatelessWidget {
     this.feed,
     this.error,
     this.footer,
+    this.orb,
   });
 
   static const width = 360.0;
@@ -38,6 +39,7 @@ class AmbientDesktopPanel extends StatelessWidget {
   final LiveCaptionFeed? feed;
   final String? error;
   final Widget? footer;
+  final Widget? orb;
 
   static String ago(DateTime t) {
     final d = DateTime.now().difference(t);
@@ -49,86 +51,130 @@ class AmbientDesktopPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final end = live;
     return SizedBox(
       width: width,
       height: height,
       child: Glass(
-        radius: BorderRadius.circular(12),
+        radius: BorderRadius.circular(16),
         tint: GlassStyle.fill,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+              padding: const EdgeInsets.fromLTRB(16, 10, 8, 0),
               child: Row(children: [
                 _LiveBars(active: live, color: color),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: Text(stateWord,
-                      key: const ValueKey('ambient-state-word'),
+                  child: Text('Snippet voice',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(14, weight: W.label, color: AppColors.fg1)),
+                      style: sans(12, weight: W.label, color: AppColors.fg3)),
                 ),
-                if (footer != null) ...[footer!, const SizedBox(width: 8)],
-                Btn(live ? 'Pause' : 'Start',
-                    small: true,
-                    variant: BtnVariant.secondary,
-                    icon: live ? 'pause' : 'play',
-                    disabled: !canToggle,
-                    onTap: canToggle ? onToggle : null),
-                const SizedBox(width: 4),
-                GestureDetector(
-                  onTap: onClose,
-                  behavior: HitTestBehavior.opaque,
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: AppIcon('x', size: 16, color: AppColors.fg3),
-                  ),
-                ),
+                if (footer != null) ...[footer!, const SizedBox(width: 4)],
+                IconBtn('x', size: 32, iconSize: 16, tooltip: 'Close', onTap: onClose),
               ]),
             ),
-            Divider(height: 1, thickness: 1, color: AppColors.line),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('HEARING NOW',
-                      style: sans(11, weight: W.label, color: AppColors.fg4)),
-                  const SizedBox(height: 6),
-                  ConstrainedBox(
-                    key: const ValueKey('ambient-caption'),
-                    constraints: const BoxConstraints(minHeight: 40),
-                    child: AmbientHeardLine(wide: true, feed: feed),
-                  ),
-                  if (error != null) ...[
-                    const SizedBox(height: 8),
-                    NoteLine(error!, error: true),
-                  ],
-                ],
+            const SizedBox(height: 12),
+            Center(
+              child: SizedBox.square(
+                dimension: 112,
+                child: orb ??
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: color.withValues(alpha: live ? 0.25 : 0.1)),
+                    ),
               ),
             ),
-            Divider(height: 1, thickness: 1, color: AppColors.line),
+            const SizedBox(height: 14),
+            Text(stateWord,
+                key: const ValueKey('ambient-state-word'),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(18, weight: W.title, color: AppColors.fg1)),
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
-              child: Text('RECENT',
-                  style: sans(11, weight: W.label, color: AppColors.fg4)),
+              padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
+              child: ConstrainedBox(
+                key: const ValueKey('ambient-caption'),
+                constraints: const BoxConstraints(minHeight: 40),
+                child: Center(child: AmbientHeardLine(wide: true, feed: feed)),
+              ),
             ),
+            if (error != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                child: NoteLine(error!, error: true),
+              ),
+            const SizedBox(height: 12),
+            Divider(height: 1, thickness: 1, color: AppColors.line),
             Expanded(
               child: recent.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+                  ? Center(
                       child: Text('Nothing heard yet',
-                          style: sans(12, color: AppColors.fg3)),
+                          style: sans(12, color: AppColors.fg4)),
                     )
                   : ListView(
-                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                       children: [for (final e in recent) _Row(e)],
                     ),
             ),
+            Divider(height: 1, thickness: 1, color: AppColors.line),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Center(
+                child: _CallButton(
+                  icon: end ? 'phone-off' : 'mic',
+                  label: end ? 'End' : 'Start',
+                  color: end ? AppColors.danger : AppColors.accent,
+                  onTap: canToggle ? onToggle : null,
+                ),
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CallButton extends StatelessWidget {
+  const _CallButton(
+      {required this.icon, required this.label, required this.color, this.onTap});
+  final String icon;
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color.withValues(alpha: enabled ? 1 : 0.4),
+            ),
+            child: Center(
+              child: AppIcon(icon,
+                  size: 22,
+                  color: label == 'End' ? Colors.white : AppColors.accentFg),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(label, style: sans(12, weight: W.label, color: AppColors.fg2)),
+        ]),
       ),
     );
   }
