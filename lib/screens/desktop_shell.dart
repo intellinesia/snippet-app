@@ -490,7 +490,19 @@ class _DesktopShellState extends State<DesktopShell>
     }
   }
 
-  List<Widget> _railTools() => [
+  List<Widget> _headerTools(_ShellTab t) => buildShellRailTools(
+        activeTab: t,
+        macSessionStatus: _macSessionStatuses[t.key],
+        isRightPanelActive: _rightPanelActive,
+        onToggleRightPanel: _toggleRightPanel,
+        onSessionAction: _dispatchSessionAction,
+        onOpenGoalPopover: _openGoalPopover,
+      );
+
+  // Session and MC tabs carry their tools in the chat header, as in v5.
+  List<Widget> _railTools() => _activeTab?.sessionId != null
+      ? const []
+      : [
         ...buildShellRailTools(
           activeTab: _activeTab,
           macSessionStatus:
@@ -501,8 +513,7 @@ class _DesktopShellState extends State<DesktopShell>
           onOpenGoalPopover: _openGoalPopover,
           onAgentAction: _agentAction,
         ),
-        if (_activeTab?.sessionId != null ||
-            (_activeAgent != null && _agentHasPanelTabs))
+        if (_activeAgent != null && _agentHasPanelTabs)
           Tooltip(
             message: _panelHidden ? 'Show panel' : 'Hide panel',
             child: Material(

@@ -160,6 +160,9 @@ class SessionScreen extends StatefulWidget {
   /// Desktop: toggle the shell's right panel from the floating header.
   final VoidCallback? onTogglePanel;
 
+  /// Desktop: the shell's actions menu, shown in the header instead of the sheet.
+  final Widget Function()? deskActions;
+
   /// Desktop PageView keeps every tab mounted. Only the visible session should
   /// accept file drops — otherwise every keep-alive DropTarget ingests the same
   /// file and the composer chips leak across tabs.
@@ -211,6 +214,7 @@ class SessionScreen extends StatefulWidget {
       this.onTerminalHost,
       this.onOpenScheduled,
       this.onTogglePanel,
+      this.deskActions,
       this.acceptDrops = true,
       this.live,
       this.inboundShare,
@@ -1833,7 +1837,7 @@ class _SessionScreenState extends State<SessionScreen>
           if (_isMissionControl && !kMobile)
             Positioned(
               top: 8,
-              right: 16,
+              left: 16,
               child: AmbientHeaderOrb(client: widget.client),
             ),
         ]),

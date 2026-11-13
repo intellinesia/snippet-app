@@ -119,6 +119,10 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     }
     return SessionScreen(
       onTogglePanel: _togglePanel,
+      deskActions: primary
+          ? () => Row(
+              mainAxisSize: MainAxisSize.min, children: _headerTools(t))
+          : null,
       key: ValueKey('body-${t.key}'),
       client: t.client,
       sessionId: t.sessionId!,
