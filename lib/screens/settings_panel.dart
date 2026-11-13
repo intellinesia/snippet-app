@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../api.dart';
 import '../models.dart';
@@ -277,6 +278,13 @@ class SettingsPanelState extends State<SettingsPanel> {
   bool _modelsEditing = false;
   bool _recurringAdding = false;
 
+  // Phone home row values, fetched once and shown beside the chevrons.
+  int? _profileCount;
+  int? _vaultCount;
+  int? _usageTokens;
+  bool? _ambientOn;
+  int? _liveCount;
+
   String? _renamingUrl;
   final TextEditingController _renameController = TextEditingController();
 
@@ -360,13 +368,53 @@ class SettingsPanelState extends State<SettingsPanel> {
       if (mounted) setState(() => _notif = v);
     });
     _scheduleCreate();
+    _loadMobileValues();
+    modelsRevision.addListener(_onModelsChanged);
   }
+
+  void _onModelsChanged() => _loadMobileValues();
 
   @override
   void dispose() {
+    modelsRevision.removeListener(_onModelsChanged);
     _addMachinePaste.dispose();
     _renameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadMobileValues() async {
+    final client = widget.client;
+    try {
+      final cfg = await client.getConfig();
+      if (mounted) setState(() => _profileCount = cfg.profiles.length);
+    } catch (_) {}
+    try {
+      final names = await client.vaultList();
+      if (mounted) setState(() => _vaultCount = names.length);
+    } catch (_) {}
+    try {
+      final week =
+          await client.getUsage(since: DateTime.now().subtract(const Duration(days: 7)));
+      if (mounted) {
+        setState(() =>
+            _usageTokens = week.providers.fold(0, (n, p) => n + p.totalTokens));
+      }
+    } catch (_) {}
+    try {
+      final ambient = await client.getAmbientSettings();
+      if (mounted) setState(() => _ambientOn = ambient.enabled);
+    } catch (_) {}
+    try {
+      final sessions = await client.sessions();
+      if (mounted) {
+        setState(() => _liveCount = sessions
+            .where((s) =>
+                !s.settled &&
+                s.status != 'waiting_for_input' &&
+                sessionIsActive(s.status))
+            .length);
+      }
+    } catch (_) {}
   }
 
   Future<void> _toggleNotif(bool v) async {
@@ -545,115 +593,136 @@ class SettingsPanelState extends State<SettingsPanel> {
   }
 
   /// Phone settings HOME.
+  ///
+  /// The 32px rounded tile every settings row leads with (v5 `.pgi .ico`).
+  Widget _settingsIconTile(String icon, {Color? color}) => Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(R.md),
+        ),
+        child: Center(
+          child: AppIcon(icon, size: 16, color: color ?? AppColors.fg2),
+        ),
+      );
+
+  /// One v5 settings row: icon tile, label, optional right-hand value, chevron.
+  Widget _settingsRow(
+    String label,
+    String icon, {
+    String? value,
+    SettingsPage? page,
+  }) =>
+      ListRow(
+        title: label,
+        leading: _settingsIconTile(icon),
+        onTap: page == null ? null : () => widget.onSection?.call(page),
+        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (value != null && value.isNotEmpty) ...[
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 132),
+              child: Text(value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TS.meta(AppColors.fg3)),
+            ),
+            const SizedBox(width: S.s6),
+          ],
+          AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+        ]),
+      );
+
+  /// v5 `.plb`: a quiet 13px group caption, indented past the card edge.
+  Widget _settingsGroupLabel(String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(S.s16, S.s16, 0, S.s4),
+        child: Text(text, style: sans(13, color: AppColors.fg3)),
+      );
+
   Widget _mobileSettingsHome() {
     final active = widget.active;
-    Widget nav(SettingsPage page, String label,
-            [String summary = '', String? icon]) =>
-        ListRow(
-          title: label,
-          leading: icon == null
-              ? null
-              : AppIcon(icon, size: 19, color: AppColors.fg3),
-          onTap: () => widget.onSection?.call(page),
-          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (summary.isNotEmpty)
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 170),
-                child: Text(summary,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TS.meta(AppColors.fg3)),
-              ),
-            const SizedBox(width: S.s6),
-            AppIcon('chevron-right', size: 14, color: AppColors.fg3),
-          ]),
-        );
-    Widget label(String text) => Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 7),
-          child: Text(text.toUpperCase(), style: TS.overline()),
-        );
+    final tm = ThemeManager.instance;
     final name = active?.label.trim() ?? '';
+    final live = _liveCount;
     return ListView(
       padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(S.s4, 4, 0, 4),
-          child: Row(children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name.isEmpty ? 'No machine yet' : name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TS.sectionTitle()),
-                  const SizedBox(height: 2),
-                  Row(children: [
-                    if (active != null) ...[
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                            color: AppColors.ok, shape: BoxShape.circle),
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                    Flexible(
-                      child: Text(
-                          active == null
-                              ? 'Add one to begin'
-                              : 'Connected · ${hostOf(active.url)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TS.meta(AppColors.fg3)),
-                    ),
-                  ]),
-                ],
+          padding: const EdgeInsets.fromLTRB(0, 4, 0, 2),
+          child: Text('Settings', style: TS.pageTitle()),
+        ),
+        ListGroup(children: [
+          ListRow(
+            title: name.isEmpty ? 'No machine yet' : name,
+            subtitle: active == null
+                ? 'Add one to begin'
+                : 'Connected${live == null ? '' : ' · $live live'}',
+            leading: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: AppColors.surface2,
+                borderRadius: BorderRadius.circular(R.md),
+              ),
+              child: Center(
+                child: Icon(LucideIcons.laptop,
+                    size: 17, color: AppColors.ok),
               ),
             ),
-          ]),
-        ),
-        label('Connection'),
+            onTap: () => widget.onSection?.call(SettingsPage.general),
+            trailing:
+                AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+          ),
+        ]),
+        _settingsGroupLabel('General'),
         ListGroup(children: [
-          nav(SettingsPage.general, 'Machines',
-              _instances.length > 1 ? '${_instances.length} saved' : '',
-              'server'),
+          _settingsRow('Inference profiles', 'cpu',
+              page: SettingsPage.models,
+              value: _profileCount?.toString()),
+          _settingsRow('Routing', 'route', page: SettingsPage.routing),
+          _settingsRow('Accounts', 'users', page: SettingsPage.accounts),
+          _settingsRow('Usage', 'gauge',
+              page: SettingsPage.usage,
+              value: _usageTokens == null
+                  ? null
+                  : '${fmtSi(_usageTokens!)} this week'),
+          ApprovalsRow(client: widget.client),
           if (kCanNotify) _notifRow(),
         ]),
-        label('Models'),
+        _settingsGroupLabel('Agents'),
         ListGroup(children: [
-          nav(SettingsPage.models, 'Profiles', 'Models and keys', 'sparkles'),
-          nav(SettingsPage.routing, 'Routing', 'Fallback models', 'route'),
-          nav(SettingsPage.accounts, 'Accounts', 'Extra subscriptions',
-              'users'),
-          nav(SettingsPage.usage, 'Usage', 'Tokens and spend', 'gauge'),
+          _settingsRow('Memory', 'book-marked', page: SettingsPage.memory),
+          _settingsRow('Vault', 'lock',
+              page: SettingsPage.vault,
+              value: _vaultCount?.toString()),
+          _settingsRow('Wakes', 'repeat', page: SettingsPage.wakes),
+          _settingsRow('Voice', 'mic',
+              page: SettingsPage.voice,
+              value: _ambientOn == null
+                  ? null
+                  : _ambientOn!
+                      ? 'Listening'
+                      : 'Off'),
+          _settingsRow('Scheduled', 'calendar-clock',
+              page: SettingsPage.scheduled),
+          _settingsRow('Web search', 'globe', page: SettingsPage.webSearch),
         ]),
-        label('Agents'),
-        ListGroup(children: [
-          nav(SettingsPage.memory, 'Memory', 'What agents remember',
-              'book-marked'),
-          ApprovalsRow(client: widget.client),
-          nav(SettingsPage.vault, 'Vault', 'Secrets for agents', 'lock'),
-          nav(SettingsPage.scheduled, 'Scheduled', 'Recurring jobs',
-              'calendar-clock'),
-          nav(SettingsPage.wakes, 'Wakes', 'Schedules',
-              'repeat'),
-          nav(SettingsPage.voice, 'Voice', 'Notes and speech',
-              'mic'),
-          nav(SettingsPage.webSearch, 'Web search', 'Agent search',
-              'globe'),
-        ]),
-        label('Appearance'),
+        _settingsGroupLabel('Appearance'),
         ListenableBuilder(
           listenable: ThemeManager.instance,
-          builder: (context, _) => ListGroup(children: [
-            nav(
-              SettingsPage.appearance,
-              'Appearance',
-              '${ThemeManager.instance.baseTheme.label} · ${ThemeManager.instance.currentFont.label}',
-              'sliders',
-            ),
-          ]),
+          builder: (context, _) {
+            final accent = tm.customAccent;
+            return ListGroup(children: [
+              _settingsRow(
+                'Theme and accent',
+                'sliders',
+                page: SettingsPage.appearance,
+                value: accent == null
+                    ? tm.baseTheme.label
+                    : '${tm.baseTheme.label} · ${accent.name}',
+              ),
+            ]);
+          },
         ),
       ],
     );

@@ -687,16 +687,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 ),
               ),
             )
-          else if (kMobile)
-            MobileBackBar(
-              title: t?.title ?? 'Task',
-              subtitle: t == null
-                  ? null
-                  : t.goalTitle == null
-                      ? t.status.label
-                      : '${t.status.label}  ·  Goal: ${t.goalTitle}',
-              onTitleTap: () {},
-            )
+          else if (kMobile) _mobileTopBar(t)
           else if (widget.embedded)
             Padding(
               padding: const EdgeInsets.fromLTRB(6, 8, 10, 4),
@@ -778,29 +769,311 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               )
             : t == null
                 ? const EmptyState(icon: 'layers', title: 'Task not found')
-                : Column(children: [
-                    Expanded(
-                      child: Stack(children: [
-                        CustomScrollView(slivers: [
-                          SliverToBoxAdapter(child: _tabBody(t)),
-                          SliverToBoxAdapter(
-                              child: Divider(height: 1, color: AppColors.line)),
-                          ..._roomSlivers(),
-                          const SliverToBoxAdapter(
-                              child: SizedBox(height: 64)),
-                        ]),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 16,
-                          child: Center(child: _fseg(t)),
+                : kMobile
+                    ? _mobileBody(t)
+                    : Column(children: [
+                        Expanded(
+                          child: Stack(children: [
+                            CustomScrollView(slivers: [
+                              SliverToBoxAdapter(child: _tabBody(t)),
+                              SliverToBoxAdapter(
+                                  child: Divider(height: 1, color: AppColors.line)),
+                              ..._roomSlivers(),
+                              const SliverToBoxAdapter(
+                                  child: SizedBox(height: 64)),
+                            ]),
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 16,
+                              child: Center(child: _fseg(t)),
+                            ),
+                          ]),
                         ),
-                      ]),
-                    ),
-                    _addresseeBar(),
-                    _composerBar(),
-                  ]);
+                        _addresseeBar(),
+                        _composerBar(),
+                      ]);
   }
+
+  // ---- phone v5 layout ----
+
+  /// v5 `.ptop`: back chevron left, overflow right. No centred title — the
+  /// page title below carries it.
+  Widget _mobileTopBar(TaskItem? t) => Padding(
+        padding: const EdgeInsets.fromLTRB(M.gutter, 10, M.gutter, 0),
+        child: Row(children: [
+          RoundBtn(
+            icon: 'chevron-left',
+            size: 40,
+            iconSize: 20,
+            tooltip: 'Back',
+            onTap: widget.onClose ??
+                () => Navigator.of(context).maybePop(),
+          ),
+          const Spacer(),
+          RoundBtn(
+            icon: 'more-horizontal',
+            size: 40,
+            iconSize: 19,
+            tooltip: 'Task actions',
+            onTap: t == null ? null : _statusMenu,
+          ),
+        ]),
+      );
+
+  /// The status moves the old column picker offered, behind the ⋯ button.
+  void _statusMenu() {
+    final t = task;
+    if (t == null || busy) return;
+    final allowed = [
+      for (final s in TaskStatus.values)
+        if (s == t.status ||
+            (s != TaskStatus.inProgress &&
+                (s == TaskStatus.todo ||
+                    !{
+                      TaskStatus.done,
+                      TaskStatus.failed,
+                      TaskStatus.cancelled
+                    }.contains(t.status))))
+          s,
+    ];
+    final size = MediaQuery.sizeOf(context);
+    showMenu<TaskStatus>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+          size.width - 56, M.appBarHeight + 8, 16, 0),
+      items: [
+        for (final s in allowed)
+          PopupMenuItem(
+            value: s,
+            enabled: s != t.status,
+            child: Text(s.label,
+                style: sans(15, color: s == t.status ? AppColors.fg3 : AppColors.fg1)),
+          ),
+      ],
+    ).then((s) {
+      if (s != null && s != t.status) _setStatus(s);
+    });
+  }
+
+  Widget _mobileBody(TaskItem t) => Column(children: [
+        Expanded(
+          child: CustomScrollView(slivers: [
+            SliverToBoxAdapter(child: _mobileV5Head(t)),
+            SliverToBoxAdapter(child: _mobileV5Groups(t)),
+            ..._roomSlivers(),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          ]),
+        ),
+        _addresseeBar(),
+        _composerBar(),
+      ]);
+
+  Widget _mobileV5Head(TaskItem t) {
+    final age = taskAge(t);
+    final inReview = t.status == TaskStatus.inReview;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          _v5Pill(
+            '${t.status.label}${age.isEmpty ? '' : ' · $age'}',
+            lit: inReview,
+          ),
+          const SizedBox(width: S.s8),
+          _v5Pill(t.id.length > 8 ? t.id.substring(0, 8) : t.id,
+              mono: true),
+        ]),
+        const SizedBox(height: S.s8),
+        Text(t.title,
+            style: sans(24,
+                weight: W.strong, height: 1.25, color: AppColors.fg1)),
+        if (t.goalTitle != null) ...[
+          const SizedBox(height: S.s4),
+          Text('Goal: ${t.goalTitle}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(14, color: AppColors.fg3)),
+        ],
+        if (inReview) ...[
+          const SizedBox(height: 14),
+          Row(children: [
+            Expanded(child: _v5Action('Approve', primary: true,
+                onTap: busy ? null : () => _setStatus(TaskStatus.done))),
+            const SizedBox(width: S.s8),
+            Expanded(child: _v5Action('Send back',
+                onTap: busy ? null : () => _setStatus(TaskStatus.inProgress))),
+          ]),
+        ],
+      ]),
+    );
+  }
+
+  Widget _v5Pill(String text, {bool lit = false, bool mono = false}) => Container(
+        height: 22,
+        padding: const EdgeInsets.symmetric(horizontal: S.s8),
+        decoration: BoxDecoration(
+          color: lit ? AppColors.runBg : AppColors.surface2,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        alignment: Alignment.center,
+        child: Text(text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: mono
+                ? mono(11, color: AppColors.fg3)
+                : sans(12,
+                    color: lit ? AppColors.run : AppColors.fg2)),
+      );
+
+  Widget _v5Action(String label,
+          {bool primary = false, VoidCallback? onTap}) =>
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 40,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: primary ? AppColors.accentFill : AppColors.surface2,
+            borderRadius: BorderRadius.circular(12),
+            border: primary ? null : Border.all(color: AppColors.line),
+          ),
+          child: Text(label,
+              style: sans(15,
+                  weight: W.label,
+                  color: primary ? AppColors.accentFg : AppColors.fg1)),
+        ),
+      );
+
+  Widget _v5Label(String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(S.s16, 14, 0, S.s6),
+        child: Text(text, style: sans(13, color: AppColors.fg3)),
+      );
+
+  Widget _v5Card({required Widget child, EdgeInsets? padding}) => Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.line),
+        ),
+        padding: padding ?? const EdgeInsets.symmetric(horizontal: 14),
+        child: child,
+      );
+
+  Widget _mobileV5Groups(TaskItem t) {
+    final brief = t.description.trim().isNotEmpty ? t.description : t.plan;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _v5Label('Brief'),
+        _v5Card(
+          padding: const EdgeInsets.fromLTRB(14, S.s12, 14, S.s12),
+          child: brief.trim().isEmpty
+              ? Text('No brief yet.', style: sans(15, color: AppColors.fg4))
+              : _Description(markdown: brief),
+        ),
+        if (t.workPlan.isNotEmpty) ...[
+          _v5Label('Plan'),
+          _v5Card(
+            padding: const EdgeInsets.fromLTRB(14, S.s12, 14, S.s12),
+            child: _WorkPlan(steps: t.workPlan),
+          ),
+        ],
+        _v5Label('Details'),
+        _v5Card(child: Column(children: _detailRows(t))),
+        _v5Label('Log'),
+        _v5Card(
+          padding: const EdgeInsets.fromLTRB(14, S.s8, 14, S.s8),
+          child: log.isEmpty
+              ? Text('No log entries yet.', style: sans(15, color: AppColors.fg4))
+              : Column(children: [
+                  BoardLog(
+                      entries: logExpanded || log.length <= 4
+                          ? log
+                          : log.sublist(0, 4),
+                      showAgent: true),
+                  if (log.length > 4)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextAction(
+                          logExpanded ? 'Show less' : 'Show all ${log.length}',
+                          onTap: () =>
+                              setState(() => logExpanded = !logExpanded)),
+                    ),
+                ]),
+        ),
+      ]),
+    );
+  }
+
+  List<Widget> _detailRows(TaskItem t) {
+    final holder = roster
+            .where((a) => a.active && a.hasSessionLease)
+            .firstOrNull ??
+        roster.where((a) => a.active).firstOrNull;
+    final agentId = holder?.agentId ??
+        (t.createdByKind == 'agent' ? t.createdById : '');
+    final reviewers = roster
+        .where((a) =>
+            a.active && a.role.toLowerCase().contains('review'))
+        .map((a) => a.agentId)
+        .toList();
+    final workspace = session?.projectFolder.split('/').last ?? '';
+    final seat = [workspace, taskAge(t)].where((s) => s.isNotEmpty).join(' · ');
+    final branch = session?.branch ?? '';
+    final changes = session?.shownChanges;
+    final files = _changedFiles();
+    final changesText = changes != null
+        ? '+${changes.added} −${changes.removed}'
+            '${changes.files > 0 ? ' · ${changes.files} ${changes.files == 1 ? 'file' : 'files'}' : ''}'
+        : files.isEmpty
+            ? ''
+            : '${files.length} ${files.length == 1 ? 'file' : 'files'}';
+    final paths = roster
+        .where((a) => a.active && a.scope.trim().isNotEmpty)
+        .map((a) => a.scope.trim())
+        .toSet()
+        .toList();
+    final rows = <(String, String)>[
+      ('Holder', agentId),
+      ('Review', reviewers.isEmpty ? '' : reviewers.join(', ')),
+      ('Seat', seat),
+      ('Branch', branch.trim()),
+      ('Changes', changesText),
+      ('Owned paths', paths.join(', ')),
+    ];
+    return [
+      for (var i = 0; i < rows.length; i++)
+        _detailRow(rows[i].$1, rows[i].$2, last: i == rows.length - 1),
+    ];
+  }
+
+  /// v5 `.pgi`: bright label left, dim value right, hairline between rows.
+  Widget _detailRow(String label, String value, {bool last = false}) => Container(
+        constraints: const BoxConstraints(minHeight: 44),
+        padding: const EdgeInsets.symmetric(vertical: S.s8),
+        decoration: BoxDecoration(
+          border: last
+              ? null
+              : Border(bottom: BorderSide(color: AppColors.line)),
+        ),
+        child: Row(children: [
+          Expanded(
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(15, color: AppColors.fg1)),
+          ),
+          const SizedBox(width: S.s12),
+          Flexible(
+            child: Text(value.isEmpty ? '—' : value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(15, color: AppColors.fg3)),
+          ),
+        ]),
+      );
 
   Widget _tabBody(TaskItem t) => _tabScroll(
         child: Center(
