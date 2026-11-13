@@ -84,8 +84,9 @@ class _MobileSearchPageState extends State<MobileSearchPage> {
   void _openTask(TaskItem t) {
     final client = widget.client;
     if (client == null) return;
-    Navigator.of(context).pop();
-    openTaskDetail(context, client, t.id);
+    final nav = Navigator.of(context);
+    nav.pop();
+    openTaskDetail(nav.context, client, t.id);
   }
 
   void _openAgent(CoordinationAgent a) {
