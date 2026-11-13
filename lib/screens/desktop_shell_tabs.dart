@@ -689,6 +689,31 @@ extension _DesktopShellTabsExt on _DesktopShellState {
           if (sessionNeedsYou(s)) s,
       ].length;
 
+  String? _folderForTab(_ShellTab t) {
+    if (t.isMissionControl || t.isBoard || t.isReadout) return null;
+    if (t.isDraft) {
+      final f = t.draftFolder?.trim() ?? '';
+      return f.isEmpty ? null : lastPathSegment(f, ifEmpty: f);
+    }
+    if (t.sessionId != null) {
+      for (final s in _sessions ?? const <SessionInfo>[]) {
+        if (s.id == t.sessionId) {
+          final f = s.projectFolder.trim();
+          return f.isEmpty ? null : lastPathSegment(f, ifEmpty: f);
+        }
+      }
+      final ws = _macSessionStatuses[t.key]?.state?.workspace.trim() ?? '';
+      return ws.isEmpty ? null : lastPathSegment(ws, ifEmpty: ws);
+    }
+    if (t.isFile) {
+      final path = t.filePath ?? '';
+      final slash = path.lastIndexOf('/');
+      final parent = slash > 0 ? path.substring(0, slash) : '';
+      return parent.isEmpty ? null : lastPathSegment(parent, ifEmpty: parent);
+    }
+    return null;
+  }
+
   Widget _mainTabsRow() => MainTabsStrip(
         controller: _stripController,
         tabs: [
@@ -704,6 +729,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         chipKeyFor: (key) => _chipKeys.putIfAbsent(key, () => GlobalKey()),
         providerFor: (t) => _tabProviders[t.profile],
         agentFor: _agentForTab,
+        folderFor: _folderForTab,
         mcAttentionCount: _mcAttentionCount,
         tasksActive: _activeTab?.isBoard ?? false,
         onOpenTasks: _client == null ? null : _openTasksTab,

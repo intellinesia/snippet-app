@@ -127,6 +127,43 @@ void main() {
           isTrue);
       expect(showedShortcuts, isTrue);
     });
+
+    testWidgets('Cmd/Ctrl+, opens settings', (tester) async {
+      var opened = 0;
+      final handler = ShellShortcutsHandler(
+        onCloseActiveTab: () {},
+        onNewSession: () {},
+        onActivateRelativeTab: (_) {},
+        onActivateTab: (_) {},
+        onOpenActiveFiles: () {},
+        onOpenMacGit: () {},
+        onOpenSettings: () => opened++,
+        onStopRunningTask: () {},
+        onShowShortcuts: () {},
+      );
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      expect(
+          handler.handleKeyEvent(const KeyDownEvent(
+            physicalKey: PhysicalKeyboardKey.comma,
+            logicalKey: LogicalKeyboardKey.comma,
+            timeStamp: Duration.zero,
+          )),
+          isTrue);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      expect(opened, 1);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+      expect(
+          handler.handleKeyEvent(const KeyDownEvent(
+            physicalKey: PhysicalKeyboardKey.comma,
+            logicalKey: LogicalKeyboardKey.comma,
+            timeStamp: Duration.zero,
+          )),
+          isTrue);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+      expect(opened, 2);
+    });
   });
 
   group('FileTreeSidebarPanel revalidation', () {

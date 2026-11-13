@@ -12,6 +12,10 @@ class ShellSplitView extends StatefulWidget {
     super.key,
     required this.sidebar,
     this.sidebarHidden = false,
+    this.sidebarWidth = kSidebarWidth,
+    this.onSidebarResize,
+    this.onSidebarResizeEnd,
+    this.onSidebarReset,
     this.sidebarHeader,
     this.sidebarTop,
     this.mainHeader,
@@ -45,6 +49,10 @@ class ShellSplitView extends StatefulWidget {
 
   final Widget sidebar;
   final bool sidebarHidden;
+  final double sidebarWidth;
+  final ValueChanged<double>? onSidebarResize;
+  final VoidCallback? onSidebarResizeEnd;
+  final VoidCallback? onSidebarReset;
   final Widget? sidebarHeader;
   final Widget? sidebarTop;
   final Widget? mainHeader;
@@ -224,24 +232,36 @@ class _ShellSplitViewState extends State<ShellSplitView> {
                     widget.readouts.any((r) => r.pane == ShellPane.right)))));
     final showLeft = !(widget.leftCollapsed && widget.leftTabs.isNotEmpty);
 
-    final subtleLine = BorderSide(color: AppColors.line.withValues(alpha: 0.65));
     return Expanded(
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (!widget.sidebarHidden)
-          Container(
-            width: kSidebarWidth,
-            decoration: BoxDecoration(
-              color: AppColors.windowBg,
-              border: Border(right: subtleLine),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (widget.sidebarTop != null) widget.sidebarTop!,
-                if (widget.sidebarHeader != null) widget.sidebarHeader!,
-                Expanded(child: widget.sidebar),
-              ],
-            ),
+          SizedBox(
+            width: widget.sidebarWidth,
+            child: Stack(children: [
+              ColoredBox(
+                color: AppColors.windowBg,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (widget.sidebarTop != null) widget.sidebarTop!,
+                    if (widget.sidebarHeader != null) widget.sidebarHeader!,
+                    Expanded(child: widget.sidebar),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 0,
+                bottom: 0,
+                right: 0,
+                width: 6,
+                child: _SidebarResizeHandle(
+                  key: const ValueKey('sidebar-resize-handle'),
+                  onResize: widget.onSidebarResize,
+                  onResizeEnd: widget.onSidebarResizeEnd,
+                  onReset: widget.onSidebarReset,
+                ),
+              ),
+            ]),
           ),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -281,6 +301,59 @@ class _ShellSplitViewState extends State<ShellSplitView> {
           ]),
         ),
       ]),
+    );
+  }
+}
+
+class _SidebarResizeHandle extends StatefulWidget {
+  const _SidebarResizeHandle({
+    super.key,
+    this.onResize,
+    this.onResizeEnd,
+    this.onReset,
+  });
+
+  final ValueChanged<double>? onResize;
+  final VoidCallback? onResizeEnd;
+  final VoidCallback? onReset;
+
+  @override
+  State<_SidebarResizeHandle> createState() => _SidebarResizeHandleState();
+}
+
+class _SidebarResizeHandleState extends State<_SidebarResizeHandle> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final divider = Align(
+      alignment: Alignment.centerRight,
+      child: SizedBox(
+        width: 1,
+        height: double.infinity,
+        child: ColoredBox(
+          color: _hover ? AppColors.border2 : AppColors.line,
+        ),
+      ),
+    );
+    if (widget.onResize == null && widget.onReset == null) {
+      return IgnorePointer(child: divider);
+    }
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeColumn,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragUpdate: widget.onResize == null
+            ? null
+            : (d) => widget.onResize!(d.delta.dx),
+        onHorizontalDragEnd:
+            widget.onResizeEnd == null ? null : (_) => widget.onResizeEnd!(),
+        onHorizontalDragCancel: widget.onResizeEnd,
+        onDoubleTap: widget.onReset,
+        child: divider,
+      ),
     );
   }
 }

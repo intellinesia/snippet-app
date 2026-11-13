@@ -331,6 +331,7 @@ class AgentThreadScreen extends StatefulWidget {
     this.embedded = false,
     this.tabHeader = false,
     this.showBack = true,
+    this.deskTrailing,
   });
 
   final DaemonClient client;
@@ -350,6 +351,7 @@ class AgentThreadScreen extends StatefulWidget {
   final bool tabHeader;
 
   final bool showBack;
+  final Widget? deskTrailing;
 
   @override
   State<AgentThreadScreen> createState() => _AgentThreadScreenState();
@@ -1438,7 +1440,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             : Navigator.of(context).canPop());
     final Widget? trailing;
     if (widget.tabHeader) {
-      trailing = null;
+      trailing = widget.deskTrailing;
     } else if (kMobile) {
       trailing = ChatGlassButton(
         icon: 'task',

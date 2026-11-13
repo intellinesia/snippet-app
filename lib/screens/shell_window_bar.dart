@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../mochi.dart';
@@ -101,6 +102,7 @@ class TopWorkspaceTabChip extends StatelessWidget {
   final GlobalKey? chipKey;
   final String? provider;
   final String? agentId;
+  final String? folder;
   final int attentionCount;
 
   const TopWorkspaceTabChip({
@@ -114,6 +116,7 @@ class TopWorkspaceTabChip extends StatelessWidget {
     this.chipKey,
     this.provider,
     this.agentId,
+    this.folder,
     this.attentionCount = 0,
   });
 
@@ -122,27 +125,34 @@ class TopWorkspaceTabChip extends StatelessWidget {
     final title = tab.title.isEmpty ? '(untitled)' : tab.title;
     final needsInput = status == 'waiting_for_input' || status == 'in_review';
     final working = status == 'running' || needsInput;
-    final showClose = canClose && onClose != null && isActive;
+    final closable = canClose && onClose != null;
+    final showClose = closable && isActive;
     // Mission Control is the pinned icon-only tab: Mochi plus the attention
     // count, no title or status dot (v5 `.tab[data-go=mc]`).
     if (tab.isMissionControl) {
-      return _TabChipBox(
-        isActive: isActive,
-        onTap: onTap,
-        chipKey: chipKey,
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          MochiIcon(color: AppColors.fg1, size: 18),
-          if (attentionCount > 0) ...[
-            const SizedBox(width: 6),
-            Text('$attentionCount', style: mono(11, color: AppColors.fg4)),
-          ],
-        ]),
+      return Tooltip(
+        message: tab.title.isEmpty ? 'Mission Control' : tab.title,
+        waitDuration: const Duration(milliseconds: 600),
+        child: _TabChipBox(
+          isActive: isActive,
+          onTap: onTap,
+          chipKey: chipKey,
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            MochiIcon(color: AppColors.fg1, size: 18),
+            if (attentionCount > 0) ...[
+              const SizedBox(width: 6),
+              Text('$attentionCount', style: mono(11, color: AppColors.fg4)),
+            ],
+          ]),
+        ),
       );
     }
+    final f = folder?.trim();
+    final tip = f != null && f.isNotEmpty ? '$title\n$f' : title;
     final hasProvider =
         provider != null && providerLogoAsset(provider) != null;
     final hasAgent = agentId != null && agentId!.isNotEmpty;
-    return _TabChipBox(
+    final chip = _TabChipBox(
       isActive: isActive,
       onTap: onTap,
       chipKey: chipKey,
@@ -205,6 +215,18 @@ class TopWorkspaceTabChip extends StatelessWidget {
           ],
         ],
       ),
+    );
+    return Tooltip(
+      message: tip,
+      waitDuration: const Duration(milliseconds: 600),
+      child: closable
+          ? Listener(
+              onPointerDown: (e) {
+                if ((e.buttons & kMiddleMouseButton) != 0) onClose!();
+              },
+              child: chip,
+            )
+          : chip,
     );
   }
 }
@@ -347,6 +369,7 @@ class MainTabsStrip extends StatelessWidget {
   final GlobalKey Function(String key) chipKeyFor;
   final String? Function(ShellTab)? providerFor;
   final String? Function(ShellTab)? agentFor;
+  final String? Function(ShellTab)? folderFor;
   final int mcAttentionCount;
   final bool tasksActive;
   final VoidCallback? onOpenTasks;
@@ -364,6 +387,7 @@ class MainTabsStrip extends StatelessWidget {
     required this.chipKeyFor,
     this.providerFor,
     this.agentFor,
+    this.folderFor,
     this.mcAttentionCount = 0,
     this.tasksActive = false,
     this.onOpenTasks,
@@ -371,54 +395,75 @@ class MainTabsStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return CustomScrollView(
       controller: controller,
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.only(right: 4),
-      children: [
-        for (var i = 0; i < tabs.length; i++) ...[
-          Center(
-            child: TopWorkspaceTabChip(
-              tab: tabs[i],
-              provider: providerFor?.call(tabs[i]),
-              agentId: agentFor?.call(tabs[i]),
-              isActive: tabs[i] == activeTab,
-              status: statusForTab(tabs[i]),
-              canClose: canCloseTab(tabs[i]),
-              onTap: () => onActivateTab(tabs[i]),
-              onClose: () => onCloseTab(tabs[i]),
-              chipKey: chipKeyFor(tabs[i].key),
-              attentionCount:
-                  tabs[i].isMissionControl ? mcAttentionCount : 0,
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.only(right: 4),
+          sliver: SliverToBoxAdapter(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < tabs.length; i++) ...[
+                  Center(
+                    child: TopWorkspaceTabChip(
+                      tab: tabs[i],
+                      provider: providerFor?.call(tabs[i]),
+                      agentId: agentFor?.call(tabs[i]),
+                      folder: folderFor?.call(tabs[i]),
+                      isActive: tabs[i] == activeTab,
+                      status: statusForTab(tabs[i]),
+                      canClose: canCloseTab(tabs[i]),
+                      onTap: () => onActivateTab(tabs[i]),
+                      onClose: () => onCloseTab(tabs[i]),
+                      chipKey: chipKeyFor(tabs[i].key),
+                      attentionCount:
+                          tabs[i].isMissionControl ? mcAttentionCount : 0,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                if (onOpenTasks != null) ...[
+                  Center(
+                    child: _TabChipBox(
+                      isActive: tasksActive,
+                      onTap: onOpenTasks!,
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        AppIcon('list',
+                            size: 14,
+                            color: tasksActive ? AppColors.fg1 : AppColors.fg3),
+                        const SizedBox(width: 7),
+                        Text('Tasks',
+                            style: sans(kMobile ? 14 : 12,
+                                color: tasksActive
+                                    ? AppColors.fg1
+                                    : AppColors.fg4)),
+                      ]),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                Center(
+                  child: IconBtn(
+                    'plus',
+                    size: 28,
+                    iconSize: 14,
+                    tooltip: 'New session',
+                    onTap: onNewSession,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 4),
-        ],
-        if (onOpenTasks != null) ...[
-          Center(
-            child: _TabChipBox(
-              isActive: tasksActive,
-              onTap: onOpenTasks!,
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                AppIcon('list',
-                    size: 14,
-                    color: tasksActive ? AppColors.fg1 : AppColors.fg3),
-                const SizedBox(width: 7),
-                Text('Tasks',
-                    style: sans(kMobile ? 14 : 12,
-                        color: tasksActive ? AppColors.fg1 : AppColors.fg4)),
-              ]),
-            ),
-          ),
-          const SizedBox(width: 4),
-        ],
-        Center(
-          child: IconBtn(
-            'plus',
-            size: 28,
-            iconSize: 14,
-            tooltip: 'New session',
-            onTap: onNewSession,
+        ),
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: GestureDetector(
+            key: const ValueKey('tab-strip-empty-space'),
+            behavior: HitTestBehavior.opaque,
+            onDoubleTap: onNewSession,
+            child: const SizedBox.expand(),
           ),
         ),
       ],

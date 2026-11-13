@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../ambient/controller.dart';
 import '../api.dart';
@@ -227,6 +228,8 @@ class _DesktopShellState extends State<DesktopShell>
   /// coordination failure can never take the session list down with it.
   bool _sidebarGit = false;
   bool _sidebarHidden = false;
+  bool _settingsOpen = false;
+  double _sidebarWidth = kSidebarWidth;
 
   /// Secondary-pane width, dragged by its handle. Width-driven rather than a
   /// flex ratio because a flex ratio cannot be dragged and has no natural size.
@@ -498,41 +501,8 @@ class _DesktopShellState extends State<DesktopShell>
         onOpenGoalPopover: _openGoalPopover,
       );
 
-  // Session and MC tabs carry their tools in the chat header, as in v5.
-  List<Widget> _railTools() => _activeTab?.sessionId != null
-      ? const []
-      : [
-        ...buildShellRailTools(
-          activeTab: _activeTab,
-          macSessionStatus:
-              _activeTab == null ? null : _macSessionStatuses[_activeTab!.key],
-          isRightPanelActive: _rightPanelActive,
-          onToggleRightPanel: _toggleRightPanel,
-          onSessionAction: _dispatchSessionAction,
-          onOpenGoalPopover: _openGoalPopover,
-          onAgentAction: _agentAction,
-        ),
-        if (_activeAgent != null && _agentHasPanelTabs)
-          Tooltip(
-            message: _panelHidden ? 'Show panel' : 'Hide panel',
-            child: Material(
-              color: _panelHidden ? Colors.transparent : AppColors.surface2,
-              borderRadius: BorderRadius.circular(8),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: _togglePanel,
-                child: SizedBox.square(
-                  dimension: 30,
-                  child: Center(
-                    child: AppIcon('panel-right',
-                        size: 16,
-                        color: _panelHidden ? AppColors.fg3 : AppColors.fg1),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ];
+  // Session, MC, and agent tabs carry their tools in the chat header.
+  List<Widget> _railTools() => const [];
 
   Future<void> _openGoalPopover(BuildContext btnCtx) => showGoalPopover(
         context: context,
@@ -625,6 +595,7 @@ class _DesktopShellState extends State<DesktopShell>
     onOpenCommandPalette: _openCommandPalette,
     onFocusComposer: () =>
         _macSessionControls[_activeTab?.key]?.performAction('focus_composer'),
+    onOpenSettings: _openShellSettings,
     onStopRunningTask: () => _macSessionControls[_activeTab?.key]?.stop(),
     onShowShortcuts: _showDesktopShortcuts,
   );
@@ -886,6 +857,32 @@ class _DesktopShellState extends State<DesktopShell>
 
   void _toggleSidebar() {
     setState(() => _sidebarHidden = !_sidebarHidden);
+  }
+
+  Future<void> _loadSidebarWidth() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.get(kSidebarWidthPref);
+    final width = raw is num ? raw.toDouble() : null;
+    if (!mounted || width == null) return;
+    _sidebarWidth = width.clamp(kSidebarMinWidth, kSidebarMaxWidth);
+  }
+
+  void _saveSidebarWidth() {
+    final width = _sidebarWidth;
+    SharedPreferences.getInstance()
+        .then((p) => p.setDouble(kSidebarWidthPref, width));
+  }
+
+  void _resizeSidebar(double delta) {
+    setState(() {
+      _sidebarWidth =
+          (_sidebarWidth + delta).clamp(kSidebarMinWidth, kSidebarMaxWidth);
+    });
+  }
+
+  void _resetSidebarWidth() {
+    setState(() => _sidebarWidth = kSidebarWidth);
+    _saveSidebarWidth();
   }
 
   void _toggleSecondaryPane() {
@@ -1274,6 +1271,7 @@ class _DesktopShellState extends State<DesktopShell>
 
   Future<void> _loadInstances() async {
     final items = await _store.load();
+    if (!kMobile) await _loadSidebarWidth();
     if (!mounted) return;
     setState(() {
       _instances = items;
