@@ -94,6 +94,29 @@ Future<void> presentFileOnDesktop(
   );
 }
 
+class _EmbeddedFileBar extends StatelessWidget {
+  const _EmbeddedFileBar({required this.path, required this.actions});
+  final String path;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 40,
+        padding: const EdgeInsets.only(left: S.s16, right: S.s8),
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.border))),
+        child: Row(children: [
+          Expanded(
+            child: Text(path,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TS.code(AppColors.fg3).copyWith(fontSize: 12)),
+          ),
+          ...actions,
+        ]),
+      );
+}
+
 /// Read-only viewer for one file.
 class FileViewer extends StatefulWidget {
   final DaemonClient client;
@@ -287,7 +310,10 @@ class _FileViewerState extends State<FileViewer> {
       body: SafeArea(
         bottom: false,
         child: Column(children: [
-          if (!widget.embedded)
+          // The Mac window bar has no file actions; other desktops get them from CardTabStrip.
+          if (widget.embedded && kMacOS)
+            _EmbeddedFileBar(path: widget.path, actions: actions)
+          else if (!widget.embedded)
             SnAppBar(
                 title: widget.name,
                 subtitle: widget.path,
