@@ -826,15 +826,18 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           ),
         ),
         const SizedBox(width: 6),
-        ListenableBuilder(
-          listenable: AmbientController.instance,
-          builder: (_, __) => AmbientController.instance.status.running
-              ? Row(mainAxisSize: MainAxisSize.min, children: [
-                  const _ListeningPill(),
-                  const SizedBox(width: 6),
-                ])
-              : const SizedBox.shrink(),
-        ),
+        if (_client != null) ...[
+          ListenableBuilder(
+            listenable: AmbientController.instance,
+            builder: (_, __) => Builder(
+              builder: (ctx) => _ListeningPill(
+                on: AmbientController.instance.status.running,
+                onTap: () => showAmbientStage(ctx, _client!),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+        ],
         if (_client != null) ...[
           Builder(
             builder: (ctx) => _TbBtn(
@@ -944,9 +947,12 @@ class _TbBtnState extends State<_TbBtn> {
   }
 }
 
-/// The `.lis` pill: shown in the sidebar footer while ambient listening is on.
+/// The sidebar footer's ambient control: "Listen" when off, the live pill when
+/// on; either opens the ambient panel.
 class _ListeningPill extends StatelessWidget {
-  const _ListeningPill();
+  const _ListeningPill({required this.on, required this.onTap});
+  final bool on;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -956,30 +962,41 @@ class _ListeningPill extends StatelessWidget {
         decoration: BoxDecoration(
             color: AppColors.ok, borderRadius: BorderRadius.circular(1)));
     return Tooltip(
-      message: 'Ambient voice is listening',
-      child: Container(
-        height: 26,
-        padding: const EdgeInsets.symmetric(horizontal: 9),
-        decoration: BoxDecoration(
-          color: AppColors.ok.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(13),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          SizedBox(
-            height: 12,
-            child: Row(children: [
-              bar(5),
-              const SizedBox(width: 2),
-              bar(11),
-              const SizedBox(width: 2),
-              bar(7),
-              const SizedBox(width: 2),
-              bar(9),
-            ]),
+      message: on ? 'Ambient voice is listening' : 'Ambient listening is off',
+      child: HoverSurface(
+        radius: 13,
+        hoverColor: on
+            ? AppColors.ok.withValues(alpha: 0.16)
+            : AppColors.fg1.withValues(alpha: 0.08),
+        onTap: onTap,
+        child: Container(
+          height: 26,
+          padding: const EdgeInsets.symmetric(horizontal: 9),
+          decoration: BoxDecoration(
+            color: on ? AppColors.ok.withValues(alpha: 0.10) : null,
+            borderRadius: BorderRadius.circular(13),
           ),
-          const SizedBox(width: 6),
-          Text('Listening', style: sans(12, color: AppColors.ok)),
-        ]),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (on)
+              SizedBox(
+                height: 12,
+                child: Row(children: [
+                  bar(5),
+                  const SizedBox(width: 2),
+                  bar(11),
+                  const SizedBox(width: 2),
+                  bar(7),
+                  const SizedBox(width: 2),
+                  bar(9),
+                ]),
+              )
+            else
+              AppIcon('mic', size: 13, color: AppColors.fg3),
+            const SizedBox(width: 6),
+            Text(on ? 'Listening' : 'Listen',
+                style: sans(12, color: on ? AppColors.ok : AppColors.fg3)),
+          ]),
+        ),
       ),
     );
   }
