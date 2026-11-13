@@ -24,6 +24,9 @@ import 'voice_screen.dart';
 import 'web_search_screen.dart';
 import 'accounts_screen.dart';
 import '../motion.dart';
+import '../window_background.dart';
+import 'dart:io' show File;
+import 'package:file_picker/file_picker.dart';
 import '../desktop_layout.dart';
 import '../wake_models.dart';
 import 'memory_screen.dart';
@@ -2479,6 +2482,12 @@ class AppearanceScreen extends StatelessWidget {
           children: [
             _AppearancePreviewCard(),
             const SizedBox(height: S.s16),
+            const SettingsGroup(
+              header: 'Window background',
+              footer:
+                  'An image replaces the window transparency. Clear it to see the desktop through the window again.',
+              children: [_WindowBackgroundRow()],
+            ),
             SettingsGroup(
               header: 'Palette',
               footer:
@@ -2492,6 +2501,56 @@ class AppearanceScreen extends StatelessWidget {
               children: typographyChildren,
             ),
           ],
+        );
+      },
+    );
+  }
+}
+
+class _WindowBackgroundRow extends StatelessWidget {
+  const _WindowBackgroundRow();
+
+  Future<void> _choose() async {
+    try {
+      final file = await FilePicker.pickFile(type: FileType.image);
+      final p = file?.path;
+      if (p != null && p.isNotEmpty) {
+        await WindowBackgroundStore.instance.setFromFile(p);
+      }
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = WindowBackgroundStore.instance;
+    return ValueListenableBuilder<String?>(
+      valueListenable: store.path,
+      builder: (context, p, _) {
+        final name = p == null ? 'Transparent' : p.split(RegExp(r'[\\/]')).last;
+        return SettingsRow(
+          label: 'Window background',
+          sub: name,
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(R.sm),
+            child: SizedBox(
+              width: 40,
+              height: 28,
+              child: p == null
+                  ? ColoredBox(color: AppColors.surface2)
+                  : Image.file(File(p),
+                      fit: BoxFit.cover,
+                      cacheWidth: 120,
+                      errorBuilder: (_, __, ___) =>
+                          ColoredBox(color: AppColors.surface2)),
+            ),
+          ),
+          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (p != null)
+              TextButton(
+                  onPressed: store.clear,
+                  child: const Text('Use transparency')),
+            TextButton(onPressed: _choose, child: const Text('Choose image')),
+          ]),
         );
       },
     );

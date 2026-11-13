@@ -65,6 +65,7 @@ import 'shell_split_view.dart';
 import 'shell_welcome.dart';
 import 'shell_window_bar.dart';
 import '../motion.dart';
+import '../window_background.dart';
 
 export 'inbound_share_picker.dart';
 export 'mobile_shell.dart';
@@ -537,6 +538,7 @@ class _DesktopShellState extends State<DesktopShell>
     if (!kMobile) HardwareKeyboard.instance.addHandler(_handleGlobalShortcuts);
     if (!kMobile) {
       loadSidebarAgentsFirst();
+      WindowBackgroundStore.instance.init();
     }
     if (kMobile) ShareInbound.listen(_onInboundShare);
     // Global shells mirror into tabs whenever the daemon reports a change: a
@@ -1809,7 +1811,8 @@ class _DesktopShellState extends State<DesktopShell>
       );
     }
     if (kMobile) return _mobileShell();
-    return ShellPanelScope(
+    return WindowBackground(
+        child: ShellPanelScope(
         open: _openShellPanel,
         client: _client,
         sessionId: _activeTab?.sessionId,
@@ -1903,7 +1906,7 @@ class _DesktopShellState extends State<DesktopShell>
               ]),
             ),
           );
-        }));
+        })));
   }
 }
 
