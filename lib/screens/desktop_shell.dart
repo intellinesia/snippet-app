@@ -359,6 +359,10 @@ class _DesktopShellState extends State<DesktopShell>
   /// Close ONE readout tab. Does not collapse the pane — other tabs may remain,
   /// and even an empty pane stays open so the next rail tap lands somewhere.
   Future<Object?> _openShellPanel(ShellPanelRequest request) {
+    if (!kMobile && request.purpose == ShellPanelPurpose.conversation) {
+      _openReadoutTab(_RightTab.request(request, originTabKey: _activeTab?.key));
+      return request.dismissed.future;
+    }
     final existing = _rightTabs.where((t) => t.key == request.key).firstOrNull;
     final tab =
         existing ?? _RightTab.request(request, originTabKey: _activeTab?.key);

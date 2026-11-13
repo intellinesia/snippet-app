@@ -74,13 +74,9 @@ class _NodeState2 extends State<_Node> with SingleTickerProviderStateMixin {
         _NodeState.running => AppColors.accent,
         _ => AppColors.fg3,
       };
-      // The backing hides the group's rail behind the icon.
-      final glyph = ColoredBox(
-        color: readingBg,
-        child: SizedBox.square(
-          dimension: 16,
-          child: Center(child: AppIcon(icon, size: 14, color: color)),
-        ),
+      final glyph = SizedBox.square(
+        dimension: 16,
+        child: Center(child: AppIcon(icon, size: 14, color: color)),
       );
       if (widget.state != _NodeState.running) return Center(child: glyph);
       return RepaintBoundary(
@@ -98,10 +94,10 @@ class _NodeState2 extends State<_Node> with SingleTickerProviderStateMixin {
     }
     const size = 9.0;
     final (fill, border) = switch (widget.state) {
-      _NodeState.ok => (readingBg, AppColors.ok),
+      _NodeState.ok => (Colors.transparent, AppColors.ok),
       _NodeState.failed => (AppColors.danger, AppColors.danger),
       _NodeState.running => (AppColors.accent, AppColors.accent),
-      _NodeState.neutral => (readingBg, AppColors.fg4),
+      _NodeState.neutral => (Colors.transparent, AppColors.fg4),
     };
     final dot = Container(
       width: size,
