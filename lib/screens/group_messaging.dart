@@ -1,7 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import '../motion_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -93,9 +92,7 @@ void openGroupThread(
           group: group,
           onClose: () => Navigator.pop(context),
         );
-    Navigator.of(context).push<void>(defaultTargetPlatform == TargetPlatform.iOS
-        ? CupertinoPageRoute(builder: page)
-        : MaterialPageRoute(builder: page));
+    Navigator.of(context).push<void>(AppPageRoute<void>(builder: page));
     return;
   }
   presentScreen(

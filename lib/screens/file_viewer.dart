@@ -15,6 +15,7 @@ import '../desktop_pick.dart';
 import '../file_actions.dart';
 import '../highlight.dart';
 import '../models.dart';
+import '../motion_routes.dart';
 import '../notifications.dart';
 import '../panel.dart';
 import '../platform.dart';
@@ -38,27 +39,12 @@ Future<void> pushFileViewerRoute(
   required String path,
   required String name,
 }) {
-  return Navigator.of(context).push(PageRouteBuilder<void>(
-    transitionDuration: Motion.fast,
-    reverseTransitionDuration: Motion.quick,
-    pageBuilder: (_, animation, __) => FileViewer(
+  return Navigator.of(context).push(AppPageRoute<void>(
+    builder: (_) => FileViewer(
       client: client,
       path: path,
       name: name,
       onClose: () => Navigator.of(context).pop(),
-    ),
-    transitionsBuilder: (_, animation, __, child) => FadeTransition(
-      opacity: animation,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0.025, 0),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(
-          parent: animation,
-          curve: Motion.enter,
-        )),
-        child: child,
-      ),
     ),
   ));
 }

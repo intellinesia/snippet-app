@@ -5,6 +5,7 @@ import 'platform.dart';
 import 'shell_panel.dart';
 import 'api.dart';
 import 'media_views.dart';
+import 'motion_routes.dart';
 import 'theme.dart';
 
 export 'shell_panel.dart' show ShellPanelPurpose, ShellPanelScope;
@@ -112,7 +113,7 @@ Future<T?> showModal<T>(
   final windowWidth = view.physicalSize.width / view.devicePixelRatio;
   if (windowWidth < kDesktopBreakpoint) {
     return Navigator.of(context)
-        .push<T>(MaterialPageRoute(builder: (_) => child));
+        .push<T>(AppPageRoute<T>(builder: (_) => child));
   }
   return showGeneralDialog<T>(
     context: context,

@@ -1258,10 +1258,10 @@ class R {
 }
 
 AnimationStyle get sheetMotion => AnimationStyle(
-      duration: Motion.open,
-      reverseDuration: Motion.close,
-      curve: Motion.enter,
-      reverseCurve: Motion.exit,
+      duration: const Duration(milliseconds: 320),
+      reverseDuration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeOutCubic.flipped,
     );
 
 /// The only spacing values the app uses.

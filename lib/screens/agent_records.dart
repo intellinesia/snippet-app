@@ -7,6 +7,7 @@ import '../swr.dart';
 import '../crew_widgets.dart';
 import '../media_views.dart' show DaemonScope;
 import '../models.dart';
+import '../motion_routes.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../pull_refresh.dart';
@@ -149,7 +150,7 @@ Future<void> openAgentActions(
   bool views = true,
 }) {
   if (kMobile) {
-    return Navigator.of(context).push<void>(MaterialPageRoute(
+    return Navigator.of(context).push<void>(AppPageRoute<void>(
       builder: (page) => Material(
         color: AppColors.bg,
         child: SafeArea(

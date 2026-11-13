@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../api.dart';
 import '../models.dart';
+import '../motion_routes.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -224,7 +225,7 @@ class _GitScreenState extends State<GitScreen> {
       );
       return;
     }
-    Navigator.push(context, MaterialPageRoute(builder: (_) => view()));
+    Navigator.push(context, AppPageRoute<void>(builder: (_) => view()));
   }
 
   Future<void> _branchSheet([BuildContext? anchor]) async {
