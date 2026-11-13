@@ -1219,6 +1219,7 @@ class _SessionActionsPanel extends StatefulWidget {
   final VoidCallback? onPullRequests;
   final VoidCallback onProcesses;
   final VoidCallback onRecurring;
+  final VoidCallback? onTasks;
   final VoidCallback onCompact;
   final VoidCallback onCheckpoints;
   final VoidCallback onMemory;
@@ -1251,6 +1252,7 @@ class _SessionActionsPanel extends StatefulWidget {
     this.onPullRequests,
     required this.onProcesses,
     required this.onRecurring,
+    this.onTasks,
     required this.onCompact,
     required this.onCheckpoints,
     required this.onMemory,
@@ -1501,6 +1503,12 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
                   ? '$runningLanes working in the background'
                   : 'Background work, finished',
               onTap: widget.onLanes),
+        if (widget.onTasks != null)
+          _row(
+              icon: 'task',
+              label: 'Tasks',
+              detail: 'Work on the board and its reviews',
+              onTap: widget.onTasks),
         _row(
             icon: 'scheduled',
             label: 'Scheduled',

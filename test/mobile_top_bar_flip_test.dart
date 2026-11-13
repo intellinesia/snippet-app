@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/screens/mobile_chrome.dart';
 import 'package:snippet/theme.dart';
-import 'package:snippet/widgets.dart';
 
 void main() {
   testWidgets(
@@ -88,45 +87,25 @@ void main() {
     }
   });
 
-  testWidgets(
-      'MobileMissionBar renders back, Mission Control pill, tasks button with badge, and handles taps',
+  testWidgets('MobileMissionBar is just the Mission Control pill',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
-      var backTaps = 0;
-    var actionTaps = 0;
-    var tasksTaps = 0;
-    await tester.pumpWidget(MaterialApp(
-      theme: buildAppTheme(),
-      home: Scaffold(
-        body: MobileMissionBar(
-          onBack: () => backTaps++,
-          onActions: () => actionTaps++,
-          onTasks: () => tasksTaps++,
-          tasksBadgeCount: 2,
+      var actionTaps = 0;
+      await tester.pumpWidget(MaterialApp(
+        theme: buildAppTheme(),
+        home: Scaffold(
+          body: MobileMissionBar(onActions: () => actionTaps++),
         ),
-      ),
-    ));
-    await tester.pump();
+      ));
+      await tester.pump();
 
-    expect(find.text('Mission Control'), findsOneWidget);
-    expect(find.byType(MochiIcon), findsOneWidget);
-    expect(find.byTooltip('Back'), findsOneWidget);
-    expect(find.byTooltip('Tasks'), findsOneWidget);
-    expect(find.text('2'), findsOneWidget);
-
-    final tasksIcon = tester.widget<AppIcon>(find
-        .descendant(
-            of: find.byTooltip('Tasks'), matching: find.byType(AppIcon))
-        .first);
-    expect(tasksIcon.name, 'task');
-
-    await tester.tap(find.byTooltip('Back'));
-    await tester.tap(find.text('Mission Control'));
-    await tester.tap(find.byTooltip('Tasks'));
-      expect(backTaps, 1);
+      expect(find.text('Mission Control'), findsOneWidget);
+      expect(find.byType(MochiIcon), findsOneWidget);
+      expect(find.byTooltip('Back'), findsNothing);
+      expect(find.byTooltip('Tasks'), findsNothing);
+      await tester.tap(find.text('Mission Control'));
       expect(actionTaps, 1);
-      expect(tasksTaps, 1);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

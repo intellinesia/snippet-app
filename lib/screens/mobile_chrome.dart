@@ -6,12 +6,10 @@ import '../ambient/controller.dart';
 import '../api.dart';
 import '../glass.dart';
 import '../mochi.dart';
-import '../models.dart';
 import '../motion_routes.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'mobile_voice_page.dart';
-import 'tasks/task_common.dart' show TaskFeed;
 import 'tasks/tasks_panel.dart';
 
 BoxDecoration _floating(double radius) => BoxDecoration(
@@ -252,102 +250,31 @@ Future<void> openMobileTasksPage(BuildContext context, DaemonClient client) {
   ));
 }
 
-class MobileMissionBar extends StatefulWidget {
-  const MobileMissionBar({
-    super.key,
-    required this.onBack,
-    this.onActions,
-    this.onTasks,
-    this.client,
-    this.tasksBadgeCount,
-  });
+class MobileMissionBar extends StatelessWidget {
+  const MobileMissionBar({super.key, this.onActions, this.client});
 
-  final VoidCallback onBack;
   final VoidCallback? onActions;
-  final VoidCallback? onTasks;
   final DaemonClient? client;
-  final int? tasksBadgeCount;
-
-  @override
-  State<MobileMissionBar> createState() => _MobileMissionBarState();
-}
-
-class _MobileMissionBarState extends State<MobileMissionBar> {
-  TaskFeed? _feed;
-
-  @override
-  void initState() {
-    super.initState();
-    _syncFeed();
-  }
-
-  @override
-  void didUpdateWidget(covariant MobileMissionBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.client != widget.client ||
-        (oldWidget.tasksBadgeCount == null) !=
-            (widget.tasksBadgeCount == null)) {
-      _feed?.dispose();
-      _feed = null;
-      _syncFeed();
-    }
-  }
-
-  void _syncFeed() {
-    if (widget.tasksBadgeCount != null || widget.client == null) return;
-    _feed = TaskFeed(widget.client!, onChange: () {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _feed?.dispose();
-    super.dispose();
-  }
-
-  int get _badgeCount {
-    final override = widget.tasksBadgeCount;
-    if (override != null) return override;
-    var count = 0;
-    for (final t in _feed?.tasks ?? const <TaskItem>[]) {
-      if (t.status == TaskStatus.inReview ||
-          t.status == TaskStatus.blocked ||
-          t.status == TaskStatus.failed) {
-        count++;
-      }
-    }
-    return count;
-  }
 
   @override
   Widget build(BuildContext context) {
-    final openTasks = widget.onTasks ??
-        (widget.client == null
-            ? null
-            : () => openMobileTasksPage(context, widget.client!));
+    final c = client;
     return SizedBox(
       height: 60,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: M.gutter),
         child: Row(children: [
-          RoundBtn(
-            icon: 'chevron-left',
-            tooltip: 'Back',
-            size: 40,
-            iconSize: 20,
-            onTap: widget.onBack,
-          ),
+          const SizedBox(width: 40),
           const SizedBox(width: 10),
           Expanded(
             child: Center(
               child: Semantics(
-                button: widget.onActions != null,
+                button: onActions != null,
                 label: 'Mission Control',
                 hint: 'Session actions',
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: widget.onActions,
+                  onTap: onActions,
                   child: Glass(
                     radius: BorderRadius.circular(20),
                     child: Container(
@@ -375,7 +302,7 @@ class _MobileMissionBarState extends State<MobileMissionBar> {
             ),
           ),
           const SizedBox(width: 10),
-          if (widget.client != null) ...[
+          if (c != null)
             ListenableBuilder(
               listenable: AmbientController.instance,
               builder: (context, _) {
@@ -383,23 +310,15 @@ class _MobileMissionBarState extends State<MobileMissionBar> {
                 return RoundBtn(
                   tooltip: live ? 'Voice call' : 'Start voice',
                   size: 40,
-                  onTap: () => startMobileVoice(context, widget.client!),
+                  onTap: () => startMobileVoice(context, c),
                   child: AppIcon('phone',
                       size: 18,
                       color: live ? AppColors.ok : AppColors.fg1),
                 );
               },
-            ),
-            const SizedBox(width: 10),
-          ],
-          RoundBtn(
-            icon: 'task',
-            tooltip: 'Tasks',
-            size: 40,
-            iconSize: 18,
-            badgeCount: _badgeCount,
-            onTap: openTasks,
-          ),
+            )
+          else
+            const SizedBox(width: 40),
         ]),
       ),
     );

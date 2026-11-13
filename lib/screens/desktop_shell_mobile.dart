@@ -124,12 +124,8 @@ extension _DesktopShellMobileExt on _DesktopShellState {
     );
   }
 
-  Widget _mobileMissionBar({VoidCallback? onActions}) => MobileMissionBar(
-        onBack: _showMobileChats,
-        onActions: onActions,
-        onTasks: () => _goMobileHome(MobileHome.tasks),
-        client: _client,
-      );
+  Widget _mobileMissionBar({VoidCallback? onActions}) =>
+      MobileMissionBar(onActions: onActions, client: _client);
 
   Widget _mobileShell() {
     final tab = _activeTab;

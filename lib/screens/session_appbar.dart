@@ -396,7 +396,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     final back = widget.onMenu ?? () => Navigator.maybePop(context);
     if (_isMissionControl) {
       return MobileMissionBar(
-        onBack: back,
         onActions: stuck ? _retryNow : () => _openActionsDrawer(s),
         client: widget.client,
       );
@@ -1048,6 +1047,9 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               sessionId: widget.sessionId,
               onClose: close))),
       onRecurring: () => run(_openRecurring),
+      onTasks: kMobile && _isMissionControl
+          ? () => run(() => openMobileTasksPage(context, widget.client))
+          : null,
       onCompact: () => run(_confirmCompact),
       onCheckpoints: () => navigate!(_showCheckpoints),
       onMemory: () => navigate!(() => presentScreen(context,

@@ -81,7 +81,7 @@ void main() {
           expect(find.byTooltip('Tasks'), findsNothing);
         } else {
           expect(find.byType(MobileMissionBar), findsOneWidget);
-          expect(find.byTooltip('Tasks'), findsOneWidget);
+          expect(find.byTooltip('Tasks'), findsNothing);
           await tester.tap(find.text('Mission Control').first);
           await _pump(tester);
           expect(find.text('Actions'), findsOneWidget);
@@ -89,7 +89,7 @@ void main() {
           expect(
               find.descendant(
                   of: find.byType(Drawer), matching: find.text('Tasks')),
-              findsNothing);
+              findsOneWidget);
           expect(
               find.descendant(
                   of: find.byType(Drawer), matching: find.byTooltip('Tasks')),
