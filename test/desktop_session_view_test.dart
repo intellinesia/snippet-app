@@ -368,14 +368,14 @@ void main() {
           findsOneWidget);
       expect(find.text('Running flutter analyze', findRichText: true),
           findsOneWidget);
-      expect(find.byType(DenseToolRow), findsNothing);
+      expect(find.byType(DenseToolRow), findsOneWidget);
       expect(find.text('Show'), findsNothing);
 
       await tester.tap(find.text('Ran 2 commands · edited 3 files',
           findRichText: true));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byType(DenseToolRow), findsNWidgets(5));
+      expect(find.byType(DenseToolRow), findsNWidgets(6));
 
       await _disposeSession(tester);
     });

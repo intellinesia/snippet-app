@@ -1055,6 +1055,8 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
 
   @override
   Widget build(BuildContext context) {
+    // One tool is its own row; a summary header would only hide it.
+    if (widget.rows.length == 1) return widget.rows.single;
     final steps = [
       for (final r in widget.rows.whereType<DenseToolRow>())
         ToolStep(tool: r.tool, args: r.args, result: r.result),
