@@ -463,7 +463,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
                   _labelForFolder(folder),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(12.5,
+                  style: sans(13,
                       color: selected ? AppColors.fg1 : AppColors.fg3),
                 ),
               ),

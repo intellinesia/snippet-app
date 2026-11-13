@@ -425,7 +425,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               overflow: TextOverflow.ellipsis,
               style: TS
                   .caption(AppColors.fg3)
-                  .copyWith(fontSize: 11.5, height: 1.2),
+                  .copyWith(fontSize: 12, height: 1.2),
             ),
           ),
         ]);

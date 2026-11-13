@@ -234,6 +234,8 @@ void main() {
 
     expect(openedAgent, isNotNull);
     expect(openedAgent?.id, 'a1');
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 11));
   });
 }
 
