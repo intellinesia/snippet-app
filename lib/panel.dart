@@ -31,6 +31,7 @@ Future<T?> presentScreen<T>(
   String? originSessionId,
   String? title,
   Widget Function(BuildContext context, VoidCallback closeTab)? sidePanel,
+  List<String>? iconAgentIds,
 }) {
   final host = ShellPanelScope.maybeOf(context);
   if (!kMobile &&
@@ -45,6 +46,7 @@ Future<T?> presentScreen<T>(
           sessionId: originSessionId ?? host.sessionId,
           title: title,
           sidePanel: sidePanel,
+          iconAgentIds: iconAgentIds,
           builder: builder,
         ))
         .then((value) => value as T?);

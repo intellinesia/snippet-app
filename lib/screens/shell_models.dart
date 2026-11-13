@@ -276,6 +276,12 @@ class ShellTab {
                       : '$instanceUrl|$sessionId';
 }
 
+/// A group conversation tab's members, drawn as a mochi cluster.
+List<String>? tabGroupAgentIds(ShellTab t) {
+  final ids = t.readout?.request?.iconAgentIds;
+  return ids == null || ids.isEmpty ? null : ids;
+}
+
 /// Icon for a tab, by kind. One helper so the four call sites that render a
 /// tab (top bar, desktop strip, split header, tab menu) cannot drift.
 String tabIconKind(ShellTab t) => t.isReadout

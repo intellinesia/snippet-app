@@ -1,4 +1,8 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -124,6 +128,18 @@ class _Client extends FakeWakeClient {
       desks.add(profile);
 }
 
+Future<void> _shot(WidgetTester t, String name) async {
+  const dir = String.fromEnvironment('SHOT_DIR');
+  if (dir.isEmpty) return;
+  await t.runAsync(() async {
+    final b = t.renderObject<RenderRepaintBoundary>(
+        find.byKey(const ValueKey('shot')));
+    final img = await b.toImage();
+    final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
+    File('$dir/$name.png').writeAsBytesSync(bytes!.buffer.asUint8List());
+  });
+}
+
 Widget _app(Widget child) => MaterialApp(
       theme: buildAppTheme(),
       home: Scaffold(body: child),
@@ -238,6 +254,52 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Revenue Scout'), findsOneWidget);
     expect(find.text('Tasks run on'), findsOneWidget);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('docked group panel opens Add member and Lead as nested pages',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1200, 800);
+    addTearDown(tester.view.reset);
+    final client = _Client(group: _group());
+    await tester.pumpWidget(_app(Align(
+      alignment: Alignment.centerRight,
+      child: SizedBox(
+        width: 340,
+        height: 800,
+        child: RepaintBoundary(
+          key: const ValueKey('shot'),
+          child: GroupInfoPanel(
+              client: client, group: _group(), docked: true, onClose: () {}),
+        ),
+      ),
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Members'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add member'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsNothing);
+    expect(find.text('Add member'), findsNWidgets(2));
+    expect(find.text('Snippet'), findsOneWidget);
+    await tester.tap(find.text('Snippet'));
+    await tester.pumpAndSettle();
+    expect(client.added, ['snippet']);
+    expect(find.text('3 members'), findsOneWidget);
+
+    await _shot(tester, 'group_members');
+    await tester.tap(find.text('Lead').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Group lead'), findsWidgets);
+    await _shot(tester, 'group_lead_page');
+    await tester.tap(find.text('Snippet').last);
+    await tester.pumpAndSettle();
+    expect(client.leads, ['snippet']);
+    expect(tester.takeException(), isNull);
     debugDefaultTargetPlatformOverride = null;
   });
 }

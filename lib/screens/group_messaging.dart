@@ -106,6 +106,7 @@ void openGroupThread(
     maxWidth: 720,
     maxHeight: 720,
     title: group.title.trim().isEmpty ? 'Group' : group.title.trim(),
+    iconAgentIds: group.agentIds,
     sidePanel: (ctx, closeTab) => GroupInfoPanel(
       key: ValueKey('group-info-${group.id}'),
       client: client,
@@ -1064,19 +1065,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     );
     final docked = kMobile ? null : ShellRequestScope.maybeOf(context);
     final toggleSide = docked?.sidePanel != null ? docked?.toggleSide : null;
-    final trailing = toggleSide != null
-        ? Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              tasksBtn,
-              const SizedBox(width: 6),
-              ChatGlassButton(
-                icon: 'panel-right',
-                tooltip: 'Group info',
-                onTap: toggleSide,
-              ),
-            ],
-          )
+    // Docked in a shell tab, the group name toggles the info panel.
+    final Widget? trailing = toggleSide != null
+        ? null
         : !kMobile && !widget.embedded && widget.onClose != null
         ? Row(
             mainAxisSize: MainAxisSize.min,
@@ -1098,8 +1089,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         title: _title,
         status: _statusLine(),
         onTitleTap: () {
-          if (docked?.showSide != null && docked?.sidePanel != null) {
-            docked!.showSide!();
+          if (toggleSide != null) {
+            toggleSide();
             return;
           }
           unawaited(showGroupInfo(

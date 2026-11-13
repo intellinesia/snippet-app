@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../chat/agent_cluster.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -117,11 +118,13 @@ class CardTabChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(R.sm),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            AppIcon(
-              tabIconKind(tab),
-              size: 14,
-              color: isActive ? AppColors.accent : AppColors.fg4,
-            ),
+            tabGroupAgentIds(tab) != null
+                ? AgentCluster(ids: tabGroupAgentIds(tab)!, size: 16)
+                : AppIcon(
+                    tabIconKind(tab),
+                    size: 14,
+                    color: isActive ? AppColors.accent : AppColors.fg4,
+                  ),
             const SizedBox(width: S.s6),
             Flexible(
               child: Text(
@@ -166,11 +169,13 @@ class CardTabChip extends StatelessWidget {
         ),
         child: Row(
           children: [
-            AppIcon(
-              tabIconKind(tab),
-              size: 14,
-              color: isActive ? AppColors.accent : AppColors.fg4,
-            ),
+            tabGroupAgentIds(tab) != null
+                ? AgentCluster(ids: tabGroupAgentIds(tab)!, size: 16)
+                : AppIcon(
+                    tabIconKind(tab),
+                    size: 14,
+                    color: isActive ? AppColors.accent : AppColors.fg4,
+                  ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(

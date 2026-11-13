@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import '../chat/agent_cluster.dart';
 import '../mochi.dart';
 
 import '../models.dart';
@@ -154,6 +155,7 @@ class TopWorkspaceTabChip extends StatelessWidget {
     final hasProvider =
         provider != null && providerLogoAsset(provider) != null;
     final hasAgent = agentId != null && agentId!.isNotEmpty;
+    final groupIds = tabGroupAgentIds(tab);
     final chip = _TabChipBox(
       isActive: isActive,
       onTap: onTap,
@@ -167,6 +169,8 @@ class TopWorkspaceTabChip extends StatelessWidget {
           else if (tab.isBoard)
             AppIcon('list',
                 size: 14, color: isActive ? AppColors.fg1 : AppColors.fg3)
+          else if (groupIds != null)
+            AgentCluster(ids: groupIds, size: 17)
           else if (hasAgent)
             AgentMochi(agentId!, size: 15)
           else if (hasProvider)

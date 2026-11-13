@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -382,11 +384,60 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   List<CoordinationAgent> _agents = const [];
   Map<String, CoordinationAgent> _byId = const {};
   bool _busy = false;
+  final _navKey = GlobalKey<NavigatorState>();
+  // The nested navigator's root page is built once; this rebuilds it.
+  final _rev = ValueNotifier(0);
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _rev.value++;
+  }
+
+  @override
+  void dispose() {
+    _rev.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
     _loadAgents();
+  }
+
+  /// Docked: a nested page in the panel. Elsewhere: a sheet.
+  Future<String?> _pickFrom(String title, List<Widget> Function(void Function(String)) rows) {
+    if (widget.docked && _navKey.currentState != null) {
+      final done = Completer<String?>();
+      _navKey.currentState!
+          .push(_NestedPageRoute(
+              title: title,
+              builder: (_) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _InfoCard(children: rows((id) {
+                        if (!done.isCompleted) done.complete(id);
+                        _navKey.currentState?.maybePop();
+                      })),
+                    ],
+                  )))
+          .then((_) {
+        if (!done.isCompleted) done.complete(null);
+      });
+      return done.future;
+    }
+    return showAppSheet<String>(
+      context,
+      title: title,
+      child: Builder(
+        builder: (ctx) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: rows((id) => Navigator.pop(ctx, id)),
+        ),
+      ),
+    );
   }
 
   Future<void> _loadAgents() async {
@@ -456,26 +507,19 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
         if (m.isAgent) m,
     ];
     if (members.isEmpty) return;
-    final picked = await showAppSheet<String>(
-      context,
-      title: 'Group lead',
-      child: Builder(
-        builder: (ctx) => Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final m in members)
-              ListRow(
-                title: _name(m.id, m.kind),
-                leading: AgentMochi(m.id, size: 20),
-                trailing: m.id == _group.lead
-                    ? AppIcon('check', size: 14, color: AppColors.fg1)
-                    : null,
-                onTap: () => Navigator.pop(ctx, m.id),
-              ),
-          ],
-        ),
-      ),
+    final picked = await _pickFrom(
+      'Group lead',
+      (pick) => [
+        for (final m in members)
+          ListRow(
+            title: _name(m.id, m.kind),
+            leading: AgentMochi(m.id, size: 20),
+            trailing: m.id == _group.lead
+                ? AppIcon('check', size: 14, color: AppColors.fg1)
+                : null,
+            onTap: () => pick(m.id),
+          ),
+      ],
     );
     if (picked == null || picked == _group.lead || !mounted) return;
     await _update(() => widget.client.updateGroup(_group.id, lead: picked));
@@ -492,24 +536,17 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
       toast(context, 'Every agent is already in this group');
       return;
     }
-    final picked = await showAppSheet<String>(
-      context,
-      title: 'Add member',
-      child: Builder(
-        builder: (ctx) => Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final a in addable)
-              ListRow(
-                title: a.displayName.trim().isEmpty ? a.id : a.displayName,
-                subtitle: a.id,
-                leading: AgentMochi(a.id, size: 20),
-                onTap: () => Navigator.pop(ctx, a.id),
-              ),
-          ],
-        ),
-      ),
+    final picked = await _pickFrom(
+      'Add member',
+      (pick) => [
+        for (final a in addable)
+          ListRow(
+            title: a.displayName.trim().isEmpty ? a.id : a.displayName,
+            subtitle: a.id,
+            leading: AgentMochi(a.id, size: 20),
+            onTap: () => pick(a.id),
+          ),
+      ],
     );
     if (picked == null || !mounted) return;
     await _update(
@@ -592,6 +629,16 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.docked) return _frame();
+    return Navigator(
+      key: _navKey,
+      onGenerateRoute: (_) => _NestedPageRoute(
+          builder: (_) => ValueListenableBuilder<int>(
+              valueListenable: _rev, builder: (_, __, ___) => _frame())),
+    );
+  }
+
+  Widget _frame() {
     final title = _group.title.trim().isEmpty ? 'Group' : _group.title.trim();
     final actions = <_CircleAction>[
       if (widget.onOpenTasks != null)
@@ -929,14 +976,22 @@ class _InfoRow extends StatelessWidget {
                   color: accent ? AppColors.accent : AppColors.fg3),
               const SizedBox(width: S.s12),
             ],
-            Flexible(
-              flex: hasValue ? 1 : 100,
-              fit: hasValue ? FlexFit.loose : FlexFit.tight,
-              child: Text(label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(kMobile ? 15 : 13, color: labelColor)),
-            ),
+            if (hasValue)
+              // Not Flexible: a loose flex share would strand the value mid-row.
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 160),
+                child: Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(kMobile ? 15 : 13, color: labelColor)),
+              )
+            else
+              Expanded(
+                child: Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(kMobile ? 15 : 13, color: labelColor)),
+              ),
             if (hasValue)
               Expanded(
                 child: Padding(

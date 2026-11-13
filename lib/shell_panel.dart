@@ -40,6 +40,7 @@ class ShellPanelRequest {
       this.sessionId,
       this.title,
       this.sidePanel,
+      this.iconAgentIds,
       required this.builder});
 
   final ShellPanelPurpose purpose;
@@ -52,6 +53,9 @@ class ShellPanelRequest {
   /// Info docked in the shell's right panel beside this conversation; gets a
   /// callback that closes the conversation tab.
   final Widget Function(BuildContext context, VoidCallback closeTab)? sidePanel;
+
+  /// Agents whose mochi stand in for the tab icon (a group's members).
+  final List<String>? iconAgentIds;
 
   /// Set by the shell: reveal or toggle [sidePanel].
   VoidCallback? showSide;
