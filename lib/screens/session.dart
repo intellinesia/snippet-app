@@ -48,7 +48,6 @@ import '../plain_text.dart';
 import '../turn_changes_card.dart';
 import 'artifact_viewer.dart';
 import 'tasks/task_common.dart' show openTaskDetail;
-import 'tasks/tasks_panel.dart' show openTasksPage;
 import 'pull_requests.dart';
 import '../github_models.dart';
 import 'presented_file_card.dart';
@@ -74,7 +73,6 @@ import '../glass.dart' show GlassTopFrame, TopFadeMask;
 import 'mobile_chrome.dart';
 import 'session_panels.dart';
 import 'session_coordination_cards.dart';
-import 'mission_control/widgets/ambient_stage.dart';
 import 'mission_control/widgets/autonomy_panel.dart';
 import 'mission_control/mission_control_state.dart'
     show
@@ -164,9 +162,6 @@ class SessionScreen extends StatefulWidget {
   /// Desktop Mission Control: the header title opens the docked agent info.
   final VoidCallback? onDeskInfo;
 
-  /// Desktop: open the Tasks board as a tab instead of a pushed page.
-  final VoidCallback? onOpenTasks;
-
   /// Desktop: the shell's actions menu, shown in the header instead of the sheet.
   final Widget Function()? deskActions;
 
@@ -222,7 +217,6 @@ class SessionScreen extends StatefulWidget {
       this.onOpenScheduled,
       this.onTogglePanel,
       this.onDeskInfo,
-      this.onOpenTasks,
       this.deskActions,
       this.acceptDrops = true,
       this.live,

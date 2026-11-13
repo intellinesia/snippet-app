@@ -119,7 +119,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     return SessionScreen(
       onTogglePanel: _togglePanel,
       onDeskInfo: t.isMissionControl ? _showAgentInfo : null,
-      onOpenTasks: _openTasksTab,
       deskActions: primary
           ? () => Row(
               mainAxisSize: MainAxisSize.min, children: _headerTools(t))

@@ -882,6 +882,7 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final labelColor = accent ? AppColors.accent : AppColors.fg1;
+    final hasValue = value != null && value!.isNotEmpty;
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
@@ -896,12 +897,14 @@ class _InfoRow extends StatelessWidget {
               const SizedBox(width: S.s12),
             ],
             Flexible(
+              flex: hasValue ? 1 : 100,
+              fit: hasValue ? FlexFit.loose : FlexFit.tight,
               child: Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: sans(kMobile ? 15 : 13, color: labelColor)),
             ),
-            if (value != null && value!.isNotEmpty)
+            if (hasValue)
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(left: S.s8),
@@ -912,7 +915,6 @@ class _InfoRow extends StatelessWidget {
                       style: sans(13, color: AppColors.fg3)),
                 ),
               ),
-            if (value == null || value!.isEmpty) const Spacer(),
             if (trailing != null) ...[
               const SizedBox(width: S.s4),
               trailing!,

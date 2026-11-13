@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/widgets.dart' show AppIcon;
 import 'package:snippet/screens/agent_messaging.dart';
 import 'package:snippet/screens/agent_panel.dart';
 import 'package:snippet/chat/chat_info.dart' show AgentInfoPanel;
@@ -67,6 +68,14 @@ void main() {
     ]) {
       expect(find.text(label), findsWidgets, reason: label);
     }
+    final chevrons = find.byWidgetPredicate(
+        (w) => w is AppIcon && w.name == 'chevron-right');
+    final rights = {
+      for (final e in chevrons.evaluate())
+        if (tester.getTopRight(find.byWidget(e.widget).first).dx > 1000)
+          tester.getTopRight(find.byWidget(e.widget).first).dx.round()
+    };
+    expect(rights.length, 1, reason: 'row arrows share one right edge');
     await closeShell(tester);
   });
 }
