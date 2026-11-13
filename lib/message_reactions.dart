@@ -340,6 +340,114 @@ Future<void> showMessageActionsSheet(
   }
 }
 
+/// Selected text inside a message, reported up by [MessageSelectionArea] so the
+/// right-click menu can offer "Copy selection".
+class _MessageMenuScope extends InheritedWidget {
+  const _MessageMenuScope({required this.selection, required super.child});
+  final ValueNotifier<String> selection;
+
+  @override
+  bool updateShouldNotify(_MessageMenuScope old) => old.selection != selection;
+}
+
+/// Desktop text selection for a message body, with the app's message menu in
+/// place of the system Copy / Select All one.
+class MessageSelectionArea extends StatelessWidget {
+  const MessageSelectionArea({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final holder =
+        context.dependOnInheritedWidgetOfExactType<_MessageMenuScope>()?.selection;
+    return SelectionArea(
+      onSelectionChanged: holder == null
+          ? null
+          : (content) => holder.value = content?.plainText ?? '',
+      contextMenuBuilder: (_, __) => const SizedBox.shrink(),
+      child: child,
+    );
+  }
+}
+
+/// Right-click menu on a desktop message: quick reactions, Reply, Copy.
+Future<void> showMessageContextMenu(
+  BuildContext context, {
+  required Offset point,
+  required String text,
+  String selection = '',
+  VoidCallback? onReply,
+  ValueChanged<String>? onReact,
+}) async {
+  final picked = await showAppMenu<String>(
+    context,
+    point: point,
+    minWidth: 236,
+    maxWidth: 260,
+    items: [
+      if (onReact != null) ...[
+        const _ReactionStripEntry(),
+        const PopupMenuDivider(height: 9),
+      ],
+      if (onReply != null)
+        appMenuItem(value: 'reply', icon: 'reply', label: 'Reply'),
+      if (selection.trim().isNotEmpty)
+        appMenuItem(value: 'copy-selection', icon: 'copy', label: 'Copy selection'),
+      if (text.trim().isNotEmpty)
+        appMenuItem(value: 'copy', icon: 'copy', label: 'Copy message'),
+    ],
+  );
+  if (picked == null) return;
+  if (picked == 'reply') {
+    onReply?.call();
+  } else if (picked == 'copy' || picked == 'copy-selection') {
+    await Clipboard.setData(
+        ClipboardData(text: picked == 'copy' ? text : selection));
+    if (context.mounted) toast(context, 'Copied');
+  } else if (picked.startsWith('react:')) {
+    onReact?.call(picked.substring(6));
+  }
+}
+
+class _ReactionStripEntry extends PopupMenuEntry<String> {
+  const _ReactionStripEntry();
+
+  @override
+  double get height => 40;
+
+  @override
+  bool represents(String? value) => false;
+
+  @override
+  State<_ReactionStripEntry> createState() => _ReactionStripEntryState();
+}
+
+class _ReactionStripEntryState extends State<_ReactionStripEntry> {
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            for (final emoji in kMessageReactions)
+              Semantics(
+                label: 'React $emoji',
+                button: true,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => Navigator.of(context).pop('react:$emoji'),
+                  child: SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: Center(child: Text(emoji, style: _emojiStyle(18))),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+}
+
 class MessageActionsView extends StatelessWidget {
   const MessageActionsView({
     super.key,
@@ -535,6 +643,7 @@ class _MessageBubbleInteractiveState extends State<MessageBubbleInteractive>
 
   final GlobalKey _bubbleKey = GlobalKey();
   final GlobalKey _contentKey = GlobalKey();
+  final ValueNotifier<String> _selection = ValueNotifier('');
   late final AnimationController _spring;
 
   double _dragOffset = 0;
@@ -558,6 +667,7 @@ class _MessageBubbleInteractiveState extends State<MessageBubbleInteractive>
 
   @override
   void dispose() {
+    _selection.dispose();
     _spring.dispose();
     super.dispose();
   }
@@ -592,6 +702,21 @@ class _MessageBubbleInteractiveState extends State<MessageBubbleInteractive>
     }
     _springStart = _dragOffset;
     _spring.forward(from: 0);
+  }
+
+  void _openMenuAt(Offset point) {
+    // Let a right-click's own word selection land first.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showMessageContextMenu(
+        context,
+        point: point,
+        text: widget.text,
+        selection: _selection.value,
+        onReply: widget.onReply,
+        onReact: widget.onReact,
+      );
+    });
   }
 
   void _open() {
@@ -661,7 +786,7 @@ class _MessageBubbleInteractiveState extends State<MessageBubbleInteractive>
     final progress = (_dragOffset / _swipeTrigger).clamp(0.0, 1.0);
     final armed = _dragOffset >= _swipeTrigger;
 
-    return RawGestureDetector(
+    final detector = RawGestureDetector(
       behavior: HitTestBehavior.translucent,
       gestures: gestures,
       child: Stack(
@@ -697,6 +822,16 @@ class _MessageBubbleInteractiveState extends State<MessageBubbleInteractive>
             child: child,
           ),
         ],
+      ),
+    );
+    if (kMobile) return detector;
+    return _MessageMenuScope(
+      selection: _selection,
+      child: Listener(
+        onPointerDown: (e) {
+          if (e.buttons == kSecondaryMouseButton) _openMenuAt(e.position);
+        },
+        child: detector,
       ),
     );
   }

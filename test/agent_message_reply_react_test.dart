@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -332,6 +333,38 @@ void main() {
       expect(client.sent.single['body'], '');
       expect(find.byType(MessageActionsView), findsNothing);
       expect(find.byType(MessageReactionChips), findsOneWidget);
+
+      await t.pumpWidget(const SizedBox());
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('desktop right-click opens the message menu, not the system one',
+      (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      final client = _FakeClient([
+        _ev('m1', 1, 'agent', 'Finished running benchmarks.'),
+      ]);
+      await _open(t, client, size: const Size(1280, 800));
+
+      final gesture = await t.startGesture(
+          t.getCenter(find.text('Finished running benchmarks.')),
+          kind: PointerDeviceKind.mouse,
+          buttons: kSecondaryMouseButton);
+      await gesture.up();
+      await _pumpFrames(t);
+
+      expect(find.text('Select All'), findsNothing);
+      expect(find.text('Reply'), findsOneWidget);
+      expect(find.text('Copy message'), findsOneWidget);
+
+      await t.tap(find.text('✅'));
+      await _pumpFrames(t);
+      expect(client.sent.single['reaction'], '✅');
+      expect(client.sent.single['reply_to'], 'm1');
+      expect(find.text('Copy message'), findsNothing);
 
       await t.pumpWidget(const SizedBox());
     } finally {

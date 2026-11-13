@@ -1391,7 +1391,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         ],
       ),
     );
-    return kMobile ? richText : SelectionArea(child: richText);
+    return kMobile ? richText : MessageSelectionArea(child: richText);
   }
 
   Widget _wideCap(Widget child) => kMobile

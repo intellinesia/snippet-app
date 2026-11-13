@@ -1749,7 +1749,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         : null;
     final styledText = textWidget == null
         ? null
-        : (kMobile ? textWidget : SelectionArea(child: textWidget));
+        : (kMobile ? textWidget : MessageSelectionArea(child: textWidget));
     final hasExtras = images.isNotEmpty ||
         files.isNotEmpty ||
         audio.isNotEmpty ||
