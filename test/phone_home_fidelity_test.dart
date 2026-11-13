@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/models.dart';
-import 'package:snippet/screens/mobile_bottom_bar.dart';
 import 'package:snippet/screens/mobile_session_home.dart';
 import 'package:snippet/screens/session_list_row.dart';
 import 'package:snippet/screens/shell_models.dart';
@@ -124,13 +123,9 @@ void main() {
       }
 
       expect(find.text('Ignored shell bar'), findsNothing);
-      expect(find.byType(MobileSearchHeader), findsOneWidget);
-      expect(find.text('Search sessions'), findsOneWidget);
-      expect(
-          find.descendant(
-              of: find.byType(MobileSearchHeader),
-              matching: find.text('Sessions')),
-          findsNothing);
+      expect(find.byType(MobileHomeTopBar), findsOneWidget);
+      expect(find.byType(MissionControlDock), findsOneWidget);
+      expect(find.byTooltip('Voice call'), findsOneWidget);
       expect(find.text('Listening'), findsNothing);
       expect(find.text('2'), findsOneWidget);
 
@@ -153,7 +148,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('2'), findsNothing);
       expect(find.byTooltip('Mission Control'), findsOneWidget);
-      expect(find.byTooltip('Start voice'), findsNothing);
+      expect(find.byTooltip('Start voice'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
@@ -319,10 +314,9 @@ void main() {
     }
   });
 
-  test('MobileHome.chats has label Sessions and MobileBottomBar excludes Tasks',
+  test('MobileHome.chats has label Sessions',
       () {
     expect(MobileHome.chats.label, 'Sessions');
     expect(MobileHome.agents.label, 'Agents');
-    expect(MobileBottomBar, isNotNull);
   });
 }

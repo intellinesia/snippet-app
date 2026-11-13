@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'drafts.dart';
-import 'screens/mobile_chrome.dart' show loadMobileAgentsList;
 import 'screens/sidebar_mode.dart' show loadSidebarAgentsFirst;
 import 'ambient/ambient_edge_glow.dart';
 import 'notifications.dart';
@@ -51,7 +50,7 @@ void main() async {
   } catch (_) {}
   await Drafts.instance.init();
   try {
-    await (kMobile ? loadMobileAgentsList() : loadSidebarAgentsFirst());
+    if (!kMobile) await loadSidebarAgentsFirst();
   } catch (_) {}
   await ResponseCache.instance.init();
   if (kCanNotify) {

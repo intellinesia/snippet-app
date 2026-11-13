@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:snippet/screens/mobile_session_home.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/notifications.dart';
 import 'package:snippet/models.dart';
@@ -118,7 +119,7 @@ void main() {
     }
   });
 
-  testWidgets('the saved agent list opens an agent and back returns to it',
+  testWidgets('the Agents tab opens an agent and back returns to it',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     DaemonClient.wsConnector = (uri, {connectTimeout, pingInterval}) =>
@@ -128,10 +129,13 @@ void main() {
       SharedPreferences.setMockInitialValues({
         'instances':
             '[{"name":"Local","url":"http://127.0.0.1:9090","token":"tok"}]',
-        'mobile_home_agents_list': true,
       });
       await _pumpShell(tester);
 
+      await tester.tap(find.descendant(
+          of: find.byType(MobileHomeTopBar), matching: find.text('Agents')));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(AgentsSidebarPanel), findsOneWidget);
 
       final sidebar = tester.widget<Sidebar>(find.byType(Sidebar));
@@ -147,7 +151,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
       shell = tester.widget<MobileShell>(find.byType(MobileShell));
-      expect(shell.mobileHome, MobileHome.chats);
+      expect(shell.mobileHome, MobileHome.agents);
       expect(find.byType(CoordinationAgentDetail), findsNothing);
       expect(find.byType(AgentsSidebarPanel), findsOneWidget);
 

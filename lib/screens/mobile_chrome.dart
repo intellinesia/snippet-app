@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../ambient/controller.dart';
 import '../api.dart';
@@ -23,22 +22,6 @@ BoxDecoration _floating(double radius) => BoxDecoration(
             color: AppColors.fg1.withValues(alpha: 0.08), spreadRadius: 1),
       ],
     );
-
-// Shared by the home list and callers that switch between Agents and Sessions.
-final mobileAgentsList = ValueNotifier<bool>(false);
-const _agentsListPref = 'mobile_home_agents_list';
-
-Future<void> loadMobileAgentsList() async {
-  mobileAgentsList.value =
-      (await SharedPreferences.getInstance()).getBool(_agentsListPref) ?? false;
-}
-
-void setMobileAgentsList(bool agents) {
-  FocusManager.instance.primaryFocus?.unfocus();
-  mobileAgentsList.value = agents;
-  SharedPreferences.getInstance()
-      .then((p) => p.setBool(_agentsListPref, agents));
-}
 
 class RoundBtn extends StatelessWidget {
   const RoundBtn({

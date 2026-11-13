@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../api.dart';
 import '../drafts.dart';
@@ -23,9 +24,9 @@ import '../pull_refresh.dart';
 import '../motion.dart';
 import '../mochi.dart';
 import '../ambient/controller.dart';
-import 'mobile_bottom_bar.dart';
 import 'mobile_chrome.dart';
 import 'mobile_session_home.dart';
+import 'mobile_voice_page.dart' show startMobileVoice;
 export 'sidebar_mobile.dart';
 
 class Sidebar extends StatefulWidget {
@@ -120,9 +121,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   String _filterQuery = '';
   String _agentFilterQuery = '';
 
-  /// The phone home list shows agents instead of sessions; kept across launches.
-  bool get _agentsList => mobileAgentsList.value;
-
   final GlobalKey<TasksPanelState> _tasksPanelKey =
       GlobalKey<TasksPanelState>();
   final GlobalKey<SettingsPanelState> _mobileSettingsKey =
@@ -147,7 +145,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
   /// Measured height of the shared bottom bar; scroll views pad by it so the
   /// last row clears the glass.
-  double _barHeight = 0;
+  // Plus button, its gap, the dock and the gap under it.
+  double get _barHeight =>
+      44 + 10 + 56 + 12 + MediaQuery.viewPaddingOf(context).bottom;
   double get _bottomClearance => _barHeight + M.gutter;
 
   bool get _showMobileBottomBar =>
@@ -207,10 +207,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     Drafts.instance.addListener(_onDrafts);
     _loadProviders();
     _mountedHomes.add(_currentHome);
-    if (kMobile) {
-      mobileAgentsList.addListener(_onAgentsList);
-      loadMobileAgentsList();
-    }
     if (!kMobile) sidebarAgentsFirst.addListener(_onAgentsList);
     if (widget.mobileHome != MobileHome.settings) {
       _lastMainHome = widget.mobileHome;
@@ -267,7 +263,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
   @override
   void dispose() {
-    mobileAgentsList.removeListener(_onAgentsList);
     sidebarAgentsFirst.removeListener(_onAgentsList);
     Drafts.instance.removeListener(_onDrafts);
     _homeAnimC?.dispose();
@@ -321,18 +316,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                         ],
                       ),
                     ),
-                    child: MobileBottomBar(
-                    home: widget.mobileHome,
-                    onHome: widget.onMobileHome,
-                    onNewSession: widget.onNewSession,
-                    showNewSession: false,
-                    search: null,
-                    onHeightChanged: (h) {
-                      if (mounted && h != _barHeight) {
-                        setState(() => _barHeight = h);
-                      }
-                    },
-                  ),
+                    child: _mobileDock(hasClient),
                   ),
                 ),
             ]),
@@ -529,7 +513,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     final destination = home ?? widget.mobileHome;
     switch (destination) {
       case MobileHome.chats:
-        final showAgents = agentsMirror || _agentsList;
+        final showAgents = agentsMirror;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -758,48 +742,53 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         ),
       );
     }
-    return ListenableBuilder(
-      listenable: AmbientController.instance,
-      builder: (context, _) {
-        final listeningOn =
-            !agents && (widget.listening || AmbientController.instance.running);
-        return MobileSearchHeader(
-          controller: agents ? _agentSearchCtl : _searchCtl,
-          focusNode: _searchFocus,
-          hint: agents ? 'Search agents' : 'Search sessions',
-          onChanged: (v) => setState(() =>
-              agents ? _agentFilterQuery = v : _filterQuery = v),
-          mcBadgeCount: _mcAttentionCount,
-          onMc: widget.onOpenMissionControl,
-          listening: listeningOn,
-          trailing: [
-            if (agents)
-              Builder(
-                builder: (btnCtx) => RoundBtn(
-                  icon: 'plus',
-                  tooltip: 'New agent or group',
-                  size: 40,
-                  iconSize: 18,
-                  onTap: !hasClient
-                      ? null
-                      : () => (agentsMirror
-                              ? _agentsMirrorKey.currentState
-                              : _agentsPanelKey.currentState)
-                          ?.openCreateMenu(btnCtx, above: false),
-                ),
-              )
-            else ...[
-              RoundBtn(
-                icon: 'plus',
-                tooltip: 'New session',
-                size: 40,
-                iconSize: 18,
-                onTap: hasClient ? widget.onNewSession : null,
-              ),
-            ],
-          ],
-        );
-      },
+    return MobileHomeTopBar(
+      key: const ValueKey('mobile-home-top'),
+      agents: agents,
+      controller: agents ? _agentSearchCtl : _searchCtl,
+      focusNode: _searchFocus,
+      onChanged: (v) =>
+          setState(() => agents ? _agentFilterQuery = v : _filterQuery = v),
+      onSessions: () => widget.onMobileHome(MobileHome.chats),
+      onAgents: () => widget.onMobileHome(MobileHome.agents),
+      onSettings: () => widget.onMobileHome(MobileHome.settings),
+    );
+  }
+
+  Widget _mobileDock(bool hasClient) {
+    final agents = widget.mobileHome == MobileHome.agents;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          M.gutter, 12, M.gutter, 12 + MediaQuery.viewPaddingOf(context).bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Builder(
+            builder: (btnCtx) => _DockPlus(
+              tooltip: agents ? 'New agent or group' : 'New session',
+              onTap: !hasClient
+                  ? null
+                  : agents
+                      ? () => _agentsMirrorKey.currentState
+                          ?.openCreateMenu(btnCtx, above: true)
+                      : widget.onNewSession,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ListenableBuilder(
+            listenable: AmbientController.instance,
+            builder: (context, _) => MissionControlDock(
+              live: widget.listening || AmbientController.instance.running,
+              badgeCount: _mcAttentionCount,
+              onOpen: widget.onOpenMissionControl,
+              onCall: widget.client == null
+                  ? null
+                  : () => startMobileVoice(context, widget.client!),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1735,3 +1724,35 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
 }
 
+class _DockPlus extends StatelessWidget {
+  const _DockPlus({required this.tooltip, this.onTap});
+
+  final String tooltip;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: tooltip,
+        child: Semantics(
+          button: true,
+          label: tooltip,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap == null
+                ? null
+                : () {
+                    HapticFeedback.lightImpact();
+                    onTap!();
+                  },
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                  color: AppColors.accentFill, shape: BoxShape.circle),
+              alignment: Alignment.center,
+              child: AppIcon('plus', size: 20, color: AppColors.accentFg),
+            ),
+          ),
+        ),
+      );
+}

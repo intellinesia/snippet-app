@@ -113,7 +113,7 @@ void main() {
     final home = tester.widget<MobileShell>(find.byType(MobileShell));
     expect(home.chatsOpen, isTrue);
     expect(home.canPopRoute, isFalse);
-    expect(find.byType(MobileSearchHeader), findsWidgets);
+    expect(find.byType(MobileHomeTopBar), findsWidgets);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
     debugDefaultTargetPlatformOverride = null;

@@ -7,10 +7,8 @@ import 'package:snippet/api.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/create_agent_form.dart';
-import 'package:snippet/screens/mobile_bottom_bar.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/screens/sidebar.dart';
-import 'package:snippet/screens/mobile_chrome.dart';
 import 'package:snippet/screens/mobile_session_home.dart';
 import 'package:snippet/screens/session_list_row.dart';
 import 'package:snippet/screens/mission_control_card.dart';
@@ -161,20 +159,24 @@ void main() {
       await tester.pumpAndSettle();
       expect(newSessionCalled, isTrue);
 
-      // The header carries its own inline filter field; the bar has no search.
-      expect(_field('Search sessions'), findsOneWidget);
-      expect(find.byTooltip('Search'), findsNothing);
+      // Search sits behind its button in the top bar.
+      expect(_field('Search sessions'), findsNothing);
       expect(
           find.descendant(
-              of: find.byType(MobileBottomBar), matching: find.text('Sessions')),
+              of: find.byType(MobileHomeTopBar), matching: find.text('Sessions')),
           findsOneWidget);
+      await tester.tap(find.byTooltip('Search'));
+      await tester.pumpAndSettle();
+      expect(_field('Search sessions'), findsOneWidget);
       await tester.enterText(_field('Search sessions'), 'Nonexistent');
       await tester.pumpAndSettle();
       expect(find.text('No matching sessions'), findsOneWidget);
-      await tester.tap(find.byTooltip('Clear').first);
+      await tester.enterText(_field('Search sessions'), '');
       await tester.pumpAndSettle();
       expect(find.text('Feature Setup'), findsOneWidget);
       expect(_field('Search sessions'), findsOneWidget);
+      await tester.tap(find.byTooltip('Close search'));
+      await tester.pumpAndSettle();
 
       // 2. Tasks is a tab of its own, with its own New.
       await tester.pumpWidget(buildTestWidget(home: MobileHome.tasks));
@@ -183,33 +185,31 @@ void main() {
       expect(find.text('No tasks yet'), findsOneWidget);
       expect(find.byTooltip('New task'), findsOneWidget);
 
-      // 3. Agents: flipping the home list (the header's Sessions segment)
-      // shows agents, search filters them and New creates one.
+      // 3. Agents: the top bar's Agents segment opens the agents list,
+      // search filters it and New creates one.
       await tester.pumpWidget(buildTestWidget(home: MobileHome.chats));
       await tester.pumpAndSettle();
-      setMobileAgentsList(true);
+      await tester.tap(find.descendant(
+          of: find.byType(MobileHomeTopBar), matching: find.text('Agents')));
+      await tester.pumpAndSettle();
+      expect(currentHome, MobileHome.agents);
+      await tester.pumpWidget(buildTestWidget(home: MobileHome.agents));
       await tester.pumpAndSettle();
       expect(find.text('Snippet'), findsOneWidget);
       expect(find.text('Reviewer'), findsOneWidget);
       expect(find.text('Feature Setup'), findsNothing);
-      expect(
-          (await SharedPreferences.getInstance())
-              .getBool('mobile_home_agents_list'),
-          isTrue);
 
+      await tester.tap(find.byTooltip('Search'));
+      await tester.pumpAndSettle();
       expect(_field('Search agents'), findsOneWidget);
       await tester.enterText(_field('Search agents'), 'review');
       await tester.pumpAndSettle();
       expect(find.text('Snippet'), findsNothing);
       expect(find.text('Reviewer'), findsOneWidget);
-      await tester.tap(find.byTooltip('Clear').first);
+      await tester.tap(find.byTooltip('Close search'));
       await tester.pumpAndSettle();
 
       expect(find.byType(CreateAgentForm), findsNothing);
-      await tester.tap(find.descendant(
-          of: find.byType(MobileBottomBar), matching: find.text('Agents')));
-      await tester.pumpAndSettle();
-      expect(currentHome, MobileHome.agents);
       await tester.tap(find.byTooltip('New agent or group'));
       await tester.pumpAndSettle();
       expect(find.text('New group'), findsOneWidget);
@@ -219,11 +219,10 @@ void main() {
       // Phone sheets have no close X; tapping the scrim dismisses.
       await tester.tapAt(const Offset(20, 20));
       await tester.pumpAndSettle();
-      setMobileAgentsList(false);
       await tester.tap(find.descendant(
-          of: find.byType(MobileBottomBar), matching: find.text('Sessions')));
+          of: find.byType(MobileHomeTopBar), matching: find.text('Sessions')));
       await tester.pumpAndSettle();
-      expect(find.text('Feature Setup'), findsOneWidget);
+      expect(currentHome, MobileHome.chats);
 
       // 4. Settings has no New of its own.
       await tester.pumpWidget(buildTestWidget(home: MobileHome.settings));
@@ -328,6 +327,8 @@ void main() {
       }
 
       // Search reaches past the visible rows to every matching chat.
+      await tester.tap(find.byTooltip('Search'));
+      await tester.pumpAndSettle();
       await tester.enterText(_field('Search sessions'), 'Title 13');
       await tester.pumpAndSettle();
       expect(find.text('Session Title 13'), findsOneWidget);

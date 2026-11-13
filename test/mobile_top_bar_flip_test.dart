@@ -1,28 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/screens/mobile_chrome.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/widgets.dart';
 
 void main() {
-  testWidgets('setMobileAgentsList persists preference cleanly', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    mobileAgentsList.value = false;
-    setMobileAgentsList(true);
-    await tester.pump();
-    expect(mobileAgentsList.value, isTrue);
-    expect(
-        (await SharedPreferences.getInstance())
-            .getBool('mobile_home_agents_list'),
-        isTrue);
-    setMobileAgentsList(false);
-    await tester.pump();
-    expect(mobileAgentsList.value, isFalse);
-  });
-
   testWidgets(
       'MobileHomeHeader renders compact 44px bar, MC badge, 17px strong title, listening pill, trailing action, and settings back mode',
       (tester) async {

@@ -11,7 +11,6 @@ import 'package:snippet/models.dart';
 import 'package:snippet/motion.dart';
 import 'package:snippet/screens/agents_sidebar_panel.dart';
 import 'package:snippet/screens/desktop_shell.dart';
-import 'package:snippet/screens/mobile_bottom_bar.dart';
 import 'package:snippet/screens/mobile_chrome.dart';
 import 'package:snippet/screens/mobile_session_home.dart';
 import 'package:snippet/screens/mission_control/coordination_agent_detail.dart';
@@ -93,7 +92,7 @@ SessionInfo _session(
 
 void main() {
   testWidgets(
-      'phone shell launches on Sessions home with MobileBottomBar and opens MC from its header button',
+      'phone shell launches on Sessions home with the Mission Control dock and opens MC from it',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     DaemonClient.wsConnector =
@@ -115,10 +114,10 @@ void main() {
 
       final shell = tester.widget<MobileShell>(find.byType(MobileShell));
       expect(shell.chatsOpen, isTrue);
-      expect(find.byType(MobileSearchHeader), findsOneWidget);
+      expect(find.byType(MobileHomeTopBar), findsOneWidget);
       expect(find.byType(MobileHomeHeader), findsNothing);
       expect(find.byTooltip('New session'), findsOneWidget);
-      expect(find.byType(MobileBottomBar), findsOneWidget);
+      expect(find.byType(MissionControlDock), findsOneWidget);
       expect(find.byType(MobileMissionBar).hitTestable(), findsNothing);
 
       await tester.tap(find.byTooltip('Mission Control').first);
@@ -128,7 +127,7 @@ void main() {
       expect(tester.widget<MobileShell>(find.byType(MobileShell)).chatsOpen,
           isFalse);
       expect(find.byType(MobileMissionBar), findsOneWidget);
-      expect(find.byType(MobileBottomBar), findsNothing);
+      expect(find.byType(MissionControlDock), findsNothing);
       expect(find.byTooltip('New session'), findsNothing);
 
       await tester.pumpWidget(const SizedBox.shrink());
@@ -141,7 +140,7 @@ void main() {
   });
 
   testWidgets(
-      'Sidebar MC badge counts all unsettled sessions needing attention and Settings uses MobileHomeHeader while Sessions uses MobileSearchHeader',
+      'Sidebar MC badge counts all unsettled sessions needing attention and Settings uses MobileHomeHeader while Sessions uses MobileHomeTopBar',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
@@ -196,21 +195,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(
         find.descendant(
-            of: find.byType(MobileSearchHeader), matching: find.text('2')),
+            of: find.byType(MissionControlDock), matching: find.text('2')),
         findsOneWidget);
     expect(find.byType(MobileHomeHeader), findsNothing);
-    expect(find.widgetWithText(TextField, ''), findsOneWidget);
-    expect(find.text('Search sessions'), findsOneWidget);
+    expect(find.byTooltip('Search'), findsOneWidget);
+    expect(find.byTooltip('Settings'), findsOneWidget);
 
     await tester.pumpWidget(buildSidebar(MobileHome.agents));
     await tester.pumpAndSettle();
     expect(find.byTooltip('New agent or group'), findsOneWidget);
-    expect(find.byType(MobileSearchHeader), findsOneWidget);
-    expect(find.text('Search agents'), findsOneWidget);
-    expect(find.descendant(
-        of: find.byType(MobileBottomBar),
-        matching: find.text('New agent or group')), findsNothing);
-    expect(find.byType(MobileBottomBar), findsOneWidget);
+    expect(find.byType(MobileHomeTopBar), findsOneWidget);
+    expect(find.byType(MissionControlDock), findsOneWidget);
     expect(find.byType(AgentsSidebarPanel), findsOneWidget);
 
     await tester.pumpWidget(buildSidebar(
@@ -220,13 +215,13 @@ void main() {
     ));
     await tester.pump();
     expect(find.byType(CoordinationAgentDetail), findsOneWidget);
-    expect(find.byType(MobileBottomBar), findsNothing);
+    expect(find.byType(MissionControlDock), findsNothing);
     expect(find.byTooltip('New session'), findsNothing);
 
     await tester.pumpWidget(buildSidebar(MobileHome.settings));
     await tester.pumpAndSettle();
     expect(find.byType(MobileHomeHeader), findsWidgets);
-    expect(find.byType(MobileBottomBar), findsNothing);
+    expect(find.byType(MissionControlDock), findsNothing);
     expect(find.byTooltip('Back'), findsOneWidget);
     expect(find.byTooltip('Mission Control'), findsNothing);
 
@@ -235,7 +230,7 @@ void main() {
       section: SettingsPage.general,
     ));
     await tester.pump();
-    expect(find.byType(MobileBottomBar), findsNothing);
+    expect(find.byType(MissionControlDock), findsNothing);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
