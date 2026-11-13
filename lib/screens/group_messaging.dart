@@ -14,6 +14,7 @@ import '../panel.dart';
 import '../platform.dart';
 import '../pull_refresh.dart';
 import '../swr.dart';
+import '../glass.dart' show TopFadeMask;
 import '../theme.dart';
 import '../widgets.dart';
 import '../chat/agent_cluster.dart';
@@ -1005,7 +1006,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   Widget build(BuildContext context) {
     final hideChrome = widget.embedded;
     return Material(
-      color: readingBg,
+      color: kMobile ? readingBg : Colors.transparent,
       child: SafeArea(
         top: !hideChrome,
         bottom: false,
@@ -1014,7 +1015,12 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             Expanded(
               child: Stack(
                 children: [
-                  Positioned.fill(child: _body(hideChrome: hideChrome)),
+                  Positioned.fill(
+                      child: kMobile || hideChrome
+                          ? _body(hideChrome: hideChrome)
+                          : TopFadeMask(
+                              clear: ChatHeader.overlap - 24,
+                              child: _body(hideChrome: hideChrome))),
                   if (!hideChrome)
                     Positioned(
                       top: 0,

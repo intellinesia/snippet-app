@@ -499,21 +499,7 @@ class ChatHeader extends StatelessWidget {
     if (!kMobile) {
       return SizedBox(
         height: overlap,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: const [0, 0.78, 1],
-              colors: [
-                AppColors.bg,
-                AppColors.bg,
-                AppColors.bg.withValues(alpha: 0)
-              ],
-            ),
-          ),
-          child: Align(alignment: Alignment.topCenter, child: body),
-        ),
+        child: Align(alignment: Alignment.topCenter, child: body),
       );
     }
     return SizedBox(

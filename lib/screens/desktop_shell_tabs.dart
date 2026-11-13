@@ -675,6 +675,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
   }
 
   String? _agentForTab(_ShellTab t) {
+    if (t.isReadout && t.readout?.isAgent == true) return t.readout!.agent!.id;
     if (t.sessionId == null) return null;
     for (final s in _sessions ?? const <SessionInfo>[]) {
       if (s.id == t.sessionId) return s.displayAgentId;

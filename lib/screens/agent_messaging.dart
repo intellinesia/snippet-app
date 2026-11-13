@@ -1356,7 +1356,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     // here require one.
     final hideChrome = _noChrome;
     return Material(
-      color: readingBg,
+      color: kMobile ? readingBg : Colors.transparent,
       child: SafeArea(
         top: !hideChrome,
         bottom: false,
@@ -1365,7 +1365,12 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             Expanded(
               child: Stack(
                 children: [
-                  Positioned.fill(child: _viewBody()),
+                  Positioned.fill(
+                      child: kMobile || hideChrome
+                          ? _viewBody()
+                          : TopFadeMask(
+                              clear: ChatHeader.overlap - 24,
+                              child: _viewBody())),
                   if (!hideChrome)
                     Positioned(
                       left: 0,

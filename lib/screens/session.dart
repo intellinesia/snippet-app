@@ -69,7 +69,7 @@ import 'desk_memory.dart';
 import 'recurring.dart';
 import 'file_changes.dart';
 import 'action_list.dart';
-import '../glass.dart' show GlassTopFrame;
+import '../glass.dart' show GlassTopFrame, TopFadeMask;
 import 'mobile_chrome.dart';
 import 'session_panels.dart';
 import 'session_coordination_cards.dart';
@@ -1623,7 +1623,7 @@ class _SessionScreenState extends State<SessionScreen>
                                               _shownRows.add(rowKey(i));
                                             }
                                           }
-                                          return ScrollConfiguration(
+                                          final list = ScrollConfiguration(
                                             behavior:
                                                 ScrollConfiguration.of(context)
                                                     .copyWith(
@@ -1677,6 +1677,11 @@ class _SessionScreenState extends State<SessionScreen>
                                               },
                                             ),
                                           );
+                                          return _deskHeader
+                                              ? TopFadeMask(
+                                                  clear: _kDeskHeaderH - 8,
+                                                  child: list)
+                                              : list;
                                         })),
                                 if (!_stickToBottom && s != null)
                                   Positioned(

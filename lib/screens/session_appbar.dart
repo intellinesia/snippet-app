@@ -1193,28 +1193,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     return SizedBox(
       height: _kDeskHeaderH,
       child: Stack(clipBehavior: Clip.none, children: [
-        Positioned(
-          left: 0,
-          right: 0,
-          top: 0,
-          bottom: -20,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: const [0, 0.8, 1],
-                  colors: [
-                    AppColors.bg,
-                    AppColors.bg,
-                    AppColors.bg.withValues(alpha: 0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
         Positioned(right: 12, top: 7, child: actions),
       ]),
     );

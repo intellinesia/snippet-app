@@ -147,3 +147,36 @@ class _Frosted extends InheritedWidget {
   @override
   bool updateShouldNotify(_Frosted oldWidget) => false;
 }
+
+/// Fades a scrolling body out under a floating header without painting a fill,
+/// so a see-through desktop window stays see-through.
+class TopFadeMask extends StatelessWidget {
+  const TopFadeMask(
+      {super.key, required this.clear, this.fade = 16, required this.child});
+
+  final double clear;
+  final double fade;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (r) {
+          final h = r.height <= 0 ? 1.0 : r.height;
+          final a = (clear / h).clamp(0.0, 1.0);
+          final b = ((clear + fade) / h).clamp(a, 1.0);
+          return LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            stops: [0, a, b, 1],
+            colors: const [
+              Colors.transparent,
+              Colors.transparent,
+              Colors.white,
+              Colors.white,
+            ],
+          ).createShader(r);
+        },
+        child: child,
+      );
+}
