@@ -24,9 +24,10 @@ import '../pull_refresh.dart';
 import '../motion.dart';
 import '../mochi.dart';
 import '../ambient/controller.dart';
+import '../ambient/ambient_model.dart';
+import 'mobile_voice_page.dart' show openMobileVoicePage;
 import 'mobile_bottom_bar.dart';
 import 'mobile_chrome.dart';
-import 'mobile_search_page.dart';
 export 'sidebar_mobile.dart';
 
 class Sidebar extends StatefulWidget {
@@ -334,7 +335,7 @@ class SidebarState extends State<Sidebar> {
                     onHome: widget.onMobileHome,
                     onNewSession: widget.onNewSession,
                     showNewSession: false,
-                    onSearch: _searchAction(),
+                    search: _barSearch(),
                     onHeightChanged: (h) {
                       if (mounted && h != _barHeight) {
                         setState(() => _barHeight = h);
@@ -565,25 +566,47 @@ class SidebarState extends State<Sidebar> {
             kMobile ? widget.onAgent(a) : widget.onOpenAgent?.call(a),
       );
 
-  /// The bar's search circle opens the v5 search page on Chats and Agents.
-  VoidCallback? _searchAction() {
+  /// The bar's search field filters the list in place, on Chats and Agents.
+  MobileBarSearch? _barSearch() {
     if (_selecting ||
         (widget.mobileHome != MobileHome.chats &&
             widget.mobileHome != MobileHome.agents)) {
       return null;
     }
-    return _openMobileSearch;
+    final showAgents = _agentsList || widget.mobileHome == MobileHome.agents;
+    return showAgents
+        ? MobileBarSearch(
+            controller: _agentSearchCtl,
+            focusNode: _searchFocus,
+            hint: 'Search agents',
+            onChanged: (v) => setState(() => _agentFilterQuery = v),
+          )
+        : MobileBarSearch(
+            controller: _searchCtl,
+            focusNode: _searchFocus,
+            hint: 'Search sessions',
+            onChanged: (v) => setState(() => _filterQuery = v),
+          );
   }
 
-  void _openMobileSearch() {
-    Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => MobileSearchPage(
-        client: widget.client,
-        sessions: _sessions ?? const [],
-        onOpenSession: widget.onOpenSession,
-        onOpenAgent: (a) => widget.onAgent(a),
-      ),
-    ));
+  /// Turns ambient on, starts listening on this phone, then opens Voice.
+  Future<void> _startVoice() async {
+    final client = widget.client;
+    if (client == null) return;
+    final m = AmbientModel(client);
+    try {
+      await m.load();
+      await m.press();
+      final err = m.error;
+      if (!mounted) return;
+      if (err != null) {
+        toast(context, err);
+        return;
+      }
+      await openMobileVoicePage(context, client: client);
+    } finally {
+      m.dispose();
+    }
   }
 
   int get _mcAttentionCount {
@@ -655,7 +678,17 @@ class SidebarState extends State<Sidebar> {
                           ?.openCreateMenu(btnCtx, above: false),
                 ),
               )
-            else
+            else ...[
+              if (!listeningOn && hasClient) ...[
+                RoundBtn(
+                  icon: 'mic',
+                  tooltip: 'Start voice',
+                  size: 40,
+                  iconSize: 18,
+                  onTap: _startVoice,
+                ),
+                const SizedBox(width: 10),
+              ],
               RoundBtn(
                 icon: 'plus',
                 tooltip: 'New session',
@@ -663,6 +696,7 @@ class SidebarState extends State<Sidebar> {
                 iconSize: 18,
                 onTap: hasClient ? widget.onNewSession : null,
               ),
+            ],
           ],
         );
       },

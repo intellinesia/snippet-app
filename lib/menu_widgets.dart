@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import 'platform.dart';
+import 'glass.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -296,16 +299,30 @@ class AppSheetSurface extends StatelessWidget {
   final Color? color;
 
   @override
-  Widget build(BuildContext context) => ClipRRect(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
-        child: ColoredBox(
-          color: color ?? AppColors.raised,
-          child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [const SheetGrabHandle(), Flexible(child: child)]),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final fill = color ?? AppColors.raised;
+    final glass = kMobile && Glass.enabled;
+    final body = DecoratedBox(
+      decoration: BoxDecoration(
+        color: glass ? fill.withValues(alpha: 0.72) : fill,
+        border: glass
+            ? Border(
+                top: BorderSide(color: AppColors.fg1.withValues(alpha: 0.08)))
+            : null,
+      ),
+      child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [const SheetGrabHandle(), Flexible(child: child)]),
+    );
+    return ClipRRect(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
+      child: glass
+          ? BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28), child: body)
+          : body,
+    );
+  }
 }
 
 /// Present a menu in the shape the platform expects.
@@ -353,7 +370,7 @@ Future<T?> showAppMenu<T>(
       sheetAnimationStyle: sheetMotion,
       context: context,
       backgroundColor: Colors.transparent,
-      barrierColor: AppColors.scrim,
+      barrierColor: AppColors.glassScrim,
       isScrollControlled: true,
       builder: (sheet) {
         final media = MediaQuery.of(sheet);

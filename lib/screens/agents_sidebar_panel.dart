@@ -525,12 +525,14 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
               for (final (grp, label, color) in sectionDefs) {
                 final rows = buckets[grp]!;
                 if (rows.isEmpty) continue;
-                children.add(Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                      M.gutter, 14, M.gutter, 4),
-                  child: Text(label,
-                      style: sans(13, weight: W.label, color: color)),
-                ));
+                if (grp != AgentGroup.recent) {
+                  children.add(Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                        M.gutter, 14, M.gutter, 4),
+                    child: Text(label,
+                        style: sans(13, weight: W.label, color: color)),
+                  ));
+                }
                 for (final r in rows) {
                   children.add(r);
                   rowCount++;

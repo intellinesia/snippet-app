@@ -478,6 +478,15 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             addEvent(key, _PlanCard(steps, _s(e['explanation'])));
           }
         case 'system_decision':
+          final watch = _watchArgs(_s(e['step']), _s(e['reasoning']));
+          if (watch != null) {
+            flushPending(key);
+            addToolRow(
+                toolRow(key,
+                    tool: 'monitor', args: watch, result: const {'ok': true}),
+                key);
+            break;
+          }
           endTools(key);
           // Don't render "interrupted" decisions — just noise in the chat.
           if (_s(e['step']) == 'interrupted') break;
@@ -1174,4 +1183,21 @@ class _PulseDotState extends State<_PulseDot>
       ),
     );
   }
+}
+
+/// Watch events as monitor steps, so they fold into the tool activity.
+Map<String, String>? _watchArgs(String step, String reasoning) {
+  final r = reasoning.trim();
+  switch (step) {
+    case 'watch_added':
+      final m = RegExp(r'^watching "(.*)" \((.*)\)$', dotAll: true).firstMatch(r);
+      return {'action': 'add', 'label': m?.group(1) ?? r, 'path': m?.group(2) ?? ''};
+    case 'watch_removed':
+      final m = RegExp(r'^stopped watching "(.*)"$').firstMatch(r);
+      return {'action': 'remove', 'label': m?.group(1) ?? r};
+    case 'file_watch':
+      final m = RegExp(r'^"(.*?)" — (.*?) grew: ?(.*)$', dotAll: true).firstMatch(reasoning);
+      return {'action': 'fired', 'label': m?.group(1) ?? 'Watched file', 'path': m?.group(2) ?? ''};
+  }
+  return null;
 }

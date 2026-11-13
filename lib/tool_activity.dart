@@ -162,6 +162,20 @@ String toolObject(ToolStep step) {
       step.args is Map ? step.args as Map : null, step.data,
       running: isRunning);
   if (coordination != null) return coordination;
+  if (name == 'monitor' && step.args is Map) {
+    final a = step.args as Map;
+    final subject = a['label']?.toString().trim() ?? '';
+    if (subject.isNotEmpty) {
+      switch (a['action']) {
+        case 'add':
+          return ('Watching', subject);
+        case 'remove':
+          return ('Stopped watching', subject);
+        case 'fired':
+          return (subject, 'updated');
+      }
+    }
+  }
   final label = name == 'bash' && step.args is Map
       ? ((step.args as Map)['label']?.toString().trim() ?? '')
       : '';

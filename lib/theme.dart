@@ -1191,6 +1191,8 @@ class AppColors {
   static Color get lineStrong => currentTheme.border2;
 
   static const Color scrim = Color(0x99000000);
+  // Lighter, so a glass sheet still shows the page through its blur.
+  static const Color glassScrim = Color(0x59000000);
   static Color get windowBg => kMobile
       ? currentTheme.bg
       : Color.lerp(currentTheme.bg, currentTheme.surface1, 0.45)!

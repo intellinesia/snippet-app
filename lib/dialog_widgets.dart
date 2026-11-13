@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'platform.dart';
+import 'glass.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -577,7 +578,7 @@ Future<T?> showAppSheet<T>(BuildContext context,
   return showModalBottomSheet<T>(
     context: context,
     backgroundColor: Colors.transparent,
-    barrierColor: AppColors.scrim,
+    barrierColor: AppColors.glassScrim,
     isScrollControlled: true,
     useSafeArea: false,
     sheetAnimationStyle: sheetMotion,
@@ -703,23 +704,39 @@ Future<T?> showAnchoredPanel<T>(
         top: above ? null : top,
         bottom: above ? bottom : null,
         width: w,
-        child: Material(
-          color: AppColors.surface2,
-          elevation: 10,
-          shadowColor: Colors.black.withValues(alpha: 0.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: BorderSide(color: AppColors.border2),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: room),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(8),
-              child: child,
-            ),
-          ),
-        ),
+        child: kMobile
+            ? Glass(
+                radius: BorderRadius.circular(16),
+                tint: AppColors.surface2.withValues(alpha: 0.7),
+                blur: 28,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: room),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(6),
+                      child: child,
+                    ),
+                  ),
+                ),
+              )
+            : Material(
+                color: AppColors.surface2,
+                elevation: 10,
+                shadowColor: Colors.black.withValues(alpha: 0.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(color: AppColors.border2),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: room),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(8),
+                    child: child,
+                  ),
+                ),
+              ),
       ),
     ]),
     transitionBuilder: (_, animation, __, child) {

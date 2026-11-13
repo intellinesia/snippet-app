@@ -5,10 +5,19 @@ import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/theme.dart';
 
 void main() {
+  MobileBarSearch search({ValueChanged<String>? onChanged}) {
+    return MobileBarSearch(
+      controller: TextEditingController(),
+      focusNode: FocusNode(),
+      hint: 'Search sessions',
+      onChanged: onChanged ?? (_) {},
+    );
+  }
+
   Widget harness({
     MobileHome home = MobileHome.chats,
     int working = 0,
-    VoidCallback? onSearch,
+    MobileBarSearch? search,
     ValueChanged<MobileHome>? onHome,
     VoidCallback? onNewSession,
     void Function(BuildContext)? onNewAgentOrGroup,
@@ -26,7 +35,7 @@ void main() {
               onNewSession: onNewSession ?? () {},
               onNewAgentOrGroup: onNewAgentOrGroup ?? (_) {},
               workingCount: working,
-              onSearch: onSearch,
+              search: search,
             ),
           ),
         ),
@@ -39,7 +48,7 @@ void main() {
   ) async {
     MobileHome? picked;
     await tester.pumpWidget(
-      harness(onSearch: () {}, onHome: (h) => picked = h),
+      harness(search: search(), onHome: (h) => picked = h),
     );
     await tester.pumpAndSettle();
 
@@ -69,19 +78,29 @@ void main() {
     expect(find.byTooltip('Search'), findsNothing);
   });
 
-  testWidgets('the search circle reports onSearch and keeps the tabs', (
+  testWidgets('the search circle reveals the field and x restores the tabs', (
     tester,
   ) async {
-    var opened = 0;
-    await tester.pumpWidget(harness(onSearch: () => opened++));
+    var cleared = false;
+    final s = search(onChanged: (_) => cleared = true);
+    await tester.pumpWidget(harness(search: s));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Search'));
     await tester.pumpAndSettle();
-    expect(opened, 1);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('Sessions'), findsNothing);
+    expect(find.byTooltip('New session'), findsNothing);
+
+    await tester.enterText(find.byType(TextField), 'abc');
+    await tester.tap(find.byTooltip('Close search'));
+    await tester.pumpAndSettle();
     expect(find.byType(TextField), findsNothing);
     expect(find.text('Sessions'), findsOneWidget);
     expect(find.byTooltip('Search'), findsOneWidget);
+    expect(s.controller.text, isEmpty);
+    expect(cleared, isTrue);
+    expect(s.focusNode.hasFocus, isFalse);
   });
 
   testWidgets('the pill shows the working count and calls onNewSession', (
@@ -108,7 +127,7 @@ void main() {
     await tester.pumpWidget(
       harness(
         home: MobileHome.agents,
-        onSearch: () {},
+        search: search(),
       ),
     );
     await tester.pumpAndSettle();
