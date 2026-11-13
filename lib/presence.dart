@@ -112,6 +112,9 @@ class PresenceStore extends ChangeNotifier {
     if (!hasListeners) {
       _sub?.cancel();
       _sub = null;
+      // Unsubscribed, we miss the idle frame; a kept entry would read as working forever.
+      _bySession.clear();
+      _agentOf.clear();
     }
   }
 
