@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
 import 'package:snippet/approval_code.dart';
+import 'package:snippet/chat/chat_card.dart';
 import 'package:snippet/chat/chat_style.dart';
 import 'package:snippet/media_views.dart';
 import 'package:snippet/models.dart';
@@ -12,7 +13,6 @@ import 'package:snippet/mochi.dart';
 import 'package:snippet/screens/agent_messaging.dart';
 import 'package:snippet/screens/agent_thread_cards.dart';
 import 'package:snippet/screens/artifact_viewer.dart';
-import 'package:snippet/screens/presented_file_card.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/transcript.dart';
@@ -174,7 +174,7 @@ void main() {
       artifacts: const [info],
     );
 
-    expect(find.byType(MediaRow), findsOneWidget);
+    expect(find.byType(ChatCardFooter), findsOneWidget);
     expect(find.byType(ArtifactRow), findsOneWidget);
     expect(find.text('Harness Map'), findsOneWidget);
     expect(find.textContaining('Document · v2'), findsOneWidget);
@@ -355,7 +355,7 @@ void main() {
         client: _Client(const []), agentId: 'builder');
     expect(card, isA<DeskApprovalCard>());
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: card!)));
-    expect(find.text('Approval'), findsOneWidget);
+    expect(find.text('Run a command'), findsOneWidget);
     expect(find.text('Auth cleanup · Fix login'), findsOneWidget);
     expect(find.text('Needs the full suite before the PR.'), findsOneWidget);
     expect(find.text('Approve'), findsOneWidget);

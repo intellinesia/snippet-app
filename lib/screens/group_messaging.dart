@@ -342,6 +342,7 @@ Future<GroupSummary?> showCreateGroupSheet(
       context,
       title: 'New group',
       maxWidth: 380,
+      maxHeight: 720,
       child: _CreateGroupSheet(client: client),
     );
 
@@ -427,19 +428,36 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
   Widget build(BuildContext context) {
     final canCreate =
         _title.text.trim().isNotEmpty && _selected.isNotEmpty && !_creating;
+    final n = _selected.length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        TextField(
-          controller: _title,
-          autofocus: true,
-          cursorColor: AppColors.accent,
-          onChanged: (_) => setState(() {}),
-          style: TS.body(AppColors.fg1),
-          decoration: ComposerCard.decoration('Group name'),
-        ),
+        Text('Several agents in one conversation. A lead answers first.',
+            style: sans(13, height: 1.45, color: AppColors.fg3)),
         const SizedBox(height: 14),
+        Container(
+          constraints: BoxConstraints(minHeight: kMobile ? 48 : 38),
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: TextField(
+            controller: _title,
+            autofocus: true,
+            cursorColor: AppColors.accent,
+            onChanged: (_) => setState(() {}),
+            style: sans(kMobile ? 15 : 13, color: AppColors.fg1),
+            decoration: InputDecoration.collapsed(
+              hintText: 'Group name',
+              hintStyle: sans(kMobile ? 15 : 13, color: AppColors.fg4),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
         if (_loading)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 20),
@@ -460,65 +478,180 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
             child: Text('No agents available.', style: TS.meta()),
           )
         else ...[
-          Text('Agents', style: TS.label(AppColors.fg3)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final a in _agents)
-                _AgentPickChip(
-                  agent: a,
-                  name: _name(a),
-                  selected: _selected.contains(a.id),
-                  onTap: () => setState(() {
-                    if (!_selected.remove(a.id)) _selected.add(a.id);
-                    if (_lead != null && !_selected.contains(_lead)) {
-                      _lead = null;
-                    }
-                  }),
-                ),
-            ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Row(children: [
+              Text('Agents', style: sans(13, color: AppColors.fg3)),
+              const Spacer(),
+              if (n > 0)
+                Text('$n selected', style: sans(13, color: AppColors.fg4)),
+            ]),
           ),
-          if (_selected.length > 1) ...[
-            const SizedBox(height: 14),
-            Text('Lead', style: TS.label(AppColors.fg3)),
-            const SizedBox(height: 6),
-            DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _lead,
-                isExpanded: true,
-                hint: Text('No lead', style: TS.body(AppColors.fg3)),
-                items: [
-                  for (final id in _selected)
-                    DropdownMenuItem<String>(
-                      value: id,
-                      child: Text(
-                        _agents
-                                .where((a) => a.id == id)
-                                .map(_name)
-                                .firstOrNull ??
-                            id,
-                        style: TS.body(AppColors.fg1),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-                onChanged: (v) => setState(() => _lead = v),
-              ),
+          const SizedBox(height: 8),
+          Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.line),
             ),
-          ],
+            child: Material(
+              color: Colors.transparent,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                for (var i = 0; i < _agents.length; i++) ...[
+                  if (i > 0) Container(height: 1, color: AppColors.line),
+                  _AgentPickRow(
+                    agent: _agents[i],
+                    name: _name(_agents[i]),
+                    selected: _selected.contains(_agents[i].id),
+                    showLead: n > 1 && _selected.contains(_agents[i].id),
+                    lead: _lead == _agents[i].id,
+                    onTap: () => setState(() {
+                      final id = _agents[i].id;
+                      if (!_selected.remove(id)) _selected.add(id);
+                      if (_lead != null && !_selected.contains(_lead)) {
+                        _lead = null;
+                      }
+                    }),
+                    onLead: () => setState(() {
+                      final id = _agents[i].id;
+                      _lead = _lead == id ? null : id;
+                    }),
+                  ),
+                ],
+              ]),
+            ),
+          ),
         ],
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
         if (_error != null && _agents.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(_error!, style: TS.meta(AppColors.danger)),
           ),
-        Btn(_creating ? 'Creating…' : 'Create group',
-            full: true, disabled: !canCreate, onTap: _create),
+        Btn(
+            _creating
+                ? 'Creating…'
+                : n == 0
+                    ? 'Create group'
+                    : 'Create group · $n ${n == 1 ? 'agent' : 'agents'}',
+            full: true,
+            small: !kMobile,
+            disabled: !canCreate,
+            onTap: _create),
       ],
+    );
+  }
+}
+
+class _AgentPickRow extends StatelessWidget {
+  const _AgentPickRow({
+    required this.agent,
+    required this.name,
+    required this.selected,
+    required this.showLead,
+    required this.lead,
+    required this.onTap,
+    required this.onLead,
+  });
+
+  final CoordinationAgent agent;
+  final String name;
+  final bool selected;
+  final bool showLead;
+  final bool lead;
+  final VoidCallback onTap;
+  final VoidCallback onLead;
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = (agent.profile ?? '').trim();
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: name,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: kMobile ? 56 : 44),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(children: [
+              AgentMochi(agent.id, size: kMobile ? 28 : 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(kMobile ? 15 : 13, color: AppColors.fg1)),
+                    if (profile.isNotEmpty)
+                      Text(profile,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(13, color: AppColors.fg3)),
+                  ],
+                ),
+              ),
+              if (showLead) ...[
+                Semantics(
+                  button: true,
+                  selected: lead,
+                  label: lead ? '$name is lead' : 'Make $name lead',
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onLead,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: ExcludeSemantics(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: lead ? AppColors.accent : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                                color: lead
+                                    ? AppColors.accent
+                                    : AppColors.lineStrong),
+                          ),
+                          child: Text(lead ? 'Lead' : 'Make lead',
+                              style: sans(12,
+                                  weight: lead ? W.strong : W.body,
+                                  color: lead
+                                      ? AppColors.accentFg
+                                      : AppColors.fg3)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: selected ? AppColors.accent : Colors.transparent,
+                  border: Border.all(
+                      color: selected ? AppColors.accent : AppColors.lineStrong,
+                      width: 1.5),
+                ),
+                child: selected
+                    ? Center(
+                        child: AppIcon('check',
+                            size: 13, color: AppColors.accentFg))
+                    : null,
+              ),
+            ]),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -544,7 +677,7 @@ class _AgentPickChip extends StatelessWidget {
           duration: Motion.fast,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: selected ? AppColors.accentFill : AppColors.surface2,
+            color: selected ? AppColors.accent : AppColors.surface2,
             borderRadius: BorderRadius.circular(16),
             border:
                 Border.all(color: selected ? AppColors.accent : AppColors.line),

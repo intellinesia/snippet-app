@@ -302,4 +302,58 @@ void main() {
     expect(tester.takeException(), isNull);
     debugDefaultTargetPlatformOverride = null;
   });
+
+  testWidgets('Mission Control panel carries session options, not agent edits',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1200, 800);
+    addTearDown(tester.view.reset);
+    final mc = CoordinationAgent.fromJson(
+        {'id': 'mission-control', 'display_name': 'Mission Control'});
+    final client = _Client(agent: mc);
+    var compacted = 0;
+    var wakes = 0;
+    await tester.pumpWidget(_app(Align(
+      alignment: Alignment.centerRight,
+      child: SizedBox(
+        width: 340,
+        height: 800,
+        child: RepaintBoundary(
+          key: const ValueKey('shot'),
+          child: AgentInfoPanel(
+            client: client,
+            agentId: 'mission-control',
+            name: 'Mission Control',
+            agent: mc,
+            docked: true,
+            onOpenInbox: () {},
+            onOpenBoard: () {},
+            onOpenDesk: () {},
+            onOpenMemory: () {},
+            contextUsed: 165000,
+            contextWindow: 556000,
+            onCompact: () => compacted++,
+            onAutonomy: () => wakes++,
+            onScheduled: () {},
+          ),
+        ),
+      ),
+    )));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Edit'), findsNothing);
+    expect(find.text('Desk'), findsNothing);
+    expect(find.text('Tasks run on'), findsNothing);
+    expect(find.text('Desk runs on'), findsNothing);
+    expect(find.text('165k / 556k'), findsOneWidget);
+    expect(find.text('Scheduled'), findsOneWidget);
+    await _shot(tester, 'mc_panel');
+    await tester.tap(find.text('Compact now'));
+    await tester.tap(find.text('Automated wakes'));
+    expect(compacted, 1);
+    expect(wakes, 1);
+    debugDefaultTargetPlatformOverride = null;
+  });
 }

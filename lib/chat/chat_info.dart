@@ -265,12 +265,22 @@ class AgentInfoPanel extends StatefulWidget {
     this.onChanged,
     this.onClose,
     this.docked = false,
+    this.contextUsed = 0,
+    this.contextWindow = 0,
+    this.onCompact,
+    this.onAutonomy,
+    this.onScheduled,
   });
 
   final DaemonClient client;
   final String agentId;
   final String name;
   final CoordinationAgent? agent;
+  final int contextUsed;
+  final int contextWindow;
+  final VoidCallback? onCompact;
+  final VoidCallback? onAutonomy;
+  final VoidCallback? onScheduled;
   final VoidCallback? onOpenTasks;
   final VoidCallback? onOpenInbox;
   final VoidCallback? onOpenBoard;
@@ -375,12 +385,36 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     );
   }
 
+  bool get _mc =>
+      widget.agentId == 'mission-control' ||
+      (widget.agent?.isMissionControl ?? false);
+
   Widget _infoTab(BuildContext context) {
     final agent = widget.agent;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (agent != null)
+        if (_mc && widget.onCompact != null)
+          _InfoCard(children: [
+            _ContextMeter(
+                used: widget.contextUsed,
+                window: widget.contextWindow,
+                onCompact: widget.onCompact!),
+          ]),
+        if (_mc && (widget.onAutonomy != null || widget.onScheduled != null))
+          _InfoCard(children: [
+            if (widget.onAutonomy != null)
+              _InfoRow(
+                  label: 'Automated wakes',
+                  icon: 'activity',
+                  onTap: widget.onAutonomy),
+            if (widget.onScheduled != null)
+              _InfoRow(
+                  label: 'Scheduled',
+                  icon: 'scheduled',
+                  onTap: widget.onScheduled),
+          ]),
+        if (agent != null && !_mc)
           _InfoCard(children: [
             AgentModelRows(
               client: widget.client,
@@ -440,7 +474,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
   Widget build(BuildContext context) {
     final agent = widget.agent;
     final actions = <_CircleAction>[
-      if (widget.onOpenTasks != null && !widget.docked)
+      if (widget.onOpenTasks != null && !widget.docked && !_mc)
         _CircleAction('task', 'Tasks', () {
           if (!widget.docked) _close();
           widget.onOpenTasks!();
@@ -455,7 +489,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
           if (!widget.docked) _close();
           widget.onOpenBoard!();
         }),
-      if (widget.onOpenDesk != null)
+      if (widget.onOpenDesk != null && !_mc)
         _CircleAction('terminal', 'Desk', () {
           if (!widget.docked) _close();
           widget.onOpenDesk!();
@@ -463,7 +497,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     ];
     Widget info(BuildContext ctx) => _InfoFrame(
           onClose: widget.docked ? null : _close,
-          edit: agent == null
+          edit: agent == null || _mc
               ? null
               : _EditPill(onTap: () => showAgentProfileSettings(
                     ctx,
@@ -1047,6 +1081,64 @@ class _Segmented extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Cards and rows
 // ---------------------------------------------------------------------------
+
+class _ContextMeter extends StatelessWidget {
+  const _ContextMeter(
+      {required this.used, required this.window, required this.onCompact});
+
+  final int used;
+  final int window;
+  final VoidCallback onCompact;
+
+  static String _k(int v) => v >= 1000 ? '${(v / 1000).round()}k' : '$v';
+
+  @override
+  Widget build(BuildContext context) {
+    final known = window > 0 && used > 0;
+    final frac = known ? (used / window).clamp(0.0, 1.0) : 0.0;
+    final lit = (frac * 24).round();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(S.s16, 14, S.s16, S.s16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(children: [
+            AppIcon('gauge', size: kMobile ? 18 : 16, color: AppColors.fg3),
+            const SizedBox(width: S.s12),
+            Expanded(
+                child: Text('Context',
+                    style: sans(kMobile ? 15 : 13, color: AppColors.fg1))),
+            Text(known ? '${_k(used)} / ${_k(window)}' : 'Not measured yet',
+                style: mono(12, color: AppColors.fg3)),
+          ]),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              for (var i = 0; i < 24; i++)
+                Container(
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: i < lit
+                        ? (frac > 0.8 ? AppColors.danger : AppColors.fg2)
+                        : AppColors.line,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Btn('Compact now',
+              full: true,
+              small: !kMobile,
+              variant: BtnVariant.secondary,
+              onTap: onCompact),
+        ],
+      ),
+    );
+  }
+}
 
 class _InfoCard extends StatelessWidget {
   const _InfoCard({required this.children});

@@ -227,8 +227,18 @@ class AgentSidePanel extends StatelessWidget {
     this.onSelectReadout,
     this.onCloseReadout,
     this.onClearReadout,
+    this.contextUsed = 0,
+    this.contextWindow = 0,
+    this.onCompact,
+    this.onAutonomy,
+    this.onScheduled,
   });
 
+  final int contextUsed;
+  final int contextWindow;
+  final VoidCallback? onCompact;
+  final VoidCallback? onAutonomy;
+  final VoidCallback? onScheduled;
   final DaemonClient client;
   final CoordinationAgent? agent;
   final VoidCallback? onHide;
@@ -320,6 +330,11 @@ class AgentSidePanel extends StatelessWidget {
                   onOpenDesk: () => onAction('desk'),
                   onOpenMemory: () => onAction('memory'),
                   onClose: onHide,
+                  contextUsed: contextUsed,
+                  contextWindow: contextWindow,
+                  onCompact: onCompact,
+                  onAutonomy: onAutonomy,
+                  onScheduled: onScheduled,
                 ),
         ),
       ],

@@ -20,6 +20,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../chat/chat_card.dart';
 import '../approval_code.dart';
 import '../notification_text.dart';
 import '../api.dart';
@@ -1411,7 +1412,7 @@ class _SessionScreenState extends State<SessionScreen>
       : _buildScreen(context);
 
   Widget _chatBackdrop(Widget body) =>
-      kMobile && !widget.embedded ? DotField.chat(child: body) : body;
+      kMobile ? DotField.chat(child: body) : body;
 
   Widget _buildScreen(BuildContext context) {
     // Depend on Theme so this rebuilds when the user switches palettes.

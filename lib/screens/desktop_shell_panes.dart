@@ -401,8 +401,16 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           r
     ];
     if (agent != null) {
+      final mc = agent.isMissionControl;
+      final mcState = mc ? _macSessionStatuses[tab.key]?.state : null;
       return AgentSidePanel(
         key: ValueKey('agent-panel-${tab.key}'),
+        contextUsed: mcState?.lastPromptTokens ?? 0,
+        contextWindow: mcState?.contextWindow ?? 0,
+        onCompact: mc ? () => _dispatchSessionAction('compact') : null,
+        onAutonomy: mc ? () => _dispatchSessionAction('autonomy') : null,
+        onScheduled:
+            mc ? () => _toggleRightPanel(RightPanel.recurring) : null,
         client: tab.client,
         agent: agent,
         onHide: _togglePanel,

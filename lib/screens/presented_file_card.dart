@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../chat/chat_card.dart';
 import '../media_views.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -116,14 +117,34 @@ class PresentedFileCard extends StatelessWidget {
     return Tooltip(
       message: path,
       waitDuration: const Duration(milliseconds: 600),
-      child: MediaRow(
-        icon: _icon,
-        name: _name,
-        detail: [_kindLabel, if (caption.isNotEmpty) caption].join(' · '),
-        grouped: grouped,
-        onTap: () => _open(context),
-        trailing: _downloadButton(context),
-      ),
+      child: grouped
+          ? MediaRow(
+              icon: _icon,
+              name: _name,
+              detail:
+                  [_kindLabel, if (caption.isNotEmpty) caption].join(' · '),
+              grouped: true,
+              onTap: () => _open(context),
+              trailing: _downloadButton(context),
+            )
+          : ChatCard(children: [
+              ChatCardFooter(
+                title: _name,
+                meta: [_kindLabel, if (caption.isNotEmpty) caption].join(' · '),
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                      color: AppColors.surface3,
+                      borderRadius: BorderRadius.circular(10)),
+                  child: AppIcon(_icon, size: 20, color: AppColors.fg2),
+                ),
+                trailing: _downloadButton(context),
+                divider: false,
+                onTap: () => _open(context),
+              ),
+            ]),
     );
   }
 

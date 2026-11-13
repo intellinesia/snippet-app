@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../chat/chat_style.dart' show ChatColors;
 import '../approval_code.dart';
+import '../chat/chat_card.dart';
 import '../media_views.dart';
 import '../models.dart';
 import '../notification_text.dart';
@@ -642,66 +643,43 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
     final total = (widget.approval['total'] as num?)?.toInt();
     final context_ = '${widget.event.payload['context'] ?? ''}'.trim();
     final decided = _decided[_key];
-    final meta = total != null && total > 1 && index != null
-        ? '$index of $total'
-        : (tool.isNotEmpty ? tool : null);
-    final small = kMobile ? 13.0 : 12.0;
-    return QuestionCardV5(
-      icon: parsed.secrets.isNotEmpty ? 'lock-key' : 'shield',
-      iconColor: AppColors.run,
-      label: 'Approval',
-      meta: meta,
-      footer: decided != null
-          ? Row(children: [
-              AppIcon(decided ? 'check-circle' : 'x-circle',
-                  size: 13,
-                  color: decided ? AppColors.ok : AppColors.danger),
-              const SizedBox(width: 6),
-              Text(decided ? 'Approved' : 'Denied',
-                  style: sans(small, color: AppColors.fg3)),
-            ])
-          : Row(children: [
-              const Spacer(),
-              Btn('Deny',
-                  small: true,
-                  variant: BtnVariant.secondary,
-                  disabled: _busy,
-                  onTap: () => _decide(false)),
-              const SizedBox(width: S.s6),
-              Btn('Approve',
-                  small: true,
-                  disabled: _busy,
-                  onTap: () => _decide(true)),
-            ]),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (from.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: S.s6),
-              child: Text(from,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(small, color: AppColors.fg3)),
-            ),
-          if (parsed.shownCommand.isNotEmpty)
-            ApprovalCode(code: parsed.shownCommand, collapsedLines: 4),
-          if (parsed.secrets.isNotEmpty) ...[
-            const SizedBox(height: S.s6),
-            Wrap(spacing: S.s6, runSpacing: S.s4, children: [
-              for (final name in parsed.secrets)
-                Tag(name, tone: Tone.run, icon: 'key', mono: true),
-            ]),
-          ],
-          if (context_.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: S.s8),
-              child: Text(context_,
-                  style: sans(kMobile ? 14 : 13, color: AppColors.fg2)),
-            ),
-        ],
+    final title = parsed.headline(tool);
+    if (decided != null) {
+      return ChatCardResolved(
+        title: title,
+        subtitle: decided ? 'Approved' : 'Denied',
+        approved: decided,
+      );
+    }
+    return ChatCard(children: [
+      ChatCardHeader(
+        title: title,
+        subtitle: from.isNotEmpty ? from : null,
+        trailing: total != null && total > 1 && index != null
+            ? ChatCardPill('$index of $total')
+            : null,
       ),
-    );
+      if (parsed.shownCommand.isNotEmpty)
+        ChatCardBody(
+            child: ApprovalCode(code: parsed.shownCommand, collapsedLines: 4)),
+      if (parsed.secrets.isNotEmpty)
+        ChatCardBody(
+          child: Wrap(spacing: S.s6, runSpacing: S.s4, children: [
+            for (final name in parsed.secrets)
+              Tag(name, tone: Tone.run, icon: 'key', mono: true),
+          ]),
+        ),
+      if (context_.isNotEmpty)
+        ChatCardBody(
+          child: Text(context_,
+              style: sans(kMobile ? 14 : 13, color: AppColors.fg2)),
+        ),
+      ChatCardActions(stack: true, buttons: [
+        ChatCardButton('Deny',
+            kind: ChatCardButtonKind.secondary,
+            onTap: _busy ? null : () => _decide(false)),
+        ChatCardButton('Approve', onTap: _busy ? null : () => _decide(true)),
+      ]),
+    ]);
   }
 }

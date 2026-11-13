@@ -165,7 +165,7 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
 
-    testWidgets('shows the v5 header, numbered options and Skip/Answer',
+    testWidgets('shows the question, options and Skip/Send',
         (t) async {
       final e = qev();
       final client = _QClient();
@@ -176,14 +176,12 @@ void main() {
               question: e.payload['question'] as Map<dynamic, dynamic>,
               client: client,
               events: [e]));
-      expect(find.text('Question'), findsOneWidget);
-      expect(find.text('1 of 1'), findsOneWidget);
-      expect(find.text('1'), findsWidgets);
+      expect(find.text('Which deployment target?'), findsOneWidget);
       expect(find.text('Staging'), findsOneWidget);
       expect(find.text('Recommended'), findsOneWidget);
       expect(find.text('Skip'), findsOneWidget);
-      expect(find.text('Answer'), findsOneWidget);
-      expect(find.text('Send'), findsNothing);
+      expect(find.text('Send'), findsOneWidget);
+      expect(find.text('Answer'), findsNothing);
     });
 
     testWidgets('Skip posts the skipped marker for every question', (t) async {
@@ -225,7 +223,7 @@ void main() {
               client: client,
               events: [e, answer]));
       expect(find.text('Answered: Production'), findsOneWidget);
-      expect(find.text('Answer'), findsNothing);
+      expect(find.text('Send'), findsNothing);
       expect(find.text('Skip'), findsNothing);
     });
 
@@ -241,7 +239,8 @@ void main() {
                       question: 'Merge or hold?')))));
       await t.pump();
       debugDefaultTargetPlatformOverride = null;
-      expect(find.text('Question'), findsOneWidget);
+      expect(find.text('1 of 1'), findsOneWidget);
+      expect(find.text('Review #131'), findsOneWidget);
       expect(find.text('Merge or hold?'), findsOneWidget);
       expect(find.textContaining('Mission Control answers'), findsOneWidget);
     });

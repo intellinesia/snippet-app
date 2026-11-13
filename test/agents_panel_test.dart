@@ -165,7 +165,7 @@ void main() {
         expect(popup.right, lessThanOrEqualTo(scenario.size.width - 18));
         expect(popup.bottom, lessThanOrEqualTo(scenario.size.height - 20));
         expect(popup.width, lessThanOrEqualTo(340));
-        final header = tester.getRect(find.text('Create agent'));
+        final header = tester.getRect(find.text('New agent'));
         final field = tester.getRect(find.byType(TextField).first);
         final button = tester.getRect(find.byType(Btn));
         expect(popup.contains(header.topLeft), isTrue);
@@ -184,6 +184,8 @@ void main() {
             findsOneWidget);
         await tester.enterText(find.byType(TextField).first,
             '  Review security issues in repos  ');
+        await tester.ensureVisible(find.text('Build agent'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Build agent'));
         await tester.pumpAndSettle();
         await tester.pump(const Duration(seconds: 3));

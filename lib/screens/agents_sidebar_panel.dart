@@ -38,7 +38,7 @@ Future<bool?> showCreateAgentDialog(
   return kMobile
       ? await showAppSheet<bool>(
           context,
-          title: 'Create agent',
+          title: 'New agent',
           child: CreateAgentForm(client: client),
         )
       : await showGeneralDialog<bool>(
@@ -73,7 +73,7 @@ Future<bool?> showCreateAgentDialog(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text('Create agent',
+                          Text('New agent',
                               style: sans(kMobile ? 14 : 13,
                                   weight: W.label, color: AppColors.fg1)),
                           const SizedBox(height: 12),

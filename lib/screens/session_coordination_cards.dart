@@ -4,7 +4,7 @@ import '../platform.dart';
 import '../transcript_card.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import 'agent_questions_card.dart' show QuestionCardV5;
+import '../chat/chat_card.dart';
 import 'mission_control/mission_control_state.dart'
     show
         QuietWakeRun,
@@ -632,30 +632,19 @@ class WorkerQuestionCard extends StatelessWidget {
   final WorkerQuestion question;
 
   @override
-  Widget build(BuildContext context) => QuestionCardV5(
-        meta: '1 of 1',
-        footer: Text(
-          'Mission Control answers from your brief, or pings you',
-          style: sans(TranscriptCard.metaSize, color: AppColors.fg3),
+  Widget build(BuildContext context) => ChatCard(children: [
+        ChatCardHeader(
+          title: question.question.trim(),
+          subtitle: question.task.trim(),
+          trailing: const ChatCardPill('1 of 1'),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (question.task.trim().isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: S.s4),
-                child: Text(question.task.trim(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(TranscriptCard.metaSize,
-                        color: AppColors.fg3)),
-              ),
-            Text(question.question.trim(),
-                style: sans(kMobile ? 15 : TranscriptCard.bodySize,
-                    height: 1.45, color: AppColors.fg1)),
-          ],
+        ChatCardBody(
+          child: Text(
+            'Mission Control answers from your brief, or pings you',
+            style: sans(TranscriptCard.metaSize, color: AppColors.fg3),
+          ),
         ),
-      );
+      ]);
 }
 
 class AgentMessageCard extends StatelessWidget {
