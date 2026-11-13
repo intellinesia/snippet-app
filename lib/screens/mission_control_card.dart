@@ -174,7 +174,7 @@ class _MissionControlCardState extends State<MissionControlCard> {
                     SwapText(waiting ? 'Waiting on you' : line,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(11.5,
+                        style: sans(12,
                             color: waiting ? AppColors.run : AppColors.fg3)),
                   ],
                 ),
