@@ -179,14 +179,14 @@ void main() {
 
     expect(find.byType(AgentMochi), findsOneWidget);
 
-    // Running mark: 6x6 filled accent circle.
+    // Running mark: 6x6 filled grey circle (v5 `.dt.w`).
     expect(
       find.byWidgetPredicate((w) {
         if (w is! Container) return false;
         final d = w.decoration;
         return d is BoxDecoration &&
             d.shape == BoxShape.circle &&
-            d.color == AppColors.accent;
+            d.color == AppColors.fg2;
       }),
       findsOneWidget,
     );

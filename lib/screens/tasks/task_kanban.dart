@@ -112,8 +112,14 @@ class _TaskKanbanState extends State<TaskKanban> {
     } catch (_) {}
   }
 
+  static final _hashSeg = RegExp(r'^[0-9a-f]{8,}$');
+
   static String _folderName(String path) {
-    final parts = path.split('/').where((p) => p.isNotEmpty);
+    // Worktree checkouts end in a hash segment; name them by the parent.
+    final parts = path
+        .split('/')
+        .where((p) => p.isNotEmpty && !_hashSeg.hasMatch(p))
+        .toList();
     return parts.isEmpty ? '' : parts.last;
   }
 
@@ -233,7 +239,7 @@ class _TaskKanbanState extends State<TaskKanban> {
             style: sans(16, weight: W.label, color: AppColors.fg1)),
         const SizedBox(width: 10),
         if (showCounts)
-          Text(sub, style: sans(12.5, color: AppColors.fg4, tabular: true)),
+          Text(sub, style: sans(12, color: AppColors.fg4, tabular: true)),
         const Spacer(),
         SizedBox(
           width: 220,
