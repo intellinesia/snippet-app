@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../models.dart';
 import '../motion.dart';
+import '../motion_routes.dart';
 import '../platform.dart';
 import '../pull_refresh.dart';
 import '../settings_form.dart';
@@ -77,7 +78,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
     }
     final scope = _scopes?.where((s) => s.key == key).firstOrNull;
     Navigator.of(context)
-        .push(MaterialPageRoute<void>(
+        .push(AppPageRoute<void>(
           builder: (ctx) => Scaffold(
             backgroundColor: AppColors.bg,
             body: SafeArea(

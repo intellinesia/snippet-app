@@ -7,6 +7,7 @@ import '../api.dart';
 import '../glass.dart';
 import '../mochi.dart';
 import '../models.dart';
+import '../motion_routes.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'mobile_voice_page.dart';
@@ -249,7 +250,7 @@ class MobileHomeHeader extends StatelessWidget {
 }
 
 Future<void> openMobileTasksPage(BuildContext context, DaemonClient client) {
-  return Navigator.of(context).push<void>(MaterialPageRoute(
+  return Navigator.of(context).push<void>(AppPageRoute<void>(
     builder: (_) => Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(child: TasksPanel(client: client, phoneHeader: true)),

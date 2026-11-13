@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../api.dart';
 import '../../models.dart';
 import '../../motion.dart';
+import '../../motion_routes.dart';
 import '../../platform.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
@@ -18,7 +19,7 @@ import 'task_list.dart';
 /// A pushed Tasks page, optionally limited to the tasks [agentIds] are on.
 Future<void> openTasksPage(BuildContext context, DaemonClient client,
     {Set<String>? agentIds}) {
-  return Navigator.of(context).push<void>(MaterialPageRoute(
+  return Navigator.of(context).push<void>(AppPageRoute<void>(
     builder: (page) => Material(
       color: AppColors.bg,
       child: SafeArea(

@@ -4,8 +4,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
-import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
+import '../motion_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -2177,10 +2176,7 @@ void openAgentThread(
           agentName: agentName,
           onClose: () => Navigator.pop(context),
         );
-    Navigator.of(context).push<void>(
-        defaultTargetPlatform == TargetPlatform.iOS
-            ? CupertinoPageRoute(builder: page)
-            : MaterialPageRoute(builder: page));
+    Navigator.of(context).push<void>(AppPageRoute<void>(builder: page));
     return;
   }
   presentScreen(

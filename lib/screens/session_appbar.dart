@@ -907,7 +907,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         final steps = sessionChangeSteps(events);
         final shell = shellChanges(events, fileChanges(steps));
         if (kMobile) {
-          Navigator.of(context).push(MaterialPageRoute(
+          Navigator.of(context).push(AppPageRoute<void>(
               builder: (_) => FileChangesScreen(
                   steps: steps, shell: shell, onOpenFile: _openChangedFile)));
         } else {
@@ -995,7 +995,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       session: s,
       fileChangeCount: fileChanges(changeSteps).length + shell.length,
       onFileChanges: () => navigate!(() => Navigator.of(context).push(
-          MaterialPageRoute(
+          AppPageRoute<void>(
               builder: (_) => FileChangesScreen(
                   steps: changeSteps,
                   shell: shell,

@@ -115,7 +115,7 @@ class Sidebar extends StatefulWidget {
   State<Sidebar> createState() => SidebarState();
 }
 
-class SidebarState extends State<Sidebar> {
+class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   DateTime? _chatsShownAt;
   // The session list now lives in the shell (passed via widget.sessions); the
   // sidebar is presentational, so opening the drawer doesn't refetch.
@@ -167,16 +167,23 @@ class SidebarState extends State<Sidebar> {
   final FocusNode _desktopChatsSearchFocus = FocusNode();
 
   MobileHome _lastMainHome = MobileHome.chats;
-  late final PageController _pageController;
-  int? _targetPage;
-
-  void _goToPage(int index) {
-    if (_pageController.hasClients) {
-      _targetPage = index;
-      _pageController.jumpToPage(index);
-      _targetPage = null;
-    }
-  }
+  late MobileHome _currentHome = widget.mobileHome;
+  MobileHome? _prevHome;
+  final Set<MobileHome> _mountedHomes = <MobileHome>{};
+  late final AnimationController _homeAnim = AnimationController(
+    vsync: this,
+    duration: Motion.fast,
+    value: 1.0,
+  )..addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted && _prevHome != null) {
+        setState(() {
+          if (_prevHome == MobileHome.settings || _prevHome == MobileHome.tasks) {
+            _mountedHomes.remove(_prevHome);
+          }
+          _prevHome = null;
+        });
+      }
+    });
 
   Map<String, String> _profileProviders = const {};
   String? _providersFor;
@@ -201,7 +208,7 @@ class SidebarState extends State<Sidebar> {
     super.initState();
     Drafts.instance.addListener(_onDrafts);
     _loadProviders();
-    _pageController = PageController(initialPage: widget.mobileHome.index);
+    _mountedHomes.add(_currentHome);
     if (kMobile) {
       mobileAgentsList.addListener(_onAgentsList);
       loadMobileAgentsList();
@@ -225,13 +232,21 @@ class SidebarState extends State<Sidebar> {
       if (oldWidget.mobileHome != MobileHome.settings) {
         _lastMainHome = oldWidget.mobileHome;
       }
-      if (_targetPage != widget.mobileHome.index &&
-          _pageController.hasClients) {
-        final current =
-            _pageController.page?.round() ?? _pageController.initialPage;
-        if (current != widget.mobileHome.index) {
-          _goToPage(widget.mobileHome.index);
-        }
+      if (widget.mobileHome != _currentHome) {
+        _prevHome = _currentHome;
+        _currentHome = widget.mobileHome;
+        _mountedHomes.add(_currentHome);
+        final reduced = reduceMotion(context);
+        final settingsPush = _currentHome == MobileHome.settings;
+        final settingsPop = _prevHome == MobileHome.settings;
+        _homeAnim.duration = reduced
+            ? const Duration(milliseconds: 150)
+            : settingsPush
+                ? const Duration(milliseconds: 340)
+                : settingsPop
+                    ? const Duration(milliseconds: 260)
+                    : Motion.fast;
+        _homeAnim.forward(from: 0.0);
       }
     }
   }
@@ -257,7 +272,7 @@ class SidebarState extends State<Sidebar> {
     mobileAgentsList.removeListener(_onAgentsList);
     sidebarAgentsFirst.removeListener(_onAgentsList);
     Drafts.instance.removeListener(_onDrafts);
-    _pageController.dispose();
+    _homeAnim.dispose();
     _renameCtl.dispose();
     _renameFocus.dispose();
     _searchCtl.dispose();
@@ -289,31 +304,9 @@ class SidebarState extends State<Sidebar> {
           // gets the remaining height, so nothing hides behind the bar and no
           // scroll-padding hack is needed. It still reads as floating (inset,
           // rounded, raised).
-          // PageView gives smooth swiping left and right across sessions,
-          // settings, and agents, with slide transitions when navigating.
           Expanded(
             child: Stack(children: [
-              PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (index) {
-                  if (_targetPage != null && _targetPage != index) {
-                    return;
-                  }
-                  _targetPage = null;
-                  final dest = MobileHome.values[index];
-                  if (widget.mobileHome != dest) {
-                    widget.onMobileHome(dest);
-                  }
-                },
-                children: [
-                  for (final h in MobileHome.values)
-                    SidebarKeepAlivePage(
-                      key: ValueKey('mobile-${h.name}'),
-                      child: _mobileHomeBody(hasClient, h),
-                    ),
-                ],
-              ),
+              _buildMobileHomeStack(hasClient),
               if (_showMobileBottomBar)
                 Positioned(
                   left: 0,
@@ -371,6 +364,162 @@ class SidebarState extends State<Sidebar> {
         action: Btn('Add machine',
             icon: 'plus', small: true, onTap: widget.onAddInstance),
       );
+
+  Widget _buildMobileHomeStack(bool hasClient) {
+    final prev = _prevHome;
+    final curr = _currentHome;
+    final ordered = <MobileHome>[
+      for (final h in MobileHome.values)
+        if (_mountedHomes.contains(h) && h != prev && h != curr) h,
+      if (prev != null && _mountedHomes.contains(prev)) prev,
+      if (_mountedHomes.contains(curr)) curr,
+    ];
+    if (prev != null && prev == MobileHome.settings && ordered.length >= 2) {
+      final iCurr = ordered.indexOf(curr);
+      final iPrev = ordered.indexOf(prev);
+      if (iCurr >= 0 && iPrev >= 0 && iPrev < iCurr) {
+        ordered[iCurr] = prev;
+        ordered[iPrev] = curr;
+      }
+    }
+    final bodies = <MobileHome, Widget>{
+      for (final h in ordered)
+        h: KeyedSubtree(
+          key: ValueKey('mobile-${h.name}'),
+          child: _mobileHomeBody(hasClient, h),
+        ),
+    };
+    final reduced = reduceMotion(context);
+    return AnimatedBuilder(
+      animation: _homeAnim,
+      builder: (context, _) {
+        final t = _homeAnim.value;
+        final settingsPush = prev != null && curr == MobileHome.settings;
+        final settingsPop = prev == MobileHome.settings;
+        final curved = (settingsPush || settingsPop)
+            ? Curves.easeOutCubic.transform(t)
+            : Motion.enter.transform(t);
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            for (final h in ordered)
+              _homeLayer(
+                h,
+                body: bodies[h]!,
+                prev: prev,
+                curr: curr,
+                curved: curved,
+                reduced: reduced,
+                settingsPush: settingsPush,
+                settingsPop: settingsPop,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _homeLayer(
+    MobileHome h, {
+    required Widget body,
+    required MobileHome? prev,
+    required MobileHome curr,
+    required double curved,
+    required bool reduced,
+    required bool settingsPush,
+    required bool settingsPop,
+  }) {
+    final active = h == curr || (prev != null && h == prev);
+    var offstage = !active;
+    var ignoring = h != curr;
+    var fractionalDx = 0.0;
+    var dx = 0.0;
+    var opacity = 1.0;
+    var scrimAlpha = 0.0;
+    var opaqueBg = false;
+
+    if (active && prev != null) {
+      if (settingsPush) {
+        if (h == curr) {
+          opaqueBg = true;
+          if (reduced) {
+            opacity = curved;
+          } else {
+            fractionalDx = 1.0 - curved;
+          }
+        } else {
+          if (reduced) {
+            opacity = 1.0 - curved;
+          } else {
+            fractionalDx = -0.3 * curved;
+            scrimAlpha = 0.18 * curved;
+          }
+        }
+      } else if (settingsPop) {
+        final p = 1.0 - curved;
+        if (h == prev) {
+          opaqueBg = true;
+          if (reduced) {
+            opacity = p;
+          } else {
+            fractionalDx = 1.0 - p;
+          }
+        } else {
+          if (reduced) {
+            opacity = curved;
+          } else {
+            fractionalDx = -0.3 * p;
+            scrimAlpha = 0.18 * p;
+          }
+        }
+      } else {
+        final dir = curr.index > prev.index ? 1.0 : -1.0;
+        if (h == curr) {
+          opacity = curved;
+          if (!reduced) dx = dir * 8.0 * (1.0 - curved);
+        } else {
+          opacity = 1.0 - curved;
+          if (!reduced) dx = -dir * 8.0 * curved;
+        }
+      }
+    }
+
+    return KeyedSubtree(
+      key: ValueKey('mobile-layer-${h.name}'),
+      child: Offstage(
+        offstage: offstage,
+        child: IgnorePointer(
+          ignoring: ignoring,
+          child: FractionalTranslation(
+            translation: Offset(fractionalDx, 0),
+            child: Transform.translate(
+              offset: Offset(dx, 0),
+              child: Opacity(
+                opacity: opacity.clamp(0.0, 1.0),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ColoredBox(
+                      color: opaqueBg ? AppColors.bg : Colors.transparent,
+                      child: body,
+                    ),
+                    if (scrimAlpha > 0)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: ColoredBox(
+                            color: Colors.black.withValues(alpha: scrimAlpha),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   /// The phone home body for the destination the bar currently selects.
   ///

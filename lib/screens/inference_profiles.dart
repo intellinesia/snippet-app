@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../desktop_layout.dart';
 import '../models.dart';
+import '../motion_routes.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../settings_form.dart';
@@ -144,7 +145,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
   Future<void> _edit(InferenceProfile? p) async {
     if (kMobile && widget.embedded) {
       final saved = await Navigator.of(context).push<bool>(
-        MaterialPageRoute(
+        AppPageRoute<bool>(
           builder: (ctx) => InferenceProfileEditor(
             client: widget.client,
             existing: p,

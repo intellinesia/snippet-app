@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -68,10 +67,20 @@ class _MobileShellState extends State<MobileShell>
     final to = _chatsVisible ? 0.0 : 1.0;
     final velocity = _commitVelocity;
     _commitVelocity = null;
-    if (velocity != null) {
+    final reduced = reduceMotion(context);
+    if (velocity != null && !reduced) {
       springTo(_v, to, velocity, epsilon: 0.001);
-    } else {
+    } else if (reduced) {
+      _v.animateTo(to,
+          duration: const Duration(milliseconds: 150), curve: Curves.linear);
+    } else if (widget.missionPair) {
       _v.animateTo(to, duration: Motion.base, curve: Motion.enter);
+    } else {
+      _v.animateTo(
+        to,
+        duration: Duration(milliseconds: _chatsVisible ? 260 : 340),
+        curve: Curves.easeOutCubic,
+      );
     }
   }
 
@@ -96,17 +105,21 @@ class _MobileShellState extends State<MobileShell>
   }
 
   /// [onCommit] runs when the drag carries far or fast enough to switch.
-  void _dragEnd(double velocityPx, double width, VoidCallback onCommit) {
+  void _dragEnd(double velocityPx, double width, VoidCallback onCommit,
+      {double? distanceThreshold, double? velocityThreshold}) {
     final here = _chatsVisible ? 0.0 : 1.0;
     final toward = _chatsVisible ? 1.0 : 0.0;
     final vel = velocityPx / width * _exitX;
     final dir = toward - here;
     final moved = (_v.value - here) * dir;
-    if (dragDismisses(
-        distance: moved * width,
-        velocity: vel * dir * width,
-        distanceThreshold: 80,
-        velocityThreshold: 600)) {
+    final vThresh = velocityThreshold ?? 600;
+    final vAlong = vel * dir * width;
+    if (vAlong > -vThresh &&
+        dragDismisses(
+            distance: moved * width,
+            velocity: vAlong,
+            distanceThreshold: distanceThreshold ?? 80,
+            velocityThreshold: vThresh)) {
       HapticFeedback.selectionClick();
       _commitVelocity = vel;
       onCommit();
@@ -162,53 +175,80 @@ class _MobileShellState extends State<MobileShell>
       }
     }
 
-    final shell = Scaffold(
-      backgroundColor: AppColors.bg,
-      body: Stack(children: [
-        if (activeTabBody != null)
-          Positioned.fill(
-            child: IgnorePointer(
-              ignoring: chatsVisible,
-              child: FractionalTranslation(
-                translation: Offset(
-                    (missionPair ? -0.25 : 0.15) *
-                        (1 - _v.value.clamp(0.0, 1.0)),
-                    0),
-                child: Opacity(
-                  opacity: _v.value.clamp(0.0, 1.0),
-                  child: SafeArea(
-                    bottom: false,
-                    child: activeTabBody,
+    final reduced = reduceMotion(context);
+    final vClamped = _v.value.clamp(0.0, 1.0);
+    final chatLayer = activeTabBody == null
+        ? null
+        : Positioned.fill(
+            child: Offstage(
+              offstage: !missionPair && chatsVisible && _v.value == 0.0,
+              child: IgnorePointer(
+                ignoring: chatsVisible,
+                child: FractionalTranslation(
+                  translation: reduced
+                      ? Offset.zero
+                      : missionPair
+                          ? Offset(-0.25 * (1 - vClamped), 0)
+                          : Offset(1 - vClamped, 0),
+                  child: Opacity(
+                    opacity: reduced || missionPair ? vClamped : 1.0,
+                    child: Material(
+                      color: AppColors.bg,
+                      child: SafeArea(
+                        bottom: false,
+                        child: activeTabBody,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        Positioned.fill(
-          child: Offstage(
-            offstage: !chatsVisible && _v.value == 1.0,
-            child: IgnorePointer(
-              ignoring: !chatsVisible,
-              child: FractionalTranslation(
-                translation: Offset(_exitX * _v.value, 0),
-                child: Material(
+          );
+    final sidebarLayer = Positioned.fill(
+      child: Offstage(
+        offstage: !chatsVisible && _v.value == 1.0,
+        child: IgnorePointer(
+          ignoring: !chatsVisible,
+          child: FractionalTranslation(
+            translation: reduced
+                ? Offset.zero
+                : missionPair
+                    ? Offset(_exitX * _v.value, 0)
+                    : Offset(-0.3 * vClamped, 0),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Material(
                   color: AppColors.bg,
                   child: SafeArea(
                     child: sidebar,
                   ),
                 ),
-              ),
+                if (!missionPair && !reduced && vClamped > 0)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: ColoredBox(
+                        color: Colors.black.withValues(alpha: 0.18 * vClamped),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
-        // iOS has no system back gesture for this in-app stack, so an edge
-        // swipe provides one. It fires once per gesture, after a deliberate
-        // travel or flick. Android already routes its back gesture through
-        // PopScope below; a second detector there made one swipe go back
-        // several screens.
-        if (!chatsVisible &&
-            defaultTargetPlatform == TargetPlatform.iOS &&
-            (onOpenChats != null || onPopRoute != null))
+      ),
+    );
+    final shell = Scaffold(
+      backgroundColor: AppColors.bg,
+      body: Stack(children: [
+        if (missionPair) ...[
+          if (chatLayer != null) chatLayer,
+          sidebarLayer,
+        ] else ...[
+          sidebarLayer,
+          if (chatLayer != null) chatLayer,
+        ],
+        if (!chatsVisible && (onOpenChats != null || onPopRoute != null))
           Positioned(
             top: 0,
             bottom: 0,
@@ -217,7 +257,13 @@ class _MobileShellState extends State<MobileShell>
             child: _EdgeSwipeBack(
               onStart: _dragStart,
               onDelta: (dx, w) => _dragUpdate(-dx * _exitX, w),
-              onEnd: (v, w) => _dragEnd(-v * _exitX, w, handleBack),
+              onEnd: (v, w) => _dragEnd(
+                -v * _exitX,
+                w,
+                handleBack,
+                distanceThreshold: w / 3,
+                velocityThreshold: w,
+              ),
             ),
           ),
       ]),

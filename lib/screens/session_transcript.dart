@@ -756,7 +756,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       );
       return;
     }
-    Navigator.of(context).push(MaterialPageRoute<void>(
+    Navigator.of(context).push(AppPageRoute<void>(
       builder: (_) => LaneTranscriptScreen(
         client: widget.client,
         laneId: id,

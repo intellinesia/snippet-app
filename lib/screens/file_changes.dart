@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../file_icons.dart';
+import '../motion_routes.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
 import '../widgets.dart';
@@ -159,7 +160,7 @@ class FileChangesScreen extends StatelessWidget {
                                   style: sans(13, color: AppColors.danger))
                               : _delta(c.added, c.removed),
                           onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
+                                AppPageRoute<void>(
                                   builder: (_) => FileChangeDetail(
                                       path: c.path, steps: steps),
                                 ),
