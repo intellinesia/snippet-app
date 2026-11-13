@@ -517,7 +517,7 @@ class DotField extends StatelessWidget {
   const DotField({super.key, required this.child, this.strength = 0.07});
 
   /// Faint enough to sit behind a chat transcript.
-  const DotField.chat({super.key, required this.child}) : strength = 0.045;
+  const DotField.chat({super.key, required this.child}) : strength = 0.06;
 
   final Widget child;
   final double strength;

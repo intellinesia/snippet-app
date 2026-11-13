@@ -530,10 +530,13 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           openFiles = files;
           addEvent(
               key,
-              PresentedFiles(
-                client: widget.client,
-                files: files,
-                onOpenFileTab: widget.onOpenFileTab,
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: PresentedFiles(
+                  client: widget.client,
+                  files: files,
+                  onOpenFileTab: widget.onOpenFileTab,
+                ),
               ));
           openFilesAt = out.length;
         case 'artifact_presented':
