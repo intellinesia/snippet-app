@@ -44,6 +44,147 @@ class DockedInfoNav extends InheritedWidget {
       push != oldWidget.push || pop != oldWidget.pop;
 }
 
+Future<String?> dockedPromptText(BuildContext context,
+    {required String title,
+    String initial = '',
+    String? hint,
+    bool anchored = false}) {
+  final nav = DockedInfoNav.maybeOf(context);
+  if (nav == null) {
+    return promptText(context,
+        title: title, initial: initial, hint: hint, anchored: anchored);
+  }
+  final done = Completer<String?>();
+  nav.push(
+      title,
+      (_) => _CompleteOnDispose(
+            done: done,
+            child: _DockedPrompt(
+              initial: initial,
+              hint: hint,
+              onDone: (v) {
+                if (!done.isCompleted) done.complete(v);
+                nav.pop();
+              },
+            ),
+          ));
+  return done.future;
+}
+
+Future<T?> dockedPick<T>(BuildContext context,
+    {required String title,
+    required List<(T value, String label, String? icon)> options,
+    T? selected,
+    required Future<T?> Function() fallback}) async {
+  final nav = DockedInfoNav.maybeOf(context);
+  if (nav == null) return fallback();
+  final done = Completer<T?>();
+  nav.push(
+      title,
+      (_) => _CompleteOnDispose(
+            done: done,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _InfoCard(children: [
+                  for (final (value, label, icon) in options)
+                    _InfoRow(
+                      label: label,
+                      icon: icon,
+                      trailing: value == selected
+                          ? AppIcon('check', size: 16, color: AppColors.accent)
+                          : null,
+                      onTap: () {
+                        if (!done.isCompleted) done.complete(value);
+                        nav.pop();
+                      },
+                    ),
+                ]),
+              ],
+            ),
+          ));
+  return done.future;
+}
+
+/// Completes [done] with null when the page goes away without an answer, so a
+/// back-button dismissal never leaves the caller waiting.
+class _CompleteOnDispose<T> extends StatefulWidget {
+  const _CompleteOnDispose({required this.done, required this.child});
+
+  final Completer<T?> done;
+  final Widget child;
+
+  @override
+  State<_CompleteOnDispose<T>> createState() => _CompleteOnDisposeState<T>();
+}
+
+class _CompleteOnDisposeState<T> extends State<_CompleteOnDispose<T>> {
+  @override
+  void dispose() {
+    if (!widget.done.isCompleted) widget.done.complete(null);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+class _DockedPrompt extends StatefulWidget {
+  const _DockedPrompt(
+      {required this.initial, required this.hint, required this.onDone});
+
+  final String initial;
+  final String? hint;
+  final ValueChanged<String> onDone;
+
+  @override
+  State<_DockedPrompt> createState() => _DockedPromptState();
+}
+
+class _DockedPromptState extends State<_DockedPrompt> {
+  late final TextEditingController _text =
+      TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final border = OutlineInputBorder(
+        borderRadius: BorderRadius.circular(R.sm),
+        borderSide: BorderSide(color: AppColors.border));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _text,
+          autofocus: true,
+          style: TS.body(AppColors.fg1),
+          onSubmitted: (_) => widget.onDone(_text.text),
+          decoration: InputDecoration(
+            helperText: widget.hint,
+            helperMaxLines: 3,
+            helperStyle: sans(12, color: AppColors.fg3),
+            isDense: true,
+            filled: true,
+            fillColor: AppColors.surface2,
+            border: border,
+            enabledBorder: border,
+          ),
+        ),
+        const SizedBox(height: S.s12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Btn('Save', small: true, onTap: () => widget.onDone(_text.text)),
+        ),
+      ],
+    );
+  }
+}
+
 /// iMessage-style contact/info screen for a direct agent chat.
 ///
 /// On phones this is a full-height frosted route over the chat; on desktop the
@@ -382,6 +523,13 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   Map<String, CoordinationAgent> _byId = const {};
   bool _busy = false;
   final _navKey = GlobalKey<NavigatorState>();
+
+  void _pushNested(String title, WidgetBuilder body) {
+    _navKey.currentState?.push(_NestedPageRoute(title: title, builder: body));
+  }
+
+  void _popNested() => _navKey.currentState?.maybePop();
+
   @override
   void initState() {
     super.initState();
@@ -475,7 +623,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   }
 
   Future<void> _rename() async {
-    final text = await promptText(context,
+    final text = await dockedPromptText(_navKey.currentContext ?? context,
         title: 'Rename group', initial: _group.title);
     if (text == null || !mounted) return;
     final title = text.trim();
@@ -616,7 +764,11 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   @override
   Widget build(BuildContext context) {
     if (!widget.docked) return _frame();
-    return _DockedNavigator(navKey: _navKey, root: (_) => _frame());
+    return DockedInfoNav(
+      push: _pushNested,
+      pop: _popNested,
+      child: _DockedNavigator(navKey: _navKey, root: (_) => _frame()),
+    );
   }
 
   Widget _frame() {

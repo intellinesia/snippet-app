@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
-import '../chat/chat_info.dart' show DockedInfoNav;
+import '../chat/chat_info.dart' show DockedInfoNav, dockedPromptText;
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -161,7 +161,7 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
   }
 
   Future<void> _editContext() async {
-    final text = await promptText(context,
+    final text = await dockedPromptText(context,
         title: 'Context length for ${widget.name}',
         initial: _context == null ? '' : tokensLabel(_context!),
         hint: 'For example 128k. Minimum 16k; empty uses the model window.');
