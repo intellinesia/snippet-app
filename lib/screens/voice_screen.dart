@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 import '../api.dart';
+import '../desktop_layout.dart';
 import '../models.dart';
 import '../platform.dart';
 import '../inline_key_row.dart';
@@ -894,16 +895,21 @@ class _VoiceScreenState extends State<VoiceScreen> {
         children: _groups(v),
       );
     }
+    final child = kMobile ? CardGroupScope(child: body) : body;
     if (widget.embedded && widget.onBack != null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          NavBackRow(title: 'Voice', onBack: widget.onBack!),
-          Expanded(child: body),
+          if (kMobile)
+            SettingsHeader(
+                title: 'Voice', compact: true, onBack: widget.onBack!)
+          else
+            NavBackRow(title: 'Voice', onBack: widget.onBack!),
+          Expanded(child: child),
         ],
       );
     }
-    return body;
+    return child;
   }
 }
 

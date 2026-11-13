@@ -709,9 +709,18 @@ class SettingsPanelState extends State<SettingsPanel> {
       SettingsPage.general => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            NavBackRow(title: 'Machines', onBack: back, trailing: [
-              HeaderAction('Add machine', onTap: _addMachine),
-            ]),
+            SettingsHeader(
+              title: 'Machines',
+              compact: true,
+              onBack: back,
+              actions: [
+                IconBtn('plus',
+                    size: 40,
+                    iconSize: 18,
+                    tooltip: 'Add machine',
+                    onTap: _addMachine),
+              ],
+            ),
             Expanded(child: _generalPage(includeNotifications: false)),
           ],
         ),
@@ -1063,10 +1072,14 @@ class SettingsPanelState extends State<SettingsPanel> {
             ? () => _selectInstance(i)
             : null,
         child: Padding(
-        padding: const EdgeInsets.fromLTRB(S.s12, S.s8, S.s4, S.s8),
+        padding: EdgeInsets.fromLTRB(compact ? 14 : S.s12, S.s8, S.s4, S.s8),
         child: Row(
           children: [
-            IconTile('server', tone: isActive ? Tone.ok : Tone.neutral),
+            if (compact)
+              V5IconTile('server',
+                  color: isActive ? AppColors.ok : AppColors.fg2)
+            else
+              IconTile('server', tone: isActive ? Tone.ok : Tone.neutral),
             const SizedBox(width: S.s12),
             if (isRenaming) ...[
               Expanded(
@@ -1285,6 +1298,7 @@ class SettingsSectionView extends StatefulWidget {
     this.onSelect,
     this.onAdd,
     this.onSelectPage,
+    this.onBack,
     this.v5Desktop = false,
   });
 
@@ -1297,6 +1311,7 @@ class SettingsSectionView extends StatefulWidget {
   final void Function(Instance)? onSelect;
   final void Function(Instance)? onAdd;
   final ValueChanged<SettingsPage>? onSelectPage;
+  final VoidCallback? onBack;
   final bool v5Desktop;
 
   @override
@@ -1317,6 +1332,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   String? _addMachineError;
 
   bool _modelsEditing = false;
+  bool _vaultAdding = false;
   bool _recurringAdding = false;
 
   String? _renamingUrl;
@@ -1374,6 +1390,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     if (!_addingMachine &&
         _addMachineError == null &&
         !_modelsEditing &&
+        !_vaultAdding &&
         !_recurringAdding &&
         _renamingUrl == null) {
       return;
@@ -1382,6 +1399,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
       _addingMachine = false;
       _addMachineError = null;
       _modelsEditing = false;
+      _vaultAdding = false;
       _recurringAdding = false;
       _renamingUrl = null;
     });
@@ -1965,6 +1983,184 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         _ => const [],
       };
 
+  Widget? _mobilePageAction(SettingsPage page) => switch (page) {
+        SettingsPage.general => _addingMachine
+            ? null
+            : IconBtn('plus',
+                size: 40,
+                iconSize: 18,
+                tooltip: 'Add machine',
+                onTap: _addMachine),
+        SettingsPage.models => _modelsEditing
+            ? null
+            : IconBtn('plus',
+                size: 40,
+                iconSize: 18,
+                tooltip: 'Add profile',
+                onTap: () => _modelsKey.currentState?.addProfile()),
+        SettingsPage.vault => _vaultAdding
+            ? null
+            : IconBtn('plus',
+                size: 40,
+                iconSize: 18,
+                tooltip: 'Add secret',
+                onTap: () => _vaultKey.currentState?.add()),
+        SettingsPage.scheduled => _recurringAdding
+            ? null
+            : IconBtn('plus',
+                size: 40,
+                iconSize: 18,
+                tooltip: 'New job',
+                onTap: () => _recurringKey.currentState?.add()),
+        _ => null,
+      };
+
+  Widget _mobileAddMachineBody() {
+    final canConnect =
+        !_addMachineBusy && _addMachinePaste.text.trim().isNotEmpty;
+    return PageBody(children: [
+      const SettingsGroupLabel('On the other machine'),
+      ListGroup(children: [
+        SettingsRow(
+          label: 'snippet serve --enable',
+          labelWidget: SelectableText('snippet serve --enable',
+              style: mono(13, color: AppColors.fg1)),
+          trailing: IconBtn('copy',
+              size: 40, iconSize: 15, tooltip: 'Copy command', onTap: () {
+            Clipboard.setData(
+                const ClipboardData(text: 'snippet serve --enable'));
+            toast(context, 'Copied');
+          }),
+        ),
+      ]),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+        child: Text(
+          'It prints a link and a QR code. If snippet is already running '
+          'there, snippet serve --status shows them again.',
+          style: TS.meta(),
+        ),
+      ),
+      const SettingsGroupLabel('Here'),
+      ListGroup(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Link', style: sans(15, color: AppColors.fg1)),
+              const SizedBox(height: 6),
+              SettingsField(
+                controller: _addMachinePaste,
+                hint: 'https://…?token=…',
+                mono: true,
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (_) => _submitAddMachine(),
+              ),
+            ],
+          ),
+        ),
+      ]),
+      if (_addMachineError != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+          child: Text(_addMachineError!,
+              style: sans(12, height: 1.4, color: AppColors.danger)),
+        ),
+      const SizedBox(height: S.s16),
+      Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+        Btn('Cancel',
+            variant: BtnVariant.secondary,
+            onTap: _addMachineBusy ? null : _closeAddMachine),
+        const SizedBox(width: S.s8),
+        Btn(_addMachineBusy ? 'Connecting…' : 'Connect',
+            disabled: !canConnect,
+            onTap: canConnect ? _submitAddMachine : null),
+      ]),
+    ]);
+  }
+
+  Widget _mobileGeneralBody() {
+    if (_addingMachine) return _mobileAddMachineBody();
+    return PageBody(children: [
+      const SettingsGroupLabel('Machines'),
+      ListGroup(children: [
+        if (_instances.isEmpty)
+          const SettingsRow(
+            label: 'No saved machines',
+            sub: 'Run snippet serve on one and add its link.',
+          )
+        else
+          for (final i in _instances) _machineRow(i),
+      ]),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+        child: Text(
+          'Snippet talks to the daemon on each machine. Run snippet serve on '
+          'a new one and paste the link it prints.',
+          style: TS.meta(),
+        ),
+      ),
+      const SettingsGroupLabel('Sessions'),
+      ListGroup(children: [
+        SettingsRow(
+          label: 'Ask before running commands',
+          sub:
+              'Off lets agents run shell commands and edit files without stopping to ask. Applies to every session on this machine.',
+          trailing: SettingsSwitch(
+              value: _manual ?? false,
+              onChanged: _manual == null ? null : _setManual),
+        ),
+        if (kCanNotify)
+          SettingsRow(
+            label: 'Notifications',
+            sub: 'When a session needs you or finishes.',
+            trailing: SettingsSwitch(
+                value: _notif, onChanged: _notifBusy ? null : _toggleNotif),
+          ),
+      ]),
+    ]);
+  }
+
+  Widget _mobileBody(SettingsPage page) => switch (page) {
+        SettingsPage.general => _mobileGeneralBody(),
+        SettingsPage.appearance => const AppearanceScreen(embedded: true),
+        SettingsPage.models => InferenceProfilesScreen(
+            key: _modelsKey,
+            client: widget.client,
+            embedded: true,
+            onEditingChanged: (editing) =>
+                setState(() => _modelsEditing = editing),
+          ),
+        SettingsPage.routing =>
+          RoutingScreen(client: widget.client, embedded: true),
+        SettingsPage.usage =>
+          UsageScreen(client: widget.client, embedded: true),
+        SettingsPage.voice =>
+          VoiceScreen(client: widget.client, embedded: true),
+        SettingsPage.webSearch =>
+          WebSearchScreen(client: widget.client, embedded: true),
+        SettingsPage.accounts =>
+          AccountsScreen(client: widget.client, embedded: true),
+        SettingsPage.memory =>
+          MemoryScreen(client: widget.client, embedded: true),
+        SettingsPage.vault => VaultScreen(
+            key: _vaultKey,
+            client: widget.client,
+            embedded: true,
+            onAddingChanged: (adding) => setState(() => _vaultAdding = adding),
+          ),
+        SettingsPage.wakes =>
+          WakesScreen(client: widget.client, embedded: true),
+        SettingsPage.scheduled => RecurringScreen(
+            key: _recurringKey,
+            client: widget.client,
+            embedded: true,
+            onAddingChanged: (adding) =>
+                setState(() => _recurringAdding = adding),
+          ),
+      };
+
   Widget _pageBody() {
     return switch (widget.page) {
       SettingsPage.models => InferenceProfilesScreen(
@@ -1986,6 +2182,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
           key: _vaultKey,
           client: widget.client,
           embedded: true,
+          onAddingChanged: (adding) => setState(() => _vaultAdding = adding),
         ),
       SettingsPage.wakes => WakesScreen(
           client: widget.client,
@@ -2006,6 +2203,31 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   Widget build(BuildContext context) {
     Theme.of(context);
     final page = widget.page;
+    if (kMobile) {
+      final addingMachine = page == SettingsPage.general && _addingMachine;
+      final action = _mobilePageAction(page);
+      final title = addingMachine
+          ? 'Connect a machine'
+          : (page == SettingsPage.general ? 'Machines' : _pageTitle(page));
+      return Swap(
+        stateKey: page,
+        fill: true,
+        child: CardGroupScope(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SettingsHeader(
+                title: title,
+                compact: true,
+                onBack: addingMachine ? _closeAddMachine : widget.onBack,
+                actions: [if (action != null) action],
+              ),
+              Expanded(child: _mobileBody(page)),
+            ],
+          ),
+        ),
+      );
+    }
     final Widget child;
     if (_plainPages.contains(page)) {
       final action = _pageAction(page);
@@ -2172,57 +2394,44 @@ class AppearanceScreen extends StatelessWidget {
         final base = tm.baseTheme;
         final custom = tm.customAccent;
 
-        final content = <Widget>[
-          _AppearancePreviewCard(),
-          const SizedBox(height: S.s16),
-          SettingsGroup(
-            header: 'Palette',
-            footer: 'Theme and accent colour are saved locally on this device.',
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
-                child: _ThemeCardCarousel(),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+        final paletteChildren = <Widget>[
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: _ThemeCardCarousel(),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Text('Accent colour',
-                            style: sans(kMobile ? 15 : 13,
-                                weight: W.label, color: AppColors.fg1)),
-                        const SizedBox(width: 8),
-                        Text(
-                          custom == null
-                              ? 'Theme default (${base.label})'
-                              : custom.label,
-                          style: sans(12, color: AppColors.fg3),
-                        ),
-                      ],
+                    Text('Accent colour',
+                        style: sans(kMobile ? 15 : 13,
+                            weight: W.label, color: AppColors.fg1)),
+                    const SizedBox(width: 8),
+                    Text(
+                      custom == null
+                          ? 'Theme default (${base.label})'
+                          : custom.label,
+                      style: sans(12, color: AppColors.fg3),
                     ),
-                    const SizedBox(height: 10),
-                    const _AccentSwatchStrip(),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 10),
+                const _AccentSwatchStrip(),
+              ],
+            ),
           ),
-          SettingsGroup(
-            header: 'Typography',
-            footer:
-                'UI typeface applies to headings, chat and controls; code font applies to diffs, terminals and IDs.',
-            children: const [
-              Padding(
-                padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
-                child: _FontCardCarousel(mono: false),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
-                child: _FontCardCarousel(mono: true),
-              ),
-            ],
+        ];
+        const typographyChildren = <Widget>[
+          Padding(
+            padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: _FontCardCarousel(mono: false),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: _FontCardCarousel(mono: true),
           ),
         ];
 
@@ -2231,11 +2440,32 @@ class AppearanceScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (onBack != null)
-                NavBackRow(title: 'Appearance', onBack: onBack!),
+                SettingsHeader(
+                    title: 'Appearance', compact: true, onBack: onBack!),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
-                  children: content,
+                  children: [
+                    _AppearancePreviewCard(),
+                    const SettingsGroupLabel('Palette'),
+                    ListGroup(children: paletteChildren),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+                      child: Text(
+                        'Theme and accent colour are saved locally on this device.',
+                        style: TS.meta(),
+                      ),
+                    ),
+                    const SettingsGroupLabel('Typography'),
+                    ListGroup(children: typographyChildren),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+                      child: Text(
+                        'UI typeface applies to headings, chat and controls; code font applies to diffs, terminals and IDs.',
+                        style: TS.meta(),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -2244,7 +2474,22 @@ class AppearanceScreen extends StatelessWidget {
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: content,
+          children: [
+            _AppearancePreviewCard(),
+            const SizedBox(height: S.s16),
+            SettingsGroup(
+              header: 'Palette',
+              footer:
+                  'Theme and accent colour are saved locally on this device.',
+              children: paletteChildren,
+            ),
+            SettingsGroup(
+              header: 'Typography',
+              footer:
+                  'UI typeface applies to headings, chat and controls; code font applies to diffs, terminals and IDs.',
+              children: typographyChildren,
+            ),
+          ],
         );
       },
     );

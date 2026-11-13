@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../api.dart';
+import '../desktop_layout.dart';
 import '../platform.dart';
 import '../settings_form.dart';
 import '../theme.dart';
@@ -107,47 +108,61 @@ class _WebSearchScreenState extends State<WebSearchScreen> {
 
   List<Widget> _groups(bool keySet) {
     final sub = keySet ? 'On for new sessions' : 'Off until a key is saved';
+    if (kMobile) {
+      return [
+        ListGroup(children: [
+          V5SettingsRow(
+            label: 'Exa key',
+            subtitle: sub,
+            leading: const V5IconTile('globe'),
+            value: keySet ? 'Set' : 'Not set',
+            valueColor: keySet ? AppColors.fg3 : AppColors.danger,
+            onTap: () => _editKey(keySet),
+          ),
+          if (keySet)
+            V5SettingsRow(
+              label: 'Remove key',
+              leading: V5IconTile('trash', color: AppColors.danger),
+              danger: true,
+              chevron: false,
+              onTap: _busy ? null : () => _save('', 'Key removed'),
+            ),
+        ]),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+          child: Text(
+            'Agents get web_search and web_read, powered by Exa, in '
+            'sessions that start after the key is saved. The key stays on '
+            'this machine.',
+            style: TS.meta(),
+          ),
+        ),
+      ];
+    }
     return [
       SettingsGroup(
         footer: 'Agents get web_search and web_read, powered by Exa, in '
             'sessions that start after the key is saved. The key stays on '
             'this machine.',
         children: [
-          if (!kMobile) ...[
-            SettingsRow(
-              label: 'Exa search',
-              sub: 'Web search and page reading for agents',
-              trailing: Tag(keySet ? 'Active' : 'Not set',
-                  tone: keySet ? Tone.ok : Tone.neutral, dot: true),
-            ),
-            SettingsRow(
-              label: keySet ? 'Replace key' : 'API key',
-              sub: 'From dashboard.exa.ai',
-              trailing: _desktopKey(),
-            ),
-            if (keySet)
-              SettingsRow(
-                label: 'Remove key',
-                sub: 'Turns web search off for new sessions',
-                trailing: SettingsPill('Remove',
-                    danger: true,
-                    onTap: _busy ? null : () => _save('', 'Key removed')),
-              ),
-          ] else
-            SettingsRow(
-              label: 'Exa key',
-              sub: sub,
-              onTap: () => _editKey(keySet),
-              trailing: Text(keySet ? 'Set' : 'Not set',
-                  style: sans(15,
-                      color: keySet ? AppColors.fg3 : AppColors.danger)),
-              chevron: true,
-            ),
-          if (kMobile && keySet)
+          SettingsRow(
+            label: 'Exa search',
+            sub: 'Web search and page reading for agents',
+            trailing: Tag(keySet ? 'Active' : 'Not set',
+                tone: keySet ? Tone.ok : Tone.neutral, dot: true),
+          ),
+          SettingsRow(
+            label: keySet ? 'Replace key' : 'API key',
+            sub: 'From dashboard.exa.ai',
+            trailing: _desktopKey(),
+          ),
+          if (keySet)
             SettingsRow(
               label: 'Remove key',
-              danger: true,
-              onTap: _busy ? null : () => _save('', 'Key removed'),
+              sub: 'Turns web search off for new sessions',
+              trailing: SettingsPill('Remove',
+                  danger: true,
+                  onTap: _busy ? null : () => _save('', 'Key removed')),
             ),
         ],
       ),
@@ -194,15 +209,20 @@ class _WebSearchScreenState extends State<WebSearchScreen> {
         children: _groups(keySet),
       );
     }
+    final child = kMobile ? CardGroupScope(child: body) : body;
     if (widget.embedded && widget.onBack != null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          NavBackRow(title: 'Web search', onBack: widget.onBack!),
-          Expanded(child: body),
+          if (kMobile)
+            SettingsHeader(
+                title: 'Web search', compact: true, onBack: widget.onBack!)
+          else
+            NavBackRow(title: 'Web search', onBack: widget.onBack!),
+          Expanded(child: child),
         ],
       );
     }
-    return body;
+    return child;
   }
 }

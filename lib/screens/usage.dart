@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../desktop_layout.dart';
 import '../models.dart';
 import '../platform.dart';
 import '../settings_form.dart';
@@ -165,7 +166,7 @@ class _UsageScreenState extends State<UsageScreen> {
     final Widget body;
     if (kMobile) {
       body = ListView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
           _PeriodTabs(value: _period, onChanged: _setPeriod),
           const SizedBox(height: 18),
@@ -226,7 +227,11 @@ class _UsageScreenState extends State<UsageScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          NavBackRow(title: 'Usage', onBack: widget.onBack!),
+          if (kMobile)
+            SettingsHeader(
+                title: 'Usage', compact: true, onBack: widget.onBack!)
+          else
+            NavBackRow(title: 'Usage', onBack: widget.onBack!),
           Expanded(child: body),
         ],
       );
