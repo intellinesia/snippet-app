@@ -350,10 +350,12 @@ class _AccountsScreenState extends State<AccountsScreen> {
       (kind.allowPasteFallback && _pasteKey);
 
   List<Widget> _groups() => [
-        const SettingsNote(
-            'When an account reaches its 5-hour or weekly limit, Snippet '
-            'moves to the next one in this order.'),
-        const SizedBox(height: 18),
+        if (!kMobile) ...[
+          const SettingsNote(
+              'When an account reaches its 5-hour or weekly limit, Snippet '
+              'moves to the next one in this order.'),
+          const SizedBox(height: 18),
+        ],
         for (final provider in _displayProviders)
           SettingsGroup(
             header: _title(provider),
@@ -957,15 +959,20 @@ class _AccountsScreenState extends State<AccountsScreen> {
         children: _groups(),
       );
     }
+    final child = kMobile ? CardGroupScope(child: body) : body;
     if (widget.embedded && widget.onBack != null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          NavBackRow(title: 'Accounts', onBack: widget.onBack!),
-          Expanded(child: body),
+          if (kMobile)
+            SettingsHeader(
+                title: 'Accounts', compact: true, onBack: widget.onBack!)
+          else
+            NavBackRow(title: 'Accounts', onBack: widget.onBack!),
+          Expanded(child: child),
         ],
       );
     }
-    return body;
+    return child;
   }
 }

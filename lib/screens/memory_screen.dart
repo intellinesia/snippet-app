@@ -86,9 +86,16 @@ class _MemoryScreenState extends State<MemoryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  NavBackRow(
+                  if (kMobile)
+                    SettingsHeader(
                       title: scopeTitle(scope, key),
-                      onBack: () => Navigator.of(ctx).maybePop()),
+                      compact: true,
+                      onBack: () => Navigator.of(ctx).maybePop(),
+                    )
+                  else
+                    NavBackRow(
+                        title: scopeTitle(scope, key),
+                        onBack: () => Navigator.of(ctx).maybePop()),
                   Expanded(
                     child: _ScopeView(
                         client: widget.client, scopeKey: key, scope: scope),
@@ -142,22 +149,26 @@ class _MemoryScreenState extends State<MemoryScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (back)
-          NavBackRow(title: title, onBack: _close)
+          if (kMobile)
+            SettingsHeader(title: title, compact: true, onBack: _close)
+          else
+            NavBackRow(title: title, onBack: _close)
         else if (!widget.embedded)
           const SizedBox.shrink(),
         Expanded(child: body),
       ],
     );
+    final scoped = kMobile ? CardGroupScope(child: content) : content;
     if (widget.embedded) {
       // Inside a shell pane the pane's own tint shows through, like Files.
       final page = kMobile ||
           (widget.initialKey != null && ShellPanelScope.maybeOf(context) == null);
       return Material(
         color: page ? AppColors.bg : Colors.transparent,
-        child: page ? SafeArea(bottom: false, child: content) : content,
+        child: page ? SafeArea(bottom: false, child: scoped) : scoped,
       );
     }
-    return Scaffold(body: SafeArea(bottom: false, child: content));
+    return Scaffold(body: SafeArea(bottom: false, child: scoped));
   }
 
   Widget _list() {
@@ -189,21 +200,30 @@ class _MemoryScreenState extends State<MemoryScreen> {
         index: index++,
         since: _shownAt,
         child: Padding(
-          padding: const EdgeInsets.only(bottom: 18),
+          padding: EdgeInsets.only(bottom: kMobile ? 0 : 18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (label.isNotEmpty) SectionHeader(label),
+              if (label.isNotEmpty)
+                kMobile ? SettingsGroupLabel(label) : SectionHeader(label),
               ListGroup(children: [
                 for (final s in items)
-                  ListRow(
-                    title: scopeTitle(s, s.key),
-                    subtitle: scopeStatus(s),
-                    leading: IconTile(scopeIcon(s.kind)),
-                    trailing: AppIcon('chevron-right',
-                        size: 15, color: AppColors.fg4),
-                    onTap: () => _openScopeKey(s.key),
-                  ),
+                  if (kMobile)
+                    V5SettingsRow(
+                      label: scopeTitle(s, s.key),
+                      subtitle: scopeStatus(s),
+                      leading: V5IconTile(scopeIcon(s.kind)),
+                      onTap: () => _openScopeKey(s.key),
+                    )
+                  else
+                    ListRow(
+                      title: scopeTitle(s, s.key),
+                      subtitle: scopeStatus(s),
+                      leading: IconTile(scopeIcon(s.kind)),
+                      trailing: AppIcon('chevron-right',
+                          size: 15, color: AppColors.fg4),
+                      onTap: () => _openScopeKey(s.key),
+                    ),
                 if (footer != null) footer,
               ]),
             ],
@@ -216,12 +236,13 @@ class _MemoryScreenState extends State<MemoryScreen> {
       onRefresh: _load,
       child: PageBody(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
-            child: Text(
-                'What your agents remember, kept as files in git. Agents write it as they work, and it is consolidated in the background.',
-                style: sans(13, height: 19 / 13, color: AppColors.fg3)),
-          ),
+          if (!kMobile)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
+              child: Text(
+                  'What your agents remember, kept as files in git. Agents write it as they work, and it is consolidated in the background.',
+                  style: sans(13, height: 19 / 13, color: AppColors.fg3)),
+            ),
           group('', global),
           group('Projects', projects),
           group('Agents', agents),

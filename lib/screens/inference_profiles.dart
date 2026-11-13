@@ -214,13 +214,20 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(widget.embedded ? 18 : 4, 6, 24, 6),
-            child: NavBackRow(
+          if (kMobile)
+            SettingsHeader(
               title: _editProfile == null ? 'Add profile' : 'Edit profile',
+              compact: true,
               onBack: _closeEditor,
+            )
+          else
+            Padding(
+              padding: EdgeInsets.fromLTRB(widget.embedded ? 18 : 4, 6, 24, 6),
+              child: NavBackRow(
+                title: _editProfile == null ? 'Add profile' : 'Edit profile',
+                onBack: _closeEditor,
+              ),
             ),
-          ),
           Expanded(child: editor),
         ],
       );
@@ -254,7 +261,50 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
                   : Btn('Add profile',
                       icon: 'plus', small: true, onTap: () => _edit(null)),
             )
-          else ...[
+          else if (kMobile) ...[
+            ListGroup(children: [
+              for (final p in profiles)
+                SettingsRow(
+                  label: p.name,
+                  sub: '${p.provider} · ${p.model}',
+                  leading: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface2,
+                      borderRadius: BorderRadius.circular(R.md),
+                    ),
+                    child: Center(child: ProviderLogo(p.provider, size: 17)),
+                  ),
+                  onTap: () => _edit(p),
+                  chevron: true,
+                  trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                    if (!p.usable) const WarnChip(),
+                    if (p.active)
+                      Text('Active',
+                          style: sans(14, color: AppColors.fg3)),
+                  ]),
+                ),
+            ]),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+              child: Text(
+                'New chats use the active profile. Lanes and background work follow Routing.',
+                style: TS.meta(),
+              ),
+            ),
+            const SizedBox(height: S.s16),
+            ListGroup(children: [
+              SettingsRow(
+                label: "Keep a task's model",
+                sub: 'Chats stay on the model a task used.',
+                trailing: SettingsSwitch(
+                  value: _keepTaskProfile ?? cfg?.keepTaskProfile ?? true,
+                  onChanged: _setKeepTaskProfile,
+                ),
+              ),
+            ]),
+          ] else ...[
             SettingsGroup(
               footer:
                   'New chats use the active profile. Lanes and background work follow Routing.',
@@ -263,14 +313,14 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
                   SettingsRow(
                     label: p.name,
                     sub: '${p.provider} · ${p.model}',
-                    leading: ProviderLogo(p.provider, size: kMobile ? 18 : 16),
+                    leading: ProviderLogo(p.provider, size: 16),
                     onTap: () => _edit(p),
                     chevron: true,
                     trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                       if (!p.usable) const WarnChip(),
                       if (p.active)
                         Text('Active',
-                            style: sans(kMobile ? 14 : 12, color: AppColors.fg3)),
+                            style: sans(12, color: AppColors.fg3)),
                     ]),
                   ),
               ],
@@ -289,20 +339,35 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
         ]);
       },
     );
+    final scoped = kMobile ? CardGroupScope(child: body) : body;
     if (widget.embedded) {
       // Desktop dialog pane: host owns navigation (chip strip), so no back row.
-      if (widget.onBack == null) return body;
+      if (widget.onBack == null) return scoped;
       // Phone drill-down: this level owns the header (see the editor branch).
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          NavBackRow(
+          if (kMobile)
+            SettingsHeader(
               title: 'Profiles',
+              compact: true,
               onBack: widget.onBack!,
-              trailing: [
-                HeaderAction('Add profile', onTap: () => _edit(null)),
-              ]),
-          Expanded(child: body),
+              actions: [
+                IconBtn('plus',
+                    size: 40,
+                    iconSize: 18,
+                    tooltip: 'Add profile',
+                    onTap: () => _edit(null)),
+              ],
+            )
+          else
+            NavBackRow(
+                title: 'Profiles',
+                onBack: widget.onBack!,
+                trailing: [
+                  HeaderAction('Add profile', onTap: () => _edit(null)),
+                ]),
+          Expanded(child: scoped),
         ],
       );
     }
