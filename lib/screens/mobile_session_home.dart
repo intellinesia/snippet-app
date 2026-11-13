@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -555,8 +554,9 @@ class HeroStat {
   final String? detail;
 }
 
-/// The home hero: a dot-matrix reading that rotates through [stats], starting
-/// on a random one each time [visit] changes.
+/// The home hero: one dot-matrix reading from [stats], picked at random each
+/// time the home is shown again ([visit] changes or a covering chat closes).
+/// A tap moves to the next reading.
 class HomeHero extends StatefulWidget {
   const HomeHero({super.key, required this.stats, this.visit = 0});
 
@@ -570,27 +570,26 @@ class HomeHero extends StatefulWidget {
 class _HomeHeroState extends State<HomeHero> {
   static final _rng = Random();
   String? _label;
-  Timer? _timer;
+  bool? _shown;
 
   @override
   void initState() {
     super.initState();
     _shuffle();
-    _timer = Timer.periodic(const Duration(seconds: 6), (_) {
-      if (mounted && TickerMode.valuesOf(context).enabled) _advance();
-    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final shown = TickerMode.valuesOf(context).enabled;
+    if (_shown == false && shown) _shuffle();
+    _shown = shown;
   }
 
   @override
   void didUpdateWidget(HomeHero old) {
     super.didUpdateWidget(old);
     if (old.visit != widget.visit) _shuffle();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
   }
 
   void _shuffle() {

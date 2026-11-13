@@ -14,21 +14,36 @@ void main() {
       .firstWhere((s) => find.text(s.label).evaluate().isNotEmpty)
       .label;
 
-  testWidgets('hero rotates on tap and on its timer', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      theme: buildAppTheme(),
-      home: const Scaffold(body: HomeHero(stats: stats)),
-    ));
+  testWidgets('hero holds its reading, a tap advances, a return reshuffles',
+      (tester) async {
+    Widget app(bool shown, int visit) => MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            body: TickerMode(
+              enabled: shown,
+              child: HomeHero(stats: stats, visit: visit),
+            ),
+          ),
+        );
+    await tester.pumpWidget(app(true, 0));
     final first = shown(tester);
     final i = stats.indexWhere((s) => s.label == first);
+
+    await tester.pump(const Duration(minutes: 5));
+    expect(shown(tester), first);
 
     await tester.tap(find.byType(HomeHero));
     await tester.pumpAndSettle();
     expect(shown(tester), stats[(i + 1) % 3].label);
 
-    await tester.pump(const Duration(seconds: 6));
-    await tester.pumpAndSettle();
-    expect(shown(tester), stats[(i + 2) % 3].label);
+    final seen = <String>{};
+    for (var v = 1; v <= 40; v++) {
+      await tester.pumpWidget(app(false, v));
+      await tester.pumpWidget(app(true, v));
+      await tester.pumpAndSettle();
+      seen.add(shown(tester));
+    }
+    expect(seen.length, greaterThan(1));
   });
 
   test('compact values fit the dot matrix', () {
