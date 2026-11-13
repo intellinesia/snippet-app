@@ -8,7 +8,6 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'settings_panel.dart';
-import 'shell_rail.dart' show kSidebarWidth;
 
 export 'settings_panel.dart' show SettingsPage;
 
@@ -183,21 +182,24 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                width: kSidebarWidth,
+                width: 224,
                 decoration: BoxDecoration(
-                  color: AppColors.windowBg,
+                  color: AppColors.tint1,
                   border: Border(right: borderSide),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SizedBox(height: kMacOS ? 44 : S.s8),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
+                      child: Text('Settings',
+                          style: sans(16, weight: W.title, color: AppColors.fg1)),
+                    ),
                     Expanded(
                       child: ListView(
                         padding: const EdgeInsets.fromLTRB(
                             S.s8, 0, S.s8, S.s12),
                         children: [
-                          _BackToSessionsRow(onTap: widget.onBack),
                           for (final (group, entries) in _groups) ...[
                             Padding(
                               padding: const EdgeInsets.fromLTRB(
@@ -219,7 +221,9 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                 ),
               ),
               Expanded(
-                child: ColoredBox(
+                child: Stack(children: [
+                  Positioned.fill(
+                    child: ColoredBox(
                   color: kMobile ? readingBg : Colors.transparent,
                   child: SettingsSectionView(
                     client: widget.client,
@@ -233,42 +237,21 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                     onSelectPage: _selectSection,
                     v5Desktop: true,
                   ),
-                ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: IconBtn('x',
+                        size: 32,
+                        iconSize: 16,
+                        tooltip: 'Close',
+                        onTap: widget.onBack),
+                  ),
+                ]),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BackToSessionsRow extends StatelessWidget {
-  const _BackToSessionsRow({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return HoverSurface(
-      onTap: onTap,
-      radius: R.md,
-      hoverColor: AppColors.fg1.withValues(alpha: 0.035),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 34),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Row(children: [
-            AppIcon('chevron-left', size: 16, color: AppColors.fg3),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Back to sessions',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(14, color: AppColors.fg3),
-              ),
-            ),
-          ]),
         ),
       ),
     );

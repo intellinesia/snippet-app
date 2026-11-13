@@ -121,7 +121,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Back to sessions'), findsOneWidget);
+    expect(find.byTooltip('Close'), findsOneWidget);
     for (final label in [
       'General',
       'Agents',
@@ -198,8 +198,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Agent schedules and keep-warm.'), findsOneWidget);
 
-    // Clicking Back to sessions and pressing Escape both invoke onBack.
-    await tester.tap(find.text('Back to sessions'));
+    // Close and Escape both invoke onBack.
+    await tester.tap(find.byTooltip('Close'));
     await tester.pumpAndSettle();
     expect(backCalls, 1);
 
