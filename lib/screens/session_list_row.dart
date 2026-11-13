@@ -525,7 +525,8 @@ class _WorkingDotsState extends State<WorkingDots>
       child: SizedBox(
         width: 14,
         height: 8,
-        child: AnimatedBuilder(
+        child: RepaintBoundary(
+            child: AnimatedBuilder(
           animation: _c,
           builder: (_, __) => Stack(clipBehavior: Clip.none, children: [
             for (var i = 0; i < 3; i++)
@@ -543,7 +544,7 @@ class _WorkingDotsState extends State<WorkingDots>
                 ),
               ),
           ]),
-        ),
+        )),
       ),
     );
   }

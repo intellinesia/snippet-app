@@ -1174,10 +1174,9 @@ class _PulseDotState extends State<_PulseDot>
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: AnimatedBuilder(
-        animation: _c,
-        builder: (_, __) => Opacity(
-          opacity: 1 - 0.65 * _c.value,
+      child: RepaintBoundary(
+        child: FadeTransition(
+          opacity: _c.drive(Tween(begin: 1.0, end: 0.35)),
           child: AppIcon('chevron-right', size: 14, color: AppColors.accent),
         ),
       ),

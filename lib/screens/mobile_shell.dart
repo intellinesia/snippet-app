@@ -176,9 +176,12 @@ class _MobileShellState extends State<MobileShell>
                     0),
                 child: Opacity(
                   opacity: _v.value.clamp(0.0, 1.0),
-                  child: SafeArea(
-                    bottom: false,
-                    child: activeTabBody,
+                  child: TickerMode(
+                    enabled: _v.value > 0,
+                    child: SafeArea(
+                      bottom: false,
+                      child: activeTabBody,
+                    ),
                   ),
                 ),
               ),
@@ -193,8 +196,11 @@ class _MobileShellState extends State<MobileShell>
                 translation: Offset(_exitX * _v.value, 0),
                 child: Material(
                   color: AppColors.bg,
-                  child: SafeArea(
-                    child: sidebar,
+                  child: TickerMode(
+                    enabled: chatsVisible || _v.value < 1.0,
+                    child: SafeArea(
+                      child: sidebar,
+                    ),
                   ),
                 ),
               ),

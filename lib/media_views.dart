@@ -499,13 +499,17 @@ class VoiceNote extends StatefulWidget {
   final String? url;
   final Duration? duration;
   final Widget? transcript;
+
+  /// Text colour of the bubble it sits in; controls and wave follow it.
+  final Color? ink;
   const VoiceNote(
       {super.key,
       required this.client,
       this.path = '',
       this.url,
       this.duration,
-      this.transcript});
+      this.transcript,
+      this.ink});
 
   @override
   State<VoiceNote> createState() => _VoiceNoteState();
@@ -604,6 +608,8 @@ class _VoiceNoteState extends State<VoiceNote> {
             : _playing || _position > Duration.zero
                 ? '${_clock(_position)} / ${_clock(_duration)}'
                 : _clock(_duration));
+    final ink = widget.ink ?? AppColors.fg1;
+    final muted = widget.ink?.withValues(alpha: 0.65) ?? AppColors.fg3;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -613,7 +619,7 @@ class _VoiceNoteState extends State<VoiceNote> {
             button: true,
             label: _playing ? 'Pause voice note' : 'Play voice note',
             child: Material(
-              color: AppColors.surface3,
+              color: widget.ink?.withValues(alpha: 0.14) ?? AppColors.surface3,
               shape: const CircleBorder(),
               child: InkWell(
                 onTap: _error == null ? _toggle : null,
@@ -623,9 +629,9 @@ class _VoiceNoteState extends State<VoiceNote> {
                   height: 32,
                   child: Center(
                     child: _loading
-                        ? Spinner(size: 13, color: AppColors.fg1)
+                        ? Spinner(size: 13, color: ink)
                         : AppIcon(_playing ? 'pause' : 'play',
-                            size: 13, color: AppColors.fg1),
+                            size: 13, color: ink),
                   ),
                 ),
               ),
@@ -651,8 +657,9 @@ class _VoiceNoteState extends State<VoiceNote> {
                               painter: _NoteWave(
                                 seed: (widget.url ?? widget.path).hashCode,
                                 progress: progress,
-                                played: AppColors.fg1,
-                                rest: AppColors.fg4.withValues(alpha: 0.5),
+                                played: ink,
+                                rest: widget.ink?.withValues(alpha: 0.3) ??
+                                    AppColors.fg4.withValues(alpha: 0.5),
                               ),
                             ))),
                   ),
@@ -664,11 +671,13 @@ class _VoiceNoteState extends State<VoiceNote> {
           Text(time,
               style: sans(12,
                   tabular: true,
-                  color: _error == null ? AppColors.fg3 : AppColors.danger)),
+                  color: _error == null ? muted : AppColors.danger)),
         ]),
         if (widget.transcript != null) ...[
           const SizedBox(height: 6),
-          Container(height: 1, color: AppColors.line),
+          Container(
+              height: 1,
+              color: widget.ink?.withValues(alpha: 0.12) ?? AppColors.line),
           const SizedBox(height: 4),
           widget.transcript!,
         ],

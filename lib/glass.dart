@@ -47,9 +47,11 @@ class Glass extends StatelessWidget {
       ),
       child: child,
     );
-    if (Glass.enabled) {
-      w = BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur), child: w);
+    if (Glass.enabled && !_Frosted.on(context)) {
+      final f = ImageFilter.blur(sigmaX: blur, sigmaY: blur);
+      w = BackdropGroup.of(context) == null
+          ? BackdropFilter(filter: f, child: w)
+          : BackdropFilter.grouped(filter: f, child: w);
     }
     return radius == null
         ? ClipOval(child: w)
@@ -68,31 +70,37 @@ class GlassTopFrame extends StatelessWidget {
   /// still reach the oldest row from under the header.
   static const double inset = 52;
   static const double fade = 14;
-  static const _steps = 8;
+  static const _bands = [
+    (0.0, 0.5, 11.0),
+    (0.5, 0.66, 9.0),
+    (0.66, 0.8, 7.0),
+    (0.8, 0.92, 5.0),
+    (0.92, 1.0, 3.0),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final bg = color ?? AppColors.bg;
     final on = Glass.enabled;
-    return Stack(children: [
+    final frame = Stack(children: [
       Positioned.fill(
         child: IgnorePointer(
           child: Stack(children: [
             if (on)
-              // Many small stacked blurs, each a little shorter: the frost
-              // tapers with no visible step. A masked blur renders unblurred.
+              // Bands share one backdrop read; overlapping stacked blurs cost a
+              // full pass each and were the main source of scroll jank.
               Positioned.fill(child: LayoutBuilder(builder: (context, c) {
                 final h = c.maxHeight;
                 return Stack(children: [
-                  for (var i = 0; i < _steps; i++)
+                  for (final (from, to, sigma) in _bands)
                     Positioned(
-                      top: 0,
+                      top: h * from,
                       left: 0,
                       right: 0,
-                      height: h * (1 - 0.55 * i / (_steps - 1)),
+                      height: h * (to - from),
                       child: ClipRect(
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                        child: BackdropFilter.grouped(
+                          filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
                           child: const SizedBox.expand(),
                         ),
                       ),
@@ -119,7 +127,23 @@ class GlassTopFrame extends StatelessWidget {
           ]),
         ),
       ),
-      Padding(padding: const EdgeInsets.only(bottom: fade), child: child),
+      Padding(
+          padding: const EdgeInsets.only(bottom: fade),
+          child: _Frosted(child: child)),
     ]);
+    return BackdropGroup.of(context) == null
+        ? BackdropGroup(child: frame)
+        : frame;
   }
+}
+
+/// Marks content already sitting on frost, so nested [Glass] skips its blur.
+class _Frosted extends InheritedWidget {
+  const _Frosted({required super.child});
+
+  static bool on(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<_Frosted>() != null;
+
+  @override
+  bool updateShouldNotify(_Frosted oldWidget) => false;
 }

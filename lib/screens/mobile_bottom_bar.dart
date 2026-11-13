@@ -111,7 +111,8 @@ class _MobileBottomBarState extends State<MobileBottomBar> {
     final bottom = keyboard > 0
         ? 12.0
         : 12.0 + MediaQuery.viewPaddingOf(context).bottom;
-    return Padding(
+    return BackdropGroup(
+        child: Padding(
       padding: EdgeInsets.only(bottom: keyboard),
       child: Padding(
         padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, bottom),
@@ -140,7 +141,7 @@ class _MobileBottomBarState extends State<MobileBottomBar> {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _pill() {

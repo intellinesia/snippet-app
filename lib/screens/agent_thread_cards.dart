@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../chat/chat_style.dart' show ChatColors;
 import '../approval_code.dart';
 import '../media_views.dart';
 import '../models.dart';
@@ -97,11 +98,12 @@ Widget _audioCard(
     constraints: BoxConstraints(maxWidth: kMobile ? 272 : 340),
     padding: const EdgeInsets.fromLTRB(8, 8, 12, 10),
     decoration: BoxDecoration(
-      color: AppColors.surface2,
-      borderRadius: BorderRadius.circular(kMobile ? 16 : R.card),
+      color: ChatColors.received,
+      borderRadius: BorderRadius.circular(ChatColors.radius),
     ),
     child: VoiceNote(
       client: client,
+      ink: ChatColors.receivedText,
       path: fallbackPath,
       url: resolvedUrl,
       duration: duration,

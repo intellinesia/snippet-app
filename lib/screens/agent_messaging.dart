@@ -14,6 +14,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
+import '../glass.dart';
 import '../api.dart';
 import '../chat/chat_style.dart';
 import '../composer/attachment_preview.dart';
@@ -1747,6 +1748,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           VoiceNote(
             client: widget.client,
             path: audio[i],
+            ink: mine ? ChatColors.sentText : ChatColors.receivedText,
             transcript: i < transcripts.length
                 ? AudioTranscriptCard(items: [transcripts[i]])
                 : (transcripts.isEmpty
@@ -1926,85 +1928,69 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             : null,
       );
     }
-    Widget roundBtn(String icon, String tip, VoidCallback onTap,
-            {Color? fill, Color? ink}) =>
-        Tooltip(
-          message: tip,
-          child: Material(
-            color: fill ?? AppColors.surface2,
-            borderRadius: BorderRadius.circular(14),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: onTap,
-              child: SizedBox.square(
-                dimension: 46,
-                child: Center(
-                    child:
-                        AppIcon(icon, size: 19, color: ink ?? AppColors.fg1)),
-              ),
+    Widget btn(String icon, String tip, VoidCallback onTap, {Color? color}) =>
+        Semantics(
+            button: true,
+            label: tip,
+            child: ComposerIconButton(icon,
+                tooltip: tip, onTap: onTap, color: color));
+    Widget slot(Widget w) => SizedBox(height: 36, child: Center(child: w));
+    return Glass(
+      radius: BorderRadius.circular(ComposerCard.radius),
+      tint: AppColors.surface1.withValues(alpha: 0.78),
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: Row(children: [
+          if (reviewing) ...[
+            slot(btn('trash', 'Discard', () => unawaited(_discardRecording()))),
+            slot(btn(
+                _isPlayingRecording ? 'pause' : 'play',
+                _isPlayingRecording ? 'Pause' : 'Play',
+                () => unawaited(_toggleRecordingPlayback()),
+                color: AppColors.fg1)),
+          ] else
+            slot(Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: StatusDot(
+                  status: 'running', size: 8, color: AppColors.danger),
+            )),
+          Expanded(
+            child: SizedBox(
+              height: 28,
+              child: LiveRecordingWave(
+                  buffer: _waveform, live: _isRecording, progress: progress),
             ),
           ),
-        );
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.raised,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(children: [
-        if (reviewing) ...[
-          roundBtn('trash', 'Discard', () => unawaited(_discardRecording()),
-              ink: AppColors.fg3),
           const SizedBox(width: 10),
-          roundBtn(
-              _isPlayingRecording ? 'pause' : 'play',
-              _isPlayingRecording ? 'Pause' : 'Play',
-              () => unawaited(_toggleRecordingPlayback())),
-          const SizedBox(width: 10),
-        ],
-        Expanded(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                if (!reviewing) ...[
-                  StatusDot(
-                      status: 'running', size: 8, color: AppColors.danger),
-                  const SizedBox(width: 6),
-                ],
-                Text(reviewing ? 'Voice note' : 'Recording',
-                    style: sans(13, color: AppColors.fg2)),
-                const Spacer(),
-                Text(time,
-                    style: sans(13,
-                        tabular: true,
-                        color: reviewing ? AppColors.fg3 : AppColors.danger)),
-              ]),
-              const SizedBox(height: 6),
-              SizedBox(
-                height: 30,
-                width: double.infinity,
-                child: LiveRecordingWave(
-                    buffer: _waveform, live: _isRecording, progress: progress),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 10),
-        if (_isRecording)
-          roundBtn('stop', 'Stop', () => unawaited(_stopRecording()),
-              fill: AppColors.surface3)
-        else ...[
-          if (_attachments.length < _maxAttachments - 1) ...[
-            roundBtn('mic', 'Record more', () => unawaited(_recordMore())),
-            const SizedBox(width: 10),
+          Text(time,
+              style: sans(13,
+                  tabular: true,
+                  color: reviewing ? AppColors.fg3 : AppColors.danger)),
+          const SizedBox(width: 6),
+          if (_isRecording)
+            slot(Semantics(
+              button: true,
+              label: 'Stop',
+              child: ComposerSendButton(
+                  enabled: true,
+                  stop: true,
+                  onTap: () => unawaited(_stopRecording())),
+            ))
+          else ...[
+            if (_attachments.length < _maxAttachments - 1)
+              slot(btn('mic', 'Record more', () => unawaited(_recordMore()))),
+            const SizedBox(width: 4),
+            slot(Semantics(
+              button: true,
+              label: 'Send voice note',
+              child: ComposerSendButton(
+                  enabled: !_sending,
+                  sending: _sending,
+                  onTap: _sending ? null : () => unawaited(_send())),
+            )),
           ],
-          roundBtn('arrow-up', 'Send voice note', () => unawaited(_send()),
-              fill: AppColors.accentFill, ink: AppColors.accentFg),
-        ],
-      ]),
+        ]),
+      ),
     );
   }
 
