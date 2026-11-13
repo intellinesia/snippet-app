@@ -7,6 +7,7 @@ import '../mochi.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'agent_cluster.dart';
 
 /// Chat palette for agent and group chats. Values measured from
 /// the reference screenshots; the received grey follows the theme brightness.
@@ -367,7 +368,7 @@ class ChatHeader extends StatelessWidget {
     this.leading,
   });
 
-  /// One id for a direct chat; up to two are stacked for a group.
+  /// One id for a direct chat; a group renders them as a cluster.
   final List<String> agentIds;
   final String title;
 
@@ -397,18 +398,9 @@ class ChatHeader extends StatelessWidget {
   Widget _avatar() {
     final big = kMobile ? 44.0 : 32.0;
     if (agentIds.length < 2) {
-      return _MochiDisc(id: agentIds.isEmpty ? '' : agentIds.first, size: big);
+      return MochiDisc(id: agentIds.isEmpty ? '' : agentIds.first, size: big);
     }
-    final s = kMobile ? 36.0 : 28.0;
-    return SizedBox(
-      width: s * 1.6,
-      height: s,
-      child: Stack(children: [
-        Positioned(left: 0, child: _MochiDisc(id: agentIds[0], size: s)),
-        Positioned(
-            right: 0, child: _MochiDisc(id: agentIds[1], size: s, ring: true)),
-      ]),
-    );
+    return AgentCluster(ids: agentIds, size: big);
   }
 
   Widget _pill() => Glass(
@@ -521,8 +513,9 @@ class ChatHeader extends StatelessWidget {
   }
 }
 
-class _MochiDisc extends StatelessWidget {
-  const _MochiDisc({required this.id, required this.size, this.ring = false});
+class MochiDisc extends StatelessWidget {
+  const MochiDisc(
+      {super.key, required this.id, required this.size, this.ring = false});
 
   final String id;
   final double size;

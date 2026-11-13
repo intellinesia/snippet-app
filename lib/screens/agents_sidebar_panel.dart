@@ -220,8 +220,8 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   Future<void> openCreateMenu(BuildContext anchor, {bool above = true}) async {
     final pick = await showAnchoredPanel<String>(
       anchor,
-      width: 240,
-      maxHeight: 160,
+      width: 288,
+      maxHeight: 200,
       above: above,
       alignRight: true,
       child: const _CreateMenu(),
@@ -629,27 +629,79 @@ class _EmptyTeam extends StatelessWidget {
 class _CreateMenu extends StatelessWidget {
   const _CreateMenu();
 
-  Widget _item(BuildContext context, String value, String icon, String label) =>
+  Widget _item(
+    BuildContext context,
+    String value,
+    String icon,
+    Color tileBg,
+    Color iconColor,
+    String title,
+    String subtitle,
+  ) =>
       InkWell(
         key: ValueKey('create-$value'),
         onTap: () => Navigator.of(context).pop(value),
+        splashFactory: NoSplash.splashFactory,
+        hoverColor: AppColors.hover,
+        highlightColor: AppColors.hover,
+        borderRadius: BorderRadius.circular(R.lg),
         child: Container(
-          constraints: BoxConstraints(minHeight: kMobile ? M.minTarget : 34),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          constraints: const BoxConstraints(minHeight: 60),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: Row(children: [
-            AppIcon(icon, size: 16, color: AppColors.fg2),
-            const SizedBox(width: 10),
-            Expanded(child: Text(label, style: TS.body(AppColors.fg1))),
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: tileBg,
+                borderRadius: BorderRadius.circular(R.card),
+              ),
+              alignment: Alignment.center,
+              child: AppIcon(icon, size: 18, color: iconColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(title,
+                      style: sans(15,
+                          weight: W.label, color: AppColors.fg1)),
+                  const SizedBox(height: 1),
+                  Text(subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(13, color: AppColors.fg3)),
+                ],
+              ),
+            ),
           ]),
         ),
       );
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          _item(context, 'agent', 'bot', 'New agent'),
-          _item(context, 'group', 'users', 'New group chat'),
-        ]),
+  Widget build(BuildContext context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _item(
+            context,
+            'agent',
+            'bot',
+            AppColors.accentBg,
+            AppColors.accent,
+            'New agent',
+            'A specialist with its own model and memory',
+          ),
+          _item(
+            context,
+            'group',
+            'users',
+            AppColors.surface3,
+            AppColors.fg1,
+            'New group',
+            'Several agents in one conversation',
+          ),
+        ],
       );
 }

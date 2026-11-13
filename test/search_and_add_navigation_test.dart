@@ -220,7 +220,7 @@ void main() {
       expect(currentHome, MobileHome.agents);
       await tester.tap(find.byTooltip('New agent or group'));
       await tester.pumpAndSettle();
-      expect(find.text('New group chat'), findsOneWidget);
+      expect(find.text('New group'), findsOneWidget);
       await tester.tap(find.text('New agent'));
       await tester.pumpAndSettle();
       expect(find.byType(CreateAgentForm), findsOneWidget);
