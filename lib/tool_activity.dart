@@ -255,20 +255,20 @@ String activitySummary(List<ToolStep> steps) {
   final changeSteps =
       steps.where((s) => toolBaseName(s.tool) == 'change_files').length;
   final parts = [
+    if (read > 0) 'read $read ${_plural(read, 'file', 'files')}',
+    if (ran > 0) 'ran $ran ${_plural(ran, 'command', 'commands')}',
+    if (searched > 0)
+      'searched $searched ${_plural(searched, 'time', 'times')}',
+    if (pages > 0) 'read $pages ${_plural(pages, 'page', 'pages')}',
     if (changeSteps > 0)
       edited > 0
           ? 'edited $edited ${_plural(edited, 'file', 'files')}'
           : 'made $changeSteps ${_plural(changeSteps, 'change', 'changes')}',
-    if (ran > 0) 'ran $ran ${_plural(ran, 'command', 'commands')}',
-    if (read > 0) 'read $read ${_plural(read, 'file', 'files')}',
-    if (searched > 0)
-      'searched $searched ${_plural(searched, 'time', 'times')}',
-    if (pages > 0) 'read $pages ${_plural(pages, 'page', 'pages')}',
     if (other > 0)
       _otherPhrase(other,
           hasOthers: ran + changeSteps + read + searched + pages > 0),
   ];
-  final sentence = parts.join(', ');
+  final sentence = parts.join(' · ');
   return '${sentence[0].toUpperCase()}${sentence.substring(1)}';
 }
 

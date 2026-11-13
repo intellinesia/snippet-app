@@ -43,20 +43,25 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
 }
 
 void main() {
-  testWidgets('collapsed line is centred fg3 text with a fg1 Show action',
-      (tester) async {
+  testWidgets('collapsed line is a left-aligned chevron summary with no Show '
+      'action', (tester) async {
     _usePhone();
     await _pump(tester, CollapsedActivity(_rows()));
 
-    final summary = tester.widget<Text>(
-        find.text('Edited 2 files, ran 6 commands'));
-    expect(summary.style?.color, AppColors.fg3);
-    expect(summary.style?.fontSize, isNot(TS.caption().fontSize));
+    final summary =
+        find.text('Ran 6 commands · edited 2 files', findRichText: true);
+    expect(summary, findsOneWidget);
+    final text = tester.widget<Text>(find.ancestor(
+        of: summary,
+        matching: find.byType(Text),
+        matchRoot: true));
+    expect(text.style?.color, AppColors.fg3);
+    expect(text.style?.fontSize, 14);
 
-    final show = tester.widget<Text>(find.text('Show'));
-    expect(show.style?.color, AppColors.fg1);
-    expect(show.style?.fontWeight, FontWeight.w500);
+    // 14px chevron slot + 8px gap puts the summary at x = 22.
+    expect(tester.getTopLeft(summary).dx, closeTo(22, 0.5));
 
+    expect(find.text('Show'), findsNothing);
     expect(find.text('Hide'), findsNothing);
     expect(find.byType(DenseToolRow), findsNothing);
     expect(
@@ -64,36 +69,31 @@ void main() {
         of: find.byType(CollapsedActivity),
         matching: find.byType(AppIcon),
       ),
-      findsNothing,
+      findsOneWidget,
     );
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('Show expands rows and Hide collapses them', (tester) async {
+  testWidgets('tapping the summary reveals the rows and tapping again hides '
+      'them', (tester) async {
     _usePhone();
     await _pump(tester, CollapsedActivity(_rows()));
 
-    await tester.tap(find.text('Show'));
+    await tester.tap(
+        find.text('Ran 6 commands · edited 2 files', findRichText: true));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(DenseToolRow), findsNWidgets(8));
-    expect(find.text('Hide'), findsOneWidget);
     expect(find.text('Show'), findsNothing);
-    expect(
-      find.descendant(
-        of: find.byType(CollapsedActivity),
-        matching: find.byType(AppIcon),
-      ),
-      findsNothing,
-    );
+    expect(find.text('Hide'), findsNothing);
 
-    await tester.tap(find.text('Hide'));
+    await tester.tap(
+        find.text('Ran 6 commands · edited 2 files', findRichText: true));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(DenseToolRow), findsNothing);
-    expect(find.text('Show'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 }

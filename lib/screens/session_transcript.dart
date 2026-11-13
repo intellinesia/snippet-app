@@ -1046,7 +1046,6 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
 
   @override
   Widget build(BuildContext context) {
-    Theme.of(context);
     final steps = [
       for (final r in widget.rows.whereType<DenseToolRow>())
         ToolStep(tool: r.tool, args: r.args, result: r.result),
@@ -1057,54 +1056,126 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
     final isRunning =
         widget.running && (steps.isEmpty || steps.any((s) => s.running));
     final open = _open;
-    final meta = TS.meta();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: S.s4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: _toggle,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: kMobile ? 32 : 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: Text(
-                      summary,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: meta,
-                    ),
+    final style = sans(kMobile ? 14 : 13, color: AppColors.fg3);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _toggle,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: kMobile ? 32 : 24),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: isRunning
+                      ? const _PulseDot()
+                      : AnimatedRotation(
+                          turns: open ? 0.25 : 0,
+                          duration: Motion.fast,
+                          curve: Curves.easeOutCubic,
+                          child: AppIcon('chevron-right',
+                              size: 14, color: AppColors.fg3),
+                        ),
+                ),
+                const SizedBox(width: S.s8),
+                Flexible(
+                  child: Text.rich(
+                    TextSpan(children: [
+                      TextSpan(text: summary),
+                      if (failures > 0 && !isRunning)
+                        TextSpan(
+                            text: ' · $failures failed',
+                            style: style.copyWith(color: AppColors.danger)),
+                    ]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: style,
                   ),
-                  if (failures > 0 && !isRunning)
-                    Text(' · $failures failed',
-                        style: meta.copyWith(color: AppColors.danger)),
-                  Text(' · ', style: meta),
-                  Text(open ? 'Hide' : 'Show',
-                      style: meta.copyWith(
-                          color: AppColors.fg1, fontWeight: W.label)),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          AnimatedSize(
-            duration: Motion.fast,
-            curve: Curves.easeOutCubic,
-            alignment: Alignment.topCenter,
-            child: open
-                ? Padding(
-                    padding: const EdgeInsets.only(top: S.s2, bottom: S.s4),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: widget.rows,
+        ),
+        AnimatedSize(
+          duration: Motion.fast,
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: open
+              ? Padding(
+                  padding: const EdgeInsets.only(top: S.s4, bottom: S.s6),
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 7),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border(
+                            left: BorderSide(color: AppColors.border)),
+                      ),
+                      padding: const EdgeInsets.only(left: S.s12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (var i = 0; i < widget.rows.length; i++) ...[
+                            if (i > 0) const SizedBox(height: S.s2),
+                            widget.rows[i],
+                          ],
+                        ],
+                      ),
                     ),
-                  )
-                : const SizedBox(width: double.infinity),
+                  ),
+                )
+              : const SizedBox(width: double.infinity),
+        ),
+      ],
+    );
+  }
+}
+
+class _PulseDot extends StatefulWidget {
+  const _PulseDot();
+
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1200));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (reduceMotion(context)) {
+      _c.stop();
+      _c.value = 0.5;
+    } else if (!_c.isAnimating) {
+      _c.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (_, __) => Opacity(
+          opacity: 1 - 0.65 * _c.value,
+          child: Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+                color: AppColors.accent, shape: BoxShape.circle),
           ),
-        ],
+        ),
       ),
     );
   }
