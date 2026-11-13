@@ -468,7 +468,7 @@ class _TermTreeRowState extends State<_TermTreeRow> {
               child: Text(widget.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(12.5, color: on ? AppColors.fg1 : AppColors.fg2)),
+                  style: sans(13, color: on ? AppColors.fg1 : AppColors.fg2)),
             ),
             const SizedBox(width: 8),
             Text(widget.alive ? 'running' : 'idle',

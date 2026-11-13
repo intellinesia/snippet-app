@@ -1781,7 +1781,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
           : null,
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         Text(connected ? 'Connected' : 'Offline',
-            style: sans(12.5, color: AppColors.fg4)),
+            style: sans(13, color: AppColors.fg4)),
         const SizedBox(width: 6),
         _machineMenu(i, connect: !isActive && widget.onSelect != null),
       ]),
@@ -1823,7 +1823,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
             },
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(_manual == null ? '' : (_manual! ? 'Ask' : 'Yolo'),
-                  style: sans(12.5, color: AppColors.fg3)),
+                  style: sans(13, color: AppColors.fg3)),
               const SizedBox(width: S.s6),
               AppIcon('chevron-down', size: 12, color: AppColors.fg3),
             ]),
@@ -1849,7 +1849,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
             if (warmCount != null) ...[
               Text(warmCount == 0 ? 'Off' : '$warmCount active',
-                  style: sans(12.5, color: AppColors.fg3)),
+                  style: sans(13, color: AppColors.fg3)),
               const SizedBox(width: S.s6),
             ],
             AppIcon('chevron-right', size: 14, color: AppColors.fg3),

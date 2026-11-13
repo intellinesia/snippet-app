@@ -123,13 +123,15 @@ void main() {
     }
   });
 
-  testWidgets('desktop cards are one flat list with the same detail',
+  testWidgets('desktop cards pin Needs you and keep the same detail',
       (tester) async {
     try {
       await _pump(tester, const Size(300, 520), TargetPlatform.macOS);
-      expect(find.text('snippet-mobile'), findsOneWidget);
+      expect(
+          find.widgetWithText(SessionGroupHeader, 'Needs you'), findsOneWidget);
+      expect(find.text('snippet-mobile'), findsNWidgets(2));
       expect(find.bySemanticsLabel(RegExp('^Working')), findsOneWidget);
-      expect(find.text('+120'), findsOneWidget);
+      expect(find.text('+88'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
@@ -249,7 +251,11 @@ void main() {
   testWidgets('tapping a group header hides and restores its rows',
       (tester) async {
     try {
-      await _pump(tester, const Size(300, 520), TargetPlatform.macOS);
+      await _pump(tester, const Size(300, 520), TargetPlatform.macOS,
+          sessions: [
+            _s('a', 'Redo voice settings subpage', 'idle', branch: 'main'),
+            _s('b', 'Richer session cards', 'running', branch: 'cards'),
+          ]);
       expect(find.text('Redo voice settings subpage'), findsOneWidget);
       expect(find.text('Richer session cards'), findsOneWidget);
       expect(

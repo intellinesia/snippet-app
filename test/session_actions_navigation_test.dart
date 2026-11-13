@@ -77,7 +77,7 @@ void main() {
         expect(find.text('Tasks'), findsNothing);
         expect(find.byTooltip('Shell'), findsNothing);
         if (desktop) {
-          expect(find.byTooltip('Tasks'), findsNothing);
+          expect(find.byTooltip('Tasks'), findsOneWidget);
         } else {
           expect(find.byType(MobileMissionBar), findsOneWidget);
           expect(find.byTooltip('Tasks'), findsOneWidget);
