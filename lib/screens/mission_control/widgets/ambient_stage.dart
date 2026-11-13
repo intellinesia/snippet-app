@@ -213,8 +213,9 @@ class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
 }
 
 class AmbientHeaderOrb extends StatefulWidget {
-  const AmbientHeaderOrb({super.key, required this.client});
+  const AmbientHeaderOrb({super.key, required this.client, this.size = 38});
   final DaemonClient client;
+  final double size;
 
   @override
   State<AmbientHeaderOrb> createState() => _AmbientHeaderOrbState();
@@ -258,11 +259,11 @@ class _AmbientHeaderOrbState extends State<AmbientHeaderOrb> {
           _m.shiftMode(v < 0 ? 1 : -1);
         },
         child: SizedBox(
-          width: 44,
-          height: 44,
+          width: widget.size + 6,
+          height: widget.size + 6,
           child: Center(
             child: _Orb(
-              size: 38,
+              size: widget.size,
               color: color,
               alive: _m.listening,
               level: _m.status.speaking ? 1 : 0,

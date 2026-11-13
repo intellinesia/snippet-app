@@ -1248,6 +1248,11 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   Widget _mcHeaderActions(HarnessState? s) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Tooltip(
+            message: 'Ambient listening',
+            child: AmbientHeaderOrb(client: widget.client, size: 22),
+          ),
+          const SizedBox(width: 4),
           IconBtn('task',
               size: 30,
               iconSize: 15,

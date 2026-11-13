@@ -1785,12 +1785,6 @@ class _SessionScreenState extends State<SessionScreen>
                   : const SizedBox(key: ValueKey('mobile-chat')),
             ),
           ),
-          if (_isMissionControl && !kMobile)
-            Positioned(
-              top: 8,
-              left: 16,
-              child: AmbientHeaderOrb(client: widget.client),
-            ),
         ]),
       ),
     );

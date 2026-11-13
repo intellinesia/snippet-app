@@ -11,7 +11,7 @@ import 'package:snippet/screens/desktop_shell.dart';
 import 'package:snippet/screens/session.dart' show TerminalHost, TerminalInfo;
 import 'package:snippet/screens/session_list_row.dart';
 import 'package:snippet/screens/session_side_panel.dart';
-import 'package:snippet/screens/tasks/tasks_panel.dart';
+import 'package:snippet/screens/tasks/task_kanban.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
 import 'package:stream_channel/stream_channel.dart';
@@ -258,7 +258,7 @@ void main() {
     expect(find.byTooltip('Session actions'), findsOneWidget);
   });
 
-  testWidgets('Tasks tab opens TasksPanel and Back/Forward navigate history',
+  testWidgets('Tasks tab opens TaskKanban and Back/Forward navigate history',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     DaemonClient.wsConnector =
@@ -283,16 +283,16 @@ void main() {
 
     await tester.tap(find.text('Tasks'));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.byType(TasksPanel), findsOneWidget);
+    expect(find.byType(TaskKanban), findsOneWidget);
 
     // Back returns to Mission Control; Forward goes back to Tasks.
     await tester.tap(find.byTooltip('Back'));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.byType(TasksPanel), findsNothing);
+    expect(find.byType(TaskKanban), findsNothing);
 
     await tester.tap(find.byTooltip('Forward'));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.byType(TasksPanel), findsOneWidget);
+    expect(find.byType(TaskKanban), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(seconds: 1));

@@ -39,7 +39,6 @@ import 'git.dart';
 import 'inbound_share_picker.dart';
 import 'mission_control.dart';
 import 'tasks/task_kanban.dart';
-import 'tasks/tasks_panel.dart';
 import 'mobile_chrome.dart';
 import 'mobile_shell.dart';
 import 'new_session_picker.dart';
