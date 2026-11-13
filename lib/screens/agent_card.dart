@@ -87,8 +87,9 @@ String agentStatusLine(CoordinationAgent agent,
 /// v5 row time: 'now', HH:mm today, weekday this week, 'd MMM' older.
 String agentRowTime(DateTime? at, {DateTime? now}) {
   if (at == null) return '';
-  final n = now ?? DateTime.now();
-  if (!at.isAfter(n.subtract(const Duration(minutes: 1)))) return 'now';
+  at = at.toLocal();
+  final n = (now ?? DateTime.now()).toLocal();
+  if (n.difference(at) < const Duration(minutes: 1)) return 'now';
   const months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'

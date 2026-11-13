@@ -48,4 +48,12 @@ void main() {
     expect(find.text('Working'), findsNothing);
     expect(find.byKey(const ValueKey('agent-ring')), findsOneWidget);
   });
+
+  test('agentRowTime: now under a minute, clock time today, weekday this week', () {
+    final n = DateTime(2026, 11, 13, 9, 30);
+    expect(agentRowTime(n.subtract(const Duration(seconds: 20)), now: n), 'now');
+    expect(agentRowTime(DateTime(2026, 11, 13, 8, 5), now: n), '08:05');
+    expect(agentRowTime(DateTime(2026, 11, 12, 18, 36), now: n), 'Thu');
+    expect(agentRowTime(DateTime(2026, 10, 2, 18, 36), now: n), '2 Oct');
+  });
 }
