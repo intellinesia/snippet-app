@@ -486,18 +486,9 @@ class ChatHeader extends StatelessWidget {
         ]),
       ),
     );
-    return SizedBox(
-      height: overlap,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            stops: const [0, 0.78, 1],
-            colors: [bg, bg, bg.withValues(alpha: 0)],
-          ),
-        ),
-        child: Padding(
+    final body = SizedBox(
+      height: overlap - GlassTopFrame.fade,
+      child: Padding(
           padding: EdgeInsets.fromLTRB(
               kMobile ? 16 : 12, kMobile ? 6 : 8, kMobile ? 16 : 12, 0),
           child: Stack(children: [
@@ -508,8 +499,25 @@ class ChatHeader extends StatelessWidget {
               Positioned(right: 0, top: 0, child: trailing!),
           ]),
         ),
-      ),
     );
+    if (!kMobile) {
+      return SizedBox(
+        height: overlap,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: const [0, 0.78, 1],
+              colors: [bg, bg, bg.withValues(alpha: 0)],
+            ),
+          ),
+          child: Align(alignment: Alignment.topCenter, child: body),
+        ),
+      );
+    }
+    return SizedBox(
+        height: overlap, child: GlassTopFrame(color: bg, child: body));
   }
 }
 

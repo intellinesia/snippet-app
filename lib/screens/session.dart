@@ -67,6 +67,7 @@ import 'desk_memory.dart';
 import 'recurring.dart';
 import 'file_changes.dart';
 import 'action_list.dart';
+import '../glass.dart' show GlassTopFrame;
 import 'mobile_chrome.dart';
 import 'session_panels.dart';
 import 'session_coordination_cards.dart';
@@ -1387,6 +1388,8 @@ class _SessionScreenState extends State<SessionScreen>
     return 0;
   }
 
+  bool get _glassHeader => kMobile && !widget.readOnly;
+
   @override
   Widget build(BuildContext context) {
     // Depend on Theme so this rebuilds when the user switches palettes.
@@ -1439,12 +1442,7 @@ class _SessionScreenState extends State<SessionScreen>
                       return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            if (widget.readOnly)
-                              _readOnlyHeader(status)
-                            else if (kMobile)
-                              widget.mobileTopBar
-                                      ?.call(() => _openActionsDrawer(s)) ??
-                                  _mobileHeader(s),
+                            if (widget.readOnly) _readOnlyHeader(status),
                             if (widget.readOnly && widget.banner != null)
                               _centerWide(widget.banner!),
                             // Mission Control's mobile top bar has no status line.
@@ -1556,7 +1554,9 @@ class _SessionScreenState extends State<SessionScreen>
                                                   ScrollCacheExtent.pixels(400),
                                               padding: EdgeInsets.fromLTRB(
                                                   kMobile ? M.gutter : 20,
-                                                  16,
+                                                  _glassHeader
+                                                      ? GlassTopFrame.inset + 12
+                                                      : 16,
                                                   kMobile ? M.gutter : 20,
                                                   24),
                                               itemCount: timeline.length,
@@ -1615,6 +1615,17 @@ class _SessionScreenState extends State<SessionScreen>
                                               size: 16, color: AppColors.fg3),
                                         ),
                                       ),
+                                    ),
+                                  ),
+                                if (_glassHeader)
+                                  Positioned(
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    child: GlassTopFrame(
+                                      child: widget.mobileTopBar?.call(
+                                              () => _openActionsDrawer(s)) ??
+                                          _mobileHeader(s),
                                     ),
                                   ),
                               ]),

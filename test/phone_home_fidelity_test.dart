@@ -64,6 +64,7 @@ Widget _phoneHarness({
   int? mcAttention,
   VoidCallback? onOpenMissionControl,
   VoidCallback? onMobileMenu,
+  VoidCallback? onNewSession,
   MobileHome mobileHome = MobileHome.chats,
 }) {
   return MaterialApp(
@@ -77,7 +78,7 @@ Widget _phoneHarness({
           sessions: sessions,
           sessionsLoading: false,
           onRefreshSessions: () {},
-          onNewSession: () {},
+          onNewSession: onNewSession ?? () {},
           onSelectInstance: (_) {},
           onOpenMissionControl: onOpenMissionControl ?? () {},
           onOpenSession: (_, __, ___) {},
@@ -104,7 +105,7 @@ Widget _phoneHarness({
 }
 
 void main() {
-  testWidgets('phone header renders MC button, badge, Listening pill, More and Sessions title',
+  testWidgets('phone header renders MC button, badge, Listening pill, New session and Sessions title',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
@@ -115,7 +116,7 @@ void main() {
         listening: true,
         mcAttention: 2,
         onOpenMissionControl: () => mcTapped++,
-        onMobileMenu: () => moreTapped++,
+        onNewSession: () => moreTapped++,
       ));
       await tester.pumpAndSettle();
 
@@ -134,7 +135,7 @@ void main() {
       expect(mcMochi.color, AppColors.fg1);
 
       await tester.tap(find.byTooltip('Mission Control'));
-      await tester.tap(find.byTooltip('More'));
+      await tester.tap(find.byTooltip('New session'));
       await tester.pump();
       expect(mcTapped, 1);
       expect(moreTapped, 1);

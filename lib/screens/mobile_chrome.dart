@@ -457,7 +457,7 @@ class MobileBackBar extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: pill
                     ? TS.ui(AppColors.fg1).copyWith(
-                        fontSize: 14, fontWeight: W.strong, height: 1.2)
+                        fontSize: 15, fontWeight: W.strong, height: 1.25)
                     : sans(16, weight: W.strong, color: AppColors.fg1)),
           ),
           if (chevron) ...[
@@ -512,15 +512,11 @@ class MobileBackBar extends StatelessWidget {
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: onTitleTap,
-                        child: Glass(
-                          radius: BorderRadius.circular(20),
-                          child: Container(
-                            height: 40,
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 16),
-                            alignment: Alignment.center,
-                            child: IntrinsicWidth(child: label),
-                          ),
+                        child: Container(
+                          height: 44,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          alignment: Alignment.center,
+                          child: IntrinsicWidth(child: label),
                         ),
                       ),
                     ),

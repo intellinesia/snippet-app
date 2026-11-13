@@ -56,3 +56,58 @@ class Glass extends StatelessWidget {
         : ClipRRect(borderRadius: radius!, child: w);
   }
 }
+
+/// The frosted strip a chat header floats on; the transcript scrolls under it.
+class GlassTopFrame extends StatelessWidget {
+  const GlassTopFrame({super.key, required this.child, this.color});
+
+  final Widget child;
+  final Color? color;
+
+  /// Room the transcript leaves at its top so the newest-first scroll can
+  /// still reach the oldest row from under the header.
+  static const double inset = 60;
+  static const double fade = 14;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = color ?? AppColors.bg;
+    final strip = DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            bg.withValues(alpha: Glass.enabled ? 0.78 : 0.96),
+            bg.withValues(alpha: Glass.enabled ? 0.52 : 0.9),
+          ],
+        ),
+      ),
+      child: child,
+    );
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      ClipRect(
+        child: Glass.enabled
+            ? BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                child: strip)
+            : strip,
+      ),
+      IgnorePointer(
+        child: Container(
+          height: fade,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                bg.withValues(alpha: Glass.enabled ? 0.52 : 0.9),
+                bg.withValues(alpha: 0),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ]);
+  }
+}

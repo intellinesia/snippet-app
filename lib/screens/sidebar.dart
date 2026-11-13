@@ -323,10 +323,7 @@ class SidebarState extends State<Sidebar> {
                     home: widget.mobileHome,
                     onHome: widget.onMobileHome,
                     onNewSession: widget.onNewSession,
-                    showNewSession: !_agentsList,
-                    workingCount: widget.mobileHome == MobileHome.chats
-                        ? _workingCount
-                        : 0,
+                    showNewSession: false,
                     onSearch: _searchAction(),
                     onHeightChanged: (h) {
                       if (mounted && h != _barHeight) {
@@ -557,15 +554,6 @@ class SidebarState extends State<Sidebar> {
             kMobile ? widget.onAgent(a) : widget.onOpenAgent?.call(a),
       );
 
-  /// Sessions the pill counts as working: awake, not waiting, actually running.
-  int get _workingCount => [
-        for (final s in widget.sessions ?? const <SessionInfo>[])
-          if (!s.settled &&
-              s.status != 'waiting_for_input' &&
-              sessionIsActive(s.status))
-            s,
-      ].length;
-
   /// The bar's search circle opens the v5 search page on Chats and Agents.
   VoidCallback? _searchAction() {
     if (_selecting ||
@@ -658,11 +646,11 @@ class SidebarState extends State<Sidebar> {
               )
             else
               RoundBtn(
-                icon: 'more-horizontal',
-                tooltip: 'More',
+                icon: 'plus',
+                tooltip: 'New session',
                 size: 40,
                 iconSize: 18,
-                onTap: widget.onMobileMenu,
+                onTap: hasClient ? widget.onNewSession : null,
               ),
           ],
         );
