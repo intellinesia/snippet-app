@@ -786,3 +786,139 @@ Future<T?> showAnchoredPanel<T>(
     },
   );
 }
+
+/// A form beside its trigger on desktop (no dialog), a sheet on phones.
+Future<T?> showSidePopover<T>(
+  BuildContext context, {
+  BuildContext? anchorContext,
+  required String title,
+  required Widget child,
+  Key? popoverKey,
+  double width = 340,
+}) async {
+  if (kMobile) return showAppSheet<T>(context, title: title, child: child);
+  final box = anchorContext?.findRenderObject() as RenderBox?;
+  final anchor = box == null || !box.attached
+      ? const Rect.fromLTWH(16, 96, 0, 0)
+      : box.localToGlobal(Offset.zero) & box.size;
+  return showGeneralDialog<T>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: title,
+    barrierColor: Colors.transparent,
+    transitionDuration: Motion.quick,
+    pageBuilder: (ctx, _, __) => SafeArea(
+      minimum: const EdgeInsets.all(12),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+        child: LayoutBuilder(builder: (context, constraints) {
+          final origin = (context.findRenderObject() as RenderBox?)
+                  ?.localToGlobal(Offset.zero) ??
+              Offset.zero;
+          return CustomSingleChildLayout(
+            delegate: _SidePopoverLayout(anchor.shift(-origin), width),
+            child: Material(
+              key: popoverKey,
+              color: AppColors.overlay,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(R.lg),
+                  side: BorderSide(color: AppColors.line)),
+              clipBehavior: Clip.antiAlias,
+              elevation: 4,
+              shadowColor: Colors.black.withValues(alpha: 0.4),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(title,
+                        style: sans(13, weight: W.label, color: AppColors.fg1)),
+                    const SizedBox(height: 12),
+                    child,
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    ),
+    transitionBuilder: (_, anim, __, child) => FadeTransition(
+        opacity: CurvedAnimation(parent: anim, curve: Motion.enter),
+        child: child),
+  );
+}
+
+class _SidePopoverLayout extends SingleChildLayoutDelegate {
+  const _SidePopoverLayout(this.anchor, this.width);
+
+  final Rect anchor;
+  final double width;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      BoxConstraints(
+        minWidth: constraints.maxWidth.clamp(0, width),
+        maxWidth: constraints.maxWidth.clamp(0, width),
+        maxHeight: constraints.maxHeight,
+      );
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final right = anchor.right + 8;
+    final left = right + childSize.width <= size.width
+        ? right
+        : anchor.right - childSize.width;
+    return Offset(
+      left.clamp(0, size.width - childSize.width),
+      anchor.top.clamp(0, size.height - childSize.height),
+    );
+  }
+
+  @override
+  bool shouldRelayout(_SidePopoverLayout old) =>
+      anchor != old.anchor || width != old.width;
+}
+
+/// Input container: an inset well that reads against any popover, brighter
+/// edge while a field inside has focus.
+class FieldWell extends StatefulWidget {
+  const FieldWell(
+      {super.key,
+      required this.child,
+      this.padding = EdgeInsets.zero,
+      this.minHeight = 0,
+      this.alignment});
+  final Widget child;
+  final EdgeInsets padding;
+  final double minHeight;
+  final AlignmentGeometry? alignment;
+
+  @override
+  State<FieldWell> createState() => _FieldWellState();
+}
+
+class _FieldWellState extends State<FieldWell> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) => Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: (f) => setState(() => _focused = f),
+        child: AnimatedContainer(
+          duration: Motion.quick,
+          constraints: BoxConstraints(minHeight: widget.minHeight),
+          alignment: widget.alignment,
+          padding: widget.padding,
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: _focused ? AppColors.fg4 : AppColors.lineStrong),
+          ),
+          child: widget.child,
+        ),
+      );
+}

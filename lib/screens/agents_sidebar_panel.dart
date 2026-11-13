@@ -29,95 +29,12 @@ Future<bool?> showCreateAgentDialog(
   BuildContext context,
   DaemonClient client, {
   BuildContext? anchorContext,
-}) async {
-  final box = anchorContext?.findRenderObject() as RenderBox?;
-  final anchor = box == null
-      ? const Rect.fromLTWH(16, 96, 0, 0)
-      : box.localToGlobal(Offset.zero) & box.size;
-
-  return kMobile
-      ? await showAppSheet<bool>(
-          context,
-          title: 'New agent',
-          child: CreateAgentForm(client: client),
-        )
-      : await showGeneralDialog<bool>(
-          context: context,
-          barrierDismissible: true,
-          barrierLabel: 'create agent',
-          barrierColor: Colors.transparent,
-          transitionDuration: Motion.quick,
-          pageBuilder: (ctx, _, __) => SafeArea(
-            minimum: const EdgeInsets.all(12),
-            child: Padding(
-              padding:
-                  EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
-              child: LayoutBuilder(builder: (context, constraints) {
-                final origin = (context.findRenderObject() as RenderBox?)
-                        ?.localToGlobal(Offset.zero) ??
-                    Offset.zero;
-                return CustomSingleChildLayout(
-                  delegate: _CreateAgentPopoverLayout(anchor.shift(-origin)),
-                  child: Material(
-                    key: const ValueKey('create-agent-popover'),
-                    color: AppColors.overlay,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(R.lg),
-                        side: BorderSide(color: AppColors.line)),
-                    clipBehavior: Clip.antiAlias,
-                    elevation: 4,
-                    shadowColor: Colors.black.withValues(alpha: 0.4),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text('New agent',
-                              style: sans(kMobile ? 14 : 13,
-                                  weight: W.label, color: AppColors.fg1)),
-                          const SizedBox(height: 12),
-                          CreateAgentForm(client: client),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ),
-          ),
-        );
-}
-
-class _CreateAgentPopoverLayout extends SingleChildLayoutDelegate {
-  const _CreateAgentPopoverLayout(this.anchor);
-
-  final Rect anchor;
-
-  @override
-  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
-      BoxConstraints(
-        minWidth: constraints.maxWidth.clamp(0, 340),
-        maxWidth: constraints.maxWidth.clamp(0, 340),
-        maxHeight: constraints.maxHeight,
-      );
-
-  @override
-  Offset getPositionForChild(Size size, Size childSize) {
-    final right = anchor.right + 8;
-    final left = right + childSize.width <= size.width
-        ? right
-        : anchor.right - childSize.width;
-    return Offset(
-      left.clamp(0, size.width - childSize.width),
-      anchor.top.clamp(0, size.height - childSize.height),
-    );
-  }
-
-  @override
-  bool shouldRelayout(_CreateAgentPopoverLayout oldDelegate) =>
-      anchor != oldDelegate.anchor;
-}
+}) =>
+    showSidePopover<bool>(context,
+        anchorContext: anchorContext,
+        title: 'New agent',
+        popoverKey: const ValueKey('create-agent-popover'),
+        child: CreateAgentForm(client: client));
 
 class AgentsSidebarPanel extends StatefulWidget {
   const AgentsSidebarPanel({
@@ -236,7 +153,9 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     if (!mounted || pick == null) return;
     if (pick == 'agent') {
       await _openCreateAgent(anchor.mounted ? anchor : context);
-    } else if (await createAndOpenGroup(context, widget.client) != null) {
+    } else if (await createAndOpenGroup(context, widget.client,
+            anchorContext: anchor.mounted ? anchor : null) !=
+        null) {
       _groups.refresh();
     }
   }

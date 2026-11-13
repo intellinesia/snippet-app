@@ -97,12 +97,7 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
           style: sans(13, height: 1.45, color: AppColors.fg3),
         ),
         const SizedBox(height: 14),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.line),
-          ),
+        FieldWell(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
@@ -121,7 +116,7 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
                 ),
               ),
             ),
-            Container(height: 1, color: AppColors.line),
+            Container(height: 1, color: AppColors.lineStrong),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Row(children: [

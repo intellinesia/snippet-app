@@ -148,8 +148,10 @@ Future<bool> confirmDeleteGroup(
 
 /// Create a group chat, then open it. Returns the group, or null if cancelled.
 Future<GroupSummary?> createAndOpenGroup(
-    BuildContext context, DaemonClient client) async {
-  final group = await showCreateGroupSheet(context, client: client);
+    BuildContext context, DaemonClient client,
+    {BuildContext? anchorContext}) async {
+  final group = await showCreateGroupSheet(context,
+      client: client, anchorContext: anchorContext);
   if (group == null || !context.mounted) return null;
   openGroupThread(context, client: client, group: group);
   return group;
@@ -337,14 +339,22 @@ class GroupRow extends StatelessWidget {
 Future<GroupSummary?> showCreateGroupSheet(
   BuildContext context, {
   required DaemonClient client,
+  BuildContext? anchorContext,
 }) =>
-    showAppSheet<GroupSummary>(
-      context,
-      title: 'New group',
-      maxWidth: 380,
-      maxHeight: 720,
-      child: _CreateGroupSheet(client: client),
-    );
+    kMobile
+        ? showAppSheet<GroupSummary>(
+            context,
+            title: 'New group',
+            maxWidth: 380,
+            maxHeight: 720,
+            child: _CreateGroupSheet(client: client),
+          )
+        : showSidePopover<GroupSummary>(context,
+            anchorContext: anchorContext,
+            title: 'New group',
+            popoverKey: const ValueKey('create-group-popover'),
+            width: 360,
+            child: _CreateGroupSheet(client: client));
 
 class _CreateGroupSheet extends StatefulWidget {
   const _CreateGroupSheet({required this.client});
@@ -436,15 +446,10 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
         Text('Several agents in one conversation. A lead answers first.',
             style: sans(13, height: 1.45, color: AppColors.fg3)),
         const SizedBox(height: 14),
-        Container(
-          constraints: BoxConstraints(minHeight: kMobile ? 48 : 38),
+        FieldWell(
+          minHeight: kMobile ? 48 : 38,
           alignment: Alignment.centerLeft,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.line),
-          ),
           child: TextField(
             controller: _title,
             autofocus: true,
