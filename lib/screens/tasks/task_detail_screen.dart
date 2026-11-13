@@ -661,26 +661,24 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         child: Column(children: [
           if (!kMobile && widget.pane)
             Align(
-              alignment: Alignment.topLeft,
+              alignment: Alignment.topCenter,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: double.infinity),
+                constraints: const BoxConstraints(maxWidth: 652),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
-                      S.s40, S.s32, S.s40, S.s8),
+                      S.s16, S.s24, S.s16, S.s8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(t?.title ?? 'Task',
-                          style: sans(20,
+                          style: sans(18,
                               weight: W.strong,
                               spacing: -0.2,
                               color: AppColors.fg1)),
                       if (t != null) ...[
-                        const SizedBox(height: S.s4),
-                        Text(t.status.label,
-                            style: sans(13, color: AppColors.fg3)),
+                        const SizedBox(height: S.s6),
+                        _byline(t),
                         if (t.goalTitle != null) _goalLine(t),
-                        TaskNoteLines(note: _note(t)),
                       ],
                     ],
                   ),
@@ -1099,12 +1097,23 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             const SizedBox(height: S.s8),
           ],
           _keyCard(_keyRows(t)),
+          if (!kMobile)
+            if (_standsCard(t) case final stands?) ...[
+              const SizedBox(height: 10),
+              stands,
+            ],
+          if (!kMobile && t.status == TaskStatus.inReview) ...[
+            const SizedBox(height: 10),
+            _verdictCard(),
+          ],
           if (_latestReport() case final report?) ...[
             const SizedBox(height: 10),
             _reportCard(report),
           ],
+          if (!kMobile) const SizedBox(height: 10),
           _briefCard(t),
           const SizedBox(height: 14),
+          if (kMobile) ...[
           // Column picker. The current state is always shown, so the row
           // reads as the task's position; In progress is never offered, as
           // only a dispatch starts work.
@@ -1183,6 +1192,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ),
           ),
           const SizedBox(height: 14),
+          ],
           _section('Agents', onAdd: _addAgent),
           if (roster.isEmpty)
             Text('Nobody assigned yet.', style: TS.meta())
@@ -1329,11 +1339,20 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             const SizedBox(width: 5),
             Text(agentId, style: TS.meta()),
           ]),
-        Text(t.status.label, style: TS.meta()),
+        if (kMobile) Text(t.status.label, style: TS.meta()),
+        if (!kMobile && workspace.isNotEmpty)
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            AppIcon('folder', size: 12, color: AppColors.fg4),
+            const SizedBox(width: 4),
+            Text(workspace, style: TS.meta()),
+          ]),
+        if (!kMobile)
+          Text(t.id.length > 8 ? t.id.substring(0, 8) : t.id,
+              style: mono(11, color: AppColors.fg4)),
         if (age.isNotEmpty)
           Text(age == 'now' ? 'Updated just now' : 'Updated $age ago',
               style: TS.meta()),
-        if (workspace.isNotEmpty) Text(workspace, style: TS.meta()),
+        if (kMobile && workspace.isNotEmpty) Text(workspace, style: TS.meta()),
       ],
     );
   }
@@ -1392,7 +1411,111 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           ],
         );
 
+  List<Widget> _deskKeyRows(TaskItem t) {
+    final active = roster.where((a) => a.active).toList();
+    final reviewers =
+        active.where((a) => a.role.toLowerCase().contains('review')).toList();
+    final holder = active.where((a) => a.hasSessionLease).firstOrNull;
+    final branch = (session?.branch ?? '').trim();
+    final age = taskAge(t);
+    final c = statusColor(t.status);
+    final rows = <(String, Widget)>[
+      (
+        'Status',
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: c.withValues(alpha: 0.13),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+                age.isEmpty || age == 'now'
+                    ? t.status.label
+                    : '${t.status.label} · $age',
+                style: sans(12, color: c, tabular: true)),
+          ),
+        )
+      ),
+      if (reviewers.isNotEmpty) ('Reviewer', _agentNames(reviewers)),
+      if (holder != null)
+        (
+          'Holder',
+          Row(children: [
+            _agentNames([holder]),
+            if (branch.isNotEmpty) ...[
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(branch,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: mono(11, color: AppColors.fg4)),
+              ),
+            ],
+          ])
+        ),
+    ];
+    return [
+      for (var i = 0; i < rows.length; i++)
+        _keyRow(rows[i].$1, rows[i].$2, last: i == rows.length - 1),
+    ];
+  }
+
+  Widget? _standsCard(TaskItem t) {
+    final note = _note(t);
+    final status = t.status.label.toLowerCase();
+    final lines = [
+      if (note.reason != null && note.reason!.trim().toLowerCase() != status)
+        note.reason!,
+      if (note.step != null) note.step!,
+      if (note.replacedBy != null) note.replacedBy!,
+    ];
+    if (lines.isEmpty) return null;
+    return Container(
+      decoration: _sheetCardDecoration,
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Where it stands', style: TS.label(AppColors.fg1)),
+          const SizedBox(height: 4),
+          for (final l in lines) Text(l, style: TS.ui(AppColors.fg2)),
+        ],
+      ),
+    );
+  }
+
+  Widget _verdictCard() => Container(
+        decoration: _sheetCardDecoration,
+        padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+        child: Row(children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Your verdict', style: TS.label(AppColors.fg1)),
+                const SizedBox(height: 2),
+                Text(
+                    'Approving closes the task; sending back requeues it with your notes.',
+                    style: TS.meta()),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Btn('Send back',
+              small: true,
+              variant: BtnVariant.secondary,
+              onTap: busy ? null : () => _setStatus(TaskStatus.todo)),
+          const SizedBox(width: 6),
+          Btn('Approve',
+              small: true,
+              onTap: busy ? null : () => _setStatus(TaskStatus.done)),
+        ]),
+      );
+
   List<Widget> _keyRows(TaskItem t) {
+    if (!kMobile) return _deskKeyRows(t);
     final members = roster.where((a) => a.active).toList();
     final display = members.isEmpty ? roster : members;
     final reviewers = display

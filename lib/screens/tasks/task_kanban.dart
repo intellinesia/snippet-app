@@ -397,7 +397,7 @@ class _TaskKanbanState extends State<TaskKanban> {
           ? () => _move(task, TaskStatus.done)
           : null,
       onSendBack: task.status == TaskStatus.inReview
-          ? () => _move(task, TaskStatus.inProgress)
+          ? () => _move(task, TaskStatus.todo)
           : null,
     );
     return Padding(

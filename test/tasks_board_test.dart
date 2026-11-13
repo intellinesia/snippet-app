@@ -180,7 +180,7 @@ void main() {
 
     await tester.tap(find.text('Send back').first);
     await tester.pumpAndSettle();
-    expect(client.moves['1'], TaskStatus.inProgress);
+    expect(client.moves['1'], TaskStatus.todo);
 
     await tester.tap(find.text('Approve').first);
     await tester.pumpAndSettle();
