@@ -334,4 +334,31 @@ void main() {
     final card = agentThreadEventCard(ev, client: client, agentId: 'growth');
     expect(card, isA<Container>());
   });
+
+  testWidgets('desk-forwarded approval names its session and offers decisions',
+      (tester) async {
+    final e = _ev(1, 'agent', 'Run cargo test', {
+      'kind': 'approval',
+      'auto': 'approval',
+      'context': 'Needs the full suite before the PR.',
+      'approval': {
+        'session': 's1',
+        'session_title': 'Fix login',
+        'task_id': 't1',
+        'task_title': 'Auth cleanup',
+        'tool': 'bash',
+        'summary': 'cargo test',
+        'approval_id': '3:2026-11-13',
+      },
+    });
+    final card = agentThreadEventCard(e,
+        client: _Client(const []), agentId: 'builder');
+    expect(card, isA<DeskApprovalCard>());
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: card!)));
+    expect(find.text('Approval'), findsOneWidget);
+    expect(find.text('Auth cleanup · Fix login'), findsOneWidget);
+    expect(find.text('Needs the full suite before the PR.'), findsOneWidget);
+    expect(find.text('Approve'), findsOneWidget);
+    expect(find.text('Deny'), findsOneWidget);
+  });
 }

@@ -6,6 +6,7 @@ import '../media_views.dart';
 import '../models.dart';
 import '../notification_text.dart';
 import '../platform.dart';
+import '../session_quick_send.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
 import '../transcript.dart';
@@ -61,6 +62,11 @@ Widget? agentThreadEventCard(
   }
   final approval = payload['approval'];
   if (approval is Map) {
+    if ('${approval['session'] ?? ''}'.isNotEmpty &&
+        '${approval['approval_id'] ?? ''}'.isNotEmpty) {
+      return DeskApprovalCard(
+          event: e, approval: approval, client: client);
+    }
     return _approvalCard(e, approval);
   }
   final tools = payload['tool_activity'];
@@ -573,6 +579,125 @@ class _ToolActivityCardState extends State<_ToolActivityCard> {
               if (_open) ...rows,
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A work session's approval, forwarded by its agent's desk. Only the human
+/// decides, so the buttons go straight to the session.
+class DeskApprovalCard extends StatefulWidget {
+  const DeskApprovalCard({
+    super.key,
+    required this.event,
+    required this.approval,
+    required this.client,
+  });
+
+  final CoordinationEvent event;
+  final Map<dynamic, dynamic> approval;
+  final DaemonClient client;
+
+  @override
+  State<DeskApprovalCard> createState() => _DeskApprovalCardState();
+}
+
+class _DeskApprovalCardState extends State<DeskApprovalCard> {
+  static final _decided = <String, bool>{};
+  bool _busy = false;
+
+  String _s(String k) => '${widget.approval[k] ?? ''}'.trim();
+  String get _key => '${_s('session')}:${_s('approval_id')}';
+
+  Future<void> _decide(bool approve) async {
+    setState(() => _busy = true);
+    final ok = await quickSend(
+      client: widget.client,
+      session: _s('session'),
+      action: approve ? const QuickApprove() : const QuickDeny(),
+    );
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      if (ok) _decided[_key] = approve;
+    });
+    if (!ok) toast(context, 'Could not reach the session', danger: true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = _s('summary').isNotEmpty
+        ? _s('summary')
+        : widget.event.body.trim();
+    final parsed = ApprovalSummary.parse(summary);
+    final tool = _s('tool');
+    final from = [
+      if (_s('task_title').isNotEmpty) _s('task_title'),
+      if (_s('session_title').isNotEmpty) _s('session_title'),
+    ].join(' · ');
+    final index = (widget.approval['index'] as num?)?.toInt();
+    final total = (widget.approval['total'] as num?)?.toInt();
+    final context_ = '${widget.event.payload['context'] ?? ''}'.trim();
+    final decided = _decided[_key];
+    final meta = total != null && total > 1 && index != null
+        ? '$index of $total'
+        : (tool.isNotEmpty ? tool : null);
+    final small = kMobile ? 13.0 : 12.0;
+    return QuestionCardV5(
+      icon: parsed.secrets.isNotEmpty ? 'lock-key' : 'shield',
+      iconColor: AppColors.run,
+      label: 'Approval',
+      meta: meta,
+      footer: decided != null
+          ? Row(children: [
+              AppIcon(decided ? 'check-circle' : 'x-circle',
+                  size: 13,
+                  color: decided ? AppColors.ok : AppColors.danger),
+              const SizedBox(width: 6),
+              Text(decided ? 'Approved' : 'Denied',
+                  style: sans(small, color: AppColors.fg3)),
+            ])
+          : Row(children: [
+              const Spacer(),
+              Btn('Deny',
+                  small: true,
+                  variant: BtnVariant.secondary,
+                  disabled: _busy,
+                  onTap: () => _decide(false)),
+              const SizedBox(width: S.s6),
+              Btn('Approve',
+                  small: true,
+                  disabled: _busy,
+                  onTap: () => _decide(true)),
+            ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (from.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: S.s6),
+              child: Text(from,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(small, color: AppColors.fg3)),
+            ),
+          if (parsed.shownCommand.isNotEmpty)
+            ApprovalCode(code: parsed.shownCommand, collapsedLines: 4),
+          if (parsed.secrets.isNotEmpty) ...[
+            const SizedBox(height: S.s6),
+            Wrap(spacing: S.s6, runSpacing: S.s4, children: [
+              for (final name in parsed.secrets)
+                Tag(name, tone: Tone.run, icon: 'key', mono: true),
+            ]),
+          ],
+          if (context_.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: S.s8),
+              child: Text(context_,
+                  style: sans(kMobile ? 14 : 13, color: AppColors.fg2)),
+            ),
         ],
       ),
     );

@@ -397,7 +397,7 @@ class SettingsPanelState extends State<SettingsPanel> {
           await client.getUsage(since: DateTime.now().subtract(const Duration(days: 7)));
       if (mounted) {
         setState(() =>
-            _usageTokens = week.providers.fold(0, (n, p) => n + p.totalTokens));
+            _usageTokens = week.providers.fold<int>(0, (n, p) => n + p.totalTokens));
       }
     } catch (_) {}
     try {

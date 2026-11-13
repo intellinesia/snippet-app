@@ -737,8 +737,14 @@ class QuestionCardV5 extends StatelessWidget {
     this.meta,
     this.count,
     this.footer,
+    this.icon = 'help-circle',
+    this.label = 'Question',
+    this.iconColor,
   });
 
+  final String icon;
+  final String label;
+  final Color? iconColor;
   final Widget child;
   final String? meta;
   final int? count;
@@ -766,10 +772,10 @@ class QuestionCardV5 extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(children: [
-                AppIcon('help-circle',
-                    size: 13, color: AppColors.accent),
+                AppIcon(icon,
+                    size: 13, color: iconColor ?? AppColors.accent),
                 const SizedBox(width: 6),
-                Text('Question',
+                Text(label,
                     style: sans(kMobile ? 13 : 12,
                         weight: W.label, color: AppColors.fg2)),
                 const Spacer(),

@@ -882,7 +882,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           ),
           const SizedBox(width: S.s8),
           _v5Pill(t.id.length > 8 ? t.id.substring(0, 8) : t.id,
-              mono: true),
+              code: true),
         ]),
         const SizedBox(height: S.s8),
         Text(t.title,
@@ -909,7 +909,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     );
   }
 
-  Widget _v5Pill(String text, {bool lit = false, bool mono = false}) => Container(
+  Widget _v5Pill(String text, {bool lit = false, bool code = false}) => Container(
         height: 22,
         padding: const EdgeInsets.symmetric(horizontal: S.s8),
         decoration: BoxDecoration(
@@ -920,7 +920,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         child: Text(text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: mono
+            style: code
                 ? mono(11, color: AppColors.fg3)
                 : sans(12,
                     color: lit ? AppColors.run : AppColors.fg2)),
