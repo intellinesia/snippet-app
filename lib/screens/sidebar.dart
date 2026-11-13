@@ -6,7 +6,6 @@ import '../api.dart';
 import '../drafts.dart';
 import '../models.dart';
 import '../settled_sessions.dart';
-import 'agent_rail.dart' show agentRailShown;
 import 'sidebar_mode.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -1237,8 +1236,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   }
 
   /// `.sctl`: the Sessions|Agents segment over the palette/search field.
+  bool _desktopAgentsAvailable(BuildContext context) =>
+      !kMobile && MediaQuery.sizeOf(context).width >= kShellCompact;
+
   Widget _sidebarControls({required bool agentsFirst}) {
-    final agentsAvailable = widget.client != null && agentRailShown(context);
+    final agentsAvailable =
+        widget.client != null && _desktopAgentsAvailable(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 2, 10, 6),
       child: Column(children: [
@@ -1381,9 +1384,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     final settledRows = split.settled;
     final mc = all.where((s) => isDedicatedMcSession(s.id)).firstOrNull;
     _chatsShownAt ??= DateTime.now();
-    final rows = _groupedRows(list, attentionFirst: false);
+    final rows = _groupedRows(list, attentionFirst: true);
     final agentsFirst =
-        sidebarAgentsFirst.value && hasClient && agentRailShown(context);
+        sidebarAgentsFirst.value && hasClient && _desktopAgentsAvailable(context);
     final sessionsBody =
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Expanded(
@@ -1391,7 +1394,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           onRefresh: () async => widget.onRefreshSessions(),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
             children: [
               if (!hasClient)
                 const SidebarEmpty('Add a machine to begin.')

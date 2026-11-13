@@ -128,23 +128,6 @@ List<Widget> buildShellRailTools({
   final used = s?.lastPromptTokens ?? 0;
   final frac = win > 0 ? (used / win).clamp(0.0, 1.0) : 0.0;
   String k(int v) => v >= 1000 ? '${(v / 1000).round()}k' : '$v';
-  Widget dots(int n, double size, double gap) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < n; i++)
-            Container(
-              width: size,
-              height: size,
-              margin: EdgeInsets.only(right: gap),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: i < (frac * n).round()
-                    ? (frac > 0.8 ? AppColors.danger : AppColors.fg3)
-                    : AppColors.line,
-              ),
-            ),
-        ],
-      );
 
   Future<void> openMenu(BuildContext ctx) async {
     PopupMenuItem<VoidCallback> item(String icon, String label, VoidCallback fn,
@@ -257,18 +240,6 @@ List<Widget> buildShellRailTools({
   }
 
   return [
-    if (tab != null && win > 0 && used > 0)
-      Tooltip(
-        message: 'Context ${k(used)} of ${k(win)}',
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            dots(8, 4, 2),
-            const SizedBox(width: 4),
-            Text(k(used), style: TS.caption()),
-          ]),
-        ),
-      ),
     Builder(
       builder: (ctx) => railTool(
         'more-horizontal',

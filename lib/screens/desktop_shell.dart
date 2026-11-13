@@ -40,7 +40,6 @@ import 'inbound_share_picker.dart';
 import 'mission_control.dart';
 import 'tasks/task_kanban.dart';
 import 'tasks/tasks_panel.dart';
-import '../usage_popover.dart';
 import 'mobile_chrome.dart';
 import 'mobile_shell.dart';
 import 'new_session_picker.dart';
@@ -48,6 +47,7 @@ import 'new_session_draft.dart';
 import 'session.dart';
 import 'mission_board_panel.dart';
 import 'pull_requests.dart';
+import 'session_list_row.dart' show sessionNeedsYou;
 import 'session_side_panel.dart';
 import 'settings_panel.dart';
 import 'shell_card_tab_strip.dart';
@@ -58,7 +58,6 @@ import 'shell_pane_view.dart';
 import 'shell_rail.dart';
 import 'shell_rail_tools.dart';
 import 'shell_shortcuts.dart';
-import 'agent_rail.dart';
 import 'sidebar_mode.dart';
 import 'shell_sidebar_host.dart';
 import 'shell_split_view.dart';
@@ -116,6 +115,9 @@ class _DesktopShellState extends State<DesktopShell>
   final PageController _pageController = PageController();
   final ScrollController _stripController = ScrollController();
   final Map<String, GlobalKey> _chipKeys = {};
+  final List<String> _tabHistory = [];
+  int _tabHistoryPos = -1;
+  bool _navigatingHistory = false;
 
   /// Daemon-wide interactive shells.
   ///
@@ -543,7 +545,6 @@ class _DesktopShellState extends State<DesktopShell>
     _startSessionsTicker();
     if (!kMobile) HardwareKeyboard.instance.addHandler(_handleGlobalShortcuts);
     if (!kMobile) {
-      sidebarAgentsFirst.addListener(_onSidebarMode);
       loadSidebarAgentsFirst();
     }
     if (kMobile) ShareInbound.listen(_onInboundShare);
@@ -551,19 +552,6 @@ class _DesktopShellState extends State<DesktopShell>
     // reconnect adopts whatever ptys already exist, so live shells never vanish
     // from the strip just because the socket dropped.
     _shells.addListener(_syncGlobalShellTabs);
-  }
-
-  late bool _railFolded = sidebarAgentsFirst.value;
-
-  void _onSidebarMode() {
-    if (!mounted) return;
-    setState(() {
-      if (!sidebarAgentsFirst.value) {
-        _railFolded = false;
-      } else if (reduceMotion(context)) {
-        _railFolded = true;
-      }
-    });
   }
 
   @override
@@ -575,7 +563,6 @@ class _DesktopShellState extends State<DesktopShell>
     WidgetsBinding.instance.removeObserver(this);
     if (!kMobile) {
       HardwareKeyboard.instance.removeHandler(_handleGlobalShortcuts);
-      sidebarAgentsFirst.removeListener(_onSidebarMode);
     }
     _sessionsTicker?.cancel();
     _stopEventsWatch();
@@ -797,6 +784,7 @@ class _DesktopShellState extends State<DesktopShell>
   }
 
   void _syncPage() {
+    _recordTabHistory();
     final currentKey = _activeTab?.key;
     final stale = _rightTabs
         .where((r) => r.originTabKey != null && r.originTabKey != currentKey)
