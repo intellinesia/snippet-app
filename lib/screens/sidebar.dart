@@ -793,6 +793,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           mcBadgeCount: _mcAttentionCount,
           onMc: widget.onOpenMissionControl,
           listening: listeningOn,
+          onListening: () => openMobileVoicePage(context, client: widget.client),
           onMic: agents || !hasClient ? null : _startVoice,
           trailing: [
             if (agents)
