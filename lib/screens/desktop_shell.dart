@@ -1438,6 +1438,25 @@ class _DesktopShellState extends State<DesktopShell>
         // answer with its home directory, which is the sane default.
         startPath: null,
         onClose: close,
+        onStart: (folder, workspace, profile, text, attachments) async {
+          try {
+            final id = await c.openSession(folder,
+                workspace: workspace, profile: profile, newConversation: true);
+            _openSession(id, 'New session', profile,
+                share: SharedInbound(
+                  type: attachments.isEmpty ? 'text' : 'file',
+                  text: text,
+                  paths: [for (final a in attachments) a.path],
+                  names: [for (final a in attachments) a.name],
+                  send: true,
+                ));
+            _loadSessions();
+          } catch (e) {
+            if (mounted) toast(context, '$e', danger: true);
+            rethrow;
+          }
+          close();
+        },
         onOpenFolder: (folder, workspace) async {
           try {
             final id = await c.openSession(folder,
