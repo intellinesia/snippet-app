@@ -15,6 +15,7 @@ import 'package:snippet/term.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/tool_activity.dart';
 import 'package:snippet/transcript.dart';
+import 'package:snippet/widgets.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -192,22 +193,34 @@ void main() {
     await tester.pump();
 
     expect(find.text('Edited 1 file, ran 1 command'), findsOneWidget);
+    expect(find.text('Show'), findsOneWidget);
+    expect(find.text('Hide'), findsNothing);
     expect(find.byType(DenseToolRow), findsNothing);
     expect(find.byType(WorkingDots), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(CollapsedActivity),
+        matching: find.byType(AppIcon),
+      ),
+      findsNothing,
+    );
 
     await tester.tap(find.text('Edited 1 file, ran 1 command'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(DenseToolRow), findsNWidgets(2));
+    expect(find.text('Hide'), findsOneWidget);
+    expect(find.text('Show'), findsNothing);
 
-    await tester.tap(find.text('Edited 1 file, ran 1 command'));
+    await tester.tap(find.text('Hide'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(DenseToolRow), findsNothing);
+    expect(find.text('Show'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('CollapsedActivity shows WorkingDots when running',
+  testWidgets('CollapsedActivity shows a Show line with no icons when running',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
@@ -229,7 +242,15 @@ void main() {
     await tester.pump();
 
     expect(find.text('Running flutter test'), findsOneWidget);
-    expect(find.byType(WorkingDots), findsOneWidget);
+    expect(find.text('Show'), findsOneWidget);
+    expect(find.byType(WorkingDots), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(CollapsedActivity),
+        matching: find.byType(AppIcon),
+      ),
+      findsNothing,
+    );
     debugDefaultTargetPlatformOverride = null;
   });
 
@@ -345,16 +366,7 @@ void main() {
       expect(find.text('Edited 3 files, ran 2 commands'), findsOneWidget);
       expect(find.text('Running flutter analyze'), findsOneWidget);
       expect(find.byType(DenseToolRow), findsNothing);
-      expect(
-        find.descendant(
-          of: find.ancestor(
-            of: find.text('Running flutter analyze'),
-            matching: find.byType(CollapsedActivity),
-          ),
-          matching: find.byType(WorkingDots),
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('Show'), findsNWidgets(2));
 
       await tester.tap(find.text('Edited 3 files, ran 2 commands'));
       await tester.pump();
