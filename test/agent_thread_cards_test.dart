@@ -11,12 +11,12 @@ import 'package:snippet/media_views.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/screens/agent_messaging.dart';
+import 'package:snippet/screens/agent_questions_card.dart';
 import 'package:snippet/screens/agent_thread_cards.dart';
 import 'package:snippet/screens/artifact_viewer.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/transcript.dart';
-import 'package:snippet/transcript_card.dart';
 import 'package:snippet/widgets.dart';
 
 CoordinationEvent _ev(
@@ -34,11 +34,26 @@ CoordinationEvent _ev(
       'payload': {'body': body, ...extra},
     });
 
+class _VerdictCall {
+  _VerdictCall(this.taskId, this.verdict, this.findings);
+  final String taskId;
+  final String verdict;
+  final List<String> findings;
+}
+
 class _Client extends DaemonClient {
-  _Client(this.thread, {this.artifactList = const []})
-      : super('https://daemon.invalid', 'test-token');
+  _Client(
+    this.thread, {
+    this.artifactList = const [],
+    Map<String, TaskItem>? tasksById,
+  })  : tasksMap = tasksById ?? {},
+        super('https://daemon.invalid', 'test-token');
   final List<CoordinationEvent> thread;
   final List<ArtifactInfo> artifactList;
+  final Map<String, TaskItem> tasksMap;
+  final Map<String, int> getTaskCalls = {};
+  final List<_VerdictCall> verdicts = [];
+  Object? verdictError;
   final _events = DeviceEventHub.local();
 
   @override
@@ -66,21 +81,51 @@ class _Client extends DaemonClient {
 
   @override
   Future<List<ArtifactInfo>> artifacts(String session) async => artifactList;
+
+  @override
+  Future<TaskItem> getTask(String id) async {
+    getTaskCalls[id] = (getTaskCalls[id] ?? 0) + 1;
+    final t = tasksMap[id];
+    if (t == null) throw Exception('no task $id');
+    return t;
+  }
+
+  @override
+  Future<TaskStatus> submitTaskVerdict(
+    String taskId,
+    String verdict, [
+    List<String> findings = const [],
+  ]) async {
+    verdicts.add(_VerdictCall(taskId, verdict, findings));
+    final err = verdictError;
+    if (err != null) throw err;
+    final next =
+        verdict == 'approve' ? TaskStatus.done : TaskStatus.inProgress;
+    final cur = tasksMap[taskId];
+    if (cur != null) {
+      tasksMap[taskId] = cur.movedTo(next);
+    }
+    return next;
+  }
 }
 
-Future<void> _open(
+Future< _Client> _open(
   WidgetTester t,
   List<CoordinationEvent> thread, {
   List<ArtifactInfo> artifacts = const [],
+  Map<String, TaskItem>? tasksById,
+  _Client? client,
 }) async {
   t.view.physicalSize = const Size(390, 844) * 3;
   t.view.devicePixelRatio = 3;
   addTearDown(t.view.reset);
+  final c = client ??
+      _Client(thread, artifactList: artifacts, tasksById: tasksById);
   await t.pumpWidget(
     MaterialApp(
       theme: buildAppTheme(),
       home: AgentThreadScreen(
-        client: _Client(thread, artifactList: artifacts),
+        client: c,
         agentId: 'growth',
         agentName: 'Growth',
       ),
@@ -89,6 +134,7 @@ Future<void> _open(
   for (var i = 0; i < 12; i++) {
     await t.pump(const Duration(milliseconds: 100));
   }
+  return c;
 }
 
 void main() {
@@ -214,13 +260,12 @@ void main() {
       }),
     ]);
 
-    expect(find.byType(TranscriptCard), findsOneWidget);
     expect(find.text('Which deployment target should we use?'), findsOneWidget);
     expect(find.text('Staging cluster'), findsOneWidget);
     expect(find.text('Safe preview environment'), findsOneWidget);
     expect(find.text('Production cluster'), findsOneWidget);
     expect(find.text('Chosen'), findsOneWidget);
-    expect(find.text('Answered'), findsOneWidget);
+    expect(find.text('Question \u00b7 Answered'), findsOneWidget);
     expect(find.byType(ChatBubble), findsNothing);
     await t.pumpWidget(const SizedBox());
     debugDefaultTargetPlatformOverride = null;
@@ -253,12 +298,17 @@ void main() {
 
     expect(find.byType(ApprovalCode), findsOneWidget);
     expect(find.text('Check working tree'), findsOneWidget);
-    expect(find.text('Approved'), findsOneWidget);
+    expect(find.text('Approval \u00b7 Approved'), findsOneWidget);
 
-    expect(find.text('3 tool calls'), findsOneWidget);
+    expect(
+      find.textContaining('Growth edited 1 file, ran 1 command, read 1 file',
+          findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.text('Show'), findsOneWidget);
     expect(find.byType(DenseToolRow), findsNothing);
 
-    await t.tap(find.text('3 tool calls'));
+    await t.tap(find.text('Show'));
     await t.pump();
     expect(find.byType(DenseToolRow), findsNWidgets(3));
     expect(find.textContaining('lib/models.dart'), findsOneWidget);
@@ -310,11 +360,154 @@ void main() {
     for (var i = 0; i < 12; i++) {
       await t.pump(const Duration(milliseconds: 100));
     }
-    final card = find.byType(TranscriptCard);
-    expect(card, findsOneWidget);
+    expect(find.text('Question'), findsOneWidget);
     expect(find.text('Yes'), findsOneWidget);
     expect(find.text('No'), findsOneWidget);
-    expect(t.getSize(card).width, lessThanOrEqualTo(440));
+    final card = find.ancestor(
+      of: find.text('Proceed with migration?'),
+      matching: find.byType(Container),
+    );
+    expect(t.getSize(card.first).width, lessThanOrEqualTo(440));
+    await t.pumpWidget(const SizedBox());
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets(
+      'task card renders only on latest event for taskId, approves and hides buttons',
+      (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    final task = TaskItem.fromJson({
+      'id': 't-100',
+      'title': 'XDR+ISE demo: fix TTS acronyms',
+      'description': 'Fix voiceover pronunciation',
+      'status': 'in_review',
+      'created_at': DateTime.now()
+          .toUtc()
+          .subtract(const Duration(hours: 30))
+          .toIso8601String(),
+      'updated_at': DateTime.now()
+          .toUtc()
+          .subtract(const Duration(hours: 30))
+          .toIso8601String(),
+    });
+    final client = await _open(
+      t,
+      [
+        _ev(1, 'agent', 'Started working on it.', {'about_task': 't-100'}),
+        _ev(2, 'agent', 'v5 delivered: ISE spoken as Ice.',
+            {'about_task': 't-100'}),
+      ],
+      tasksById: {'t-100': task},
+    );
+
+    // Earlier event is a ChatBubble; latest event is the task card.
+    expect(find.byType(ChatBubble), findsOneWidget);
+    expect(find.text('Started working on it.'), findsOneWidget);
+    expect(find.text('XDR+ISE demo: fix TTS acronyms'), findsOneWidget);
+    expect(find.textContaining('Task in review'), findsOneWidget);
+    expect(find.text('Approve'), findsOneWidget);
+    expect(find.text('Send back'), findsOneWidget);
+    expect(client.getTaskCalls['t-100'], 1);
+
+    await t.tap(find.text('Approve'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 100));
+
+    expect(client.verdicts, hasLength(1));
+    expect(client.verdicts.single.taskId, 't-100');
+    expect(client.verdicts.single.verdict, 'approve');
+    expect(find.text('Approve'), findsNothing);
+    expect(find.text('Send back'), findsNothing);
+    expect(find.textContaining('Task \u00b7 Done'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets(
+      'task card send back opens sheet, submits changes, and shows 409 inline',
+      (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    final task = TaskItem.fromJson({
+      'id': 't-101',
+      'title': 'Refine onboarding copy',
+      'status': 'in_review',
+      'created_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
+    final client = _Client(
+      [
+        _ev(1, 'agent', 'Ready for review.', {'task_id': 't-101'}),
+      ],
+      tasksById: {'t-101': task},
+    )..verdictError =
+        const TaskVerdictConflict('task `t-101` is done, not in_review');
+
+    await _open(t, client.thread, client: client);
+
+    expect(find.text('Refine onboarding copy'), findsOneWidget);
+    await t.tap(find.text('Send back'));
+    await t.pumpAndSettle();
+
+    await t.enterText(find.byType(TextField).last, 'Fix typo in paragraph 2');
+    await t.pump();
+    await t.tap(find.text('Send back').last);
+    await t.pumpAndSettle();
+
+    expect(client.verdicts, hasLength(1));
+    expect(client.verdicts.single.verdict, 'changes');
+    expect(client.verdicts.single.findings, ['Fix typo in paragraph 2']);
+    expect(find.text('task `t-101` is done, not in_review'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('missing task falls back to rendering event as bubble',
+      (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    await _open(t, [
+      _ev(1, 'agent', 'Fallback message body', {'about_task': 'missing-id'}),
+    ]);
+
+    expect(find.byType(ChatBubble), findsOneWidget);
+    expect(find.text('Fallback message body'), findsOneWidget);
+    expect(find.text('Approve'), findsNothing);
+    await t.pumpWidget(const SizedBox());
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('AgentQuestionsCard in agent chat uses chatStyle pills',
+      (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    await _open(t, [
+      _ev(1, 'agent', 'Ask', {
+        'question': {
+          'session': 's-1',
+          'questions': [
+            {
+              'id': 'q1',
+              'text': 'May I release the machine now?',
+              'answer_kind': {
+                'kind': 'single_choice',
+                'choices': [
+                  {
+                    'value': 'yes',
+                    'label': 'Yes, release',
+                    'recommended': true,
+                  },
+                  {'value': 'no', 'label': 'Not yet'},
+                ],
+              },
+            },
+          ],
+        },
+      }),
+    ]);
+
+    final qCard = t.widget<AgentQuestionsCard>(find.byType(AgentQuestionsCard));
+    expect(qCard.chatStyle, isTrue);
+    expect(find.text('May I release the machine now?'), findsOneWidget);
+    expect(find.text('Yes, release'), findsOneWidget);
+    expect(find.text('Not yet'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
     debugDefaultTargetPlatformOverride = null;
   });

@@ -265,6 +265,11 @@ class _CustomAgentsClient extends DaemonClient {
   _CustomAgentsClient(this._agents)
       : super('https://daemon.invalid', 'test-token');
 
+  final _deviceEvents = DeviceEventHub.local();
+
+  @override
+  DeviceEventHub get deviceEvents => _deviceEvents;
+
   @override
   Future<List<CoordinationAgent>> coordinationAgents() async => _agents;
 }

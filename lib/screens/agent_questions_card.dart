@@ -19,12 +19,14 @@ class AgentQuestionsCard extends StatefulWidget {
     required this.question,
     required this.client,
     this.events = const [],
+    this.chatStyle = false,
   });
 
   final CoordinationEvent event;
   final Map<dynamic, dynamic> question;
   final DaemonClient client;
   final List<CoordinationEvent> events;
+  final bool chatStyle;
 
   @override
   State<AgentQuestionsCard> createState() => _AgentQuestionsCardState();
