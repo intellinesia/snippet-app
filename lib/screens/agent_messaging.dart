@@ -591,7 +591,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       setState(() => _filter = f.isEmpty ? null : f);
     }
   }
-  static const _maxAttachments = 10;
   Duration _maxRecordingDuration = const Duration(minutes: 3);
 
   final _input = TextEditingController();
@@ -1147,17 +1146,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                 Future<Uint8List> Function() readBytes
               })>
           picked) async {
-    final remaining = _maxAttachments - _attachments.length;
-    if (remaining <= 0) {
-      toast(context, 'Max $_maxAttachments attachments reached.');
-      return;
-    }
-    var items = picked;
-    if (items.length > remaining) {
-      items = items.take(remaining).toList();
-      toast(context, 'Added $remaining (max $_maxAttachments).');
-    }
-    final entries = items
+    final entries = picked
         .map((p) => _AgentAttachment(
               name: p.name,
               isImage: _isImageName(p.name),
@@ -1169,7 +1158,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     setState(() => _attachments.addAll(entries));
     final generation = _attachmentGeneration;
     for (var i = 0; i < entries.length; i++) {
-      final p = items[i];
+      final p = picked[i];
       final a = entries[i];
       try {
         final bytes = await p.readBytes();
@@ -1974,7 +1963,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         onPlay: () => unawaited(_toggleRecordingPlayback()),
         onStop: () => unawaited(_stopRecording()),
         onSend: () => unawaited(_send()),
-        onMore: reviewing && _attachments.length < _maxAttachments - 1
+        onMore: reviewing
             ? () => unawaited(_recordMore())
             : null,
       );
@@ -2028,8 +2017,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                   onTap: () => unawaited(_stopRecording())),
             ))
           else ...[
-            if (_attachments.length < _maxAttachments - 1)
-              slot(btn('mic', 'Record more', () => unawaited(_recordMore()))),
+            slot(btn('mic', 'Record more', () => unawaited(_recordMore()))),
             const SizedBox(width: 4),
             slot(Semantics(
               button: true,

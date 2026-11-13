@@ -267,7 +267,6 @@ class _SessionActionPanel extends StatelessWidget {
   }
 }
 
-const int _maxAttachments = 5;
 
 int _userEchoCount(List<Map<String, dynamic>> events) => events
     .where((e) => e['kind'] == 'user_input' || e['kind'] == 'steer')
