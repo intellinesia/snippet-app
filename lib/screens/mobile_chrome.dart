@@ -9,6 +9,7 @@ import '../mochi.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'mobile_voice_page.dart';
 import 'tasks/task_common.dart' show TaskFeed;
 import 'tasks/tasks_panel.dart';
 
@@ -126,43 +127,60 @@ class RoundBtn extends StatelessWidget {
 }
 
 class ListeningPill extends StatelessWidget {
-  const ListeningPill({super.key});
+  const ListeningPill({super.key, this.onTap});
+
+  final VoidCallback? onTap;
 
   static const _heights = [5.0, 11.0, 7.0, 9.0];
 
   @override
-  Widget build(BuildContext context) => Container(
-        height: 26,
-        padding: const EdgeInsets.symmetric(horizontal: 9),
-        decoration: BoxDecoration(
-          color: AppColors.ok.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(13),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          SizedBox(
-            height: 12,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                for (var i = 0; i < _heights.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 2),
-                  Container(
-                    width: 2,
-                    height: _heights[i],
-                    decoration: BoxDecoration(
-                      color: AppColors.ok,
-                      borderRadius: BorderRadius.circular(1),
-                    ),
+  Widget build(BuildContext context) {
+    final pill = Container(
+      height: 26,
+      padding: const EdgeInsets.symmetric(horizontal: 9),
+      decoration: BoxDecoration(
+        color: AppColors.ok.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        SizedBox(
+          height: 12,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              for (var i = 0; i < _heights.length; i++) ...[
+                if (i > 0) const SizedBox(width: 2),
+                Container(
+                  width: 2,
+                  height: _heights[i],
+                  decoration: BoxDecoration(
+                    color: AppColors.ok,
+                    borderRadius: BorderRadius.circular(1),
                   ),
-                ],
+                ),
               ],
-            ),
+            ],
           ),
-          const SizedBox(width: 6),
-          Text('Listening', style: TS.caption(AppColors.ok).copyWith(height: 1)),
-        ]),
-      );
+        ),
+        const SizedBox(width: 6),
+        Text('Listening', style: TS.caption(AppColors.ok).copyWith(height: 1)),
+      ]),
+    );
+    if (onTap == null) return pill;
+    return Semantics(
+      button: true,
+      label: 'Voice',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap!();
+        },
+        child: pill,
+      ),
+    );
+  }
 }
 
 class MobileHomeHeader extends StatelessWidget {
@@ -173,6 +191,7 @@ class MobileHomeHeader extends StatelessWidget {
     this.onMc,
     this.onBack,
     this.listening = false,
+    this.onListening,
     this.trailing = const [],
   });
 
@@ -181,6 +200,7 @@ class MobileHomeHeader extends StatelessWidget {
   final VoidCallback? onMc;
   final VoidCallback? onBack;
   final bool listening;
+  final VoidCallback? onListening;
   final List<Widget> trailing;
 
   @override
@@ -209,7 +229,9 @@ class MobileHomeHeader extends StatelessWidget {
                 ),
               const Spacer(),
               if (listening) ...[
-                const ListeningPill(),
+                ListeningPill(
+                  onTap: onListening ?? () => openMobileVoicePage(context),
+                ),
                 if (trailing.isNotEmpty) const SizedBox(width: 10),
               ],
               ...trailing,

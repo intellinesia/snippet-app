@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../ambient/capture.dart';
+import '../../../ambient/ambient_model.dart';
 import '../../../ambient/controller.dart';
 import '../../../ambient/voice.dart';
 import '../../../api.dart';
@@ -17,115 +17,9 @@ import '../../../platform.dart';
 import '../../../settings_form.dart';
 import '../../../theme.dart';
 import '../../../widgets.dart';
+import '../../mobile_voice_page.dart';
 
 final ValueNotifier<AmbientStateEvent?> _emptyAmbientState = ValueNotifier(null);
-
-Color _modeColor(String mode) =>
-    mode == 'active' ? AppColors.accent : AppColors.ok;
-
-Color _stateColor(AmbientSettings? s, AmbientStatus st) {
-  if (s != null && s.enabled && st.error != null) return AppColors.danger;
-  return _modeColor(s?.shownMode ?? 'passive');
-}
-
-class _AmbientModel extends ChangeNotifier {
-  _AmbientModel(this.client) {
-    ambient.addListener(notifyListeners);
-    ambient.bind();
-    ambient.deviceId.then((v) {
-      selfId = v;
-      notifyListeners();
-    });
-    load();
-    _live = Revalidator(
-        client: client,
-        on: (e) => e['kind'] == 'ambient_state' || e['kind'] == 'config',
-        debounce: const Duration(seconds: 1),
-        onRevalidate: ({required bool force}) => load());
-  }
-
-  final DaemonClient client;
-  final AmbientController ambient = AmbientController.instance;
-  AmbientSettings? settings;
-  String selfId = '';
-  String? error;
-  bool busy = false;
-  Revalidator? _live;
-
-  AmbientStatus get status => ambient.status;
-  bool get on => settings?.enabled ?? false;
-  bool get listening => on && status.running;
-
-  Future<void> load() async {
-    try {
-      settings = await client.getAmbientSettings();
-      notifyListeners();
-    } catch (_) {}
-  }
-
-  bool get elsewhere {
-    final id = settings?.listeningId;
-    return id != null && selfId.isNotEmpty && id != selfId;
-  }
-
-  Future<void> press() async {
-    if (on && listening) return toggle(false);
-    if (on) {
-      if (busy) return;
-      busy = true;
-      notifyListeners();
-      error = await ambient.start(client);
-      busy = false;
-      notifyListeners();
-      load();
-      return;
-    }
-    return toggle(true);
-  }
-
-  Future<void> toggle(bool value) async {
-    if (busy) return;
-    busy = true;
-    error = null;
-    notifyListeners();
-    final (saved, err) = await ambient.setEnabled(client, value);
-    if (saved != null) settings = saved;
-    error = err;
-    busy = false;
-    notifyListeners();
-    if (value && err == null && !await ambient.ignoringBattery) {
-      await ambient.requestBatteryExemption();
-    }
-  }
-
-  Future<void> shiftMode(int dir) =>
-      setMode(dir > 0 ? 'active' : 'passive');
-
-  Future<void> setMode(String mode) async {
-    final before = settings;
-    if (before == null ||
-        (before.mode == mode && before.shownMode == mode)) {
-      return;
-    }
-    settings = before.withMode(mode);
-    notifyListeners();
-    try {
-      final saved = await client.setAmbientSettings(mode: mode);
-      settings = saved.withMode(mode);
-    } catch (e) {
-      settings = before;
-      error = '$e';
-    }
-    notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _live?.dispose();
-    ambient.removeListener(notifyListeners);
-    super.dispose();
-  }
-}
 
 class _OrbDots {
   _OrbDots(this.x, this.y, this.size, this.alpha, this.depth);
@@ -281,7 +175,7 @@ class AmbientHeaderOrb extends StatefulWidget {
 }
 
 class _AmbientHeaderOrbState extends State<AmbientHeaderOrb> {
-  late final _AmbientModel _m = _AmbientModel(widget.client)
+  late final AmbientModel _m = AmbientModel(widget.client)
     ..addListener(_changed);
 
   void _changed() {
@@ -297,13 +191,15 @@ class _AmbientHeaderOrbState extends State<AmbientHeaderOrb> {
 
   @override
   Widget build(BuildContext context) {
-    final color = _stateColor(_m.settings, _m.status);
+    final color = ambientStateColor(_m.settings, _m.status);
     return Semantics(
       button: true,
       label: 'Ambient listening',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => showAmbientStage(context, widget.client),
+        onTap: () => kMobile
+            ? openMobileVoicePage(context, client: widget.client)
+            : showAmbientStage(context, widget.client),
         onLongPress: () {
           if (_m.settings == null) return;
           HapticFeedback.mediumImpact();
@@ -367,7 +263,7 @@ class AmbientStage extends StatefulWidget {
 
 class _AmbientStageState extends State<AmbientStage>
     with SingleTickerProviderStateMixin {
-  late final _AmbientModel _m = _AmbientModel(widget.client)
+  late final AmbientModel _m = AmbientModel(widget.client)
     ..addListener(_changed);
   late final CurvedAnimation _a = CurvedAnimation(
       parent: widget.animation, curve: Motion.enter, reverseCurve: Motion.exit);
@@ -392,15 +288,7 @@ class _AmbientStageState extends State<AmbientStage>
     try {
       final events = await widget.client.ambientEvents(limit: 16);
       if (!mounted) return;
-      setState(() => _recent = events
-          .where((e) =>
-              e.status == 'done' &&
-              e.kept &&
-              e.text.trim().isNotEmpty &&
-              !const {'media', 'noise', 'background', 'echo'}
-                  .contains(e.verdict))
-          .take(3)
-          .toList());
+      setState(() => _recent = filterAmbientEvents(events).take(3).toList());
     } catch (_) {}
   }
 
@@ -436,24 +324,14 @@ class _AmbientStageState extends State<AmbientStage>
     _m.setMode(mode);
   }
 
-  String _caption(AmbientStateEvent? event) {
-    if (kIsWeb) return 'Unavailable in browser';
-    if (_m.elsewhere) {
-      return 'On ${_m.settings?.listeningDevice ?? 'another device'}';
-    }
-    if (_m.status.displaced) return 'Paused here';
-    if (_m.busy) return _live ? 'Stopping…' : 'Starting…';
-    if (!_live) return 'Off';
-    if (event != null) {
-      if (event.sub == 'speaking') return 'Speaking';
-      if (event.sub == 'thinking') return 'Thinking';
-      if (event.mode == 'active') return 'In conversation';
-    }
-    if (_m.status.assistantSpeaking) return 'Speaking';
-    if (_m.settings?.conversationOpen ?? false) return 'In conversation';
-    if (_m.status.speaking) return 'Hearing you';
-    return 'Listening';
-  }
+  String _caption(AmbientStateEvent? event) => ambientStatusText(
+        settings: _m.settings,
+        status: _m.status,
+        event: event,
+        elsewhere: _m.elsewhere,
+        busy: _m.busy,
+        liveOverride: _live,
+      );
 
   String _ago(DateTime t) {
     final d = DateTime.now().difference(t);
@@ -502,7 +380,7 @@ class _AmbientStageState extends State<AmbientStage>
 
   Widget _panel(bool wide, double orb) {
     final err = _m.error ?? _m.status.error;
-    final color = _stateColor(_m.settings, _m.status);
+    final color = ambientStateColor(_m.settings, _m.status);
     final popover = wide && widget.anchor != null;
     final orbWidget = Semantics(
       button: true,
