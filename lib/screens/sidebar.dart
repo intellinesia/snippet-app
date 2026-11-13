@@ -1395,10 +1395,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 2, 10, 6),
       child: Column(children: [
-        Tactile(
-          radius: BorderRadius.circular(9),
-          kind: TactileKind.inset,
-          child: Container(
+        Container(
           height: 28,
           padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
@@ -1418,7 +1415,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                 agentsAvailable ? () => setSidebarAgentsFirst(true) : null),
           ]),
         ),
-        ),
         const SizedBox(height: 8),
         _sidebarSearch(agentsFirst: agentsFirst),
       ]),
@@ -1435,21 +1431,17 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             key: key,
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
-            child: Tactile(
-              radius: BorderRadius.circular(7),
-              enabled: on,
-              child: AnimatedContainer(
-                duration: Motion.quick,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: on ? AppColors.surface2 : Colors.transparent,
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                alignment: Alignment.center,
-                child: Text(label,
-                    style: sans(12,
-                        color: on ? AppColors.fg1 : AppColors.fg4)),
+            child: AnimatedContainer(
+              duration: Motion.quick,
+              height: 24,
+              decoration: BoxDecoration(
+                color: on ? AppColors.surface2 : Colors.transparent,
+                borderRadius: BorderRadius.circular(7),
               ),
+              alignment: Alignment.center,
+              child: Text(label,
+                  style: sans(12,
+                      color: on ? AppColors.fg1 : AppColors.fg4)),
             ),
           ),
         ),

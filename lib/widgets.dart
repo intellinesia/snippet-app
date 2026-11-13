@@ -2448,6 +2448,7 @@ const _lucide = <String, IconData>{
   'split': LucideIcons.split,
   'processes': LucideIcons.cog,
   'server': LucideIcons.server,
+  'monitor': LucideIcons.monitor,
   'ai-chip': LucideIcons.cpu,
   'analytics': LucideIcons.chartColumn,
   'lock-key': LucideIcons.keyRound,

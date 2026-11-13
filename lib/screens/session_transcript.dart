@@ -544,7 +544,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           final display = e['display'] as String?;
           addEvent(
               key,
-              artifactVersion == newestArtifact[artifactId] &&
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: artifactVersion == newestArtifact[artifactId] &&
                       artifactShowsInline(artifactKind, display)
                   ? ArtifactInline(
                       key: ValueKey(
@@ -565,7 +567,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                       title: _s(e['title']),
                       kind: artifactKind,
                       caption: _s(e['caption']),
-                    ));
+                    ),
+              ));
         case 'lane_spawned':
           endTools(key);
           final id = _s(e['id']);

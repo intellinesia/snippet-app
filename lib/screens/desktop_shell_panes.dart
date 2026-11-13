@@ -848,13 +848,25 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               height: 28,
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Row(children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: healthy == true ? AppColors.ok : AppColors.fg4,
-                  ),
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: Stack(clipBehavior: Clip.none, children: [
+                    AppIcon('monitor', size: 15, color: AppColors.fg3),
+                    Positioned(
+                      right: -2,
+                      bottom: -1,
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: healthy == true ? AppColors.ok : AppColors.fg4,
+                          border: Border.all(color: AppColors.bg, width: 1.5),
+                        ),
+                      ),
+                    ),
+                  ]),
                 ),
                 const SizedBox(width: 8),
                 Expanded(

@@ -38,12 +38,16 @@ class ChatCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.lineStrong),
             ),
-            child: Opacity(
-              opacity: dimmed ? 0.85 : 1,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: children,
+            // Own Material so row hovers paint inside the rounded clip.
+            child: Material(
+              type: MaterialType.transparency,
+              child: Opacity(
+                opacity: dimmed ? 0.85 : 1,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: children,
+                ),
               ),
             ),
           ),

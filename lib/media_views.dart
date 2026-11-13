@@ -602,88 +602,89 @@ class _VoiceNoteState extends State<VoiceNote> {
   }
 
   Widget _mobile(double progress) {
+    final active = _playing || _position > Duration.zero;
     final time = _error ??
         (_duration == Duration.zero
-            ? 'Voice note'
-            : _playing || _position > Duration.zero
-                ? '${_clock(_position)} / ${_clock(_duration)}'
-                : _clock(_duration));
+            ? (active ? _clock(_position) : 'Voice note')
+            : _clock(active ? _position : _duration));
     final ink = widget.ink ?? AppColors.fg1;
-    final muted = widget.ink?.withValues(alpha: 0.65) ?? AppColors.fg3;
+    final muted = widget.ink?.withValues(alpha: 0.6) ?? AppColors.fg3;
+    final glyph = widget.ink == null
+        ? AppColors.bg
+        : (ink.computeLuminance() > 0.5 ? Colors.black : Colors.white);
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [
+        Row(mainAxisSize: MainAxisSize.min, children: [
           Semantics(
             button: true,
             label: _playing ? 'Pause voice note' : 'Play voice note',
             child: Material(
-              color: widget.ink?.withValues(alpha: 0.14) ?? AppColors.surface3,
+              color: _error == null ? ink : ink.withValues(alpha: 0.3),
               shape: const CircleBorder(),
               child: InkWell(
                 onTap: _error == null ? _toggle : null,
                 customBorder: const CircleBorder(),
                 child: SizedBox(
-                  width: 32,
-                  height: 32,
+                  width: 36,
+                  height: 36,
                   child: Center(
                     child: _loading
-                        ? Spinner(size: 13, color: ink)
-                        : AppIcon(_playing ? 'pause' : 'play',
-                            size: 13, color: ink),
+                        ? Spinner(size: 14, color: glyph)
+                        : Padding(
+                            padding: EdgeInsets.only(left: _playing ? 0 : 2),
+                            child: AppIcon(_playing ? 'pause' : 'play',
+                                size: 15, color: glyph),
+                          ),
                   ),
                 ),
               ),
             ),
           ),
           const SizedBox(width: 10),
-          Flexible(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 190),
-              child: LayoutBuilder(
-                builder: (_, c) => GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapDown: (d) => _seekTo(d.localPosition.dx / c.maxWidth),
-                  onHorizontalDragUpdate: (d) =>
-                      _seekTo(d.localPosition.dx / c.maxWidth),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: Center(
-                        child: SizedBox(
-                            height: 22,
-                            child: CustomPaint(
-                              painter: _NoteWave(
-                                seed: (widget.url ?? widget.path).hashCode,
-                                progress: progress,
-                                played: ink,
-                                rest: widget.ink?.withValues(alpha: 0.3) ??
-                                    AppColors.fg4.withValues(alpha: 0.5),
-                              ),
-                            ))),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: (d) => _seekTo(d.localPosition.dx / _waveWidth),
+                onHorizontalDragUpdate: (d) =>
+                    _seekTo(d.localPosition.dx / _waveWidth),
+                child: SizedBox(
+                  width: _waveWidth,
+                  height: 26,
+                  child: CustomPaint(
+                    painter: _NoteWave(
+                      seed: (widget.url ?? widget.path).hashCode,
+                      progress: progress,
+                      played: ink,
+                      rest: widget.ink?.withValues(alpha: 0.4) ??
+                          AppColors.fg4.withValues(alpha: 0.5),
+                    ),
                   ),
                 ),
               ),
-            ),
+              const SizedBox(height: 3),
+              Text(time,
+                  style: sans(11.5,
+                      tabular: true,
+                      color: _error == null ? muted : AppColors.danger)),
+            ],
           ),
-          const SizedBox(width: 10),
-          Text(time,
-              style: sans(12,
-                  tabular: true,
-                  color: _error == null ? muted : AppColors.danger)),
+          const SizedBox(width: 4),
         ]),
-        if (widget.transcript != null) ...[
+        // Only when the audio can't play: the words are the fallback.
+        if (_error != null && widget.transcript != null) ...[
           const SizedBox(height: 6),
-          Container(
-              height: 1,
-              color: widget.ink?.withValues(alpha: 0.12) ?? AppColors.line),
-          const SizedBox(height: 4),
           widget.transcript!,
         ],
       ],
     );
   }
+
+  static double get _waveWidth => kMobile ? 168 : 196;
 
   @override
   Widget build(BuildContext context) {
@@ -862,23 +863,25 @@ class _NoteWave extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const step = 4.0;
-    const stroke = 2.5;
-    final count = (size.width / step).floor();
+    const bar = 3.0;
+    const gap = 2.0;
+    final count = ((size.width + gap) / (bar + gap)).floor();
     if (count <= 0) return;
     final rnd = math.Random(seed);
     final paint = Paint()
-      ..strokeWidth = stroke
+      ..strokeWidth = bar
       ..strokeCap = StrokeCap.round;
     final mid = size.height / 2;
+    var prev = 0.5;
     for (var i = 0; i < count; i++) {
       final t = i / count;
-      final envelope = 0.35 + 0.65 * math.sin(math.pi * (0.08 + t * 0.84));
-      final h = math.max(3.0,
-          (size.height - stroke) * envelope * (0.3 + rnd.nextDouble() * 0.7));
-      final x = i * step + stroke / 2;
+      final envelope = 0.45 + 0.55 * math.sin(math.pi * (0.05 + t * 0.9));
+      prev = (prev * 0.35 + rnd.nextDouble() * 0.65).clamp(0.12, 1.0);
+      final h = math.max(bar, (size.height - bar) * envelope * prev);
+      final x = i * (bar + gap) + bar / 2;
       paint.color = t < progress ? played : rest;
-      canvas.drawLine(Offset(x, mid - h / 2), Offset(x, mid + h / 2), paint);
+      canvas.drawLine(Offset(x, mid - h / 2 + bar / 2),
+          Offset(x, mid + h / 2 - bar / 2), paint);
     }
   }
 

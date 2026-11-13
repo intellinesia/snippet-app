@@ -27,7 +27,7 @@ import '../motion.dart';
 import '../desktop_look.dart';
 import '../window_background.dart';
 import 'dart:io' show File;
-import 'package:file_picker/file_picker.dart';
+import '../desktop_pick.dart';
 import '../desktop_layout.dart';
 import '../wake_models.dart';
 import 'memory_screen.dart';
@@ -2540,9 +2540,8 @@ class _ChatWallpaperPicker extends StatelessWidget {
 
   Future<void> _chooseImage() async {
     try {
-      final file = await FilePicker.pickFile(type: FileType.image);
-      final p = file?.path;
-      if (p != null && p.isNotEmpty) {
+      final p = await pickLocalImage();
+      if (p != null) {
         await DesktopLook.instance.setImageFromFile(p);
       }
     } catch (_) {}
@@ -2624,9 +2623,8 @@ class _WindowBackgroundRow extends StatelessWidget {
 
   Future<void> _choose() async {
     try {
-      final file = await FilePicker.pickFile(type: FileType.image);
-      final p = file?.path;
-      if (p != null && p.isNotEmpty) {
+      final p = await pickLocalImage();
+      if (p != null) {
         await WindowBackgroundStore.instance.setFromFile(p);
       }
     } catch (_) {}
