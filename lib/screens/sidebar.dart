@@ -27,6 +27,7 @@ import '../ambient/ambient_model.dart';
 import 'mobile_voice_page.dart' show openMobileVoicePage;
 import 'mobile_bottom_bar.dart';
 import 'mobile_chrome.dart';
+import 'mobile_session_home.dart';
 export 'sidebar_mobile.dart';
 
 class Sidebar extends StatefulWidget {
@@ -327,7 +328,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                     onHome: widget.onMobileHome,
                     onNewSession: widget.onNewSession,
                     showNewSession: false,
-                    search: _barSearch(),
+                    search: null,
                     onHeightChanged: (h) {
                       if (mounted && h != _barHeight) {
                         setState(() => _barHeight = h);
@@ -715,28 +716,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       );
 
   /// The bar's search field filters the list in place, on Chats and Agents.
-  MobileBarSearch? _barSearch() {
-    if (_selecting ||
-        (widget.mobileHome != MobileHome.chats &&
-            widget.mobileHome != MobileHome.agents)) {
-      return null;
-    }
-    final showAgents = _agentsList || widget.mobileHome == MobileHome.agents;
-    return showAgents
-        ? MobileBarSearch(
-            controller: _agentSearchCtl,
-            focusNode: _searchFocus,
-            hint: 'Search agents',
-            onChanged: (v) => setState(() => _agentFilterQuery = v),
-          )
-        : MobileBarSearch(
-            controller: _searchCtl,
-            focusNode: _searchFocus,
-            hint: 'Search sessions',
-            onChanged: (v) => setState(() => _filterQuery = v),
-          );
-  }
-
   /// Turns ambient on, starts listening on this phone, then opens Voice.
   Future<void> _startVoice() async {
     final client = widget.client;
@@ -805,11 +784,16 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       builder: (context, _) {
         final listeningOn =
             !agents && (widget.listening || AmbientController.instance.running);
-        return MobileHomeHeader(
-          title: title,
+        return MobileSearchHeader(
+          controller: agents ? _agentSearchCtl : _searchCtl,
+          focusNode: _searchFocus,
+          hint: agents ? 'Search agents' : 'Search sessions',
+          onChanged: (v) => setState(() =>
+              agents ? _agentFilterQuery = v : _filterQuery = v),
           mcBadgeCount: _mcAttentionCount,
           onMc: widget.onOpenMissionControl,
           listening: listeningOn,
+          onMic: agents || !hasClient ? null : _startVoice,
           trailing: [
             if (agents)
               Builder(
@@ -827,16 +811,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                 ),
               )
             else ...[
-              if (!listeningOn && hasClient) ...[
-                RoundBtn(
-                  icon: 'mic',
-                  tooltip: 'Start voice',
-                  size: 40,
-                  iconSize: 18,
-                  onTap: _startVoice,
-                ),
-                const SizedBox(width: 10),
-              ],
               RoundBtn(
                 icon: 'plus',
                 tooltip: 'New session',
@@ -986,10 +960,13 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         !isInboxSessionRow(s) &&
         _matchesQuery(s))));
     final children = <Widget>[
-      ..._groupedRows(split.main, attentionFirst: true),
+      ...(kMobile
+          ? _mobileGroupedRows(split.main)
+          : _groupedRows(split.main, attentionFirst: true)),
     ];
-    final pinSettled = kMobile && split.settled.isNotEmpty;
-    if (split.settled.isNotEmpty && !pinSettled) {
+    if (kMobile && split.settled.isNotEmpty) {
+      children.add(_mobileSettledCard(split.settled));
+    } else if (split.settled.isNotEmpty) {
       final settledOpen = _settledOpen || _filterQuery.trim().isNotEmpty;
       children.add(SessionGroupHeader(
         'Settled',
@@ -1018,14 +995,121 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(
-            M.gutter, 4, M.gutter, pinSettled ? 8 : _scrollBottomPad),
+            M.gutter, 4, M.gutter, _scrollBottomPad),
         children: children,
       ),
     );
-    if (!pinSettled) return list;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [Expanded(child: list), _settledPinned(split.settled)],
+    return list;
+  }
+
+  /// Phone list: live sessions as cards, then each folder in its own card.
+  List<Widget> _mobileGroupedRows(List<SessionInfo> sorted) {
+    if (sorted.isEmpty) return const [];
+    final out = <Widget>[];
+    final filtering = _filterQuery.trim().isNotEmpty;
+    _chatsShownAt ??= DateTime.now();
+    var n = 0;
+    final live = filtering
+        ? const <SessionInfo>[]
+        : [
+            for (final s in sorted)
+              if (sessionNeedsYou(s)) s,
+            for (final s in sorted)
+              if (!sessionNeedsYou(s) && sessionIsActive(s.status)) s,
+          ];
+    if (live.isNotEmpty) {
+      out.add(MobileSectionLabel('Now', count: live.length, top: 2));
+      for (final s in live) {
+        out.add(Appear(
+          key: ValueKey('chat-${s.id}'),
+          index: n++,
+          since: _chatsShownAt,
+          child: LiveSessionCard(
+            session: s,
+            leading: _agentBadge(s),
+            onTap: () => _selecting
+                ? _toggleSelected(s.id)
+                : widget.onOpenSession(s.id, s.title, s.profile),
+            onLongPress: () =>
+                _selecting ? _toggleSelected(s.id) : _sessionActions(s),
+          ),
+        ));
+      }
+    }
+    final liveIds = {for (final s in live) s.id};
+    final byFolder = <String, List<SessionInfo>>{};
+    for (final s in sorted) {
+      if (liveIds.contains(s.id)) continue;
+      byFolder.putIfAbsent(projectKey(s), () => []).add(s);
+    }
+    final labelCount = <String, int>{};
+    for (final rows in byFolder.values) {
+      final l = projectLabel(rows.first);
+      labelCount[l] = (labelCount[l] ?? 0) + 1;
+    }
+    var first = live.isEmpty;
+    for (final rows in byFolder.values) {
+      var label = projectLabel(rows.first);
+      if ((labelCount[label] ?? 0) > 1) label = _projectPath(rows.first);
+      out.add(MobileSectionLabel(label,
+          icon: 'folder', count: rows.length, top: first ? 2 : 18));
+      first = false;
+      out.add(Appear(
+        key: ValueKey('folder-${projectKey(rows.first)}'),
+        index: n++,
+        since: _chatsShownAt,
+        child: MobileGroupCard(children: [
+          for (var i = 0; i < rows.length; i++)
+            _listRow(rows[i], divider: i + 1 < rows.length),
+        ]),
+      ));
+    }
+    return out;
+  }
+
+  /// Settled sessions as the last card in the phone list, expanding in place.
+  Widget _mobileSettledCard(List<SessionInfo> rows) {
+    final open = _settledOpen || _filterQuery.trim().isNotEmpty;
+    return Padding(
+      padding: const EdgeInsets.only(top: 18),
+      child: MobileGroupCard(children: [
+        Semantics(
+          button: true,
+          expanded: open,
+          label: 'Settled, ${rows.length}',
+          child: ExcludeSemantics(
+            child: InkWell(
+              onTap: () => setState(() => _settledOpen = !_settledOpen),
+              child: SizedBox(
+                height: M.minTarget + 4,
+                child: Row(children: [
+                  AppIcon('archive', size: 16, color: AppColors.fg3),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: Text('Settled', style: TS.rowTitle(AppColors.fg2))),
+                  Text('${rows.length}', style: TS.meta()),
+                  const SizedBox(width: 6),
+                  AnimatedRotation(
+                    turns: open ? 0.25 : 0,
+                    duration: Motion.base,
+                    curve: Curves.easeOutCubic,
+                    child: AppIcon('chevron-right',
+                        size: 14, color: AppColors.fg3),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        ),
+        Reveal(
+          show: open,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(height: 1, color: AppColors.line),
+            for (var i = 0; i < rows.length; i++)
+              _listRow(rows[i], divider: i + 1 < rows.length),
+          ]),
+        ),
+      ]),
     );
   }
 

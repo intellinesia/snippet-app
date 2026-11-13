@@ -8,6 +8,7 @@ import 'package:snippet/models.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/widgets.dart';
+import 'package:snippet/screens/mobile_session_home.dart';
 import 'package:snippet/screens/session_list_row.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/screens/sidebar.dart';
@@ -108,12 +109,21 @@ void main() {
       (tester) async {
     try {
       await _pump(tester, const Size(390, 700), TargetPlatform.android);
+      expect(find.byType(SessionGroupHeader), findsNothing);
+      expect(find.widgetWithText(MobileSectionLabel, 'Now'), findsOneWidget);
+      expect(find.byType(LiveSessionCard), findsNWidgets(2));
       expect(
-          find.widgetWithText(SessionGroupHeader, 'Needs you'), findsOneWidget);
-      expect(find.widgetWithText(SessionGroupHeader, 'snippet-mobile'),
-          findsOneWidget);
-      expect(find.text('snippet-mobile'), findsNWidgets(2));
+          find.descendant(
+              of: find.byType(LiveSessionCard),
+              matching: find.text('snippet-mobile')),
+          findsNWidgets(2));
       expect(find.text('~/code/snippet-mobile'), findsNothing);
+      expect(find.widgetWithText(MobileSectionLabel, 'snippet-service'),
+          findsOneWidget);
+      expect(find.text('main'), findsNWidgets(2));
+      expect(find.text('cards'), findsOneWidget);
+      expect(find.text('+120'), findsOneWidget);
+      expect(find.text('-31'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('^Needs input')), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('^Working')), findsOneWidget);
       expect(find.text('+88'), findsOneWidget);
@@ -269,17 +279,21 @@ void main() {
   });
 
   testWidgets(
-      'phone Needs you header colour and 20px mark',
+      'phone Needs you card state colour and agent mark',
       (tester) async {
     try {
       await _pump(tester, const Size(390, 700), TargetPlatform.android,
           sessions: [
             _s('a', 'Needs input chat', 'waiting_for_input', agentId: 'scout'),
           ]);
-      final header = find.widgetWithText(SessionGroupHeader, 'Needs you');
+      expect(find.byType(SessionGroupHeader), findsNothing);
+      final card = find.byType(LiveSessionCard);
+      expect(card, findsOneWidget);
 
-      final label = tester.widget<Text>(
-          find.descendant(of: header, matching: find.text('Needs you')));
+      final label = tester.widget<Text>(find.descendant(
+          of: card,
+          matching: find.byWidgetPredicate((w) =>
+              w is Text && (w.data ?? '').startsWith('Needs input ·'))));
       expect(label.style?.color, AppColors.run);
 
       final mochi = tester.widget<AgentMochi>(find.byType(AgentMochi));

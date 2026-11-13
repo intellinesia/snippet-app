@@ -13,6 +13,7 @@ import 'package:snippet/screens/agents_sidebar_panel.dart';
 import 'package:snippet/screens/desktop_shell.dart';
 import 'package:snippet/screens/mobile_bottom_bar.dart';
 import 'package:snippet/screens/mobile_chrome.dart';
+import 'package:snippet/screens/mobile_session_home.dart';
 import 'package:snippet/screens/mission_control/coordination_agent_detail.dart';
 import 'package:snippet/screens/session.dart';
 import 'package:snippet/swr.dart';
@@ -92,7 +93,7 @@ SessionInfo _session(
 
 void main() {
   testWidgets(
-      'phone shell launches on Sessions home with MobileBottomBar and opens MC from avatar',
+      'phone shell launches on Sessions home with MobileBottomBar and opens MC from its header button',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     DaemonClient.wsConnector =
@@ -114,7 +115,8 @@ void main() {
 
       final shell = tester.widget<MobileShell>(find.byType(MobileShell));
       expect(shell.chatsOpen, isTrue);
-      expect(find.byType(MobileHomeHeader), findsWidgets);
+      expect(find.byType(MobileSearchHeader), findsOneWidget);
+      expect(find.byType(MobileHomeHeader), findsNothing);
       expect(find.byTooltip('New session'), findsOneWidget);
       expect(find.byType(MobileBottomBar), findsOneWidget);
       expect(find.byType(MobileMissionBar).hitTestable(), findsNothing);
@@ -139,7 +141,7 @@ void main() {
   });
 
   testWidgets(
-      'Sidebar MC badge counts all unsettled sessions needing attention and Settings uses MobileHomeHeader',
+      'Sidebar MC badge counts all unsettled sessions needing attention and Settings uses MobileHomeHeader while Sessions uses MobileSearchHeader',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
@@ -194,12 +196,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(
         find.descendant(
-            of: find.byType(MobileHomeHeader), matching: find.text('2')),
+            of: find.byType(MobileSearchHeader), matching: find.text('2')),
         findsOneWidget);
+    expect(find.byType(MobileHomeHeader), findsNothing);
+    expect(find.widgetWithText(TextField, ''), findsOneWidget);
+    expect(find.text('Search sessions'), findsOneWidget);
 
     await tester.pumpWidget(buildSidebar(MobileHome.agents));
     await tester.pumpAndSettle();
     expect(find.byTooltip('New agent or group'), findsOneWidget);
+    expect(find.byType(MobileSearchHeader), findsOneWidget);
+    expect(find.text('Search agents'), findsOneWidget);
     expect(find.descendant(
         of: find.byType(MobileBottomBar),
         matching: find.text('New agent or group')), findsNothing);

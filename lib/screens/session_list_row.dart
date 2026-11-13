@@ -48,7 +48,7 @@ bool sessionNeedsYou(SessionInfo s) =>
         s.status == 'in_review' ||
         s.attention != null);
 
-({String label, String icon}) _attentionState(SessionInfo s) {
+({String label, String icon}) sessionAttentionState(SessionInfo s) {
   final type = '${s.attention?['type'] ?? ''}'.toLowerCase();
   if (type == 'question') return (label: 'Question', icon: 'help-circle');
   if (type == 'in_review' || type == 'review' || s.status == 'in_review') {
@@ -242,7 +242,7 @@ class SessionListRow extends StatelessWidget {
     final lineH = kMobile ? 22.0 : 18.0;
     final diff = sessionDiff(s);
     final branch = s.branch?.trim() ?? '';
-    final attn = needsYou ? _attentionState(s) : null;
+    final attn = needsYou ? sessionAttentionState(s) : null;
     final noRepo = !showProject && branch.isEmpty && !s.isGit;
     final hasMeta = showProject || needsYou || branch.isNotEmpty || diff != null || noRepo;
 

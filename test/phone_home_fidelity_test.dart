@@ -5,6 +5,7 @@ import 'package:snippet/api.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/mobile_bottom_bar.dart';
+import 'package:snippet/screens/mobile_session_home.dart';
 import 'package:snippet/screens/session_list_row.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/screens/sidebar.dart';
@@ -105,7 +106,7 @@ Widget _phoneHarness({
 }
 
 void main() {
-  testWidgets('phone header renders MC button, badge, Listening pill, New session and Sessions title',
+  testWidgets('phone header renders MC button, badge, Listening pill, New session and inline search',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
@@ -121,16 +122,15 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Ignored shell bar'), findsNothing);
-      expect(find.text('Sessions'), findsAtLeastNWidgets(1));
+      expect(find.byType(MobileSearchHeader), findsOneWidget);
+      expect(find.text('Search sessions'), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byType(MobileSearchHeader),
+              matching: find.text('Sessions')),
+          findsNothing);
       expect(find.text('Listening'), findsOneWidget);
       expect(find.text('2'), findsOneWidget);
-
-      final title = tester.widget<Text>(find.text('Sessions').first);
-      expect(title.style?.fontSize, 17);
-      expect(title.style?.fontWeight, FontWeight.w500);
-      expect(title.style?.letterSpacing, 0);
-      expect(title.maxLines, 1);
-      expect(title.overflow, TextOverflow.ellipsis);
 
       final mcMochi = tester.widget<MochiIcon>(find.byType(MochiIcon));
       expect(mcMochi.size, 22);
@@ -151,6 +151,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Listening'), findsNothing);
       expect(find.text('2'), findsNothing);
+      expect(find.byTooltip('Start voice'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
@@ -193,29 +194,48 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
       await tester.pump(const Duration(seconds: 1));
 
-      // Cross-project Needs you header holds all 3 attention sessions.
-      final needsHeader = find.widgetWithText(SessionGroupHeader, 'Needs you');
-      expect(needsHeader, findsOneWidget);
-      expect(find.descendant(of: needsHeader, matching: find.text('3')),
-          findsOneWidget);
+      expect(find.byType(SessionGroupHeader), findsNothing);
+      expect(find.text('Needs you'), findsNothing);
 
-      // alpha and beta have no remaining sessions, so no project headers appear.
-      expect(find.widgetWithText(SessionGroupHeader, 'alpha'), findsNothing);
-      expect(find.widgetWithText(SessionGroupHeader, 'beta'), findsNothing);
+      // The Now section holds all 3 attention sessions as live cards.
+      final nowLabel = find.widgetWithText(MobileSectionLabel, 'Now');
+      expect(nowLabel, findsOneWidget);
+      expect(find.descendant(of: nowLabel, matching: find.text('3')),
+          findsOneWidget);
+      expect(find.byType(LiveSessionCard), findsNWidgets(3));
+
+      // alpha and beta have no remaining sessions, so no folder sections.
+      expect(find.widgetWithText(MobileSectionLabel, 'alpha'), findsNothing);
+      expect(find.widgetWithText(MobileSectionLabel, 'beta'), findsNothing);
 
       // gamma retains only the normal session (count 1).
-      final gammaHeader = find.widgetWithText(SessionGroupHeader, 'gamma');
+      final gammaHeader = find.widgetWithText(MobileSectionLabel, 'gamma');
       expect(gammaHeader, findsOneWidget);
       expect(find.descendant(of: gammaHeader, matching: find.text('1')),
           findsOneWidget);
+      expect(find.byType(SessionListRow), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byType(SessionListRow),
+              matching: find.text('Normal gamma')),
+          findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byType(LiveSessionCard),
+              matching: find.text('Normal gamma')),
+          findsNothing);
 
-      expect(find.text('Question'), findsOneWidget);
-      expect(find.text('In review'), findsOneWidget);
-      expect(find.text('Needs input'), findsOneWidget);
+      expect(find.textContaining('Question'), findsWidgets);
+      expect(find.textContaining('In review'), findsOneWidget);
+      expect(find.textContaining('Needs input'), findsOneWidget);
 
-      // Project chips appear on Needs you rows.
+      // Project tags appear on live cards.
       expect(find.text('alpha'), findsOneWidget);
       expect(find.text('beta'), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byType(LiveSessionCard), matching: find.text('gamma')),
+          findsOneWidget);
 
       // Phone provider mark uses size 18 inside the 20px box.
       final logo = tester.widget<ProviderLogo>(find.byType(ProviderLogo));
@@ -225,7 +245,7 @@ void main() {
     }
   });
 
-  testWidgets('row formatting handles untitled weight, unread time, group header fg4, and phone Settled pinned',
+  testWidgets('row formatting handles untitled weight, unread time, folder label fg3, and phone Settled card',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
@@ -240,28 +260,40 @@ void main() {
       expect(untitled.style?.color, AppColors.fg3);
       expect(untitled.style?.fontWeight, FontWeight.w400);
 
-      final repoHeader = find.widgetWithText(SessionGroupHeader, 'repo');
+      final repoHeader = find.widgetWithText(MobileSectionLabel, 'repo');
       final repoLabel = tester.widget<Text>(
           find.descendant(of: repoHeader, matching: find.text('repo')));
-      expect(repoLabel.style?.color, AppColors.fg4);
+      expect(repoLabel.style?.color, AppColors.fg3);
 
       final settledHeader = find.text('Settled');
       expect(settledHeader, findsOneWidget);
-      // Settled is pinned under the list, outside its scroll.
+      // Settled is the last card in the scrolling list.
       expect(
         find.ancestor(of: settledHeader, matching: find.byType(ListView)),
-        findsNothing,
+        findsWidgets,
       );
-      final settledIcon = tester.widget<AppIcon>(find.descendant(
-          of: find.ancestor(of: settledHeader, matching: find.byType(Row)).first,
-          matching: find.byType(AppIcon)));
-      expect(settledIcon.name, 'chevron-right');
+      final settledCard = find.ancestor(
+          of: settledHeader, matching: find.byType(MobileGroupCard));
+      final settledIcon = tester.widget<AppIcon>(find
+          .descendant(of: settledCard, matching: find.byType(AppIcon))
+          .first);
+      expect(settledIcon.name, 'archive');
+      expect(find.descendant(of: settledCard, matching: find.text('1')),
+          findsOneWidget);
+      expect(
+          tester
+              .widgetList<AppIcon>(
+                  find.descendant(of: settledCard, matching: find.byType(AppIcon)))
+              .any((i) => i.name == 'chevron-right'),
+          isTrue);
+      final reveal = find.descendant(
+          of: settledCard, matching: find.byType(Reveal));
       expect(find.text('Archived fix'), findsNothing);
-      expect(tester.widget<Reveal>(find.byType(Reveal)).show, isFalse);
+      expect(tester.widget<Reveal>(reveal).show, isFalse);
 
       await tester.tap(settledHeader);
       await tester.pump(const Duration(milliseconds: 400));
-      expect(tester.widget<Reveal>(find.byType(Reveal)).show, isTrue);
+      expect(tester.widget<Reveal>(reveal).show, isTrue);
       expect(find.text('Archived fix'), findsOneWidget);
       await tester.tap(settledHeader);
       await tester.pump(const Duration(milliseconds: 400));
