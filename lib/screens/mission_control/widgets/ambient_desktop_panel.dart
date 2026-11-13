@@ -95,7 +95,7 @@ class AmbientDesktopPanel extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('HEARING NOW',
-                      style: sans(10.5, weight: W.label, color: AppColors.fg4)),
+                      style: sans(11, weight: W.label, color: AppColors.fg4)),
                   const SizedBox(height: 6),
                   ConstrainedBox(
                     key: const ValueKey('ambient-caption'),
@@ -113,7 +113,7 @@ class AmbientDesktopPanel extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
               child: Text('RECENT',
-                  style: sans(10.5, weight: W.label, color: AppColors.fg4)),
+                  style: sans(11, weight: W.label, color: AppColors.fg4)),
             ),
             Expanded(
               child: recent.isEmpty
