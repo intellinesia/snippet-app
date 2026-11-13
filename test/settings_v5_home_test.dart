@@ -3,9 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
+import 'package:snippet/desktop_layout.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/settings_panel.dart';
 import 'package:snippet/theme.dart';
+import 'package:snippet/widgets.dart';
 
 /// Enough of the daemon for the phone settings home: config, vault, usage,
 /// ambient flag and sessions for the live count.
@@ -114,5 +116,63 @@ void main() {
     expect(find.text('1'), findsWidgets); // profile count
     expect(find.text('2'), findsWidgets); // vault count
     expect(find.text('Listening'), findsOneWidget);
+  });
+
+  testWidgets(
+      'SettingsSectionView on phone uses compact header without subtitle for Appearance and Routing',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    var backCount = 0;
+    Widget buildView(SettingsPage page) => MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            backgroundColor: AppColors.bg,
+            body: SettingsSectionView(
+              client: _Daemon(),
+              instances: const [
+                Instance(
+                    name: 'desk', url: 'http://desk.local:8742', token: ''),
+              ],
+              active: const Instance(
+                  name: 'desk', url: 'http://desk.local:8742', token: ''),
+              page: page,
+              onRemove: (_) {},
+              onBack: () => backCount++,
+            ),
+          ),
+        );
+
+    await tester.pumpWidget(buildView(SettingsPage.appearance));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(
+      find.text(
+          'Theme palette, accent colour, UI typeface and code font saved on this device.'),
+      findsNothing,
+    );
+    expect(find.text('Palette'), findsOneWidget);
+    expect(find.text('Typography'), findsOneWidget);
+    expect(find.text('PALETTE'), findsNothing);
+    expect(find.text('TYPOGRAPHY'), findsNothing);
+    expect(tester.getSize(find.byType(SettingsHeader)).height, 44);
+    await tester.tap(find.byWidgetPredicate(
+        (w) => w is AppIcon && w.name == 'chevron-left'));
+    expect(backCount, 1);
+
+    await tester.pumpWidget(buildView(SettingsPage.routing));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Routing'), findsOneWidget);
+    expect(
+      find.text(
+          'Which model does each kind of work, and who steps in when it hits a limit.'),
+      findsNothing,
+    );
+    expect(tester.getSize(find.byType(SettingsHeader)).height, 44);
+    expect(find.text('Mission Control'), findsOneWidget);
   });
 }
