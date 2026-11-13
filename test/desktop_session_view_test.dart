@@ -297,6 +297,7 @@ void main() {
           contextWindow: 200000,
           lastPromptTokens: 160000,
           cacheReadTokens: 42000,
+          totalTokens: 1200000,
           rateSecondary: RateWindow.fromJson({
             'used_percent': 7,
             'window_minutes': 10080,
@@ -305,7 +306,7 @@ void main() {
       ),
     ));
     expect(find.text('80% context'), findsOneWidget);
-    expect(find.text('42k cached'), findsOneWidget);
+    expect(find.text('1.2M tokens \u00b7 42k cached'), findsOneWidget);
     expect(find.text('7% this week'), findsOneWidget);
 
     await tester.pumpWidget(MaterialApp(
@@ -421,7 +422,7 @@ void main() {
     expect(find.textContaining('Lanes'), findsNothing);
     expect(find.text('1 terminal'), findsOneWidget);
     expect(find.text('80% context'), findsOneWidget);
-    expect(find.text('42k cached'), findsOneWidget);
+    expect(find.textContaining('42k cached'), findsOneWidget);
     expect(find.text('7% this week'), findsOneWidget);
 
     // The tab strip carries the title; the desktop header is actions only.

@@ -940,6 +940,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       contextWindow: s.contextWindow,
       lastPromptTokens: s.lastPromptTokens,
       cacheReadTokens: s.cacheReadTokens,
+      totalTokens: s.totalTokens,
       rateSecondary: s.rateSecondary,
     );
   }
@@ -1153,12 +1154,14 @@ class SessionContextFooter extends StatelessWidget {
     required this.contextWindow,
     required this.lastPromptTokens,
     required this.cacheReadTokens,
+    this.totalTokens = 0,
     this.rateSecondary,
   });
 
   final int contextWindow;
   final int lastPromptTokens;
   final int cacheReadTokens;
+  final int totalTokens;
   final RateWindow? rateSecondary;
 
   @override
@@ -1171,8 +1174,12 @@ class SessionContextFooter extends StatelessWidget {
         label: '${(frac * 100).round()}% context',
       ));
     }
-    if (cacheReadTokens > 0) {
-      items.add(Text('${fmtSi(cacheReadTokens)} cached',
+    if (totalTokens > 0 || cacheReadTokens > 0) {
+      items.add(Text(
+          [
+            if (totalTokens > 0) '${fmtSi(totalTokens)} tokens',
+            if (cacheReadTokens > 0) '${fmtSi(cacheReadTokens)} cached',
+          ].join(' \u00b7 '),
           style: TS.caption(AppColors.fg4)));
     }
     final secondary = rateSecondary;

@@ -319,7 +319,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
         }),
     ];
     Widget info(BuildContext ctx) => _InfoFrame(
-          onClose: _close,
+          onClose: widget.docked ? null : _close,
           edit: agent == null
               ? null
               : _EditPill(onTap: () => showAgentProfileSettings(
@@ -639,7 +639,7 @@ class _InfoFrame extends StatelessWidget {
     this.edit,
   });
 
-  final VoidCallback onClose;
+  final VoidCallback? onClose;
   final Widget? edit;
   final Widget avatar;
   final String name;
@@ -661,7 +661,8 @@ class _InfoFrame extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: S.s16),
           child: Row(children: [
-            _GlassCircle(onTap: onClose, icon: 'x', label: 'Close'),
+            if (onClose != null)
+              _GlassCircle(onTap: onClose!, icon: 'x', label: 'Close'),
             const Spacer(),
             if (edit != null) edit!,
           ]),
@@ -1131,13 +1132,16 @@ class _NestedPageRoute extends PageRoute<void> {
         parent: animation,
         curve: Motion.enter,
         reverseCurve: Motion.exit);
+    // The panel is see-through, so a covered page must fade or it shows under the new one.
+    final covered = FadeTransition(
+        opacity: ReverseAnimation(secondaryAnimation), child: child);
     if (reduceMotion(context)) {
-      return FadeTransition(opacity: curved, child: child);
+      return FadeTransition(opacity: curved, child: covered);
     }
     return SlideTransition(
       position:
           Tween(begin: const Offset(1, 0), end: Offset.zero).animate(curved),
-      child: child,
+      child: covered,
     );
   }
 }
