@@ -191,6 +191,8 @@ class SessionListRow extends StatelessWidget {
     this.selected = false,
     this.selecting = false,
     this.checked = false,
+    this.joinAbove = false,
+    this.joinBelow = false,
     this.draft = false,
     this.divider = false,
     this.showProject = false,
@@ -206,6 +208,10 @@ class SessionListRow extends StatelessWidget {
   final bool selected;
   final bool selecting;
   final bool checked;
+
+  /// The neighbour is checked too, so the tints meet without a rounded edge.
+  final bool joinAbove;
+  final bool joinBelow;
   final bool draft;
   final bool divider;
   final bool showProject;
@@ -379,7 +385,10 @@ class SessionListRow extends StatelessWidget {
                 child: DecoratedBox(
                     decoration: BoxDecoration(
                         color: AppColors.accentBg,
-                        borderRadius: BorderRadius.circular(R.md))),
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(joinAbove ? 0 : R.md),
+                          bottom: Radius.circular(joinBelow ? 0 : R.md),
+                        ))),
               ),
             Pressable(
               kind: PressKind.row,

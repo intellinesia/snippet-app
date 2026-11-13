@@ -1021,6 +1021,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           children: [
             for (var i = 0; i < split.settled.length; i++)
               _listRow(split.settled[i],
+                  above: i > 0 ? split.settled[i - 1] : null,
+                  below: i + 1 < split.settled.length ? split.settled[i + 1] : null,
                   divider: kMobile && i + 1 < split.settled.length),
           ],
         ),
@@ -1125,7 +1127,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         since: _chatsShownAt,
         child: MobileGroupCard(children: [
           for (var i = 0; i < rows.length; i++)
-            _listRow(rows[i], divider: i + 1 < rows.length),
+            _listRow(rows[i],
+                above: i > 0 ? rows[i - 1] : null,
+                below: i + 1 < rows.length ? rows[i + 1] : null, divider: i + 1 < rows.length),
         ]),
       ));
     }
@@ -1171,7 +1175,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Container(height: 1, color: AppColors.line),
             for (var i = 0; i < rows.length; i++)
-              _listRow(rows[i], divider: i + 1 < rows.length),
+              _listRow(rows[i],
+                  above: i > 0 ? rows[i - 1] : null,
+                  below: i + 1 < rows.length ? rows[i + 1] : null, divider: i + 1 < rows.length),
           ]),
         ),
       ]),
@@ -1210,8 +1216,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             key: ValueKey('chat-${needsYouRows[i].id}'),
             index: n++,
             since: _chatsShownAt,
-            child: _listRow(
-              needsYouRows[i],
+            child: _listRow(needsYouRows[i],
+     above: i > 0 ? needsYouRows[i - 1] : null,
+     below: i + 1 < needsYouRows.length ? needsYouRows[i + 1] : null,
               divider: kMobile && i + 1 < needsYouRows.length,
               showProject: true,
             ),
@@ -1259,7 +1266,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           key: ValueKey('chat-${rows[i].id}'),
           index: n++,
           since: _chatsShownAt,
-          child: _listRow(rows[i], divider: kMobile && i + 1 < rows.length),
+          child: _listRow(rows[i],
+     above: i > 0 ? rows[i - 1] : null,
+     below: i + 1 < rows.length ? rows[i + 1] : null, divider: kMobile && i + 1 < rows.length),
         ));
       }
     }
@@ -1305,15 +1314,22 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   }
 
   Widget _listRow(SessionInfo s,
-      {bool divider = false, bool showProject = false}) {
+      {bool divider = false,
+      bool showProject = false,
+      SessionInfo? above,
+      SessionInfo? below}) {
     final renaming = _renamingId == s.id;
+    final checked = _selected.contains(s.id);
     return SessionListRow(
       session: s,
       selected: !kMobile && s.id == widget.selectedSessionId,
       selecting: _selecting,
-      checked: _selected.contains(s.id),
+      checked: checked,
+      joinAbove: checked && above != null && _selected.contains(above.id),
+      joinBelow: checked && below != null && _selected.contains(below.id),
       draft: !renaming && _hasDraft(s),
-      divider: divider,
+      divider:
+          divider && !(below != null && _selected.contains(below.id)),
       showProject: showProject,
       renameField: renaming ? _inlineRenameField(s, compact: !kMobile) : null,
       leading: _agentBadge(s),
@@ -1356,7 +1372,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
               padding: const EdgeInsets.only(bottom: 8),
               children: [
                 for (var i = 0; i < rows.length; i++)
-                  _listRow(rows[i], divider: kMobile && i + 1 < rows.length),
+                  _listRow(rows[i],
+                      above: i > 0 ? rows[i - 1] : null,
+                      below: i + 1 < rows.length ? rows[i + 1] : null, divider: kMobile && i + 1 < rows.length),
               ],
             ),
           ),
