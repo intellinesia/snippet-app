@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -543,47 +546,154 @@ class _DotGridPainter extends CustomPainter {
   bool shouldRepaint(_DotGridPainter old) => old.color != color;
 }
 
-/// The home hero: a dot-matrix count with a two-line mono label beside it.
-class HomeHero extends StatelessWidget {
-  const HomeHero({
-    super.key,
-    required this.count,
-    required this.label,
-    this.detail,
-  });
+/// One reading for the home hero.
+class HeroStat {
+  const HeroStat(this.value, this.label, [this.detail]);
 
-  final int count;
+  final String value;
   final String label;
   final String? detail;
+}
+
+/// The home hero: a dot-matrix reading that rotates through [stats], starting
+/// on a random one each time [visit] changes.
+class HomeHero extends StatefulWidget {
+  const HomeHero({super.key, required this.stats, this.visit = 0});
+
+  final List<HeroStat> stats;
+  final int visit;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-        label: detail == null ? '$count $label' : '$count $label, $detail',
-        child: ExcludeSemantics(
+  State<HomeHero> createState() => _HomeHeroState();
+}
+
+class _HomeHeroState extends State<HomeHero> {
+  static final _rng = Random();
+  String? _label;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _shuffle();
+    _timer = Timer.periodic(const Duration(seconds: 6), (_) {
+      if (mounted && TickerMode.valuesOf(context).enabled) _advance();
+    });
+  }
+
+  @override
+  void didUpdateWidget(HomeHero old) {
+    super.didUpdateWidget(old);
+    if (old.visit != widget.visit) _shuffle();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _shuffle() {
+    final s = widget.stats;
+    _label = s.isEmpty ? null : s[_rng.nextInt(s.length)].label;
+  }
+
+  int get _index {
+    final i = widget.stats.indexWhere((s) => s.label == _label);
+    return i < 0 ? 0 : i;
+  }
+
+  void _advance() {
+    final s = widget.stats;
+    if (s.length < 2) return;
+    setState(() => _label = s[(_index + 1) % s.length].label);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final stats = widget.stats;
+    if (stats.isEmpty) return const SizedBox.shrink();
+    final stat = stats[_index];
+    final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    return Semantics(
+      label: [stat.value, stat.label, if (stat.detail != null) stat.detail]
+          .join(' '),
+      button: stats.length > 1,
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _advance,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(2, 10, 2, 14),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              DotMatrixNumber(count.toString().padLeft(2, '0')),
-              const SizedBox(width: 12),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 1),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(label, style: mono(12, color: AppColors.fg2)),
-                    if (detail != null)
-                      Text(detail!, style: mono(12, color: AppColors.accent)),
-                  ],
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: AnimatedSwitcher(
+                duration: reduced
+                    ? Duration.zero
+                    : const Duration(milliseconds: 320),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                layoutBuilder: (current, previous) => Stack(
+                  alignment: Alignment.centerLeft,
+                  children: [...previous, if (current != null) current],
                 ),
+                child: _reading(stat),
               ),
-            ]),
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _reading(HeroStat stat) => SizedBox(
+        key: ValueKey(stat.label),
+        height: 63,
+        child: _readingRow(stat),
+      );
+
+  Widget _readingRow(HeroStat stat) => Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          DotMatrixNumber(stat.value,
+              cell: _DotMatrixPainter.columns(stat.value) > 22 ? 7 : 9),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 1),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(stat.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mono(12, color: AppColors.fg2)),
+                  if (stat.detail != null)
+                    Text(stat.detail!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: mono(12, color: AppColors.accent)),
+                ],
+              ),
+            ),
+          ),
+        ],
       );
 }
 
-/// Digits drawn as a 5x7 dot matrix.
+/// Compact hero value: 842, 16.8k, 4.2M.
+String heroCompact(int n) {
+  final a = n.abs();
+  String f(double v, String u) =>
+      '${v >= 100 ? v.toStringAsFixed(0) : v.toStringAsFixed(1)}$u';
+  if (a >= 1000000) return f(n / 1000000, 'M');
+  if (a >= 1000) return f(n / 1000, 'k');
+  return n.toString().padLeft(2, '0');
+}
+
+/// Text drawn as a 7-row dot matrix: digits and `%.:kM+-`.
 class DotMatrixNumber extends StatelessWidget {
   const DotMatrixNumber(this.digits, {super.key, this.cell = 9, this.color});
 
@@ -592,13 +702,10 @@ class DotMatrixNumber extends StatelessWidget {
   final Color? color;
 
   @override
-  Widget build(BuildContext context) {
-    final n = digits.length;
-    return CustomPaint(
-      size: Size(cell * (n * 6 - 1), cell * 7),
-      painter: _DotMatrixPainter(digits, cell, color ?? AppColors.fg1),
-    );
-  }
+  Widget build(BuildContext context) => CustomPaint(
+        size: Size(cell * _DotMatrixPainter.columns(digits), cell * 7),
+        painter: _DotMatrixPainter(digits, cell, color ?? AppColors.fg1),
+      );
 }
 
 class _DotMatrixPainter extends CustomPainter {
@@ -619,23 +726,41 @@ class _DotMatrixPainter extends CustomPainter {
     '7': ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
     '8': ['01110', '10001', '10001', '01110', '10001', '10001', '01110'],
     '9': ['01110', '10001', '10001', '01111', '00001', '00010', '01100'],
+    '%': ['11001', '11010', '00010', '00100', '01000', '01011', '10011'],
+    '.': ['0', '0', '0', '0', '0', '0', '1'],
+    ':': ['0', '0', '1', '0', '1', '0', '0'],
+    'k': ['1000', '1000', '1001', '1010', '1100', '1010', '1001'],
+    'M': ['10001', '11011', '10101', '10101', '10001', '10001', '10001'],
+    '+': ['000', '000', '010', '111', '010', '000', '000'],
+    '-': ['000', '000', '000', '111', '000', '000', '000'],
   };
+
+  static int columns(String text) {
+    var w = 0;
+    for (final ch in text.split('')) {
+      final g = _glyphs[ch];
+      if (g != null) w += g[0].length + 1;
+    }
+    return w == 0 ? 0 : w - 1;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     final on = Paint()..color = color;
     final off = Paint()..color = color.withValues(alpha: color.a * 0.08);
     final r = cell * 0.36;
-    for (var d = 0; d < digits.length; d++) {
-      final g = _glyphs[digits[d]];
+    var x = 0;
+    for (final ch in digits.split('')) {
+      final g = _glyphs[ch];
       if (g == null) continue;
+      final w = g[0].length;
       for (var row = 0; row < 7; row++) {
-        for (var col = 0; col < 5; col++) {
-          final c = Offset(
-              (d * 6 + col + 0.5) * cell, (row + 0.5) * cell);
+        for (var col = 0; col < w; col++) {
+          final c = Offset((x + col + 0.5) * cell, (row + 0.5) * cell);
           canvas.drawCircle(c, r, g[row][col] == '1' ? on : off);
         }
       }
+      x += w + 1;
     }
   }
 

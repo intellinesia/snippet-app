@@ -135,7 +135,7 @@ class AgentsSidebarPanel extends StatefulWidget {
   });
 
   /// Phone list header built from the agent count and how many need you.
-  final Widget Function(int count, int needsYou)? heroBuilder;
+  final Widget Function(int count, int needsYou, int working)? heroBuilder;
 
   final DaemonClient client;
 
@@ -588,8 +588,10 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                     0,
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: M.gutter),
-                      child: hero(agents.length,
-                          buckets[AgentGroup.needsYou]!.length),
+                      child: hero(
+                          agents.length,
+                          buckets[AgentGroup.needsYou]!.length,
+                          buckets[AgentGroup.working]!.length),
                     ));
               }
             } else {

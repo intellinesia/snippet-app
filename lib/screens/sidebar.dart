@@ -201,12 +201,73 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     } catch (_) {}
   }
 
+  int _heroVisit = 0;
+  UsageSummary? _todayUsage;
+  DateTime? _todayUsageAt;
+
+  Future<void> _loadTodayUsage() async {
+    final client = widget.client;
+    final at = _todayUsageAt;
+    final now = DateTime.now();
+    if (client == null) return;
+    if (at != null && now.difference(at) < const Duration(minutes: 2)) return;
+    _todayUsageAt = now;
+    try {
+      final u = await client
+          .getUsage(since: DateTime(now.year, now.month, now.day));
+      if (mounted) setState(() => _todayUsage = u);
+    } catch (_) {}
+  }
+
+  /// Readings both homes share: lines, tokens and the tightest plan limit.
+  List<HeroStat> _sharedHeroStats() {
+    final now = DateTime.now();
+    final midnight =
+        DateTime(now.year, now.month, now.day).millisecondsSinceEpoch ~/ 1000;
+    var added = 0, removed = 0;
+    for (final s in widget.sessions ?? const <SessionInfo>[]) {
+      if (s.lastActive < midnight) continue;
+      final c = s.totalChanges ?? s.changes;
+      if (c == null) continue;
+      added += c.added;
+      removed += c.removed;
+    }
+    final out = <HeroStat>[
+      if (added + removed > 0)
+        HeroStat('+${heroCompact(added)}', 'lines today',
+            '-${heroCompact(removed)} removed'),
+    ];
+    final u = _todayUsage;
+    if (u != null) {
+      var tokens = 0, calls = 0;
+      RateWindow? tight;
+      for (final p in u.providers) {
+        tokens += p.totalTokens;
+        calls += p.calls;
+        for (final r in p.rateLimits) {
+          if (!r.isReported || r.isExpired) continue;
+          if (tight == null || r.usedPercent > tight.usedPercent) tight = r;
+        }
+      }
+      if (tokens > 0) {
+        out.add(HeroStat(heroCompact(tokens), 'tokens today', '$calls calls'));
+      }
+      if (tight != null) {
+        final reset = rateResetLabel(tight.resetsAt)?.split(' · ').first;
+        out.add(HeroStat('${tight.usedPercent.round()}%',
+            '${rateWindowLabel(tight.windowMinutes)} limit used', reset));
+      }
+    }
+    return out;
+  }
+
   @override
   void initState() {
     super.initState();
     Drafts.instance.addListener(_onDrafts);
     _loadProviders();
     _mountedHomes.add(_currentHome);
+    if (kMobile) _loadTodayUsage();
     if (!kMobile) sidebarAgentsFirst.addListener(_onAgentsList);
     if (widget.mobileHome != MobileHome.settings) {
       _lastMainHome = widget.mobileHome;
@@ -226,6 +287,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       if (oldWidget.mobileHome != MobileHome.settings) {
         _lastMainHome = oldWidget.mobileHome;
       }
+      _heroVisit++;
+      if (kMobile) _loadTodayUsage();
       if (widget.mobileHome != _currentHome) {
         _prevHome = _currentHome;
         _currentHome = widget.mobileHome;
@@ -692,10 +755,19 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         bottomPadding: _scrollBottomPad,
         groupsKey: mirror ? 'groups-mirror' : null,
         heroBuilder: kMobile
-            ? (count, needs) => HomeHero(
-                  count: count,
-                  label: 'agents',
-                  detail: needs > 0 ? '$needs need you' : null,
+            ? (count, needs, working) => HomeHero(
+                  visit: _heroVisit,
+                  stats: [
+                    HeroStat(
+                      working.toString().padLeft(2, '0'),
+                      'agents working',
+                      [
+                        '${(count - working - needs).clamp(0, count)} idle',
+                        if (needs > 0) '$needs need you',
+                      ].join(' · '),
+                    ),
+                    ..._sharedHeroStats(),
+                  ],
                 )
             : null,
         onSearchChanged: (v) => setState(() {
@@ -983,9 +1055,18 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     final live = main.where((s) => sessionIsActive(s.status)).length;
     final needs = main.where(sessionNeedsYou).length;
     return HomeHero(
-      count: live,
-      label: 'live',
-      detail: needs > 0 ? '$needs needs you' : null,
+      visit: _heroVisit,
+      stats: [
+        HeroStat(
+          live.toString().padLeft(2, '0'),
+          'sessions working',
+          [
+            '${(main.length - live - needs).clamp(0, main.length)} idle',
+            if (needs > 0) '$needs need you',
+          ].join(' · '),
+        ),
+        ..._sharedHeroStats(),
+      ],
     );
   }
 
