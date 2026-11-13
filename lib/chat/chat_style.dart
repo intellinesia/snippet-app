@@ -501,7 +501,11 @@ class ChatHeader extends StatelessWidget {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               stops: const [0, 0.78, 1],
-              colors: [bg, bg, bg.withValues(alpha: 0)],
+              colors: [
+                AppColors.bg,
+                AppColors.bg,
+                AppColors.bg.withValues(alpha: 0)
+              ],
             ),
           ),
           child: Align(alignment: Alignment.topCenter, child: body),
