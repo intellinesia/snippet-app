@@ -658,8 +658,8 @@ class _InfoFrame extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 for (final a in actions) ...[
-                  _ActionCircle(action: a),
-                  if (a != actions.last) const SizedBox(width: S.s20),
+                  Flexible(child: _ActionCircle(action: a)),
+                  if (a != actions.last) const SizedBox(width: S.s12),
                 ],
               ],
             ),
@@ -898,7 +898,7 @@ class _InfoRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: sans(15, color: labelColor)),
             ),
-            if (value != null)
+            if (value != null && value!.isNotEmpty)
               Flexible(
                 child: Padding(
                   padding: const EdgeInsets.only(left: S.s8),
