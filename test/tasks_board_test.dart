@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
+import 'package:snippet/mochi.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/screens/tasks/task_kanban.dart';
@@ -13,12 +14,20 @@ import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
 
 class _FakeDaemon extends DaemonClient {
-  _FakeDaemon(this.items) : super('https://daemon.invalid', 'test-token');
+  _FakeDaemon(
+    this.items, {
+    this.sessionRows = const [],
+    this.agentRows = const [],
+  }) : super('https://daemon.invalid', 'test-token');
+
+  final DeviceEventHub _deviceEvents = DeviceEventHub.local();
 
   @override
-  late final DeviceEventHub deviceEvents = DeviceEventHub.local();
+  DeviceEventHub get deviceEvents => _deviceEvents;
 
   List<Map<String, dynamic>> items;
+  final List<Map<String, dynamic>> sessionRows;
+  final List<Map<String, dynamic>> agentRows;
   final moves = <String, TaskStatus>{};
   bool refuse = false;
 
@@ -33,6 +42,14 @@ class _FakeDaemon extends DaemonClient {
       items.map(TaskItem.fromJson).toList();
 
   @override
+  Future<List<SessionInfo>> sessions({String? folder, int? limit}) async =>
+      sessionRows.map(SessionInfo.fromJson).toList();
+
+  @override
+  Future<List<CoordinationAgent>> coordinationAgents() async =>
+      agentRows.map(CoordinationAgent.fromJson).toList();
+
+  @override
   Future<TaskItem> setTaskStatus(String id, TaskStatus status) async {
     if (refuse) throw Exception('refused');
     moves[id] = status;
@@ -42,13 +59,40 @@ class _FakeDaemon extends DaemonClient {
   }
 }
 
-Map<String, dynamic> _task(String id, String title, String status) =>
-    {'id': id, 'title': title, 'status': status, 'priority': 0};
+Map<String, dynamic> _task(
+  String id,
+  String title,
+  String status, {
+  String createdByKind = '',
+  String createdById = '',
+  String sessionId = '',
+  String description = '',
+  String? currentStep,
+  String? statusReason,
+  String updatedAt = '',
+}) =>
+    {
+      'id': id,
+      'title': title,
+      'status': status,
+      'priority': 0,
+      'created_by_kind': createdByKind,
+      'created_by_id': createdById,
+      'session_id': sessionId,
+      'description': description,
+      if (currentStep != null) 'current_step': currentStep,
+      if (statusReason != null) 'status_reason': statusReason,
+      if (updatedAt.isNotEmpty) 'updated_at': updatedAt,
+    };
 
-Future<void> _pumpBoard(WidgetTester tester, _FakeDaemon client) async {
+Future<void> _pumpBoard(
+  WidgetTester tester,
+  _FakeDaemon client, {
+  Size size = const Size(1440, 900),
+}) async {
   SharedPreferences.setMockInitialValues({});
   tester.view.devicePixelRatio = 1.0;
-  tester.view.physicalSize = const Size(1900, 900);
+  tester.view.physicalSize = size;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(MaterialApp(
     theme: buildAppTheme(),
@@ -80,22 +124,21 @@ void main() {
     ]);
     await _pumpBoard(tester, client);
 
-    for (final s in TaskStatus.values) {
-      expect(find.text(s.label), findsWidgets);
+    for (final label in ['Needs you', 'Working', 'Queued', 'Done']) {
+      expect(find.text(label), findsOneWidget);
     }
-    expect(find.text('1 open'), findsNothing);
-    expect(find.text('2 open'), findsOneWidget);
+    expect(find.text('2 active'), findsOneWidget);
 
-    await _drag(tester, 'Write the docs', 'Blocked');
-    expect(client.moves['1'], TaskStatus.blocked);
+    await _drag(tester, 'Write the docs', 'Needs you');
+    expect(client.moves['1'], TaskStatus.inReview);
   });
 
-  testWidgets('In progress takes no drops: only a dispatch starts work',
+  testWidgets('Working takes no drops: only a dispatch starts work',
       (tester) async {
     final client = _FakeDaemon([_task('1', 'Write the docs', 'todo')]);
     await _pumpBoard(tester, client);
 
-    await _drag(tester, 'Write the docs', 'In progress');
+    await _drag(tester, 'Write the docs', 'Working');
     expect(client.moves, isEmpty);
   });
 
@@ -107,49 +150,138 @@ void main() {
     await _drag(tester, 'Write the docs', 'Done');
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
-    final todo = tester.getCenter(find.text('To do').first).dx;
-    expect((tester.getCenter(find.text('Write the docs')).dx - todo).abs(),
+    final queued = tester.getCenter(find.text('Queued').first).dx;
+    expect((tester.getCenter(find.text('Write the docs')).dx - queued).abs(),
         lessThan(200),
         reason: 'the card must return to its column after a refusal');
   });
 
-  testWidgets('finished columns fold away yet still take drops',
+  testWidgets('groups statuses into four columns and handles review actions',
       (tester) async {
-    final client = _FakeDaemon([_task('1', 'Write the docs', 'todo')]);
+    final client = _FakeDaemon([
+      _task('1', 'Review card one', 'in_review'),
+      _task('1b', 'Review card two', 'in_review'),
+      _task('2', 'Blocked card', 'blocked'),
+      _task('3', 'Failed card', 'failed'),
+      _task('4', 'Working card', 'in_progress'),
+      _task('5', 'Queued card', 'todo'),
+      _task('6', 'Done card', 'done'),
+      _task('7', 'Cancelled card', 'cancelled'),
+    ]);
     await _pumpBoard(tester, client);
 
-    expect(find.byTooltip('Show Cancelled'), findsOneWidget);
-    final strip = tester.getCenter(find.byTooltip('Show Cancelled'));
-    final gesture = await tester
-        .startGesture(tester.getCenter(find.text('Write the docs')));
-    await tester.pump(const Duration(milliseconds: 50));
-    await gesture.moveTo(strip);
-    await tester.pump(const Duration(milliseconds: 50));
-    await gesture.up();
-    await tester.pumpAndSettle();
-    expect(client.moves['1'], TaskStatus.cancelled);
+    expect(find.text('2 active · 4 needs you'), findsOneWidget);
+    final doneY = tester.getTopLeft(find.text('Done card')).dy;
+    final cancelledY = tester.getTopLeft(find.text('Cancelled card')).dy;
+    expect(cancelledY, greaterThan(doneY));
 
-    await tester.tap(find.byTooltip('Show Cancelled'));
+    expect(find.text('Approve'), findsNWidgets(2));
+    expect(find.text('Send back'), findsNWidgets(2));
+
+    await tester.tap(find.text('Send back').first);
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Fold Cancelled'), findsOneWidget);
-    expect(find.text('Write the docs'), findsOneWidget);
+    expect(client.moves['1'], TaskStatus.inProgress);
+
+    await tester.tap(find.text('Approve').first);
+    await tester.pumpAndSettle();
+    expect(client.moves['1b'], TaskStatus.done);
   });
 
-  testWidgets('folded columns are remembered', (tester) async {
-    final client = _FakeDaemon([_task('1', 'Write the docs', 'todo')]);
+  testWidgets('filter chips narrow by Mine and project folder', (tester) async {
+    final client = _FakeDaemon(
+      [
+        _task('1', 'Mobile task', 'todo',
+            createdByKind: 'human', sessionId: 's1'),
+        _task('2', 'Technoxi task', 'in_progress',
+            createdByKind: 'agent', createdById: 'snippet', sessionId: 's2'),
+        _task('3', 'Loose task', 'todo', createdByKind: 'agent'),
+      ],
+      sessionRows: [
+        {'id': 's1', 'folder': '/home/snippet/code/snippet-mobile'},
+        {
+          'id': 's2',
+          'folder': '/tmp/wt-1',
+          'origin_folder': '/home/snippet/code/technoxi',
+        },
+      ],
+    );
     await _pumpBoard(tester, client);
-    await tester.tap(find.byTooltip('Fold Done'));
-    await tester.pumpAndSettle();
 
-    // A fresh board reads the choice back.
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpWidget(MaterialApp(
-      theme: buildAppTheme(),
-      home: Scaffold(body: TaskKanban(client: client)),
-    ));
+    expect(find.text('All'), findsOneWidget);
+    expect(find.text('Mine'), findsOneWidget);
+    expect(find.text('snippet-mobile'), findsWidgets);
+    expect(find.text('technoxi'), findsOneWidget);
+
+    await tester.tap(find.text('Mine'));
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Show Done'), findsOneWidget);
-    expect(find.byTooltip('Show Cancelled'), findsOneWidget);
+    expect(find.text('Mobile task'), findsOneWidget);
+    expect(find.text('Technoxi task'), findsNothing);
+    expect(find.text('Loose task'), findsNothing);
+
+    await tester.tap(find.text('technoxi').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Technoxi task'), findsOneWidget);
+    expect(find.text('Mobile task'), findsNothing);
+
+    await tester.tap(find.text('All'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mobile task'), findsOneWidget);
+    expect(find.text('Technoxi task'), findsOneWidget);
+    expect(find.text('Loose task'), findsOneWidget);
+  });
+
+  testWidgets('cards render step fallback, agent name, folder, and age',
+      (tester) async {
+    final recent =
+        DateTime.now().subtract(const Duration(minutes: 12)).toUtc().toIso8601String();
+    final client = _FakeDaemon(
+      [
+        _task(
+          '1',
+          'Fix TTS acronyms',
+          'in_review',
+          createdByKind: 'agent',
+          createdById: 'snippet-1',
+          sessionId: 's1',
+          currentStep: 'In review · v5 delivered',
+          updatedAt: recent,
+        ),
+        _task(
+          '2',
+          'Fallback description',
+          'todo',
+          description: 'First line only\nSecond line ignored',
+        ),
+      ],
+      sessionRows: [
+        {'id': 's1', 'folder': '/home/snippet/code/technoxi'},
+      ],
+      agentRows: [
+        {'id': 'snippet-1', 'display_name': 'Snippet', 'handle': 'snippet'},
+      ],
+    );
+    await _pumpBoard(tester, client);
+
+    expect(find.text('In review · v5 delivered'), findsOneWidget);
+    expect(find.text('First line only'), findsOneWidget);
+    expect(find.text('Snippet · technoxi'), findsOneWidget);
+    expect(find.byType(AgentMochi), findsOneWidget);
+
+    final ageText = tester.widget<Text>(find.text('12m'));
+    expect(ageText.style?.color, AppColors.run);
+  });
+
+  testWidgets('search narrows the kanban board', (tester) async {
+    final client = _FakeDaemon([
+      _task('1', 'Write the docs', 'todo'),
+      _task('2', 'Fix the login bug', 'blocked'),
+    ]);
+    await _pumpBoard(tester, client);
+
+    await tester.enterText(find.byType(TextField), 'login');
+    await tester.pumpAndSettle();
+    expect(find.text('Fix the login bug'), findsOneWidget);
+    expect(find.text('Write the docs'), findsNothing);
   });
 
   testWidgets('the search narrows the tasks panel', (tester) async {
