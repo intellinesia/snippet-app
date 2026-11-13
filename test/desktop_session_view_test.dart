@@ -6,12 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
-import 'package:snippet/composer/composer_card.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/motion.dart';
-import 'package:snippet/screens/lanes.dart';
 import 'package:snippet/screens/session.dart';
-import 'package:snippet/term.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/tool_activity.dart';
 import 'package:snippet/transcript.dart';
@@ -104,6 +101,8 @@ Future<_FakeSocket> _pumpSession(
   WidgetTester tester, {
   required TargetPlatform platform,
   Size size = const Size(1280, 800),
+  String sessionId = 'sess-1',
+  VoidCallback? onTogglePanel,
 }) async {
   debugDefaultTargetPlatformOverride = platform;
   addTearDown(() => debugDefaultTargetPlatformOverride = null);
@@ -119,8 +118,9 @@ Future<_FakeSocket> _pumpSession(
     theme: buildAppTheme(),
     home: SessionScreen(
       client: DaemonClient('http://127.0.0.1:9090', 'tok'),
-      sessionId: 'sess-1',
+      sessionId: sessionId,
       title: 'Test Session',
+      onTogglePanel: onTogglePanel,
     ),
   ));
   await tester.pump();
@@ -381,7 +381,7 @@ void main() {
     });
   }
 
-  testWidgets('Desktop SessionScreen shows ctxbar chips and cfoot under composer',
+  testWidgets('Desktop SessionScreen drops ctxbar and cfoot, shows header',
       (tester) async {
     final socket = await _pumpSession(
       tester,
@@ -425,25 +425,82 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    final composerBox = tester.getRect(find.byType(ComposerCard));
-    final lanesBox = tester.getRect(find.text('Lanes 2'));
-    final termBox = tester.getRect(find.text('1 terminal'));
-    final ctxBox = tester.getRect(find.text('80% context'));
+    expect(find.byType(SessionContextBar), findsNothing);
+    expect(find.byType(SessionContextFooter), findsNothing);
+    expect(find.text('Lanes 2'), findsNothing);
+    expect(find.text('1 terminal'), findsNothing);
+    expect(find.text('80% context'), findsNothing);
+    expect(find.text('42k cached'), findsNothing);
+    expect(find.text('7% this week'), findsNothing);
 
-    expect(lanesBox.bottom, lessThanOrEqualTo(composerBox.top));
-    expect(termBox.bottom, lessThanOrEqualTo(composerBox.top));
-    expect(ctxBox.top, greaterThanOrEqualTo(composerBox.bottom));
-    expect(find.text('42k cached'), findsOneWidget);
-    expect(find.text('7% this week'), findsOneWidget);
+    // The v5 floating header carries the title; the chips row and footer
+    // are gone from the composer.
+    expect(find.text('Test Session'), findsOneWidget);
 
-    await tester.tap(find.text('1 terminal'));
+    await _disposeSession(tester);
+  });
+
+  testWidgets('Desktop SessionScreen header shows working status and panel toggle',
+      (tester) async {
+    var panelToggles = 0;
+    final socket = await _pumpSession(
+      tester,
+      platform: TargetPlatform.linux,
+      size: const Size(1280, 800),
+      onTogglePanel: () => panelToggles++,
+    );
+    socket.pushJson({
+      'wire': 'snapshot',
+      'status': 'running',
+      'workspace': '/tmp/ws',
+      'turn_started_at': DateTime.now()
+          .subtract(const Duration(minutes: 4))
+          .toUtc()
+          .toIso8601String(),
+      'events': [
+        {'kind': 'user_input', 'text': 'hello'},
+      ],
+    });
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
-    expect(find.byType(SessionTermView), findsOneWidget);
 
-    await tester.tap(find.text('Lanes 2'));
-    await tester.pumpAndSettle();
-    expect(find.byType(LanesScreen), findsOneWidget);
+    expect(find.text('Test Session'), findsOneWidget);
+    expect(find.textContaining('Working'), findsWidgets);
+
+    await tester.tap(find.byTooltip('Toggle panel'));
+    await tester.pump();
+    expect(panelToggles, 1);
+
+    await _disposeSession(tester);
+  });
+
+  testWidgets('Desktop Mission Control header shows mochi, counts and usage chips',
+      (tester) async {
+    final socket = await _pumpSession(
+      tester,
+      platform: TargetPlatform.linux,
+      size: const Size(1280, 800),
+      sessionId: 'mission-control',
+    );
+    socket.pushJson({
+      'wire': 'snapshot',
+      'status': 'idle',
+      'workspace': '/tmp/ws',
+      'context_window': 200000,
+      'last_prompt_tokens': 160000,
+      'rate_limit': {
+        'secondary': {'used_percent': 7, 'window_minutes': 10080},
+      },
+      'events': [
+        {'kind': 'user_input', 'text': 'hello'},
+      ],
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Mission Control'), findsOneWidget);
+    expect(find.text('80% context'), findsOneWidget);
+    expect(find.text('7% this week'), findsOneWidget);
 
     await _disposeSession(tester);
   });

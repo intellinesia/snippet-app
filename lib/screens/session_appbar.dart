@@ -1173,7 +1173,199 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       ),
     );
   }
+
+  // Desktop floating header (v5): a centred title/status block over the
+  // transcript with actions at the right. The phone keeps its own chrome.
+  bool get _deskHeader => !kMobile && !widget.readOnly;
+
+  Widget _deskHeaderBar(HarnessState? s, bool running) {
+    final mid = _isMissionControl
+        ? _mcHeaderMid(s)
+        : _sessionHeaderMid(s, running);
+    final actions = _isMissionControl
+        ? _mcHeaderActions(s)
+        : _sessionHeaderActions(s);
+    return SizedBox(
+      height: _kDeskHeaderH,
+      child: Stack(children: [
+        Positioned.fill(
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0, 0.72, 1],
+                  colors: [
+                    AppColors.bg,
+                    AppColors.bg,
+                    AppColors.bg.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(120, 10, 120, 0),
+            child: Center(child: mid),
+          ),
+        ),
+        Positioned(right: 12, top: 10, child: actions),
+      ]),
+    );
+  }
+
+  Widget _sessionHeaderMid(HarnessState? s, bool running) {
+    final title = _title.isEmpty ? 'Session' : _title;
+    final detail = [
+      if ((_modelLabel ?? '').trim().isNotEmpty) _modelLabel!.trim(),
+      if ((_sessionBranch ?? '').trim().isNotEmpty) _sessionBranch!.trim(),
+    ].join(' · ');
+    final started = DateTime.tryParse(s?.turnStartedAt ?? '');
+    final mins =
+        started == null ? 0 : DateTime.now().difference(started).inMinutes;
+    final working =
+        running ? (mins >= 1 ? 'Working ${mins}m' : 'Working') : null;
+    final detailStyle = sans(12, color: AppColors.fg3);
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _openActions(s),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Flexible(
+              child: Text(title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(14, weight: W.label, color: AppColors.fg1)),
+            ),
+            const SizedBox(width: 5),
+            AppIcon('chevron-down', size: 10, color: AppColors.fg3),
+          ]),
+        ),
+      ),
+      if (working != null || detail.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(top: 3),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (working != null) ...[
+              WorkingDots(size: 3, color: AppColors.accent),
+              const SizedBox(width: 5),
+              Text(working, style: detailStyle),
+            ],
+            if (working != null && detail.isNotEmpty)
+              Text(' · ', style: detailStyle),
+            if (detail.isNotEmpty)
+              Flexible(
+                child: Text(detail,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: detailStyle),
+              ),
+          ]),
+        ),
+    ]);
+  }
+
+  Widget _sessionHeaderActions(HarnessState? s) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconBtn('goal',
+              size: 30,
+              iconSize: 15,
+              tooltip: 'Goal',
+              onTap: () => _performMacAction('goal')),
+          IconBtn('more-horizontal',
+              size: 30,
+              iconSize: 15,
+              tooltip: 'Session actions',
+              onTap: () => _openActions(s)),
+          if (widget.onTogglePanel != null)
+            IconBtn('panel-right',
+                size: 30,
+                iconSize: 15,
+                tooltip: 'Toggle panel',
+                onTap: widget.onTogglePanel),
+        ],
+      );
+
+  Widget _mcHeaderMid(HarnessState? s) {
+    final active = _mcActiveTasks;
+    final needs = _mcNeedsYou;
+    final status = [
+      if (active != null) '$active tasks active',
+      if (needs != null && needs > 0) '$needs needs you',
+    ].join(' · ');
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Column(mainAxisSize: MainAxisSize.min, children: [
+        const AgentMochi('mission-control', size: 20),
+        const SizedBox(height: 3),
+        Text('Mission Control',
+            style: sans(14, weight: W.label, color: AppColors.fg1)),
+        if (status.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(status, style: sans(12, color: AppColors.fg3)),
+          ),
+      ]),
+      ..._mcUsageChips(s),
+    ]);
+  }
+
+  List<Widget> _mcUsageChips(HarnessState? s) {
+    if (s == null) return const [];
+    final items = <Widget>[];
+    if (s.contextWindow > 0 && s.lastPromptTokens > 0) {
+      final frac = (s.lastPromptTokens / s.contextWindow).clamp(0.0, 1.0);
+      items.add(_ContextRingStat(
+          fraction: frac, label: '${(frac * 100).round()}% context'));
+    }
+    final secondary = s.rateSecondary;
+    if (secondary != null && secondary.isReported && !secondary.isExpired) {
+      final frac = (secondary.usedPercent / 100).clamp(0.0, 1.0);
+      final pct = secondary.usedPercent.clamp(0, 100).round();
+      final win = limitWindowLabel(secondary);
+      items.add(_ContextRingStat(
+          fraction: frac,
+          label: '$pct% ${win == '7d' ? 'this week' : win}'));
+    }
+    if (items.isEmpty) return const [];
+    return [
+      const SizedBox(width: 18),
+      for (var i = 0; i < items.length; i++) ...[
+        if (i > 0) const SizedBox(width: 12),
+        items[i],
+      ],
+    ];
+  }
+
+  Widget _mcHeaderActions(HarnessState? s) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconBtn('task',
+              size: 30,
+              iconSize: 15,
+              tooltip: 'Tasks',
+              onTap: () => openTasksPage(context, widget.client)),
+          IconBtn('more-horizontal',
+              size: 30,
+              iconSize: 15,
+              tooltip: 'Mission Control actions',
+              onTap: () => _openActions(s)),
+          if (widget.onTogglePanel != null)
+            IconBtn('panel-right',
+                size: 30,
+                iconSize: 15,
+                tooltip: 'Toggle panel',
+                onTap: widget.onTogglePanel),
+        ],
+      );
 }
+
+const double _kDeskHeaderH = 76;
 
 class _DockTab extends StatefulWidget {
   const _DockTab({

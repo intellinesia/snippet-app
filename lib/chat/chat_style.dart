@@ -387,7 +387,7 @@ class ChatHeader extends StatelessWidget {
   /// Desktop only: a left button where the back pill would be.
   final Widget? leading;
 
-  static double get overlap => kMobile ? 106 : 80;
+  static double get overlap => kMobile ? 106 : 88;
 
   static Widget statusText(String text) => Text(text,
       maxLines: 1,
@@ -396,7 +396,7 @@ class ChatHeader extends StatelessWidget {
       style: sans(kMobile ? 12 : 11, color: ChatColors.meta));
 
   Widget _avatar() {
-    final big = kMobile ? 44.0 : 32.0;
+    final big = kMobile ? 44.0 : 36.0;
     if (agentIds.length < 2) {
       return MochiDisc(id: agentIds.isEmpty ? '' : agentIds.first, size: big);
     }
@@ -413,7 +413,7 @@ class ChatHeader extends StatelessWidget {
               child: Text(title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(kMobile ? 13 : 12,
+                  style: sans(13,
                       weight: W.label, color: ChatColors.receivedText)),
             ),
             if (onTitleTap != null) ...[
