@@ -4,6 +4,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../ambient/controller.dart';
 import '../ambient/live_caption.dart';
 import '../api.dart';
 import '../github_models.dart';
@@ -39,7 +40,6 @@ import 'inbound_share_picker.dart';
 import 'mission_control.dart';
 import 'tasks/task_kanban.dart';
 import 'tasks/tasks_panel.dart';
-import '../tasks_popover.dart';
 import '../usage_popover.dart';
 import 'mobile_chrome.dart';
 import 'mission_control/widgets/ambient_stage.dart';

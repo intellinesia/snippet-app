@@ -512,33 +512,6 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     _syncPage();
   }
 
-  void _openTasksTab(DaemonClient client, String url) {
-    final pane = _focusedPane;
-    final group = _activeGroupKeyFor(pane) ?? _activeTab?.key;
-    if (group == null) return;
-    final existing =
-        _tabs.indexWhere((t) => t.isBoard && t.instanceUrl == url);
-    _setState(() {
-      if (existing >= 0) {
-        final t = _tabs[existing];
-        t
-          ..pane = pane
-          ..groupSessionKey = group;
-        _dockAux(pane, t.key);
-      } else {
-        _tabs.add(_ShellTab.board(
-          client: client,
-          instanceUrl: url,
-          pane: pane,
-          groupSessionKey: group,
-        ));
-        _dockAux(pane, _tabs.last.key);
-      }
-    });
-    _syncPage();
-    _persistTabs();
-  }
-
   Future<void> _openTaskTabById(DaemonClient client, String taskId) async {
     final url = _active?.url ?? '';
     try {
@@ -644,6 +617,13 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     if (i >= 0) _activateTab(i);
   }
 
+  /// Sessions carrying attention (waiting on input or flagged), for the
+  /// Mission Control tab badge.
+  int get _mcAttentionCount => [
+        for (final s in _sessions ?? const <SessionInfo>[])
+          if (!s.settled && (s.needsInput || s.attention != null)) s,
+      ].length;
+
   Widget _mainTabsRow() => MainTabsStrip(
         controller: _stripController,
         tabs: _mainTabs,
@@ -655,6 +635,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         onNewSession: _newSessionFlow,
         chipKeyFor: (key) => _chipKeys.putIfAbsent(key, () => GlobalKey()),
         providerFor: (t) => _tabProviders[t.profile],
+        mcAttentionCount: _mcAttentionCount,
       );
 
   Future<void> _downloadActiveFile() async {

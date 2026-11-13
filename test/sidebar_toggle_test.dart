@@ -87,13 +87,10 @@ void main() {
     expect(sidebarAgentsFirst.value, isTrue);
     expect(find.byType(AgentRail), findsNothing);
     expect(find.byType(AgentsSidebarPanel), findsOneWidget);
-    for (final tip in ['Usage', 'Settings', 'Tasks']) {
-      expect(
-          find.descendant(
-              of: find.byType(Sidebar), matching: find.byTooltip(tip)),
-          findsWidgets,
-          reason: tip);
-    }
+    expect(
+        find.descendant(
+            of: find.byType(Sidebar), matching: find.byTooltip('Settings')),
+        findsWidgets);
     expect(tester.state(find.byType(ShellSplitView)), same(before));
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getBool('desktop_sidebar_agents_first'), isTrue);
