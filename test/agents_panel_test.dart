@@ -237,6 +237,25 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 11));
   });
+
+  testWidgets('the create menu shows titled rows for agent and group',
+      (tester) async {
+    await asDesktop(() async {
+      await pumpPanel(tester);
+
+      await tester.tap(find.byTooltip('New agent or group'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('create-agent')), findsOneWidget);
+      expect(find.byKey(const ValueKey('create-group')), findsOneWidget);
+      expect(find.text('New agent'), findsOneWidget);
+      expect(find.text('New group'), findsOneWidget);
+      expect(
+          find.text('A specialist with its own model and memory'),
+          findsOneWidget);
+      expect(find.text('Several agents in one conversation'), findsOneWidget);
+    });
+  });
 }
 
 class _CustomAgentsClient extends DaemonClient {

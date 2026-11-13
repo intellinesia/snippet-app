@@ -16,6 +16,7 @@ import '../pull_refresh.dart';
 import '../swr.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../chat/agent_cluster.dart';
 import '../chat/chat_style.dart';
 import 'agent_card.dart' show agentRowTime;
 import 'tasks/tasks_panel.dart' show openTasksPage, openTaskCountFor;
@@ -166,7 +167,6 @@ class GroupRow extends StatelessWidget {
     if (kMobile) {
       final at = DateTime.tryParse(group.lastEventAt ?? '')?.toLocal();
       final time = agentRowTime(at);
-      final more = shown.length - 1 + (extra > 0 ? extra : 0);
       return Pressable(
         kind: PressKind.row,
         child: InkWell(
@@ -181,39 +181,28 @@ class GroupRow extends StatelessWidget {
               SizedBox.square(
                 dimension: 52,
                 child: Stack(alignment: Alignment.center, children: [
-                  Container(
-                    width: unread > 0 ? 52 : 48,
-                    height: unread > 0 ? 52 : 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface2,
-                      shape: BoxShape.circle,
-                      border: unread > 0
-                          ? Border.all(color: AppColors.accent, width: 2)
-                          : null,
-                    ),
-                    alignment: Alignment.center,
-                    child: shown.isEmpty
-                        ? const AppIcon('users', size: 20)
-                        : AgentMochi(shown.first, size: 28),
-                  ),
-                  if (more > 0)
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        height: 20,
-                        constraints: const BoxConstraints(minWidth: 20),
-                        padding: const EdgeInsets.symmetric(horizontal: 5),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface3,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.bg, width: 2),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text('+$more',
-                            style: sans(10, color: AppColors.fg2)),
+                  if (unread > 0)
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.accent, width: 2),
                       ),
                     ),
+                  if (shown.isEmpty)
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface2,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: const AppIcon('users', size: 20),
+                    )
+                  else
+                    AgentCluster(ids: agents, size: 48),
                 ]),
               ),
               const SizedBox(width: 12),
@@ -967,9 +956,41 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   String get _title =>
       _group.title.trim().isEmpty ? 'Group' : _group.title.trim();
 
-  String get _subtitle {
+  /// Names while they fit the header line, else the member count.
+  String _memberLine(double width) {
     final n = _group.members.length;
-    return '$n ${n == 1 ? 'member' : 'members'}';
+    final fallback = '$n ${n == 1 ? 'member' : 'members'}';
+    final names = [for (final id in _group.agentIds) _agentName(id)];
+    if (names.isEmpty) return fallback;
+    bool fits(String s) {
+      final painter = TextPainter(
+        text: TextSpan(
+            text: s,
+            style: sans(kMobile ? 12 : 11, color: ChatColors.meta)),
+        maxLines: 1,
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: width);
+      return painter.width <= width;
+    }
+
+    if (names.length <= 2) {
+      final s = names.length == 1
+          ? names.first
+          : '${names[0]} and ${names[1]}';
+      return fits(s) ? s : fallback;
+    }
+    final pair = '${names[0]}, ${names[1]} and ${names.length - 2} more';
+    if (fits(pair)) return pair;
+    final single = '${names.first} and ${names.length - 1} more';
+    return fits(single) ? single : fallback;
+  }
+
+  Widget _statusLine() {
+    final typing = _typingStatus();
+    if (typing != null) return ChatHeader.statusText(typing);
+    return LayoutBuilder(
+        builder: (_, box) =>
+            ChatHeader.statusText(_memberLine(box.maxWidth)));
   }
 
   String _agentName(String id) => groupMemberName(
@@ -1048,9 +1069,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     return ListenableBuilder(
       listenable: widget.client.presence,
       builder: (_, __) => ChatHeader(
-        agentIds: _group.agentIds.take(2).toList(),
+        agentIds: _group.agentIds,
         title: _title,
-        status: ChatHeader.statusText(_typingStatus() ?? _subtitle),
+        status: _statusLine(),
         onTitleTap: _openMembers,
         titleHint: 'Members',
         onBack: canGoBack ? _closePage : null,
