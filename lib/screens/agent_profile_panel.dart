@@ -302,3 +302,201 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
     );
   }
 }
+
+/// The chat info card's compact model rows: 'Tasks run on' and 'Desk runs on',
+/// each opening the same inference-profile list [AgentProfilePanel] uses.
+class AgentModelRows extends StatefulWidget {
+  const AgentModelRows({
+    super.key,
+    required this.client,
+    required this.agent,
+    required this.name,
+    this.onChanged,
+  });
+
+  final DaemonClient client;
+  final CoordinationAgent agent;
+  final String name;
+  final VoidCallback? onChanged;
+
+  @override
+  State<AgentModelRows> createState() => _AgentModelRowsState();
+}
+
+class _AgentModelRowsState extends State<AgentModelRows> {
+  ServerConfig? _cfg;
+  late String? _work = widget.agent.profile;
+  late String? _desk = widget.agent.deskModel;
+  late bool _separate = widget.agent.deskModel != null;
+
+  String get _workLabel => _work ?? 'Routing default';
+  String get _deskLabel =>
+      _separate ? (_desk ?? _work ?? 'Routing default') : _workLabel;
+
+  Future<void> _save(Future<void> Function() call, VoidCallback apply,
+      VoidCallback revert,
+      {bool notifyProfile = false}) async {
+    setState(apply);
+    try {
+      await call();
+      if (!mounted) return;
+      if (notifyProfile) {
+        toast(context, 'Model updated');
+        widget.onChanged?.call();
+      } else {
+        widget.onChanged?.call();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(revert);
+      toast(context, '$e', danger: true);
+    }
+  }
+
+  Future<ServerConfig?> _config() async {
+    final cached = _cfg;
+    if (cached != null) return cached;
+    try {
+      final cfg = await widget.client.getConfig();
+      if (!mounted) return null;
+      setState(() => _cfg = cfg);
+      return cfg;
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+      return null;
+    }
+  }
+
+  Future<void> _pick({required bool desk}) async {
+    final cfg = await _config();
+    if (cfg == null || !mounted) return;
+    if (cfg.profiles.isEmpty) {
+      toast(context, 'No inference profiles configured', danger: true);
+      return;
+    }
+    final picked = await showAppSheet<String>(
+      context,
+      title: desk ? 'Desk runs on' : 'Tasks run on',
+      maxWidth: 340,
+      maxHeight: 460,
+      child: Builder(
+        builder: (ctx) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _pickRow(
+              ctx,
+              desk ? 'Same as tasks' : 'Routing default',
+              desk ? 'Follows the profile above' : 'Your Routing settings',
+              'layers',
+              selected: desk ? !_separate : _work == null,
+              onTap: () => Navigator.pop(ctx, ''),
+            ),
+            for (final p in cfg.profiles)
+              _pickRow(
+                ctx,
+                p.name,
+                '${p.provider} · ${p.model}',
+                'provider:${p.provider}',
+                selected: desk ? (_separate && _desk == p.name) : _work == p.name,
+                onTap: () => Navigator.pop(ctx, p.name),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    final name = picked.isEmpty ? null : picked;
+    if (!desk) {
+      if (name == _work) return;
+      final before = _work;
+      _save(() => widget.client.setAgentProfile(widget.agent.id, name),
+          () => _work = name, () => _work = before,
+          notifyProfile: true);
+      return;
+    }
+    if (name == null) {
+      if (!_separate) return;
+      final beforeDesk = _desk;
+      _save(() => widget.client.setAgentDeskProfile(widget.agent.id, null),
+          () {
+        _separate = false;
+        _desk = null;
+      }, () {
+        _separate = true;
+        _desk = beforeDesk;
+      });
+      return;
+    }
+    if (_separate && name == _desk) return;
+    final beforeDesk = _desk;
+    _save(() => widget.client.setAgentDeskProfile(widget.agent.id, name), () {
+      _separate = true;
+      _desk = name;
+    }, () {
+      _separate = beforeDesk != null;
+      _desk = beforeDesk;
+    });
+  }
+
+  Widget _pickRow(
+    BuildContext ctx,
+    String title,
+    String? detail,
+    String icon, {
+    required bool selected,
+    required VoidCallback onTap,
+  }) =>
+      ListRow(
+        title: title,
+        subtitle: detail,
+        selected: selected,
+        leading: AppIcon(icon, size: 16, color: AppColors.fg2),
+        trailing: selected
+            ? AppIcon('check', size: 14, color: AppColors.fg1)
+            : null,
+        onTap: onTap,
+      );
+
+  Widget _row(String label, String value, {required bool desk}) => InkWell(
+        onTap: () => _pick(desk: desk),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: S.s16),
+            child: Row(children: [
+              Expanded(
+                child: Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(15, color: AppColors.fg1)),
+              ),
+              Flexible(
+                child: Text(value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: sans(13, color: AppColors.fg3)),
+              ),
+              const SizedBox(width: S.s4),
+              AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+            ]),
+          ),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _row('Tasks run on', _workLabel, desk: false),
+          Divider(
+              height: 1,
+              thickness: 1,
+              indent: S.s16,
+              color: AppColors.border),
+          _row('Desk runs on', _deskLabel, desk: true),
+        ],
+      );
+}
