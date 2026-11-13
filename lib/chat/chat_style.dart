@@ -387,7 +387,7 @@ class ChatHeader extends StatelessWidget {
   /// Desktop only: a left button where the back pill would be.
   final Widget? leading;
 
-  static double get overlap => kMobile ? 106 : 88;
+  static double get overlap => kMobile ? 106 : 94;
 
   static Widget statusText(String text) => Text(text,
       maxLines: 1,

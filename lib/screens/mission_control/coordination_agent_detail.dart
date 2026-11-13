@@ -15,6 +15,7 @@ class CoordinationAgentDetail extends StatelessWidget {
     required this.agent,
     this.client,
     this.embedded = false,
+    this.tabHeader = false,
     this.onClose,
   });
 
@@ -23,6 +24,7 @@ class CoordinationAgentDetail extends StatelessWidget {
   final DaemonClient? client;
   final CoordinationAgent agent;
   final bool embedded;
+  final bool tabHeader;
   final VoidCallback? onClose;
 
   @override
@@ -39,6 +41,7 @@ class CoordinationAgentDetail extends StatelessWidget {
           : agent.displayName.trim(),
       onClose: onClose,
       embedded: embedded,
+      tabHeader: tabHeader,
     );
   }
 }

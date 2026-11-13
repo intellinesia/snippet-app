@@ -535,6 +535,7 @@ class RightTabBody extends StatelessWidget {
         agent: agent,
         client: client,
         embedded: true,
+        tabHeader: true,
       );
     }
     return switch (tab.panel) {

@@ -328,6 +328,7 @@ class AgentThreadScreen extends StatefulWidget {
     this.subtitle,
     this.onClose,
     this.embedded = false,
+    this.tabHeader = false,
     this.showBack = true,
   });
 
@@ -343,6 +344,9 @@ class AgentThreadScreen extends StatefulWidget {
 
   /// Nested under a host that already draws `NavBackRow`.
   final bool embedded;
+
+  /// Desktop shell tab: embedded, but keeps the centred header from v5.
+  final bool tabHeader;
 
   final bool showBack;
 
@@ -458,7 +462,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   Widget _viewBody() {
-    final recordsTop = widget.embedded ? 0.0 : ChatHeader.overlap;
+    final recordsTop = _noChrome ? 0.0 : ChatHeader.overlap;
     final child = switch (_view) {
       AgentView.thread => KeyedSubtree(
           key: const ValueKey(AgentView.thread), child: _body()),
@@ -1343,7 +1347,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     // Wrapped in Material because presentScreen's non-rounded frames are plain
     // Containers — no Material ancestor — while a TextField and the icon buttons
     // here require one.
-    final hideChrome = widget.embedded;
+    final hideChrome = _noChrome;
     return Material(
       color: readingBg,
       child: SafeArea(
@@ -1422,6 +1426,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     );
   }
 
+  bool get _noChrome => widget.embedded && !widget.tabHeader;
+
   Widget _header() {
     final subtitle = (widget.subtitle ?? _fetchedLine ?? '').trim();
     final canPop = !widget.embedded &&
@@ -1429,8 +1435,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         (kMobile
             ? (widget.onClose != null || Navigator.of(context).canPop())
             : Navigator.of(context).canPop());
-    final Widget trailing;
-    if (kMobile) {
+    final Widget? trailing;
+    if (widget.tabHeader) {
+      trailing = null;
+    } else if (kMobile) {
       trailing = ChatGlassButton(
         icon: 'task',
         tooltip: 'Tasks',
@@ -1542,10 +1550,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   Widget _body() {
-    final topPad = widget.embedded ? 12.0 : ChatHeader.overlap;
+    final topPad = _noChrome ? 12.0 : ChatHeader.overlap;
     if (_loading) {
       return Padding(
-        padding: EdgeInsets.only(top: widget.embedded ? 0 : ChatHeader.overlap),
+        padding: EdgeInsets.only(top: _noChrome ? 0 : ChatHeader.overlap),
         child: const Center(
           child: Spinner(size: 24),
         ),
@@ -1553,7 +1561,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     }
     if (_error != null) {
       return Padding(
-        padding: EdgeInsets.only(top: widget.embedded ? 0 : ChatHeader.overlap),
+        padding: EdgeInsets.only(top: _noChrome ? 0 : ChatHeader.overlap),
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -1582,7 +1590,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         onRefresh: () => _load(silent: true),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(top: widget.embedded ? 0 : ChatHeader.overlap),
+          padding: EdgeInsets.only(top: _noChrome ? 0 : ChatHeader.overlap),
           children: [
             SizedBox(
               height: MediaQuery.sizeOf(context).height * 0.45,
