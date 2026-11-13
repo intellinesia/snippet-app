@@ -329,7 +329,9 @@ class _PreviewContentState extends State<_PreviewContent> {
 
   TextEditingController _controllerFor(PreviewAttachment a) =>
       _controllers.putIfAbsent(a, () {
-        final c = TextEditingController(text: a.pastedText ?? '');
+        final c = TextEditingController(text: a.pastedText ?? '')
+          // Autofocus would otherwise put the caret at the end and open scrolled down.
+          ..selection = const TextSelection.collapsed(offset: 0);
         s.texts[a] = c.text;
         return c;
       });
