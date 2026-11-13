@@ -159,7 +159,11 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   }
 
   bool _isAuxiliary(_ShellTab t) =>
-      t.isTerminal || t.isFile || t.isDiff || t.isBoard || t.isTask;
+      t.isTerminal ||
+      t.isFile ||
+      t.isDiff ||
+      (kMobile && t.isBoard) ||
+      t.isTask;
 
   List<_ShellTab> get _mainTabs => [
         for (final t in _tabs)
@@ -280,63 +284,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     if (i >= 0) _closeTab(i, force: force);
   }
 
-  String? get _railAgentId {
-    if (_focusedPane == _Pane.left && (_activeTab?.isMissionControl ?? false)) {
-      return null;
-    }
-    for (final r in _rightTabs) {
-      if (r.isAgent && _activeKey[r.pane] == r.key) return r.agent!.id;
-    }
-    return null;
-  }
-
-  Widget _bodyRow({required bool topInset}) {
-    final split = _splitView(topInset: topInset);
-    final rail = !kMobile && !_sidebarHidden && agentRailShown(context);
-    final agentId = _railAgentId;
-    // One stable tree: swapping the parent on toggle remounted every open tab.
-    return Expanded(
-      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (rail)
-          _railSlot(AgentRail(
-            client: _client,
-            sessions: _sessions,
-            mcSelected:
-                agentId == null && (_activeTab?.isMissionControl ?? false),
-            selectedAgentId: agentId,
-            topInset: kMacOS ? 46 : 10,
-            onOpenMissionControl: _openMissionControlTab,
-            onOpenAgent: _openRightAgent,
-            footer: [_usageButton(32), _settingsButton(32)],
-          )),
-        split,
-      ]),
-    );
-  }
-
-  // Agents first: the rail folds away as the sidebar takes over its list.
-  Widget _railSlot(Widget rail) {
-    final folding = sidebarAgentsFirst.value;
-    return AnimatedContainer(
-      duration: reduceMotion(context) ? Duration.zero : Motion.page,
-      curve: Curves.easeInOutCubic,
-      width: folding ? 0 : kAgentRailWidth,
-      clipBehavior: Clip.hardEdge,
-      decoration: const BoxDecoration(),
-      onEnd: () {
-        if (mounted) _setState(() => _railFolded = sidebarAgentsFirst.value);
-      },
-      // Once folded the rail is dropped, so it stops polling and taking focus.
-      child: _railFolded
-          ? null
-          : OverflowBox(
-              alignment: Alignment.centerRight,
-              minWidth: kAgentRailWidth,
-              maxWidth: kAgentRailWidth,
-              child: ExcludeFocus(excluding: folding, child: rail),
-            ),
-    );
-  }
+  Widget _bodyRow({required bool topInset}) => _splitView(topInset: topInset);
 
   Widget _splitView({required bool topInset}) => ShellSplitView(
         key: const ValueKey('shell-split'),
@@ -384,7 +332,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         hideRight: _activeTab != null &&
             (_activeTab!.isDraft ||
                 (_activeTab!.isReadout && _activeAgent == null) ||
-                _activeTab!.isPrs),
+                _activeTab!.isPrs ||
+                (_activeTab!.isBoard && _tabsIn(_Pane.right).isEmpty)),
         panelHostsReadouts: _activeTab != null &&
             (_activeTab!.sessionId != null || _activeAgent != null),
         onPaneResize: (delta) => _setState(() {
@@ -478,6 +427,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           _openFileTab(tab.client, tab.instanceUrl, path, name),
       host: _termHosts[tab.key],
       sessionId: tab.sessionId,
+      lanes: _macSessionStatuses[tab.key]?.state?.lanes ?? const [],
+      onTogglePanel: _toggleRightPanel,
       onOpenDiff: (f) =>
           _openDiffTab(tab.client, tab.instanceUrl, tab.sessionId!, f),
       readouts: tabReadouts,
@@ -795,20 +746,11 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     _syncPage();
   }
 
-  bool get _railOn =>
-      !kMobile && agentRailShown(context) && !sidebarAgentsFirst.value;
-
   Widget _sidebarTop() {
     return SizedBox(
       height: 44,
       child: Row(children: [
-        if (kMacOS) ...[
-          AnimatedContainer(
-              duration: reduceMotion(context) ? Duration.zero : Motion.page,
-              curve: Curves.easeInOutCubic,
-              width: _railOn ? 78 - kAgentRailWidth : 78),
-        ] else
-          const SizedBox(width: 14),
+        if (kMacOS) const SizedBox(width: 78) else const SizedBox(width: 14),
         const Spacer(),
         _TbBtn(
             icon: 'sidebar',
@@ -820,18 +762,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       ]),
     );
   }
-
-  Widget _usageButton(double size) => Builder(
-        builder: (ctx) => IconBtn('gauge',
-            size: size,
-            iconSize: 16,
-            tooltip: 'Usage',
-            onTap:
-                _client == null ? null : () => showUsagePopover(ctx, _client!)),
-      );
-
-  Widget _settingsButton(double size) => IconBtn('settings',
-      size: size, iconSize: 16, tooltip: 'Settings', onTap: _openShellSettings);
 
   Widget _sidebarFooter() {
     final healthy = _active == null ? null : _health[_active!.url];

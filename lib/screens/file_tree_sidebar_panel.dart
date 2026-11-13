@@ -33,9 +33,11 @@ const double kTreeIndentStep = 21;
 /// in this shell colour is reserved for state, not file type.
 class FileTreeSidebarPanel extends StatefulWidget {
   final Widget? header;
+  final bool showHeader;
   const FileTreeSidebarPanel({
     super.key,
     this.header,
+    this.showHeader = true,
     required this.client,
     required this.workspacePath,
     required this.onOpenFile,
@@ -329,10 +331,11 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
           // its own), so the list itself only manages the top and tail.
           padding: EdgeInsets.only(top: kMobile ? 8 : 0, bottom: 16),
           children: [
-            ShellSectionHeader(
-              label: 'File Tree',
-              leading: widget.header,
-              actions: [
+            if (widget.showHeader)
+              ShellSectionHeader(
+                label: 'File Tree',
+                leading: widget.header,
+                actions: [
                 // `Builder` gives each menu a context that anchors to its OWN
                 // button: `Element.findRenderObject` walks DOWN to the button's
                 // box, so the popover opens under the control that summoned it

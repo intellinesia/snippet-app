@@ -33,12 +33,14 @@ class GitDiffSidebarPanel extends StatefulWidget {
     this.onTab,
     this.onOpenPullRequest,
     this.header,
+    this.showHeader = true,
   });
 
   final String tab;
   final ValueChanged<String>? onTab;
   final ValueChanged<int>? onOpenPullRequest;
   final Widget? header;
+  final bool showHeader;
 
   final DaemonClient client;
   final String workspacePath;
@@ -211,7 +213,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(top: kMobile ? 8 : 0, bottom: 16),
           children: [
-            if (!tabbed)
+            if (!tabbed && widget.showHeader)
               ShellSectionHeader(
                 label: 'Git Diff',
                 leading: widget.header,
