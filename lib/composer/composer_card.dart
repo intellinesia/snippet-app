@@ -47,7 +47,9 @@ class ComposerCard extends StatelessWidget {
             EdgeInsets.fromLTRB(4, kMobile ? 6 : 5, 4, kMobile ? 6 : 5),
         border: InputBorder.none,
         hintText: hint,
-        hintStyle: TS.body(AppColors.fg4),
+        hintMaxLines: 1,
+        hintStyle: TS.body(AppColors.fg4)
+            .copyWith(overflow: TextOverflow.ellipsis),
       );
 
   bool _compact(double width, String draft) {
