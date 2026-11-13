@@ -8,11 +8,57 @@ import '../../theme.dart';
 import '../../widgets.dart';
 import '../../desktop_layout.dart';
 import '../list_search_field.dart';
+import '../mobile_chrome.dart' show MobileBackBar;
 import '../shell_nav.dart';
 import 'create_task_form.dart';
 import 'task_common.dart';
 import 'task_detail_screen.dart';
 import 'task_list.dart';
+
+/// A pushed Tasks page, optionally limited to the tasks [agentIds] are on.
+Future<void> openTasksPage(BuildContext context, DaemonClient client,
+    {Set<String>? agentIds}) {
+  return Navigator.of(context).push<void>(MaterialPageRoute(
+    builder: (page) => Material(
+      color: AppColors.bg,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            MobileBackBar(
+              title: 'Tasks',
+              onBack: () => Navigator.of(page).pop(),
+            ),
+            Expanded(
+              child: TasksPanel(
+                client: client,
+                phoneHeader: false,
+                agentIds: agentIds,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ));
+}
+
+/// Open tasks the given agents are on, counted once each.
+Future<int> openTaskCountFor(DaemonClient client, Iterable<String> agentIds) async {
+  const open = {
+    TaskStatus.todo,
+    TaskStatus.inProgress,
+    TaskStatus.inReview,
+    TaskStatus.blocked,
+  };
+  final lists = await Future.wait(
+      [for (final a in agentIds) client.tasks(agentId: a, limit: 500)]);
+  return {
+    for (final l in lists)
+      for (final t in l)
+        if (open.contains(t.status)) t.id,
+  }.length;
+}
 
 class TasksPanel extends StatefulWidget {
   const TasksPanel({
@@ -21,9 +67,13 @@ class TasksPanel extends StatefulWidget {
     this.trailing = const [],
     this.phoneHeader = true,
     this.onOpenTask,
+    this.agentIds,
   });
 
   final DaemonClient client;
+
+  /// Only tasks these agents are on; null shows every task.
+  final Set<String>? agentIds;
   final List<Widget> trailing;
   final bool phoneHeader;
 
@@ -45,11 +95,36 @@ class TasksPanelState extends State<TasksPanel> {
   String? _selectedTaskId;
   bool _creatingTask = false;
   Map<String, String> _sessionFolders = const {};
+  Set<String>? _agentTaskIds;
+
+  List<TaskItem> get _tasks {
+    if (widget.agentIds == null) return _feed.tasks;
+    final ids = _agentTaskIds;
+    if (ids == null) return const [];
+    return _feed.tasks.where((t) => ids.contains(t.id)).toList();
+  }
 
   @override
   void initState() {
     super.initState();
     _loadFolders();
+    _loadAgentTasks();
+  }
+
+  Future<void> _loadAgentTasks() async {
+    final agents = widget.agentIds;
+    if (agents == null) return;
+    try {
+      final lists = await Future.wait(
+          [for (final a in agents) widget.client.tasks(agentId: a, limit: 500)]);
+      if (!mounted) return;
+      setState(() => _agentTaskIds = {
+            for (final l in lists)
+              for (final t in l) t.id,
+          });
+    } catch (_) {
+      if (mounted) setState(() => _agentTaskIds = const {});
+    }
   }
 
   @override
@@ -118,7 +193,7 @@ class TasksPanelState extends State<TasksPanel> {
   static const _stuck = {TaskStatus.blocked, TaskStatus.failed};
 
   Widget _statusStrip() {
-    final tasks = _feed.tasks;
+    final tasks = _tasks;
     int count(Set<TaskStatus> s) =>
         tasks.where((t) => s.contains(t.status)).length;
     final tabs = <(String, Set<TaskStatus>)>[
@@ -280,7 +355,7 @@ class TasksPanelState extends State<TasksPanel> {
   Widget _wide() {
     final list = TaskList(
       appearSince: _shownAt,
-      tasks: _feed.tasks,
+      tasks: _tasks,
       query: _query,
       filter: _filter,
       selectedId: _selectedTaskId,
@@ -301,7 +376,7 @@ class TasksPanelState extends State<TasksPanel> {
         Btn('Retry', small: true, onTap: _feed.refresh),
       ]);
     } else {
-      _shownAt ??= _feed.tasks.isNotEmpty ? DateTime.now() : null;
+      _shownAt ??= _tasks.isNotEmpty ? DateTime.now() : null;
       rows = list.rows();
       empty = list.emptyState();
     }
@@ -366,7 +441,7 @@ class TasksPanelState extends State<TasksPanel> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (_searchOpen) _desktopSearch(),
-              if (_feed.tasks.isNotEmpty)
+              if (_tasks.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: S.s4),
                   child: _statusStrip(),
@@ -488,7 +563,7 @@ class TasksPanelState extends State<TasksPanel> {
                       ]),
                     ),
                   ),
-          if (_feed.tasks.isNotEmpty)
+          if (_tasks.isNotEmpty)
             Padding(
               padding: kMobile
                   ? const EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 0)
@@ -552,10 +627,10 @@ class TasksPanelState extends State<TasksPanel> {
         ),
       );
     }
-    if (_feed.tasks.isNotEmpty) _shownAt ??= DateTime.now();
+    if (_tasks.isNotEmpty) _shownAt ??= DateTime.now();
     return TaskList(
       appearSince: _shownAt,
-      tasks: _feed.tasks,
+      tasks: _tasks,
       query: _query,
       filter: _filter,
       onOpen: _open,

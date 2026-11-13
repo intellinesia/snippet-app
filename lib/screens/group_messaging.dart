@@ -18,6 +18,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../chat/chat_style.dart';
 import 'agent_card.dart' show agentRowTime;
+import 'tasks/tasks_panel.dart' show openTasksPage, openTaskCountFor;
 
 /// An `@token` in a group message: the boundary keeps `mail@fable` from
 /// counting as a mention.
@@ -813,7 +814,18 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       if (!mounted) return;
       setState(() => _agents = {for (final a in all) a.id: a});
     } catch (_) {}
+    try {
+      final n = await openTaskCountFor(widget.client, _groupAgentIds);
+      if (mounted) setState(() => _openTaskCount = n);
+    } catch (_) {}
   }
+
+  int? _openTaskCount;
+
+  Set<String> get _groupAgentIds => {
+        for (final m in _group.members)
+          if (m.isAgent) m.id,
+      };
 
   /// Member agent ids plus `everyone`, for mentions and highlighting.
   Set<String> get _mentionIds => {
@@ -1012,16 +1024,18 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         : (!widget.embedded &&
             widget.showBack &&
             (widget.onClose != null || canPop));
-    final membersBtn = ChatGlassButton(
-      icon: 'users',
-      tooltip: 'Members',
-      onTap: _openMembers,
+    final tasksBtn = ChatGlassButton(
+      icon: 'task',
+      tooltip: 'Tasks',
+      badge: (_openTaskCount ?? 0) > 0 ? _openTaskCount : null,
+      onTap: () => openTasksPage(context, widget.client,
+          agentIds: _groupAgentIds),
     );
     final trailing = !kMobile && !widget.embedded && widget.onClose != null
         ? Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              membersBtn,
+              tasksBtn,
               const SizedBox(width: 6),
               ChatGlassButton(
                 icon: 'x',
@@ -1030,7 +1044,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
               ),
             ],
           )
-        : membersBtn;
+        : tasksBtn;
     return ListenableBuilder(
       listenable: widget.client.presence,
       builder: (_, __) => ChatHeader(

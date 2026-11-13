@@ -24,8 +24,12 @@ String toolIcon(String tool) => switch (toolBaseName(tool)) {
       'web_search' || 'web_read' => 'globe',
       'set_session_title' => 'edit',
       'search_skills' || 'skill' => 'sparkles',
-      'monitor' => 'activity',
+      'monitor' => 'eye',
       'present_file' => 'file',
+      'manage_process' => 'cpu',
+      'delegate_task' => 'users',
+      'send_agent_message' => 'message-square',
+      'ask_user' => 'help-circle',
       _ => 'code',
     };
 

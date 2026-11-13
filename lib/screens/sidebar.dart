@@ -686,6 +686,12 @@ class SidebarState extends State<Sidebar> {
         (s.branch?.toLowerCase().contains(q) ?? false);
   }
 
+  Widget _settledTap({required VoidCallback onTap, required Widget child}) =>
+      kMobile
+          ? GestureDetector(
+              behavior: HitTestBehavior.opaque, onTap: onTap, child: child)
+          : HoverSurface(radius: 8, onTap: onTap, child: child);
+
   Widget _settledHeader(List<SessionInfo> rows, {required bool open}) {
     return Padding(
       padding: EdgeInsets.only(top: kMobile ? 8 : 4),
@@ -694,13 +700,12 @@ class SidebarState extends State<Sidebar> {
         expanded: open,
         label: 'Settled, ${rows.length}',
         child: ExcludeSemantics(
-          child: HoverSurface(
-            radius: 8,
+          child: _settledTap(
             onTap: () => setState(() => _settledOpen = !_settledOpen),
             child: Container(
               height: kMobile ? M.minTarget : 32,
               padding:
-                  EdgeInsets.fromLTRB(kMobile ? 4 : 10, 0, kMobile ? 4 : 10, 0),
+                  EdgeInsets.fromLTRB(kMobile ? 0 : 10, 0, kMobile ? 0 : 10, 0),
               child: Row(children: [
                 Text('Settled',
                     style: TS.label(kMobile ? AppColors.fg3 : AppColors.fg4)),
@@ -789,7 +794,8 @@ class SidebarState extends State<Sidebar> {
     final children = <Widget>[
       ..._groupedRows(split.main, attentionFirst: true),
     ];
-    if (split.settled.isNotEmpty) {
+    final pinSettled = kMobile && split.settled.isNotEmpty;
+    if (split.settled.isNotEmpty && !pinSettled) {
       final settledOpen = _settledOpen || _filterQuery.trim().isNotEmpty;
       children.add(SessionGroupHeader(
         'Settled',
@@ -813,13 +819,19 @@ class SidebarState extends State<Sidebar> {
     if (children.isEmpty) {
       children.add(_emptySessions(searching: _filterQuery.trim().isNotEmpty));
     }
-    return PullToRefresh(
+    final list = PullToRefresh(
       onRefresh: () async => widget.onRefreshSessions(),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, _scrollBottomPad),
+        padding: EdgeInsets.fromLTRB(
+            M.gutter, 4, M.gutter, pinSettled ? 8 : _scrollBottomPad),
         children: children,
       ),
+    );
+    if (!pinSettled) return list;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [Expanded(child: list), _settledPinned(split.settled)],
     );
   }
 

@@ -223,7 +223,7 @@ void main() {
     }
   });
 
-  testWidgets('row formatting handles untitled weight, unread time, group header fg4, and phone Settled in-place',
+  testWidgets('row formatting handles untitled weight, unread time, group header fg4, and phone Settled pinned',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
@@ -243,17 +243,17 @@ void main() {
           find.descendant(of: repoHeader, matching: find.text('repo')));
       expect(repoLabel.style?.color, AppColors.fg4);
 
-      final settledHeader = find.widgetWithText(SessionGroupHeader, 'Settled');
+      final settledHeader = find.text('Settled');
       expect(settledHeader, findsOneWidget);
-      // Settled lives inside the scrollable ListView (not pinned outside).
+      // Settled is pinned under the list, outside its scroll.
       expect(
         find.ancestor(of: settledHeader, matching: find.byType(ListView)),
-        findsOneWidget,
+        findsNothing,
       );
-      final settledIcon = tester.widget<AppIcon>(
-          find.descendant(of: settledHeader, matching: find.byType(AppIcon)));
+      final settledIcon = tester.widget<AppIcon>(find.descendant(
+          of: find.ancestor(of: settledHeader, matching: find.byType(Row)).first,
+          matching: find.byType(AppIcon)));
       expect(settledIcon.name, 'chevron-right');
-      expect(settledIcon.size, 11);
       expect(find.text('Archived fix'), findsNothing);
       expect(tester.widget<Reveal>(find.byType(Reveal)).show, isFalse);
 

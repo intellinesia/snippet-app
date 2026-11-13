@@ -596,8 +596,8 @@ class SettingsPanelState extends State<SettingsPanel> {
   ///
   /// The 32px rounded tile every settings row leads with (v5 `.pgi .ico`).
   Widget _settingsIconTile(String icon, {Color? color}) => Container(
-        width: 32,
-        height: 32,
+        width: 30,
+        height: 30,
         decoration: BoxDecoration(
           color: AppColors.surface2,
           borderRadius: BorderRadius.circular(R.md),
@@ -614,23 +614,11 @@ class SettingsPanelState extends State<SettingsPanel> {
     String? value,
     SettingsPage? page,
   }) =>
-      ListRow(
-        title: label,
+      _V5SettingsRow(
+        label: label,
         leading: _settingsIconTile(icon),
+        value: value,
         onTap: page == null ? null : () => widget.onSection?.call(page),
-        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (value != null && value.isNotEmpty) ...[
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 132),
-              child: Text(value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TS.meta(AppColors.fg3)),
-            ),
-            const SizedBox(width: S.s6),
-          ],
-          AppIcon('chevron-right', size: 14, color: AppColors.fg3),
-        ]),
       );
 
   /// v5 `.plb`: a quiet 13px group caption, indented past the card edge.
@@ -648,14 +636,14 @@ class SettingsPanelState extends State<SettingsPanel> {
       padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
       children: [
         ListGroup(children: [
-          ListRow(
-            title: name.isEmpty ? 'No machine yet' : name,
+          _V5SettingsRow(
+            label: name.isEmpty ? 'No machine yet' : name,
             subtitle: active == null
                 ? 'Add one to begin'
                 : 'Connected${live == null ? '' : ' · $live live'}',
             leading: Container(
-              width: 32,
-              height: 32,
+              width: 30,
+              height: 30,
               decoration: BoxDecoration(
                 color: AppColors.surface2,
                 borderRadius: BorderRadius.circular(R.md),
@@ -666,8 +654,6 @@ class SettingsPanelState extends State<SettingsPanel> {
               ),
             ),
             onTap: () => widget.onSection?.call(SettingsPage.general),
-            trailing:
-                AppIcon('chevron-right', size: 14, color: AppColors.fg3),
           ),
         ]),
         _settingsGroupLabel('General'),
@@ -1467,8 +1453,8 @@ class SettingsPanelState extends State<SettingsPanel> {
 
   Widget _notifRow() {
     if (kMobile) {
-      return ListRow(
-        title: 'Notifications',
+      return _V5SettingsRow(
+        label: 'Notifications',
         subtitle: 'When a chat needs you or finishes',
         leading: _settingsIconTile('bell'),
         onTap: _notifBusy ? null : () => _toggleNotif(!_notif),
@@ -1610,6 +1596,26 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
   @override
   Widget build(BuildContext context) {
     final manual = _manual;
+    if (kMobile) {
+      return Builder(
+        builder: (anchor) => _V5SettingsRow(
+          label: 'Approvals',
+          value: manual == null ? null : (manual ? 'Ask' : 'Yolo'),
+          leading: Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(R.md),
+            ),
+            child: Center(
+              child: AppIcon('shield-check', size: 16, color: AppColors.fg2),
+            ),
+          ),
+          onTap: () => _pick(anchor),
+        ),
+      );
+    }
     return Builder(
       builder: (anchor) => ListRow(
         title: 'Approvals',
@@ -2243,6 +2249,73 @@ class _AppearancePreviewCard extends StatelessWidget {
             style: mono(12, color: AppColors.fg3),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// v5 `.pgi`: a 46px row, 30px tile, 15px label, 15px muted value, chevron.
+class _V5SettingsRow extends StatelessWidget {
+  const _V5SettingsRow({
+    required this.label,
+    required this.leading,
+    this.value,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+  });
+
+  final String label;
+  final Widget leading;
+  final String? value;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = value;
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 46),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          child: Row(children: [
+            leading,
+            const SizedBox(width: S.s12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(15, color: AppColors.fg1)),
+                  if (subtitle != null && subtitle!.isNotEmpty)
+                    Text(subtitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13, color: AppColors.fg3)),
+                ],
+              ),
+            ),
+            if (v != null && v.isNotEmpty) ...[
+              const SizedBox(width: S.s8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 150),
+                child: Text(v,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(15, color: AppColors.fg3)),
+              ),
+            ],
+            const SizedBox(width: S.s6),
+            trailing ??
+                AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+          ]),
+        ),
       ),
     );
   }

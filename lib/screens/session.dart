@@ -1389,6 +1389,7 @@ class _SessionScreenState extends State<SessionScreen>
   }
 
   bool get _glassHeader => kMobile && !widget.readOnly;
+  double _composerH = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -1439,6 +1440,76 @@ class _SessionScreenState extends State<SessionScreen>
                     // here is what lets the cards be capped and scroll instead.
                     LayoutBuilder(builder: (context, pane) {
                       final barsCap = pane.maxHeight * 0.6;
+                      final bottomBars = <Widget>[
+                            // The question/approval bars are PINNED here (not inside the scroll
+                            // list) so a "needs input" request is always visible — buried at the
+                            // bottom of a scrolled-up transcript it read as "the agent is stuck".
+                            if (!widget.readOnly &&
+                                waiting &&
+                                _pendingApproval(events))
+                              _centerWide(ConstrainedBox(
+                                constraints: BoxConstraints(maxHeight: barsCap),
+                                child: Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                      kMobile
+                                          ? M.gutter
+                                          : (widget.embedded ? 0 : 20),
+                                      6,
+                                      kMobile
+                                          ? M.gutter
+                                          : (widget.embedded ? 0 : 20),
+                                      0),
+                                  child: ApprovalBar(
+                                      events: events,
+                                      onSend: _sendDecision,
+                                      showApproveAll:
+                                          _pendingApprovalTotal(events) > 1),
+                                ),
+                              )),
+                            if (!widget.readOnly &&
+                                waiting &&
+                                s?.pendingQuestion != null)
+                              _centerWide(ConstrainedBox(
+                                constraints: BoxConstraints(maxHeight: barsCap),
+                                child: Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                      kMobile
+                                          ? M.gutter
+                                          : (widget.embedded ? 0 : 20),
+                                      6,
+                                      kMobile
+                                          ? M.gutter
+                                          : (widget.embedded ? 0 : 20),
+                                      0),
+                                  // Keyed by the question set, so a new one
+                                  // starts fresh (selection, step, review).
+                                  child: QuestionBar(
+                                      key: ValueKey(
+                                          jsonEncode(s!.pendingQuestion!)),
+                                      question: s.pendingQuestion!,
+                                      onSend: _sendDecision),
+                                ),
+                              )),
+                            if (!widget.readOnly && _settled)
+                              _centerWide(_settledNotice(),
+                                  extra: 2 * kComposerGutter),
+                            if (!widget.readOnly &&
+                                !(waiting && s?.pendingQuestion != null))
+                              _centerWide(
+                                  _inputBar(running,
+                                      top: !running &&
+                                              !_settled &&
+                                              _cold != null
+                                          ? ColdTab(
+                                              mode: _resumeMode,
+                                              resumeTokens:
+                                                  (_cold!['resume_tokens']
+                                                          as num?)
+                                                      ?.toInt(),
+                                              onPick: _onColdPick)
+                                          : null),
+                                  extra: 2 * kComposerGutter),
+                      ];
                       return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -1558,7 +1629,9 @@ class _SessionScreenState extends State<SessionScreen>
                                                       ? GlassTopFrame.inset + 12
                                                       : 16,
                                                   kMobile ? M.gutter : 20,
-                                                  24),
+                                                  _glassHeader
+                                                      ? _composerH + 12
+                                                      : 24),
                                               itemCount: timeline.length,
                                               itemBuilder: (context, index) {
                                                 final at =
@@ -1596,7 +1669,7 @@ class _SessionScreenState extends State<SessionScreen>
                                 if (!_stickToBottom && s != null)
                                   Positioned(
                                     right: 16,
-                                    bottom: 12,
+                                    bottom: 12 + (_glassHeader ? _composerH : 0),
                                     child: Material(
                                       color: AppColors.surface1,
                                       shape: const CircleBorder(),
@@ -1619,6 +1692,37 @@ class _SessionScreenState extends State<SessionScreen>
                                   ),
                                 if (_glassHeader)
                                   Positioned(
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    child: _ReportHeight(
+                                      onHeight: (h) {
+                                        if (mounted && h != _composerH) {
+                                          setState(() => _composerH = h);
+                                        }
+                                      },
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [
+                                              AppColors.bg.withValues(alpha: 0),
+                                              AppColors.bg.withValues(alpha: 0.85),
+                                            ],
+                                          ),
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: bottomBars,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                if (_glassHeader)
+                                  Positioned(
                                     top: 0,
                                     left: 0,
                                     right: 0,
@@ -1630,74 +1734,7 @@ class _SessionScreenState extends State<SessionScreen>
                                   ),
                               ]),
                             ),
-                            // The question/approval bars are PINNED here (not inside the scroll
-                            // list) so a "needs input" request is always visible — buried at the
-                            // bottom of a scrolled-up transcript it read as "the agent is stuck".
-                            if (!widget.readOnly &&
-                                waiting &&
-                                _pendingApproval(events))
-                              _centerWide(ConstrainedBox(
-                                constraints: BoxConstraints(maxHeight: barsCap),
-                                child: Padding(
-                                  padding: EdgeInsets.fromLTRB(
-                                      kMobile
-                                          ? M.gutter
-                                          : (widget.embedded ? 0 : 20),
-                                      6,
-                                      kMobile
-                                          ? M.gutter
-                                          : (widget.embedded ? 0 : 20),
-                                      0),
-                                  child: ApprovalBar(
-                                      events: events,
-                                      onSend: _sendDecision,
-                                      showApproveAll:
-                                          _pendingApprovalTotal(events) > 1),
-                                ),
-                              )),
-                            if (!widget.readOnly &&
-                                waiting &&
-                                s?.pendingQuestion != null)
-                              _centerWide(ConstrainedBox(
-                                constraints: BoxConstraints(maxHeight: barsCap),
-                                child: Padding(
-                                  padding: EdgeInsets.fromLTRB(
-                                      kMobile
-                                          ? M.gutter
-                                          : (widget.embedded ? 0 : 20),
-                                      6,
-                                      kMobile
-                                          ? M.gutter
-                                          : (widget.embedded ? 0 : 20),
-                                      0),
-                                  // Keyed by the question set, so a new one
-                                  // starts fresh (selection, step, review).
-                                  child: QuestionBar(
-                                      key: ValueKey(
-                                          jsonEncode(s!.pendingQuestion!)),
-                                      question: s.pendingQuestion!,
-                                      onSend: _sendDecision),
-                                ),
-                              )),
-                            if (!widget.readOnly && _settled)
-                              _centerWide(_settledNotice(),
-                                  extra: 2 * kComposerGutter),
-                            if (!widget.readOnly &&
-                                !(waiting && s?.pendingQuestion != null))
-                              _centerWide(
-                                  _inputBar(running,
-                                      top: !running &&
-                                              !_settled &&
-                                              _cold != null
-                                          ? ColdTab(
-                                              mode: _resumeMode,
-                                              resumeTokens:
-                                                  (_cold!['resume_tokens']
-                                                          as num?)
-                                                      ?.toInt(),
-                                              onPick: _onColdPick)
-                                          : null),
-                                  extra: 2 * kComposerGutter),
+                            if (!_glassHeader) ...bottomBars,
                           ]);
                     }),
                   ),
@@ -1796,5 +1833,25 @@ class _RenderRowSizeWatch extends RenderProxyBox {
         if (attached) onResize(this, delta);
       });
     }
+  }
+}
+
+class _ReportHeight extends StatefulWidget {
+  const _ReportHeight({required this.onHeight, required this.child});
+  final ValueChanged<double> onHeight;
+  final Widget child;
+
+  @override
+  State<_ReportHeight> createState() => _ReportHeightState();
+}
+
+class _ReportHeightState extends State<_ReportHeight> {
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final h = context.size?.height;
+      if (mounted && h != null) widget.onHeight(h);
+    });
+    return widget.child;
   }
 }

@@ -36,7 +36,6 @@ import 'agent_questions_card.dart';
 import 'agent_records.dart';
 import 'agent_thread_cards.dart';
 import 'agent_view_switcher.dart';
-import 'mobile_chrome.dart';
 import 'tasks/tasks_panel.dart';
 
 /// Pick one agent from the directory, as an anchored DROPDOWN.
@@ -417,28 +416,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   void _openTasks() {
-    Navigator.of(context).push<void>(MaterialPageRoute(
-      builder: (page) => Material(
-        color: AppColors.bg,
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              MobileBackBar(
-                title: 'Tasks',
-                onBack: () => Navigator.of(page).pop(),
-              ),
-              Expanded(
-                child: TasksPanel(
-                  client: widget.client,
-                  phoneHeader: false,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ));
+    openTasksPage(context, widget.client, agentIds: {widget.agentId});
   }
 
   Future<void> _openSwitcherMenu(BuildContext anchor) async {

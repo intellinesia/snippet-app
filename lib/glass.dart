@@ -66,8 +66,8 @@ class GlassTopFrame extends StatelessWidget {
 
   /// Room the transcript leaves at its top so the newest-first scroll can
   /// still reach the oldest row from under the header.
-  static const double inset = 60;
-  static const double fade = 22;
+  static const double inset = 52;
+  static const double fade = 14;
   static const _steps = 8;
 
   @override

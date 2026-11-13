@@ -1169,12 +1169,7 @@ class _PulseDotState extends State<_PulseDot>
         animation: _c,
         builder: (_, __) => Opacity(
           opacity: 1 - 0.65 * _c.value,
-          child: Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-                color: AppColors.accent, shape: BoxShape.circle),
-          ),
+          child: AppIcon('chevron-right', size: 14, color: AppColors.accent),
         ),
       ),
     );

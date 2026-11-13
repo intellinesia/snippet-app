@@ -219,7 +219,7 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('CollapsedActivity shows a pulsing dot and no chevron when running',
+  testWidgets('CollapsedActivity shows a pulsing chevron when running',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
@@ -249,7 +249,7 @@ void main() {
         of: find.byType(CollapsedActivity),
         matching: find.byType(AppIcon),
       ),
-      findsNothing,
+      findsOneWidget,
     );
     debugDefaultTargetPlatformOverride = null;
   });
