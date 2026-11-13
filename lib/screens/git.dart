@@ -296,7 +296,7 @@ class _GitScreenState extends State<GitScreen> {
       if (_busy || _refreshing)
         LinearProgressIndicator(
           minHeight: 2,
-          backgroundColor: AppColors.surface2,
+          backgroundColor: AppColors.tint2,
           color: AppColors.accent,
         ),
       if (_loading)
@@ -509,7 +509,7 @@ class _GitScreenState extends State<GitScreen> {
           ? const EdgeInsets.fromLTRB(18, 12, 10, 10)
           : const EdgeInsets.fromLTRB(S.s12, S.s8, S.s8, S.s8),
       decoration: BoxDecoration(
-        color: kMobile ? AppColors.surface1 : AppColors.raised,
+        color: kMobile ? AppColors.surface1 : AppColors.tint1,
         borderRadius: BorderRadius.circular(kMobile ? 24 : R.md),
         border: kMobile
             ? Border.all(color: AppColors.fg1.withValues(alpha: 0.08))
@@ -1238,7 +1238,7 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
       return kMobile ? ColoredBox(color: readingBg, child: body) : body;
     }
     return Scaffold(
-      backgroundColor: readingBg,
+      backgroundColor: kMobile ? readingBg : Colors.transparent,
       body: SafeArea(bottom: false, child: body),
     );
   }

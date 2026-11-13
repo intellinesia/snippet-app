@@ -154,7 +154,7 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
     Widget btn(_SideTab target, String label, int count) {
       final on = !reading && _tab == target;
       return Material(
-        color: on ? AppColors.surface2 : Colors.transparent,
+        color: on ? AppColors.tint2 : Colors.transparent,
         borderRadius: BorderRadius.circular(7),
         child: InkWell(
           borderRadius: BorderRadius.circular(7),
@@ -182,7 +182,7 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: AppColors.surface1,
+        color: AppColors.tint1,
         borderRadius: BorderRadius.circular(9),
         border: Border.all(color: AppColors.border),
       ),
@@ -218,7 +218,7 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
     return Padding(
       padding: const EdgeInsets.only(left: 4),
       child: Material(
-        color: on ? AppColors.surface2 : Colors.transparent,
+        color: on ? AppColors.tint2 : Colors.transparent,
         borderRadius: BorderRadius.circular(R.md),
         child: InkWell(
           borderRadius: BorderRadius.circular(R.md),
@@ -392,7 +392,7 @@ class _TermTreeRowState extends State<_TermTreeRow> {
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
         child: Container(
-          color: on || _hover ? AppColors.surface2 : Colors.transparent,
+          color: on || _hover ? AppColors.tint3 : Colors.transparent,
           padding: const EdgeInsets.fromLTRB(24, 5, 14, 5),
           child: Row(children: [
             Container(

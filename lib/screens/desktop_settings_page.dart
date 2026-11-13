@@ -178,7 +178,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
       child: Focus(
         autofocus: true,
         child: Material(
-          color: AppColors.bg,
+          color: AppColors.paneBg,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -220,7 +220,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
               ),
               Expanded(
                 child: ColoredBox(
-                  color: readingBg,
+                  color: kMobile ? readingBg : Colors.transparent,
                   child: SettingsSectionView(
                     client: widget.client,
                     instances: widget.instances,
@@ -295,7 +295,7 @@ class _NavRow extends StatelessWidget {
         onTap: onTap,
         selected: selected,
         radius: R.md,
-        selectedColor: AppColors.surface2,
+        selectedColor: AppColors.tint2,
         hoverColor: AppColors.fg1.withValues(alpha: 0.035),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 34),

@@ -80,7 +80,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
     Navigator.of(context)
         .push(AppPageRoute<void>(
           builder: (ctx) => Scaffold(
-            backgroundColor: AppColors.bg,
+            backgroundColor: AppColors.paneBg,
             body: SafeArea(
               bottom: false,
               child: Column(
@@ -164,7 +164,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
       final page = kMobile ||
           (widget.initialKey != null && ShellPanelScope.maybeOf(context) == null);
       return Material(
-        color: page ? AppColors.bg : Colors.transparent,
+        color: page ? AppColors.paneBg : Colors.transparent,
         child: page ? SafeArea(bottom: false, child: scoped) : scoped,
       );
     }

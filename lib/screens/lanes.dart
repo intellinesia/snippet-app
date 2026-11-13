@@ -218,7 +218,7 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface1,
+        color: AppColors.tint1,
         borderRadius: BorderRadius.circular(R.lg),
       ),
       clipBehavior: Clip.antiAlias,

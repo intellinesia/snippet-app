@@ -328,7 +328,7 @@ class _ArtifactInlineState extends State<ArtifactInline>
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.surface1,
+                    color: AppColors.tint1,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: SingleChildScrollView(
@@ -472,7 +472,7 @@ class _ArtifactSkeletonState extends State<ArtifactSkeleton>
 
   @override
   Widget build(BuildContext context) {
-    final block = AppColors.surface2;
+    final block = AppColors.tint2;
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: widget.fill ? MainAxisSize.max : MainAxisSize.min,
@@ -487,10 +487,9 @@ class _ArtifactSkeletonState extends State<ArtifactSkeleton>
         const SizedBox(height: 16),
         if (widget.fill)
           Expanded(
-              child: Skeleton(
-                  height: double.infinity, radius: 12, color: AppColors.surface1))
+              child:           Skeleton(height: double.infinity, radius: 12, color: AppColors.tint1))
         else
-          Skeleton(height: 96, radius: 12, color: AppColors.surface1),
+          Skeleton(height: 96, radius: 12, color: AppColors.tint1),
       ],
     );
     return Semantics(
@@ -1082,7 +1081,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
             height: 64,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppColors.surface2,
+              color: AppColors.tint2,
               borderRadius: BorderRadius.circular(20),
             ),
             child: AppIcon(
@@ -1385,7 +1384,7 @@ class _CsvTable extends StatelessWidget {
             for (var i = 0; i < rows.length; i++)
               TableRow(
                 decoration:
-                    i == 0 ? BoxDecoration(color: AppColors.surface1) : null,
+                    i == 0 ? BoxDecoration(color: AppColors.tint1) : null,
                 children: [
                   for (var c = 0; c < width; c++)
                     cell(c < rows[i].length ? rows[i][c] : '', head: i == 0),

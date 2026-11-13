@@ -490,7 +490,7 @@ class SettingsPanelState extends State<SettingsPanel> {
       child: Focus(
         autofocus: true,
         child: Material(
-          color: AppColors.bg,
+          color: AppColors.paneBg,
           child: LayoutBuilder(builder: (context, c) {
             if (c.maxWidth >= 560) {
               return Row(
@@ -499,7 +499,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                   Container(
                     width: 210,
                     decoration: BoxDecoration(
-                      color: AppColors.surface1,
+                      color: AppColors.tint1,
                       border: Border(right: BorderSide(color: AppColors.line)),
                     ),
                     child: Column(
@@ -566,7 +566,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                 height: 46,
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  color: AppColors.surface1,
+                  color: AppColors.tint1,
                   border: Border(bottom: BorderSide(color: AppColors.border)),
                 ),
                 child: Row(children: [
@@ -590,7 +590,7 @@ class SettingsPanelState extends State<SettingsPanel> {
         width: 30,
         height: 30,
         decoration: BoxDecoration(
-          color: AppColors.surface2,
+          color: AppColors.tint2,
           borderRadius: BorderRadius.circular(R.md),
         ),
         child: Center(
@@ -636,7 +636,7 @@ class SettingsPanelState extends State<SettingsPanel> {
               width: 30,
               height: 30,
               decoration: BoxDecoration(
-                color: AppColors.surface2,
+                color: AppColors.tint2,
                 borderRadius: BorderRadius.circular(R.md),
               ),
               child: Center(
@@ -858,7 +858,7 @@ class SettingsPanelState extends State<SettingsPanel> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Material(
-        color: selected ? AppColors.surface2 : Colors.transparent,
+        color: selected ? AppColors.tint2 : Colors.transparent,
         borderRadius: BorderRadius.circular(9),
         child: InkWell(
           borderRadius: BorderRadius.circular(9),
@@ -896,7 +896,9 @@ class SettingsPanelState extends State<SettingsPanel> {
           Padding(
             padding: const EdgeInsets.only(right: 6),
             child: Material(
-              color: _page == page ? AppColors.surface3 : Colors.transparent,
+              color: _page == page
+                  ? (kMobile ? AppColors.surface3 : AppColors.tint2)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(R.sm),
               child: InkWell(
                 onTap: () {
@@ -1705,7 +1707,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: AppColors.surface1,
+        color: AppColors.tint1,
         borderRadius: BorderRadius.circular(R.lg),
       ),
       foregroundDecoration: BoxDecoration(
@@ -2358,7 +2360,7 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: AppColors.surface2,
+                  color: AppColors.tint2,
                   borderRadius: BorderRadius.circular(R.md),
                 ),
                 child: Center(
@@ -2831,7 +2833,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                                       decoration: BoxDecoration(
                                         color: selected
                                             ? AppColors.accent
-                                            : AppColors.surface3,
+                                            : AppColors.tint3,
                                         shape: BoxShape.circle,
                                       ),
                                     ),
@@ -2902,7 +2904,7 @@ class _AccentSwatchStrip extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: custom == null ? AppColors.accentBg : AppColors.surface2,
+                  color: custom == null ? AppColors.accentBg : AppColors.tint2,
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
                     color: custom == null
@@ -2958,7 +2960,7 @@ class _AppearancePreviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface1,
+        color: AppColors.tint1,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
