@@ -44,6 +44,13 @@ class TasksPanelState extends State<TasksPanel> {
   Set<TaskStatus> _filter = {};
   String? _selectedTaskId;
   bool _creatingTask = false;
+  Map<String, String> _sessionFolders = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFolders();
+  }
 
   @override
   void didUpdateWidget(covariant TasksPanel oldWidget) {
@@ -58,6 +65,19 @@ class TasksPanelState extends State<TasksPanel> {
 
   void _sync() {
     if (mounted) setState(() {});
+  }
+
+  /// session id → last path segment, for the phone card meta line. Best
+  /// effort: an unreachable daemon just leaves the line shorter.
+  Future<void> _loadFolders() async {
+    try {
+      final sessions = await widget.client.sessions();
+      if (!mounted) return;
+      setState(() => _sessionFolders = {
+            for (final s in sessions)
+              s.id: s.projectFolder.split('/').where((p) => p.isNotEmpty).last,
+          });
+    } catch (_) {}
   }
 
   @override
@@ -112,53 +132,36 @@ class TasksPanelState extends State<TasksPanel> {
     bool same(Set<TaskStatus> a, Set<TaskStatus> b) =>
         a.length == b.length && a.containsAll(b);
     if (kMobile) {
+      // v5 `.pseg`:Needs you / Working / Queued / Done. Tapping the lit chip
+      // again clears back to all.
+      const needsYou = {
+        TaskStatus.inReview,
+        TaskStatus.blocked,
+        TaskStatus.failed,
+      };
+      final chips = <(String, Set<TaskStatus>)>[
+        ('Needs you', needsYou),
+        ('Working', const {TaskStatus.inProgress}),
+        ('Queued', const {TaskStatus.todo}),
+        ('Done', const {TaskStatus.done}),
+      ];
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.only(top: 6, bottom: 2),
-        child: Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                  color: AppColors.fg1.withValues(alpha: 0.08),
-                  spreadRadius: 1),
-            ],
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            for (final (label, set) in tabs)
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => setState(() {
-                  _filter = {...set};
-                  _shownAt = null;
-                }),
-                child: AnimatedContainer(
-                  duration: Motion.fast,
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 13),
-                  decoration: BoxDecoration(
-                    color: same(_filter, set)
-                        ? AppColors.surface3
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text(label,
-                        style: sans(14,
-                            weight: W.label,
-                            color: same(_filter, set)
-                                ? AppColors.fg1
-                                : AppColors.fg3)),
-                    const SizedBox(width: 6),
-                    Text('${set.isEmpty ? tasks.length : count(set)}',
-                        style: sans(13, color: AppColors.fg4, tabular: true)),
-                  ]),
-                ),
-              ),
-          ]),
-        ),
+        padding: const EdgeInsets.fromLTRB(0, 4, 0, 8),
+        child: Row(children: [
+          for (final (label, set) in chips) ...[
+            _FilterChip(
+              label: label,
+              count: count(set),
+              on: same(_filter, set),
+              onTap: () => setState(() {
+                _filter = same(_filter, set) ? const {} : {...set};
+                _shownAt = null;
+              }),
+            ),
+            const SizedBox(width: 6),
+          ],
+        ]),
       );
     }
     return SingleChildScrollView(
@@ -559,9 +562,44 @@ class TasksPanelState extends State<TasksPanel> {
       onRefresh: _feed.refresh,
       hasMore: _feed.hasMore,
       onLoadMore: _feed.loadMore,
+      sessionFolders: _sessionFolders,
       padding: kMobile
           ? const EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 16)
           : const EdgeInsets.fromLTRB(10, 2, 10, 16),
     );
   }
+}
+
+/// One v5 `.pseg` filter chip: 32px pill, surface fill, lit when [on].
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.count,
+    required this.on,
+    required this.onTap,
+  });
+
+  final String label;
+  final int count;
+  final bool on;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: Motion.fast,
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: on ? AppColors.surface3 : AppColors.surface2,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Text('$label $count',
+                style: sans(14, color: on ? AppColors.fg1 : AppColors.fg3)),
+          ]),
+        ),
+      );
 }

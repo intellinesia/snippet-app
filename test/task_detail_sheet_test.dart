@@ -72,6 +72,25 @@ class _Daemon extends DaemonClient {
       ];
 
   @override
+  Future<TaskItem> setTaskStatus(String id, TaskStatus status) async {
+    final t = await getTask(id);
+    return TaskItem.fromJson({
+      ...{
+        'id': t.id,
+        'title': t.title,
+        'description': t.description,
+        'status': status.wire,
+        'session_id': t.sessionId,
+        'thread_id': t.threadId,
+        'created_by_kind': t.createdByKind,
+        'created_by_id': t.createdById,
+        'created_at': t.createdAt,
+        'updated_at': t.updatedAt,
+      },
+    });
+  }
+
+  @override
   Future<List<BoardEntry>> taskLog(String id, {int limit = 50}) async => [
         BoardEntry.fromJson({
           'id': 1,
@@ -152,54 +171,44 @@ void phoneTest(String name, Future<void> Function(WidgetTester) body) {
 }
 
 void main() {
-  phoneTest('summary sheet shows title, byline, cards and segment',
+  phoneTest('v5 layout shows pills, title, actions and groups',
       (tester) async {
     await _phone(tester, TaskDetailScreen(client: _Daemon(), taskId: 't1'));
 
     expect(find.text('Fix the demo voice'), findsWidgets);
-    expect(find.text('In review'), findsWidgets);
-    expect(find.text('snippet'), findsWidgets);
-    expect(find.text('mc'), findsWidgets);
+    expect(find.textContaining('In review'), findsWidgets);
+    expect(find.text('Approve'), findsOneWidget);
+    expect(find.text('Send back'), findsOneWidget);
     for (final key in [
-      'Status',
-      'Agents',
-      'Reviewer',
+      'Brief',
+      'Plan',
+      'Details',
+      'Log',
+      'Holder',
+      'Review',
+      'Seat',
       'Branch',
+      'Changes',
       'Owned paths',
     ]) {
-      expect(find.text(key), findsOneWidget, reason: key);
+      expect(find.text(key), findsWidgets, reason: key);
     }
-    expect(find.text('feat/demo'), findsOneWidget);
-    expect(find.text('src/tts'), findsOneWidget);
-    expect(find.text('Brief'), findsOneWidget);
     expect(find.textContaining('Speak ISE'), findsOneWidget);
-    expect(find.text('Report'), findsOneWidget);
+    expect(find.text('Draft the fix'), findsOneWidget);
+    expect(find.text('feat/demo'), findsOneWidget);
     expect(find.textContaining('v5 delivered'), findsWidgets);
-    for (final tab in ['Summary', 'Plan', 'Log', 'Changes']) {
-      expect(find.text(tab), findsWidgets, reason: tab);
+    // The old tab strip is gone on phones.
+    for (final tab in ['Summary', 'Changes']) {
+      expect(find.text(tab), findsNothing, reason: tab);
     }
   });
 
-  phoneTest('segment switches plan, log and changes', (tester) async {
+  phoneTest('approve moves an in-review task to done', (tester) async {
     await _phone(tester, TaskDetailScreen(client: _Daemon(), taskId: 't1'));
 
-    await tester.tap(find.text('Plan'));
+    await tester.tap(find.text('Approve'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Plan ·'), findsOneWidget);
-    expect(find.text('Draft the fix'), findsOneWidget);
-    expect(find.text('snippet'), findsWidgets);
-
-    await tester.tap(find.text('Log'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('v5 delivered'), findsWidgets);
-
-    await tester.tap(find.text('Changes'));
-    await tester.pumpAndSettle();
-    expect(find.text('src/tts/x.dart'), findsOneWidget);
-    expect(find.text('abc123 fix acronyms'), findsOneWidget);
-
-    await tester.tap(find.text('Summary'));
-    await tester.pumpAndSettle();
-    expect(find.text('Owned paths'), findsOneWidget);
+    expect(find.textContaining('Done'), findsWidgets);
+    expect(find.text('Approve'), findsNothing);
   });
 }
