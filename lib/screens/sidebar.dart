@@ -20,6 +20,7 @@ import 'shell_nav.dart';
 import 'session_list_row.dart';
 import 'sidebar_mobile.dart';
 import 'tasks/tasks_panel.dart';
+import 'usage.dart' show usageProviderTitle;
 import '../pull_refresh.dart';
 import '../motion.dart';
 import '../mochi.dart';
@@ -241,12 +242,21 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     if (u != null) {
       var tokens = 0, calls = 0;
       RateWindow? tight;
+      String? tightProvider;
       for (final p in u.providers) {
         tokens += p.totalTokens;
         calls += p.calls;
         for (final r in p.rateLimits) {
-          if (!r.isReported || r.isExpired) continue;
-          if (tight == null || r.usedPercent > tight.usedPercent) tight = r;
+          // Only a live 5h window; without a reset time the figure may be stale.
+          if (rateWindowLabel(r.windowMinutes) != '5h' ||
+              r.resetsAt <= 0 ||
+              r.isExpired) {
+            continue;
+          }
+          if (tight == null || r.usedPercent > tight.usedPercent) {
+            tight = r;
+            tightProvider = p.provider;
+          }
         }
       }
       if (tokens > 0) {
@@ -254,8 +264,11 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       }
       if (tight != null) {
         final reset = rateResetLabel(tight.resetsAt)?.split(' · ').first;
-        out.add(HeroStat('${tight.usedPercent.round()}%',
-            '${rateWindowLabel(tight.windowMinutes)} limit used', reset));
+        out.add(HeroStat(
+          '${tight.usedPercent.round()}%',
+          '${usageProviderTitle(tightProvider!)} 5h limit',
+          reset,
+        ));
       }
     }
     return out;
@@ -1054,6 +1067,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   Widget _sessionsHero(List<SessionInfo> main) {
     final live = main.where((s) => sessionIsActive(s.status)).length;
     final needs = main.where(sessionNeedsYou).length;
+    final settled = main.where((s) => s.settled).length;
     return HomeHero(
       visit: _heroVisit,
       stats: [
@@ -1061,10 +1075,16 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           live.toString().padLeft(2, '0'),
           'sessions working',
           [
-            '${(main.length - live - needs).clamp(0, main.length)} idle',
+            '${(main.length - live - needs - settled).clamp(0, main.length)} idle',
             if (needs > 0) '$needs need you',
           ].join(' · '),
         ),
+        if (settled > 0)
+          HeroStat(
+            settled.toString().padLeft(2, '0'),
+            'sessions settled',
+            'of ${main.length} sessions',
+          ),
         ..._sharedHeroStats(),
       ],
     );
