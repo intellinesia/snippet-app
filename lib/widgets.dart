@@ -2284,6 +2284,7 @@ const _lucide = <String, IconData>{
   'bell': LucideIcons.bell,
   'alert-circle': LucideIcons.circleAlert,
   'message': LucideIcons.messageSquare,
+  'message-square': LucideIcons.messageSquare,
   'message-text': LucideIcons.messageSquareText,
   'chat-thread': LucideIcons.messagesSquare,
   'users': LucideIcons.users,
