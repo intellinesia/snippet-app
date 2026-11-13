@@ -33,7 +33,8 @@ class MobileBottomBar extends StatefulWidget {
     required this.home,
     required this.onHome,
     required this.onNewSession,
-    required this.onNewAgentOrGroup,
+    this.onNewAgentOrGroup,
+    this.showNewSession = true,
     this.workingCount = 0,
     this.search,
     this.onHeightChanged,
@@ -41,11 +42,9 @@ class MobileBottomBar extends StatefulWidget {
 
   final MobileHome home;
   final ValueChanged<MobileHome> onHome;
-
-  /// Chats pill. Agents pill opens the agents panel's create menu instead and
-  /// receives the bar's context as the menu anchor.
   final VoidCallback onNewSession;
-  final void Function(BuildContext anchor) onNewAgentOrGroup;
+  final void Function(BuildContext anchor)? onNewAgentOrGroup;
+  final bool showNewSession;
 
   /// Non-settled, non-waiting sessions in a running state; shown on the pill.
   final int workingCount;
@@ -66,7 +65,7 @@ class _MobileBottomBarState extends State<MobileBottomBar> {
   double _reported = -1;
 
   bool get _primaryShown =>
-      widget.home == MobileHome.chats || widget.home == MobileHome.agents;
+      widget.home == MobileHome.chats && widget.showNewSession;
 
   bool get _searchingNow => _searching && widget.search != null;
 
@@ -100,11 +99,7 @@ class _MobileBottomBarState extends State<MobileBottomBar> {
 
   void _primary() {
     HapticFeedback.lightImpact();
-    if (widget.home == MobileHome.agents) {
-      widget.onNewAgentOrGroup(context);
-    } else {
-      widget.onNewSession();
-    }
+    widget.onNewSession();
   }
 
   @override
@@ -149,8 +144,7 @@ class _MobileBottomBarState extends State<MobileBottomBar> {
   }
 
   Widget _pill() {
-    final agents = widget.home == MobileHome.agents;
-    final label = agents ? 'New agent or group' : 'New session';
+    const label = 'New session';
     return Tooltip(
       message: label,
       child: Semantics(

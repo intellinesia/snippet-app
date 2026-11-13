@@ -122,21 +122,19 @@ void main() {
     expect(find.textContaining('working'), findsNothing);
   });
 
-  testWidgets('the Agents pill opens the create menu callback', (tester) async {
-    BuildContext? anchor;
+  testWidgets('Agents hides the primary pill and keeps tabs and search',
+      (tester) async {
     await tester.pumpWidget(
       harness(
         home: MobileHome.agents,
         search: search(),
-        onNewAgentOrGroup: (ctx) => anchor = ctx,
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.byTooltip('New agent or group'), findsOneWidget);
+    expect(find.byTooltip('New agent or group'), findsNothing);
     expect(find.byTooltip('New session'), findsNothing);
-    await tester.tap(find.byTooltip('New agent or group'));
-    await tester.pumpAndSettle();
-    expect(anchor, isNotNull);
+    expect(find.byTooltip('Search'), findsOneWidget);
+    expect(find.text('Agents'), findsOneWidget);
   });
 }

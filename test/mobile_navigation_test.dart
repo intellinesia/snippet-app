@@ -44,7 +44,8 @@ void main() {
       await _pumpShell(tester);
       expect(find.text('Connect to your computer'), findsOneWidget);
       expect(_visible(find.text('Scan QR code')), findsOneWidget);
-      expect(find.byType(MobileTopBar), findsNothing);
+      expect(find.byType(MobileHomeHeader), findsNothing);
+      expect(find.byType(MobileMissionBar), findsNothing);
       for (final text in [_chats, _tasks, _agents, _settings]) {
         expect(find.text(text), findsNothing);
       }
