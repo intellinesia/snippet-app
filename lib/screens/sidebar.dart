@@ -20,7 +20,6 @@ import 'shell_nav.dart';
 import 'session_list_row.dart';
 import 'sidebar_mobile.dart';
 import 'tasks/tasks_panel.dart';
-import 'usage.dart' show usageProviderTitle;
 import '../pull_refresh.dart';
 import '../motion.dart';
 import '../mochi.dart';
@@ -220,7 +219,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     } catch (_) {}
   }
 
-  /// Readings both homes share: lines, tokens and the tightest plan limit.
+  /// Readings both homes share: lines and tokens today.
   List<HeroStat> _sharedHeroStats() {
     final now = DateTime.now();
     final midnight =
@@ -241,34 +240,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     final u = _todayUsage;
     if (u != null) {
       var tokens = 0, calls = 0;
-      RateWindow? tight;
-      String? tightProvider;
       for (final p in u.providers) {
         tokens += p.totalTokens;
         calls += p.calls;
-        for (final r in p.rateLimits) {
-          // Only a live 5h window; without a reset time the figure may be stale.
-          if (rateWindowLabel(r.windowMinutes) != '5h' ||
-              r.resetsAt <= 0 ||
-              r.isExpired) {
-            continue;
-          }
-          if (tight == null || r.usedPercent > tight.usedPercent) {
-            tight = r;
-            tightProvider = p.provider;
-          }
-        }
       }
       if (tokens > 0) {
         out.add(HeroStat(heroCompact(tokens), 'tokens today', '$calls calls'));
-      }
-      if (tight != null) {
-        final reset = rateResetLabel(tight.resetsAt)?.split(' · ').first;
-        out.add(HeroStat(
-          '${tight.usedPercent.round()}%',
-          '${usageProviderTitle(tightProvider!)} 5h limit',
-          reset,
-        ));
       }
     }
     return out;
