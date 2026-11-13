@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../desktop_look.dart';
 import 'package:flutter/material.dart';
 
 import '../glass.dart';
@@ -108,7 +109,9 @@ class ComposerCard extends StatelessWidget {
         ),
       ),
     );
-    if (!highlight) return card;
+    if (!highlight) {
+      return Tactile(radius: BorderRadius.circular(radius), child: card);
+    }
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),

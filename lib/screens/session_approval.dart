@@ -210,14 +210,18 @@ class ApprovalBarState extends State<ApprovalBar> {
                 ),
                 if (detail.isNotEmpty)
                   ChatCardBody(
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.bg,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.line),
+                    child: Tactile(
+                      radius: BorderRadius.circular(10),
+                      kind: TactileKind.inset,
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.bg,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.line),
+                        ),
+                        child: ApprovalCode(code: detail, shell: isShell),
                       ),
-                      child: ApprovalCode(code: detail, shell: isShell),
                     ),
                   ),
                 if (isVault)

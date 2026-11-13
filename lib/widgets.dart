@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'desktop_look.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 export 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -745,7 +746,11 @@ class Btn extends StatelessWidget {
       child: Pressable(
         enabled: !disabled && onTap != null,
         haptic: variant == BtnVariant.primary,
-        child: Material(
+        child: Tactile(
+          radius: BorderRadius.circular(radius),
+          enabled: variant == BtnVariant.primary ||
+              variant == BtnVariant.secondary,
+          child: Material(
           color: bg,
           borderRadius: BorderRadius.circular(radius),
           child: InkWell(
@@ -769,6 +774,7 @@ class Btn extends StatelessWidget {
               child: child,
             ),
           ),
+        ),
         ),
       ),
     );
@@ -1086,19 +1092,23 @@ class _HoverSurfaceState extends State<HoverSurface> {
         kind: PressKind.row,
         radius: widget.radius,
         enabled: widget.onTap != null || widget.onLongPress != null,
-        child: AnimatedContainer(
-          duration: reduceMotion(context) ? Duration.zero : Motion.quick,
-          curve: Curves.easeOut,
-          decoration: BoxDecoration(color: color, borderRadius: r),
-          child: Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              borderRadius: r,
-              hoverColor: Colors.transparent,
-              onTap: widget.onTap,
-              onLongPress: widget.onLongPress,
-              onSecondaryTapDown: widget.onSecondaryTapDown,
-              child: widget.child,
+        child: Tactile(
+          radius: r,
+          enabled: widget.selected,
+          child: AnimatedContainer(
+            duration: reduceMotion(context) ? Duration.zero : Motion.quick,
+            curve: Curves.easeOut,
+            decoration: BoxDecoration(color: color, borderRadius: r),
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                borderRadius: r,
+                hoverColor: Colors.transparent,
+                onTap: widget.onTap,
+                onLongPress: widget.onLongPress,
+                onSecondaryTapDown: widget.onSecondaryTapDown,
+                child: widget.child,
+              ),
             ),
           ),
         ),

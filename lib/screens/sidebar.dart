@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../desktop_look.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -1394,7 +1395,10 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 2, 10, 6),
       child: Column(children: [
-        Container(
+        Tactile(
+          radius: BorderRadius.circular(9),
+          kind: TactileKind.inset,
+          child: Container(
           height: 28,
           padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
@@ -1414,6 +1418,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                 agentsAvailable ? () => setSidebarAgentsFirst(true) : null),
           ]),
         ),
+        ),
         const SizedBox(height: 8),
         _sidebarSearch(agentsFirst: agentsFirst),
       ]),
@@ -1430,17 +1435,21 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             key: key,
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
-            child: AnimatedContainer(
-              duration: Motion.quick,
-              height: 24,
-              decoration: BoxDecoration(
-                color: on ? AppColors.surface2 : Colors.transparent,
-                borderRadius: BorderRadius.circular(7),
+            child: Tactile(
+              radius: BorderRadius.circular(7),
+              enabled: on,
+              child: AnimatedContainer(
+                duration: Motion.quick,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: on ? AppColors.surface2 : Colors.transparent,
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                alignment: Alignment.center,
+                child: Text(label,
+                    style: sans(12,
+                        color: on ? AppColors.fg1 : AppColors.fg4)),
               ),
-              alignment: Alignment.center,
-              child: Text(label,
-                  style: sans(12,
-                      color: on ? AppColors.fg1 : AppColors.fg4)),
             ),
           ),
         ),
@@ -1496,15 +1505,19 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   }
 
   Widget _searchBox({VoidCallback? onTap, required Widget child}) {
-    final box = Container(
-      height: 28,
-      padding: const EdgeInsets.symmetric(horizontal: 9),
-      decoration: BoxDecoration(
-        color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.line),
+    final box = Tactile(
+      radius: BorderRadius.circular(8),
+      kind: TactileKind.inset,
+      child: Container(
+        height: 28,
+        padding: const EdgeInsets.symmetric(horizontal: 9),
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: child,
       ),
-      child: child,
     );
     if (onTap == null) return box;
     return Tooltip(

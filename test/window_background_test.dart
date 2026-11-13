@@ -42,7 +42,7 @@ void main() {
         home: Scaffold(body: SingleChildScrollView(child: AppearanceScreen()))));
     await tester.pump();
     expect(find.text('Transparent'), findsOneWidget);
-    expect(find.text('Choose image'), findsOneWidget);
+    expect(find.text('Choose image'), findsNWidgets(2));
     await tester.pumpWidget(const SizedBox());
 
     debugDefaultTargetPlatformOverride = TargetPlatform.android;

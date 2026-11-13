@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../desktop_look.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -544,6 +545,7 @@ class _DesktopShellState extends State<DesktopShell>
     if (!kMobile) {
       loadSidebarAgentsFirst();
       WindowBackgroundStore.instance.init();
+      DesktopLook.instance.init();
     }
     if (kMobile) ShareInbound.listen(_onInboundShare);
     // Global shells mirror into tabs whenever the daemon reports a change: a

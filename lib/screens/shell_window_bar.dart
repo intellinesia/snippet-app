@@ -1,4 +1,5 @@
 import 'package:flutter/gestures.dart';
+import '../desktop_look.dart';
 import 'package:flutter/material.dart';
 
 import '../chat/agent_cluster.dart';
@@ -72,7 +73,10 @@ class _TabChipBoxState extends State<_TabChipBox> {
       onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
         onTap: widget.onTap,
-        child: AnimatedContainer(
+        child: Tactile(
+          radius: BorderRadius.circular(R.md),
+          enabled: widget.isActive,
+          child: AnimatedContainer(
           duration: Motion.quick,
           key: widget.chipKey,
           height: 28,
@@ -89,6 +93,7 @@ class _TabChipBoxState extends State<_TabChipBox> {
                     widget.isActive ? AppColors.border2 : Colors.transparent),
           ),
           child: widget.child,
+        ),
         ),
       ),
     );

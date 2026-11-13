@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../desktop_look.dart';
 import '../api.dart';
 import '../chat/chat_style.dart' show ChatColors;
 import '../approval_code.dart';
@@ -661,7 +662,21 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
       ),
       if (parsed.shownCommand.isNotEmpty)
         ChatCardBody(
-            child: ApprovalCode(code: parsed.shownCommand, collapsedLines: 4)),
+          child: Tactile(
+            radius: BorderRadius.circular(10),
+            kind: TactileKind.inset,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+              decoration: BoxDecoration(
+                color: AppColors.bg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.line),
+              ),
+              child:
+                  ApprovalCode(code: parsed.shownCommand, collapsedLines: 4),
+            ),
+          ),
+        ),
       if (parsed.secrets.isNotEmpty)
         ChatCardBody(
           child: Wrap(spacing: S.s6, runSpacing: S.s4, children: [

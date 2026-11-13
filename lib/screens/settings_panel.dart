@@ -24,6 +24,7 @@ import 'voice_screen.dart';
 import 'web_search_screen.dart';
 import 'accounts_screen.dart';
 import '../motion.dart';
+import '../desktop_look.dart';
 import '../window_background.dart';
 import 'dart:io' show File;
 import 'package:file_picker/file_picker.dart';
@@ -2486,6 +2487,12 @@ class AppearanceScreen extends StatelessWidget {
             _AppearancePreviewCard(),
             const SizedBox(height: S.s16),
             const SettingsGroup(
+              header: 'Surfaces and wallpaper',
+              footer:
+                  'Wallpaper sits behind the chat and fades into the theme so text stays readable.',
+              children: [_TactileRow(), _ChatWallpaperPicker()],
+            ),
+            const SettingsGroup(
               header: 'Window background',
               footer:
                   'An image replaces the window transparency. Clear it to see the desktop through the window again.',
@@ -2503,6 +2510,108 @@ class AppearanceScreen extends StatelessWidget {
                   'UI typeface applies to headings, chat and controls; code font applies to diffs, terminals and IDs.',
               children: typographyChildren,
             ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _TactileRow extends StatelessWidget {
+  const _TactileRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final look = DesktopLook.instance;
+    return ListenableBuilder(
+      listenable: look,
+      builder: (context, _) => SettingsRow(
+        label: 'Tactile surfaces',
+        sub: 'Soft highlights on raised controls, inset wells for fields',
+        onTap: () => look.setTactile(!look.tactile),
+        trailing: SettingsSwitch(value: look.tactile, onChanged: look.setTactile),
+      ),
+    );
+  }
+}
+
+class _ChatWallpaperPicker extends StatelessWidget {
+  const _ChatWallpaperPicker();
+
+  Future<void> _chooseImage() async {
+    try {
+      final file = await FilePicker.pickFile(type: FileType.image);
+      final p = file?.path;
+      if (p != null && p.isNotEmpty) {
+        await DesktopLook.instance.setImageFromFile(p);
+      }
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final look = DesktopLook.instance;
+    return ListenableBuilder(
+      listenable: look,
+      builder: (context, _) {
+        final img = look.hasWallpaper ? look.imagePath : null;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SettingsRow(
+              label: 'Chat wallpaper',
+              sub: img == null ? 'None' : img.split(RegExp(r'[\\/]')).last,
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(R.sm),
+                child: SizedBox(
+                  width: 40,
+                  height: 28,
+                  child: img == null
+                      ? ColoredBox(color: AppColors.surface2)
+                      : Image.file(File(img),
+                          fit: BoxFit.cover,
+                          cacheWidth: 120,
+                          errorBuilder: (_, __, ___) =>
+                              ColoredBox(color: AppColors.surface2)),
+                ),
+              ),
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (img != null)
+                  TextButton(
+                      onPressed: look.clearWallpaper,
+                      child: const Text('Remove')),
+                TextButton(
+                    onPressed: _chooseImage,
+                    child: Text(img == null ? 'Choose image' : 'Change')),
+              ]),
+            ),
+            if (img != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                child: Row(children: [
+                  Text('Strength', style: sans(12, color: AppColors.fg3)),
+                  Expanded(
+                    child: SliderTheme(
+                      data: SliderThemeData(
+                        trackHeight: 3,
+                        activeTrackColor: AppColors.accent,
+                        inactiveTrackColor: AppColors.surface3,
+                        thumbColor: AppColors.accent,
+                        overlayColor: AppColors.accentBg,
+                        thumbShape:
+                            const RoundSliderThumbShape(enabledThumbRadius: 6),
+                        overlayShape:
+                            const RoundSliderOverlayShape(overlayRadius: 14),
+                      ),
+                      child: Slider(
+                        value: look.strength,
+                        onChanged: (v) => look.setStrength(v, persist: false),
+                        onChangeEnd: look.setStrength,
+                      ),
+                    ),
+                  ),
+                ]),
+              ),
           ],
         );
       },

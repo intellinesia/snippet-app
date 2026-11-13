@@ -319,13 +319,15 @@ class _AmbientStageState extends State<AmbientStage>
   List<AmbientEvent> _recent = const [];
   List<AmbientEvent> _recentAll = const [];
   Revalidator? _recentLive;
-  late final AnimationController _dragC =
-      AnimationController.unbounded(vsync: this)..addListener(_changed);
+  late final AnimationController _dragC;
   double get _drag => _dragC.value;
 
   @override
   void initState() {
     super.initState();
+    // Eager: created lazily, dispose() was the first touch on desktop and
+    // asked an unmounting element for a ticker.
+    _dragC = AnimationController.unbounded(vsync: this)..addListener(_changed);
     if (!kMobile) scheduleMicrotask(() => AmbientEdgeGlow.suppressed.value = true);
     _loadRecent();
     _recentLive = Revalidator(

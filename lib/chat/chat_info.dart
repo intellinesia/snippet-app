@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../desktop_look.dart';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -1149,6 +1150,8 @@ class _InfoCard extends StatelessWidget {
   // A Material of its own so row hover ink is clipped to the rounded card.
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: S.s12),
+        child: Tactile(
+        radius: BorderRadius.circular(16),
         child: Material(
         color: AppColors.surface2.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(16),
@@ -1163,6 +1166,7 @@ class _InfoCard extends StatelessWidget {
               children[i],
             ],
           ],
+        ),
         ),
         ),
       );

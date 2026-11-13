@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'desktop_look.dart';
 import 'package:flutter/services.dart';
 
 import 'platform.dart';
@@ -154,7 +155,9 @@ class SettingsGroup extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(kMobile ? 16 : 4, 0, 4, 6),
             child: Text(header!.toUpperCase(), style: TS.overline()),
           ),
-        Container(
+        Tactile(
+          radius: BorderRadius.circular(kMobile ? 14 : 10),
+          child: Container(
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: AppColors.surface1,
@@ -170,6 +173,7 @@ class SettingsGroup extends StatelessWidget {
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
           ),
+        ),
         ),
         if (footer != null)
           Padding(
