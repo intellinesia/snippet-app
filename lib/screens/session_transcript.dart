@@ -1057,6 +1057,7 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
     final isRunning =
         widget.running && (steps.isEmpty || steps.any((s) => s.running));
     final open = _open;
+    final meta = TS.meta();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: S.s4),
       child: Column(
@@ -1068,32 +1069,23 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: kMobile ? 32 : 24),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  AppIcon('activity', size: 13, color: AppColors.fg4),
-                  const SizedBox(width: 6),
                   Flexible(
                     child: Text(
                       summary,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TS.caption(AppColors.fg4),
+                      style: meta,
                     ),
                   ),
-                  if (failures > 0 && !isRunning) ...[
-                    const SizedBox(width: 6),
-                    Text('$failures failed',
-                        style: TS.caption(AppColors.danger)),
-                  ],
-                  const SizedBox(width: 6),
-                  if (isRunning)
-                    const WorkingDots(size: 4)
-                  else
-                    AnimatedRotation(
-                      turns: open ? 0.25 : 0,
-                      duration: Motion.fast,
-                      child: AppIcon('chevron-right',
-                          size: 12, color: AppColors.fg4),
-                    ),
+                  if (failures > 0 && !isRunning)
+                    Text(' · $failures failed',
+                        style: meta.copyWith(color: AppColors.danger)),
+                  Text(' · ', style: meta),
+                  Text(open ? 'Hide' : 'Show',
+                      style: meta.copyWith(
+                          color: AppColors.fg1, fontWeight: W.label)),
                 ],
               ),
             ),
@@ -1105,20 +1097,9 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
             child: open
                 ? Padding(
                     padding: const EdgeInsets.only(top: S.s2, bottom: S.s4),
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          left: 7.5,
-                          top: 14,
-                          bottom: 14,
-                          width: 1,
-                          child: ColoredBox(color: AppColors.border2),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: widget.rows,
-                        ),
-                      ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: widget.rows,
                     ),
                   )
                 : const SizedBox(width: double.infinity),
