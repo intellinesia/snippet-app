@@ -926,11 +926,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   }
 
   Widget _contextBar() {
-    final lanes = _state?.lanes ?? const <LaneInfo>[];
     return SessionContextBar(
-      laneCount: lanes.length,
-      laneRunning: lanes.any((l) => l.running),
-      onTapLanes: _showLanes,
       termCount: _terms.length,
       termRunning: _terms.any((t) => t.alive),
       onTapTerms: _openTerm,
@@ -1069,39 +1065,24 @@ extension _SessionScreenComposerExt on _SessionScreenState {
 class SessionContextBar extends StatelessWidget {
   const SessionContextBar({
     super.key,
-    required this.laneCount,
-    required this.laneRunning,
-    required this.onTapLanes,
     required this.termCount,
     required this.termRunning,
     required this.onTapTerms,
   });
 
-  final int laneCount;
-  final bool laneRunning;
-  final VoidCallback onTapLanes;
   final int termCount;
   final bool termRunning;
   final VoidCallback onTapTerms;
 
   @override
   Widget build(BuildContext context) {
-    if (laneCount == 0 && termCount == 0) return const SizedBox.shrink();
+    if (termCount == 0) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          if (laneCount > 0)
-            _ContextChip(
-              icon: 'layers',
-              label: 'Lanes $laneCount',
-              running: laneRunning,
-              onTap: onTapLanes,
-            ),
-          if (laneCount > 0 && termCount > 0) const SizedBox(width: 6),
-          if (termCount > 0)
-            _ContextChip(
+          _ContextChip(
               icon: 'terminal',
               label: '$termCount ${termCount == 1 ? 'terminal' : 'terminals'}',
               running: termRunning,

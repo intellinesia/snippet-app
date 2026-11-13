@@ -256,16 +256,12 @@ void main() {
 
   testWidgets('SessionContextBar hides zero counts and opens on tap',
       (tester) async {
-    var lanesTapped = 0;
     var termsTapped = 0;
 
     await tester.pumpWidget(MaterialApp(
       theme: buildAppTheme(),
       home: Scaffold(
         body: SessionContextBar(
-          laneCount: 0,
-          laneRunning: false,
-          onTapLanes: () => lanesTapped++,
           termCount: 0,
           termRunning: false,
           onTapTerms: () => termsTapped++,
@@ -279,21 +275,16 @@ void main() {
       theme: buildAppTheme(),
       home: Scaffold(
         body: SessionContextBar(
-          laneCount: 4,
-          laneRunning: false,
-          onTapLanes: () => lanesTapped++,
           termCount: 2,
           termRunning: true,
           onTapTerms: () => termsTapped++,
         ),
       ),
     ));
-    expect(find.text('Lanes 4'), findsOneWidget);
+    expect(find.textContaining('Lanes'), findsNothing);
     expect(find.text('2 terminals'), findsOneWidget);
 
-    await tester.tap(find.text('Lanes 4'));
     await tester.tap(find.text('2 terminals'));
-    expect(lanesTapped, 1);
     expect(termsTapped, 1);
   });
 
@@ -427,7 +418,7 @@ void main() {
 
     expect(find.byType(SessionContextBar), findsOneWidget);
     expect(find.byType(SessionContextFooter), findsOneWidget);
-    expect(find.text('Lanes 2'), findsOneWidget);
+    expect(find.textContaining('Lanes'), findsNothing);
     expect(find.text('1 terminal'), findsOneWidget);
     expect(find.text('80% context'), findsOneWidget);
     expect(find.text('42k cached'), findsOneWidget);

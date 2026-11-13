@@ -56,8 +56,6 @@ class _TaskKanbanState extends State<TaskKanban> {
   final _scroll = ScrollController();
 
   String _query = '';
-  bool _mineOnly = false;
-  String? _folderFilter;
   Map<String, String> _sessionFolders = const {};
   Map<String, String> _agentNames = const {};
   TaskItem? _dragging;
@@ -166,25 +164,8 @@ class _TaskKanbanState extends State<TaskKanban> {
     }
   }
 
-  List<String> _distinctFolders() {
-    final seen = <String>{};
-    for (final t in _feed.tasks) {
-      final folder = _sessionFolders[t.sessionId];
-      if (folder != null && folder.isNotEmpty) seen.add(folder);
-    }
-    return seen.toList()..sort();
-  }
-
   List<TaskItem> _filteredTasks() {
-    return _feed.tasks.where((t) {
-      if (!taskMatches(t, _query)) return false;
-      if (_mineOnly && t.createdByKind != 'human') return false;
-      if (_folderFilter != null &&
-          _sessionFolders[t.sessionId] != _folderFilter) {
-        return false;
-      }
-      return true;
-    }).toList();
+    return _feed.tasks.where((t) => taskMatches(t, _query)).toList();
   }
 
   List<TaskItem> _itemsFor(_KanbanColumn column, List<TaskItem> visible) {
@@ -211,7 +192,6 @@ class _TaskKanbanState extends State<TaskKanban> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _header(showCounts: showBoard),
-          if (showBoard) _filters(),
           Expanded(child: _board()),
         ],
       ),
@@ -253,45 +233,6 @@ class _TaskKanbanState extends State<TaskKanban> {
         Btn('New task',
             small: true, variant: BtnVariant.secondary, onTap: _create),
       ]),
-    );
-  }
-
-  Widget _filters() {
-    final folders = _distinctFolders();
-    final isAll = !_mineOnly && _folderFilter == null;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 14),
-      child: Wrap(
-        spacing: 4,
-        runSpacing: 4,
-        children: [
-          _FilterChip(
-            label: 'All',
-            selected: isAll,
-            onTap: () => setState(() {
-              _mineOnly = false;
-              _folderFilter = null;
-            }),
-          ),
-          _FilterChip(
-            label: 'Mine',
-            selected: _mineOnly,
-            onTap: () => setState(() {
-              _mineOnly = true;
-              _folderFilter = null;
-            }),
-          ),
-          for (final folder in folders)
-            _FilterChip(
-              label: folder,
-              selected: _folderFilter == folder,
-              onTap: () => setState(() {
-                _mineOnly = false;
-                _folderFilter = folder;
-              }),
-            ),
-        ],
-      ),
     );
   }
 
@@ -484,45 +425,6 @@ class _TaskKanbanState extends State<TaskKanban> {
         ),
         childWhenDragging: Opacity(opacity: 0.3, child: card),
         child: card,
-      ),
-    );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? AppColors.surface2 : Colors.transparent,
-      borderRadius: BorderRadius.circular(7),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(7),
-        hoverColor: AppColors.surface2.withValues(alpha: 0.5),
-        child: SizedBox(
-          height: 26,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Center(
-              widthFactor: 1,
-              child: Text(
-                label,
-                style: sans(12,
-                    color: selected ? AppColors.fg1 : AppColors.fg3),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

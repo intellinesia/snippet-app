@@ -163,14 +163,13 @@ class _DialogFrame extends StatelessWidget {
           constraints: BoxConstraints(
               maxWidth: maxWidth, maxHeight: maxHeight ?? double.infinity),
           decoration: BoxDecoration(
+            color: AppColors.surface1,
             borderRadius: BorderRadius.circular(R.card),
+            border: Border.all(color: AppColors.border),
             boxShadow: overlayShadow,
           ),
-          child: Glass(
-            radius: BorderRadius.circular(R.card),
-            tint: AppColors.surface1.withValues(alpha: 0.8),
-            blur: 28,
-            child: Material(
+          clipBehavior: Clip.antiAlias,
+          child: Material(
             type: MaterialType.transparency,
             child: Padding(
               padding:
@@ -209,7 +208,6 @@ class _DialogFrame extends StatelessWidget {
                 ],
               ),
             ),
-          ),
           ),
         ),
       );
@@ -352,6 +350,7 @@ void trackPointer() {
 /// Phone popovers sit on a frosted blackout of the whole screen; desktop
 /// ones stay anchored over an untouched window.
 Widget popoverBackdrop(Animation<double> animation, Widget child) {
+  if (!kMobile) return child;
   return Stack(children: [
     Positioned.fill(
       child: IgnorePointer(
@@ -409,11 +408,16 @@ Future<T?> showPointPopover<T>(BuildContext context,
         left: left,
         top: top,
         width: w,
-        child: Glass(
-          radius: BorderRadius.circular(12),
-          tint: AppColors.surface2.withValues(alpha: 0.7),
-          blur: 28,
-          child: Material(type: MaterialType.transparency, child: child),
+        child: Material(
+          color: AppColors.surface2,
+          elevation: 10,
+          shadowColor: Colors.black.withValues(alpha: 0.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: AppColors.border2),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: child,
         ),
       ),
     ]),
@@ -731,21 +735,39 @@ Future<T?> showAnchoredPanel<T>(
         top: above ? null : top,
         bottom: above ? bottom : null,
         width: w,
-        child: Glass(
-          radius: BorderRadius.circular(kMobile ? 16 : 14),
-          tint: AppColors.surface2.withValues(alpha: 0.7),
-          blur: 28,
-          child: Material(
-            type: MaterialType.transparency,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: room),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(kMobile ? 6 : 8),
-                child: child,
+        child: kMobile
+            ? Glass(
+                radius: BorderRadius.circular(16),
+                tint: AppColors.surface2.withValues(alpha: 0.7),
+                blur: 28,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: room),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(6),
+                      child: child,
+                    ),
+                  ),
+                ),
+              )
+            : Material(
+                color: AppColors.surface2,
+                elevation: 10,
+                shadowColor: Colors.black.withValues(alpha: 0.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(color: AppColors.border2),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: room),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(8),
+                    child: child,
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
       ),
     ]),
     transitionBuilder: (_, animation, __, child) {

@@ -187,49 +187,6 @@ void main() {
     expect(client.moves['1b'], TaskStatus.done);
   });
 
-  testWidgets('filter chips narrow by Mine and project folder', (tester) async {
-    final client = _FakeDaemon(
-      [
-        _task('1', 'Mobile task', 'todo',
-            createdByKind: 'human', sessionId: 's1'),
-        _task('2', 'Technoxi task', 'in_progress',
-            createdByKind: 'agent', createdById: 'snippet', sessionId: 's2'),
-        _task('3', 'Loose task', 'todo', createdByKind: 'agent'),
-      ],
-      sessionRows: [
-        {'id': 's1', 'folder': '/home/snippet/code/snippet-mobile'},
-        {
-          'id': 's2',
-          'folder': '/tmp/wt-1',
-          'origin_folder': '/home/snippet/code/technoxi',
-        },
-      ],
-    );
-    await _pumpBoard(tester, client);
-
-    expect(find.text('All'), findsOneWidget);
-    expect(find.text('Mine'), findsOneWidget);
-    expect(find.text('snippet-mobile'), findsWidgets);
-    expect(find.text('technoxi'), findsOneWidget);
-
-    await tester.tap(find.text('Mine'));
-    await tester.pumpAndSettle();
-    expect(find.text('Mobile task'), findsOneWidget);
-    expect(find.text('Technoxi task'), findsNothing);
-    expect(find.text('Loose task'), findsNothing);
-
-    await tester.tap(find.text('technoxi').first);
-    await tester.pumpAndSettle();
-    expect(find.text('Technoxi task'), findsOneWidget);
-    expect(find.text('Mobile task'), findsNothing);
-
-    await tester.tap(find.text('All'));
-    await tester.pumpAndSettle();
-    expect(find.text('Mobile task'), findsOneWidget);
-    expect(find.text('Technoxi task'), findsOneWidget);
-    expect(find.text('Loose task'), findsOneWidget);
-  });
-
   testWidgets('cards render step fallback, agent name, folder, and age',
       (tester) async {
     final recent =
