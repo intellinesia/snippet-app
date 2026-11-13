@@ -362,6 +362,8 @@ class _DesktopShellState extends State<DesktopShell>
   /// and even an empty pane stays open so the next rail tap lands somewhere.
   Future<Object?> _openShellPanel(ShellPanelRequest request) {
     if (!kMobile && request.purpose == ShellPanelPurpose.conversation) {
+      request.showSide = _showAgentInfo;
+      request.toggleSide = _togglePanel;
       _openReadoutTab(_RightTab.request(request, originTabKey: _activeTab?.key));
       return request.dismissed.future;
     }
@@ -454,11 +456,14 @@ class _DesktopShellState extends State<DesktopShell>
       _activeTab?.readout?.agent ??
       (!kMobile && _activeTab?.isMissionControl == true ? _mcAgent : null);
 
-  bool get _panelHidden =>
-      _activeAgent != null ? _agentPanelHidden : _sidePanelHidden;
+  /// The active tab docks an info panel (agent, Mission Control or group chat).
+  bool get _dockedInfo =>
+      _activeAgent != null || _activeTab?.readout?.request?.sidePanel != null;
+
+  bool get _panelHidden => _dockedInfo ? _agentPanelHidden : _sidePanelHidden;
 
   void _togglePanel() => setState(() {
-        if (_activeAgent != null) {
+        if (_dockedInfo) {
           _agentPanelHidden = !_agentPanelHidden;
         } else {
           _sidePanelHidden = !_sidePanelHidden;

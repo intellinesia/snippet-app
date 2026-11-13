@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import '../chat/chat_info.dart' show showGroupInfo;
+import '../chat/chat_info.dart' show GroupInfoPanel, showGroupInfo;
 import '../motion_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -105,6 +105,16 @@ void openGroupThread(
     originClient: client,
     maxWidth: 720,
     maxHeight: 720,
+    title: group.title.trim().isEmpty ? 'Group' : group.title.trim(),
+    sidePanel: (ctx, closeTab) => GroupInfoPanel(
+      key: ValueKey('group-info-${group.id}'),
+      client: client,
+      group: group,
+      docked: true,
+      onOpenTasks: () =>
+          openTasksPage(ctx, client, agentIds: group.agentIds.toSet()),
+      onClose: closeTab,
+    ),
     builder: (_, close) => GroupThreadScreen(
       client: client,
       group: group,
@@ -1052,7 +1062,22 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       onTap: () => openTasksPage(context, widget.client,
           agentIds: _groupAgentIds),
     );
-    final trailing = !kMobile && !widget.embedded && widget.onClose != null
+    final docked = kMobile ? null : ShellRequestScope.maybeOf(context);
+    final toggleSide = docked?.sidePanel != null ? docked?.toggleSide : null;
+    final trailing = toggleSide != null
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              tasksBtn,
+              const SizedBox(width: 6),
+              ChatGlassButton(
+                icon: 'panel-right',
+                tooltip: 'Group info',
+                onTap: toggleSide,
+              ),
+            ],
+          )
+        : !kMobile && !widget.embedded && widget.onClose != null
         ? Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1072,14 +1097,20 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         agentIds: _group.agentIds,
         title: _title,
         status: _statusLine(),
-        onTitleTap: () => unawaited(showGroupInfo(
-              context,
-              client: widget.client,
-              group: _group,
-              onOpenTasks: () => openTasksPage(context, widget.client,
-                  agentIds: _groupAgentIds),
-              onChanged: () => unawaited(_reloadGroup()),
-            )),
+        onTitleTap: () {
+          if (docked?.showSide != null && docked?.sidePanel != null) {
+            docked!.showSide!();
+            return;
+          }
+          unawaited(showGroupInfo(
+            context,
+            client: widget.client,
+            group: _group,
+            onOpenTasks: () => openTasksPage(context, widget.client,
+                agentIds: _groupAgentIds),
+            onChanged: () => unawaited(_reloadGroup()),
+          ));
+        },
         titleHint: 'Members',
         onBack: canGoBack ? _closePage : null,
         trailing: trailing,

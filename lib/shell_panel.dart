@@ -39,6 +39,7 @@ class ShellPanelRequest {
       required this.client,
       this.sessionId,
       this.title,
+      this.sidePanel,
       required this.builder});
 
   final ShellPanelPurpose purpose;
@@ -47,10 +48,20 @@ class ShellPanelRequest {
   final String? sessionId;
   final String? title;
   final Widget Function(BuildContext, VoidCallback) builder;
+
+  /// Info docked in the shell's right panel beside this conversation; gets a
+  /// callback that closes the conversation tab.
+  final Widget Function(BuildContext context, VoidCallback closeTab)? sidePanel;
+
+  /// Set by the shell: reveal or toggle [sidePanel].
+  VoidCallback? showSide;
+  VoidCallback? toggleSide;
   final Completer<Object?> dismissed = Completer<Object?>();
   final navigatorKey = GlobalKey<NavigatorState>();
   String get key => 'request|${client?.baseUrl}|$sessionId|${purpose.name}|$id';
-  String get label => title ?? switch (purpose) {
+  String get label =>
+      title ??
+      switch (purpose) {
         ShellPanelPurpose.task => 'Task',
         ShellPanelPurpose.agents => 'Agents',
         ShellPanelPurpose.conversation => 'Conversation',
@@ -100,10 +111,9 @@ class ShellPanelBody extends StatelessWidget {
         MaterialPage<void>(
           key: ValueKey(request.key),
           child: Builder(
-              builder: (context) =>
-                  Material(
-                      type: MaterialType.transparency,
-                      child: request.builder(context, onClose))),
+              builder: (context) => Material(
+                  type: MaterialType.transparency,
+                  child: request.builder(context, onClose))),
         )
       ],
       onDidRemovePage: (_) => onClose(),
@@ -114,6 +124,19 @@ class ShellPanelBody extends StatelessWidget {
         open: host.open,
         client: client,
         sessionId: request.sessionId,
-        child: ShellPanelRoot(label: request.label, child: body));
+        child: ShellRequestScope(
+            request: request,
+            child: ShellPanelRoot(label: request.label, child: body)));
   }
+}
+
+/// The shell request a panel's content is hosted in, if any.
+class ShellRequestScope extends InheritedWidget {
+  const ShellRequestScope(
+      {super.key, required this.request, required super.child});
+  final ShellPanelRequest request;
+  static ShellPanelRequest? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ShellRequestScope>()?.request;
+  @override
+  bool updateShouldNotify(ShellRequestScope old) => old.request != request;
 }

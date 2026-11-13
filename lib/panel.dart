@@ -8,7 +8,8 @@ import 'media_views.dart';
 import 'motion_routes.dart';
 import 'theme.dart';
 
-export 'shell_panel.dart' show ShellPanelPurpose, ShellPanelScope;
+export 'shell_panel.dart'
+    show ShellPanelPurpose, ShellPanelScope, ShellRequestScope;
 
 enum PanelStyle { drawer, dialog }
 
@@ -28,6 +29,8 @@ Future<T?> presentScreen<T>(
   String panelId = '',
   DaemonClient? originClient,
   String? originSessionId,
+  String? title,
+  Widget Function(BuildContext context, VoidCallback closeTab)? sidePanel,
 }) {
   final host = ShellPanelScope.maybeOf(context);
   if (!kMobile &&
@@ -40,6 +43,8 @@ Future<T?> presentScreen<T>(
           id: panelId,
           client: originClient ?? DaemonScope.maybeOf(context) ?? host.client,
           sessionId: originSessionId ?? host.sessionId,
+          title: title,
+          sidePanel: sidePanel,
           builder: builder,
         ))
         .then((value) => value as T?);

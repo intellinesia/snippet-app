@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/models.dart';
+import 'package:snippet/panel.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/screens/desktop_shell.dart';
 import 'package:snippet/screens/session.dart' show TerminalHost, TerminalInfo;
@@ -256,6 +257,57 @@ void main() {
     expect(find.text('121k'), findsNothing);
     expect(find.byTooltip('Context 121k of 200k'), findsNothing);
     expect(find.byTooltip('Session actions'), findsOneWidget);
+  });
+
+  testWidgets('conversation tab docks its side panel in the right panel',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    DaemonClient.wsConnector =
+        (uri, {connectTimeout, pingInterval}) => _Socket();
+    SharedPreferences.setMockInitialValues({
+      'instances':
+          '[{"name":"Local","url":"http://127.0.0.1:9090","token":"tok"}]',
+    });
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1440, 900);
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+        MaterialApp(theme: buildAppTheme(), home: const DesktopShell()));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    final ctx = tester.element(find
+        .descendant(
+            of: find.byType(ShellPanelScope), matching: find.byType(Text))
+        .first);
+    unawaited(presentScreen<void>(ctx,
+        style: PanelStyle.drawer,
+        purpose: ShellPanelPurpose.conversation,
+        panelId: 'group:g1',
+        title: 'bois',
+        sidePanel: (_, __) => const Text('GROUP-INFO'),
+        builder: (c, __) => TextButton(
+            onPressed: () => ShellRequestScope.maybeOf(c)!.toggleSide!(),
+            child: const Text('GROUP-CHAT'))));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('GROUP-CHAT'), findsOneWidget);
+    expect(find.text('bois'), findsWidgets);
+    expect(find.text('GROUP-INFO'), findsNothing);
+
+    await tester.tap(find.text('GROUP-CHAT'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('GROUP-INFO'), findsOneWidget);
+
+    await tester.tap(find.text('GROUP-CHAT'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('GROUP-INFO'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 1));
+    DaemonClient.wsConnector = null;
+    debugDefaultTargetPlatformOverride = null;
   });
 
   testWidgets('Tasks tab opens TaskKanban and Back/Forward navigate history',

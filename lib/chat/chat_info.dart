@@ -359,8 +359,12 @@ class GroupInfoPanel extends StatefulWidget {
     this.onOpenTasks,
     this.onChanged,
     this.onClose,
+    this.docked = false,
   });
 
+  /// Docked beside the chat: no close button, and actions keep it open.
+  /// [onClose] then closes the conversation (after Delete group).
+  final bool docked;
   final DaemonClient client;
   final GroupSummary group;
   final VoidCallback? onOpenTasks;
@@ -592,13 +596,13 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
     final actions = <_CircleAction>[
       if (widget.onOpenTasks != null)
         _CircleAction('task', 'Tasks', () {
-          _close();
+          if (!widget.docked) _close();
           widget.onOpenTasks!();
         }),
       _CircleAction('users', 'Add', _pickAdd),
     ];
     return _InfoFrame(
-      onClose: _close,
+      onClose: widget.docked ? null : _close,
       edit: _EditPill(onTap: _busy ? null : _rename),
       avatar: AgentCluster(ids: _group.agentIds, size: kMobile ? 88 : 64),
       name: title,

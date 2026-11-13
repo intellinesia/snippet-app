@@ -340,7 +340,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         rightPanel: _sessionSidePanel(),
         hideRight: _activeTab != null &&
             (_activeTab!.isDraft ||
-                (_activeTab!.isReadout && _activeAgent == null) ||
+                (_activeTab!.isReadout && !_dockedInfo) ||
                 _activeTab!.isPrs ||
                 (_activeTab!.isBoard && _tabsIn(_Pane.right).isEmpty)),
         panelHostsReadouts: _activeTab != null &&
@@ -384,6 +384,14 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   Widget? _sessionSidePanel() {
     final tab = _activeTab;
     final agent = _activeAgent;
+    final side = tab?.readout?.request?.sidePanel;
+    if (tab != null && side != null) {
+      return _panelHidden
+          ? null
+          : KeyedSubtree(
+              key: ValueKey('side-${tab.key}'),
+              child: side(context, () => _closePaneTab(tab)));
+    }
     if (tab == null || (tab.sessionId == null && agent == null)) return null;
     if (_panelHidden) return null;
     final tabReadouts = [
