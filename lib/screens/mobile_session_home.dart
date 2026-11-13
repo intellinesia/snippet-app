@@ -514,14 +514,18 @@ class _LiveRingState extends State<LiveRing>
 
 /// Faint dot grid painted behind the phone home lists.
 class DotField extends StatelessWidget {
-  const DotField({super.key, required this.child});
+  const DotField({super.key, required this.child, this.strength = 0.07});
+
+  /// Faint enough to sit behind a chat transcript.
+  const DotField.chat({super.key, required this.child}) : strength = 0.045;
 
   final Widget child;
+  final double strength;
 
   @override
   Widget build(BuildContext context) => CustomPaint(
-        painter: _DotGridPainter(AppColors.fg1.withValues(alpha: 0.07)),
-        child: child,
+        painter: _DotGridPainter(AppColors.fg1.withValues(alpha: strength)),
+        child: RepaintBoundary(child: child),
       );
 }
 

@@ -39,6 +39,7 @@ import 'agent_records.dart';
 import 'agent_thread_cards.dart';
 import 'agent_view_switcher.dart';
 import 'tasks/tasks_panel.dart';
+import 'mobile_session_home.dart' show DotField;
 
 /// Pick one agent from the directory, as an anchored DROPDOWN.
 ///
@@ -374,7 +375,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   bool _fetchedPaused = false;
   String? _fetchedProfile;
   String? _profileProvider;
-  int? _openTaskCount;
   final GlobalKey _headerKey = GlobalKey();
 
   void _loadLine() {
@@ -385,14 +385,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         if (!a.available) 'Paused',
         if (a.profile != null) a.profile!,
       ].join(' \u00b7 ');
-      final openTasks = a.taskCounts == null
-          ? null
-          : a.tasksIn({'todo', 'in_progress', 'in_review', 'blocked'});
       setState(() {
         _fetchedLine = line;
         _fetchedPaused = !a.available;
         _fetchedProfile = a.profile;
-        _openTaskCount = openTasks;
       });
       final name = a.profile;
       if (name == null) return;
@@ -1366,7 +1362,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               child: Stack(
                 children: [
                   Positioned.fill(
-                      child: kMobile || hideChrome
+                      child: kMobile
+                          ? DotField.chat(child: _viewBody())
+                          : hideChrome
                           ? _viewBody()
                           : TopFadeMask(
                               clear: ChatHeader.overlap - 24,
@@ -1451,12 +1449,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     if (widget.tabHeader) {
       trailing = widget.deskTrailing;
     } else if (kMobile) {
-      trailing = ChatGlassButton(
-        icon: 'task',
-        tooltip: 'Tasks',
-        badge: (_openTaskCount ?? 0) > 0 ? _openTaskCount : null,
-        onTap: _openTasks,
-      );
+      // Tasks lives in the info sheet behind the title.
+      trailing = null;
     } else {
       final switcher = Builder(
         builder: (btnCtx) => ChatGlassButton(
@@ -1493,7 +1487,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           : () => _openViewMenu(
               anchor: kMobile ? null : _headerKey.currentContext),
       titleHint: _view == AgentView.thread ? 'Info' : 'Switch view',
-      onBack: canPop ? _closePage : null,
+      onBack: canPop && !kMobile ? _closePage : null,
       trailing: trailing,
     );
   }

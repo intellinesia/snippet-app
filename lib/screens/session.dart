@@ -71,6 +71,7 @@ import 'file_changes.dart';
 import 'action_list.dart';
 import '../glass.dart' show GlassTopFrame, TopFadeMask;
 import 'mobile_chrome.dart';
+import 'mobile_session_home.dart' show DotField;
 import 'session_panels.dart';
 import 'session_coordination_cards.dart';
 import 'mission_control/widgets/autonomy_panel.dart';
@@ -1409,6 +1410,9 @@ class _SessionScreenState extends State<SessionScreen>
       ? ChatBubbleScope(child: _buildScreen(context))
       : _buildScreen(context);
 
+  Widget _chatBackdrop(Widget body) =>
+      kMobile && !widget.embedded ? DotField.chat(child: body) : body;
+
   Widget _buildScreen(BuildContext context) {
     // Depend on Theme so this rebuilds when the user switches palettes.
     Theme.of(context);
@@ -1439,7 +1443,7 @@ class _SessionScreenState extends State<SessionScreen>
       backgroundColor:
           widget.embedded && !kMobile ? Colors.transparent : readingBg,
       resizeToAvoidBottomInset: false,
-      body: SafeArea(
+      body: _chatBackdrop(SafeArea(
         bottom: false,
         child: Stack(children: [
           Positioned.fill(
@@ -1798,7 +1802,7 @@ class _SessionScreenState extends State<SessionScreen>
             ),
           ),
         ]),
-      ),
+      )),
     );
     final guardedScaffold = DaemonScope(
       client: widget.client,

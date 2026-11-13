@@ -363,7 +363,7 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('phone header shows tasks button and open task badge', (t) async {
+  testWidgets('phone header has no back or tasks button', (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
       final agent = CoordinationAgent.fromJson({
@@ -384,8 +384,8 @@ void main() {
       final tasksBtn = find.byWidgetPredicate(
         (w) => w is ChatGlassButton && w.icon == 'task',
       );
-      expect(tasksBtn, findsOneWidget);
-      expect(find.text('3'), findsOneWidget);
+      expect(tasksBtn, findsNothing);
+      expect(find.byType(ChatGlassButton), findsNothing);
       await t.pumpWidget(const SizedBox());
     } finally {
       debugDefaultTargetPlatformOverride = null;

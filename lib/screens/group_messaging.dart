@@ -21,6 +21,7 @@ import '../chat/agent_cluster.dart';
 import '../chat/chat_style.dart';
 import 'agent_card.dart' show agentRowTime;
 import 'tasks/tasks_panel.dart' show openTasksPage, openTaskCountFor;
+import 'mobile_session_home.dart' show DotField;
 
 /// An `@token` in a group message: the boundary keeps `mail@fable` from
 /// counting as a mention.
@@ -1028,7 +1029,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
               child: Stack(
                 children: [
                   Positioned.fill(
-                      child: kMobile || hideChrome
+                      child: kMobile
+                          ? DotField.chat(child: _body(hideChrome: hideChrome))
+                          : hideChrome
                           ? _body(hideChrome: hideChrome)
                           : TopFadeMask(
                               clear: ChatHeader.overlap - 24,
@@ -1067,7 +1070,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     final docked = kMobile ? null : ShellRequestScope.maybeOf(context);
     final toggleSide = docked?.sidePanel != null ? docked?.toggleSide : null;
     // Docked in a shell tab, the group name toggles the info panel.
-    final Widget? trailing = toggleSide != null
+    final Widget? trailing = toggleSide != null || kMobile
         ? null
         : !kMobile && !widget.embedded && widget.onClose != null
         ? Row(
@@ -1104,7 +1107,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           ));
         },
         titleHint: 'Members',
-        onBack: canGoBack ? _closePage : null,
+        onBack: canGoBack && !kMobile ? _closePage : null,
         trailing: trailing,
       ),
     );
