@@ -19,6 +19,7 @@ import '../../../settings_form.dart';
 import '../../../theme.dart';
 import '../../../widgets.dart';
 import '../../mobile_voice_page.dart';
+import 'ambient_desktop_panel.dart';
 
 final ValueNotifier<AmbientStateEvent?> _emptyAmbientState = ValueNotifier(null);
 
@@ -315,6 +316,7 @@ class _AmbientStageState extends State<AmbientStage>
   late final CurvedAnimation _a = CurvedAnimation(
       parent: widget.animation, curve: Motion.enter, reverseCurve: Motion.exit);
   List<AmbientEvent> _recent = const [];
+  List<AmbientEvent> _recentAll = const [];
   Revalidator? _recentLive;
   late final AnimationController _dragC =
       AnimationController.unbounded(vsync: this)..addListener(_changed);
@@ -335,7 +337,11 @@ class _AmbientStageState extends State<AmbientStage>
     try {
       final events = await widget.client.ambientEvents(limit: 16);
       if (!mounted) return;
-      setState(() => _recent = filterAmbientEvents(events).take(3).toList());
+      final kept = filterAmbientEvents(events);
+      setState(() {
+        _recentAll = kept;
+        _recent = kept.take(3).toList();
+      });
     } catch (_) {}
   }
 
@@ -540,9 +546,85 @@ class _AmbientStageState extends State<AmbientStage>
     );
   }
 
+  Widget _desktopPanel() => ValueListenableBuilder<AmbientVoice?>(
+        valueListenable: AmbientController.instance.voice,
+        builder: (context, voice, _) =>
+            ValueListenableBuilder<AmbientStateEvent?>(
+          valueListenable: voice?.state ?? _emptyAmbientState,
+          builder: (context, event, _) {
+            final word = _caption(event);
+            return AmbientDesktopPanel(
+              stateWord: word,
+              live: _live,
+              color: ambientStateColor(_m.settings, _m.status),
+              canToggle: _canToggle,
+              onToggle: _toggle,
+              onClose: _close,
+              recent: _recentAll,
+              error: kIsWeb ? null : (_m.error ?? _m.status.error),
+            );
+          },
+        ),
+      );
+
+  Widget _buildDesktop(Size size) {
+    final anchor = widget.anchor;
+    const w = AmbientDesktopPanel.width, h = AmbientDesktopPanel.height;
+    final double left = anchor == null
+        ? 12.0
+        : anchor.left.clamp(12.0, math.max(12.0, size.width - w - 12));
+    final double bottom = anchor == null
+        ? 12.0
+        : (size.height - anchor.top + 8).clamp(12.0, math.max(12.0, size.height - 120));
+    final still = reduceMotion(context);
+    final panel = ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: size.height - bottom - 12),
+      child: _desktopPanel(),
+    );
+    return CallbackShortcuts(
+      bindings: {const SingleActivator(LogicalKeyboardKey.escape): _close},
+      child: Focus(
+        autofocus: true,
+        child: Material(
+          type: MaterialType.transparency,
+          child: Stack(children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _close,
+                child: AnimatedBuilder(
+                  animation: _a,
+                  builder: (_, __) => ColoredBox(
+                      color: Colors.black
+                          .withValues(alpha: 0.06 * _a.value.clamp(0.0, 1.0))),
+                ),
+              ),
+            ),
+            Positioned(
+              left: left,
+              bottom: bottom,
+              width: w,
+              height: math.min(h, size.height - bottom - 12),
+              child: FadeTransition(
+                opacity: _a,
+                child: still
+                    ? panel
+                    : ScaleTransition(
+                        alignment: Alignment.bottomLeft,
+                        scale: Tween(begin: 0.96, end: 1.0).animate(_a),
+                        child: panel),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    if (!kMobile) return _buildDesktop(size);
     final wide = size.width >= 720;
     final anchor = wide ? widget.anchor : null;
     final still = reduceMotion(context);
