@@ -28,9 +28,13 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         key: ValueKey('body-${t.key}'),
         color: kMobile ? AppColors.bg : Colors.transparent,
         child: _rightTabBody(
-            t.readout!,
-            origin == null ? null : _macSessionStatuses[origin]?.state,
-            origin == null ? null : _macSessionControls[origin]),
+          t.readout!,
+          origin == null ? null : _macSessionStatuses[origin]?.state,
+          origin == null ? null : _macSessionControls[origin],
+          deskTrailing: visible && t == _activeTab && t.readout!.isAgent
+              ? _agentHeaderTrailing(t)
+              : null,
+        ),
       );
     }
     if (t.isDraft) {
@@ -559,11 +563,52 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 
   Widget _emptyPaneHint() => const EmptyPaneHint();
 
+  Widget _agentHeaderTrailing(_ShellTab t) {
+    final tools = buildShellRailTools(
+      activeTab: t,
+      macSessionStatus: _macSessionStatuses[t.key],
+      isRightPanelActive: _rightPanelActive,
+      onToggleRightPanel: _toggleRightPanel,
+      onSessionAction: _dispatchSessionAction,
+      onOpenGoalPopover: _openGoalPopover,
+      onAgentAction: _agentAction,
+    );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ...tools,
+        if (_activeAgent != null && _agentHasPanelTabs) ...[
+          if (tools.isNotEmpty) const SizedBox(width: 4),
+          Tooltip(
+            message: _panelHidden ? 'Show panel' : 'Hide panel',
+            child: Material(
+              color: _panelHidden ? Colors.transparent : AppColors.surface2,
+              borderRadius: BorderRadius.circular(8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: _togglePanel,
+                child: SizedBox.square(
+                  dimension: 30,
+                  child: Center(
+                    child: AppIcon('panel-right',
+                        size: 16,
+                        color: _panelHidden ? AppColors.fg3 : AppColors.fg1),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _rightTabBody(
     _RightTab t,
     HarnessState? s,
-    _MacSessionControls? controls,
-  ) =>
+    _MacSessionControls? controls, {
+    Widget? deskTrailing,
+  }) =>
       RightTabBody(
         tab: t,
         state: s,
@@ -572,6 +617,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         activeSessionId: _activeTab?.sessionId,
         onClose: () => _closeRightTab(t.key),
         onOpenFile: _openFileFromRightPane,
+        deskTrailing: deskTrailing,
       );
 
   Widget _mainPane({VoidCallback? onMenu}) => MainPaneView(

@@ -495,6 +495,7 @@ class RightTabBody extends StatelessWidget {
   final String? activeSessionId;
   final VoidCallback? onClose;
   final void Function(String path, String name)? onOpenFile;
+  final Widget? deskTrailing;
 
   const RightTabBody({
     super.key,
@@ -505,6 +506,7 @@ class RightTabBody extends StatelessWidget {
     required this.activeSessionId,
     this.onClose,
     this.onOpenFile,
+    this.deskTrailing,
   });
 
   @override
@@ -536,6 +538,7 @@ class RightTabBody extends StatelessWidget {
         client: client,
         embedded: true,
         tabHeader: true,
+        deskTrailing: deskTrailing,
       );
     }
     return switch (tab.panel) {
