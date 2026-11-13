@@ -1149,8 +1149,24 @@ class CoordinationAgent {
   /// Per-agent ceiling before compaction; null follows the model's window.
   final int? maxContextTokens;
 
+  final Map<String, dynamic> _raw;
+
+  /// The same agent with its preview replaced, e.g. by its direct thread's.
+  CoordinationAgent withLastMessage(AgentLastMessage? m) =>
+      CoordinationAgent.fromJson({
+        ..._raw,
+        'last_message': m == null
+            ? null
+            : {
+                'text': m.text,
+                'from': m.fromUser ? 'user' : 'agent',
+                'at': m.at?.toUtc().toIso8601String(),
+              },
+      });
+
   CoordinationAgent.fromJson(Map<String, dynamic> j)
-      : id = j['id'] as String? ?? '',
+      : _raw = j,
+        id = j['id'] as String? ?? '',
         color = j['color'] as String?,
         shape = j['shape'] as String?,
         profile = (j['profile'] as String?)?.trim().isEmpty ?? true

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../api.dart';
@@ -11,6 +13,7 @@ import 'group_messaging.dart';
 import 'mission_control_card.dart';
 import 'shell_nav.dart';
 import '../pull_refresh.dart';
+import '../message_reactions.dart' show isReactionEvent;
 import '../motion.dart';
 import '../swr.dart';
 
@@ -253,15 +256,62 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       setState(() {
         // Mission Control is excluded: it has its own pinned chat, so it is not
         // one of the workers this panel lists.
-        agents = all.where((a) => !a.isMissionControl).toList();
+        agents = [
+          for (final a in all)
+            if (!a.isMissionControl)
+              _dmLast == null ? a : a.withLastMessage(_dmLast![a.id]),
+        ];
         _mcLast = all.where((a) => a.isMissionControl).firstOrNull?.lastMessage;
         error = null;
       });
+      unawaited(_loadDmLast());
     } catch (e) {
       if (mounted) setState(() => error = '$e');
     } finally {
       if (mounted) setState(() => loading = false);
     }
+  }
+
+  /// Agent id to the newest message in your direct thread with it. The
+  /// daemon's own preview also counts session turns ("Posted."), which is not
+  /// what the list should say.
+  Map<String, AgentLastMessage?>? _dmLast;
+
+  Future<void> _loadDmLast() async {
+    try {
+      final threads = await widget.client.directThreads();
+      final pages = await Future.wait([
+        for (final t in threads)
+          if (t.peerKind == 'agent')
+            widget.client
+                .agentThreadPage(
+                    peerId: t.peerId,
+                    afterSequence: t.lastSequence > 8 ? t.lastSequence - 8 : 0,
+                    limit: 8)
+                .then((p) => (t.peerId, p.events),
+                    onError: (_) => (t.peerId, const <CoordinationEvent>[])),
+      ]);
+      final next = <String, AgentLastMessage?>{};
+      for (final (id, events) in pages) {
+        final shown = [
+          for (final e in events)
+            if (!isReactionEvent(e) && e.body.trim().isNotEmpty) e
+        ];
+        final e = shown.lastOrNull;
+        next[id] = e == null
+            ? null
+            : AgentLastMessage(
+                text: e.body.trim().split(RegExp(r'\s+')).join(' '),
+                fromUser: e.actorKind == 'human',
+                at: DateTime.tryParse(e.createdAt),
+              );
+      }
+      if (!mounted) return;
+      setState(() {
+        _dmLast = next;
+        agents = [for (final a in agents) a.withLastMessage(next[a.id])];
+      });
+    } catch (_) {}
   }
 
   String get effectiveQuery {
