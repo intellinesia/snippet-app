@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../ambient/ambient_model.dart';
+import '../../../ambient/live_caption.dart';
 import '../../../ambient/controller.dart';
 import '../../../ambient/voice.dart';
 import '../../../api.dart';
@@ -20,6 +21,51 @@ import '../../../widgets.dart';
 import '../../mobile_voice_page.dart';
 
 final ValueNotifier<AmbientStateEvent?> _emptyAmbientState = ValueNotifier(null);
+
+/// The words being heard right now (or the last finished utterance) under the status line.
+class AmbientHeardLine extends StatelessWidget {
+  const AmbientHeardLine({super.key, required this.wide, this.feed});
+
+  final bool wide;
+  final LiveCaptionFeed? feed;
+
+  @override
+  Widget build(BuildContext context) {
+    final f = feed ?? LiveCaptionFeed.instance;
+    final motion =
+        reduceMotion(context) ? Duration.zero : Motion.fast;
+    return AnimatedSize(
+      duration: motion,
+      child: ValueListenableBuilder<String?>(
+        valueListenable: f.text,
+        builder: (context, live, _) =>
+            ValueListenableBuilder<String?>(
+          valueListenable: f.lastFinal,
+          builder: (context, last, _) {
+            final shown = live ?? last;
+            return AnimatedSwitcher(
+              duration: motion,
+              child: shown == null
+                  ? const SizedBox.shrink(key: ValueKey('none'))
+                  : Text(
+                      '\u201C$shown\u201D',
+                      key: ValueKey(shown),
+                      textAlign:
+                          wide ? TextAlign.start : TextAlign.center,
+                      maxLines: wide ? 2 : 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(wide ? 13 : 16,
+                          color: live != null
+                              ? AppColors.fg1
+                              : AppColors.fg2),
+                    ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
 
 class _OrbDots {
   _OrbDots(this.x, this.y, this.size, this.alpha, this.depth);
@@ -424,6 +470,7 @@ class _AmbientStageState extends State<AmbientStage>
                 _toggleControl(),
               ],
             ),
+            AmbientHeardLine(wide: true),
             const SizedBox(height: 10),
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -448,6 +495,7 @@ class _AmbientStageState extends State<AmbientStage>
             Center(child: orbWidget),
             const SizedBox(height: 12),
             _statusText(fontSize: 15, align: TextAlign.center),
+            AmbientHeardLine(wide: false),
             const SizedBox(height: 20),
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,

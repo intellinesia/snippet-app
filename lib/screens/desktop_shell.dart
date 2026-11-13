@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../ambient/controller.dart';
-import '../ambient/live_caption.dart';
 import '../api.dart';
 import '../github_models.dart';
 import '../swr.dart';
@@ -761,7 +760,6 @@ class _DesktopShellState extends State<DesktopShell>
         return;
       }
       if (kind == 'ambient_live') {
-        LiveCaptionFeed.instance.apply(frame);
         return;
       }
       if (kind == 'notification' && _active != null) {
