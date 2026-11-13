@@ -194,7 +194,7 @@ class TopWorkspaceTabChip extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: status == 'running'
-                    ? AppColors.accent
+                    ? AppColors.fg2
                     : Colors.transparent,
                 border: status == 'running'
                     ? null
