@@ -185,14 +185,17 @@ class _MobileShellState extends State<MobileShell>
             ),
           ),
         Positioned.fill(
-          child: IgnorePointer(
-            ignoring: !chatsVisible,
-            child: FractionalTranslation(
-              translation: Offset(_exitX * _v.value, 0),
-              child: Material(
-                color: AppColors.bg,
-                child: SafeArea(
-                  child: sidebar,
+          child: Offstage(
+            offstage: !chatsVisible && _v.value == 1.0,
+            child: IgnorePointer(
+              ignoring: !chatsVisible,
+              child: FractionalTranslation(
+                translation: Offset(_exitX * _v.value, 0),
+                child: Material(
+                  color: AppColors.bg,
+                  child: SafeArea(
+                    child: sidebar,
+                  ),
                 ),
               ),
             ),

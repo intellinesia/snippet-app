@@ -150,7 +150,16 @@ class SidebarState extends State<Sidebar> {
   /// last row clears the glass.
   double _barHeight = 0;
   double get _bottomClearance => _barHeight + M.gutter;
-  double get _scrollBottomPad => _selecting ? 24.0 : _bottomClearance;
+
+  bool get _showMobileBottomBar =>
+      !_selecting &&
+      widget.mobileHome != MobileHome.tasks &&
+      !(widget.mobileHome == MobileHome.agents && widget.agent != null) &&
+      !(widget.mobileHome == MobileHome.settings &&
+          widget.settingsSection != null);
+
+  double get _scrollBottomPad =>
+      _selecting ? 24.0 : (_showMobileBottomBar ? _bottomClearance : 0.0);
 
   /// Desktop search in section headers.
   final TextEditingController _desktopChatsSearchCtl = TextEditingController();
@@ -304,7 +313,7 @@ class SidebarState extends State<Sidebar> {
                     ),
                 ],
               ),
-              if (!_selecting)
+              if (_showMobileBottomBar)
                 Positioned(
                   left: 0,
                   right: 0,
@@ -313,9 +322,7 @@ class SidebarState extends State<Sidebar> {
                     home: widget.mobileHome,
                     onHome: widget.onMobileHome,
                     onNewSession: widget.onNewSession,
-                    onNewAgentOrGroup: (ctx) => (_agentsPanelKey.currentState ??
-                            _agentsMirrorKey.currentState)
-                        ?.openCreateMenu(ctx),
+                    showNewSession: !_agentsList,
                     workingCount: widget.mobileHome == MobileHome.chats
                         ? _workingCount
                         : 0,
@@ -372,6 +379,8 @@ class SidebarState extends State<Sidebar> {
             _mobileChatsHeader(
               hasClient,
               title: showAgents ? 'Agents' : 'Sessions',
+              agents: showAgents,
+              agentsMirror: agentsMirror,
             ),
             Expanded(
               child: !hasClient
@@ -585,15 +594,19 @@ class SidebarState extends State<Sidebar> {
     if (override != null) return override;
     var count = 0;
     for (final s in widget.sessions ?? const <SessionInfo>[]) {
-      if (isDedicatedMcSession(s.id) &&
-          (s.needsInput || s.attention != null)) {
+      if (!s.settled && (s.needsInput || s.attention != null)) {
         count++;
       }
     }
     return count;
   }
 
-  Widget _mobileChatsHeader(bool hasClient, {String title = 'Sessions'}) {
+  Widget _mobileChatsHeader(
+    bool hasClient, {
+    String title = 'Sessions',
+    bool agents = false,
+    bool agentsMirror = false,
+  }) {
     if (_selecting) {
       final n = _selected.length;
       return Padding(
@@ -623,113 +636,43 @@ class SidebarState extends State<Sidebar> {
       listenable: AmbientController.instance,
       builder: (context, _) {
         final listeningOn =
-            widget.listening || AmbientController.instance.running;
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: Row(children: [
-                _mcHeaderButton(),
-                const Spacer(),
-                if (listeningOn) ...[
-                  _listeningPill(),
-                  const SizedBox(width: 10),
-                ],
-                RoundBtn(
-                  icon: 'ellipsis',
-                  tooltip: 'More',
+            !agents && (widget.listening || AmbientController.instance.running);
+        return MobileHomeHeader(
+          title: title,
+          mcBadgeCount: _mcAttentionCount,
+          onMc: widget.onOpenMissionControl,
+          listening: listeningOn,
+          trailing: [
+            if (agents)
+              Builder(
+                builder: (btnCtx) => RoundBtn(
+                  icon: 'plus',
+                  tooltip: 'New agent or group',
                   size: 40,
                   iconSize: 18,
-                  onTap: widget.onMobileMenu,
+                  onTap: !hasClient
+                      ? null
+                      : () => (agentsMirror
+                              ? _agentsMirrorKey.currentState
+                              : _agentsPanelKey.currentState)
+                          ?.openCreateMenu(btnCtx, above: false),
                 ),
-              ]),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
-              child: Text(
-                title,
-                style: sans(28, weight: W.strong, color: AppColors.fg1)
-                    .copyWith(letterSpacing: -0.5),
+              )
+            else
+              RoundBtn(
+                icon: 'more-horizontal',
+                tooltip: 'More',
+                size: 40,
+                iconSize: 18,
+                onTap: widget.onMobileMenu,
               ),
-            ),
           ],
         );
       },
     );
   }
 
-  Widget _mcHeaderButton() {
-    final count = _mcAttentionCount;
-    return Stack(clipBehavior: Clip.none, children: [
-      RoundBtn(
-        tooltip: 'Mission Control',
-        size: 40,
-        onTap: widget.onOpenMissionControl,
-        child: MochiIcon(color: AppColors.fg1, size: 22),
-      ),
-      if (count > 0)
-        Positioned(
-          right: -2,
-          top: -2,
-          child: IgnorePointer(
-            child: Container(
-              constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                color: AppColors.fg1,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                '$count',
-                style:
-                    sans(11, weight: W.label, color: AppColors.bg, height: 1),
-              ),
-            ),
-          ),
-        ),
-    ]);
-  }
-
-  Widget _listeningPill() {
-    const heights = [5.0, 11.0, 7.0, 9.0];
-    return Container(
-      height: 26,
-      padding: const EdgeInsets.symmetric(horizontal: 9),
-      decoration: BoxDecoration(
-        color: AppColors.ok.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        SizedBox(
-          height: 12,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              for (var i = 0; i < heights.length; i++) ...[
-                if (i > 0) const SizedBox(width: 2),
-                Container(
-                  width: 2,
-                  height: heights[i],
-                  decoration: BoxDecoration(
-                    color: AppColors.ok,
-                    borderRadius: BorderRadius.circular(1),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text('Listening', style: sans(12, color: AppColors.ok, height: 1)),
-      ]),
-    );
-  }
-
-  Widget _mobileSettingsHeader() => MobileBackBar(
+  Widget _mobileSettingsHeader() => MobileHomeHeader(
         title: 'Settings',
         onBack: () => Navigator.maybePop(context),
       );

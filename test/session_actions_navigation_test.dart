@@ -74,16 +74,25 @@ void main() {
         ));
         await _pump(tester);
         expect(find.byType(SessionScreen), findsOneWidget);
-        expect(find.byTooltip('Tasks'), findsNothing);
         expect(find.text('Tasks'), findsNothing);
         expect(find.byTooltip('Shell'), findsNothing);
-        if (!desktop) {
+        if (desktop) {
+          expect(find.byTooltip('Tasks'), findsNothing);
+        } else {
+          expect(find.byType(MobileMissionBar), findsOneWidget);
+          expect(find.byTooltip('Tasks'), findsOneWidget);
           await tester.tap(find.text('Mission Control').first);
           await _pump(tester);
           expect(find.text('Actions'), findsOneWidget);
           expect(find.text('Scheduled'), findsOneWidget);
-          expect(find.text('Tasks'), findsNothing);
-          expect(find.byTooltip('Tasks'), findsNothing);
+          expect(
+              find.descendant(
+                  of: find.byType(Drawer), matching: find.text('Tasks')),
+              findsNothing);
+          expect(
+              find.descendant(
+                  of: find.byType(Drawer), matching: find.byTooltip('Tasks')),
+              findsNothing);
         }
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
@@ -101,9 +110,9 @@ void main() {
     await tester.binding.handlePopRoute();
     await _pump(tester);
     final home = tester.widget<MobileShell>(find.byType(MobileShell));
-    expect(home.chatsOpen, isFalse);
+    expect(home.chatsOpen, isTrue);
     expect(home.canPopRoute, isFalse);
-    expect(find.byType(MobileTopBar), findsWidgets);
+    expect(find.byType(MobileHomeHeader), findsWidgets);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
     debugDefaultTargetPlatformOverride = null;
