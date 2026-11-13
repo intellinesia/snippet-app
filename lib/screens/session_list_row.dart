@@ -125,8 +125,10 @@ class _SessionGroupHeaderState extends State<SessionGroupHeader> {
           ],
         ]),
       ),
-      const SizedBox(width: 6),
-      chevron,
+      if (widget.onToggle != null) ...[
+        const SizedBox(width: 6),
+        chevron,
+      ],
     ]);
 
     final row = kMobile
@@ -158,7 +160,9 @@ class _SessionGroupHeaderState extends State<SessionGroupHeader> {
         child: MouseRegion(
           onEnter: (_) => setState(() => _hover = true),
           onExit: (_) => setState(() => _hover = false),
-          child: kMobile
+          child: widget.onToggle == null
+              ? row
+              : kMobile
               ? GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: widget.onToggle,

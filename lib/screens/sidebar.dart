@@ -139,7 +139,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   bool _selecting = false;
   static bool _settledOpen = false;
   final Set<String> _selected = {};
-  final Set<String> _collapsedGroups = {};
 
   /// Phone search: a filter field at the top of each tab.
   final TextEditingController _searchCtl = TextEditingController();
@@ -1030,7 +1029,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     );
   }
 
-  static const _needsYouGroupKey = '__needs_you__';
 
   /// Rows under their project's header, with cross-project Needs you first on
   /// phone when not filtering.
@@ -1053,31 +1051,22 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           if (!sessionNeedsYou(s)) s,
       ];
       if (needsYouRows.isNotEmpty) {
-        final collapsed = _collapsedGroups.contains(_needsYouGroupKey);
         out.add(SessionGroupHeader(
           'Needs you',
           count: needsYouRows.length,
-          collapsed: collapsed,
           needsYou: true,
-          onToggle: () => setState(() {
-            if (!_collapsedGroups.remove(_needsYouGroupKey)) {
-              _collapsedGroups.add(_needsYouGroupKey);
-            }
-          }),
         ));
-        if (!collapsed) {
-          for (var i = 0; i < needsYouRows.length; i++) {
-            out.add(Appear(
-              key: ValueKey('chat-${needsYouRows[i].id}'),
-              index: n++,
-              since: _chatsShownAt,
-              child: _listRow(
-                needsYouRows[i],
-                divider: kMobile && i + 1 < needsYouRows.length,
-                showProject: true,
-              ),
-            ));
-          }
+        for (var i = 0; i < needsYouRows.length; i++) {
+          out.add(Appear(
+            key: ValueKey('chat-${needsYouRows[i].id}'),
+            index: n++,
+            since: _chatsShownAt,
+            child: _listRow(
+              needsYouRows[i],
+              divider: kMobile && i + 1 < needsYouRows.length,
+              showProject: true,
+            ),
+          ));
         }
       }
     } else {
@@ -1110,26 +1099,19 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       final first = rows.first;
       var label = projectLabel(first);
       if ((labelCount[label] ?? 0) > 1) label = _projectPath(first);
-      final collapsed = _collapsedGroups.contains(k);
       final needsYou = rows.any(sessionNeedsYou);
       out.add(SessionGroupHeader(
         label,
         count: rows.length,
-        collapsed: collapsed,
         needsYou: needsYou,
-        onToggle: () => setState(() {
-          if (!_collapsedGroups.remove(k)) _collapsedGroups.add(k);
-        }),
       ));
-      if (!collapsed) {
-        for (var i = 0; i < rows.length; i++) {
-          out.add(Appear(
-            key: ValueKey('chat-${rows[i].id}'),
-            index: n++,
-            since: _chatsShownAt,
-            child: _listRow(rows[i], divider: kMobile && i + 1 < rows.length),
-          ));
-        }
+      for (var i = 0; i < rows.length; i++) {
+        out.add(Appear(
+          key: ValueKey('chat-${rows[i].id}'),
+          index: n++,
+          since: _chatsShownAt,
+          child: _listRow(rows[i], divider: kMobile && i + 1 < rows.length),
+        ));
       }
     }
     return out;
