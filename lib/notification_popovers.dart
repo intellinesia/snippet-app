@@ -32,11 +32,11 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
 
   bool get _held => _pointer || _cardHold || _expanded;
 
-  // Clears the app bar (56 on phones, 44 on desktop panes) so toasts never cover header controls.
-  static double get _anchorTop => kMobile ? M.appBarHeight + S.s12 : 44 + S.s8;
+  // Slides over the header strip on phones so the 28px page title stays clear.
+  static double get _anchorTop => kMobile ? S.s4 : 44 + S.s8;
 
   Duration _life(Map<String, dynamic> p) {
-    final base = kMobile ? 5 : 7;
+    final base = kMobile ? 4 : 7;
     return Duration(seconds: needsYou(p) ? base * 3 : base);
   }
 
@@ -252,14 +252,19 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
                     opacity: animation,
                     child: SlideTransition(
                       position: Tween<Offset>(
-                              begin: const Offset(0, -.08), end: Offset.zero)
+                              begin: kMobile
+                                  ? const Offset(0, -.2)
+                                  : const Offset(0, -.08),
+                              end: Offset.zero)
                           .animate(animation),
-                      child: ScaleTransition(
-                        alignment:
-                            kMobile ? Alignment.topCenter : Alignment.topRight,
-                        scale: Tween(begin: .96, end: 1.0).animate(animation),
-                        child: child,
-                      ),
+                      child: kMobile
+                          ? child
+                          : ScaleTransition(
+                              alignment: Alignment.topRight,
+                              scale: Tween(begin: .96, end: 1.0)
+                                  .animate(animation),
+                              child: child,
+                            ),
                     ),
                   ),
                   child: items.isEmpty
