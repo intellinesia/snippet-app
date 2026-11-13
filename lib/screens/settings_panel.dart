@@ -25,6 +25,7 @@ import 'web_search_screen.dart';
 import 'accounts_screen.dart';
 import '../motion.dart';
 import '../desktop_layout.dart';
+import '../wake_models.dart';
 import 'memory_screen.dart';
 import 'wakes_screen.dart';
 
@@ -239,9 +240,7 @@ class SettingsPanelState extends State<SettingsPanel> {
 
   Future<void> _saveInstances(
       void Function(List<Instance> items) change) async {
-    final items = await InstanceStore().load();
-    change(items);
-    await InstanceStore().save(items);
+    final items = await _updateStoredInstances(change);
     if (!mounted) return;
     setState(() => _instances
       ..clear()
@@ -249,13 +248,7 @@ class SettingsPanelState extends State<SettingsPanel> {
   }
 
   void _syncInstances(List<Instance> items) {
-    final same = items.length == _instances.length &&
-        [
-          for (var i = 0; i < items.length; i++)
-            items[i].url == _instances[i].url &&
-                items[i].label == _instances[i].label
-        ].every((x) => x);
-    if (!same) {
+    if (!_instancesMatch(_instances, items)) {
       _instances
         ..clear()
         ..addAll(items);
@@ -269,14 +262,13 @@ class SettingsPanelState extends State<SettingsPanel> {
       GlobalKey<InferenceProfilesScreenState>();
   final GlobalKey<RecurringScreenState> _recurringKey =
       GlobalKey<RecurringScreenState>();
+  final GlobalKey<SettingsSectionViewState> _deskSectionKey =
+      GlobalKey<SettingsSectionViewState>();
 
   bool _addingMachine = false;
   final TextEditingController _addMachinePaste = TextEditingController();
   bool _addMachineBusy = false;
   String? _addMachineError;
-
-  bool _modelsEditing = false;
-  bool _recurringAdding = false;
 
   // Phone home row values, fetched once and shown beside the chevrons.
   int? _profileCount;
@@ -316,6 +308,10 @@ class SettingsPanelState extends State<SettingsPanel> {
     Future.delayed(Motion.base, () {
       if (!mounted || widget.createOnOpen != page) return;
       widget.onCreateHandled?.call();
+      if (!kMobile) {
+        _deskSectionKey.currentState?.triggerCreate(page);
+        return;
+      }
       switch (page) {
         case SettingsPage.general:
           _addMachine();
@@ -429,16 +425,11 @@ class SettingsPanelState extends State<SettingsPanel> {
   }
 
   Future<void> _confirmRemove(Instance inst) async {
-    final ok = await confirmAction(
-      context,
-      title: 'Remove instance?',
-      body:
-          '${inst.label}\n\nRemoves the saved connection from this app. The machine and its sessions are untouched.',
-      confirmLabel: 'Remove',
-    );
-    if (!ok) return;
+    if (!await _confirmRemoveInstance(context, inst)) return;
     widget.onRemove(inst);
-    setState(() => _instances.removeWhere((e) => e.url == inst.url));
+    if (mounted) {
+      setState(() => _instances.removeWhere((e) => e.url == inst.url));
+    }
   }
 
   @override
@@ -812,14 +803,7 @@ class SettingsPanelState extends State<SettingsPanel> {
       _addMachineError = null;
     });
     try {
-      final parsed = parseConnection(raw);
-      if (parsed == null) {
-        throw 'That is not a valid link. Run "snippet serve --enable" on the other machine, then "snippet serve --status", and paste the link it prints.';
-      }
-      final (url, token) = parsed;
-      final cfg = await DaemonClient(url, token).getConfig();
-      final name = cfg.hostname.isNotEmpty ? cfg.hostname : hostOf(url);
-      final inst = Instance(name: name, url: url, token: token);
+      final inst = await _connectMachineFromLink(raw);
       if (!mounted) return;
       setState(() {
         _addMachineBusy = false;
@@ -849,53 +833,15 @@ class SettingsPanelState extends State<SettingsPanel> {
 
   Future<void> _commitRename(Instance inst) async {
     final newName = _renameController.text.trim();
-    if (newName.isEmpty) {
-      setState(() => _renamingUrl = null);
-      return;
-    }
     setState(() => _renamingUrl = null);
-    await _saveInstances((items) {
-      final idx = items.indexWhere((e) => e.url == inst.url);
-      if (idx >= 0) {
-        items[idx] = Instance(name: newName, url: inst.url, token: inst.token);
-      }
-    });
+    if (newName.isEmpty) return;
+    await _saveInstances((items) => _renameStoredInstance(items, inst, newName));
     widget.onRename?.call(inst, newName);
   }
 
   void _selectInstance(Instance i) {
     widget.onSelect?.call(i);
   }
-
-  String _pageTitle(SettingsPage page) => switch (page) {
-        SettingsPage.general => 'General',
-        SettingsPage.appearance => 'Appearance',
-        SettingsPage.models => 'Profiles',
-        SettingsPage.routing => 'Routing',
-        SettingsPage.memory => 'Memory',
-        SettingsPage.usage => 'Usage',
-        SettingsPage.vault => 'Vault',
-        SettingsPage.scheduled => 'Scheduled',
-        SettingsPage.wakes => 'Wakes',
-        SettingsPage.voice => 'Voice',
-        SettingsPage.webSearch => 'Web search',
-        SettingsPage.accounts => 'Accounts',
-      };
-
-  Widget? _pageAction(SettingsPage page) => switch (page) {
-        SettingsPage.general => _addingMachine
-            ? null
-            : HeaderAction('Add machine', onTap: _addMachine),
-        SettingsPage.models => _modelsEditing
-            ? null
-            : HeaderAction('Add profile',
-                onTap: () => _modelsKey.currentState?.addProfile()),
-        SettingsPage.scheduled => _recurringAdding
-            ? null
-            : HeaderAction('New job',
-                onTap: () => _recurringKey.currentState?.add()),
-        _ => null,
-      };
 
   /// One row in the desktop settings rail.
   Widget _settingsNavRow(SettingsPage page, String icon, String label) {
@@ -907,12 +853,10 @@ class SettingsPanelState extends State<SettingsPanel> {
         borderRadius: BorderRadius.circular(9),
         child: InkWell(
           borderRadius: BorderRadius.circular(9),
-          onTap: () => setState(() {
-            _page = page;
-            _addingMachine = false;
-            _modelsEditing = false;
-            _renamingUrl = null;
-          }),
+          onTap: () {
+            setState(() => _page = page);
+            _deskSectionKey.currentState?.resetTransient();
+          },
           child: Container(
             height: 34,
             padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -946,7 +890,10 @@ class SettingsPanelState extends State<SettingsPanel> {
               color: _page == page ? AppColors.surface3 : Colors.transparent,
               borderRadius: BorderRadius.circular(R.sm),
               child: InkWell(
-                onTap: () => setState(() => _page = page),
+                onTap: () {
+                  setState(() => _page = page);
+                  _deskSectionKey.currentState?.resetTransient();
+                },
                 borderRadius: BorderRadius.circular(R.sm),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -970,313 +917,41 @@ class SettingsPanelState extends State<SettingsPanel> {
     );
   }
 
-  static const _plainPages = {
-    SettingsPage.general,
-    SettingsPage.appearance,
-    SettingsPage.routing,
-    SettingsPage.usage,
-    SettingsPage.voice,
-    SettingsPage.webSearch,
-  };
-
-  String _pageSubtitle(SettingsPage page) => switch (page) {
-        SettingsPage.general =>
-          'Machines this app connects to, and how sessions behave.',
-        SettingsPage.appearance =>
-          'Theme palette, accent colour, UI typeface and code font saved on this device.',
-        SettingsPage.routing =>
-          'Which model does each kind of work, and who steps in when it hits a limit.',
-        SettingsPage.usage =>
-          'Rate limits and token usage across your providers.',
-        SettingsPage.voice => 'Voice notes, transcription and speech services.',
-        SettingsPage.webSearch => 'Let agents search the web and read pages.',
-        _ => '',
-      };
-
   Widget _desktopContent() {
-    final page = _page;
-    final Widget child;
-    if (_plainPages.contains(page)) {
-      final action = _pageAction(page);
-      final addingMachine = page == SettingsPage.general && _addingMachine;
-      child = SettingsColumn(children: [
-        SettingsHeader(
-          title: addingMachine ? 'Connect a machine' : _pageTitle(page),
-          subtitle: addingMachine
-              ? 'Add another machine running snippet serve.'
-              : _pageSubtitle(page),
-          back: addingMachine
-              ? SettingsBack('General', onTap: _closeAddMachine)
-              : null,
-          actions: [if (action != null) action],
-        ),
-        const SizedBox(height: S.s16),
-        ..._plainBody(page),
-      ]);
-    } else {
-      child = _pageBody();
-    }
-    return Swap(stateKey: page, fill: true, child: child);
-  }
-
-  List<Widget> _plainBody(SettingsPage page) => switch (page) {
-        SettingsPage.general => _nativeGeneral(),
-        SettingsPage.appearance => [
-            const AppearanceScreen(embedded: true),
-          ],
-        SettingsPage.routing => [
-            RoutingScreen(client: widget.client, embedded: true)
-          ],
-        SettingsPage.usage => [
-            UsageScreen(client: widget.client, embedded: true)
-          ],
-        SettingsPage.voice => [
-            VoiceScreen(client: widget.client, embedded: true)
-          ],
-        SettingsPage.webSearch => [
-            WebSearchScreen(client: widget.client, embedded: true)
-          ],
-        _ => const [],
-      };
-
-  Widget _pageBody() {
-    return switch (_page) {
-      SettingsPage.general => _generalPage(),
-      SettingsPage.appearance => const AppearanceScreen(embedded: true),
-      SettingsPage.models => InferenceProfilesScreen(
-          key: _modelsKey,
-          client: widget.client,
-          embedded: true,
-          onEditingChanged: (editing) =>
-              setState(() => _modelsEditing = editing),
-        ),
-      SettingsPage.routing => RoutingScreen(
-          client: widget.client,
-          embedded: true,
-        ),
-      SettingsPage.voice => VoiceScreen(
-          client: widget.client,
-          embedded: true,
-        ),
-      SettingsPage.webSearch => WebSearchScreen(
-          client: widget.client,
-          embedded: true,
-        ),
-      SettingsPage.accounts => AccountsScreen(
-          client: widget.client,
-          embedded: true,
-        ),
-      SettingsPage.memory => MemoryScreen(
-          client: widget.client,
-          embedded: true,
-        ),
-      SettingsPage.usage => UsageScreen(
-          client: widget.client,
-          embedded: true,
-        ),
-      SettingsPage.vault => VaultScreen(
-          key: _vaultKey,
-          client: widget.client,
-          embedded: true,
-        ),
-      SettingsPage.wakes => WakesScreen(
-          client: widget.client,
-          embedded: true,
-        ),
-      SettingsPage.scheduled => RecurringScreen(
-          key: _recurringKey,
-          client: widget.client,
-          embedded: true,
-          onAddingChanged: (adding) =>
-              setState(() => _recurringAdding = adding),
-        ),
-    };
-  }
-
-  /// The General section's content.
-  bool? _manual;
-
-  Future<void> _loadManual() async {
-    try {
-      final c = await widget.client.getConfig();
-      if (mounted) setState(() => _manual = c.manualApproval);
-    } catch (_) {}
-  }
-
-  Future<void> _setManual(bool on) async {
-    final before = _manual;
-    setState(() => _manual = on);
-    try {
-      await widget.client.setManualApproval(on);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _manual = before);
-      toast(context, '$e', danger: true);
-    }
+    return SettingsSectionView(
+      key: _deskSectionKey,
+      client: widget.client,
+      instances: _instances,
+      active: widget.active,
+      page: _page,
+      onRemove: (inst) {
+        widget.onRemove(inst);
+        if (mounted) {
+          setState(() => _instances.removeWhere((e) => e.url == inst.url));
+        }
+      },
+      onRename: widget.onRename,
+      onSelect: widget.onSelect,
+      onAdd: widget.onAdd,
+      onSelectPage: (page) => setState(() => _page = page),
+    );
   }
 
   Widget _machineMenu(Instance i, {bool connect = false}) => Builder(
         builder: (anchor) => IconBtn('more-horizontal',
             size: kMobile ? M.minTarget : 28,
             iconSize: 16,
-            tooltip: 'Machine actions', onTap: () async {
-          final picked = await showAppMenu<String>(context,
-              anchor: anchor,
-              below: true,
-              alignEnd: true,
-              minWidth: 160,
-              items: [
-                if (connect) appMenuItem(value: 'connect', label: 'Connect'),
-                appMenuItem(value: 'rename', label: 'Rename'),
-                appMenuItem(value: 'remove', label: 'Remove', danger: true),
-              ]);
-          if (picked == 'connect') _selectInstance(i);
-          if (picked == 'rename') _startRename(i);
-          if (picked == 'remove') _confirmRemove(i);
-        }),
+            tooltip: 'Machine actions',
+            onTap: () => _showMachineMenu(
+                  context,
+                  anchor: anchor,
+                  instance: i,
+                  connect: connect,
+                  onSelect: () => _selectInstance(i),
+                  onRename: () => _startRename(i),
+                  onRemove: () => _confirmRemove(i),
+                )),
       );
-
-  Widget _machineRow(Instance i) {
-    final isActive = i.url == widget.active?.url;
-    if (_renamingUrl == i.url) {
-      return SettingsRow(
-        label: i.label,
-        leading: _machineDot(isActive),
-        labelWidget: InlineEditField(
-          controller: _renameController,
-          hint: 'Machine name',
-          commitOnTapOutside: false,
-          showActions: true,
-          onSubmit: () => _commitRename(i),
-          onCancel: () => setState(() => _renamingUrl = null),
-        ),
-      );
-    }
-    return SettingsRow(
-      label: i.label.isEmpty ? hostOf(i.url) : i.label,
-      sub: hostOf(i.url),
-      leading: _machineDot(isActive),
-      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (isActive)
-          const Tag('Active', tone: Tone.ok, dot: true)
-        else if (widget.onSelect != null)
-          Btn('Connect',
-              small: true,
-              variant: BtnVariant.secondary,
-              onTap: () => _selectInstance(i)),
-        const SizedBox(width: S.s8),
-        _machineMenu(i),
-      ]),
-    );
-  }
-
-  Widget _machineDot(bool active) => Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: active ? AppColors.ok : AppColors.fg4,
-        ),
-      );
-
-  List<Widget> _addMachineBody() {
-    final canConnect =
-        !_addMachineBusy && _addMachinePaste.text.trim().isNotEmpty;
-    return [
-      SettingsGroup(
-        header: 'On the other machine',
-        footer: 'It prints a link and a QR code. If snippet is already '
-            'running there, snippet serve --status shows them again.',
-        children: [
-          SettingsRow(
-            label: 'snippet serve --enable',
-            labelWidget: SelectableText('snippet serve --enable',
-                style: mono(13, color: AppColors.fg1)),
-            trailing: IconBtn('copy',
-                size: 28, iconSize: 14, tooltip: 'Copy command', onTap: () {
-              Clipboard.setData(const ClipboardData(text: 'snippet serve --enable'));
-              toast(context, 'Copied');
-            }),
-          ),
-        ],
-      ),
-      SettingsGroup(
-        header: 'Here',
-        footer: _addMachineError,
-        children: [
-          SettingsRow(
-            label: 'Link',
-            sub: 'Paste the link it printed.',
-            trailing: SettingsField(
-              controller: _addMachinePaste,
-              hint: 'https://…?token=…',
-              mono: true,
-              width: 320,
-              onChanged: (_) => setState(() {}),
-              onSubmitted: (_) => _submitAddMachine(),
-            ),
-          ),
-        ],
-      ),
-      Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-        Btn('Cancel',
-            variant: BtnVariant.secondary,
-            onTap: _addMachineBusy ? null : _closeAddMachine),
-        const SizedBox(width: S.s8),
-        Btn(_addMachineBusy ? 'Connecting…' : 'Connect',
-            disabled: !canConnect,
-            onTap: canConnect ? _submitAddMachine : null),
-      ]),
-    ];
-  }
-
-  void _closeAddMachine() => setState(() {
-        _addingMachine = false;
-        _addMachineError = null;
-      });
-
-  List<Widget> _nativeGeneral() {
-    if (_manual == null) _loadManual();
-    return [
-      if (_addingMachine)
-        ..._addMachineBody()
-      else ...[
-        SettingsGroup(
-          header: 'Machines',
-          footer:
-              'Snippet talks to the daemon on each machine. Run snippet serve on a new one and paste the link it prints.',
-          children: [
-            if (_instances.isEmpty)
-              const SettingsRow(
-                  label: 'No saved machines',
-                  sub: 'Run snippet serve on one and add its link.')
-            else
-              for (final i in _instances) _machineRow(i),
-          ],
-        ),
-        SettingsGroup(
-          header: 'Sessions',
-          children: [
-            SettingsRow(
-              label: 'Ask before running commands',
-              sub:
-                  'Off lets agents run shell commands and edit files without stopping to ask. Applies to every session on this machine.',
-              trailing: SettingsSwitch(
-                  value: _manual ?? false,
-                  onChanged: _manual == null ? null : _setManual),
-            ),
-            if (kCanNotify)
-              SettingsRow(
-                label: 'Notifications',
-                sub: 'When a session needs you or finishes.',
-                trailing: SettingsSwitch(
-                    value: _notif, onChanged: _notifBusy ? null : _toggleNotif),
-              ),
-          ],
-        ),
-      ],
-    ];
-  }
 
   Widget _generalPage({bool includeNotifications = true}) {
     if (_addingMachine) return _addMachinePane();
@@ -1500,6 +1175,863 @@ class SettingsPanelState extends State<SettingsPanel> {
   }
 }
 
+bool _instancesMatch(List<Instance> a, List<Instance> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i].url != b[i].url || a[i].label != b[i].label) return false;
+  }
+  return true;
+}
+
+Future<List<Instance>> _updateStoredInstances(
+    void Function(List<Instance> items) change) async {
+  final items = await InstanceStore().load();
+  change(items);
+  await InstanceStore().save(items);
+  return items;
+}
+
+Future<Instance> _connectMachineFromLink(String raw) async {
+  final parsed = parseConnection(raw);
+  if (parsed == null) {
+    throw 'That is not a valid link. Run "snippet serve --enable" on the other machine, then "snippet serve --status", and paste the link it prints.';
+  }
+  final (url, token) = parsed;
+  final cfg = await DaemonClient(url, token).getConfig();
+  final name = cfg.hostname.isNotEmpty ? cfg.hostname : hostOf(url);
+  return Instance(name: name, url: url, token: token);
+}
+
+void _renameStoredInstance(
+    List<Instance> items, Instance inst, String newName) {
+  final idx = items.indexWhere((e) => e.url == inst.url);
+  if (idx >= 0) {
+    items[idx] = Instance(name: newName, url: inst.url, token: inst.token);
+  }
+}
+
+Future<bool> _confirmRemoveInstance(BuildContext context, Instance inst) =>
+    confirmAction(
+      context,
+      title: 'Remove instance?',
+      body:
+          '${inst.label}\n\nRemoves the saved connection from this app. The machine and its sessions are untouched.',
+      confirmLabel: 'Remove',
+    );
+
+Future<void> _showMachineMenu(
+  BuildContext context, {
+  required BuildContext anchor,
+  required Instance instance,
+  required bool connect,
+  required VoidCallback onSelect,
+  required VoidCallback onRename,
+  required VoidCallback onRemove,
+}) async {
+  final picked = await showAppMenu<String>(context,
+      anchor: anchor,
+      below: true,
+      alignEnd: true,
+      minWidth: 160,
+      items: [
+        if (connect) appMenuItem(value: 'connect', label: 'Connect'),
+        appMenuItem(value: 'rename', label: 'Rename'),
+        appMenuItem(value: 'remove', label: 'Remove', danger: true),
+      ]);
+  if (picked == 'connect') onSelect();
+  if (picked == 'rename') onRename();
+  if (picked == 'remove') onRemove();
+}
+
+Future<bool?> _showApprovalsMenu(
+  BuildContext context,
+  BuildContext anchor,
+  bool current,
+) =>
+    showAppMenu<bool>(
+      context,
+      anchor: anchor,
+      minWidth: 260,
+      maxWidth: 320,
+      items: [
+        appMenuRow(
+          value: false,
+          icon: 'check-circle',
+          label: 'Yolo',
+          description: 'Run shell and file edits without asking',
+          selected: !current,
+        ),
+        appMenuRow(
+          value: true,
+          icon: 'shield',
+          label: 'Ask',
+          description: 'Pause for approval on each change',
+          selected: current,
+        ),
+      ],
+    );
+
+/// Shared desktop settings section content used by both [SettingsPanel]
+/// and `DesktopSettingsPage`.
+class SettingsSectionView extends StatefulWidget {
+  const SettingsSectionView({
+    super.key,
+    required this.client,
+    required this.instances,
+    required this.active,
+    required this.page,
+    required this.onRemove,
+    this.onRename,
+    this.onSelect,
+    this.onAdd,
+    this.onSelectPage,
+    this.v5Desktop = false,
+  });
+
+  final DaemonClient client;
+  final List<Instance> instances;
+  final Instance? active;
+  final SettingsPage page;
+  final void Function(Instance) onRemove;
+  final void Function(Instance, String)? onRename;
+  final void Function(Instance)? onSelect;
+  final void Function(Instance)? onAdd;
+  final ValueChanged<SettingsPage>? onSelectPage;
+  final bool v5Desktop;
+
+  @override
+  State<SettingsSectionView> createState() => SettingsSectionViewState();
+}
+
+class SettingsSectionViewState extends State<SettingsSectionView> {
+  late final List<Instance> _instances = [...widget.instances];
+  final GlobalKey<VaultScreenState> _vaultKey = GlobalKey<VaultScreenState>();
+  final GlobalKey<InferenceProfilesScreenState> _modelsKey =
+      GlobalKey<InferenceProfilesScreenState>();
+  final GlobalKey<RecurringScreenState> _recurringKey =
+      GlobalKey<RecurringScreenState>();
+
+  bool _addingMachine = false;
+  final TextEditingController _addMachinePaste = TextEditingController();
+  bool _addMachineBusy = false;
+  String? _addMachineError;
+
+  bool _modelsEditing = false;
+  bool _recurringAdding = false;
+
+  String? _renamingUrl;
+  final TextEditingController _renameController = TextEditingController();
+
+  bool? _manual;
+  bool _notif = false;
+  bool _notifBusy = false;
+  final Map<String, bool> _health = {};
+  int? _liveCount;
+  int? _warmActiveCount;
+
+  static const _plainPages = {
+    SettingsPage.general,
+    SettingsPage.appearance,
+    SettingsPage.routing,
+    SettingsPage.usage,
+    SettingsPage.voice,
+    SettingsPage.webSearch,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _addMachinePaste.addListener(() => setState(() {}));
+    if (kCanNotify) {
+      notificationsEnabled().then((v) {
+        if (mounted) setState(() => _notif = v);
+      });
+    }
+    if (widget.page == SettingsPage.general) _loadGeneral();
+  }
+
+  @override
+  void didUpdateWidget(covariant SettingsSectionView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncInstances(widget.instances);
+    final pageChanged = widget.page != oldWidget.page;
+    if (pageChanged) resetTransient();
+    final clientChanged = widget.client != oldWidget.client ||
+        widget.active?.url != oldWidget.active?.url;
+    if (widget.page == SettingsPage.general && (pageChanged || clientChanged)) {
+      _loadGeneral();
+    }
+  }
+
+  @override
+  void dispose() {
+    _addMachinePaste.dispose();
+    _renameController.dispose();
+    super.dispose();
+  }
+
+  void resetTransient() {
+    if (!_addingMachine &&
+        _addMachineError == null &&
+        !_modelsEditing &&
+        !_recurringAdding &&
+        _renamingUrl == null) {
+      return;
+    }
+    setState(() {
+      _addingMachine = false;
+      _addMachineError = null;
+      _modelsEditing = false;
+      _recurringAdding = false;
+      _renamingUrl = null;
+    });
+  }
+
+  void triggerCreate(SettingsPage page) {
+    switch (page) {
+      case SettingsPage.general:
+        _addMachine();
+      case SettingsPage.models:
+        _modelsKey.currentState?.addProfile();
+      case SettingsPage.vault:
+        _vaultKey.currentState?.add();
+      case SettingsPage.scheduled:
+        _recurringKey.currentState?.add();
+      case SettingsPage.appearance:
+      case SettingsPage.usage:
+      case SettingsPage.wakes:
+      case SettingsPage.memory:
+      case SettingsPage.routing:
+      case SettingsPage.voice:
+      case SettingsPage.webSearch:
+      case SettingsPage.accounts:
+        break;
+    }
+  }
+
+  void _syncInstances(List<Instance> items) {
+    if (!_instancesMatch(_instances, items)) {
+      _instances
+        ..clear()
+        ..addAll(items);
+      if (widget.v5Desktop && widget.page == SettingsPage.general) {
+        _pingMachines();
+      }
+    }
+  }
+
+  Future<void> _saveInstances(void Function(List<Instance> items) change) async {
+    final items = await _updateStoredInstances(change);
+    if (!mounted) return;
+    setState(() => _instances
+      ..clear()
+      ..addAll(items));
+  }
+
+  void _loadGeneral() {
+    _loadManual();
+    if (!widget.v5Desktop) return;
+    _pingMachines();
+    _loadGeneralStats();
+  }
+
+  Future<void> _pingMachines() async {
+    for (final i in _instances) {
+      final isActive = i.url == widget.active?.url;
+      final client =
+          isActive ? widget.client : DaemonClient(i.url, i.token);
+      client.health().then((ok) {
+        if (mounted && _health[i.url] != ok) {
+          setState(() => _health[i.url] = ok);
+        }
+      }).catchError((_) {
+        if (mounted && _health[i.url] != false) {
+          setState(() => _health[i.url] = false);
+        }
+      });
+    }
+  }
+
+  Future<void> _loadGeneralStats() async {
+    try {
+      final sessions = await widget.client.sessions();
+      if (mounted) {
+        setState(() => _liveCount = sessions.where((s) => !s.settled).length);
+      }
+    } catch (_) {}
+    try {
+      final KeepWarmList warm = await widget.client.keepWarm();
+      if (mounted) {
+        setState(
+            () => _warmActiveCount = warm.entries.where((e) => e.enabled).length);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadManual() async {
+    try {
+      final c = await widget.client.getConfig();
+      if (mounted) setState(() => _manual = c.manualApproval);
+    } catch (_) {}
+  }
+
+  Future<void> _setManual(bool on) async {
+    final before = _manual;
+    setState(() => _manual = on);
+    try {
+      await widget.client.setManualApproval(on);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _manual = before);
+      toast(context, '$e', danger: true);
+    }
+  }
+
+  Future<void> _toggleNotif(bool v) async {
+    setState(() => _notifBusy = true);
+    final err = await setNotificationsEnabled(v);
+    if (!mounted) return;
+    setState(() {
+      _notifBusy = false;
+      _notif = err == null ? v : _notif;
+    });
+    if (err != null) toast(context, err);
+  }
+
+  void _addMachine() => setState(() {
+        _addingMachine = true;
+        _addMachineError = null;
+        _addMachinePaste.clear();
+      });
+
+  void _closeAddMachine() => setState(() {
+        _addingMachine = false;
+        _addMachineError = null;
+      });
+
+  Future<void> _submitAddMachine() async {
+    final raw = _addMachinePaste.text.trim();
+    if (raw.isEmpty || _addMachineBusy) return;
+    setState(() {
+      _addMachineBusy = true;
+      _addMachineError = null;
+    });
+    try {
+      final inst = await _connectMachineFromLink(raw);
+      if (!mounted) return;
+      setState(() {
+        _addMachineBusy = false;
+        _addingMachine = false;
+        _addMachinePaste.clear();
+      });
+      await _saveInstances((items) => items
+        ..removeWhere((e) => e.url == inst.url || e.token == inst.token)
+        ..add(inst));
+      widget.onAdd?.call(inst);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _addMachineBusy = false;
+          _addMachineError = 'Connection failed: $e';
+        });
+      }
+    }
+  }
+
+  void _startRename(Instance i) => setState(() {
+        _renamingUrl = i.url;
+        _renameController.text = i.label;
+      });
+
+  Future<void> _commitRename(Instance inst) async {
+    final newName = _renameController.text.trim();
+    setState(() => _renamingUrl = null);
+    if (newName.isEmpty) return;
+    await _saveInstances((items) => _renameStoredInstance(items, inst, newName));
+    widget.onRename?.call(inst, newName);
+  }
+
+  Future<void> _confirmRemove(Instance inst) async {
+    if (!await _confirmRemoveInstance(context, inst)) return;
+    widget.onRemove(inst);
+    if (mounted) {
+      setState(() => _instances.removeWhere((e) => e.url == inst.url));
+    }
+  }
+
+  Widget _machineMenu(Instance i, {bool connect = false}) => Builder(
+        builder: (anchor) => IconBtn('more-horizontal',
+            size: 28,
+            iconSize: 16,
+            tooltip: 'Machine actions',
+            onTap: () => _showMachineMenu(
+                  context,
+                  anchor: anchor,
+                  instance: i,
+                  connect: connect,
+                  onSelect: () => widget.onSelect?.call(i),
+                  onRename: () => _startRename(i),
+                  onRemove: () => _confirmRemove(i),
+                )),
+      );
+
+  String _pageTitle(SettingsPage page) => switch (page) {
+        SettingsPage.general => widget.v5Desktop ? 'Machines' : 'General',
+        SettingsPage.appearance =>
+          widget.v5Desktop ? 'Theme and accent' : 'Appearance',
+        SettingsPage.models => 'Profiles',
+        SettingsPage.routing => 'Routing',
+        SettingsPage.memory => 'Memory',
+        SettingsPage.usage => 'Usage',
+        SettingsPage.vault => 'Vault',
+        SettingsPage.scheduled => 'Scheduled',
+        SettingsPage.wakes => 'Wakes',
+        SettingsPage.voice => 'Voice',
+        SettingsPage.webSearch => 'Web search',
+        SettingsPage.accounts => 'Accounts',
+      };
+
+  String _pageSubtitle(SettingsPage page) => switch (page) {
+        SettingsPage.general => widget.v5Desktop
+            ? 'Computers this app can reach. Sessions run on the selected one.'
+            : 'Machines this app connects to, and how sessions behave.',
+        SettingsPage.appearance =>
+          'Theme palette, accent colour, UI typeface and code font saved on this device.',
+        SettingsPage.routing =>
+          'Which model does each kind of work, and who steps in when it hits a limit.',
+        SettingsPage.usage =>
+          'Rate limits and token usage across your providers.',
+        SettingsPage.voice => 'Voice notes, transcription and speech services.',
+        SettingsPage.webSearch => 'Let agents search the web and read pages.',
+        _ => '',
+      };
+
+  Widget? _pageAction(SettingsPage page) {
+    if (widget.v5Desktop && page == SettingsPage.general) return null;
+    return switch (page) {
+      SettingsPage.general => _addingMachine
+          ? null
+          : HeaderAction('Add machine', onTap: _addMachine),
+      SettingsPage.models => _modelsEditing
+          ? null
+          : HeaderAction('Add profile',
+              onTap: () => _modelsKey.currentState?.addProfile()),
+      SettingsPage.scheduled => _recurringAdding
+          ? null
+          : HeaderAction('New job',
+              onTap: () => _recurringKey.currentState?.add()),
+      _ => null,
+    };
+  }
+
+  List<Widget> _addMachineBody() {
+    final canConnect =
+        !_addMachineBusy && _addMachinePaste.text.trim().isNotEmpty;
+    return [
+      SettingsGroup(
+        header: 'On the other machine',
+        footer: 'It prints a link and a QR code. If snippet is already '
+            'running there, snippet serve --status shows them again.',
+        children: [
+          SettingsRow(
+            label: 'snippet serve --enable',
+            labelWidget: SelectableText('snippet serve --enable',
+                style: mono(13, color: AppColors.fg1)),
+            trailing: IconBtn('copy',
+                size: 28, iconSize: 14, tooltip: 'Copy command', onTap: () {
+              Clipboard.setData(
+                  const ClipboardData(text: 'snippet serve --enable'));
+              toast(context, 'Copied');
+            }),
+          ),
+        ],
+      ),
+      SettingsGroup(
+        header: 'Here',
+        footer: _addMachineError,
+        children: [
+          SettingsRow(
+            label: 'Link',
+            sub: 'Paste the link it printed.',
+            trailing: SettingsField(
+              controller: _addMachinePaste,
+              hint: 'https://…?token=…',
+              mono: true,
+              width: 320,
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (_) => _submitAddMachine(),
+            ),
+          ),
+        ],
+      ),
+      Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+        Btn('Cancel',
+            variant: BtnVariant.secondary,
+            onTap: _addMachineBusy ? null : _closeAddMachine),
+        const SizedBox(width: S.s8),
+        Btn(_addMachineBusy ? 'Connecting…' : 'Connect',
+            disabled: !canConnect,
+            onTap: canConnect ? _submitAddMachine : null),
+      ]),
+    ];
+  }
+
+  Widget _v5Card(List<Widget> children) {
+    final rows = <Widget>[];
+    for (var i = 0; i < children.length; i++) {
+      rows.add(children[i]);
+      if (i < children.length - 1) {
+        rows.add(Container(height: 1, color: AppColors.line));
+      }
+    }
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(R.lg),
+      ),
+      foregroundDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(R.lg),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: rows,
+      ),
+    );
+  }
+
+  Widget _v5Row({
+    Widget? leading,
+    required String title,
+    String? subtitle,
+    Widget? trailing,
+    VoidCallback? onTap,
+    Color? titleColor,
+  }) {
+    final body = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      child: Row(children: [
+        if (leading != null) ...[leading, const SizedBox(width: 12)],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13,
+                      weight: W.label, color: titleColor ?? AppColors.fg1)),
+              if (subtitle != null && subtitle.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12, color: AppColors.fg4)),
+              ],
+            ],
+          ),
+        ),
+        if (trailing != null) ...[const SizedBox(width: 12), trailing],
+      ]),
+    );
+    if (onTap == null) return body;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(onTap: onTap, child: body),
+    );
+  }
+
+  Widget _v5MachineRow(Instance i) {
+    final isActive = i.url == widget.active?.url;
+    final connected = _health[i.url] ?? isActive;
+    final iconColor = connected ? AppColors.ok : AppColors.fg4;
+    if (_renamingUrl == i.url) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        child: Row(children: [
+          Icon(LucideIcons.laptop, size: 16, color: iconColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: InlineEditField(
+              controller: _renameController,
+              hint: 'Machine name',
+              commitOnTapOutside: false,
+              showActions: true,
+              onSubmit: () => _commitRename(i),
+              onCancel: () => setState(() => _renamingUrl = null),
+            ),
+          ),
+        ]),
+      );
+    }
+    final live = _liveCount;
+    final sub = isActive
+        ? (live == null
+            ? 'This machine'
+            : 'This machine · $live live session${live == 1 ? '' : 's'}')
+        : hostOf(i.url);
+    return _v5Row(
+      leading: Icon(LucideIcons.laptop, size: 16, color: iconColor),
+      title: i.label.isEmpty ? hostOf(i.url) : i.label,
+      subtitle: sub,
+      onTap: !isActive && widget.onSelect != null
+          ? () => widget.onSelect?.call(i)
+          : null,
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(connected ? 'Connected' : 'Offline',
+            style: sans(12.5, color: AppColors.fg4)),
+        const SizedBox(width: 6),
+        _machineMenu(i, connect: !isActive && widget.onSelect != null),
+      ]),
+    );
+  }
+
+  List<Widget> _v5General() {
+    if (_addingMachine) return _addMachineBody();
+    final warmCount = _warmActiveCount;
+    return [
+      _v5Card([
+        if (_instances.isEmpty)
+          _v5Row(
+            leading: Icon(LucideIcons.laptop, size: 16, color: AppColors.fg4),
+            title: 'No saved machines',
+            subtitle: 'Run snippet serve on one and add its link.',
+          )
+        else
+          for (final i in _instances) _v5MachineRow(i),
+        _v5Row(
+          leading: AppIcon('plus', size: 16, color: AppColors.fg4),
+          title: 'Add machine',
+          titleColor: AppColors.fg2,
+          onTap: _addMachine,
+        ),
+      ]),
+      const SizedBox(height: S.s16),
+      _v5Card([
+        Builder(
+          builder: (anchor) => _v5Row(
+            title: 'Approvals',
+            subtitle: 'Ask before running commands',
+            onTap: () async {
+              final current = _manual ?? false;
+              final picked = await _showApprovalsMenu(context, anchor, current);
+              if (picked != null && picked != current) {
+                await _setManual(picked);
+              }
+            },
+            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              Text(_manual == null ? '' : (_manual! ? 'Ask' : 'Yolo'),
+                  style: sans(12.5, color: AppColors.fg3)),
+              const SizedBox(width: S.s6),
+              AppIcon('chevron-down', size: 12, color: AppColors.fg3),
+            ]),
+          ),
+        ),
+        if (kCanNotify)
+          _v5Row(
+            title: 'Notifications',
+            subtitle: 'Questions and finished tasks',
+            onTap: _notifBusy ? null : () => _toggleNotif(!_notif),
+            trailing: _notifBusy
+                ? const DelayedSpinner(size: 18)
+                : SettingsSwitch(
+                    value: _notif,
+                    onChanged: _notifBusy ? null : _toggleNotif),
+          ),
+        _v5Row(
+          title: 'Keep sessions warm',
+          subtitle: 'Hold the prompt cache while idle',
+          onTap: widget.onSelectPage != null
+              ? () => widget.onSelectPage!(SettingsPage.wakes)
+              : null,
+          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (warmCount != null) ...[
+              Text(warmCount == 0 ? 'Off' : '$warmCount active',
+                  style: sans(12.5, color: AppColors.fg3)),
+              const SizedBox(width: S.s6),
+            ],
+            AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+          ]),
+        ),
+      ]),
+    ];
+  }
+
+  Widget _machineRow(Instance i) {
+    final isActive = i.url == widget.active?.url;
+    if (_renamingUrl == i.url) {
+      return SettingsRow(
+        label: i.label,
+        leading: _machineDot(isActive),
+        labelWidget: InlineEditField(
+          controller: _renameController,
+          hint: 'Machine name',
+          commitOnTapOutside: false,
+          showActions: true,
+          onSubmit: () => _commitRename(i),
+          onCancel: () => setState(() => _renamingUrl = null),
+        ),
+      );
+    }
+    return SettingsRow(
+      label: i.label.isEmpty ? hostOf(i.url) : i.label,
+      sub: hostOf(i.url),
+      leading: _machineDot(isActive),
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (isActive)
+          const Tag('Active', tone: Tone.ok, dot: true)
+        else if (widget.onSelect != null)
+          Btn('Connect',
+              small: true,
+              variant: BtnVariant.secondary,
+              onTap: () => widget.onSelect?.call(i)),
+        const SizedBox(width: S.s8),
+        _machineMenu(i),
+      ]),
+    );
+  }
+
+  Widget _machineDot(bool active) => Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: active ? AppColors.ok : AppColors.fg4,
+        ),
+      );
+
+  List<Widget> _nativeGeneral() {
+    if (widget.v5Desktop) return _v5General();
+    return [
+      if (_addingMachine)
+        ..._addMachineBody()
+      else ...[
+        SettingsGroup(
+          header: 'Machines',
+          footer:
+              'Snippet talks to the daemon on each machine. Run snippet serve on a new one and paste the link it prints.',
+          children: [
+            if (_instances.isEmpty)
+              const SettingsRow(
+                  label: 'No saved machines',
+                  sub: 'Run snippet serve on one and add its link.')
+            else
+              for (final i in _instances) _machineRow(i),
+          ],
+        ),
+        SettingsGroup(
+          header: 'Sessions',
+          children: [
+            SettingsRow(
+              label: 'Ask before running commands',
+              sub:
+                  'Off lets agents run shell commands and edit files without stopping to ask. Applies to every session on this machine.',
+              trailing: SettingsSwitch(
+                  value: _manual ?? false,
+                  onChanged: _manual == null ? null : _setManual),
+            ),
+            if (kCanNotify)
+              SettingsRow(
+                label: 'Notifications',
+                sub: 'When a session needs you or finishes.',
+                trailing: SettingsSwitch(
+                    value: _notif, onChanged: _notifBusy ? null : _toggleNotif),
+              ),
+          ],
+        ),
+      ],
+    ];
+  }
+
+  List<Widget> _plainBody(SettingsPage page) => switch (page) {
+        SettingsPage.general => _nativeGeneral(),
+        SettingsPage.appearance => [
+            const AppearanceScreen(embedded: true),
+          ],
+        SettingsPage.routing => [
+            RoutingScreen(client: widget.client, embedded: true)
+          ],
+        SettingsPage.usage => [
+            UsageScreen(client: widget.client, embedded: true)
+          ],
+        SettingsPage.voice => [
+            VoiceScreen(client: widget.client, embedded: true)
+          ],
+        SettingsPage.webSearch => [
+            WebSearchScreen(client: widget.client, embedded: true)
+          ],
+        _ => const [],
+      };
+
+  Widget _pageBody() {
+    return switch (widget.page) {
+      SettingsPage.models => InferenceProfilesScreen(
+          key: _modelsKey,
+          client: widget.client,
+          embedded: true,
+          onEditingChanged: (editing) =>
+              setState(() => _modelsEditing = editing),
+        ),
+      SettingsPage.accounts => AccountsScreen(
+          client: widget.client,
+          embedded: true,
+        ),
+      SettingsPage.memory => MemoryScreen(
+          client: widget.client,
+          embedded: true,
+        ),
+      SettingsPage.vault => VaultScreen(
+          key: _vaultKey,
+          client: widget.client,
+          embedded: true,
+        ),
+      SettingsPage.wakes => WakesScreen(
+          client: widget.client,
+          embedded: true,
+        ),
+      SettingsPage.scheduled => RecurringScreen(
+          key: _recurringKey,
+          client: widget.client,
+          embedded: true,
+          onAddingChanged: (adding) =>
+              setState(() => _recurringAdding = adding),
+        ),
+      _ => const SizedBox.shrink(),
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Theme.of(context);
+    final page = widget.page;
+    final Widget child;
+    if (_plainPages.contains(page)) {
+      final action = _pageAction(page);
+      final addingMachine = page == SettingsPage.general && _addingMachine;
+      child = SettingsColumn(children: [
+        SettingsHeader(
+          title: addingMachine ? 'Connect a machine' : _pageTitle(page),
+          subtitle: addingMachine
+              ? 'Add another machine running snippet serve.'
+              : _pageSubtitle(page),
+          back: addingMachine
+              ? SettingsBack(widget.v5Desktop ? 'Machines' : 'General',
+                  onTap: _closeAddMachine)
+              : null,
+          actions: [if (action != null) action],
+        ),
+        const SizedBox(height: S.s16),
+        ..._plainBody(page),
+      ]);
+    } else {
+      child = _pageBody();
+    }
+    return Swap(stateKey: page, fill: true, child: child);
+  }
+}
+
 /// Action sheet to rename or remove a machine instance.
 Future<void> showManageMachineSheet({
   required BuildContext context,
@@ -1560,28 +2092,7 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
 
   Future<void> _pick(BuildContext anchor) async {
     final current = _manual ?? false;
-    final picked = await showAppMenu<bool>(
-      context,
-      anchor: anchor,
-      minWidth: 260,
-      maxWidth: 320,
-      items: [
-        appMenuRow(
-          value: false,
-          icon: 'check-circle',
-          label: 'Yolo',
-          description: 'Run shell and file edits without asking',
-          selected: !current,
-        ),
-        appMenuRow(
-          value: true,
-          icon: 'shield',
-          label: 'Ask',
-          description: 'Pause for approval on each change',
-          selected: current,
-        ),
-      ],
-    );
+    final picked = await _showApprovalsMenu(context, anchor, current);
     if (picked == null || picked == current || !mounted) return;
     setState(() => _manual = picked);
     try {
