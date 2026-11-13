@@ -224,23 +224,58 @@ class MessageReactionChips extends StatelessWidget {
   final bool mine;
   final ValueChanged<String> onReact;
 
+  /// How far the tapback rises above and past the bubble's corner.
+  static const double rise = 12;
+  static const double overhang = 6;
+
   @override
   Widget build(BuildContext context) {
     if (reactions.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Wrap(
-        spacing: 6,
-        runSpacing: 4,
-        alignment: mine ? WrapAlignment.end : WrapAlignment.start,
-        children: [
-          for (final r in reactions)
-            _ReactionChip(
-              group: r,
-              onTap: () => onReact(r.name),
+    final total = reactions.fold<int>(0, (n, r) => n + r.count);
+    final active = reactions.any((r) => r.mine);
+    final fill = active ? AppColors.accentBg : AppColors.surface2;
+    return Semantics(
+      container: true,
+      child: Stack(clipBehavior: Clip.none, children: [
+        Material(
+          color: fill,
+          shape: StadiumBorder(side: BorderSide(color: AppColors.bg, width: 2)),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              for (final r in reactions)
+                _ReactionChip(group: r, onTap: () => onReact(r.name)),
+              if (total > 1)
+                Padding(
+                  padding: const EdgeInsets.only(left: 2, right: 2),
+                  child: Text('$total',
+                      style: sans(11,
+                          tabular: true,
+                          weight: W.label,
+                          color: active ? AppColors.accent : AppColors.fg3)),
+                ),
+            ]),
+          ),
+        ),
+        // The small trailing bubble that points at the message, as in iMessage.
+        Positioned(
+          bottom: -3,
+          left: mine ? null : 2,
+          right: mine ? 2 : null,
+          child: IgnorePointer(
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: fill,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.bg, width: 1.5),
+              ),
             ),
-        ],
-      ),
+          ),
+        ),
+      ]),
     );
   }
 }
@@ -252,46 +287,18 @@ class _ReactionChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final active = group.mine;
-    return Semantics(
-      label: '${group.name} ${group.count}',
-      child: Material(
-        color: active ? AppColors.accentBg : AppColors.surface2,
-        borderRadius: BorderRadius.circular(12),
+  Widget build(BuildContext context) => Semantics(
+        label: '${group.name} ${group.count}',
+        button: true,
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           onTap: onTap,
-          child: Container(
-            height: 24,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: active ? AppColors.accentLine : AppColors.border,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(group.name, style: _emojiStyle(13)),
-                const SizedBox(width: 4),
-                Text(
-                  '${group.count}',
-                  style: sans(
-                    11,
-                    tabular: true,
-                    weight: W.label,
-                    color: active ? AppColors.accent : AppColors.fg3,
-                  ),
-                ),
-              ],
-            ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Text(group.name, style: _emojiStyle(14)),
           ),
         ),
-      ),
-    );
-  }
+      );
 }
 
 /// Compact row offering `Reply` and the quick emoji reactions.

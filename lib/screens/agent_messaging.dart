@@ -1789,6 +1789,24 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     );
   }
 
+  /// iMessage tapback: the reactions ride the bubble's top corner, on the
+  /// right of a received bubble and the left of a sent one.
+  Widget _withTapback(Widget bubble, Widget? chips, {required bool mine}) {
+    if (chips == null) return bubble;
+    return Padding(
+      padding: const EdgeInsets.only(top: MessageReactionChips.rise),
+      child: Stack(clipBehavior: Clip.none, children: [
+        bubble,
+        Positioned(
+          top: -MessageReactionChips.rise,
+          left: mine ? -MessageReactionChips.overhang : null,
+          right: mine ? null : -MessageReactionChips.overhang,
+          child: chips,
+        ),
+      ]),
+    );
+  }
+
   Widget _messageRow(
     CoordinationEvent e, {
     Widget? card,
@@ -1872,12 +1890,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                   padding: const EdgeInsets.only(left: 4, bottom: 2),
                   child: quotedLine,
                 ),
-              cappedCard,
-              if (chips != null)
-                Padding(
-                  padding: const EdgeInsets.only(left: 4, top: 2),
-                  child: chips,
-                ),
+              _withTapback(cappedCard, chips, mine: false),
             ],
           );
         }
@@ -1893,19 +1906,18 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                       bottom: 2, left: mine ? 0 : 4, right: mine ? 4 : 0),
                   child: quotedLine,
                 ),
-              KeyedSubtree(
-                key: bubbleKey,
-                child: ChatBubble(
-                  mine: mine,
-                  tail: tail,
-                  child: _bubbleBody(e, mine: mine),
+              _withTapback(
+                KeyedSubtree(
+                  key: bubbleKey,
+                  child: ChatBubble(
+                    mine: mine,
+                    tail: tail,
+                    child: _bubbleBody(e, mine: mine),
+                  ),
                 ),
+                chips,
+                mine: mine,
               ),
-              if (chips != null)
-                Padding(
-                  padding: EdgeInsets.only(top: 2, left: mine ? 0 : 4),
-                  child: chips,
-                ),
             ],
           ),
         );
