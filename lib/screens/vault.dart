@@ -341,7 +341,17 @@ class VaultScreenState extends State<VaultScreen> {
         ),
       ];
 
-  Widget _addRow(bool empty) => SettingsRow(
+  Widget _addRow(bool empty) => kMobile
+      ? V5SettingsRow(
+          label: 'Add secret',
+          subtitle: empty ? 'No secrets yet' : null,
+          leading: V5IconTile('plus', color: AppColors.accent),
+          labelWidget: Text('Add secret',
+              style: sans(15, color: AppColors.accent)),
+          chevron: false,
+          onTap: _add,
+        )
+      : SettingsRow(
         label: 'Add secret',
         sub: empty ? 'No secrets yet' : null,
         labelWidget: Row(children: [
@@ -354,16 +364,18 @@ class VaultScreenState extends State<VaultScreen> {
       );
 
   List<Widget> _form() => [
-        SettingsRow(
+        V5SettingsRow(
           label: 'Name',
+          leading: const V5IconTile('key'),
           trailing: SettingsField(
               controller: _name,
               hint: 'STRIPE_KEY',
               mono: true,
               width: kMobile ? 200 : 260),
         ),
-        SettingsRow(
+        V5SettingsRow(
           label: 'Value',
+          leading: const V5IconTile('lock'),
           trailing: SettingsField(
               controller: _value,
               hint: 'sk_live_…',
@@ -371,7 +383,7 @@ class VaultScreenState extends State<VaultScreen> {
               obscure: true,
               width: kMobile ? 200 : 260),
         ),
-        SettingsRow(
+        V5SettingsRow(
           label: _formError ?? '',
           labelWidget: Text(_formError ?? '',
               style: sans(kMobile ? 13 : 12, color: AppColors.danger)),
@@ -383,7 +395,25 @@ class VaultScreenState extends State<VaultScreen> {
         ),
       ];
 
-  Widget _secretRow(String name) => SettingsRow(
+  Widget _secretRow(String name) => kMobile
+      ? V5SettingsRow(
+          label: name,
+          leading: const V5IconTile('key'),
+          trailing: Tooltip(
+            message: 'Remove $name',
+            child: InkResponse(
+              onTap: () => _remove(name),
+              radius: 20,
+              child: SizedBox(
+                width: 36,
+                height: 30,
+                child: Center(
+                    child: AppIcon('trash', size: 16, color: AppColors.fg4)),
+              ),
+            ),
+          ),
+        )
+      : SettingsRow(
         label: name,
         labelWidget: Text(name,
             maxLines: 1,
