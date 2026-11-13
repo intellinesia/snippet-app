@@ -644,27 +644,31 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       );
 
   void _openShellSettings([SettingsPage? page]) {
+    if (page == null && _settingsOpen) return;
     final c = _client;
     if (c == null) return;
     final inst = _active;
-    Navigator.of(context).push<void>(PageRouteBuilder<void>(
-      transitionDuration: Motion.base,
-      reverseTransitionDuration: Motion.fast,
-      pageBuilder: (ctx, a1, a2) => DesktopSettingsPage(
-        client: c,
-        instances: _instances,
-        active: inst,
-        onRemove: _removeInstance,
-        onRename: _renameInstance,
-        onSelect: _selectInstance,
-        onAdd: _onInstanceAdded,
-        onBack: () => Navigator.of(ctx).maybePop(),
-        initialSection: page,
-      ),
-      transitionsBuilder: (ctx, anim, a2, child) => FadeTransition(
-          opacity: CurvedAnimation(parent: anim, curve: Motion.enter),
-          child: child),
-    ));
+    _settingsOpen = true;
+    Navigator.of(context)
+        .push<void>(PageRouteBuilder<void>(
+          transitionDuration: Motion.base,
+          reverseTransitionDuration: Motion.fast,
+          pageBuilder: (ctx, a1, a2) => DesktopSettingsPage(
+            client: c,
+            instances: _instances,
+            active: inst,
+            onRemove: _removeInstance,
+            onRename: _renameInstance,
+            onSelect: _selectInstance,
+            onAdd: _onInstanceAdded,
+            onBack: () => Navigator.of(ctx).maybePop(),
+            initialSection: page,
+          ),
+          transitionsBuilder: (ctx, anim, a2, child) => FadeTransition(
+              opacity: CurvedAnimation(parent: anim, curve: Motion.enter),
+              child: child),
+        ))
+        .whenComplete(() => _settingsOpen = false);
   }
 
   Widget _tabStrip(VoidCallback? onMenu) => CardTabStrip(

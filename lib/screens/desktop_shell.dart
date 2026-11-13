@@ -229,6 +229,7 @@ class _DesktopShellState extends State<DesktopShell>
   /// coordination failure can never take the session list down with it.
   bool _sidebarGit = false;
   bool _sidebarHidden = false;
+  bool _settingsOpen = false;
   double _sidebarWidth = kSidebarWidth;
 
   /// Secondary-pane width, dragged by its handle. Width-driven rather than a
@@ -595,6 +596,7 @@ class _DesktopShellState extends State<DesktopShell>
     onOpenCommandPalette: _openCommandPalette,
     onFocusComposer: () =>
         _macSessionControls[_activeTab?.key]?.performAction('focus_composer'),
+    onOpenSettings: _openShellSettings,
     onStopRunningTask: () => _macSessionControls[_activeTab?.key]?.stop(),
     onShowShortcuts: _showDesktopShortcuts,
   );
