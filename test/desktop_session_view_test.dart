@@ -135,7 +135,7 @@ Future<void> _disposeSession(WidgetTester tester) async {
 }
 
 void main() {
-  test('activitySummary formats edited files before commands', () {
+  test('activitySummary joins parts with dots in reading order', () {
     expect(activitySummary(const []), '');
     final summary = activitySummary([
       const ToolStep(
@@ -160,7 +160,7 @@ void main() {
         result: {'data': {'exit_code': 0}},
       ),
     ]);
-    expect(summary, 'Edited 3 files, ran 2 commands');
+    expect(summary, 'Ran 2 commands · edited 3 files');
   });
 
   testWidgets('CollapsedActivity collapses consecutive tools and expands in place',
@@ -192,8 +192,10 @@ void main() {
     ));
     await tester.pump();
 
-    expect(find.text('Edited 1 file, ran 1 command'), findsOneWidget);
-    expect(find.text('Show'), findsOneWidget);
+    final summary = find.text('Ran 1 command · edited 1 file',
+        findRichText: true);
+    expect(summary, findsOneWidget);
+    expect(find.text('Show'), findsNothing);
     expect(find.text('Hide'), findsNothing);
     expect(find.byType(DenseToolRow), findsNothing);
     expect(find.byType(WorkingDots), findsNothing);
@@ -202,25 +204,22 @@ void main() {
         of: find.byType(CollapsedActivity),
         matching: find.byType(AppIcon),
       ),
-      findsNothing,
+      findsOneWidget,
     );
 
-    await tester.tap(find.text('Edited 1 file, ran 1 command'));
+    await tester.tap(summary);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(DenseToolRow), findsNWidgets(2));
-    expect(find.text('Hide'), findsOneWidget);
-    expect(find.text('Show'), findsNothing);
 
-    await tester.tap(find.text('Hide'));
+    await tester.tap(summary);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(DenseToolRow), findsNothing);
-    expect(find.text('Show'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('CollapsedActivity shows a Show line with no icons when running',
+  testWidgets('CollapsedActivity shows a pulsing dot and no chevron when running',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
@@ -241,8 +240,9 @@ void main() {
     ));
     await tester.pump();
 
-    expect(find.text('Running flutter test'), findsOneWidget);
-    expect(find.text('Show'), findsOneWidget);
+    expect(find.text('Running flutter test', findRichText: true),
+        findsOneWidget);
+    expect(find.text('Show'), findsNothing);
     expect(find.byType(WorkingDots), findsNothing);
     expect(
       find.descendant(
@@ -363,12 +363,16 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Edited 3 files, ran 2 commands'), findsOneWidget);
-      expect(find.text('Running flutter analyze'), findsOneWidget);
+      expect(
+          find.text('Ran 2 commands · edited 3 files', findRichText: true),
+          findsOneWidget);
+      expect(find.text('Running flutter analyze', findRichText: true),
+          findsOneWidget);
       expect(find.byType(DenseToolRow), findsNothing);
-      expect(find.text('Show'), findsNWidgets(2));
+      expect(find.text('Show'), findsNothing);
 
-      await tester.tap(find.text('Edited 3 files, ran 2 commands'));
+      await tester.tap(find.text('Ran 2 commands · edited 3 files',
+          findRichText: true));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byType(DenseToolRow), findsNWidgets(5));
