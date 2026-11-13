@@ -151,27 +151,47 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
 
   Widget _segPill(bool reading) {
     final changes = _changesCount;
+    final reduced = reduceMotion(context);
     Widget btn(_SideTab target, String label, int count) {
       final on = !reading && _tab == target;
-      return Material(
-        color: on ? AppColors.tint2 : Colors.transparent,
-        borderRadius: BorderRadius.circular(7),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(7),
+      return MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () {
             widget.onClearReadout?.call();
             setState(() => _tab = target);
           },
-          child: Container(
-            height: 24,
-            padding: const EdgeInsets.symmetric(horizontal: 9),
+          child: AnimatedContainer(
+            duration: reduced ? Duration.zero : Motion.fast,
+            height: 26,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: on
+                  ? AppColors.fg1.withValues(alpha: 0.12)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(R.pill),
+            ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(label,
-                  style: sans(12, color: on ? AppColors.fg1 : AppColors.fg4)),
+                  style: sans(13,
+                      weight: on ? W.label : W.body,
+                      color: on ? AppColors.fg1 : AppColors.fg3)),
               if (count > 0) ...[
-                const SizedBox(width: 5),
-                Text('$count', style: mono(11, color: AppColors.fg4)),
+                const SizedBox(width: 6),
+                Container(
+                  constraints: const BoxConstraints(minWidth: 18),
+                  height: 18,
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(R.pill),
+                  ),
+                  child: Text('$count',
+                      style: mono(11, color: AppColors.accent)),
+                ),
               ],
             ]),
           ),
@@ -180,15 +200,13 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(2),
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: AppColors.tint1,
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(R.pill),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         btn(_SideTab.files, 'Files', 0),
-        const SizedBox(width: 2),
         btn(_SideTab.changes, 'Changes', changes),
       ]),
     );
