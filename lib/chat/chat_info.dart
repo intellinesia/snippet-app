@@ -295,7 +295,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
                 name: widget.name,
                 onChanged: widget.onChanged,
               )),
-      avatar: MochiDisc(id: widget.agentId, size: 88),
+      avatar: MochiDisc(id: widget.agentId, size: kMobile ? 88 : 64),
       name: widget.name,
       status: _statusLine(),
       actions: actions,
@@ -564,7 +564,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
     return _InfoFrame(
       onClose: _close,
       edit: _EditPill(onTap: _busy ? null : _rename),
-      avatar: AgentCluster(ids: _group.agentIds, size: 88),
+      avatar: AgentCluster(ids: _group.agentIds, size: kMobile ? 88 : 64),
       name: title,
       status: Text('${_group.members.length} '
           '${_group.members.length == 1 ? 'member' : 'members'}',
@@ -649,7 +649,8 @@ class _InfoFrame extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: sans(26, weight: W.strong, color: AppColors.fg1)),
+              style: sans(kMobile ? 26 : 20,
+                  weight: W.strong, color: AppColors.fg1)),
           const SizedBox(height: S.s4),
           status,
           if (actions.isNotEmpty) ...[
@@ -768,14 +769,14 @@ class _ActionCircle extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: action.onTap,
         child: SizedBox(
-        width: 64,
+        width: kMobile ? 64 : 56,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Glass(
             child: SizedBox.square(
-              dimension: 48,
+              dimension: kMobile ? 48 : 40,
               child: Center(
                   child: AppIcon(action.icon,
-                      size: 20, color: AppColors.fg1)),
+                      size: kMobile ? 20 : 17, color: AppColors.fg1)),
             ),
           ),
           const SizedBox(height: S.s6),
@@ -883,23 +884,24 @@ class _InfoRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
+        constraints: BoxConstraints(minHeight: kMobile ? 48 : 40),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: S.s16),
           child: Row(children: [
             if (icon != null) ...[
               AppIcon(icon!,
-                  size: 18, color: accent ? AppColors.accent : AppColors.fg3),
+                  size: kMobile ? 18 : 16,
+                  color: accent ? AppColors.accent : AppColors.fg3),
               const SizedBox(width: S.s12),
             ],
-            Expanded(
+            Flexible(
               child: Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(15, color: labelColor)),
+                  style: sans(kMobile ? 15 : 13, color: labelColor)),
             ),
             if (value != null && value!.isNotEmpty)
-              Flexible(
+              Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(left: S.s8),
                   child: Text(value!,
@@ -909,6 +911,7 @@ class _InfoRow extends StatelessWidget {
                       style: sans(13, color: AppColors.fg3)),
                 ),
               ),
+            if (value == null || value!.isEmpty) const Spacer(),
             if (trailing != null) ...[
               const SizedBox(width: S.s4),
               trailing!,
@@ -960,7 +963,7 @@ class _DangerRow extends StatelessWidget {
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
+          constraints: BoxConstraints(minHeight: kMobile ? 48 : 40),
           child: Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: S.s12),
@@ -969,7 +972,8 @@ class _DangerRow extends StatelessWidget {
                 const SizedBox(width: S.s8),
                 Text(label,
                     style:
-                        sans(15, weight: W.label, color: AppColors.danger)),
+                        sans(kMobile ? 15 : 13,
+                            weight: W.label, color: AppColors.danger)),
               ]),
             ),
           ),

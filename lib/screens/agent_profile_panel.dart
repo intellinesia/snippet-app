@@ -461,17 +461,18 @@ class _AgentModelRowsState extends State<AgentModelRows> {
   Widget _row(String label, String value, {required bool desk}) => InkWell(
         onTap: () => _pick(desk: desk),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
+          constraints: BoxConstraints(minHeight: kMobile ? 48 : 40),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: S.s16),
             child: Row(children: [
+              AppIcon(desk ? 'terminal' : 'cpu',
+                  size: kMobile ? 18 : 16, color: AppColors.fg3),
+              const SizedBox(width: S.s12),
+              Text(label,
+                  maxLines: 1,
+                  style: sans(kMobile ? 15 : 13, color: AppColors.fg1)),
+              const SizedBox(width: S.s8),
               Expanded(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(15, color: AppColors.fg1)),
-              ),
-              Flexible(
                 child: Text(value,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
