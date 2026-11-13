@@ -2,27 +2,45 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../api.dart';
 import '../glass.dart';
-import '../media_views.dart';
 import '../models.dart';
 import '../mochi.dart';
 import '../platform.dart';
 import '../presence.dart';
-import '../swr.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../screens/agent_appearance.dart' show showAgentAppearance;
 import '../screens/agent_reach_panel.dart' show showAgentReachSettings;
-import '../screens/agent_thread_cards.dart' show daemonRelativeUrl;
 import '../screens/agent_wake_panel.dart' show showAgentWakeSettings;
 import '../screens/group_messaging.dart' show confirmDeleteGroup;
 import 'agent_cluster.dart';
 import '../screens/agent_profile_panel.dart'
     show AgentModelRows, showAgentProfileSettings;
 import 'chat_style.dart';
+
+/// Lets rows inside a docked [AgentInfoPanel] push a nested page instead of
+/// opening a popover or sheet. Absent everywhere else, so the same rows keep
+/// their old behaviour.
+class DockedInfoNav extends InheritedWidget {
+  const DockedInfoNav({
+    super.key,
+    required this.push,
+    required this.pop,
+    required super.child,
+  });
+
+  final void Function(String title, WidgetBuilder body) push;
+  final VoidCallback pop;
+
+  static DockedInfoNav? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<DockedInfoNav>();
+
+  @override
+  bool updateShouldNotify(DockedInfoNav oldWidget) =>
+      push != oldWidget.push || pop != oldWidget.pop;
+}
 
 /// iMessage-style contact/info screen for a direct agent chat.
 ///
@@ -127,11 +145,13 @@ class AgentInfoPanel extends StatefulWidget {
 }
 
 class _AgentInfoPanelState extends State<AgentInfoPanel> {
-  static const _tabs = ['Info', 'Files', 'Links'];
-  int _tab = 0;
+  final _navKey = GlobalKey<NavigatorState>();
 
-  Future<List<CoordinationEvent>> _fetch() async =>
-      (await widget.client.agentThreadPage(peerId: widget.agentId)).events;
+  void _pushNested(String title, WidgetBuilder body) {
+    _navKey.currentState?.push(_NestedPageRoute(title: title, builder: body));
+  }
+
+  void _popNested() => _navKey.currentState?.maybePop();
 
   void _close() {
     final close = widget.onClose;
@@ -142,10 +162,22 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     }
   }
 
-  Future<void> _editNickname() async {
+  Future<void> _editNickname(BuildContext ctx) async {
     final agent = widget.agent;
     if (agent == null) return;
-    final next = await promptText(context,
+    final nav = DockedInfoNav.maybeOf(ctx);
+    if (nav != null) {
+      nav.push(
+          'Nickname',
+          (_) => _NicknameEditor(
+                client: widget.client,
+                agent: agent,
+                onChanged: widget.onChanged,
+                onClose: nav.pop,
+              ));
+      return;
+    }
+    final next = await promptText(ctx,
         title: 'Nickname for ${widget.name}',
         initial: agent.nickname ?? '',
         hint: 'Leave empty to use the name');
@@ -159,13 +191,13 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     }
   }
 
-  Future<void> _deleteAgent() async {
+  Future<void> _deleteAgent(BuildContext ctx) async {
     final agent = widget.agent;
     if (agent == null) return;
     final name = agent.displayName.trim().isEmpty
         ? agent.id
         : agent.displayName.trim();
-    final ok = await confirmAction(context,
+    final ok = await confirmAction(ctx,
         title: 'Delete $name?',
         body:
             'This removes the agent, its identity and its notes. Its past task history loses it too. This can\'t be undone.',
@@ -188,7 +220,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
       listenable: widget.client.presence,
       builder: (_, __) {
         final p = widget.client.presence.presenceForAgentId(widget.agentId);
-        final s = p != null ? PresenceStore.word(p) : fallback;
+        final s = p != null ? PresenceStore.chatWord(p) : fallback;
         final text = s.isEmpty
             ? 'Active'
             : s[0].toUpperCase() + s.substring(1);
@@ -200,7 +232,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     );
   }
 
-  Widget _infoTab() {
+  Widget _infoTab(BuildContext context) {
     final agent = widget.agent;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -221,7 +253,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
                   label: 'Nickname',
                   icon: 'edit',
                   value: agent.nickname ?? '',
-                  onTap: _editNickname),
+                  onTap: () => _editNickname(context)),
             if (widget.onOpenMemory != null)
               _InfoRow(
                   label: 'Memory',
@@ -254,7 +286,8 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
         ]),
         if (widget.agentId != 'mission-control')
           _InfoCard(children: [
-            _DangerRow(label: 'Delete agent', onTap: _deleteAgent),
+            _DangerRow(
+                label: 'Delete agent', onTap: () => _deleteAgent(context)),
           ]),
       ],
     );
@@ -285,32 +318,34 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
           widget.onOpenDesk!();
         }),
     ];
-    return _InfoFrame(
-      onClose: _close,
-      edit: agent == null
-          ? null
-          : _EditPill(onTap: () => showAgentProfileSettings(
-                context,
-                client: widget.client,
-                agent: agent,
-                name: widget.name,
-                onChanged: widget.onChanged,
-              )),
-      avatar: MochiDisc(id: widget.agentId, size: kMobile ? 88 : 64),
-      name: widget.name,
-      status: _statusLine(),
-      actions: actions,
-      tabs: _tabs,
-      tab: _tab,
-      onTab: (i) => setState(() => _tab = i),
-      body: _tab == 0
-          ? _infoTab()
-          : _ThreadTab(
-              client: widget.client,
-              cacheKey: 'chat-info-agent:${widget.agentId}',
-              fetch: _fetch,
-              links: _tab == 2,
-            ),
+    Widget info(BuildContext ctx) => _InfoFrame(
+          onClose: _close,
+          edit: agent == null
+              ? null
+              : _EditPill(onTap: () => showAgentProfileSettings(
+                    ctx,
+                    client: widget.client,
+                    agent: agent,
+                    name: widget.name,
+                    onChanged: widget.onChanged,
+                  )),
+          avatar: MochiDisc(id: widget.agentId, size: kMobile ? 88 : 64),
+          name: widget.name,
+          status: _statusLine(),
+          actions: actions,
+          tabs: const [],
+          tab: 0,
+          onTab: (_) {},
+          body: _infoTab(ctx),
+        );
+    if (!widget.docked) return info(context);
+    return DockedInfoNav(
+      push: _pushNested,
+      pop: _popNested,
+      child: Navigator(
+        key: _navKey,
+        onGenerateRoute: (settings) => _NestedPageRoute(builder: info),
+      ),
     );
   }
 }
@@ -337,7 +372,7 @@ class GroupInfoPanel extends StatefulWidget {
 }
 
 class _GroupInfoPanelState extends State<GroupInfoPanel> {
-  static const _tabs = ['Info', 'Members', 'Files', 'Links'];
+  static const _tabs = ['Info', 'Members'];
   int _tab = 0;
   late GroupSummary _group = widget.group;
   List<CoordinationAgent> _agents = const [];
@@ -574,16 +609,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
       tabs: _tabs,
       tab: _tab,
       onTab: (i) => setState(() => _tab = i),
-      body: _tab == 1
-          ? _membersSection()
-          : _tab == 0
-              ? _infoTab()
-              : _ThreadTab(
-                  client: widget.client,
-                  cacheKey: 'chat-info-group:${_group.id}',
-                  fetch: () => widget.client.groupEvents(_group.id),
-                  links: _tab == 3,
-                ),
+      body: _tab == 1 ? _membersSection() : _infoTab(),
     );
   }
 }
@@ -667,8 +693,10 @@ class _InfoFrame extends StatelessWidget {
             ),
           ],
           const SizedBox(height: S.s20),
-          _Segmented(labels: tabs, index: tab, onSelect: onTab),
-          const SizedBox(height: S.s16),
+          if (tabs.length > 1) ...[
+            _Segmented(labels: tabs, index: tab, onSelect: onTab),
+            const SizedBox(height: S.s16),
+          ],
         ]),
       ),
       Expanded(
@@ -999,260 +1027,197 @@ class _LongPressRow extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Files and Links tabs
+// Docked nested pages
 // ---------------------------------------------------------------------------
 
-class _ThreadTab extends StatefulWidget {
-  const _ThreadTab({
+/// A page pushed inside the docked panel's own [Navigator]: 52px chrome with a
+/// back circle and centred title, then a scrolling body. Paints nothing, so
+/// the see-through panel background shows through.
+class _NestedPage extends StatelessWidget {
+  const _NestedPage({required this.title, required this.builder});
+
+  final String title;
+  final WidgetBuilder builder;
+
+  @override
+  Widget build(BuildContext context) {
+    final nav = DockedInfoNav.maybeOf(context);
+    return Material(
+      type: MaterialType.transparency,
+      // The transparent colour is only hit absorption: empty areas must not
+      // fall through to the info page underneath.
+      child: Container(
+        color: Colors.transparent,
+        child: Column(children: [
+          SizedBox(
+            height: 52,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: S.s16),
+              child: Stack(children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: _GlassCircle(
+                    onTap: nav == null
+                        ? () => Navigator.of(context).maybePop()
+                        : nav.pop,
+                    icon: 'chevron-left',
+                    label: 'Back',
+                  ),
+                ),
+                Center(
+                  child: Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(15,
+                          weight: W.label, color: AppColors.fg1)),
+                ),
+              ]),
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding:
+                  const EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s24),
+              child: builder(context),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Slide-from-right route for [_NestedPage]; the first route (no title) is the
+/// info page itself. Nothing is painted, so the panel stays see-through.
+class _NestedPageRoute extends PageRoute<void> {
+  _NestedPageRoute({this.title, required this.builder});
+
+  final String? title;
+  final WidgetBuilder builder;
+
+  @override
+  bool get opaque => false;
+
+  @override
+  Color? get barrierColor => null;
+
+  @override
+  String? get barrierLabel => null;
+
+  @override
+  bool get maintainState => true;
+
+  @override
+  Duration get transitionDuration => Motion.base;
+
+  @override
+  Duration get reverseTransitionDuration => Motion.base;
+
+  @override
+  Widget buildPage(BuildContext context, Animation<double> animation,
+          Animation<double> secondaryAnimation) =>
+      title == null
+          ? builder(context)
+          : _NestedPage(title: title!, builder: builder);
+
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final curved = CurvedAnimation(
+        parent: animation,
+        curve: Motion.enter,
+        reverseCurve: Motion.exit);
+    if (reduceMotion(context)) {
+      return FadeTransition(opacity: curved, child: child);
+    }
+    return SlideTransition(
+      position:
+          Tween(begin: const Offset(1, 0), end: Offset.zero).animate(curved),
+      child: child,
+    );
+  }
+}
+
+/// The docked 'Nickname' page: same save as the old prompt, minus the dialog.
+class _NicknameEditor extends StatefulWidget {
+  const _NicknameEditor({
     required this.client,
-    required this.cacheKey,
-    required this.fetch,
-    required this.links,
+    required this.agent,
+    required this.onChanged,
+    required this.onClose,
   });
 
   final DaemonClient client;
-  final String cacheKey;
-  final Future<List<CoordinationEvent>> Function() fetch;
-  final bool links;
+  final CoordinationAgent agent;
+  final VoidCallback? onChanged;
+  final VoidCallback onClose;
 
   @override
-  State<_ThreadTab> createState() => _ThreadTabState();
+  State<_NicknameEditor> createState() => _NicknameEditorState();
 }
 
-class _ThreadTabState extends State<_ThreadTab> {
-  late final Swr<List<CoordinationEvent>> _swr;
-
-  @override
-  void initState() {
-    super.initState();
-    _swr = Swr<List<CoordinationEvent>>(
-      client: widget.client,
-      key: widget.cacheKey,
-      fetch: widget.fetch,
-      revalidateOn: Swr.coordination,
-      onChange: () {
-        if (mounted) setState(() {});
-      },
-    );
-  }
+class _NicknameEditorState extends State<_NicknameEditor> {
+  late final TextEditingController _text =
+      TextEditingController(text: widget.agent.nickname ?? '');
+  bool _saving = false;
 
   @override
   void dispose() {
-    _swr.dispose();
+    _text.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final events = _swr.data;
-    if (events == null) {
-      if (_swr.error != null) {
-        return _TabMessage('Couldn\'t load the conversation');
-      }
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: S.s40),
-        child: Center(
-            child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2))),
-      );
-    }
-    return widget.links
-        ? _LinksList(client: widget.client, events: events)
-        : _FilesList(client: widget.client, events: events);
-  }
-}
-
-class _TabMessage extends StatelessWidget {
-  const _TabMessage(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: S.s32),
-        child: Center(child: Text(text, style: TS.meta())),
-      );
-}
-
-class _FileEntry {
-  const _FileEntry({this.path, this.url, required this.kind, required this.label});
-
-  final String? path;
-  final String? url;
-  final MediaKind kind;
-  final String label;
-}
-
-List<_FileEntry> _fileEntries(List<CoordinationEvent> events) {
-  final out = <_FileEntry>[];
-  final seen = <String>{};
-  void add(_FileEntry e) {
-    final key = '${e.path}|${e.url}|${e.label}';
-    if (seen.add(key)) out.add(e);
-  }
-
-  for (final e in events) {
-    for (final a in parseSentAttachments(e.body)) {
-      add(_FileEntry(path: a.path, kind: a.kind, label: baseName(a.path)));
-    }
-    final att = e.payload['attachment'];
-    if (att is! Map) continue;
-    final path = '${att['path'] ?? ''}'.trim();
-    final url = '${att['url'] ?? ''}'.trim();
-    if (path.isEmpty && url.isEmpty) continue;
-    final kind = path.isNotEmpty
-        ? mediaKindOf(path)
-        : switch ('${att['kind'] ?? ''}') {
-            'image' => MediaKind.image,
-            'audio' => MediaKind.audio,
-            'video' => MediaKind.video,
-            _ => MediaKind.other,
-          };
-    add(_FileEntry(
-      path: path.isEmpty ? null : path,
-      url: url.isEmpty ? null : url,
-      kind: kind,
-      label: path.isNotEmpty ? baseName(path) : 'Attachment',
-    ));
-  }
-  return out;
-}
-
-String _fileIcon(MediaKind kind) => switch (kind) {
-      MediaKind.image => 'image',
-      MediaKind.audio => 'file-audio',
-      MediaKind.video => 'file-video',
-      MediaKind.pdf => 'pdf',
-      MediaKind.archive => 'file-archive',
-      MediaKind.code => 'file-code',
-      MediaKind.text => 'file-text',
-      MediaKind.other => 'file',
-    };
-
-void _openFile(BuildContext context, DaemonClient client, _FileEntry f,
-    List<String> gallery) {
-  if (f.path != null) {
-    openMedia(context, client, f.path!, gallery: gallery);
-    return;
-  }
-  final url = f.url;
-  if (url == null) return;
-  final resolved = daemonRelativeUrl(client, url);
-  if (resolved.isEmpty) return;
-  launchUrl(Uri.parse(resolved), mode: LaunchMode.externalApplication);
-}
-
-class _FilesList extends StatelessWidget {
-  const _FilesList({required this.client, required this.events});
-
-  final DaemonClient client;
-  final List<CoordinationEvent> events;
-
-  @override
-  Widget build(BuildContext context) {
-    final files = _fileEntries(events);
-    if (files.isEmpty) return const _TabMessage('No files in this conversation yet');
-    final images = [
-      for (final f in files)
-        if (f.kind == MediaKind.image && f.path != null) f.path!,
-    ];
-    final others = [
-      for (final f in files)
-        if (!(f.kind == MediaKind.image && f.path != null)) f,
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (images.isNotEmpty)
-          LayoutBuilder(builder: (_, c) {
-            final w = (c.maxWidth - 12) / 3;
-            return GridView.count(
-              crossAxisCount: 3,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-              children: [
-                for (final p in images)
-                  ImageThumb(
-                      client: client,
-                      path: p,
-                      width: w,
-                      height: w,
-                      gallery: images),
-              ],
-            );
-          }),
-        if (others.isNotEmpty)
-          _InfoCard(children: [
-            for (final f in others)
-              _InfoRow(
-                label: f.label,
-                onTap: () => _openFile(context, client, f, images),
-                trailing: AppIcon(_fileIcon(f.kind),
-                    size: 16, color: AppColors.fg3),
-              ),
-          ]),
-      ],
-    );
-  }
-}
-
-class _LinkEntry {
-  const _LinkEntry(this.url, this.host);
-
-  final String url;
-  final String host;
-}
-
-final _urlRe = RegExp(r'''https?://[^\s<>"'()\[\]]+''');
-final _urlTailRe = RegExp(r'''[.,;:!?)\]'"<>]+$''');
-
-List<_LinkEntry> _linkEntries(List<CoordinationEvent> events) {
-  final out = <_LinkEntry>[];
-  final seen = <String>{};
-  for (final e in events) {
-    for (final m in _urlRe.allMatches(e.body)) {
-      final url = m.group(0)!.replaceAll(_urlTailRe, '');
-      if (url.isEmpty || !seen.add(url)) continue;
-      final host = Uri.tryParse(url)?.host ?? url;
-      out.add(_LinkEntry(url, host.isEmpty ? url : host));
+  Future<void> _save() async {
+    final next = _text.text.trim();
+    if (next == (widget.agent.nickname ?? '')) return widget.onClose();
+    setState(() => _saving = true);
+    try {
+      await widget.client
+          .setAgentNickname(widget.agent.id, next.isEmpty ? null : next);
+      if (!mounted) return;
+      widget.onChanged?.call();
+      widget.onClose();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      toast(context, '$e', danger: true);
     }
   }
-  return out;
-}
-
-class _LinksList extends StatelessWidget {
-  const _LinksList({required this.client, required this.events});
-
-  final DaemonClient client;
-  final List<CoordinationEvent> events;
 
   @override
-  Widget build(BuildContext context) {
-    final links = _linkEntries(events);
-    if (links.isEmpty) return const _TabMessage('No links in this conversation yet');
-    return _InfoCard(children: [
-      for (final l in links)
-        _InfoRow(
-          label: l.url,
-          onTap: () => openMarkdownLink(l.url, context),
-          trailing: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(l.host,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(12, color: AppColors.fg3)),
-              AppIcon('external-link', size: 12, color: AppColors.fg4),
-            ],
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _text,
+            autofocus: true,
+            style: TS.body(AppColors.fg1),
+            onSubmitted: (_) => _save(),
+            decoration: InputDecoration(
+              hintText: 'Leave empty to use the name',
+              hintStyle: TS.body(AppColors.fg4),
+              isDense: true,
+              filled: true,
+              fillColor: AppColors.surface2,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(R.sm),
+                  borderSide: BorderSide(color: AppColors.border)),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(R.sm),
+                  borderSide: BorderSide(color: AppColors.border)),
+            ),
           ),
-        ),
-    ]);
-  }
+          const SizedBox(height: S.s12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Btn('Save', small: true, disabled: _saving, onTap: _save),
+          ),
+        ],
+      );
 }
 
 // ---------------------------------------------------------------------------

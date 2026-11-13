@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../chat/chat_info.dart' show DockedInfoNav;
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -21,6 +22,11 @@ Future<void> showAgentWakeSettings(
 }) {
   final panel = AgentWakePanel(
       client: client, owner: owner, name: name, onChanged: onChanged);
+  final nav = DockedInfoNav.maybeOf(context);
+  if (nav != null) {
+    nav.push('Wakes and reporting', (_) => panel);
+    return Future<void>.value();
+  }
   if (kMobile) {
     return showAppSheet(context, title: name, maxHeight: 640, child: panel);
   }

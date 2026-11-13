@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../chat/chat_info.dart' show DockedInfoNav;
 import '../menu_widgets.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -15,6 +16,11 @@ Future<void> showAgentReachSettings(
   Offset? point,
 }) {
   final panel = AgentReachPanel(client: client, agentId: agentId);
+  final nav = DockedInfoNav.maybeOf(context);
+  if (nav != null) {
+    nav.push('How it reaches you', (_) => panel);
+    return Future<void>.value();
+  }
   if (kMobile) {
     return showAppSheet(context,
         title: name,

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../chat/chat_info.dart' show DockedInfoNav;
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -17,6 +20,18 @@ Future<void> showAgentProfileSettings(
   Offset? point,
   VoidCallback? onChanged,
 }) {
+  final nav = DockedInfoNav.maybeOf(context);
+  if (nav != null) {
+    nav.push(
+        'Model',
+        (_) => AgentProfilePanel(
+            client: client,
+            agent: agent,
+            name: name,
+            onChanged: onChanged,
+            onPicked: nav.pop));
+    return Future<void>.value();
+  }
   Widget buildPanel(BuildContext ctx, {required bool closeOnPick}) =>
       AgentProfilePanel(
         client: client,
@@ -367,6 +382,32 @@ class _AgentModelRowsState extends State<AgentModelRows> {
     }
   }
 
+  Widget _pickOptions(BuildContext ctx, ServerConfig cfg,
+          {required bool desk, required void Function(String) onPick}) =>
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _pickRow(
+            ctx,
+            desk ? 'Same as tasks' : 'Routing default',
+            desk ? 'Follows the profile above' : 'Your Routing settings',
+            'layers',
+            selected: desk ? !_separate : _work == null,
+            onTap: () => onPick(''),
+          ),
+          for (final p in cfg.profiles)
+            _pickRow(
+              ctx,
+              p.name,
+              '${p.provider} · ${p.model}',
+              'provider:${p.provider}',
+              selected: desk ? (_separate && _desk == p.name) : _work == p.name,
+              onTap: () => onPick(p.name),
+            ),
+        ],
+      );
+
   Future<void> _pick({required bool desk}) async {
     final cfg = await _config();
     if (cfg == null || !mounted) return;
@@ -374,37 +415,32 @@ class _AgentModelRowsState extends State<AgentModelRows> {
       toast(context, 'No inference profiles configured', danger: true);
       return;
     }
-    final picked = await showAppSheet<String>(
-      context,
-      title: desk ? 'Desk runs on' : 'Tasks run on',
-      maxWidth: 340,
-      maxHeight: 460,
-      child: Builder(
-        builder: (ctx) => Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _pickRow(
-              ctx,
-              desk ? 'Same as tasks' : 'Routing default',
-              desk ? 'Follows the profile above' : 'Your Routing settings',
-              'layers',
-              selected: desk ? !_separate : _work == null,
-              onTap: () => Navigator.pop(ctx, ''),
-            ),
-            for (final p in cfg.profiles)
-              _pickRow(
-                ctx,
-                p.name,
-                '${p.provider} · ${p.model}',
-                'provider:${p.provider}',
-                selected: desk ? (_separate && _desk == p.name) : _work == p.name,
-                onTap: () => Navigator.pop(ctx, p.name),
-              ),
-          ],
+    final title = desk ? 'Desk runs on' : 'Tasks run on';
+    final nav = DockedInfoNav.maybeOf(context);
+    final String? picked;
+    if (nav != null) {
+      final done = Completer<String?>();
+      nav.push(
+          title,
+          (ctx) => _pickOptions(ctx, cfg,
+              desk: desk,
+              onPick: (v) {
+                if (!done.isCompleted) done.complete(v);
+                nav.pop();
+              }));
+      picked = await done.future;
+    } else {
+      picked = await showAppSheet<String>(
+        context,
+        title: title,
+        maxWidth: 340,
+        maxHeight: 460,
+        child: Builder(
+          builder: (ctx) => _pickOptions(ctx, cfg,
+              desk: desk, onPick: (v) => Navigator.pop(ctx, v)),
         ),
-      ),
-    );
+      );
+    }
     if (picked == null || !mounted) return;
     final name = picked.isEmpty ? null : picked;
     if (!desk) {
