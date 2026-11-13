@@ -30,6 +30,7 @@ import '../theme.dart';
 import '../media_views.dart';
 import '../widgets.dart';
 import '../crew_widgets.dart' show runCrewAgentAction;
+import '../usage_popover.dart' show showUsagePopover;
 import 'add_instance.dart';
 import 'agent_panel.dart';
 import 'editor.dart';

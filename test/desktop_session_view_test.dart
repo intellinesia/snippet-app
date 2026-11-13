@@ -381,7 +381,7 @@ void main() {
     });
   }
 
-  testWidgets('Desktop SessionScreen drops ctxbar and cfoot, shows header',
+  testWidgets('Desktop SessionScreen shows ctxbar and cfoot, no header title',
       (tester) async {
     final socket = await _pumpSession(
       tester,
@@ -425,22 +425,21 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.byType(SessionContextBar), findsNothing);
-    expect(find.byType(SessionContextFooter), findsNothing);
-    expect(find.text('Lanes 2'), findsNothing);
-    expect(find.text('1 terminal'), findsNothing);
-    expect(find.text('80% context'), findsNothing);
-    expect(find.text('42k cached'), findsNothing);
-    expect(find.text('7% this week'), findsNothing);
+    expect(find.byType(SessionContextBar), findsOneWidget);
+    expect(find.byType(SessionContextFooter), findsOneWidget);
+    expect(find.text('Lanes 2'), findsOneWidget);
+    expect(find.text('1 terminal'), findsOneWidget);
+    expect(find.text('80% context'), findsOneWidget);
+    expect(find.text('42k cached'), findsOneWidget);
+    expect(find.text('7% this week'), findsOneWidget);
 
-    // The v5 floating header carries the title; the chips row and footer
-    // are gone from the composer.
-    expect(find.text('Test Session'), findsOneWidget);
+    // The tab strip carries the title; the desktop header is actions only.
+    expect(find.text('Test Session'), findsNothing);
 
     await _disposeSession(tester);
   });
 
-  testWidgets('Desktop SessionScreen header shows working status and panel toggle',
+  testWidgets('Desktop SessionScreen header shows the panel toggle',
       (tester) async {
     var panelToggles = 0;
     final socket = await _pumpSession(
@@ -464,8 +463,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Test Session'), findsOneWidget);
-    expect(find.textContaining('Working'), findsWidgets);
+    expect(find.text('Test Session'), findsNothing);
+    expect(find.byTooltip('Session actions'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Toggle panel'));
     await tester.pump();
@@ -474,7 +473,7 @@ void main() {
     await _disposeSession(tester);
   });
 
-  testWidgets('Desktop Mission Control header shows mochi, counts and usage chips',
+  testWidgets('Desktop Mission Control shows usage in the composer footer',
       (tester) async {
     final socket = await _pumpSession(
       tester,
@@ -498,7 +497,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Mission Control'), findsOneWidget);
+    expect(find.byType(SessionContextFooter), findsOneWidget);
     expect(find.text('80% context'), findsOneWidget);
     expect(find.text('7% this week'), findsOneWidget);
 
@@ -547,17 +546,4 @@ void main() {
     await _disposeSession(tester);
   });
 
-  testWidgets('Desktop session header title has Session menu tooltip and opens menu on click',
-      (tester) async {
-    await _pumpSession(tester, platform: TargetPlatform.linux);
-
-    expect(find.byTooltip('Session menu'), findsOneWidget);
-    await tester.tap(find.text('Test Session'));
-    await tester.pumpAndSettle();
-    expect(find.text('Actions'), findsOneWidget);
-    await tester.tapAt(const Offset(10, 10));
-    await tester.pumpAndSettle();
-
-    await _disposeSession(tester);
-  });
 }

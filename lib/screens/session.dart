@@ -284,10 +284,7 @@ class _SessionScreenState extends State<SessionScreen>
   bool _rowsSeeded = false;
 
   void _setState(VoidCallback fn) {
-    if (mounted) {
-      setState(fn);
-      if (_isMissionControl) unawaited(_refreshMcCounts());
-    }
+    if (mounted) setState(fn);
   }
 
   WebSocketChannel? _channel;
@@ -337,10 +334,6 @@ class _SessionScreenState extends State<SessionScreen>
   String? _modelLabel;
   String? _modelProvider;
   String? _currentProfile;
-  String? _sessionBranch;
-  int? _mcActiveTasks;
-  int? _mcNeedsYou;
-  DateTime? _mcCountsAt;
 
   /// When set, the composer sends a DIRECT MESSAGE to this agent instead of a
   /// turn in the current session. Null means ordinary chat input.
@@ -968,7 +961,6 @@ class _SessionScreenState extends State<SessionScreen>
       _loadSettled();
       _checkCold();
       _loadModel();
-      if (_isMissionControl) unawaited(_refreshMcCounts(force: true));
     });
     if (widget.inboundShare != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1194,11 +1186,9 @@ class _SessionScreenState extends State<SessionScreen>
         try {
           final list = await widget.client.sessions();
           var found = false;
-          _sessionBranch = null;
           for (final s in list) {
             if (s.id == widget.sessionId) {
               wanted = s.profile; // null here means "uses the global default"
-              _sessionBranch = s.branch;
               found = true;
               break;
             }
@@ -1232,45 +1222,6 @@ class _SessionScreenState extends State<SessionScreen>
         setState(() {
           _modelLabel = p?.name;
           _modelProvider = p?.provider;
-        });
-      }
-    } catch (_) {}
-  }
-
-  /// Task counts for the Mission Control header line, refreshed at most
-  /// every 30s and only while the desktop header is on screen.
-  Future<void> _refreshMcCounts({bool force = false}) async {
-    if (!_isMissionControl || kMobile) return;
-    final now = DateTime.now();
-    if (!force &&
-        _mcCountsAt != null &&
-        now.difference(_mcCountsAt!) < const Duration(seconds: 30)) {
-      return;
-    }
-    _mcCountsAt = now;
-    try {
-      final tasks = await widget.client.tasks(limit: 500);
-      if (!mounted) return;
-      var active = 0;
-      var needs = 0;
-      for (final t in tasks) {
-        switch (t.status) {
-          case TaskStatus.todo:
-          case TaskStatus.inProgress:
-            active++;
-          case TaskStatus.inReview:
-          case TaskStatus.blocked:
-          case TaskStatus.failed:
-            needs++;
-          case TaskStatus.done:
-          case TaskStatus.cancelled:
-            break;
-        }
-      }
-      if (active != _mcActiveTasks || needs != _mcNeedsYou) {
-        setState(() {
-          _mcActiveTasks = active;
-          _mcNeedsYou = needs;
         });
       }
     } catch (_) {}

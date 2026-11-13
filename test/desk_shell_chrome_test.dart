@@ -10,7 +10,6 @@ import 'package:snippet/mochi.dart';
 import 'package:snippet/screens/desktop_shell.dart';
 import 'package:snippet/screens/session.dart' show TerminalHost, TerminalInfo;
 import 'package:snippet/screens/session_list_row.dart';
-import 'package:snippet/screens/session_panels.dart';
 import 'package:snippet/screens/session_side_panel.dart';
 import 'package:snippet/screens/tasks/tasks_panel.dart';
 import 'package:snippet/swr.dart';
@@ -301,7 +300,7 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('SessionSidePanel shows segmented header, lanes, and terminals dock',
+  testWidgets('SessionSidePanel shows segmented header and terminals dock',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     final host = TerminalHost(
@@ -315,12 +314,6 @@ void main() {
       onRequestNew: () {},
       onRequestClose: (_) {},
     );
-    final lane = LaneInfo(
-      id: 'l1',
-      title: 'Fix shell chrome',
-      status: 'running',
-      startedAt: '2026-11-13T03:00:00Z',
-    );
 
     await tester.pumpWidget(MaterialApp(
       theme: buildAppTheme(),
@@ -333,7 +326,6 @@ void main() {
             workspacePath: '/workspace',
             sessionId: 's1',
             changesCount: 6,
-            lanes: [lane],
             host: host,
             onTogglePanel: (_) {},
             onOpenFile: (_, __) {},
@@ -343,12 +335,12 @@ void main() {
     ));
     await tester.pump(const Duration(milliseconds: 300));
 
-    // Fixed header with Files | Changes 6 | Lanes 1 and more button.
+    // Fixed header with Files | Changes 6 and more button; lanes are a menu
+    // toggle, not a default tab.
     expect(find.text('Files'), findsOneWidget);
     expect(find.text('Changes'), findsOneWidget);
     expect(find.text('6'), findsOneWidget);
-    expect(find.text('Lanes'), findsOneWidget);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Lanes'), findsNothing);
     expect(find.byTooltip('Scheduled, checkpoints'), findsOneWidget);
     // Standalone header is hidden when hosted inside SessionSidePanel.
     expect(find.text('File Tree'), findsNothing);
@@ -364,12 +356,6 @@ void main() {
     await tester.tap(find.text('Terminals'));
     await tester.pump();
     expect(find.text('flutter test'), findsNothing);
-
-    // Switching to Lanes renders SessionLanesPanel.
-    await tester.tap(find.text('Lanes'));
-    await tester.pump(const Duration(milliseconds: 200));
-    expect(find.byType(SessionLanesPanel), findsOneWidget);
-    expect(find.text('Fix shell chrome'), findsOneWidget);
 
     // Switching to Changes renders GitDiffSidebarPanel without duplicate header.
     await tester.tap(find.text('Changes'));

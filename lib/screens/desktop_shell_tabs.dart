@@ -302,7 +302,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
   bool _canCloseTab(_ShellTab t) =>
       (_isAuxiliary(t) && !t.isTerminal) || t.isPrs || t.isDraft || t.isReadout;
 
-  bool _canCloseTopTab(_ShellTab t) => !t.isMissionControl && !t.isBoard;
+  bool _canCloseTopTab(_ShellTab t) => !t.isMissionControl;
 
   void _closeTab(int i, {bool force = false}) {
     if (i < 0 || i >= _tabs.length) return;
@@ -716,10 +716,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
 
   Widget _mainTabsRow() => MainTabsStrip(
         controller: _stripController,
-        tabs: [
-          for (final t in _mainTabs)
-            if (!t.isBoard) t,
-        ],
+        tabs: _mainTabs,
         activeTab: _activeTab,
         statusForTab: _statusForTab,
         canCloseTab: _canCloseTopTab,
@@ -732,7 +729,9 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         folderFor: _folderForTab,
         mcAttentionCount: _mcAttentionCount,
         tasksActive: _activeTab?.isBoard ?? false,
-        onOpenTasks: _client == null ? null : _openTasksTab,
+        onOpenTasks: _client == null || _mainTabs.any((t) => t.isBoard)
+            ? null
+            : _openTasksTab,
       );
 
   Future<void> _downloadActiveFile() async {

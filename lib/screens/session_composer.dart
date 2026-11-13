@@ -903,6 +903,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                   if (_attachments.isNotEmpty) _attachmentBar(),
                   if (_mentionQuery != null && !_isMissionControl)
                     _mentionList(),
+                  if (!kMobile) _contextBar(),
                   if (top != null) top,
                   Swap(
                     stateKey: (_isRecording || _recordingPath != null)
@@ -916,10 +917,34 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                           )
                         : _composerCard(running),
                   ),
+                  if (!kMobile) _contextFooter(),
                 ]),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _contextBar() {
+    final lanes = _state?.lanes ?? const <LaneInfo>[];
+    return SessionContextBar(
+      laneCount: lanes.length,
+      laneRunning: lanes.any((l) => l.running),
+      onTapLanes: _showLanes,
+      termCount: _terms.length,
+      termRunning: _terms.any((t) => t.alive),
+      onTapTerms: _openTerm,
+    );
+  }
+
+  Widget _contextFooter() {
+    final s = _state;
+    if (s == null) return const SizedBox.shrink();
+    return SessionContextFooter(
+      contextWindow: s.contextWindow,
+      lastPromptTokens: s.lastPromptTokens,
+      cacheReadTokens: s.cacheReadTokens,
+      rateSecondary: s.rateSecondary,
     );
   }
 

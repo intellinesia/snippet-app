@@ -440,7 +440,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           _openFileTab(tab.client, tab.instanceUrl, path, name),
       host: _termHosts[tab.key],
       sessionId: tab.sessionId,
-      lanes: _macSessionStatuses[tab.key]?.state?.lanes ?? const [],
       onTogglePanel: _toggleRightPanel,
       onOpenDiff: (f) =>
           _openDiffTab(tab.client, tab.instanceUrl, tab.sessionId!, f),
@@ -788,10 +787,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 
   Widget _sidebarFooter() {
     final healthy = _active == null ? null : _health[_active!.url];
-    final live = [
-      for (final s in _sessions ?? const <SessionInfo>[])
-        if (!s.settled) s,
-    ].length;
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       child: Row(children: [
@@ -825,8 +820,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                       overflow: TextOverflow.ellipsis,
                       style: sans(12, color: AppColors.fg2)),
                 ),
-                const SizedBox(width: 8),
-                Text('$live live', style: sans(12, color: AppColors.fg4)),
               ]),
             ),
           ),
@@ -841,6 +834,15 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                 ])
               : const SizedBox.shrink(),
         ),
+        if (_client != null) ...[
+          Builder(
+            builder: (ctx) => _TbBtn(
+                icon: 'gauge',
+                tooltip: 'Usage',
+                onTap: () => showUsagePopover(ctx, _client!)),
+          ),
+          const SizedBox(width: 2),
+        ],
         _TbBtn(
             icon: 'settings',
             tooltip: 'Settings',

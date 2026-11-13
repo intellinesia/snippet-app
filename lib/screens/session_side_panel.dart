@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
-import '../models.dart' show GitFile, GitStatus, LaneInfo;
+import '../models.dart' show GitFile, GitStatus;
 import '../swr.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'file_tree_sidebar_panel.dart';
 import 'git_diff_sidebar_panel.dart';
 import 'session.dart' show TerminalHost;
-import 'session_panels.dart' show SessionLanesPanel;
 import 'shell_models.dart' show RightPanel, RightTab;
 
-enum _SideTab { files, changes, lanes }
+enum _SideTab { files, changes }
 
 class SessionSidePanel extends StatefulWidget {
   const SessionSidePanel({
@@ -21,7 +20,6 @@ class SessionSidePanel extends StatefulWidget {
     required this.onOpenFile,
     this.host,
     this.sessionId,
-    this.lanes = const [],
     this.changesCount,
     this.onTogglePanel,
     this.onOpenDiff,
@@ -45,7 +43,6 @@ class SessionSidePanel extends StatefulWidget {
   final VoidCallback? onClearReadout;
 
   final String? sessionId;
-  final List<LaneInfo> lanes;
   final int? changesCount;
   final void Function(GitFile file)? onOpenDiff;
 
@@ -154,7 +151,6 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
 
   Widget _segPill(bool reading) {
     final changes = _changesCount;
-    final lanes = widget.lanes.length;
     Widget btn(_SideTab target, String label, int count) {
       final on = !reading && _tab == target;
       return Material(
@@ -194,8 +190,6 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
         btn(_SideTab.files, 'Files', 0),
         const SizedBox(width: 2),
         btn(_SideTab.changes, 'Changes', changes),
-        const SizedBox(width: 2),
-        btn(_SideTab.lanes, 'Lanes', lanes),
       ]),
     );
   }
@@ -331,13 +325,6 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
       return KeyedSubtree(
         key: ValueKey(readout.key),
         child: widget.readoutBody!(readout),
-      );
-    }
-    if (_tab == _SideTab.lanes) {
-      return SessionLanesPanel(
-        lanes: widget.lanes,
-        client: widget.client,
-        sessionId: widget.sessionId,
       );
     }
     if (widget.workspacePath.isEmpty) return const SizedBox();
