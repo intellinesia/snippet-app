@@ -172,9 +172,6 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
     _loadRepo(folder);
   }
 
-  bool get _atHome =>
-      _homePath != null && _homePath!.isNotEmpty && _folder == _homePath;
-
   String _labelForFolder(String? path) {
     if (path == null || path.isEmpty) return 'Choose folder';
     if (_homePath != null && _homePath!.isNotEmpty && path == _homePath) {
