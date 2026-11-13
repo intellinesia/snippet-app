@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'theme.dart';
+import 'widgets.dart';
 
 class MasterDetail extends StatelessWidget {
   const MasterDetail({
@@ -123,15 +124,50 @@ class SettingsHeader extends StatelessWidget {
     this.subtitle,
     this.actions = const [],
     this.back,
+    this.compact = false,
+    this.onBack,
   });
 
   final String title;
   final String? subtitle;
   final List<Widget> actions;
   final Widget? back;
+  final bool compact;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return SizedBox(
+        height: 44,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(children: [
+            IconBtn(
+              'chevron-left',
+              size: 40,
+              iconSize: 20,
+              tooltip: 'Back',
+              onTap: onBack ?? () => Navigator.maybePop(context),
+            ),
+            Expanded(
+              child: Center(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(17, weight: W.label, color: AppColors.fg1),
+                ),
+              ),
+            ),
+            if (actions.isNotEmpty)
+              ...actions
+            else
+              const SizedBox(width: 44),
+          ]),
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: S.s8),
       child: Column(
