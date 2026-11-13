@@ -54,7 +54,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Recent'), findsNothing);
     final ys = [
-      for (final t in ['Bravo', 'Alpha', 'Charlie', 'Crew'])
+      for (final t in ['Bravo', 'Crew', 'Alpha', 'Charlie'])
         tester.getTopLeft(find.text(t)).dy
     ];
     expect(ys, [...ys]..sort());

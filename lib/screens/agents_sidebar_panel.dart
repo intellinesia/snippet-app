@@ -475,44 +475,31 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 margin: const EdgeInsets.symmetric(horizontal: M.gutter),
                 color: AppColors.border);
             if (q.isEmpty) {
-              final sorted = [...ordered]
-                ..sort((a, b) {
-                  final x = a.lastMessage?.at;
-                  final y = b.lastMessage?.at;
-                  if (x != y) {
-                    if (x == null) return 1;
-                    if (y == null) return -1;
-                    return y.compareTo(x);
-                  }
-                  return a.displayName
-                      .toLowerCase()
-                      .compareTo(b.displayName.toLowerCase());
-                });
               final buckets = <AgentGroup, List<Widget>>{
                 for (final g in AgentGroup.values) g: <Widget>[],
               };
+              // Agents and groups interleave by recency inside each section.
               var i = 0;
-              for (final a in sorted) {
-                final tile = agentTile(a);
-                buckets[agentGroupFor(a,
-                    presence: widget.client.presence
-                        .presenceForAgentId(a.id))]!
-                    .add(Appear(
-                        key: ValueKey('appear-${tile.key}-$i'),
-                        index: i++,
-                        since: _shownAt,
-                        child: tile));
-              }
-              for (final g in groups) {
-                final tile = groupTile(g);
-                (g.hasUnread
-                        ? buckets[AgentGroup.needsYou]!
-                        : buckets[AgentGroup.recent]!)
-                    .add(Appear(
-                        key: ValueKey('appear-${tile.key}-$i'),
-                        index: i++,
-                        since: _shownAt,
-                        child: tile));
+              for (final e in entries) {
+                final item = e.item;
+                final Widget tile;
+                final AgentGroup bucket;
+                if (item is CoordinationAgent) {
+                  tile = agentTile(item);
+                  bucket = agentGroupFor(item,
+                      presence: widget.client.presence
+                          .presenceForAgentId(item.id));
+                } else {
+                  final g = item as GroupSummary;
+                  tile = groupTile(g);
+                  bucket =
+                      g.hasUnread ? AgentGroup.needsYou : AgentGroup.recent;
+                }
+                buckets[bucket]!.add(Appear(
+                    key: ValueKey('appear-${tile.key}-$i'),
+                    index: i++,
+                    since: _shownAt,
+                    child: tile));
               }
               final sectionDefs = <(AgentGroup, String, Color)>[
                 (AgentGroup.needsYou, 'Needs you', AppColors.accent),
