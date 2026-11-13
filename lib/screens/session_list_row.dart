@@ -233,7 +233,8 @@ class SessionListRow extends StatelessWidget {
     final diff = sessionDiff(s);
     final branch = s.branch?.trim() ?? '';
     final attn = needsYou ? _attentionState(s) : null;
-    final hasMeta = showProject || needsYou || branch.isNotEmpty || diff != null;
+    final noRepo = !showProject && branch.isEmpty && diff == null;
+    final hasMeta = showProject || needsYou || branch.isNotEmpty || diff != null || noRepo;
 
     final stateLabel = attn?.label ??
         (working
@@ -294,7 +295,7 @@ class SessionListRow extends StatelessWidget {
                   child: Row(children: [
                     if (attn != null) ...[
                       _StateLabel(state: attn),
-                      if (showProject || branch.isNotEmpty || diff != null)
+                      if (showProject || branch.isNotEmpty || diff != null || noRepo)
                         const SizedBox(width: 8),
                     ],
                     if (showProject)
@@ -313,6 +314,13 @@ class SessionListRow extends StatelessWidget {
                                   style: TS.meta()),
                             ),
                           ]),
+                        )
+                      else if (noRepo)
+                        Expanded(
+                          child: Text('No git repo',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TS.meta(AppColors.fg4)),
                         )
                       else if (diff != null)
                         const Spacer(),
