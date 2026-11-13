@@ -26,6 +26,7 @@ import '../mochi.dart';
 import '../ambient/controller.dart';
 import 'mobile_bottom_bar.dart';
 import 'mobile_chrome.dart';
+import 'mobile_search_page.dart';
 export 'sidebar_mobile.dart';
 
 class Sidebar extends StatefulWidget {
@@ -326,7 +327,7 @@ class SidebarState extends State<Sidebar> {
                     workingCount: widget.mobileHome == MobileHome.chats
                         ? _workingCount
                         : 0,
-                    search: _barSearch(),
+                    onSearch: _searchAction(),
                     onHeightChanged: (h) {
                       if (mounted && h != _barHeight) {
                         setState(() => _barHeight = h);
@@ -565,28 +566,25 @@ class SidebarState extends State<Sidebar> {
             s,
       ].length;
 
-  /// The bar's search field: same controllers, focus node, hints and filter
-  /// callbacks the per-page FloatingSearch used, on Chats and Agents only.
-  MobileBarSearch? _barSearch() {
+  /// The bar's search circle opens the v5 search page on Chats and Agents.
+  VoidCallback? _searchAction() {
     if (_selecting ||
         (widget.mobileHome != MobileHome.chats &&
             widget.mobileHome != MobileHome.agents)) {
       return null;
     }
-    final showAgents = _agentsList || widget.mobileHome == MobileHome.agents;
-    return showAgents
-        ? MobileBarSearch(
-            controller: _agentSearchCtl,
-            focusNode: _searchFocus,
-            hint: 'Search agents',
-            onChanged: (v) => setState(() => _agentFilterQuery = v),
-          )
-        : MobileBarSearch(
-            controller: _searchCtl,
-            focusNode: _searchFocus,
-            hint: 'Search sessions',
-            onChanged: (v) => setState(() => _filterQuery = v),
-          );
+    return _openMobileSearch;
+  }
+
+  void _openMobileSearch() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => MobileSearchPage(
+        client: widget.client,
+        sessions: _sessions ?? const [],
+        onOpenSession: widget.onOpenSession,
+        onOpenAgent: (a) => widget.onAgent(a),
+      ),
+    ));
   }
 
   int get _mcAttentionCount {

@@ -11,6 +11,7 @@ import 'package:snippet/screens/mobile_bottom_bar.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/screens/sidebar.dart';
 import 'package:snippet/screens/mobile_chrome.dart';
+import 'package:snippet/screens/mobile_search_page.dart';
 import 'package:snippet/screens/mission_control_card.dart';
 import 'package:snippet/theme.dart';
 
@@ -159,23 +160,21 @@ void main() {
       await tester.pumpAndSettle();
       expect(newSessionCalled, isTrue);
 
-      // The search circle swaps the tab row for the filter field.
+      // The search circle opens the v5 search page.
       await tester.tap(find.byTooltip('Search'));
       await tester.pumpAndSettle();
-      expect(_field('Search sessions'), findsOneWidget);
-      expect(
-          find.descendant(
-              of: find.byType(MobileBottomBar), matching: find.text('Sessions')),
-          findsNothing);
-      await tester.enterText(_field('Search sessions'), 'Nonexistent');
+      final searchPage = find.byType(MobileSearchPage);
+      expect(searchPage, findsOneWidget);
+      expect(_field('Search'), findsOneWidget);
+      await tester.enterText(_field('Search'), 'Nonexistent');
       await tester.pumpAndSettle();
-      expect(find.text('No matching sessions'), findsOneWidget);
+      expect(find.text('No results'), findsOneWidget);
       await tester.tap(find.byTooltip('Clear').first);
       await tester.pumpAndSettle();
-      expect(find.text('Feature Setup'), findsOneWidget);
-      await tester.tap(find.byTooltip('Close search'));
+      await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
-      expect(_field('Search sessions'), findsNothing);
+      expect(find.byType(MobileSearchPage), findsNothing);
+      expect(find.text('Feature Setup'), findsOneWidget);
       expect(
           find.descendant(
               of: find.byType(MobileBottomBar), matching: find.text('Sessions')),
@@ -204,14 +203,23 @@ void main() {
 
       await tester.tap(find.byTooltip('Search'));
       await tester.pumpAndSettle();
-      await tester.enterText(_field('Search agents'), 'review');
+      final agentSearchPage = find.byType(MobileSearchPage);
+      expect(agentSearchPage, findsOneWidget);
+      await tester.enterText(_field('Search'), 'review');
       await tester.pumpAndSettle();
-      expect(find.text('Snippet'), findsNothing);
-      expect(find.text('Reviewer'), findsOneWidget);
+      expect(
+          find.descendant(
+              of: agentSearchPage, matching: find.text('Snippet')),
+          findsNothing);
+      expect(
+          find.descendant(
+              of: agentSearchPage, matching: find.text('Reviewer')),
+          findsOneWidget);
       await tester.tap(find.byTooltip('Clear').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Close search'));
+      await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
+      expect(find.byType(MobileSearchPage), findsNothing);
 
       expect(find.byType(CreateAgentForm), findsNothing);
       await tester.tap(find.descendant(
@@ -326,16 +334,24 @@ void main() {
       // Search reaches past the visible rows to every matching chat.
       await tester.tap(find.byTooltip('Search'));
       await tester.pumpAndSettle();
-      await tester.enterText(_field('Search sessions'), 'Title 13');
+      final searchPage = find.byType(MobileSearchPage);
+      expect(searchPage, findsOneWidget);
+      await tester.enterText(_field('Search'), 'Title 13');
       await tester.pumpAndSettle();
-      expect(find.text('Session Title 13'), findsOneWidget);
+      expect(
+          find.descendant(
+              of: searchPage, matching: find.text('Session Title 13')),
+          findsOneWidget);
 
       // Search for nonexistent chat
-      await tester.enterText(_field('Search sessions'), 'Session Title 99');
+      await tester.enterText(_field('Search'), 'Session Title 99');
       await tester.pumpAndSettle();
-      expect(find.text('No matching sessions'), findsOneWidget);
-      await tester.enterText(_field('Search sessions'), '');
+      expect(find.text('No results'), findsOneWidget);
+      await tester.enterText(_field('Search'), '');
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.byType(MobileSearchPage), findsNothing);
 
       // When all sessions are older than 12 hours, Recent header is absent but folder shows them
       final oldSessionsOnly = [
