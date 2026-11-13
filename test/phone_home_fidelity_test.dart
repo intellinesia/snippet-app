@@ -125,10 +125,12 @@ void main() {
       expect(find.text('Listening'), findsOneWidget);
       expect(find.text('2'), findsOneWidget);
 
-      final bigTitle = tester.widget<Text>(find.text('Sessions').first);
-      expect(bigTitle.style?.fontSize, 28);
-      expect(bigTitle.style?.fontWeight, FontWeight.w500);
-      expect(bigTitle.style?.letterSpacing, -0.5);
+      final title = tester.widget<Text>(find.text('Sessions').first);
+      expect(title.style?.fontSize, 17);
+      expect(title.style?.fontWeight, FontWeight.w500);
+      expect(title.style?.letterSpacing, 0);
+      expect(title.maxLines, 1);
+      expect(title.overflow, TextOverflow.ellipsis);
 
       final mcMochi = tester.widget<MochiIcon>(find.byType(MochiIcon));
       expect(mcMochi.size, 22);

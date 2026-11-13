@@ -379,6 +379,8 @@ void main() {
       });
       await _open(t, DirectThreadPage(events: const []), agents: [agent]);
       expect(find.byType(ChatHeader), findsOneWidget);
+      expect(ChatHeader.overlap, 92);
+      expect(t.widget<MochiDisc>(find.byType(MochiDisc)).size, 36);
       final tasksBtn = find.byWidgetPredicate(
         (w) => w is ChatGlassButton && w.icon == 'task',
       );

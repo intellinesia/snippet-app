@@ -205,47 +205,54 @@ class MobileHomeHeader extends StatelessWidget {
   final List<Widget> trailing;
 
   @override
-  Widget build(BuildContext context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(M.gutter, 10, M.gutter, 0),
-            child: Row(children: [
-              if (onBack != null)
-                RoundBtn(
-                  icon: 'chevron-left',
-                  tooltip: 'Back',
-                  size: 40,
-                  iconSize: 20,
-                  onTap: onBack,
-                )
-              else
-                RoundBtn(
-                  tooltip: 'Mission Control',
-                  size: 40,
-                  badgeCount: mcBadgeCount,
-                  onTap: onMc,
-                  child: MochiIcon(color: AppColors.fg1, size: 22),
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(M.gutter, 6, M.gutter, 6),
+        child: SizedBox(
+          height: 44,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 56),
+                child: Center(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: sans(17, weight: W.strong, color: AppColors.fg1),
+                  ),
                 ),
-              const Spacer(),
-              if (listening) ...[
-                ListeningPill(
-                  onTap: onListening ?? () => openMobileVoicePage(context),
-                ),
-                if (trailing.isNotEmpty) const SizedBox(width: 10),
-              ],
-              ...trailing,
-            ]),
+              ),
+              Row(children: [
+                if (onBack != null)
+                  RoundBtn(
+                    icon: 'chevron-left',
+                    tooltip: 'Back',
+                    size: 40,
+                    iconSize: 20,
+                    onTap: onBack,
+                  )
+                else
+                  RoundBtn(
+                    tooltip: 'Mission Control',
+                    size: 40,
+                    badgeCount: mcBadgeCount,
+                    onTap: onMc,
+                    child: MochiIcon(color: AppColors.fg1, size: 22),
+                  ),
+                const Spacer(),
+                if (listening) ...[
+                  ListeningPill(
+                    onTap: onListening ?? () => openMobileVoicePage(context),
+                  ),
+                  if (trailing.isNotEmpty) const SizedBox(width: 10),
+                ],
+                ...trailing,
+              ]),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(M.gutter, 12, M.gutter, 2),
-            child: Text(
-              title,
-              style: TS.pageTitle().copyWith(fontSize: 28, letterSpacing: -0.5),
-            ),
-          ),
-        ],
+        ),
       );
 }
 
