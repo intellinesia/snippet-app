@@ -1405,7 +1405,11 @@ class _SessionScreenState extends State<SessionScreen>
   double _composerH = 0;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _isMissionControl
+      ? ChatBubbleScope(child: _buildScreen(context))
+      : _buildScreen(context);
+
+  Widget _buildScreen(BuildContext context) {
     // Depend on Theme so this rebuilds when the user switches palettes.
     Theme.of(context);
     _syncDraftAttachments();

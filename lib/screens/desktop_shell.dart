@@ -1345,10 +1345,16 @@ class _DesktopShellState extends State<DesktopShell>
       });
       _liveStatus.merge(s, since: statusRevision);
       if (mounted) {
+        final profiles = {for (final x in s) x.id: x.profile};
         setState(() {
           _sessions = s;
           _sessionsLoading = false;
           _sessionsError = null;
+          // Restored tabs can carry a stale or empty profile; the list is current.
+          for (final t in _tabs) {
+            final p = profiles[t.sessionId];
+            if (p != null && p.isNotEmpty) t.profile = p;
+          }
         });
       }
       // Decoration only, fired after the list is already on screen. Kept out of

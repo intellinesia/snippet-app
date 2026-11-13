@@ -1402,6 +1402,7 @@ Future<void> _showDesktopInfo(
   return showGeneralDialog<void>(
     context: context,
     barrierDismissible: true,
+    barrierLabel: 'Close',
     barrierColor: AppColors.scrim,
     transitionDuration: Motion.base,
     pageBuilder: (ctx, _, __) => Stack(children: [

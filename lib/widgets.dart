@@ -19,6 +19,7 @@ import 'components.dart';
 import 'dialog_widgets.dart';
 import 'markdown_widgets.dart';
 import 'menu_widgets.dart';
+import 'chat/chat_style.dart' show ChatBubble, ChatBubbleRow, chatMarkdownStyle;
 import 'screens/artifact_viewer.dart' show openArtifact;
 import 'screens/file_viewer.dart' show openFileForViewing, presentFileOnDesktop;
 import 'screens/session.dart' show SessionScreen;
@@ -1485,6 +1486,18 @@ void _messageActions(BuildContext context, String text) {
       ]));
 }
 
+/// Draws a transcript's replies and sent messages as chat bubbles, the way
+/// agent chat does (Mission Control).
+class ChatBubbleScope extends InheritedWidget {
+  const ChatBubbleScope({super.key, required super.child});
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ChatBubbleScope>() != null;
+
+  @override
+  bool updateShouldNotify(ChatBubbleScope oldWidget) => false;
+}
+
 class Bubble extends StatelessWidget {
   final bool mine;
   final String text;
@@ -1568,6 +1581,27 @@ class Bubble extends StatelessWidget {
     final agent =
         selectable ? SelectionArea(child: agentContent) : agentContent;
 
+    final chatBubbles = ChatBubbleScope.of(context);
+    if (chatBubbles && !mine && shown.isNotEmpty) {
+      final reply = MarkdownBody(
+        data: unwrapCodedLinks(shown),
+        selectable: false,
+        extensionSet: md.ExtensionSet.gitHubFlavored,
+        styleSheet: chatMarkdownStyle(context, mine: false),
+        builders: {'pre': PreBlockBuilder()},
+        onTapLink: (txt, href, title) => openMarkdownLink(href, context, txt),
+      );
+      final body = selectable && !kMobile ? SelectionArea(child: reply) : reply;
+      final bubble = ChatBubbleRow(
+          mine: false, child: ChatBubble(mine: false, child: body));
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: onLongPress != null
+            ? GestureDetector(onLongPress: onLongPress, child: bubble)
+            : (selectable ? _LongPressCopy(text: shown, child: bubble) : bubble),
+      );
+    }
+
     if (!mine && kMobile && selectable) {
       // Phones: no Copy row under every reply. Long-press offers copying the
       // whole message or selecting within it (a long-press can't do both).
@@ -1625,7 +1659,19 @@ class Bubble extends StatelessWidget {
                 m,
                 const SizedBox(height: 6),
               ],
-            if (shown.isNotEmpty)
+            if (shown.isNotEmpty && chatBubbles)
+              ChatBubble(
+                mine: true,
+                child: MarkdownBody(
+                  data: unwrapCodedLinks(shown),
+                  selectable: false,
+                  styleSheet: chatMarkdownStyle(context, mine: true),
+                  builders: {'pre': PreBlockBuilder()},
+                  onTapLink: (txt, href, title) =>
+                      openMarkdownLink(href, context, txt),
+                ),
+              )
+            else if (shown.isNotEmpty)
               Container(
                 padding: kMobile
                     ? const EdgeInsets.fromLTRB(15, 10, 15, 11)

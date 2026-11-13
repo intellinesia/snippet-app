@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'agent_card.dart' show WorkingRing;
 import '../api.dart';
 import '../mochi.dart';
 import '../models.dart';
@@ -135,7 +136,14 @@ class _MissionControlCardState extends State<MissionControlCard> {
                     alignment: Alignment.center,
                     child: const AgentMochi('mission-control', size: 20),
                   ),
-                  if (waiting || working)
+                  if (working)
+                    const Positioned(
+                        left: -3,
+                        top: -3,
+                        right: -3,
+                        bottom: -3,
+                        child: WorkingRing(key: ValueKey('mc-working'))),
+                  if (waiting)
                     Positioned(
                       right: -1,
                       bottom: -1,
@@ -143,7 +151,7 @@ class _MissionControlCardState extends State<MissionControlCard> {
                         width: 10,
                         height: 10,
                         decoration: BoxDecoration(
-                          color: waiting ? AppColors.run : AppColors.accent,
+                          color: AppColors.run,
                           shape: BoxShape.circle,
                           border:
                               Border.all(color: AppColors.windowBg, width: 2),
@@ -163,23 +171,11 @@ class _MissionControlCardState extends State<MissionControlCard> {
                         overflow: TextOverflow.ellipsis,
                         style: sans(13, weight: W.body, color: AppColors.fg1)),
                     const SizedBox(height: 2),
-                    Row(children: [
-                      if (working) ...[
-                        Spinner(
-                            key: const ValueKey('mc-working'),
-                            size: 10,
-                            color: AppColors.run),
-                        const SizedBox(width: 5),
-                      ],
-                      Expanded(
-                        child: SwapText(waiting ? 'Waiting on you' : line,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(12,
-                                color:
-                                    waiting ? AppColors.run : AppColors.fg3)),
-                      ),
-                    ]),
+                    SwapText(waiting ? 'Waiting on you' : line,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(11.5,
+                            color: waiting ? AppColors.run : AppColors.fg3)),
                   ],
                 ),
               ),
