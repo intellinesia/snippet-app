@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
 import 'package:snippet/chat/chat_style.dart';
+import 'package:snippet/chat/message_focus_overlay.dart';
 import 'package:snippet/composer/composer_card.dart';
 import 'package:snippet/message_reactions.dart';
 import 'package:snippet/models.dart';
@@ -252,16 +253,14 @@ void main() {
       await t.longPress(find.text('Ready for review on branch feat/x.'));
       await _pumpFrames(t);
 
-      expect(find.byType(MessageActionsView), findsOneWidget);
+      expect(find.byType(MessageFocusOverlay), findsOneWidget);
+      expect(find.byType(MessageActionsView), findsNothing);
       expect(find.text('Reply'), findsOneWidget);
       expect(find.text('Copy'), findsOneWidget);
-      for (final emoji in [
-        ...kMessageReactions,
-        for (final (e, _) in kMoreReactions) e
-      ]) {
+      for (final emoji in kMessageReactions) {
         expect(
           find.descendant(
-              of: find.byType(MessageActionsView), matching: find.text(emoji)),
+              of: find.byType(MessageFocusOverlay), matching: find.text(emoji)),
           findsOneWidget,
         );
       }
@@ -350,13 +349,19 @@ void main() {
 
       await t.longPress(find.text('Finished running benchmarks.'));
       await _pumpFrames(t);
+      expect(find.byType(MessageFocusOverlay), findsOneWidget);
+
+      await t.tap(find.bySemanticsLabel('More reactions'));
+      await _pumpFrames(t);
+      expect(find.byType(MessageReactionGrid), findsOneWidget);
       expect(find.text('Ship it'), findsOneWidget);
 
       await t.tap(find.text('🚀'));
       await _pumpFrames(t);
 
       expect(client.sent.single['reaction'], '🚀');
-      expect(find.byType(MessageActionsView), findsNothing);
+      expect(find.byType(MessageReactionGrid), findsNothing);
+      expect(find.byType(MessageFocusOverlay), findsNothing);
 
       await t.pumpWidget(const SizedBox());
     } finally {

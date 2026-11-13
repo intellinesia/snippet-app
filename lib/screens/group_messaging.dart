@@ -1323,11 +1323,11 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       );
     }
     final mine = e.actorKind == 'human';
-    final bubble = ChatBubble(
-      mine: mine,
-      tail: run.last,
-      child: _mentionText(e.body, mine: mine),
-    );
+    Widget buildBubble() => ChatBubble(
+          mine: mine,
+          tail: run.last,
+          child: _mentionText(e.body, mine: mine),
+        );
     return Padding(
       padding: EdgeInsets.only(top: topGap),
       child: Column(
@@ -1341,11 +1341,19 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
               _agentName(e.actorId),
               indent: ChatBubbleRow.avatarSize + 6,
             ),
-          ChatBubbleRow(
+          MessageBubbleInteractive(
+            text: e.body,
             mine: mine,
-            avatar: !mine && run.last ? _senderAvatar(e.actorId) : null,
-            avatarSlot: !mine && !run.last,
-            child: bubble,
+            focusBuilder: (_) => buildBubble(),
+            builder: (_, __, bubbleKey) => ChatBubbleRow(
+              mine: mine,
+              avatar: !mine && run.last ? _senderAvatar(e.actorId) : null,
+              avatarSlot: !mine && !run.last,
+              child: KeyedSubtree(
+                key: bubbleKey,
+                child: buildBubble(),
+              ),
+            ),
           ),
           if (readLine != null)
             ChatSystemLine(readLine, align: Alignment.centerRight),
@@ -1364,17 +1372,16 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             color: ChatColors.receivedText,
             fontWeight: FontWeight.w500,
           );
-    return SelectionArea(
-      child: Text.rich(
-        TextSpan(
-          style: chatText(mine: mine),
-          children: [
-            for (final s in groupMentionSpans(body, _mentionIds))
-              s.style == null ? s : TextSpan(text: s.text, style: mentionStyle),
-          ],
-        ),
+    final richText = Text.rich(
+      TextSpan(
+        style: chatText(mine: mine),
+        children: [
+          for (final s in groupMentionSpans(body, _mentionIds))
+            s.style == null ? s : TextSpan(text: s.text, style: mentionStyle),
+        ],
       ),
     );
+    return kMobile ? richText : SelectionArea(child: richText);
   }
 
   Widget _wideCap(Widget child) => kMobile
