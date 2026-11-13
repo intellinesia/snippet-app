@@ -12,6 +12,9 @@ class _QuestionRecord extends StatelessWidget {
   final String? answer;
   const _QuestionRecord(this.event, {this.answer});
 
+  static String _displayAnswer(String s) =>
+      s == 'user skipped the question' ? 'Skipped' : s;
+
   List<Map<String, dynamic>> get _questions {
     final qd = event['questions'];
     final raw = qd is Map ? qd['questions'] : event['questions'];
@@ -99,13 +102,20 @@ class _QuestionRecord extends StatelessWidget {
                       style:
                           sans(14, height: 20 / 14.5, color: AppColors.fg2)),
                   const SizedBox(height: 3),
-                  Text(a == null || a.isEmpty ? 'Not answered' : a,
+                  Text(
+                      a == null || a.isEmpty
+                          ? 'Not answered'
+                          : a == 'user skipped the question'
+                              ? 'Skipped'
+                              : a,
                       style: sans(14,
                           weight: W.label,
                           height: 20 / 14.5,
                           color: a == null || a.isEmpty
                               ? AppColors.fg4
-                              : AppColors.accent)),
+                              : a == 'user skipped the question'
+                                  ? AppColors.fg3
+                                  : AppColors.accent)),
                   const SizedBox(height: 8),
                 ],
               ],
@@ -172,9 +182,10 @@ class _QuestionRecord extends StatelessWidget {
                       : qs[i]['text']?.toString() ?? '',
                   style: sans(13,
                       height: 1.45, weight: W.label, color: AppColors.fg1)),
-              if (answers[qs[i]['id']?.toString() ?? ''] != null ||
-                  answers['0'] != null)
-                answer(answers[qs[i]['id']?.toString()] ?? answers['0'] ?? ''),
+                          if (answers[qs[i]['id']?.toString() ?? ''] != null ||
+                answers['0'] != null)
+              answer(_displayAnswer(
+                  answers[qs[i]['id']?.toString()] ?? answers['0'] ?? '')),
             ],
             if (qs.isEmpty && (event['text'] != null)) ...[
               const SizedBox(height: 5),
