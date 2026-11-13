@@ -55,6 +55,10 @@ class _MobileShellState extends State<MobileShell>
   double _base = 0;
   double _raw = 0;
   double? _commitVelocity;
+  // Sideways swipe between the Sessions and Agents lists; null until decided.
+  bool? _homeDrag;
+  double _homeDx = 0;
+  double _homePull = 0;
 
   bool get _chatsVisible => widget.chatsOpen || !widget.hasActiveTab;
   double get _exitX => widget.missionPair ? 1.0 : -1.0;
@@ -226,7 +230,14 @@ class _MobileShellState extends State<MobileShell>
                   child: TickerMode(
                     enabled: chatsVisible || _v.value < 1.0,
                     child: SafeArea(
-                      child: sidebar,
+                      child: AnimatedSlide(
+                        offset: Offset(_homePull, 0),
+                        duration: _homeDrag == true
+                            ? Duration.zero
+                            : const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        child: sidebar,
+                      ),
                     ),
                   ),
                 ),
@@ -280,12 +291,54 @@ class _MobileShellState extends State<MobileShell>
             ? onSwipeToMission
             : null)
         : (missionPair ? onSwipeToSessions : null);
-    final body = swipe != null
-        ? _PairSwipe(
-            onStart: _dragStart,
-            onDelta: _dragUpdate,
-            onEnd: (v, w) => _dragEnd(v, w, swipe),
-            child: shell)
+    final onAgents = mobileHome == MobileHome.agents;
+    final homeSwipe = chatsVisible &&
+        !drilledDown &&
+        (mobileHome == MobileHome.chats || onAgents);
+    // Sessions -> Agents is a left swipe, Agents -> Sessions a right one.
+    final homeSign = onAgents ? 1.0 : -1.0;
+
+    void start() {
+      _homeDrag = null;
+      _homeDx = 0;
+      _dragStart();
+    }
+
+    void delta(double dx, double w) {
+      if (dx == 0 && _homeDrag == null) return;
+      _homeDrag ??= homeSwipe && dx * homeSign > 0;
+      if (_homeDrag!) {
+        _homeDx += dx;
+        final pull = rubberBand(_homeDx.abs() / w, .35) * 0.5;
+        setState(() => _homePull = _homeDx > 0 ? pull : -pull);
+      } else if (swipe != null) {
+        _dragUpdate(dx, w);
+      }
+    }
+
+    void end(double v, double w) {
+      if (_homeDrag == true) {
+        final passed = dragDismisses(
+            distance: _homeDx * homeSign,
+            velocity: v * homeSign,
+            distanceThreshold: 64,
+            velocityThreshold: 500);
+        setState(() {
+          _homeDrag = null;
+          _homePull = 0;
+        });
+        if (passed) {
+          HapticFeedback.selectionClick();
+          onMobileHome(onAgents ? MobileHome.chats : MobileHome.agents);
+        }
+        return;
+      }
+      _homeDrag = null;
+      if (swipe != null) _dragEnd(v, w, swipe);
+    }
+
+    final body = swipe != null || homeSwipe
+        ? _PairSwipe(onStart: start, onDelta: delta, onEnd: end, child: shell)
         : shell;
 
     if (canPop) {

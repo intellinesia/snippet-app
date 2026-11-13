@@ -47,7 +47,8 @@ void main() {
 
   group('mobile shell swipe', () {
     var swiped = 0;
-    Widget shell() => MaterialApp(
+    MobileHome? went;
+    Widget shell({MobileHome home = MobileHome.chats}) => MaterialApp(
           theme: buildAppTheme(),
           home: MobileShell(
             activeTabBody: const ColoredBox(color: Colors.blue),
@@ -56,11 +57,11 @@ void main() {
             hasActiveTab: true,
             chatsOpen: true,
             drilledDown: false,
-            mobileHome: MobileHome.chats,
+            mobileHome: home,
             onClearDrillDown: () {},
-            onMobileHome: (_) {},
+            onMobileHome: (h) => went = h,
             onCloseChats: () {},
-            missionPair: true,
+            missionPair: home == MobileHome.chats,
             onSwipeToMission: () => swiped++,
             onSwipeToSessions: () {},
           ),
@@ -68,7 +69,10 @@ void main() {
     double sideX(WidgetTester t) =>
         t.getTopLeft(find.byKey(const Key('side'))).dx;
 
-    setUp(() => swiped = 0);
+    setUp(() {
+      swiped = 0;
+      went = null;
+    });
 
     testWidgets('sidebar tracks the finger 1:1 and fast short fling commits',
         (t) async {
@@ -97,7 +101,7 @@ void main() {
       expect(sideX(t), closeTo(0, .5));
     });
 
-    testWidgets('wrong way rubber-bands', (t) async {
+    testWidgets('left swipe on Sessions pulls and opens Agents', (t) async {
       await t.pumpWidget(shell());
       await t.pump(const Duration(milliseconds: 400));
       final g = await t.startGesture(const Offset(300, 300));
@@ -110,6 +114,31 @@ void main() {
       await t.pumpAndSettle();
       expect(sideX(t), closeTo(0, .5));
       expect(swiped, 0);
+      expect(went, MobileHome.agents);
+    });
+
+    testWidgets('short slow left drag stays on Sessions', (t) async {
+      await t.pumpWidget(shell());
+      await t.pump(const Duration(milliseconds: 400));
+      await t.timedDrag(find.byKey(const Key('side')), const Offset(-30, 0),
+          const Duration(seconds: 1));
+      await t.pumpAndSettle();
+      expect(went, isNull);
+      expect(sideX(t), closeTo(0, .5));
+    });
+
+    testWidgets('right swipe on Agents returns to Sessions', (t) async {
+      await t.pumpWidget(shell(home: MobileHome.agents));
+      await t.pump(const Duration(milliseconds: 400));
+      await t.fling(find.byKey(const Key('side')), const Offset(80, 0), 1500);
+      await t.pumpAndSettle();
+      expect(went, MobileHome.chats);
+      expect(swiped, 0);
+
+      went = null;
+      await t.fling(find.byKey(const Key('side')), const Offset(-80, 0), 1500);
+      await t.pumpAndSettle();
+      expect(went, isNull);
     });
   });
 
