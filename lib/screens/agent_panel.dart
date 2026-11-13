@@ -191,7 +191,7 @@ class _NicknamePageState extends State<_NicknamePage> {
               hintStyle: TS.body(AppColors.fg4),
               isDense: true,
               filled: true,
-              fillColor: AppColors.surface2,
+              fillColor: AppColors.tint2,
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(R.sm),
                   borderSide: BorderSide(color: AppColors.border)),
@@ -251,7 +251,7 @@ class AgentSidePanel extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 2),
       child: Material(
-        color: on ? AppColors.surface2 : Colors.transparent,
+        color: on ? AppColors.tint2 : Colors.transparent,
         borderRadius: BorderRadius.circular(R.sm),
         child: InkWell(
           borderRadius: BorderRadius.circular(R.sm),
