@@ -53,4 +53,15 @@ void main() {
     expect(find.byType(DecoratedBox), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
+
+  testWidgets('side chrome turns opaque while a wallpaper shows',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    final look = DesktopLook.instance;
+    look.debugSet(wallpaper: 'image', imagePath: '/tmp/none.png');
+    expect(AppColors.windowBg.a, 1);
+    look.debugSet(wallpaper: 'none');
+    expect(AppColors.windowBg.a, lessThan(1));
+    debugDefaultTargetPlatformOverride = null;
+  });
 }

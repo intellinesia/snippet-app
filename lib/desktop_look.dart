@@ -9,6 +9,12 @@ import 'theme.dart';
 
 /// Desktop-only finish: tactile surfaces and the chat wallpaper.
 class DesktopLook extends ChangeNotifier {
+  @override
+  void notifyListeners() {
+    AppColors.solidChrome = hasWallpaper;
+    super.notifyListeners();
+  }
+
   DesktopLook._();
   static final DesktopLook instance = DesktopLook._();
 

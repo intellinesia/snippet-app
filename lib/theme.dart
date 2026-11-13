@@ -1230,10 +1230,12 @@ class AppColors {
   static const Color scrim = Color(0x99000000);
   // Lighter, so a glass sheet still shows the page through its blur.
   static const Color glassScrim = Color(0x59000000);
+  /// Set while a chat wallpaper shows: side chrome goes opaque to frame it.
+  static bool solidChrome = false;
   static Color get windowBg => kMobile
       ? currentTheme.bg
       : Color.lerp(currentTheme.bg, currentTheme.surface1, 0.45)!
-          .withValues(alpha: 0.92);
+          .withValues(alpha: solidChrome ? 1 : 0.92);
   static Color get sidebarPanel => kMobile
       ? currentTheme.surface1
       : currentTheme.surface1.withValues(alpha: 0.92);

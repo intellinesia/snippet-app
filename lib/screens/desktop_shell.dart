@@ -546,7 +546,9 @@ class _DesktopShellState extends State<DesktopShell>
     if (!kMobile) {
       loadSidebarAgentsFirst();
       WindowBackgroundStore.instance.init();
-      DesktopLook.instance.init();
+      DesktopLook.instance
+        ..addListener(_onLookChanged)
+        ..init();
     }
     if (kMobile) ShareInbound.listen(_onInboundShare);
     // Global shells mirror into tabs whenever the daemon reports a change: a
@@ -555,8 +557,13 @@ class _DesktopShellState extends State<DesktopShell>
     _shells.addListener(_syncGlobalShellTabs);
   }
 
+  void _onLookChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
+    DesktopLook.instance.removeListener(_onLookChanged);
     for (final tab in _rightTabs) {
       tab.request?.complete();
     }
