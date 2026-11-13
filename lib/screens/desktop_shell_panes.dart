@@ -298,6 +298,10 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   Widget _splitView({required bool topInset}) => ShellSplitView(
         key: const ValueKey('shell-split'),
         sidebarHidden: _sidebarHidden,
+        sidebarWidth: _sidebarWidth,
+        onSidebarResize: _resizeSidebar,
+        onSidebarResizeEnd: _saveSidebarWidth,
+        onSidebarReset: _resetSidebarWidth,
         sidebar: ShellPanelScope(
           open: _openShellPanel,
           client: _client,

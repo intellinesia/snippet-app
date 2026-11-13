@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../ambient/controller.dart';
 import '../ambient/live_caption.dart';
@@ -228,6 +229,7 @@ class _DesktopShellState extends State<DesktopShell>
   /// coordination failure can never take the session list down with it.
   bool _sidebarGit = false;
   bool _sidebarHidden = false;
+  double _sidebarWidth = kSidebarWidth;
 
   /// Secondary-pane width, dragged by its handle. Width-driven rather than a
   /// flex ratio because a flex ratio cannot be dragged and has no natural size.
@@ -857,6 +859,32 @@ class _DesktopShellState extends State<DesktopShell>
     setState(() => _sidebarHidden = !_sidebarHidden);
   }
 
+  Future<void> _loadSidebarWidth() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.get(kSidebarWidthPref);
+    final width = raw is num ? raw.toDouble() : null;
+    if (!mounted || width == null) return;
+    _sidebarWidth = width.clamp(kSidebarMinWidth, kSidebarMaxWidth);
+  }
+
+  void _saveSidebarWidth() {
+    final width = _sidebarWidth;
+    SharedPreferences.getInstance()
+        .then((p) => p.setDouble(kSidebarWidthPref, width));
+  }
+
+  void _resizeSidebar(double delta) {
+    setState(() {
+      _sidebarWidth =
+          (_sidebarWidth + delta).clamp(kSidebarMinWidth, kSidebarMaxWidth);
+    });
+  }
+
+  void _resetSidebarWidth() {
+    setState(() => _sidebarWidth = kSidebarWidth);
+    _saveSidebarWidth();
+  }
+
   void _toggleSecondaryPane() {
     setState(() => _rightCollapsed = !_rightCollapsed);
   }
@@ -1243,6 +1271,7 @@ class _DesktopShellState extends State<DesktopShell>
 
   Future<void> _loadInstances() async {
     final items = await _store.load();
+    if (!kMobile) await _loadSidebarWidth();
     if (!mounted) return;
     setState(() {
       _instances = items;
