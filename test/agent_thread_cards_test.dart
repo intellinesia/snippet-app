@@ -108,7 +108,7 @@ void main() {
     );
   });
 
-  testWidgets('audio payload renders AudioTranscriptCard with play button',
+  testWidgets('audio payload renders a voice note, transcript hidden',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     await _open(t, [
@@ -122,9 +122,9 @@ void main() {
       }),
     ]);
 
-    expect(find.byType(AudioTranscriptCard), findsOneWidget);
+    expect(find.byType(AudioTranscriptCard), findsNothing);
     expect(find.byType(VoiceNote), findsOneWidget);
-    expect(find.text('Here is my quick voice update.'), findsOneWidget);
+    expect(find.text('Here is my quick voice update.'), findsNothing);
     expect(find.text('0:05'), findsOneWidget);
     expect(find.bySemanticsLabel('Play voice note'), findsOneWidget);
     expect(find.byType(AgentMochi), findsWidgets);

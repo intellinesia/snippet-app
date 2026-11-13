@@ -668,7 +668,7 @@ class _VoiceNoteState extends State<VoiceNote> {
               ),
               const SizedBox(height: 3),
               Text(time,
-                  style: sans(11.5,
+                  style: sans(12,
                       tabular: true,
                       color: _error == null ? muted : AppColors.danger)),
             ],
