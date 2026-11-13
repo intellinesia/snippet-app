@@ -1200,6 +1200,16 @@ class AppColors {
   static Color get sidebarPanel => kMobile
       ? currentTheme.surface1
       : currentTheme.surface1.withValues(alpha: 0.92);
+  static Color get paneBg => kMobile ? currentTheme.bg : const Color(0x00000000);
+  static Color get tint1 => kMobile
+      ? currentTheme.surface1
+      : currentTheme.fg1.withValues(alpha: 0.05);
+  static Color get tint2 => kMobile
+      ? currentTheme.surface2
+      : currentTheme.fg1.withValues(alpha: 0.08);
+  static Color get tint3 => kMobile
+      ? currentTheme.surface3
+      : currentTheme.fg1.withValues(alpha: 0.11);
   static Color get glassSurface => currentTheme.surface2;
   static Color get glassBorder => currentTheme.border;
 
