@@ -509,3 +509,137 @@ class _LiveRingState extends State<LiveRing>
     );
   }
 }
+
+/// Faint dot grid painted behind the phone home lists.
+class DotField extends StatelessWidget {
+  const DotField({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+        painter: _DotGridPainter(AppColors.fg1.withValues(alpha: 0.07)),
+        child: child,
+      );
+}
+
+class _DotGridPainter extends CustomPainter {
+  _DotGridPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const step = 12.0;
+    final p = Paint()..color = color;
+    for (var y = step / 2; y < size.height; y += step) {
+      for (var x = step / 2; x < size.width; x += step) {
+        canvas.drawCircle(Offset(x, y), 0.9, p);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DotGridPainter old) => old.color != color;
+}
+
+/// The home hero: a dot-matrix count with a two-line mono label beside it.
+class HomeHero extends StatelessWidget {
+  const HomeHero({
+    super.key,
+    required this.count,
+    required this.label,
+    this.detail,
+  });
+
+  final int count;
+  final String label;
+  final String? detail;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        label: detail == null ? '$count $label' : '$count $label, $detail',
+        child: ExcludeSemantics(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(2, 10, 2, 14),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              DotMatrixNumber(count.toString().padLeft(2, '0')),
+              const SizedBox(width: 12),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 1),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(label, style: mono(12, color: AppColors.fg2)),
+                    if (detail != null)
+                      Text(detail!, style: mono(12, color: AppColors.accent)),
+                  ],
+                ),
+              ),
+            ]),
+          ),
+        ),
+      );
+}
+
+/// Digits drawn as a 5x7 dot matrix.
+class DotMatrixNumber extends StatelessWidget {
+  const DotMatrixNumber(this.digits, {super.key, this.cell = 9, this.color});
+
+  final String digits;
+  final double cell;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = digits.length;
+    return CustomPaint(
+      size: Size(cell * (n * 6 - 1), cell * 7),
+      painter: _DotMatrixPainter(digits, cell, color ?? AppColors.fg1),
+    );
+  }
+}
+
+class _DotMatrixPainter extends CustomPainter {
+  _DotMatrixPainter(this.digits, this.cell, this.color);
+
+  final String digits;
+  final double cell;
+  final Color color;
+
+  static const _glyphs = {
+    '0': ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
+    '1': ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
+    '2': ['01110', '10001', '00001', '00010', '00100', '01000', '11111'],
+    '3': ['11111', '00010', '00100', '00010', '00001', '10001', '01110'],
+    '4': ['00010', '00110', '01010', '10010', '11111', '00010', '00010'],
+    '5': ['11111', '10000', '11110', '00001', '00001', '10001', '01110'],
+    '6': ['00110', '01000', '10000', '11110', '10001', '10001', '01110'],
+    '7': ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
+    '8': ['01110', '10001', '10001', '01110', '10001', '10001', '01110'],
+    '9': ['01110', '10001', '10001', '01111', '00001', '00010', '01100'],
+  };
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final on = Paint()..color = color;
+    final off = Paint()..color = color.withValues(alpha: color.a * 0.08);
+    final r = cell * 0.36;
+    for (var d = 0; d < digits.length; d++) {
+      final g = _glyphs[digits[d]];
+      if (g == null) continue;
+      for (var row = 0; row < 7; row++) {
+        for (var col = 0; col < 5; col++) {
+          final c = Offset(
+              (d * 6 + col + 0.5) * cell, (row + 0.5) * cell);
+          canvas.drawCircle(c, r, g[row][col] == '1' ? on : off);
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DotMatrixPainter old) =>
+      old.digits != digits || old.cell != cell || old.color != color;
+}

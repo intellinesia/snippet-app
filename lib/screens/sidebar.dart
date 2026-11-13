@@ -514,7 +514,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     switch (destination) {
       case MobileHome.chats:
         final showAgents = agentsMirror;
-        return Column(
+        return DotField(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _mobileChatsHeader(
@@ -532,6 +533,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             ),
             if (_selecting) _mobileSelectionActions(),
           ],
+        ),
         );
 
       case MobileHome.tasks:
@@ -689,6 +691,13 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         searchQuery: _agentFilterQuery,
         bottomPadding: _scrollBottomPad,
         groupsKey: mirror ? 'groups-mirror' : null,
+        heroBuilder: kMobile
+            ? (count, needs) => HomeHero(
+                  count: count,
+                  label: 'agents',
+                  detail: needs > 0 ? '$needs need you' : null,
+                )
+            : null,
         onSearchChanged: (v) => setState(() {
           _agentFilterQuery = v;
           if (_agentSearchCtl.text != v) _agentSearchCtl.text = v;
@@ -927,6 +936,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         !isInboxSessionRow(s) &&
         _matchesQuery(s))));
     final children = <Widget>[
+      if (kMobile && _filterQuery.trim().isEmpty) _sessionsHero(split.main),
       ...(kMobile
           ? _mobileGroupedRows(split.main)
           : _groupedRows(split.main, attentionFirst: true)),
@@ -967,6 +977,16 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       ),
     );
     return list;
+  }
+
+  Widget _sessionsHero(List<SessionInfo> main) {
+    final live = main.where((s) => sessionIsActive(s.status)).length;
+    final needs = main.where(sessionNeedsYou).length;
+    return HomeHero(
+      count: live,
+      label: 'live',
+      detail: needs > 0 ? '$needs needs you' : null,
+    );
   }
 
   /// Phone list: live sessions as cards, then each folder in its own card.
