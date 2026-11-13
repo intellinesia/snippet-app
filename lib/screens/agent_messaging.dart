@@ -332,6 +332,7 @@ class AgentThreadScreen extends StatefulWidget {
     this.tabHeader = false,
     this.showBack = true,
     this.deskTrailing,
+    this.onDeskInfo,
   });
 
   final DaemonClient client;
@@ -352,6 +353,9 @@ class AgentThreadScreen extends StatefulWidget {
 
   final bool showBack;
   final Widget? deskTrailing;
+
+  /// Desktop shell: the title opens the docked info panel instead of a dialog.
+  final VoidCallback? onDeskInfo;
 
   @override
   State<AgentThreadScreen> createState() => _AgentThreadScreenState();
@@ -1480,7 +1484,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           ? _headerStatus(subtitle)
           : ChatHeader.statusText(_viewLine),
       onTitleTap: _view == AgentView.thread
-          ? _openInfo
+          ? (widget.onDeskInfo ?? _openInfo)
           : () => _openViewMenu(
               anchor: kMobile ? null : _headerKey.currentContext),
       titleHint: _view == AgentView.thread ? 'Info' : 'Switch view',

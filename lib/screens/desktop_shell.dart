@@ -442,10 +442,6 @@ class _DesktopShellState extends State<DesktopShell>
   /// An agent tab's panel holds only the pages opened from its Actions menu.
   bool _agentPanelHidden = true;
 
-  bool get _agentHasPanelTabs => _rightTabs.any((r) =>
-      r.pane == _Pane.right &&
-      (r.originTabKey == null || r.originTabKey == _activeTab?.key));
-
   CoordinationAgent? get _activeAgent => _activeTab?.readout?.agent;
 
   bool get _panelHidden =>
@@ -457,6 +453,11 @@ class _DesktopShellState extends State<DesktopShell>
         } else {
           _sidePanelHidden = !_sidePanelHidden;
         }
+      });
+
+  void _showAgentInfo() => setState(() {
+        _agentPanelHidden = false;
+        _activeKey.remove(_Pane.right);
       });
 
   void _agentAction(String action) {

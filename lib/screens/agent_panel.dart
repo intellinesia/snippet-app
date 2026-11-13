@@ -5,6 +5,7 @@ import '../models.dart';
 import '../shell_panel.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../chat/chat_info.dart' show AgentInfoPanel;
 import 'agent_appearance.dart';
 import 'agent_profile_panel.dart';
 import 'agent_reach_panel.dart';
@@ -209,12 +210,14 @@ class _NicknamePageState extends State<_NicknamePage> {
   }
 }
 
-/// The desktop right panel of an agent tab: one closable tab per page opened
-/// from the agent's Actions menu ([readouts], scoped to this tab).
+/// The desktop right panel of an agent tab: the iMessage-style info page, then
+/// one closable tab per page opened from it ([readouts], scoped to this tab).
 class AgentSidePanel extends StatelessWidget {
   const AgentSidePanel({
     super.key,
     required this.client,
+    this.agent,
+    this.onHide,
     required this.agentId,
     required this.agentName,
     required this.onAction,
@@ -227,6 +230,8 @@ class AgentSidePanel extends StatelessWidget {
   });
 
   final DaemonClient client;
+  final CoordinationAgent? agent;
+  final VoidCallback? onHide;
   final String agentId;
   final String agentName;
   final ValueChanged<String> onAction;
@@ -280,10 +285,11 @@ class AgentSidePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final reading = _reading ?? readouts.lastOrNull;
+    final reading = _reading;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (readouts.isNotEmpty)
         Container(
           height: 46,
           padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
@@ -291,6 +297,7 @@ class AgentSidePanel extends StatelessWidget {
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(children: [
+              _seg('Info', reading == null, () => onClearReadout?.call()),
               for (final r in readouts)
                 _seg(r.label, r.key == reading?.key,
                     () => onSelectReadout?.call(r),
@@ -301,7 +308,19 @@ class AgentSidePanel extends StatelessWidget {
         Expanded(
           child: reading != null && readoutBody != null
               ? readoutBody!(reading)
-              : const SizedBox.shrink(),
+              : AgentInfoPanel(
+                  key: ValueKey('agent-info-$agentId'),
+                  client: client,
+                  agentId: agentId,
+                  name: agentName,
+                  agent: agent,
+                  docked: true,
+                  onOpenInbox: () => onAction('inbox'),
+                  onOpenBoard: () => onAction('board'),
+                  onOpenDesk: () => onAction('desk'),
+                  onOpenMemory: () => onAction('memory'),
+                  onClose: onHide,
+                ),
         ),
       ],
     );

@@ -34,6 +34,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           deskTrailing: visible && t == _activeTab && t.readout!.isAgent
               ? _agentHeaderTrailing(t)
               : null,
+          onDeskInfo: t.readout!.isAgent ? _showAgentInfo : null,
         ),
       );
     }
@@ -391,10 +392,11 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           r
     ];
     if (agent != null) {
-      if (tabReadouts.isEmpty) return null;
       return AgentSidePanel(
         key: ValueKey('agent-panel-${tab.key}'),
         client: tab.client,
+        agent: agent,
+        onHide: _togglePanel,
         agentId: agent.id,
         agentName: agent.displayName.trim().isEmpty
             ? agent.id
@@ -574,7 +576,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       mainAxisSize: MainAxisSize.min,
       children: [
         ...tools,
-        if (_activeAgent != null && _agentHasPanelTabs) ...[
+        if (_activeAgent != null) ...[
           if (tools.isNotEmpty) const SizedBox(width: 4),
           Tooltip(
             message: _panelHidden ? 'Show panel' : 'Hide panel',
@@ -605,6 +607,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     HarnessState? s,
     _MacSessionControls? controls, {
     Widget? deskTrailing,
+    VoidCallback? onDeskInfo,
   }) =>
       RightTabBody(
         tab: t,
@@ -615,6 +618,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onClose: () => _closeRightTab(t.key),
         onOpenFile: _openFileFromRightPane,
         deskTrailing: deskTrailing,
+        onDeskInfo: onDeskInfo,
       );
 
   Widget _mainPane({VoidCallback? onMenu}) => MainPaneView(

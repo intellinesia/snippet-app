@@ -100,8 +100,10 @@ class AgentInfoPanel extends StatefulWidget {
     this.onOpenInbox,
     this.onOpenBoard,
     this.onOpenDesk,
+    this.onOpenMemory,
     this.onChanged,
     this.onClose,
+    this.docked = false,
   });
 
   final DaemonClient client;
@@ -112,8 +114,13 @@ class AgentInfoPanel extends StatefulWidget {
   final VoidCallback? onOpenInbox;
   final VoidCallback? onOpenBoard;
   final VoidCallback? onOpenDesk;
+  final VoidCallback? onOpenMemory;
   final VoidCallback? onChanged;
   final VoidCallback? onClose;
+
+  /// Docked in the desktop agent panel: actions open beside it, so they leave
+  /// the panel up.
+  final bool docked;
 
   @override
   State<AgentInfoPanel> createState() => _AgentInfoPanelState();
@@ -215,6 +222,11 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
                   icon: 'edit',
                   value: agent.nickname ?? '',
                   onTap: _editNickname),
+            if (widget.onOpenMemory != null)
+              _InfoRow(
+                  label: 'Memory',
+                  icon: 'brain',
+                  onTap: widget.onOpenMemory),
             _InfoRow(
                 label: 'Appearance',
                 icon: 'sparkles',
@@ -253,22 +265,22 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     final actions = <_CircleAction>[
       if (widget.onOpenTasks != null)
         _CircleAction('task', 'Tasks', () {
-          _close();
+          if (!widget.docked) _close();
           widget.onOpenTasks!();
         }),
       if (widget.onOpenInbox != null)
         _CircleAction('inbox', 'Inbox', () {
-          _close();
+          if (!widget.docked) _close();
           widget.onOpenInbox!();
         }),
       if (widget.onOpenBoard != null)
         _CircleAction('kanban', 'Board', () {
-          _close();
+          if (!widget.docked) _close();
           widget.onOpenBoard!();
         }),
       if (widget.onOpenDesk != null)
         _CircleAction('terminal', 'Desk', () {
-          _close();
+          if (!widget.docked) _close();
           widget.onOpenDesk!();
         }),
     ];
