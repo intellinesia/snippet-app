@@ -170,7 +170,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   late MobileHome _currentHome = widget.mobileHome;
   MobileHome? _prevHome;
   final Set<MobileHome> _mountedHomes = <MobileHome>{};
-  late final AnimationController _homeAnim = AnimationController(
+  AnimationController? _homeAnimC;
+  AnimationController get _homeAnim => _homeAnimC ??= AnimationController(
     vsync: this,
     duration: Motion.fast,
     value: 1.0,
@@ -272,7 +273,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     mobileAgentsList.removeListener(_onAgentsList);
     sidebarAgentsFirst.removeListener(_onAgentsList);
     Drafts.instance.removeListener(_onDrafts);
-    _homeAnim.dispose();
+    _homeAnimC?.dispose();
     _renameCtl.dispose();
     _renameFocus.dispose();
     _searchCtl.dispose();
