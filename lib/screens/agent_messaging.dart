@@ -16,6 +16,7 @@ import 'package:record/record.dart';
 import '../chat/chat_info.dart' show showAgentInfo;
 import '../glass.dart';
 import '../api.dart';
+import '../clock.dart';
 import '../chat/chat_style.dart';
 import '../composer/attachment_preview.dart';
 import '../composer/attachment_tile.dart';
@@ -1516,8 +1517,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   static bool _sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  static String _clockLabel(DateTime t) =>
-      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+  static String _clockLabel(DateTime t) => clock12(t);
 
   static String _dayLabel(DateTime t) {
     final now = DateTime.now();

@@ -81,7 +81,17 @@ Future<T?> presentScreen<T>(
       });
     },
     transitionBuilder: (ctx, anim, _, child) {
-      final curved = CurvedAnimation(parent: anim, curve: Motion.enter);
+      final curved = CurvedAnimation(
+          parent: anim, curve: Motion.enter, reverseCurve: Motion.exit);
+      final narrow = MediaQuery.sizeOf(ctx).width < kDesktopBreakpoint;
+      if (narrow && !reduceMotion(ctx)) {
+        // Full-screen on a phone: rise like a sheet instead of a bare fade.
+        return SlideTransition(
+          position: Tween(begin: const Offset(0, 0.08), end: Offset.zero)
+              .animate(curved),
+          child: FadeTransition(opacity: curved, child: child),
+        );
+      }
       final transition = (style == PanelStyle.dialog)
           ? FadeTransition(
               opacity: curved,

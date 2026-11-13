@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../clock.dart';
 import '../swr.dart';
 import '../crew_widgets.dart';
 import '../media_views.dart' show DaemonScope;
@@ -32,8 +33,7 @@ double get _gutter => kMobile ? M.gutter : 12;
 
 DateTime? _time(String raw) => DateTime.tryParse(raw)?.toLocal();
 
-String _clock(DateTime t) =>
-    '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+String _clock(DateTime t) => clock12(t);
 
 const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const _months = [

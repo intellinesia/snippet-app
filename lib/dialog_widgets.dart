@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/gestures.dart';
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import 'platform.dart';
@@ -346,6 +347,33 @@ void trackPointer() {
   });
 }
 
+/// Phone popovers sit on a frosted blackout of the whole screen; desktop
+/// ones stay anchored over an untouched window.
+Widget popoverBackdrop(Animation<double> animation, Widget child) {
+  if (!kMobile) return child;
+  return Stack(children: [
+    Positioned.fill(
+      child: IgnorePointer(
+        child: AnimatedBuilder(
+          animation: animation,
+          builder: (_, __) {
+            final t = animation.value;
+            final scrim = ColoredBox(
+                color: AppColors.glassScrim
+                    .withValues(alpha: AppColors.glassScrim.a * t));
+            if (!Glass.enabled || t < 0.001) return scrim;
+            return BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 16 * t, sigmaY: 16 * t),
+              child: scrim,
+            );
+          },
+        ),
+      ),
+    ),
+    child,
+  ]);
+}
+
 Future<T?> showPointPopover<T>(BuildContext context,
     {required Offset? point,
     required double width,
@@ -395,12 +423,15 @@ Future<T?> showPointPopover<T>(BuildContext context,
     ]),
     transitionBuilder: (_, animation, __, child) {
       final curve = CurvedAnimation(parent: animation, curve: Motion.enter);
-      return FadeTransition(
-        opacity: curve,
-        child: ScaleTransition(
-          scale: Tween(begin: 0.97, end: 1.0).animate(curve),
-          alignment: origin,
-          child: child,
+      return popoverBackdrop(
+        curve,
+        FadeTransition(
+          opacity: curve,
+          child: ScaleTransition(
+            scale: Tween(begin: 0.97, end: 1.0).animate(curve),
+            alignment: origin,
+            child: child,
+          ),
         ),
       );
     },
@@ -741,12 +772,15 @@ Future<T?> showAnchoredPanel<T>(
     ]),
     transitionBuilder: (_, animation, __, child) {
       final curve = CurvedAnimation(parent: animation, curve: Motion.enter);
-      return FadeTransition(
-        opacity: curve,
-        child: ScaleTransition(
-          scale: Tween(begin: 0.97, end: 1.0).animate(curve),
-          alignment: grow,
-          child: child,
+      return popoverBackdrop(
+        curve,
+        FadeTransition(
+          opacity: curve,
+          child: ScaleTransition(
+            scale: Tween(begin: 0.97, end: 1.0).animate(curve),
+            alignment: grow,
+            child: child,
+          ),
         ),
       );
     },

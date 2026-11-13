@@ -14,7 +14,10 @@ import '../presence.dart';
 import '../swr.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../screens/agent_appearance.dart' show showAgentAppearance;
+import '../screens/agent_reach_panel.dart' show showAgentReachSettings;
 import '../screens/agent_thread_cards.dart' show daemonRelativeUrl;
+import '../screens/agent_wake_panel.dart' show showAgentWakeSettings;
 import '../screens/group_messaging.dart' show confirmDeleteGroup;
 import 'agent_cluster.dart';
 import '../screens/agent_profile_panel.dart'
@@ -132,6 +135,23 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     }
   }
 
+  Future<void> _editNickname() async {
+    final agent = widget.agent;
+    if (agent == null) return;
+    final next = await promptText(context,
+        title: 'Nickname for ${widget.name}',
+        initial: agent.nickname ?? '',
+        hint: 'Leave empty to use the name');
+    if (next == null || next == (agent.nickname ?? '') || !mounted) return;
+    try {
+      await widget.client
+          .setAgentNickname(agent.id, next.isEmpty ? null : next);
+      widget.onChanged?.call();
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+    }
+  }
+
   Future<void> _deleteAgent() async {
     final agent = widget.agent;
     if (agent == null) return;
@@ -186,6 +206,36 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
               name: widget.name,
               onChanged: widget.onChanged,
             ),
+          ]),
+        if (agent != null)
+          _InfoCard(children: [
+            if (!agent.isMissionControl)
+              _InfoRow(
+                  label: 'Nickname',
+                  icon: 'edit',
+                  value: agent.nickname ?? '',
+                  onTap: _editNickname),
+            _InfoRow(
+                label: 'Appearance',
+                icon: 'sparkles',
+                onTap: () => showAgentAppearance(
+                    context, widget.client, widget.agentId, widget.name)),
+            if (!agent.isMissionControl)
+              _InfoRow(
+                  label: 'Wakes and reporting',
+                  icon: 'calendar-clock',
+                  onTap: () => showAgentWakeSettings(context,
+                      client: widget.client,
+                      owner: widget.agentId,
+                      name: widget.name,
+                      onChanged: widget.onChanged)),
+            _InfoRow(
+                label: 'How it reaches you',
+                icon: 'bell',
+                onTap: () => showAgentReachSettings(context,
+                    client: widget.client,
+                    agentId: widget.agentId,
+                    name: widget.name)),
           ]),
         _InfoCard(children: [
           _CopyRow(label: 'Agent ID', value: widget.agentId),

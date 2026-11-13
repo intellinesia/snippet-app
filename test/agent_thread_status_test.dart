@@ -218,7 +218,7 @@ void main() {
         },
       ),
     );
-    expect(find.text('Read 10:00'), findsOneWidget);
+    expect(find.text('Read 10:00 am'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });
 
@@ -266,9 +266,9 @@ void main() {
         at('3', 3, 'agent', todayLater),
       ]),
     );
-    expect(find.text('Yesterday 22:15'), findsOneWidget);
-    expect(find.text('Today 09:00'), findsOneWidget);
-    expect(find.text('Today 09:20'), findsOneWidget);
+    expect(find.text('Yesterday 10:15 pm'), findsOneWidget);
+    expect(find.text('Today 9:00 am'), findsOneWidget);
+    expect(find.text('Today 9:20 am'), findsOneWidget);
     final bubbles = t.widgetList<ChatBubble>(find.byType(ChatBubble)).toList();
     expect(bubbles, hasLength(3));
     expect(bubbles.every((b) => b.tail), isTrue);

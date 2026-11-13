@@ -693,6 +693,7 @@ class _CreateMenu extends StatelessWidget {
             'New agent',
             'A specialist with its own model and memory',
           ),
+          Divider(height: 1, thickness: 1, color: AppColors.line),
           _item(
             context,
             'group',

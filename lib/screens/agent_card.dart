@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api.dart';
+import '../clock.dart';
 import '../crew_widgets.dart' show AgentProviderMark;
 import '../models.dart';
 import '../platform.dart';
@@ -84,7 +85,7 @@ String agentStatusLine(CoordinationAgent agent,
   };
 }
 
-/// v5 row time: 'now', HH:mm today, weekday this week, 'd MMM' older.
+/// v5 row time: 'now', clock today, weekday this week, 'd MMM' older.
 String agentRowTime(DateTime? at, {DateTime? now}) {
   if (at == null) return '';
   at = at.toLocal();
@@ -95,8 +96,7 @@ String agentRowTime(DateTime? at, {DateTime? now}) {
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
   ];
   if (at.year == n.year && at.month == n.month && at.day == n.day) {
-    return '${at.hour.toString().padLeft(2, '0')}:'
-        '${at.minute.toString().padLeft(2, '0')}';
+    return clock12(at);
   }
   if (n.difference(at).inDays < 7) {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
