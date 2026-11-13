@@ -318,7 +318,18 @@ class SidebarState extends State<Sidebar> {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  child: MobileBottomBar(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.bg.withValues(alpha: 0),
+                          AppColors.bg.withValues(alpha: 0.85),
+                        ],
+                      ),
+                    ),
+                    child: MobileBottomBar(
                     home: widget.mobileHome,
                     onHome: widget.onMobileHome,
                     onNewSession: widget.onNewSession,
@@ -329,6 +340,7 @@ class SidebarState extends State<Sidebar> {
                         setState(() => _barHeight = h);
                       }
                     },
+                  ),
                   ),
                 ),
             ]),

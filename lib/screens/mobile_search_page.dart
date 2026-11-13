@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../glass.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -100,8 +101,14 @@ class _MobileSearchPageState extends State<MobileSearchPage> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
-        child: Column(children: [
-          Padding(
+        child: Stack(children: [
+          Positioned.fill(child: _results(q)),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: GlassTopFrame(
+              child: Padding(
             padding: const EdgeInsets.fromLTRB(M.gutter, 8, M.gutter, 0),
             child: Row(children: [
               Expanded(child: _field()),
@@ -118,19 +125,18 @@ class _MobileSearchPageState extends State<MobileSearchPage> {
               ),
             ]),
           ),
-          Expanded(child: _results(q)),
+            ),
+          ),
         ]),
       ),
     );
   }
 
   Widget _field() {
-    return Container(
+    return Glass(
+      radius: BorderRadius.circular(22),
+      child: Container(
       height: 44,
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(22),
-      ),
       padding: const EdgeInsets.only(left: 16, right: 4),
       child: Row(children: [
         AppIcon('search', size: 16, color: AppColors.fg3),
@@ -164,6 +170,7 @@ class _MobileSearchPageState extends State<MobileSearchPage> {
                   }),
         ),
       ]),
+      ),
     );
   }
 
@@ -182,7 +189,7 @@ class _MobileSearchPageState extends State<MobileSearchPage> {
         ),
       );
     }
-    return ListView(children: [
+    return ListView(padding: const EdgeInsets.only(top: 64), children: [
       if (sessions.isNotEmpty)
         ..._section('Sessions', [
           for (final s in sessions)
