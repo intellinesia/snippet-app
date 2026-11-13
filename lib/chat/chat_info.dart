@@ -189,12 +189,6 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
           ]),
         _InfoCard(children: [
           _CopyRow(label: 'Agent ID', value: widget.agentId),
-          _InfoRow(
-            label: 'Capabilities',
-            value: agent == null || agent.capabilities.isEmpty
-                ? 'None'
-                : agent.capabilities.join(', '),
-          ),
         ]),
         _InfoCard(children: [
           _DangerRow(label: 'Delete agent', onTap: _deleteAgent),
@@ -430,10 +424,16 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   Widget _membersSection() => _InfoCard(children: [
         for (final m in _group.members) _memberRow(m),
         _InfoRow(
+          label: 'Lead',
+          icon: 'crown',
+          value: _leadName() ?? 'None',
+          onTap: _busy ? null : _pickLead,
+        ),
+        _InfoRow(
           label: 'Add member',
+          icon: 'user-plus',
           accent: true,
           onTap: _busy ? null : _pickAdd,
-          trailing: AppIcon('plus', size: 14, color: AppColors.accent),
         ),
       ]);
 
@@ -477,18 +477,10 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   }
 
   Widget _infoTab() {
-    final lead = _leadName();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _membersSection(),
-        _InfoCard(children: [
-          _InfoRow(
-            label: 'Lead',
-            value: lead ?? 'None',
-            onTap: _busy ? null : _pickLead,
-          ),
-        ]),
         _InfoCard(children: [
           _DangerRow(label: 'Delete group', onTap: _deleteGroup),
         ]),
@@ -812,6 +804,7 @@ class _InfoRow extends StatelessWidget {
     this.value,
     this.onTap,
     this.trailing,
+    this.icon,
     this.accent = false,
   });
 
@@ -819,6 +812,7 @@ class _InfoRow extends StatelessWidget {
   final String? value;
   final VoidCallback? onTap;
   final Widget? trailing;
+  final String? icon;
   final bool accent;
 
   @override
@@ -831,6 +825,11 @@ class _InfoRow extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: S.s16),
           child: Row(children: [
+            if (icon != null) ...[
+              AppIcon(icon!,
+                  size: 18, color: accent ? AppColors.accent : AppColors.fg3),
+              const SizedBox(width: S.s12),
+            ],
             Expanded(
               child: Text(label,
                   maxLines: 1,
@@ -870,6 +869,7 @@ class _CopyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _InfoRow(
         label: label,
+        icon: 'hash',
         onTap: () {
           Clipboard.setData(ClipboardData(text: value));
           toast(context, 'Copied');
@@ -902,8 +902,13 @@ class _DangerRow extends StatelessWidget {
           child: Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: S.s12),
-              child: Text(label,
-                  style: sans(15, weight: W.label, color: AppColors.danger)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                AppIcon('trash', size: 16, color: AppColors.danger),
+                const SizedBox(width: S.s8),
+                Text(label,
+                    style:
+                        sans(15, weight: W.label, color: AppColors.danger)),
+              ]),
             ),
           ),
         ),

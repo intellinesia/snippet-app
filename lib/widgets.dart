@@ -2273,6 +2273,9 @@ class AppToggle extends StatelessWidget {
 }
 
 const _lucide = <String, IconData>{
+  'crown': LucideIcons.crown,
+  'user-plus': LucideIcons.userPlus,
+  'hash': LucideIcons.hash,
   'chevron-left': LucideIcons.chevronLeft,
   'arrow-left': LucideIcons.arrowLeft,
   'chevron-right': LucideIcons.chevronRight,
