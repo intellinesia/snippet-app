@@ -1,9 +1,132 @@
 import 'package:flutter/material.dart';
+import 'desktop_look.dart';
 import 'package:flutter/services.dart';
 
 import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
+
+/// v5 phone group caption: 13px sentence-case text indented past the card edge.
+class SettingsGroupLabel extends StatelessWidget {
+  const SettingsGroupLabel(this.text, {super.key});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(S.s16, S.s16, 0, S.s4),
+        child: Text(text, style: sans(13, color: AppColors.fg3)),
+      );
+}
+
+/// v5 30px rounded icon tile on `surface2` with `R.md` corners.
+class V5IconTile extends StatelessWidget {
+  const V5IconTile(this.icon, {super.key, this.color, this.iconData})
+      : assert(icon != null || iconData != null);
+
+  final String? icon;
+  final IconData? iconData;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(R.md),
+        ),
+        child: Center(
+          child: iconData != null
+              ? Icon(iconData, size: 17, color: color ?? AppColors.fg2)
+              : AppIcon(icon!, size: 16, color: color ?? AppColors.fg2),
+        ),
+      );
+}
+
+/// v5 `.pgi` row: minHeight 46, optional 30px leading tile, 15px label,
+/// 14px muted value, trailing widget or chevron when tappable.
+class V5SettingsRow extends StatelessWidget {
+  const V5SettingsRow({
+    super.key,
+    required this.label,
+    this.leading,
+    this.value,
+    this.valueColor,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+    this.chevron,
+    this.danger = false,
+    this.labelWidget,
+  });
+
+  final String label;
+  final Widget? leading;
+  final String? value;
+  final Color? valueColor;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final bool? chevron;
+  final bool danger;
+  final Widget? labelWidget;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = value;
+    final showChevron = trailing == null && (chevron ?? onTap != null);
+    final body = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 46),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Row(children: [
+          if (leading != null) ...[leading!, const SizedBox(width: S.s12)],
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                labelWidget ??
+                    Text(label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(15,
+                            color: danger ? AppColors.danger : AppColors.fg1)),
+                if (subtitle != null && subtitle!.isNotEmpty)
+                  Text(subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(13, color: AppColors.fg3)),
+              ],
+            ),
+          ),
+          if (v != null && v.isNotEmpty) ...[
+            const SizedBox(width: S.s8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 150),
+              child: Text(v,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(14, color: valueColor ?? AppColors.fg3)),
+            ),
+          ],
+          if (trailing != null) ...[
+            const SizedBox(width: S.s6),
+            trailing!,
+          ] else if (showChevron) ...[
+            const SizedBox(width: S.s6),
+            AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+          ],
+        ]),
+      ),
+    );
+    if (onTap == null) return body;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(onTap: onTap, child: body),
+    );
+  }
+}
 
 class SettingsGroup extends StatelessWidget {
   const SettingsGroup(
@@ -32,7 +155,9 @@ class SettingsGroup extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(kMobile ? 16 : 4, 0, 4, 6),
             child: Text(header!.toUpperCase(), style: TS.overline()),
           ),
-        Container(
+        Tactile(
+          radius: BorderRadius.circular(kMobile ? 14 : 10),
+          child: Container(
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: AppColors.surface1,
@@ -42,8 +167,13 @@ class SettingsGroup extends StatelessWidget {
             borderRadius: BorderRadius.circular(kMobile ? 14 : 10),
             border: Border.all(color: AppColors.line),
           ),
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
+          // Ink must paint inside the clip, not on a Material further up.
+          child: Material(
+            type: MaterialType.transparency,
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
+          ),
+        ),
         ),
         if (footer != null)
           Padding(

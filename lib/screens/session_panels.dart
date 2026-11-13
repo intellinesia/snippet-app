@@ -289,7 +289,7 @@ class _CheckpointTimelineState extends State<_CheckpointTimeline> {
       Padding(
         padding: const EdgeInsets.only(right: 4),
         child: Material(
-          color: filled ? AppColors.surface2 : Colors.transparent,
+          color: filled ? AppColors.tint2 : Colors.transparent,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(kMobile ? R.pill : R.sm),
               side: BorderSide(
@@ -347,7 +347,7 @@ class _CheckpointTimelineState extends State<_CheckpointTimeline> {
           margin: const EdgeInsets.only(bottom: 2),
           padding: const EdgeInsets.fromLTRB(30, 9, 10, 10),
           decoration: BoxDecoration(
-            color: open ? AppColors.surface1 : Colors.transparent,
+            color: open ? AppColors.tint1 : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Stack(clipBehavior: Clip.none, children: [
@@ -489,7 +489,7 @@ class _DeskLanesState extends State<_DeskLanes> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: AppColors.surface1,
+        color: AppColors.tint1,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(color: AppColors.line),

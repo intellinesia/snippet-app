@@ -390,50 +390,68 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     }
   }
 
-  String _missionStatus(HarnessState? s) {
-    if (s == null) return '';
-    final n = s.lanes.where((l) => l.running).length;
-    if (n > 0) return n == 1 ? '1 task running' : '$n tasks running';
-    if (s.pendingQuestion != null) return 'Needs you';
-    if (s.compacting) return 'Tidying up';
-    return s.status == 'running' ? 'Working' : 'Idle';
-  }
-
   Widget _mobileHeader(HarnessState? s) {
-    final ws = s?.workspace.trim() ?? '';
-    final folder = ws.isEmpty ? '' : lastPathSegment(ws, ifEmpty: ws);
-    final sub = _isMissionControl
-        ? _missionStatus(s)
-        : [
-            if (folder.isNotEmpty) folder,
-            if ((_modelLabel ?? '').isNotEmpty) _modelLabel!,
-          ].join(' · ');
     final offline = _connError != null;
     final stuck = _connError == _SessionScreenState._unreachable;
+    final back = widget.onMenu ?? () => Navigator.maybePop(context);
+    if (_isMissionControl) {
+      return MobileMissionBar(
+        onActions: stuck ? _retryNow : () => _openActionsDrawer(s),
+        client: widget.client,
+      );
+    }
+    final ws = s?.workspace.trim() ?? '';
+    final folder = ws.isEmpty ? '' : lastPathSegment(ws, ifEmpty: ws);
+    String joinFolder(String state) =>
+        folder.isNotEmpty ? '$state · $folder' : state;
+
+    String sub = folder;
+    Widget? subView = offline ? _mobileConnectionLine() : null;
+    if (!offline && s != null) {
+      if (s.status == 'running') {
+        final started = DateTime.tryParse(s.turnStartedAt ?? '');
+        final mins =
+            started == null ? 0 : DateTime.now().difference(started).inMinutes;
+        final label = joinFolder(mins >= 1 ? 'Working ${mins}m' : 'Working');
+        sub = '';
+        subView = Row(mainAxisSize: MainAxisSize.min, children: [
+          WorkingDots(size: 3, color: AppColors.accent),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TS
+                  .caption(AppColors.fg3)
+                  .copyWith(fontSize: 12, height: 1.2),
+            ),
+          ),
+        ]);
+      } else if (s.compacting) {
+        sub = joinFolder('Tidying up');
+      } else if (s.pendingQuestion != null || s.status == 'waiting_for_input') {
+        sub = joinFolder('Needs you');
+      } else if (s.status == 'in_review') {
+        sub = joinFolder('In review');
+      }
+    }
     return MobileBackBar(
       title: _title.isEmpty ? 'Session' : _title,
       subtitle: sub,
-      subtitleView: offline ? _mobileConnectionLine() : null,
-      onBack: widget.onMenu ?? () => Navigator.maybePop(context),
+      subtitleView: subView,
+      onBack: back,
       keepBack: true,
       onTitleTap: stuck ? _retryNow : () => _openActionsDrawer(s),
       onTitleTapHint: stuck ? 'Retry connection' : 'Session actions',
       trailing: [
-        if (s != null && s.lanes.any((l) => l.running)) ...[
-          RoundBtn(
-            tooltip: 'Parallel agents',
-            onTap: _showLanes,
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const WorkingMochi(size: 15),
-              Text('${s.lanes.where((l) => l.running).length}',
-                  style: sans(11,
-                      weight: W.label, height: 1.1, color: AppColors.fg2)),
-            ]),
-          ),
-          const SizedBox(width: 8),
-        ],
-        if (!_isMissionControl)
-          RoundBtn(icon: 'terminal', tooltip: 'Shell', onTap: _openTerm),
+        RoundBtn(
+          icon: 'terminal',
+          tooltip: 'Shell',
+          size: 40,
+          iconSize: 18,
+          onTap: _openTerm,
+        ),
       ],
     );
   }
@@ -878,7 +896,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         final steps = sessionChangeSteps(events);
         final shell = shellChanges(events, fileChanges(steps));
         if (kMobile) {
-          Navigator.of(context).push(MaterialPageRoute(
+          Navigator.of(context).push(AppPageRoute<void>(
               builder: (_) => FileChangesScreen(
                   steps: steps, shell: shell, onOpenFile: _openChangedFile)));
         } else {
@@ -939,12 +957,20 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     }
   }
 
-  void _openActions(HarnessState? s) {
+  void _openActions(HarnessState? s, {BuildContext? anchor}) {
     void run(VoidCallback f) {
       Navigator.pop(context);
       f();
     }
 
+    if (!kMobile && anchor != null) {
+      showAnchoredPanel<void>(anchor,
+          width: 340,
+          maxHeight: 640,
+          alignRight: true,
+          child: SingleChildScrollView(child: _actionsPanel(s, run)));
+      return;
+    }
     showAppSheet(context,
         title: 'Actions',
         maxWidth: 420,
@@ -966,7 +992,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       session: s,
       fileChangeCount: fileChanges(changeSteps).length + shell.length,
       onFileChanges: () => navigate!(() => Navigator.of(context).push(
-          MaterialPageRoute(
+          AppPageRoute<void>(
               builder: (_) => FileChangesScreen(
                   steps: changeSteps,
                   shell: shell,
@@ -1021,6 +1047,9 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               sessionId: widget.sessionId,
               onClose: close))),
       onRecurring: () => run(_openRecurring),
+      onTasks: kMobile && _isMissionControl
+          ? () => run(() => openMobileTasksPage(context, widget.client))
+          : null,
       onCompact: () => run(_confirmCompact),
       onCheckpoints: () => navigate!(_showCheckpoints),
       onMemory: () => navigate!(() => presentScreen(context,
@@ -1144,7 +1173,86 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       ),
     );
   }
+
+  // Desktop floating header: the session's actions at the right over the
+  // transcript. The tab strip carries the title; the phone keeps its own chrome.
+  bool get _deskHeader => !kMobile && !widget.readOnly;
+
+  double get _deskHeaderHeight =>
+      _isMissionControl ? ChatHeader.overlap - 8 : _kDeskHeaderH;
+
+  Widget _deskHeaderBar(HarnessState? s, bool running) {
+    if (_isMissionControl) {
+      return ChatHeader(
+        agentIds: const ['mission-control'],
+        title: 'Mission Control',
+        status: ChatHeader.statusText(running ? 'Working' : 'Active'),
+        onTitleTap: widget.onDeskInfo,
+        titleHint: 'Info',
+        trailing: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: _mcHeaderActions(s),
+        ),
+      );
+    }
+    final actions = _isMissionControl
+        ? _mcHeaderActions(s)
+        : _sessionHeaderActions(s);
+    return SizedBox(
+      height: _kDeskHeaderH,
+      child: Stack(clipBehavior: Clip.none, children: [
+        Positioned(right: 12, top: 7, child: actions),
+      ]),
+    );
+  }
+
+  Widget _sessionHeaderActions(HarnessState? s) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconBtn('goal',
+              size: 30,
+              iconSize: 15,
+              tooltip: 'Goal',
+              onTap: () => _performMacAction('goal')),
+          widget.deskActions?.call() ??
+              Builder(
+                builder: (ctx) => IconBtn('more-horizontal',
+                    size: 30,
+                    iconSize: 15,
+                    tooltip: 'Session actions',
+                    onTap: () => _openActions(s, anchor: ctx)),
+              ),
+          if (widget.onTogglePanel != null)
+            IconBtn('panel-right',
+                size: 30,
+                iconSize: 15,
+                tooltip: 'Toggle panel',
+                onTap: widget.onTogglePanel),
+        ],
+      );
+
+  Widget _mcHeaderActions(HarnessState? s) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          widget.deskActions?.call() ??
+              Builder(
+                builder: (ctx) => IconBtn('more-horizontal',
+                    size: 30,
+                    iconSize: 15,
+                    tooltip: 'Mission Control actions',
+                    onTap: () => _openActions(s, anchor: ctx)),
+              ),
+          if (widget.onTogglePanel != null)
+            IconBtn('panel-right',
+                size: 30,
+                iconSize: 15,
+                tooltip: 'Toggle panel',
+                onTap: widget.onTogglePanel),
+        ],
+      );
 }
+
+const double _kDeskHeaderH = 44;
 
 class _DockTab extends StatefulWidget {
   const _DockTab({

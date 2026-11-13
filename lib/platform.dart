@@ -3,10 +3,14 @@ import 'package:flutter/foundation.dart';
 /// True on phones/tablets (Android/iOS). Desktop (macOS/Linux/Windows) and web
 /// are false. Used to guard mobile-only plugins (foreground task, camera
 /// permissions) that have no desktop support, and to pick the layout.
+// Dev only: the Linux build with the phone layout, for screen audits.
+const _forceMobile = bool.fromEnvironment('SNIPPET_FORCE_MOBILE');
+
 bool get kMobile =>
-    !kIsWeb &&
-    (defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS);
+    _forceMobile ||
+    (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS));
 
 /// Desktop platforms with native notification plugin support.
 bool get kDesktopNotify =>

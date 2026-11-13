@@ -33,12 +33,14 @@ class GitDiffSidebarPanel extends StatefulWidget {
     this.onTab,
     this.onOpenPullRequest,
     this.header,
+    this.showHeader = true,
   });
 
   final String tab;
   final ValueChanged<String>? onTab;
   final ValueChanged<int>? onOpenPullRequest;
   final Widget? header;
+  final bool showHeader;
 
   final DaemonClient client;
   final String workspacePath;
@@ -211,7 +213,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(top: kMobile ? 8 : 0, bottom: 16),
           children: [
-            if (!tabbed)
+            if (!tabbed && widget.showHeader)
               ShellSectionHeader(
                 label: 'Git Diff',
                 leading: widget.header,
@@ -389,7 +391,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
         child: Opacity(
           opacity: onTap == null ? 0.45 : 1,
           child: Material(
-            color: AppColors.surface2,
+            color: AppColors.tint2,
             shape: const CircleBorder(),
             child: InkWell(
               customBorder: const CircleBorder(),
@@ -413,7 +415,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
       Opacity(
         opacity: disabled ? 0.45 : 1,
         child: Material(
-          color: light ? AppColors.fg1 : AppColors.surface2,
+          color: light ? AppColors.fg1 : AppColors.tint2,
           borderRadius: BorderRadius.circular(16),
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
@@ -442,7 +444,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Container(
             decoration: BoxDecoration(
-              color: AppColors.surface1,
+              color: AppColors.tint1,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.line),
             ),
@@ -528,12 +530,14 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
     return Padding(
       padding: const EdgeInsets.only(right: 2),
       child: Material(
-        color: on ? AppColors.surface2 : Colors.transparent,
+        color: on ? AppColors.tint2 : Colors.transparent,
         borderRadius: BorderRadius.circular(7),
         child: InkWell(
           onTap: () => widget.onTab?.call(key),
           borderRadius: BorderRadius.circular(7),
-          hoverColor: AppColors.surface2.withValues(alpha: 0.5),
+          hoverColor: kMobile
+              ? AppColors.surface2.withValues(alpha: 0.5)
+              : AppColors.tint3,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Text(label,
@@ -585,7 +589,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
             : const EdgeInsets.fromLTRB(8, 2, 8, 4),
         child: Builder(
           builder: (anchor) => Material(
-            color: AppColors.surface2,
+            color: AppColors.tint2,
             borderRadius: BorderRadius.circular(kMobile ? 10 : 8),
             child: InkWell(
               borderRadius: BorderRadius.circular(kMobile ? 10 : 8),

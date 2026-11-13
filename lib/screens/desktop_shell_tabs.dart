@@ -300,7 +300,11 @@ extension _DesktopShellTabsExt on _DesktopShellState {
   }
 
   bool _canCloseTab(_ShellTab t) =>
-      (_isAuxiliary(t) && !t.isTerminal) || t.isPrs || t.isDraft || t.isReadout;
+      (_isAuxiliary(t) && !t.isTerminal) ||
+      t.isPrs ||
+      t.isDraft ||
+      t.isReadout ||
+      t.isBoard;
 
   bool _canCloseTopTab(_ShellTab t) => !t.isMissionControl;
 
@@ -512,33 +516,6 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     _syncPage();
   }
 
-  void _openTasksTab(DaemonClient client, String url) {
-    final pane = _focusedPane;
-    final group = _activeGroupKeyFor(pane) ?? _activeTab?.key;
-    if (group == null) return;
-    final existing =
-        _tabs.indexWhere((t) => t.isBoard && t.instanceUrl == url);
-    _setState(() {
-      if (existing >= 0) {
-        final t = _tabs[existing];
-        t
-          ..pane = pane
-          ..groupSessionKey = group;
-        _dockAux(pane, t.key);
-      } else {
-        _tabs.add(_ShellTab.board(
-          client: client,
-          instanceUrl: url,
-          pane: pane,
-          groupSessionKey: group,
-        ));
-        _dockAux(pane, _tabs.last.key);
-      }
-    });
-    _syncPage();
-    _persistTabs();
-  }
-
   Future<void> _openTaskTabById(DaemonClient client, String taskId) async {
     final url = _active?.url ?? '';
     try {
@@ -627,21 +604,119 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     }
   }
 
-  bool get _canNavigateBack => _activeIndex > 0;
+  void _recordTabHistory() {
+    final valid = {for (final t in _mainTabs) t.key};
+    for (var i = _tabHistory.length - 1; i >= 0; i--) {
+      if (!valid.contains(_tabHistory[i])) {
+        _tabHistory.removeAt(i);
+        if (i <= _tabHistoryPos) _tabHistoryPos--;
+      }
+    }
+    for (var i = _tabHistory.length - 1; i > 0; i--) {
+      if (_tabHistory[i] == _tabHistory[i - 1]) {
+        _tabHistory.removeAt(i);
+        if (i <= _tabHistoryPos) _tabHistoryPos--;
+      }
+    }
+    if (_tabHistory.isEmpty) {
+      _tabHistoryPos = -1;
+    } else {
+      _tabHistoryPos = _tabHistoryPos.clamp(0, _tabHistory.length - 1);
+    }
+    final active = _activeTab;
+    if (active != null && !_navigatingHistory) {
+      if (_tabHistoryPos < 0 || _tabHistory[_tabHistoryPos] != active.key) {
+        if (_tabHistoryPos + 1 < _tabHistory.length) {
+          _tabHistory.removeRange(_tabHistoryPos + 1, _tabHistory.length);
+        }
+        _tabHistory.add(active.key);
+        _tabHistoryPos = _tabHistory.length - 1;
+      }
+    }
+    _navigatingHistory = false;
+  }
+
+  bool get _canNavigateBack => _tabHistoryPos > 0;
   bool get _canNavigateForward =>
-      _activeIndex >= 0 && _activeIndex < _tabs.length - 1;
+      _tabHistoryPos >= 0 && _tabHistoryPos < _tabHistory.length - 1;
 
   void _navigateBack() {
-    if (_canNavigateBack) _activateTab(_activeIndex - 1);
+    if (!_canNavigateBack) return;
+    final targetKey = _tabHistory[_tabHistoryPos - 1];
+    final i = _tabs.indexWhere((t) => t.key == targetKey);
+    if (i < 0) return;
+    _navigatingHistory = true;
+    _tabHistoryPos--;
+    _activateTab(i);
   }
 
   void _navigateForward() {
-    if (_canNavigateForward) _activateTab(_activeIndex + 1);
+    if (!_canNavigateForward) return;
+    final targetKey = _tabHistory[_tabHistoryPos + 1];
+    final i = _tabs.indexWhere((t) => t.key == targetKey);
+    if (i < 0) return;
+    _navigatingHistory = true;
+    _tabHistoryPos++;
+    _activateTab(i);
   }
 
   void _activateTabAt(_ShellTab t) {
     final i = _tabs.indexOf(t);
     if (i >= 0) _activateTab(i);
+  }
+
+  void _openTasksTab() {
+    final client = _client;
+    final url = _active?.url;
+    if (client == null || url == null) return;
+    final existing =
+        _tabs.indexWhere((t) => t.isBoard && t.instanceUrl == url);
+    _openMainTab(
+        existing >= 0
+            ? null
+            : _ShellTab.board(client: client, instanceUrl: url),
+        existing);
+  }
+
+  String? _agentForTab(_ShellTab t) {
+    if (t.isReadout && t.readout?.isAgent == true) return t.readout!.agent!.id;
+    if (t.sessionId == null) return null;
+    for (final s in _sessions ?? const <SessionInfo>[]) {
+      if (s.id == t.sessionId) return s.displayAgentId;
+    }
+    return null;
+  }
+
+  /// Sessions carrying attention (waiting on input, in review, or flagged),
+  /// for the Mission Control tab badge.
+  int get _mcAttentionCount => [
+        for (final s in _sessions ?? const <SessionInfo>[])
+          if (sessionNeedsYou(s)) s,
+      ].length;
+
+  String? _folderForTab(_ShellTab t) {
+    if (t.isMissionControl || t.isBoard || t.isReadout) return null;
+    if (t.isDraft) {
+      final f = t.draftFolder?.trim() ?? '';
+      return f.isEmpty ? null : lastPathSegment(f, ifEmpty: f);
+    }
+    if (t.sessionId != null) {
+      for (final s in _sessions ?? const <SessionInfo>[]) {
+        if (s.id == t.sessionId) {
+          final f = s.projectFolder.trim();
+          return f.isEmpty ? null : lastPathSegment(f, ifEmpty: f);
+        }
+      }
+      final ws = _macSessionStatuses[t.key]?.state?.workspace.trim() ?? '';
+      return ws.isEmpty ? null : lastPathSegment(ws, ifEmpty: ws);
+    }
+    if (t.isFile) {
+      final path = t.filePath ?? '';
+      final slash = path.lastIndexOf('/');
+      final parent = slash > 0 ? path.substring(0, slash) : '';
+      return parent.isEmpty ? null : lastPathSegment(parent, ifEmpty: parent);
+    }
+    return null;
   }
 
   Widget _mainTabsRow() => MainTabsStrip(
@@ -655,6 +730,11 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         onNewSession: _newSessionFlow,
         chipKeyFor: (key) => _chipKeys.putIfAbsent(key, () => GlobalKey()),
         providerFor: (t) => _tabProviders[t.profile],
+        agentFor: _agentForTab,
+        folderFor: _folderForTab,
+        mcAttentionCount: _mcAttentionCount,
+        tasksActive: _activeTab?.isBoard ?? false,
+        onOpenTasks: null,
       );
 
   Future<void> _downloadActiveFile() async {

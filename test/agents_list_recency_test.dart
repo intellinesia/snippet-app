@@ -52,6 +52,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
         home: Scaffold(body: AgentsSidebarPanel(client: _Client()))));
     await tester.pumpAndSettle();
+    expect(find.text('Recent'), findsNothing);
     final ys = [
       for (final t in ['Bravo', 'Crew', 'Alpha', 'Charlie'])
         tester.getTopLeft(find.text(t)).dy

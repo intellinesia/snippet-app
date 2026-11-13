@@ -1,6 +1,13 @@
 part of 'desktop_shell.dart';
 
 extension _DesktopShellPanesExt on _DesktopShellState {
+  SessionInfo? _draftSource(String? folder) {
+    if (folder == null || folder.isEmpty) return null;
+    return _sessions
+        ?.where((s) => s.projectFolder == folder || s.folder == folder)
+        .firstOrNull;
+  }
+
   Widget _tabBody(_ShellTab t, {required bool primary, bool? visible}) =>
       kMobile
           ? _originTabBody(t, primary: primary, visible: visible ?? primary)
@@ -21,9 +28,14 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         key: ValueKey('body-${t.key}'),
         color: kMobile ? AppColors.bg : Colors.transparent,
         child: _rightTabBody(
-            t.readout!,
-            origin == null ? null : _macSessionStatuses[origin]?.state,
-            origin == null ? null : _macSessionControls[origin]),
+          t.readout!,
+          origin == null ? null : _macSessionStatuses[origin]?.state,
+          origin == null ? null : _macSessionControls[origin],
+          deskTrailing: visible && t == _activeTab && t.readout!.isAgent
+              ? _agentHeaderTrailing(t)
+              : null,
+          onDeskInfo: t.readout!.isAgent ? _showAgentInfo : null,
+        ),
       );
     }
     if (t.isDraft) {
@@ -32,6 +44,12 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         client: t.client,
         machineLabel: _active?.label ?? '',
         folder: t.draftFolder,
+        source: _draftSource(t.draftFolder),
+        recentSessions: _sessions,
+        onOpenSession: (id) {
+          final s = _sessions?.where((s) => s.id == id).firstOrNull;
+          _openSession(id, s?.title ?? '', s?.profile);
+        },
         onStart: (folder, mode, profile, text) =>
             _startDraft(t, folder, mode, profile, text),
       );
@@ -54,13 +72,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       );
     }
     if (t.isBoard) {
-      return kMobile
-          ? TaskKanban(key: ValueKey('body-${t.key}'), client: t.client)
-          : TasksPanel(
-              key: ValueKey('body-${t.key}'),
-              client: t.client,
-              onOpenTask: (task) =>
-                  _openTaskTab(t.client, t.instanceUrl, task));
+      return TaskKanban(key: ValueKey('body-${t.key}'), client: t.client);
     }
     if (t.isTerminal) {
       if (t.termSessionKey == null) {
@@ -105,6 +117,12 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       );
     }
     return SessionScreen(
+      onTogglePanel: _togglePanel,
+      onDeskInfo: t.isMissionControl ? _showAgentInfo : null,
+      deskActions: primary
+          ? () => Row(
+              mainAxisSize: MainAxisSize.min, children: _headerTools(t))
+          : null,
       key: ValueKey('body-${t.key}'),
       client: t.client,
       sessionId: t.sessionId!,
@@ -124,8 +142,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       onTitle: (title) => _onSessionTitle(t.sessionId!, title),
       onMenu: kMobile ? _showMobileChats : null,
       mobileTopBar: kMobile && t.isMissionControl
-          ? (openActions) =>
-              _mobileTopBar(mission: true, onActions: openActions)
+          ? (openActions) => _mobileMissionBar(onActions: openActions)
           : null,
       onOpenFileTab: (path, name) =>
           _openFileTab(t.client, t.instanceUrl, path, name),
@@ -147,7 +164,11 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   }
 
   bool _isAuxiliary(_ShellTab t) =>
-      t.isTerminal || t.isFile || t.isDiff || t.isBoard || t.isTask;
+      t.isTerminal ||
+      t.isFile ||
+      t.isDiff ||
+      (kMobile && t.isBoard) ||
+      t.isTask;
 
   List<_ShellTab> get _mainTabs => [
         for (final t in _tabs)
@@ -268,67 +289,15 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     if (i >= 0) _closeTab(i, force: force);
   }
 
-  String? get _railAgentId {
-    if (_focusedPane == _Pane.left && (_activeTab?.isMissionControl ?? false)) {
-      return null;
-    }
-    for (final r in _rightTabs) {
-      if (r.isAgent && _activeKey[r.pane] == r.key) return r.agent!.id;
-    }
-    return null;
-  }
-
-  Widget _bodyRow({required bool topInset}) {
-    final split = _splitView(topInset: topInset);
-    final rail = !kMobile && !_sidebarHidden && agentRailShown(context);
-    final agentId = _railAgentId;
-    // One stable tree: swapping the parent on toggle remounted every open tab.
-    return Expanded(
-      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (rail)
-          _railSlot(AgentRail(
-            client: _client,
-            sessions: _sessions,
-            mcSelected:
-                agentId == null && (_activeTab?.isMissionControl ?? false),
-            selectedAgentId: agentId,
-            topInset: kMacOS ? 46 : 10,
-            onOpenMissionControl: _openMissionControlTab,
-            onOpenAgent: _openRightAgent,
-            footer: [_usageButton(32), _settingsButton(32)],
-          )),
-        split,
-      ]),
-    );
-  }
-
-  // Agents first: the rail folds away as the sidebar takes over its list.
-  Widget _railSlot(Widget rail) {
-    final folding = sidebarAgentsFirst.value;
-    return AnimatedContainer(
-      duration: reduceMotion(context) ? Duration.zero : Motion.page,
-      curve: Curves.easeInOutCubic,
-      width: folding ? 0 : kAgentRailWidth,
-      clipBehavior: Clip.hardEdge,
-      decoration: const BoxDecoration(),
-      onEnd: () {
-        if (mounted) _setState(() => _railFolded = sidebarAgentsFirst.value);
-      },
-      // Once folded the rail is dropped, so it stops polling and taking focus.
-      child: _railFolded
-          ? null
-          : OverflowBox(
-              alignment: Alignment.centerRight,
-              minWidth: kAgentRailWidth,
-              maxWidth: kAgentRailWidth,
-              child: ExcludeFocus(excluding: folding, child: rail),
-            ),
-    );
-  }
+  Widget _bodyRow({required bool topInset}) => _splitView(topInset: topInset);
 
   Widget _splitView({required bool topInset}) => ShellSplitView(
         key: const ValueKey('shell-split'),
         sidebarHidden: _sidebarHidden,
+        sidebarWidth: _sidebarWidth,
+        onSidebarResize: _resizeSidebar,
+        onSidebarResizeEnd: _saveSidebarWidth,
+        onSidebarReset: _resetSidebarWidth,
         sidebar: ShellPanelScope(
           open: _openShellPanel,
           client: _client,
@@ -371,8 +340,9 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         rightPanel: _sessionSidePanel(),
         hideRight: _activeTab != null &&
             (_activeTab!.isDraft ||
-                (_activeTab!.isReadout && _activeAgent == null) ||
-                _activeTab!.isPrs),
+                (_activeTab!.isReadout && !_dockedInfo) ||
+                _activeTab!.isPrs ||
+                (_activeTab!.isBoard && _tabsIn(_Pane.right).isEmpty)),
         panelHostsReadouts: _activeTab != null &&
             (_activeTab!.sessionId != null || _activeAgent != null),
         onPaneResize: (delta) => _setState(() {
@@ -414,6 +384,14 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   Widget? _sessionSidePanel() {
     final tab = _activeTab;
     final agent = _activeAgent;
+    final side = tab?.readout?.request?.sidePanel;
+    if (tab != null && side != null) {
+      return _panelHidden
+          ? null
+          : KeyedSubtree(
+              key: ValueKey('side-${tab.key}'),
+              child: side(context, () => _closePaneTab(tab)));
+    }
     if (tab == null || (tab.sessionId == null && agent == null)) return null;
     if (_panelHidden) return null;
     final tabReadouts = [
@@ -423,10 +401,19 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           r
     ];
     if (agent != null) {
-      if (tabReadouts.isEmpty) return null;
+      final mc = agent.isMissionControl;
+      final mcState = mc ? _macSessionStatuses[tab.key]?.state : null;
       return AgentSidePanel(
         key: ValueKey('agent-panel-${tab.key}'),
+        contextUsed: mcState?.lastPromptTokens ?? 0,
+        contextWindow: mcState?.contextWindow ?? 0,
+        onCompact: mc ? () => _dispatchSessionAction('compact') : null,
+        onAutonomy: mc ? () => _dispatchSessionAction('autonomy') : null,
+        onScheduled:
+            mc ? () => _toggleRightPanel(RightPanel.recurring) : null,
         client: tab.client,
+        agent: agent,
+        onHide: _togglePanel,
         agentId: agent.id,
         agentName: agent.displayName.trim().isEmpty
             ? agent.id
@@ -466,6 +453,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           _openFileTab(tab.client, tab.instanceUrl, path, name),
       host: _termHosts[tab.key],
       sessionId: tab.sessionId,
+      onTogglePanel: _toggleRightPanel,
       onOpenDiff: (f) =>
           _openDiffTab(tab.client, tab.instanceUrl, tab.sessionId!, f),
       readouts: tabReadouts,
@@ -591,11 +579,53 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 
   Widget _emptyPaneHint() => const EmptyPaneHint();
 
+  Widget _agentHeaderTrailing(_ShellTab t) {
+    final tools = buildShellRailTools(
+      activeTab: t,
+      macSessionStatus: _macSessionStatuses[t.key],
+      isRightPanelActive: _rightPanelActive,
+      onToggleRightPanel: _toggleRightPanel,
+      onSessionAction: _dispatchSessionAction,
+      onOpenGoalPopover: _openGoalPopover,
+      onAgentAction: _agentAction,
+    );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ...tools,
+        if (_activeTab?.readout?.agent != null) ...[
+          if (tools.isNotEmpty) const SizedBox(width: 4),
+          Tooltip(
+            message: _panelHidden ? 'Show panel' : 'Hide panel',
+            child: Material(
+              color: _panelHidden ? Colors.transparent : AppColors.surface2,
+              borderRadius: BorderRadius.circular(8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: _togglePanel,
+                child: SizedBox.square(
+                  dimension: 30,
+                  child: Center(
+                    child: AppIcon('panel-right',
+                        size: 16,
+                        color: _panelHidden ? AppColors.fg3 : AppColors.fg1),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _rightTabBody(
     _RightTab t,
     HarnessState? s,
-    _MacSessionControls? controls,
-  ) =>
+    _MacSessionControls? controls, {
+    Widget? deskTrailing,
+    VoidCallback? onDeskInfo,
+  }) =>
       RightTabBody(
         tab: t,
         state: s,
@@ -604,6 +634,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         activeSessionId: _activeTab?.sessionId,
         onClose: () => _closeRightTab(t.key),
         onOpenFile: _openFileFromRightPane,
+        deskTrailing: deskTrailing,
+        onDeskInfo: onDeskInfo,
       );
 
   Widget _mainPane({VoidCallback? onMenu}) => MainPaneView(
@@ -626,9 +658,11 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       );
 
   void _openShellSettings([SettingsPage? page]) {
+    if (page == null && _settingsOpen) return;
     final c = _client;
     if (c == null) return;
     final inst = _active;
+    _settingsOpen = true;
     showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -651,7 +685,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                 borderRadius: BorderRadius.circular(R.lg),
                 border: Border.all(color: AppColors.border2),
               ),
-              child: _SettingsPanel(
+              child: DesktopSettingsPage(
                 client: c,
                 instances: _instances,
                 active: inst,
@@ -659,8 +693,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                 onRename: _renameInstance,
                 onSelect: _selectInstance,
                 onAdd: _onInstanceAdded,
-                onClose: () => Navigator.of(ctx).maybePop(),
-                initialPage: page,
+                onBack: () => Navigator.of(ctx).maybePop(),
+                initialSection: page,
               ),
             ),
           ),
@@ -671,8 +705,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             parent: anim,
             curve: Curves.easeOutCubic,
             reverseCurve: Curves.easeInCubic);
-        return BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 6 * t.value, sigmaY: 6 * t.value),
+        return ModalGlass(
           child: FadeTransition(
             opacity: t,
             child: ScaleTransition(
@@ -682,7 +715,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           ),
         );
       },
-    );
+    ).whenComplete(() => _settingsOpen = false);
   }
 
   Widget _tabStrip(VoidCallback? onMenu) => CardTabStrip(
@@ -783,121 +816,103 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     _syncPage();
   }
 
-  bool get _railOn =>
-      !kMobile && agentRailShown(context) && !sidebarAgentsFirst.value;
-
   Widget _sidebarTop() {
     return SizedBox(
-      height: 46,
+      height: 44,
       child: Row(children: [
-        if (kMacOS) ...[
-          AnimatedContainer(
-              duration: reduceMotion(context) ? Duration.zero : Motion.page,
-              curve: Curves.easeInOutCubic,
-              width: _railOn ? 78 - kAgentRailWidth : 78),
-          const Spacer(),
-        ] else
-          const SizedBox(width: 10),
-        IconBtn('sidebar',
-            size: 28,
-            iconSize: 15,
+        if (kMacOS) const SizedBox(width: 78) else const SizedBox(width: 14),
+        const Spacer(),
+        _TbBtn(
+            icon: 'sidebar',
             tooltip: kMacOS ? 'Hide sidebar (⌘B)' : 'Hide sidebar (Ctrl+B)',
             onTap: _toggleSidebar),
-        if (!kMacOS) const Spacer(),
         const SizedBox(width: 6),
-        const SidebarModeSwitch(),
+        _TbBtn(icon: 'list', tooltip: 'Tasks', onTap: _openTasksTab),
+        const SizedBox(width: 6),
+        _TbBtn(icon: 'square-pen', tooltip: 'New session', onTap: _newSessionFlow),
         const SizedBox(width: 10),
       ]),
     );
   }
 
-  Widget _usageButton(double size) => Builder(
-        builder: (ctx) => IconBtn('gauge',
-            size: size,
-            iconSize: 16,
-            tooltip: 'Usage',
-            onTap:
-                _client == null ? null : () => showUsagePopover(ctx, _client!)),
-      );
-
-  Widget _settingsButton(double size) => IconBtn('settings',
-      size: size, iconSize: 16, tooltip: 'Settings', onTap: _openShellSettings);
-
   Widget _sidebarFooter() {
     final healthy = _active == null ? null : _health[_active!.url];
-    // With the agent rail on, usage and settings sit at its foot instead.
-    final rail = _railOn;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 2, 8, 10),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       child: Row(children: [
-        if (!rail) _usageButton(28),
         Expanded(
-          child: Material(
+          child: HoverSurface(
             key: _topMachineKey,
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(7),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(7),
-              onTap: _instances.isEmpty ? _addInstanceFlow : _openTopMachines,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 1),
-                        child: Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color:
-                                healthy == true ? AppColors.ok : AppColors.fg4,
-                          ),
+            radius: 8,
+            hoverColor: AppColors.surface2,
+            onTap: _instances.isEmpty ? _addInstanceFlow : _openTopMachines,
+            child: Container(
+              height: 28,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: Stack(clipBehavior: Clip.none, children: [
+                    AppIcon('monitor', size: 15, color: AppColors.fg3),
+                    Positioned(
+                      right: -2,
+                      bottom: -1,
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: healthy == true ? AppColors.ok : AppColors.fg4,
+                          border: Border.all(color: AppColors.bg, width: 1.5),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                            _active == null
-                                ? 'Add machine'
-                                : (_active!.label.isNotEmpty
-                                    ? _active!.label
-                                    : _active!.name),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(13, color: AppColors.fg2)),
-                      ),
-                    ]),
-              ),
+                    ),
+                  ]),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                      _active == null
+                          ? 'Add machine'
+                          : (_active!.label.isNotEmpty
+                              ? _active!.label
+                              : _active!.name),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, color: AppColors.fg2)),
+                ),
+              ]),
             ),
           ),
         ),
-        if (!rail) _settingsButton(28),
-        Builder(
-          builder: (ctx) => IconBtn('task',
-              size: 28,
-              iconSize: 16,
-              tooltip: 'Tasks',
-              onTap: _client == null ? null : () => _openTasksPopover(ctx)),
-        ),
-        IconBtn('search',
-            size: 28,
-            iconSize: 16,
-            tooltip: 'Search or jump (\u2318K)',
-            onTap: _openCommandPalette),
+        const SizedBox(width: 6),
+        if (_client != null) ...[
+          ListenableBuilder(
+            listenable: AmbientController.instance,
+            builder: (_, __) => Builder(
+              builder: (ctx) => _ListeningPill(
+                on: AmbientController.instance.status.running,
+                onTap: () => showAmbientStage(ctx, _client!),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+        ],
+        if (_client != null) ...[
+          Builder(
+            builder: (ctx) => _TbBtn(
+                icon: 'gauge',
+                tooltip: 'Usage',
+                onTap: () => showUsagePopover(ctx, _client!)),
+          ),
+          const SizedBox(width: 2),
+        ],
+        _TbBtn(
+            icon: 'settings',
+            tooltip: 'Settings',
+            onTap: _openShellSettings),
       ]),
-    );
-  }
-
-  Future<void> _openTasksPopover(BuildContext anchor) {
-    final client = _client;
-    if (client == null) return Future.value();
-    return showTasksPopover(
-      anchor,
-      client,
-      onExpand: () => _openTasksTab(client, _active?.url ?? ''),
-      onOpenTask: (task) => _openTaskTab(client, _active?.url ?? '', task),
     );
   }
 
@@ -947,4 +962,103 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onRename: _renameInstance,
         onRemove: _removeInstance,
       );
+}
+
+/// The `.tb` button in the `.stop` strip: 28px, fg3 icon, surface2 hover.
+class _TbBtn extends StatefulWidget {
+  const _TbBtn(
+      {required this.icon, required this.tooltip, required this.onTap});
+  final String icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  State<_TbBtn> createState() => _TbBtnState();
+}
+
+class _TbBtnState extends State<_TbBtn> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: widget.tooltip,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: _hover ? AppColors.surface2 : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: AppIcon(widget.icon,
+                  size: 16, color: _hover ? AppColors.fg1 : AppColors.fg3),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The sidebar footer's ambient control: "Listen" when off, the live pill when
+/// on; either opens the ambient panel.
+class _ListeningPill extends StatelessWidget {
+  const _ListeningPill({required this.on, required this.onTap});
+  final bool on;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget bar(double h) => Container(
+        width: 2,
+        height: h,
+        decoration: BoxDecoration(
+            color: AppColors.ok, borderRadius: BorderRadius.circular(1)));
+    return Tooltip(
+      message: on ? 'Ambient voice is listening' : 'Ambient listening is off',
+      child: HoverSurface(
+        radius: 13,
+        hoverColor: on
+            ? AppColors.ok.withValues(alpha: 0.16)
+            : AppColors.fg1.withValues(alpha: 0.08),
+        onTap: onTap,
+        child: Container(
+          height: 26,
+          padding: const EdgeInsets.symmetric(horizontal: 9),
+          decoration: BoxDecoration(
+            color: on ? AppColors.ok.withValues(alpha: 0.10) : null,
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (on)
+              SizedBox(
+                height: 12,
+                child: Row(children: [
+                  bar(5),
+                  const SizedBox(width: 2),
+                  bar(11),
+                  const SizedBox(width: 2),
+                  bar(7),
+                  const SizedBox(width: 2),
+                  bar(9),
+                ]),
+              )
+            else
+              AppIcon('mic', size: 13, color: AppColors.fg3),
+            const SizedBox(width: 6),
+            Text(on ? 'Listening' : 'Listen',
+                style: sans(12, color: on ? AppColors.ok : AppColors.fg3)),
+          ]),
+        ),
+      ),
+    );
+  }
 }

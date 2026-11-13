@@ -165,7 +165,7 @@ void main() {
         expect(popup.right, lessThanOrEqualTo(scenario.size.width - 18));
         expect(popup.bottom, lessThanOrEqualTo(scenario.size.height - 20));
         expect(popup.width, lessThanOrEqualTo(340));
-        final header = tester.getRect(find.text('Create agent'));
+        final header = tester.getRect(find.text('New agent'));
         final field = tester.getRect(find.byType(TextField).first);
         final button = tester.getRect(find.byType(Btn));
         expect(popup.contains(header.topLeft), isTrue);
@@ -184,6 +184,8 @@ void main() {
             findsOneWidget);
         await tester.enterText(find.byType(TextField).first,
             '  Review security issues in repos  ');
+        await tester.ensureVisible(find.text('Build agent'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Build agent'));
         await tester.pumpAndSettle();
         await tester.pump(const Duration(seconds: 3));
@@ -234,6 +236,27 @@ void main() {
 
     expect(openedAgent, isNotNull);
     expect(openedAgent?.id, 'a1');
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 11));
+  });
+
+  testWidgets('the create menu shows titled rows for agent and group',
+      (tester) async {
+    await asDesktop(() async {
+      await pumpPanel(tester);
+
+      await tester.tap(find.byTooltip('New agent or group'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('create-agent')), findsOneWidget);
+      expect(find.byKey(const ValueKey('create-group')), findsOneWidget);
+      expect(find.text('New agent'), findsOneWidget);
+      expect(find.text('New group'), findsOneWidget);
+      expect(
+          find.text('A specialist with its own model and memory'),
+          findsOneWidget);
+      expect(find.text('Several agents in one conversation'), findsOneWidget);
+    });
   });
 }
 
@@ -241,6 +264,11 @@ class _CustomAgentsClient extends DaemonClient {
   final List<CoordinationAgent> _agents;
   _CustomAgentsClient(this._agents)
       : super('https://daemon.invalid', 'test-token');
+
+  final _deviceEvents = DeviceEventHub.local();
+
+  @override
+  DeviceEventHub get deviceEvents => _deviceEvents;
 
   @override
   Future<List<CoordinationAgent>> coordinationAgents() async => _agents;

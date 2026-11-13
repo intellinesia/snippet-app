@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../chat/chat_info.dart' show DockedInfoNav;
 import '../mochi.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -11,6 +12,14 @@ import '../widgets.dart';
 Future<void> showAgentAppearance(
     BuildContext context, DaemonClient client, String agentId, String name,
     {Offset? point}) {
+  final nav = DockedInfoNav.maybeOf(context);
+  if (nav != null) {
+    nav.push(
+        'Appearance',
+        (_) => AgentAppearancePicker(
+            client: client, agentId: agentId, onDone: nav.pop));
+    return Future<void>.value();
+  }
   if (kMobile) {
     return showAppSheet<void>(
       context,

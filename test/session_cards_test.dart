@@ -1,18 +1,33 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/api.dart';
+import 'package:snippet/mochi.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
+import 'package:snippet/widgets.dart';
+import 'package:snippet/screens/mobile_session_home.dart';
+import 'package:snippet/screens/session_list_row.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/screens/sidebar.dart';
 
 class _Client extends DaemonClient {
   _Client() : super('https://daemon.invalid', 'test');
 
+  final DeviceEventHub _deviceEvents = DeviceEventHub.local();
+
   @override
-  late final DeviceEventHub deviceEvents = DeviceEventHub.local();
+  DeviceEventHub get deviceEvents => _deviceEvents;
+
+  @override
+  Future<ServerConfig> getConfig({bool force = false}) async =>
+      ServerConfig.fromJson({
+        'profiles': [
+          {'name': 'claude', 'provider': 'claude-code'},
+        ],
+      });
 }
 
 final _now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -21,7 +36,9 @@ SessionInfo _s(String id, String title, String status,
         {String folder = '/home/dev/code/snippet-mobile',
         String? branch,
         Map<String, dynamic>? changes,
-        int? since}) =>
+        int? since,
+        String? agentId,
+        String? profile}) =>
     SessionInfo.fromJson({
       'id': id,
       'title': title,
@@ -31,6 +48,8 @@ SessionInfo _s(String id, String title, String status,
       if (branch != null) 'branch': branch,
       if (changes != null) 'changes': changes,
       if (since != null) 'running_since': since,
+      if (agentId != null) 'agent_id': agentId,
+      if (profile != null) 'profile': profile,
     });
 
 Future<void> _pump(WidgetTester tester, Size size, TargetPlatform p,
@@ -90,8 +109,21 @@ void main() {
       (tester) async {
     try {
       await _pump(tester, const Size(390, 700), TargetPlatform.android);
-      expect(find.text('snippet-mobile'), findsOneWidget);
+      expect(find.byType(SessionGroupHeader), findsNothing);
+      expect(find.widgetWithText(MobileSectionLabel, 'Now'), findsOneWidget);
+      expect(find.byType(LiveSessionCard), findsNWidgets(2));
+      expect(
+          find.descendant(
+              of: find.byType(LiveSessionCard),
+              matching: find.text('snippet-mobile')),
+          findsNWidgets(2));
       expect(find.text('~/code/snippet-mobile'), findsNothing);
+      expect(find.widgetWithText(MobileSectionLabel, 'snippet-service'),
+          findsOneWidget);
+      expect(find.text('main'), findsNWidgets(2));
+      expect(find.text('cards'), findsOneWidget);
+      expect(find.text('+120'), findsOneWidget);
+      expect(find.text('-31'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('^Needs input')), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('^Working')), findsOneWidget);
       expect(find.text('+88'), findsOneWidget);
@@ -101,13 +133,15 @@ void main() {
     }
   });
 
-  testWidgets('desktop cards are one flat list with the same detail',
+  testWidgets('desktop cards pin Needs you and keep the same detail',
       (tester) async {
     try {
       await _pump(tester, const Size(300, 520), TargetPlatform.macOS);
-      expect(find.text('snippet-mobile'), findsOneWidget);
+      expect(
+          find.widgetWithText(SessionGroupHeader, 'Needs you'), findsOneWidget);
+      expect(find.text('snippet-mobile'), findsNWidgets(2));
       expect(find.bySemanticsLabel(RegExp('^Working')), findsOneWidget);
-      expect(find.text('+120'), findsOneWidget);
+      expect(find.text('+88'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
@@ -118,7 +152,8 @@ void main() {
       await _pump(tester, const Size(390, 700), TargetPlatform.android,
           sessions: const []);
       expect(find.text('No sessions yet'), findsOneWidget);
-      expect(find.text('New session'), findsOneWidget);
+      // Only the header's +, no second button in the empty state.
+      expect(find.byTooltip('New session'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
@@ -186,6 +221,83 @@ void main() {
       expect(mid, inExclusiveRange(0, full));
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Old chat'), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('working row shows Working and no time', (tester) async {
+    try {
+      await _pump(tester, const Size(300, 520), TargetPlatform.macOS,
+          sessions: [
+            _s('a', 'Running task', 'running', since: _now - 60),
+            _s('b', 'Idle task', 'idle'),
+          ]);
+      final workingRow = find.ancestor(
+          of: find.text('Running task'), matching: find.byType(SessionListRow));
+      expect(
+          find.descendant(of: workingRow, matching: find.byType(WorkingDots)),
+          findsOneWidget);
+      expect(
+          find.descendant(of: workingRow, matching: find.text('Working')),
+          findsOneWidget);
+      expect(
+          find.descendant(of: workingRow, matching: find.text('10m')),
+          findsNothing);
+
+      final idleRow = find.ancestor(
+          of: find.text('Idle task'), matching: find.byType(SessionListRow));
+      expect(
+          find.descendant(of: idleRow, matching: find.text('Working')),
+          findsNothing);
+      expect(
+          find.descendant(of: idleRow, matching: find.text('10m')),
+          findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('folder group headers are plain labels that do not collapse',
+      (tester) async {
+    try {
+      await _pump(tester, const Size(300, 520), TargetPlatform.macOS,
+          sessions: [
+            _s('a', 'Redo voice settings subpage', 'idle', branch: 'main'),
+            _s('b', 'Richer session cards', 'running', branch: 'cards'),
+          ]);
+      final header = find.widgetWithText(SessionGroupHeader, 'snippet-mobile');
+      expect(find.descendant(of: header, matching: find.byType(AnimatedOpacity)),
+          findsNothing);
+      await tester.tap(find.text('snippet-mobile'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Redo voice settings subpage'), findsOneWidget);
+      expect(find.text('Richer session cards'), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets(
+      'phone Needs you card state colour and agent mark',
+      (tester) async {
+    try {
+      await _pump(tester, const Size(390, 700), TargetPlatform.android,
+          sessions: [
+            _s('a', 'Needs input chat', 'waiting_for_input', agentId: 'scout'),
+          ]);
+      expect(find.byType(SessionGroupHeader), findsNothing);
+      final card = find.byType(LiveSessionCard);
+      expect(card, findsOneWidget);
+
+      final label = tester.widget<Text>(find.descendant(
+          of: card,
+          matching: find.byWidgetPredicate((w) =>
+              w is Text && (w.data ?? '').startsWith('Needs input ·'))));
+      expect(label.style?.color, AppColors.run);
+
+      final mochi = tester.widget<AgentMochi>(find.byType(AgentMochi));
+      expect(mochi.size, 20);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

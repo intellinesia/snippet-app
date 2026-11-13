@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'glass.dart';
 import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -79,7 +80,7 @@ Future<void> showCommandPalette(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'palette',
-      barrierColor: AppColors.scrim,
+      barrierColor: AppColors.glassScrim,
       transitionDuration: Motion.quick,
       pageBuilder: (ctx, _, __) => Align(
         alignment: const Alignment(0, -0.55),
@@ -87,7 +88,7 @@ Future<void> showCommandPalette(
           padding: const EdgeInsets.all(24),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640, maxHeight: 520),
-            child: _frame(body()),
+            child: _glassFrame(body()),
           ),
         ),
       ),
@@ -123,6 +124,35 @@ Widget _frame(Widget child) => ClipRRect(
       borderRadius: BorderRadius.circular(R.card),
       child: Material(color: AppColors.glassSurface, child: child),
     );
+
+Widget _glassFrame(Widget child) {
+  const radius = BorderRadius.all(Radius.circular(12));
+  return Glass(
+    radius: radius,
+    border: false,
+    child: DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(color: AppColors.glassBorder),
+      ),
+      child: Material(type: MaterialType.transparency, child: child),
+    ),
+  );
+}
+
+const _desktopOrder = [
+  PaletteKind.session,
+  PaletteKind.task,
+  PaletteKind.agent,
+  PaletteKind.command,
+];
+
+String _desktopLabel(PaletteKind k) => switch (k) {
+      PaletteKind.session => 'Sessions',
+      PaletteKind.command => 'Actions',
+      _ => k.label,
+    };
 
 double? fuzzyScore(String query, String text) {
   if (query.isEmpty) return 0;
@@ -317,7 +347,16 @@ class _PaletteState extends State<_Palette> {
     }
     double best(List<_Scored> l) => l.map((e) => e.score).reduce(math.max);
     final ordered = groups.entries.toList()
-      ..sort((a, b) => best(b.value).compareTo(best(a.value)));
+      ..sort((a, b) {
+        if (!kMobile) {
+          final ia = _desktopOrder.indexOf(a.key);
+          final ib = _desktopOrder.indexOf(b.key);
+          if (ia >= 0 || ib >= 0) {
+            return (ia < 0 ? 99 : ia).compareTo(ib < 0 ? 99 : ib);
+          }
+        }
+        return best(b.value).compareTo(best(a.value));
+      });
     for (final g in ordered) {
       if (tokens.isNotEmpty) {
         g.value.sort((a, b) => b.score.compareTo(a.score));
@@ -396,7 +435,7 @@ class _PaletteState extends State<_Palette> {
       },
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          padding: EdgeInsets.fromLTRB(16, kMobile ? 16 : 14, 16, kMobile ? 16 : 14),
           margin: const EdgeInsets.only(bottom: 4),
           decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.line))),
@@ -436,7 +475,8 @@ class _PaletteState extends State<_Palette> {
               : ListView(
                   controller: _scroll,
                   shrinkWrap: true,
-                  padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
+                  padding: EdgeInsets.fromLTRB(
+                      kMobile ? 6 : 4, 0, kMobile ? 6 : 4, kMobile ? 6 : 4),
                   children: [
                     for (final r in _rows)
                       if (r is PaletteKind)
@@ -455,8 +495,10 @@ class _PaletteState extends State<_Palette> {
         height: _headerHeight,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(10, 10, 10, 2),
-          child: Text(k.label.toUpperCase(),
-              style: sans(11, spacing: 0.9, color: AppColors.fg4)),
+          child: kMobile
+              ? Text(k.label.toUpperCase(),
+                  style: sans(11, spacing: 0.9, color: AppColors.fg4))
+              : Text(_desktopLabel(k), style: sans(11, color: AppColors.fg4)),
         ),
       );
 
@@ -473,7 +515,9 @@ class _PaletteState extends State<_Palette> {
           height: _rowHeight,
           padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
-            color: selected ? AppColors.raised : Colors.transparent,
+            color: selected
+                ? (kMobile ? AppColors.raised : AppColors.tint2)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(R.md),
           ),
           child: Row(children: [
@@ -488,7 +532,7 @@ class _PaletteState extends State<_Palette> {
                       style: sans(13, color: AppColors.fg1)),
                   if (item.subtitle.isNotEmpty)
                     TextSpan(
-                        text: '   ${item.subtitle}',
+                        text: '  ${item.subtitle}',
                         style: sans(12, color: AppColors.fg4)),
                 ]),
                 maxLines: 1,
@@ -512,7 +556,8 @@ class _PaletteState extends State<_Palette> {
           padding: EdgeInsets.only(right: last ? 0 : 14),
           child: Text.rich(TextSpan(children: [
             TextSpan(text: k, style: sans(11, color: AppColors.fg2)),
-            TextSpan(text: ' $label', style: sans(11, color: AppColors.fg4)),
+            if (label.isNotEmpty)
+              TextSpan(text: ' $label', style: sans(11, color: AppColors.fg4)),
           ])),
         );
     return Container(
@@ -521,13 +566,9 @@ class _PaletteState extends State<_Palette> {
           border: Border(top: BorderSide(color: AppColors.line))),
       child: Row(children: [
         hint('↑↓', 'move'),
-        hint('enter', 'open'),
-        hint('esc', 'close'),
+        hint('↵', 'open'),
         const Spacer(),
-        hint('>', 'commands'),
-        hint('@', 'agents'),
-        hint('#', 'PRs'),
-        hint('/', 'files', last: true),
+        hint('esc', '', last: true),
       ]),
     );
   }

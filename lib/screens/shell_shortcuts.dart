@@ -16,6 +16,7 @@ class ShellShortcutsHandler {
   final void Function()? onToggleRightPanel;
   final void Function()? onOpenCommandPalette;
   final void Function()? onFocusComposer;
+  final void Function()? onOpenSettings;
   final void Function() onStopRunningTask;
   final void Function() onShowShortcuts;
 
@@ -30,6 +31,7 @@ class ShellShortcutsHandler {
     this.onToggleRightPanel,
     this.onOpenCommandPalette,
     this.onFocusComposer,
+    this.onOpenSettings,
     required this.onStopRunningTask,
     required this.onShowShortcuts,
   });
@@ -202,6 +204,14 @@ class ShellShortcutsHandler {
       return true;
     }
 
+    // Settings: Cmd/Ctrl + ,
+    if (key == LogicalKeyboardKey.comma && !shiftDown && !altDown) {
+      if (onOpenSettings != null) {
+        onOpenSettings!();
+        return true;
+      }
+    }
+
     // Show shortcuts: Cmd/Ctrl + /
     if (key == LogicalKeyboardKey.slash && !shiftDown && !altDown) {
       onShowShortcuts();
@@ -247,6 +257,7 @@ void showDesktopShortcutsDialog(BuildContext context) {
       shortcutRow('⌘/Ctrl ⇧ E · ⌘/Ctrl ⇧ F', 'File explorer'),
       shortcutRow('⌘/Ctrl ⇧ G', 'Git diff'),
       shortcutRow('⌘/Ctrl .', 'Stop active run'),
+      shortcutRow('⌘/Ctrl ,', 'Settings'),
       shortcutRow('⌘/Ctrl / · F1', 'Show shortcuts'),
       shortcutRow('Enter · ⌘/Ctrl Enter', 'Send message'),
     ]),

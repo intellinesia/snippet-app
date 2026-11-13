@@ -6,11 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/models.dart';
-import 'package:snippet/screens/agent_rail.dart';
 import 'package:snippet/screens/agents_sidebar_panel.dart';
 import 'package:snippet/screens/desktop_shell.dart';
-import 'package:snippet/screens/shell_split_view.dart';
-import 'package:snippet/screens/sidebar.dart';
 import 'package:snippet/screens/sidebar_mode.dart';
 import 'package:snippet/theme.dart';
 import 'package:stream_channel/stream_channel.dart';
@@ -40,18 +37,15 @@ void main() {
 
     final before = tester.state(find.byType(ShellSplitView));
     expect(find.byType(Sidebar), findsOneWidget);
-    expect(find.byType(AgentRail), findsOneWidget);
 
     await tester.tap(find.byTooltip('Hide sidebar (Ctrl+B)'));
     await _pump(tester);
     expect(find.byType(Sidebar), findsNothing);
-    expect(find.byType(AgentRail), findsNothing);
     expect(tester.state(find.byType(ShellSplitView)), same(before));
 
     await tester.tap(find.byTooltip('Show sidebar (Ctrl+B)'));
     await _pump(tester);
     expect(find.byType(Sidebar), findsOneWidget);
-    expect(find.byType(AgentRail), findsOneWidget);
     expect(tester.state(find.byType(ShellSplitView)), same(before));
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -78,22 +72,18 @@ void main() {
     await _pump(tester);
 
     final before = tester.state(find.byType(ShellSplitView));
-    expect(find.byTooltip('Back'), findsNothing);
-    expect(find.byType(AgentRail), findsOneWidget);
+    expect(find.byTooltip('Back'), findsOneWidget);
+    expect(find.byTooltip('Forward'), findsOneWidget);
     expect(find.byType(AgentsSidebarPanel), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('sidebar-mode-agents')));
     await _pump(tester);
     expect(sidebarAgentsFirst.value, isTrue);
-    expect(find.byType(AgentRail), findsNothing);
     expect(find.byType(AgentsSidebarPanel), findsOneWidget);
-    for (final tip in ['Usage', 'Settings', 'Tasks']) {
-      expect(
-          find.descendant(
-              of: find.byType(Sidebar), matching: find.byTooltip(tip)),
-          findsWidgets,
-          reason: tip);
-    }
+    expect(
+        find.descendant(
+            of: find.byType(Sidebar), matching: find.byTooltip('Settings')),
+        findsWidgets);
     expect(tester.state(find.byType(ShellSplitView)), same(before));
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getBool('desktop_sidebar_agents_first'), isTrue);
@@ -109,7 +99,6 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('sidebar-mode-sessions')));
     await _pump(tester);
-    expect(find.byType(AgentRail), findsOneWidget);
     expect(find.byType(AgentsSidebarPanel), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());

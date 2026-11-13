@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../chat/chat_info.dart'
+    show DockedInfoNav, dockedPick, dockedPromptText;
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -21,6 +23,11 @@ Future<void> showAgentWakeSettings(
 }) {
   final panel = AgentWakePanel(
       client: client, owner: owner, name: name, onChanged: onChanged);
+  final nav = DockedInfoNav.maybeOf(context);
+  if (nav != null) {
+    nav.push('Wakes and reporting', (_) => panel);
+    return Future<void>.value();
+  }
   if (kMobile) {
     return showAppSheet(context, title: name, maxHeight: 640, child: panel);
   }
@@ -261,25 +268,32 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
   }
 
   Future<void> _pickReport(BuildContext anchor) async {
-    final picked = await showAppMenu<String>(
+    const reports = [
+      ('mission_control', 'Mission Control', 'Summarised in its feed'),
+      ('user', 'You', 'Sent as a notification'),
+      ('task_room', 'Task room', 'Posted on a task'),
+      ('none', 'Nobody', 'Runs silently'),
+    ];
+    final picked = await dockedPick<String>(
       context,
-      anchor: anchor,
-      minWidth: 240,
-      maxWidth: 320,
-      items: [
-        for (final (v, label, sub) in const [
-          ('mission_control', 'Mission Control', 'Summarised in its feed'),
-          ('user', 'You', 'Sent as a notification'),
-          ('task_room', 'Task room', 'Posted on a task'),
-          ('none', 'Nobody', 'Runs silently'),
-        ])
-          appMenuRow<String>(
-              value: v,
-              icon: 'check-circle',
-              label: label,
-              description: sub,
-              selected: v == _reportTo),
-      ],
+      title: 'Report to',
+      options: [for (final (v, label, _) in reports) (v, label, 'check-circle')],
+      selected: _reportTo,
+      fallback: () => showAppMenu<String>(
+        context,
+        anchor: anchor,
+        minWidth: 240,
+        maxWidth: 320,
+        items: [
+          for (final (v, label, sub) in reports)
+            appMenuRow<String>(
+                value: v,
+                icon: 'check-circle',
+                label: label,
+                description: sub,
+                selected: v == _reportTo),
+        ],
+      ),
     );
     if (picked != null && mounted) {
       setState(() => _reportTo = picked);
@@ -308,7 +322,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
     final closed = _tasks.where((t) => t.status.isTerminal).take(8).toList();
     final ordered = [...open, ...closed];
     if (ordered.isEmpty) {
-      final manual = await promptText(
+      final manual = await dockedPromptText(
         context,
         title: 'Task ID',
         initial: current,
@@ -320,44 +334,56 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
       }
       return;
     }
-    final picked = await showAppMenu<String>(
+    String taskLabel(TaskItem t) =>
+        '${t.title.isEmpty ? t.id : t.title} · ${t.status.label}';
+    final picked = await dockedPick<String>(
       context,
-      anchor: anchor,
-      minWidth: 260,
-      maxWidth: 340,
-      items: [
-        if (open.isNotEmpty) appMenuHeading<String>('Open tasks'),
-        for (final t in open)
-          appMenuRow<String>(
-            value: t.id,
-            icon: 'task',
-            label: t.title.isEmpty ? t.id : t.title,
-            description:
-                '${t.status.label} · ${t.id.length > 8 ? t.id.substring(0, 8) : t.id}',
-            selected: t.id == current,
-          ),
-        if (closed.isNotEmpty) appMenuHeading<String>('Recent tasks'),
-        for (final t in closed)
-          appMenuRow<String>(
-            value: t.id,
-            icon: 'check-circle',
-            label: t.title.isEmpty ? t.id : t.title,
-            description:
-                '${t.status.label} · ${t.id.length > 8 ? t.id.substring(0, 8) : t.id}',
-            selected: t.id == current,
-          ),
-        const PopupMenuDivider(height: 9),
-        appMenuRow<String>(
-          value: '__custom__',
-          icon: 'edit',
-          label: 'Enter task ID…',
-          description: 'Paste a task ID manually',
-        ),
+      title: 'Task',
+      options: [
+        for (final t in open) (t.id, taskLabel(t), 'task'),
+        for (final t in closed) (t.id, taskLabel(t), 'check-circle'),
+        ('__custom__', 'Enter task ID…', 'edit'),
       ],
+      selected: current,
+      fallback: () => showAppMenu<String>(
+        context,
+        anchor: anchor,
+        minWidth: 260,
+        maxWidth: 340,
+        items: [
+          if (open.isNotEmpty) appMenuHeading<String>('Open tasks'),
+          for (final t in open)
+            appMenuRow<String>(
+              value: t.id,
+              icon: 'task',
+              label: t.title.isEmpty ? t.id : t.title,
+              description:
+                  '${t.status.label} · ${t.id.length > 8 ? t.id.substring(0, 8) : t.id}',
+              selected: t.id == current,
+            ),
+          if (closed.isNotEmpty) appMenuHeading<String>('Recent tasks'),
+          for (final t in closed)
+            appMenuRow<String>(
+              value: t.id,
+              icon: 'check-circle',
+              label: t.title.isEmpty ? t.id : t.title,
+              description:
+                  '${t.status.label} · ${t.id.length > 8 ? t.id.substring(0, 8) : t.id}',
+              selected: t.id == current,
+            ),
+          const PopupMenuDivider(height: 9),
+          appMenuRow<String>(
+            value: '__custom__',
+            icon: 'edit',
+            label: 'Enter task ID…',
+            description: 'Paste a task ID manually',
+          ),
+        ],
+      ),
     );
     if (picked == null || !mounted) return;
     if (picked == '__custom__') {
-      final manual = await promptText(
+      final manual = await dockedPromptText(
         context,
         title: 'Task ID',
         initial: current,
@@ -393,20 +419,29 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
     final w = _warm;
     if (w == null) return;
     final current = interval ? w.intervalMinutes : w.maxIdleHours;
-    final picked = await showAppMenu<int>(
+    final heading = interval ? 'Ping every' : 'Stop after idle for';
+    final picked = await dockedPick<int>(
       context,
-      anchor: anchor,
-      minWidth: 200,
-      maxWidth: 260,
-      items: [
-        appMenuHeading<int>(interval ? 'Ping every' : 'Stop after idle for'),
-        for (final o in options)
-          appMenuRow<int>(
-              value: o,
-              icon: 'repeat',
-              label: interval ? '$o min' : '$o h',
-              selected: o == current),
+      title: heading,
+      options: [
+        for (final o in options) (o, interval ? '$o min' : '$o h', 'repeat'),
       ],
+      selected: current,
+      fallback: () => showAppMenu<int>(
+        context,
+        anchor: anchor,
+        minWidth: 200,
+        maxWidth: 260,
+        items: [
+          appMenuHeading<int>(heading),
+          for (final o in options)
+            appMenuRow<int>(
+                value: o,
+                icon: 'repeat',
+                label: interval ? '$o min' : '$o h',
+                selected: o == current),
+        ],
+      ),
     );
     if (picked == null || picked == current) return;
     try {

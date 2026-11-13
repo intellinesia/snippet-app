@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:media_store_plus/media_store_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:re_editor/re_editor.dart';
@@ -15,6 +16,7 @@ import '../desktop_pick.dart';
 import '../file_actions.dart';
 import '../highlight.dart';
 import '../models.dart';
+import '../motion_routes.dart';
 import '../notifications.dart';
 import '../panel.dart';
 import '../platform.dart';
@@ -38,27 +40,12 @@ Future<void> pushFileViewerRoute(
   required String path,
   required String name,
 }) {
-  return Navigator.of(context).push(PageRouteBuilder<void>(
-    transitionDuration: Motion.fast,
-    reverseTransitionDuration: Motion.quick,
-    pageBuilder: (_, animation, __) => FileViewer(
+  return Navigator.of(context).push(AppPageRoute<void>(
+    builder: (_) => FileViewer(
       client: client,
       path: path,
       name: name,
       onClose: () => Navigator.of(context).pop(),
-    ),
-    transitionsBuilder: (_, animation, __, child) => FadeTransition(
-      opacity: animation,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0.025, 0),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(
-          parent: animation,
-          curve: Motion.enter,
-        )),
-        child: child,
-      ),
     ),
   ));
 }
@@ -108,7 +95,31 @@ Future<void> presentFileOnDesktop(
   );
 }
 
-/// Read-only viewer for one file.
+/// One row over a file: mode tabs, size, save and download.
+class _FileToolbar extends StatelessWidget {
+  const _FileToolbar(
+      {this.leading = const [], this.meta, this.actions = const []});
+  final List<Widget> leading;
+  final String? meta;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 40,
+        padding: const EdgeInsets.only(left: 12, right: 8),
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.border))),
+        child: Row(children: [
+          ...leading,
+          const Spacer(),
+          if (meta != null) Text(meta!, style: mono(10, color: AppColors.fg3)),
+          if (meta != null && actions.isNotEmpty) const SizedBox(width: 8),
+          ...actions,
+        ]),
+      );
+}
+
+/// Viewer for one file; editable in place on desktop.
 class FileViewer extends StatefulWidget {
   final DaemonClient client;
   final String path;
@@ -135,6 +146,56 @@ class _FileViewerState extends State<FileViewer> {
   bool _loading = true;
   bool _downloading = false;
   String? _error;
+  String _initial = '';
+  String _hash = '';
+  bool _crlf = false;
+  bool _dirty = false;
+  bool _saving = false;
+
+  // Desktop edits in place; phones keep the separate editor screen.
+  bool get _inline => !kMobile && (_f?.editable ?? false);
+
+  String _normalized(String s) =>
+      s.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+
+  void _onChanged() {
+    final d = _normalized(_controller.text) != _initial;
+    if (d != _dirty && mounted) setState(() => _dirty = d);
+  }
+
+  Future<void> _save({bool force = false}) async {
+    if (_saving || !_dirty) return;
+    setState(() => _saving = true);
+    try {
+      final text = _normalized(_controller.text);
+      final r = await widget.client.writeFile(
+          widget.path, _crlf ? text.replaceAll('\n', '\r\n') : text,
+          prevHash: force ? null : _hash);
+      if (!mounted) return;
+      setState(() => _saving = false);
+      if (r['ok'] == true) {
+        _initial = text;
+        _hash = r['hash'] as String? ?? _hash;
+        setState(() => _dirty = false);
+        return;
+      }
+      if (r['conflict'] == true) {
+        final overwrite = await confirmAction(context,
+            title: 'File changed on disk',
+            body:
+                'It was modified since you opened it. Overwrite it with your version?',
+            confirmLabel: 'Overwrite');
+        if (overwrite && mounted) await _save(force: true);
+      } else {
+        toast(context, (r['error'] as String?) ?? 'Save failed', danger: true);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        toast(context, '$e', danger: true);
+      }
+    }
+  }
 
   static const _imageExts = {
     'png',
@@ -220,6 +281,7 @@ class _FileViewerState extends State<FileViewer> {
   @override
   void initState() {
     super.initState();
+    _controller.addListener(_onChanged);
     // Media renders straight from its streaming URL — no text read.
     if (_isMedia) {
       _loading = false;
@@ -239,8 +301,12 @@ class _FileViewerState extends State<FileViewer> {
     try {
       final f = await widget.client.readFile(widget.path);
       if (!mounted) return;
+      _crlf = f.content.contains('\r\n');
+      _initial = _normalized(f.content);
+      _hash = f.hash;
       if (!f.binary) _controller.text = f.content;
       setState(() {
+        _dirty = false;
         _f = f;
         _loading = false;
         _error = null;
@@ -292,21 +358,29 @@ class _FileViewerState extends State<FileViewer> {
       else ...[
         IconBtn('download',
             tooltip: 'Download', onTap: _downloading ? null : _download),
-        if (editable) IconBtn('edit', tooltip: 'Edit', onTap: edit),
+        if (editable && kMobile) IconBtn('edit', tooltip: 'Edit', onTap: edit),
       ],
     ];
+    // The Mac window bar has no file actions; other desktops get them from CardTabStrip.
+    final barActions =
+        !widget.embedded || kMacOS ? actions : const <Widget>[];
+    final merged = !kMobile;
     return Scaffold(
       backgroundColor:
           widget.embedded && !kMobile ? Colors.transparent : readingBg,
       body: SafeArea(
         bottom: false,
         child: Column(children: [
+          // The Mac window bar has no file actions; other desktops get them from CardTabStrip.
           if (!widget.embedded)
             SnAppBar(
                 title: widget.name,
                 subtitle: widget.path,
                 onBack: widget.onClose ?? () => Navigator.pop(context),
-                actions: actions),
+                actions: merged ? const [] : actions),
+          if (merged && (_isMedia || f == null || f.binary) &&
+              barActions.isNotEmpty)
+            _FileToolbar(actions: barActions),
           if (_isImage)
             Expanded(
               child: InteractiveViewer(
@@ -383,33 +457,44 @@ class _FileViewerState extends State<FileViewer> {
               ),
             )
           else ...[
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(
-                  horizontal: 16, vertical: _isMarkdown ? 6 : 8),
-              decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: AppColors.border))),
-              child: Row(children: [
+            _FileToolbar(
+              leading: [
                 if (_isMarkdown) ...[
                   _modeTab('Preview', !_source,
                       () => setState(() => _source = false)),
                   const SizedBox(width: 4),
                   _modeTab(
                       'Source', _source, () => setState(() => _source = true)),
-                  const Spacer(),
                 ],
-                Text(
-                    '${f.content.split('\n').length} lines · ${formatBytes(f.size)}${f.truncated ? ' · truncated' : ''}',
-                    style: mono(10, color: AppColors.fg3)),
-              ]),
+              ],
+              meta:
+                  '${_controller.text.split('\n').length} lines · ${formatBytes(f.size)}${f.truncated ? ' · truncated' : ''}',
+              actions: [
+                if (_inline && (_dirty || _saving))
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Btn(_saving ? 'Saving…' : 'Save',
+                        small: true,
+                        disabled: _saving,
+                        onTap: _save),
+                  ),
+                if (merged) ...barActions,
+              ],
             ),
             if (_isMarkdown && !_source)
-              Expanded(child: _markdownView(f.content))
+              Expanded(child: _markdownView(_controller.text))
             else
               Expanded(
-                child: CodeEditor(
+                child: CallbackShortcuts(
+                  bindings: {
+                    const SingleActivator(LogicalKeyboardKey.keyS, meta: true):
+                        _save,
+                    const SingleActivator(LogicalKeyboardKey.keyS,
+                        control: true): _save,
+                  },
+                  child: CodeEditor(
                   controller: _controller,
-                  readOnly: true,
+                  readOnly: !_inline,
                   wordWrap: false,
                   style: codeEditorStyle(widget.name),
                   indicatorBuilder:
@@ -423,6 +508,7 @@ class _FileViewerState extends State<FileViewer> {
                           notifier: notifier),
                     ]);
                   },
+                ),
                 ),
               ),
           ],

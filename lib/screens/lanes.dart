@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../api.dart';
 import '../media_views.dart';
 import '../models.dart';
+import '../motion_routes.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -145,7 +146,7 @@ void openLaneView(BuildContext context, LaneInfo lane,
         builder: (_, __) => screen());
     return;
   }
-  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen()));
+  Navigator.of(context).push(AppPageRoute<void>(builder: (_) => screen()));
 }
 
 class LaneDetailCard extends StatefulWidget {
@@ -217,7 +218,7 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface1,
+        color: AppColors.tint1,
         borderRadius: BorderRadius.circular(R.lg),
       ),
       clipBehavior: Clip.antiAlias,

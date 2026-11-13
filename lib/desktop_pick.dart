@@ -33,6 +33,34 @@ Future<List<PickedLocalFile>> pickLocalFiles() async {
   }
 }
 
+Future<String?> pickLocalImage() async {
+  try {
+    final f = await FilePicker.pickFile(type: FileType.image);
+    final p = f?.path;
+    return (p == null || p.isEmpty) ? null : p;
+  } on MissingPluginException {
+    if (kMobile) rethrow;
+  } on UnimplementedError {
+    if (kMobile) rethrow;
+  }
+  final paths = kMacOS
+      ? await _osascriptImage()
+      : await _linuxFiles();
+  for (final p in paths) {
+    if (await File(p).exists()) return p;
+  }
+  return null;
+}
+
+Future<List<String>> _osascriptImage() async {
+  final result = await Process.run('osascript', [
+    '-e',
+    'POSIX path of (choose file of type {"public.image"} with prompt "Choose an image")',
+  ]);
+  if (result.exitCode != 0) return const [];
+  return _splitChooserOutput(result.stdout.toString());
+}
+
 Future<List<PickedLocalFile>> _desktopChooser() async {
   final paths = kMacOS ? await _osascriptFiles() : await _linuxFiles();
   final out = <PickedLocalFile>[];

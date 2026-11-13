@@ -153,7 +153,7 @@ void main() {
     await tester.pump();
     visibleNotificationSession.value = notificationSessionKey('a', 'worker');
     await tester.pump();
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Other instance'), findsOneWidget);
     await tester.drag(find.byType(Dismissible), const Offset(0, -500));
     await tester.pumpAndSettle();

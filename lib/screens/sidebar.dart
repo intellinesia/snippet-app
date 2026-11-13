@@ -1,13 +1,13 @@
 import 'dart:async';
 
+import '../desktop_look.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../api.dart';
 import '../drafts.dart';
 import '../models.dart';
 import '../settled_sessions.dart';
-import '../crew_status.dart';
-import 'agent_rail.dart' show agentRailShown;
 import 'sidebar_mode.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -24,8 +24,10 @@ import 'tasks/tasks_panel.dart';
 import '../pull_refresh.dart';
 import '../motion.dart';
 import '../mochi.dart';
-import '../swr.dart';
+import '../ambient/controller.dart';
 import 'mobile_chrome.dart';
+import 'mobile_session_home.dart';
+import 'mobile_voice_page.dart' show startMobileVoice;
 export 'sidebar_mobile.dart';
 
 class Sidebar extends StatefulWidget {
@@ -68,6 +70,8 @@ class Sidebar extends StatefulWidget {
   final CoordinationAgent? agent;
   final ValueChanged<CoordinationAgent?> onAgent;
   final VoidCallback? onSettingsClose;
+  final bool listening;
+  final int? mcAttention;
 
   const Sidebar({
     super.key,
@@ -104,27 +108,31 @@ class Sidebar extends StatefulWidget {
     required this.agent,
     required this.onAgent,
     this.onSettingsClose,
+    this.listening = false,
+    this.mcAttention,
   });
   @override
   State<Sidebar> createState() => SidebarState();
 }
 
-class SidebarState extends State<Sidebar> {
+class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   DateTime? _chatsShownAt;
   // The session list now lives in the shell (passed via widget.sessions); the
   // sidebar is presentational, so opening the drawer doesn't refetch.
   String _filterQuery = '';
   String _agentFilterQuery = '';
 
-  /// The phone home list shows agents instead of sessions; kept across launches.
-  bool get _agentsList => mobileAgentsList.value;
-  final _machineKey = GlobalKey(); // anchors the desktop machine popover
   final GlobalKey<TasksPanelState> _tasksPanelKey =
       GlobalKey<TasksPanelState>();
   final GlobalKey<SettingsPanelState> _mobileSettingsKey =
       GlobalKey<SettingsPanelState>();
   SettingsPage? _pendingSettingsCreate;
   final GlobalKey<AgentsSidebarPanelState> _agentsPanelKey =
+      GlobalKey<AgentsSidebarPanelState>();
+
+  /// The Agents tab with no agent open mirrors the Chats list; its panel needs
+  /// its own key or it collides with the Chats page's in the PageView.
+  final GlobalKey<AgentsSidebarPanelState> _agentsMirrorKey =
       GlobalKey<AgentsSidebarPanelState>();
   bool _selecting = false;
   static bool _settledOpen = false;
@@ -136,50 +144,50 @@ class SidebarState extends State<Sidebar> {
   final TextEditingController _agentSearchCtl = TextEditingController();
   final FocusNode _agentSearchFocus = FocusNode();
 
+  /// Measured height of the shared bottom bar; scroll views pad by it so the
+  /// last row clears the glass.
+  // Plus button, its gap, the dock and the gap under it.
+  double get _barHeight =>
+      44 + 10 + 56 + 12 + MediaQuery.viewPaddingOf(context).bottom;
+  double get _bottomClearance => _barHeight + M.gutter;
+
+  bool get _showMobileBottomBar =>
+      !_selecting &&
+      widget.mobileHome != MobileHome.tasks &&
+      !(widget.mobileHome == MobileHome.agents && widget.agent != null) &&
+      widget.mobileHome != MobileHome.settings;
+
+  double get _scrollBottomPad =>
+      _selecting ? 24.0 : (_showMobileBottomBar ? _bottomClearance : 0.0);
+
   /// Desktop search in section headers.
   final TextEditingController _desktopChatsSearchCtl = TextEditingController();
   final FocusNode _desktopChatsSearchFocus = FocusNode();
 
   MobileHome _lastMainHome = MobileHome.chats;
-  late final PageController _pageController;
-  int? _targetPage;
-
-  void _goToPage(int index) {
-    if (_pageController.hasClients) {
-      _targetPage = index;
-      _pageController.jumpToPage(index);
-      _targetPage = null;
-    }
-  }
+  late MobileHome _currentHome = widget.mobileHome;
+  MobileHome? _prevHome;
+  final Set<MobileHome> _mountedHomes = <MobileHome>{};
+  AnimationController? _homeAnimC;
+  AnimationController get _homeAnim => _homeAnimC ??= AnimationController(
+    vsync: this,
+    duration: Motion.fast,
+    value: 1.0,
+  )..addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted && _prevHome != null) {
+        setState(() {
+          if (_prevHome == MobileHome.settings || _prevHome == MobileHome.tasks) {
+            _mountedHomes.remove(_prevHome);
+          }
+          _prevHome = null;
+        });
+      }
+    });
 
   Map<String, String> _profileProviders = const {};
   String? _providersFor;
 
-  List<CoordinationAgent> _crew = const [];
-  DateTime? _crewAt;
-  Revalidator? _crewLive;
-
-  Future<void> _loadCrew() async {
-    final client = widget.client;
-    if (client == null || kMobile) return;
-    final now = DateTime.now();
-    if (_crewAt != null && now.difference(_crewAt!).inSeconds < 60) return;
-    _crewAt = now;
-    try {
-      try {
-        final a = await client.coordinationAgents();
-        if (mounted) {
-          setState(() => _crew = a
-              .where(
-                  (x) => x.status != 'archived' && x.kind != 'mission_control')
-              .toList());
-        }
-      } catch (_) {}
-    } catch (_) {}
-  }
-
   Future<void> _loadProviders() async {
-    _loadCrew();
     final client = widget.client;
     if (client == null) return;
     final key = '${client.baseUrl}|${widget.sessions?.length}';
@@ -194,19 +202,54 @@ class SidebarState extends State<Sidebar> {
     } catch (_) {}
   }
 
-  void _bindCrewLive() {
-    _crewLive?.dispose();
+  int _heroVisit = 0;
+  UsageSummary? _todayUsage;
+  DateTime? _todayUsageAt;
+
+  Future<void> _loadTodayUsage() async {
     final client = widget.client;
-    _crewLive = client == null
-        ? null
-        : Revalidator(
-            client: client,
-            on: (e) => Swr.coordination(e) || Swr.sessionStatus(e),
-            debounce: const Duration(seconds: 2),
-            onRevalidate: ({required bool force}) {
-              _crewAt = null;
-              _loadCrew();
-            });
+    final at = _todayUsageAt;
+    final now = DateTime.now();
+    if (client == null) return;
+    if (at != null && now.difference(at) < const Duration(minutes: 2)) return;
+    _todayUsageAt = now;
+    try {
+      final u = await client
+          .getUsage(since: DateTime(now.year, now.month, now.day));
+      if (mounted) setState(() => _todayUsage = u);
+    } catch (_) {}
+  }
+
+  /// Readings both homes share: lines and tokens today.
+  List<HeroStat> _sharedHeroStats() {
+    final now = DateTime.now();
+    final midnight =
+        DateTime(now.year, now.month, now.day).millisecondsSinceEpoch ~/ 1000;
+    var added = 0, removed = 0;
+    for (final s in widget.sessions ?? const <SessionInfo>[]) {
+      if (s.lastActive < midnight) continue;
+      final c = s.totalChanges ?? s.changes;
+      if (c == null) continue;
+      added += c.added;
+      removed += c.removed;
+    }
+    final out = <HeroStat>[
+      if (added + removed > 0)
+        HeroStat('+${heroCompact(added)}', 'lines today',
+            '-${heroCompact(removed)} removed'),
+    ];
+    final u = _todayUsage;
+    if (u != null) {
+      var tokens = 0, calls = 0;
+      for (final p in u.providers) {
+        tokens += p.totalTokens;
+        calls += p.calls;
+      }
+      if (tokens > 0) {
+        out.add(HeroStat(heroCompact(tokens), 'tokens today', '$calls calls'));
+      }
+    }
+    return out;
   }
 
   @override
@@ -214,14 +257,8 @@ class SidebarState extends State<Sidebar> {
     super.initState();
     Drafts.instance.addListener(_onDrafts);
     _loadProviders();
-    if (!kMobile) {
-      _bindCrewLive();
-    }
-    _pageController = PageController(initialPage: widget.mobileHome.index);
-    if (kMobile) {
-      mobileAgentsList.addListener(_onAgentsList);
-      loadMobileAgentsList();
-    }
+    _mountedHomes.add(_currentHome);
+    if (kMobile) _loadTodayUsage();
     if (!kMobile) sidebarAgentsFirst.addListener(_onAgentsList);
     if (widget.mobileHome != MobileHome.settings) {
       _lastMainHome = widget.mobileHome;
@@ -231,10 +268,6 @@ class SidebarState extends State<Sidebar> {
   @override
   void didUpdateWidget(covariant Sidebar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.client != widget.client) {
-      _crewAt = null;
-      if (!kMobile) _bindCrewLive();
-    }
     if (oldWidget.client != widget.client ||
         (widget.sessions ?? const <SessionInfo>[]).any((s) =>
             (s.profile ?? '').isNotEmpty &&
@@ -245,13 +278,23 @@ class SidebarState extends State<Sidebar> {
       if (oldWidget.mobileHome != MobileHome.settings) {
         _lastMainHome = oldWidget.mobileHome;
       }
-      if (_targetPage != widget.mobileHome.index &&
-          _pageController.hasClients) {
-        final current =
-            _pageController.page?.round() ?? _pageController.initialPage;
-        if (current != widget.mobileHome.index) {
-          _goToPage(widget.mobileHome.index);
-        }
+      _heroVisit++;
+      if (kMobile) _loadTodayUsage();
+      if (widget.mobileHome != _currentHome) {
+        _prevHome = _currentHome;
+        _currentHome = widget.mobileHome;
+        _mountedHomes.add(_currentHome);
+        final reduced = reduceMotion(context);
+        final settingsPush = _currentHome == MobileHome.settings;
+        final settingsPop = _prevHome == MobileHome.settings;
+        _homeAnim.duration = reduced
+            ? const Duration(milliseconds: 150)
+            : settingsPush
+                ? const Duration(milliseconds: 340)
+                : settingsPop
+                    ? const Duration(milliseconds: 260)
+                    : Motion.fast;
+        _homeAnim.forward(from: 0.0);
       }
     }
   }
@@ -274,11 +317,9 @@ class SidebarState extends State<Sidebar> {
 
   @override
   void dispose() {
-    mobileAgentsList.removeListener(_onAgentsList);
     sidebarAgentsFirst.removeListener(_onAgentsList);
     Drafts.instance.removeListener(_onDrafts);
-    _crewLive?.dispose();
-    _pageController.dispose();
+    _homeAnimC?.dispose();
     _renameCtl.dispose();
     _renameFocus.dispose();
     _searchCtl.dispose();
@@ -310,31 +351,28 @@ class SidebarState extends State<Sidebar> {
           // gets the remaining height, so nothing hides behind the bar and no
           // scroll-padding hack is needed. It still reads as floating (inset,
           // rounded, raised).
-          // PageView gives smooth swiping left and right across sessions,
-          // settings, and agents, with slide transitions when navigating.
           Expanded(
             child: Stack(children: [
-              PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (index) {
-                  if (_targetPage != null && _targetPage != index) {
-                    return;
-                  }
-                  _targetPage = null;
-                  final dest = MobileHome.values[index];
-                  if (widget.mobileHome != dest) {
-                    widget.onMobileHome(dest);
-                  }
-                },
-                children: [
-                  for (final h in MobileHome.values)
-                    SidebarKeepAlivePage(
-                      key: ValueKey('mobile-${h.name}'),
-                      child: _mobileHomeBody(hasClient, h),
+              _buildMobileHomeStack(hasClient),
+              if (_showMobileBottomBar)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.bg.withValues(alpha: 0),
+                          AppColors.bg.withValues(alpha: 0.85),
+                        ],
+                      ),
                     ),
-                ],
-              ),
+                    child: _mobileDock(hasClient),
+                  ),
+                ),
             ]),
           ),
         ],
@@ -363,78 +401,193 @@ class SidebarState extends State<Sidebar> {
             icon: 'plus', small: true, onTap: widget.onAddInstance),
       );
 
+  Widget _buildMobileHomeStack(bool hasClient) {
+    final prev = _prevHome;
+    final curr = _currentHome;
+    final ordered = <MobileHome>[
+      for (final h in MobileHome.values)
+        if (_mountedHomes.contains(h) && h != prev && h != curr) h,
+      if (prev != null && _mountedHomes.contains(prev)) prev,
+      if (_mountedHomes.contains(curr)) curr,
+    ];
+    if (prev != null && prev == MobileHome.settings && ordered.length >= 2) {
+      final iCurr = ordered.indexOf(curr);
+      final iPrev = ordered.indexOf(prev);
+      if (iCurr >= 0 && iPrev >= 0 && iPrev < iCurr) {
+        ordered[iCurr] = prev;
+        ordered[iPrev] = curr;
+      }
+    }
+    final bodies = <MobileHome, Widget>{
+      for (final h in ordered)
+        h: KeyedSubtree(
+          key: ValueKey('mobile-${h.name}'),
+          child: _mobileHomeBody(hasClient, h),
+        ),
+    };
+    final reduced = reduceMotion(context);
+    return AnimatedBuilder(
+      animation: _homeAnim,
+      builder: (context, _) {
+        final t = _homeAnim.value;
+        final settingsPush = prev != null && curr == MobileHome.settings;
+        final settingsPop = prev == MobileHome.settings;
+        final curved = (settingsPush || settingsPop)
+            ? Curves.easeOutCubic.transform(t)
+            : Motion.enter.transform(t);
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            for (final h in ordered)
+              _homeLayer(
+                h,
+                body: bodies[h]!,
+                prev: prev,
+                curr: curr,
+                curved: curved,
+                reduced: reduced,
+                settingsPush: settingsPush,
+                settingsPop: settingsPop,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _homeLayer(
+    MobileHome h, {
+    required Widget body,
+    required MobileHome? prev,
+    required MobileHome curr,
+    required double curved,
+    required bool reduced,
+    required bool settingsPush,
+    required bool settingsPop,
+  }) {
+    final active = h == curr || (prev != null && h == prev);
+    var offstage = !active;
+    var ignoring = h != curr;
+    var fractionalDx = 0.0;
+    var dx = 0.0;
+    var opacity = 1.0;
+    var scrimAlpha = 0.0;
+    var opaqueBg = false;
+
+    if (active && prev != null) {
+      if (settingsPush) {
+        if (h == curr) {
+          opaqueBg = true;
+          if (reduced) {
+            opacity = curved;
+          } else {
+            fractionalDx = 1.0 - curved;
+          }
+        } else {
+          if (reduced) {
+            opacity = 1.0 - curved;
+          } else {
+            fractionalDx = -0.3 * curved;
+            scrimAlpha = 0.18 * curved;
+          }
+        }
+      } else if (settingsPop) {
+        final p = 1.0 - curved;
+        if (h == prev) {
+          opaqueBg = true;
+          if (reduced) {
+            opacity = p;
+          } else {
+            fractionalDx = 1.0 - p;
+          }
+        } else {
+          if (reduced) {
+            opacity = curved;
+          } else {
+            fractionalDx = -0.3 * p;
+            scrimAlpha = 0.18 * p;
+          }
+        }
+      } else {
+        final dir = curr.index > prev.index ? 1.0 : -1.0;
+        if (h == curr) {
+          opacity = curved;
+          if (!reduced) dx = dir * 8.0 * (1.0 - curved);
+        } else {
+          opacity = 1.0 - curved;
+          if (!reduced) dx = -dir * 8.0 * curved;
+        }
+      }
+    }
+
+    return KeyedSubtree(
+      key: ValueKey('mobile-layer-${h.name}'),
+      child: Offstage(
+        offstage: offstage,
+        child: IgnorePointer(
+          ignoring: ignoring,
+          child: FractionalTranslation(
+            translation: Offset(fractionalDx, 0),
+            child: Transform.translate(
+              offset: Offset(dx, 0),
+              child: Opacity(
+                opacity: opacity.clamp(0.0, 1.0),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ColoredBox(
+                      color: opaqueBg ? AppColors.bg : Colors.transparent,
+                      child: body,
+                    ),
+                    if (scrimAlpha > 0)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: ColoredBox(
+                            color: Colors.black.withValues(alpha: scrimAlpha),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// The phone home body for the destination the bar currently selects.
   ///
   /// Each destination gets the whole surface below the bar. Chats keeps a head
   /// for its title and context controls; Agents and Settings own their own
   /// headers, so they render directly.
-  Widget _mobileHomeBody(bool hasClient, [MobileHome? home]) {
+  Widget _mobileHomeBody(bool hasClient,
+      [MobileHome? home, bool agentsMirror = false]) {
     final destination = home ?? widget.mobileHome;
     switch (destination) {
       case MobileHome.chats:
-        // The header STAYS while searching. It names the machine whose chats are
-        // being filtered — hiding it exactly when you are narrowing a machine's
-        // chats took away the context you were filtering against.
-        return Column(
+        final showAgents = agentsMirror;
+        return DotField(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (_selecting || widget.mobileTopBar == null)
-              _mobileChatsHeader(hasClient)
-            else
-              widget.mobileTopBar!,
+            _mobileChatsHeader(
+              hasClient,
+              title: showAgents ? 'Agents' : 'Sessions',
+              agents: showAgents,
+              agentsMirror: agentsMirror,
+            ),
             Expanded(
               child: !hasClient
                   ? _mobileUnavailable('Add a machine to begin.')
-                  : Stack(children: [
-                      Positioned.fill(
-                          child: _agentsList && !_selecting
-                              ? _agentList(widget.client!)
-                              : _sessionList()),
-                      if (!_selecting) ...[
-                        const Positioned(
-                            left: 0, right: 0, bottom: 0, child: BottomFade()),
-                        Positioned(
-                          left: M.gutter,
-                          right: M.gutter,
-                          bottom: 12,
-                          child: Row(children: [
-                            Expanded(
-                              child: _agentsList
-                                  ? FloatingSearch(
-                                      key: const ValueKey('search-agents'),
-                                      controller: _agentSearchCtl,
-                                      focusNode: _searchFocus,
-                                      hint: 'Search agents',
-                                      onChanged: (v) =>
-                                          setState(() => _agentFilterQuery = v),
-                                    )
-                                  : FloatingSearch(
-                                      key: const ValueKey('search-sessions'),
-                                      controller: _searchCtl,
-                                      focusNode: _searchFocus,
-                                      hint: 'Search sessions',
-                                      onChanged: (v) =>
-                                          setState(() => _filterQuery = v),
-                                    ),
-                            ),
-                            const SizedBox(width: 8),
-                            _agentsList
-                                ? Builder(
-                                    builder: (fab) => AccentFab(
-                                        tooltip: 'New agent or group',
-                                        onTap: () => _agentsPanelKey
-                                            .currentState
-                                            ?.openCreateMenu(fab)))
-                                : AccentFab(
-                                    tooltip: 'New session',
-                                    onTap: widget.onNewSession),
-                          ]),
-                        ),
-                      ],
-                    ]),
+                  : showAgents && !_selecting
+                      ? _agentList(widget.client!, mirror: agentsMirror)
+                      : _sessionList(),
             ),
             if (_selecting) _mobileSelectionActions(),
           ],
+        ),
         );
 
       case MobileHome.tasks:
@@ -457,11 +610,14 @@ class SidebarState extends State<Sidebar> {
               ],
             ),
             Expanded(
-              child: TasksPanel(
-                key: _tasksPanelKey,
-                client: client,
-                trailing: const [],
-                phoneHeader: false,
+              child: Padding(
+                padding: EdgeInsets.only(bottom: _scrollBottomPad),
+                child: TasksPanel(
+                  key: _tasksPanelKey,
+                  client: client,
+                  trailing: const [],
+                  phoneHeader: false,
+                ),
               ),
             ),
           ],
@@ -474,13 +630,18 @@ class SidebarState extends State<Sidebar> {
         }
         // The agent list lives on the home list; this is one agent's detail.
         final agent = widget.agent;
-        if (agent == null) return _mobileHomeBody(hasClient, MobileHome.chats);
-        return CoordinationAgentDetail(
-          key: const ValueKey('agent-detail'),
-          agent: agent,
-          client: client,
-          embedded: false,
-          onClose: () => widget.onAgent(null),
+        if (agent == null) {
+          return _mobileHomeBody(hasClient, MobileHome.chats, true);
+        }
+        return Padding(
+          padding: EdgeInsets.only(bottom: _scrollBottomPad),
+          child: CoordinationAgentDetail(
+            key: const ValueKey('agent-detail'),
+            agent: agent,
+            client: client,
+            embedded: false,
+            onClose: () => widget.onAgent(null),
+          ),
         );
 
       case MobileHome.settings:
@@ -497,7 +658,9 @@ class SidebarState extends State<Sidebar> {
           );
         }
         final section = widget.settingsSection;
-        return AnimatedSwitcher(
+        return Padding(
+          padding: EdgeInsets.only(bottom: _scrollBottomPad),
+          child: AnimatedSwitcher(
           duration: Motion.base,
           switchInCurve: Motion.enter,
           switchOutCurve: Motion.exit,
@@ -561,6 +724,7 @@ class SidebarState extends State<Sidebar> {
                     ),
                   ],
                 ),
+          ),
         );
     }
   }
@@ -570,13 +734,33 @@ class SidebarState extends State<Sidebar> {
   }
 
   Widget _agentList(DaemonClient client,
-          {SessionInfo? missionControl, VoidCallback? onOpenMissionControl}) =>
+          {SessionInfo? missionControl,
+          VoidCallback? onOpenMissionControl,
+          bool mirror = false}) =>
       AgentsSidebarPanel(
-        key: _agentsPanelKey,
+        key: mirror ? _agentsMirrorKey : _agentsPanelKey,
         client: client,
         missionControl: missionControl,
         onOpenMissionControl: onOpenMissionControl,
         searchQuery: _agentFilterQuery,
+        bottomPadding: _scrollBottomPad,
+        groupsKey: mirror ? 'groups-mirror' : null,
+        heroBuilder: kMobile
+            ? (count, needs, working) => HomeHero(
+                  visit: _heroVisit,
+                  stats: [
+                    HeroStat(
+                      working.toString().padLeft(2, '0'),
+                      'agents working',
+                      [
+                        '${(count - working - needs).clamp(0, count)} idle',
+                        if (needs > 0) '$needs need you',
+                      ].join(' · '),
+                    ),
+                    ..._sharedHeroStats(),
+                  ],
+                )
+            : null,
         onSearchChanged: (v) => setState(() {
           _agentFilterQuery = v;
           if (_agentSearchCtl.text != v) _agentSearchCtl.text = v;
@@ -585,13 +769,28 @@ class SidebarState extends State<Sidebar> {
             kMobile ? widget.onAgent(a) : widget.onOpenAgent?.call(a),
       );
 
-  /// The Chats header: the destination name on the left, icon buttons on
-  /// the right for search, new chat, Mission Control and machine avatar.
-  Widget _mobileChatsHeader(bool hasClient) {
+  /// The bar's search field filters the list in place, on Chats and Agents.
+
+  int get _mcAttentionCount {
+    final override = widget.mcAttention;
+    if (override != null) return override;
+    var count = 0;
+    for (final s in widget.sessions ?? const <SessionInfo>[]) {
+      if (!s.settled && (s.needsInput || s.attention != null)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  Widget _mobileChatsHeader(
+    bool hasClient, {
+    String title = 'Sessions',
+    bool agents = false,
+    bool agentsMirror = false,
+  }) {
     if (_selecting) {
       final n = _selected.length;
-      // Same footprint as the title row, so entering selection doesn't jump
-      // the list; Delete lives in the bottom bar.
       return Padding(
         padding: const EdgeInsets.fromLTRB(S.s4, 16, M.gutter, 6),
         child: SizedBox(
@@ -615,82 +814,60 @@ class SidebarState extends State<Sidebar> {
         ),
       );
     }
-    return Padding(
-      padding: EdgeInsets.fromLTRB(M.gutter, 16, M.gutter, 6),
-      child: Row(children: [
-        Text('Chats', style: TS.pageTitle()),
-        const Spacer(),
-        ..._headerTrailing(hasClient),
-      ]),
+    return MobileHomeTopBar(
+      key: const ValueKey('mobile-home-top'),
+      agents: agents,
+      controller: agents ? _agentSearchCtl : _searchCtl,
+      focusNode: _searchFocus,
+      onChanged: (v) =>
+          setState(() => agents ? _agentFilterQuery = v : _filterQuery = v),
+      onSessions: () => widget.onMobileHome(MobileHome.chats),
+      onAgents: () => widget.onMobileHome(MobileHome.agents),
+      onSettings: () => widget.onMobileHome(MobileHome.settings),
     );
   }
 
-  /// The control at the right of every phone page header: the machine
-  /// switcher.
-  List<Widget> _headerTrailing(bool hasClient) => [_machineAvatarButton()];
-
-  Widget _mobileSettingsHeader() => MobileBackBar(
-        title: 'Settings',
-        onBack: () => Navigator.maybePop(context),
-      );
-
-  /// Machine switcher, as a small round button: the machine's initial plus a
-  /// reachability dot, matching the desktop window bar's avatar so the two read
-  /// as the same control.
-  Widget _machineAvatarButton() {
-    final a = widget.active;
-    final ok = a == null ? null : widget.health[a.url];
-    final initial = a == null || a.label.trim().isEmpty
-        ? '+'
-        : a.label.trim().characters.first.toUpperCase();
-    return Tooltip(
-      message: a == null ? 'Add machine' : 'Switch machine',
-      child: Material(
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap:
-              widget.instances.isEmpty ? widget.onAddInstance : _openMachines,
-          child: SizedBox(
-            width: M.minTarget,
-            height: M.minTarget,
-            child: Center(
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 30,
-                    height: 30,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface2,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(initial,
-                        style: sans(13, weight: W.title, color: AppColors.fg1)),
-                  ),
-                  Positioned(
-                    right: -1,
-                    bottom: -1,
-                    child: Container(
-                      width: 9,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        color: ok == true ? AppColors.ok : AppColors.fg4,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.bg, width: 1.5),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+  Widget _mobileDock(bool hasClient) {
+    final agents = widget.mobileHome == MobileHome.agents;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          M.gutter, 12, M.gutter, 12 + MediaQuery.viewPaddingOf(context).bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Builder(
+            builder: (btnCtx) => _DockPlus(
+              tooltip: agents ? 'New agent or group' : 'New session',
+              onTap: !hasClient
+                  ? null
+                  : agents
+                      ? () => _agentsMirrorKey.currentState
+                          ?.openCreateMenu(btnCtx, above: true)
+                      : widget.onNewSession,
             ),
           ),
-        ),
+          const SizedBox(height: 10),
+          ListenableBuilder(
+            listenable: AmbientController.instance,
+            builder: (context, _) => MissionControlDock(
+              live: widget.listening || AmbientController.instance.running,
+              badgeCount: _mcAttentionCount,
+              onOpen: widget.onOpenMissionControl,
+              onCall: widget.client == null
+                  ? null
+                  : () => startMobileVoice(context, widget.client!),
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  Widget _mobileSettingsHeader() => MobileHomeHeader(
+        title: 'Settings',
+        onBack: () => widget.onMobileHome(_lastMainHome),
+      );
 
   Widget _emptySessions({bool searching = false}) => Padding(
         padding: EdgeInsets.only(top: kMobile ? 72 : 32),
@@ -700,7 +877,8 @@ class SidebarState extends State<Sidebar> {
           body: searching
               ? 'Nothing matches "${_filterQuery.trim()}". Try a title, project or branch.'
               : 'Start one and it shows up here with its project, status and changes.',
-          action: searching || widget.client == null
+          // On phone the bottom bar's pill is the one new-session action.
+          action: searching || widget.client == null || kMobile
               ? null
               : Btn('New session',
                   icon: 'plus', small: !kMobile, onTap: widget.onNewSession),
@@ -715,6 +893,12 @@ class SidebarState extends State<Sidebar> {
         (s.branch?.toLowerCase().contains(q) ?? false);
   }
 
+  Widget _settledTap({required VoidCallback onTap, required Widget child}) =>
+      kMobile
+          ? GestureDetector(
+              behavior: HitTestBehavior.opaque, onTap: onTap, child: child)
+          : HoverSurface(radius: 8, onTap: onTap, child: child);
+
   Widget _settledHeader(List<SessionInfo> rows, {required bool open}) {
     return Padding(
       padding: EdgeInsets.only(top: kMobile ? 8 : 4),
@@ -723,24 +907,28 @@ class SidebarState extends State<Sidebar> {
         expanded: open,
         label: 'Settled, ${rows.length}',
         child: ExcludeSemantics(
-          child: HoverSurface(
-            radius: 8,
+          child: _settledTap(
             onTap: () => setState(() => _settledOpen = !_settledOpen),
             child: Container(
               height: kMobile ? M.minTarget : 32,
               padding:
-                  EdgeInsets.fromLTRB(kMobile ? 4 : 10, 0, kMobile ? 4 : 10, 0),
+                  EdgeInsets.fromLTRB(kMobile ? 0 : 10, 0, kMobile ? 0 : 10, 0),
               child: Row(children: [
-                Text('Settled', style: TS.label(AppColors.fg3)),
+                Text('Settled',
+                    style: TS.label(kMobile ? AppColors.fg3 : AppColors.fg4)),
                 const SizedBox(width: 8),
-                Text('${rows.length}', style: TS.meta()),
+                Text('${rows.length}',
+                    style: kMobile
+                        ? TS.meta()
+                        : mono(11, color: AppColors.fg4)),
                 const Spacer(),
                 AnimatedRotation(
                   turns: open ? 0.25 : 0,
                   duration: Motion.base,
                   curve: Curves.easeOutCubic,
-                  child:
-                      AppIcon('chevron-right', size: 13, color: AppColors.fg3),
+                  child: AppIcon('chevron-right',
+                      size: 13,
+                      color: kMobile ? AppColors.fg3 : AppColors.fg4),
                 ),
               ]),
             ),
@@ -811,9 +999,37 @@ class SidebarState extends State<Sidebar> {
         !isInboxSessionRow(s) &&
         _matchesQuery(s))));
     final children = <Widget>[
-      ..._groupedRows(split.main, attentionFirst: true),
+      if (kMobile && _filterQuery.trim().isEmpty) _sessionsHero(split.main),
+      ...(kMobile
+          ? _mobileGroupedRows(split.main)
+          : _groupedRows(split.main, attentionFirst: true)),
     ];
-    if (children.isEmpty && split.settled.isEmpty) {
+    if (kMobile && split.settled.isNotEmpty) {
+      children.add(_mobileSettledCard(split.settled));
+    } else if (split.settled.isNotEmpty) {
+      final settledOpen = _settledOpen || _filterQuery.trim().isNotEmpty;
+      children.add(SessionGroupHeader(
+        'Settled',
+        count: split.settled.length,
+        collapsed: !settledOpen,
+        chevronRight: true,
+        onToggle: () => setState(() => _settledOpen = !_settledOpen),
+      ));
+      children.add(Reveal(
+        show: settledOpen,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < split.settled.length; i++)
+              _listRow(split.settled[i],
+                  above: i > 0 ? split.settled[i - 1] : null,
+                  below: i + 1 < split.settled.length ? split.settled[i + 1] : null,
+                  divider: kMobile && i + 1 < split.settled.length),
+          ],
+        ),
+      ));
+    }
+    if (children.isEmpty) {
       children.add(_emptySessions(searching: _filterQuery.trim().isNotEmpty));
     }
     final list = PullToRefresh(
@@ -821,28 +1037,204 @@ class SidebarState extends State<Sidebar> {
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(
-            M.gutter, 4, M.gutter, split.settled.isEmpty ? 120 : 16),
+            M.gutter, 4, M.gutter, _scrollBottomPad),
         children: children,
       ),
     );
-    if (split.settled.isEmpty) return list;
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Expanded(child: list),
-      _settledPinned(split.settled),
-    ]);
+    return list;
   }
 
-  /// Rows under their project's header. Groups follow the recency of their
-  /// newest session; on phones a group holding a chat that needs input leads,
-  /// and inside a group input-needed then working chats come first.
+  Widget _sessionsHero(List<SessionInfo> main) {
+    final live = main.where((s) => sessionIsActive(s.status)).length;
+    final needs = main.where(sessionNeedsYou).length;
+    final settled = main.where((s) => s.settled).length;
+    return HomeHero(
+      visit: _heroVisit,
+      stats: [
+        HeroStat(
+          live.toString().padLeft(2, '0'),
+          'sessions working',
+          [
+            '${(main.length - live - needs - settled).clamp(0, main.length)} idle',
+            if (needs > 0) '$needs need you',
+          ].join(' · '),
+        ),
+        if (settled > 0)
+          HeroStat(
+            settled.toString().padLeft(2, '0'),
+            'sessions settled',
+            'of ${main.length} sessions',
+          ),
+        ..._sharedHeroStats(),
+      ],
+    );
+  }
+
+  /// Phone list: live sessions as cards, then each folder in its own card.
+  List<Widget> _mobileGroupedRows(List<SessionInfo> sorted) {
+    if (sorted.isEmpty) return const [];
+    final out = <Widget>[];
+    final filtering = _filterQuery.trim().isNotEmpty;
+    _chatsShownAt ??= DateTime.now();
+    var n = 0;
+    final live = filtering
+        ? const <SessionInfo>[]
+        : [
+            for (final s in sorted)
+              if (sessionNeedsYou(s)) s,
+            for (final s in sorted)
+              if (!sessionNeedsYou(s) && sessionIsActive(s.status)) s,
+          ];
+    if (live.isNotEmpty) {
+      out.add(MobileSectionLabel('Now', count: live.length, top: 2));
+      for (final s in live) {
+        out.add(Appear(
+          key: ValueKey('chat-${s.id}'),
+          index: n++,
+          since: _chatsShownAt,
+          child: LiveSessionCard(
+            session: s,
+            leading: _agentBadge(s),
+            onTap: () => _selecting
+                ? _toggleSelected(s.id)
+                : widget.onOpenSession(s.id, s.title, s.profile),
+            onLongPress: () =>
+                _selecting ? _toggleSelected(s.id) : _sessionActions(s),
+          ),
+        ));
+      }
+    }
+    final liveIds = {for (final s in live) s.id};
+    final byFolder = <String, List<SessionInfo>>{};
+    for (final s in sorted) {
+      if (liveIds.contains(s.id)) continue;
+      byFolder.putIfAbsent(projectKey(s), () => []).add(s);
+    }
+    final labelCount = <String, int>{};
+    for (final rows in byFolder.values) {
+      final l = projectLabel(rows.first);
+      labelCount[l] = (labelCount[l] ?? 0) + 1;
+    }
+    var first = live.isEmpty;
+    for (final rows in byFolder.values) {
+      var label = projectLabel(rows.first);
+      if ((labelCount[label] ?? 0) > 1) label = _projectPath(rows.first);
+      out.add(MobileSectionLabel(label,
+          icon: 'folder', count: rows.length, top: first ? 2 : 18));
+      first = false;
+      out.add(Appear(
+        key: ValueKey('folder-${projectKey(rows.first)}'),
+        index: n++,
+        since: _chatsShownAt,
+        child: MobileGroupCard(children: [
+          for (var i = 0; i < rows.length; i++)
+            _listRow(rows[i],
+                above: i > 0 ? rows[i - 1] : null,
+                below: i + 1 < rows.length ? rows[i + 1] : null, divider: i + 1 < rows.length),
+        ]),
+      ));
+    }
+    return out;
+  }
+
+  /// Settled sessions as the last card in the phone list, expanding in place.
+  Widget _mobileSettledCard(List<SessionInfo> rows) {
+    final open = _settledOpen || _filterQuery.trim().isNotEmpty;
+    return Padding(
+      padding: const EdgeInsets.only(top: 18),
+      child: MobileGroupCard(children: [
+        Semantics(
+          button: true,
+          expanded: open,
+          label: 'Settled, ${rows.length}',
+          child: ExcludeSemantics(
+            child: InkWell(
+              onTap: () => setState(() => _settledOpen = !_settledOpen),
+              child: SizedBox(
+                height: M.minTarget + 4,
+                child: Row(children: [
+                  AppIcon('archive', size: 16, color: AppColors.fg3),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: Text('Settled', style: TS.rowTitle(AppColors.fg2))),
+                  Text('${rows.length}', style: TS.meta()),
+                  const SizedBox(width: 6),
+                  AnimatedRotation(
+                    turns: open ? 0.25 : 0,
+                    duration: Motion.base,
+                    curve: Curves.easeOutCubic,
+                    child: AppIcon('chevron-right',
+                        size: 14, color: AppColors.fg3),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        ),
+        Reveal(
+          show: open,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(height: 1, color: AppColors.line),
+            for (var i = 0; i < rows.length; i++)
+              _listRow(rows[i],
+                  above: i > 0 ? rows[i - 1] : null,
+                  below: i + 1 < rows.length ? rows[i + 1] : null, divider: i + 1 < rows.length),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+
+  /// Rows under their project's header, with cross-project Needs you first on
+  /// phone when not filtering.
   List<Widget> _groupedRows(List<SessionInfo> sorted,
       {required bool attentionFirst}) {
     if (sorted.isEmpty) return const [];
+    final pin = attentionFirst && _filterQuery.trim().isEmpty;
+    final out = <Widget>[];
+    _chatsShownAt ??= DateTime.now();
+    var n = 0;
+
+    final List<SessionInfo> groupedSource;
+    if (pin) {
+      final needsYouRows = [
+        for (final s in sorted)
+          if (sessionNeedsYou(s)) s,
+      ];
+      groupedSource = [
+        for (final s in sorted)
+          if (!sessionNeedsYou(s)) s,
+      ];
+      if (needsYouRows.isNotEmpty) {
+        out.add(SessionGroupHeader(
+          'Needs you',
+          count: needsYouRows.length,
+          needsYou: true,
+        ));
+        for (var i = 0; i < needsYouRows.length; i++) {
+          out.add(Appear(
+            key: ValueKey('chat-${needsYouRows[i].id}'),
+            index: n++,
+            since: _chatsShownAt,
+            child: _listRow(needsYouRows[i],
+     above: i > 0 ? needsYouRows[i - 1] : null,
+     below: i + 1 < needsYouRows.length ? needsYouRows[i + 1] : null,
+              divider: kMobile && i + 1 < needsYouRows.length,
+              showProject: true,
+            ),
+          ));
+        }
+      }
+    } else {
+      groupedSource = sorted;
+    }
+
+    if (groupedSource.isEmpty) return out;
     final byFolder = <String, List<SessionInfo>>{};
-    for (final s in sorted) {
+    for (final s in groupedSource) {
       byFolder.putIfAbsent(projectKey(s), () => []).add(s);
     }
-    final pin = attentionFirst && _filterQuery.trim().isEmpty;
     int rank(SessionInfo s) => !pin
         ? 0
         : s.status == 'waiting_for_input'
@@ -850,20 +1242,12 @@ class SidebarState extends State<Sidebar> {
             : sessionIsActive(s.status)
                 ? 1
                 : 2;
-    var keys = byFolder.keys.toList();
-    if (pin) {
-      bool needs(String k) =>
-          byFolder[k]!.any((s) => s.status == 'waiting_for_input');
-      keys = [...keys.where(needs), ...keys.where((k) => !needs(k))];
-    }
+    final keys = byFolder.keys.toList();
     final labelCount = <String, int>{};
     for (final k in keys) {
       final l = projectLabel(byFolder[k]!.first);
       labelCount[l] = (labelCount[l] ?? 0) + 1;
     }
-    _chatsShownAt ??= DateTime.now();
-    final out = <Widget>[];
-    var n = 0;
     for (final k in keys) {
       final rows = [
         for (var r = 0; r <= 2; r++)
@@ -872,13 +1256,20 @@ class SidebarState extends State<Sidebar> {
       final first = rows.first;
       var label = projectLabel(first);
       if ((labelCount[label] ?? 0) > 1) label = _projectPath(first);
-      out.add(SessionGroupHeader(label));
+      final needsYou = rows.any(sessionNeedsYou);
+      out.add(SessionGroupHeader(
+        label,
+        count: rows.length,
+        needsYou: needsYou,
+      ));
       for (var i = 0; i < rows.length; i++) {
         out.add(Appear(
           key: ValueKey('chat-${rows[i].id}'),
           index: n++,
           since: _chatsShownAt,
-          child: _listRow(rows[i], divider: kMobile && i + 1 < rows.length),
+          child: _listRow(rows[i],
+     above: i > 0 ? rows[i - 1] : null,
+     below: i + 1 < rows.length ? rows[i + 1] : null, divider: kMobile && i + 1 < rows.length),
         ));
       }
     }
@@ -903,31 +1294,46 @@ class SidebarState extends State<Sidebar> {
     return '$lead${tail.join('/')}';
   }
 
-  Widget? _agentBadge(SessionInfo s) {
+  Widget _agentBadge(SessionInfo s) {
     final agent = s.displayAgentId?.trim() ?? '';
-    if (agent.isNotEmpty) return AgentMochi(agent, size: 14);
+    if (agent.isNotEmpty) {
+      return AgentMochi(agent, size: kMobile ? 20.0 : 17.0);
+    }
     final profile = s.profile ?? '';
-    if (profile.isEmpty) return null;
-    final provider = _profileProviders[profile];
-    if (provider != null) return ProviderLogo(provider, size: 14);
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 72),
-      child: Text(profile,
-          maxLines: 1, overflow: TextOverflow.ellipsis, style: TS.meta()),
+    final provider = profile.isEmpty ? null : _profileProviders[profile];
+    if (provider != null && providerLogoAsset(provider) != null) {
+      return ProviderLogo(provider, size: kMobile ? 18.0 : 15.0);
+    }
+    return Container(
+      width: 6,
+      height: 6,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.fg4,
+      ),
     );
   }
 
-  Widget _listRow(SessionInfo s, {bool divider = false}) {
+  Widget _listRow(SessionInfo s,
+      {bool divider = false,
+      bool showProject = false,
+      SessionInfo? above,
+      SessionInfo? below}) {
     final renaming = _renamingId == s.id;
+    final checked = _selected.contains(s.id);
     return SessionListRow(
       session: s,
       selected: !kMobile && s.id == widget.selectedSessionId,
       selecting: _selecting,
-      checked: _selected.contains(s.id),
+      checked: checked,
+      joinAbove: checked && above != null && _selected.contains(above.id),
+      joinBelow: checked && below != null && _selected.contains(below.id),
       draft: !renaming && _hasDraft(s),
-      divider: divider,
+      divider:
+          divider && !(below != null && _selected.contains(below.id)),
+      showProject: showProject,
       renameField: renaming ? _inlineRenameField(s, compact: !kMobile) : null,
-      badge: _agentBadge(s),
+      leading: _agentBadge(s),
       onTap: renaming
           ? null
           : () => _selecting
@@ -948,7 +1354,10 @@ class SidebarState extends State<Sidebar> {
     final maxHeight = MediaQuery.sizeOf(context).height * (kMobile ? 0.5 : 0.4);
     return AnimatedContainer(
       duration: Motion.base,
-      margin: EdgeInsets.symmetric(horizontal: kMobile ? M.gutter : 4),
+      margin: EdgeInsets.only(
+          left: kMobile ? M.gutter : 8,
+          right: kMobile ? M.gutter : 8,
+          bottom: kMobile ? 0 : 6),
       decoration: BoxDecoration(
           border: Border(
               top: BorderSide(
@@ -964,13 +1373,155 @@ class SidebarState extends State<Sidebar> {
               padding: const EdgeInsets.only(bottom: 8),
               children: [
                 for (var i = 0; i < rows.length; i++)
-                  _listRow(rows[i], divider: kMobile && i + 1 < rows.length),
+                  _listRow(rows[i],
+                      above: i > 0 ? rows[i - 1] : null,
+                      below: i + 1 < rows.length ? rows[i + 1] : null, divider: kMobile && i + 1 < rows.length),
               ],
             ),
           ),
         ),
-        if (kMobile) const SizedBox(height: 76),
+        if (kMobile) SizedBox(height: _scrollBottomPad),
       ]),
+    );
+  }
+
+  /// `.sctl`: the Sessions|Agents segment over the palette/search field.
+  bool _desktopAgentsAvailable(BuildContext context) =>
+      !kMobile && MediaQuery.sizeOf(context).width >= kShellCompact;
+
+  Widget _sidebarControls({required bool agentsFirst}) {
+    final agentsAvailable =
+        widget.client != null && _desktopAgentsAvailable(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 2, 10, 6),
+      child: Column(children: [
+        Container(
+          height: 28,
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Row(children: [
+            _segCell('Sessions', !agentsFirst,
+                const ValueKey('sidebar-mode-sessions'),
+                () => setSidebarAgentsFirst(false)),
+            const SizedBox(width: 2),
+            _segCell(
+                'Agents',
+                agentsFirst,
+                const ValueKey('sidebar-mode-agents'),
+                agentsAvailable ? () => setSidebarAgentsFirst(true) : null),
+          ]),
+        ),
+        const SizedBox(height: 8),
+        _sidebarSearch(agentsFirst: agentsFirst),
+      ]),
+    );
+  }
+
+  Widget _segCell(String label, bool on, Key key, VoidCallback? onTap) =>
+      Expanded(
+        child: Semantics(
+          button: true,
+          selected: on,
+          label: label,
+          child: GestureDetector(
+            key: key,
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: AnimatedContainer(
+              duration: Motion.quick,
+              height: 24,
+              decoration: BoxDecoration(
+                color: on ? AppColors.surface2 : Colors.transparent,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              alignment: Alignment.center,
+              child: Text(label,
+                  style: sans(12,
+                      color: on ? AppColors.fg1 : AppColors.fg4)),
+            ),
+          ),
+        ),
+      );
+
+  /// The `.search` field: a palette opener when one is wired, else the
+  /// inline filter for whichever list is showing.
+  Widget _sidebarSearch({required bool agentsFirst}) {
+    final palette = widget.onOpenPalette;
+    if (palette != null) {
+      return _searchBox(
+        onTap: palette,
+        child: Row(children: [
+          AppIcon('search', size: 14, color: AppColors.fg4),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text('Search', style: sans(12, color: AppColors.fg4)),
+          ),
+          Text(kMacOS ? '⌘K' : 'Ctrl+K',
+              style: mono(11, color: AppColors.fg4)),
+        ]),
+      );
+    }
+    final ctl = agentsFirst ? _agentSearchCtl : _desktopChatsSearchCtl;
+    final focus = agentsFirst ? _agentSearchFocus : _desktopChatsSearchFocus;
+    return _searchBox(
+      child: Row(children: [
+        AppIcon('search', size: 14, color: AppColors.fg4),
+        const SizedBox(width: 8),
+        Expanded(
+          child: TextField(
+            controller: ctl,
+            focusNode: focus,
+            onChanged: (v) => setState(() =>
+                agentsFirst ? _agentFilterQuery = v : _filterQuery = v),
+            style: sans(12, color: AppColors.fg1),
+            decoration: InputDecoration(
+              isCollapsed: true,
+              border: InputBorder.none,
+              hintText: agentsFirst ? 'Search agents' : 'Search chats',
+              hintStyle: sans(12, color: AppColors.fg4),
+            ),
+          ),
+        ),
+        if (ctl.text.isNotEmpty)
+          IconBtn('x', size: 20, iconSize: 10, tooltip: 'Clear', onTap: () {
+            ctl.clear();
+            setState(() =>
+                agentsFirst ? _agentFilterQuery = '' : _filterQuery = '');
+          }),
+      ]),
+    );
+  }
+
+  Widget _searchBox({VoidCallback? onTap, required Widget child}) {
+    final box = Tactile(
+      radius: BorderRadius.circular(8),
+      kind: TactileKind.inset,
+      child: Container(
+        height: 28,
+        padding: const EdgeInsets.symmetric(horizontal: 9),
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: child,
+      ),
+    );
+    if (onTap == null) return box;
+    return Tooltip(
+      message: kMacOS ? 'Search or jump (⌘K)' : 'Search or jump (Ctrl+K)',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: box,
+        ),
+      ),
     );
   }
 
@@ -987,126 +1538,17 @@ class SidebarState extends State<Sidebar> {
     final settledRows = split.settled;
     final mc = all.where((s) => isDedicatedMcSession(s.id)).firstOrNull;
     _chatsShownAt ??= DateTime.now();
-    final rows = _groupedRows(list, attentionFirst: false);
-    final mcSelected = mc != null && mc.id == widget.selectedSessionId;
-    final mcWaiting = mc != null && mc.status == 'waiting_for_input';
-    String crewLine() => _crew.isEmpty
-        ? 'Standing by'
-        : crewSummary(deriveCrew(
-            _crew, widget.sessions ?? const <SessionInfo>[],
-            presence: widget.client?.presence));
-    final mcBusy = mc != null &&
-        (sessionIsActive(mc.status) || mc.status == 'waiting_for_input');
+    final rows = _groupedRows(list, attentionFirst: true);
+    final agentsFirst =
+        sidebarAgentsFirst.value && hasClient && _desktopAgentsAvailable(context);
     final sessionsBody =
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (hasClient || _crew.isNotEmpty) ...[
-        if (!agentRailShown(context))
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-            child: HoverSurface(
-              selected: mcSelected,
-              radius: 8,
-              onTap: hasClient ? widget.onOpenMissionControl : null,
-              child: Container(
-                height: 46,
-                padding: const EdgeInsets.only(left: 6, right: 2),
-                child: Row(children: [
-                  MochiIcon(color: AppColors.accent, size: 22),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Mission Control',
-                            style: sans(13,
-                                weight: W.label,
-                                color: mcSelected
-                                    ? AppColors.fg1
-                                    : AppColors.fg2)),
-                        Row(children: [
-                          if (mcBusy && !mcWaiting) ...[
-                            SessionStateIcon(
-                              status: 'running',
-                              icon: 'activity',
-                              size: 11,
-                              activeColor: AppColors.accent,
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                          Expanded(
-                            child: ListenableBuilder(
-                              listenable:
-                                  widget.client?.presence ?? _noPresence,
-                              builder: (_, __) => Text(
-                                  mcWaiting
-                                      ? 'Waiting on you'
-                                      : mcBusy
-                                          ? 'Working'
-                                          : crewLine(),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: sans(12,
-                                      color: mcWaiting
-                                          ? AppColors.run
-                                          : mcBusy
-                                              ? AppColors.fg1
-                                              : AppColors.fg4)),
-                            ),
-                          ),
-                        ]),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                ]),
-              ),
-            ),
-          ),
-        if (widget.onOpenPalette == null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
-            child: Container(
-              height: 32,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                color: AppColors.surface1,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.line),
-              ),
-              child: Row(children: [
-                AppIcon('search', size: 14, color: AppColors.fg4),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextField(
-                    controller: _desktopChatsSearchCtl,
-                    focusNode: _desktopChatsSearchFocus,
-                    onChanged: (v) => setState(() => _filterQuery = v),
-                    style: sans(13, color: AppColors.fg1),
-                    decoration: InputDecoration(
-                      isCollapsed: true,
-                      border: InputBorder.none,
-                      hintText: 'Search chats',
-                      hintStyle: sans(13, color: AppColors.fg4),
-                    ),
-                  ),
-                ),
-                if (_desktopChatsSearchCtl.text.isNotEmpty)
-                  IconBtn('x', size: 20, iconSize: 10, tooltip: 'Clear',
-                      onTap: () {
-                    _desktopChatsSearchCtl.clear();
-                    setState(() => _filterQuery = '');
-                  }),
-              ]),
-            ),
-          ),
-      ],
       Expanded(
         child: PullToRefresh(
           onRefresh: () async => widget.onRefreshSessions(),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
             children: [
               if (!hasClient)
                 const SidebarEmpty('Add a machine to begin.')
@@ -1121,11 +1563,11 @@ class SidebarState extends State<Sidebar> {
       if (hasClient && settledRows.isNotEmpty) _settledPinned(settledRows),
     ]);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (hasClient) _sidebarControls(agentsFirst: agentsFirst),
       Expanded(
         child: SidebarModeSwap(
           // The narrow drawer has no switch, so it always lists sessions.
-          agentsFirst:
-              sidebarAgentsFirst.value && hasClient && agentRailShown(context),
+          agentsFirst: agentsFirst,
           sessions: sessionsBody,
           agents: (_) => _agentList(widget.client!,
               missionControl: mc,
@@ -1400,28 +1842,38 @@ class SidebarState extends State<Sidebar> {
     widget.onRefreshSessions();
   }
 
-  // ---- machines ----
 
-  /// Machine list: bottom sheet on phones, a popover anchored to the block on
-  /// desktop. Same rows + "Add machine" footer either way.
-  Future<void> _openMachines() => showSidebarMachinesPicker(
-        context,
-        anchorKey: _machineKey,
-        instances: widget.instances,
-        active: widget.active,
-        health: widget.health,
-        onSelect: widget.onSelectInstance,
-        onAdd: widget.onAddInstance,
-        onManage: _machineActions,
-        onRefreshHealth: widget.onRefreshHealth,
-      );
-
-  void _machineActions(Instance i) => showManageMachineSheet(
-        context: context,
-        instance: i,
-        onRename: (inst, name) => widget.onRenameInstance(inst, name),
-        onRemove: (inst) => widget.onRemoveInstance(inst),
-      );
 }
 
-final _noPresence = ValueNotifier<int>(0);
+class _DockPlus extends StatelessWidget {
+  const _DockPlus({required this.tooltip, this.onTap});
+
+  final String tooltip;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: tooltip,
+        child: Semantics(
+          button: true,
+          label: tooltip,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap == null
+                ? null
+                : () {
+                    HapticFeedback.lightImpact();
+                    onTap!();
+                  },
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                  color: AppColors.accentFill, shape: BoxShape.circle),
+              alignment: Alignment.center,
+              child: AppIcon('plus', size: 20, color: AppColors.accentFg),
+            ),
+          ),
+        ),
+      );
+}

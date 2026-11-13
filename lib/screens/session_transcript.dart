@@ -107,7 +107,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       final open = _toolRunOpen[toolKey] ?? false;
       out.add(KeyedSubtree(
         key: ValueKey(toolKey),
-        child: ToolRun(
+        child: CollapsedActivity(
           List.of(run),
           running: running,
           open: open,
@@ -115,8 +115,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             if (!mounted) return;
             _setState(() {
               _toolRunOpen[toolKey] = nextOpen;
-              // The transcript is normally cached between event updates. Rebuild
-              // it now so ToolRun receives the new open value immediately.
+              // Rebuild cached transcript so CollapsedActivity reflects open immediately.
               _transcriptDirty = true;
             });
           },
@@ -479,6 +478,15 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             addEvent(key, _PlanCard(steps, _s(e['explanation'])));
           }
         case 'system_decision':
+          final watch = _watchArgs(_s(e['step']), _s(e['reasoning']));
+          if (watch != null) {
+            flushPending(key);
+            addToolRow(
+                toolRow(key,
+                    tool: 'monitor', args: watch, result: const {'ok': true}),
+                key);
+            break;
+          }
           endTools(key);
           // Don't render "interrupted" decisions — just noise in the chat.
           if (_s(e['step']) == 'interrupted') break;
@@ -522,10 +530,13 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           openFiles = files;
           addEvent(
               key,
-              PresentedFiles(
-                client: widget.client,
-                files: files,
-                onOpenFileTab: widget.onOpenFileTab,
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: PresentedFiles(
+                  client: widget.client,
+                  files: files,
+                  onOpenFileTab: widget.onOpenFileTab,
+                ),
               ));
           openFilesAt = out.length;
         case 'artifact_presented':
@@ -536,7 +547,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           final display = e['display'] as String?;
           addEvent(
               key,
-              artifactVersion == newestArtifact[artifactId] &&
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: artifactVersion == newestArtifact[artifactId] &&
                       artifactShowsInline(artifactKind, display)
                   ? ArtifactInline(
                       key: ValueKey(
@@ -557,7 +570,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                       title: _s(e['title']),
                       kind: artifactKind,
                       caption: _s(e['caption']),
-                    ));
+                    ),
+              ));
         case 'lane_spawned':
           endTools(key);
           final id = _s(e['id']);
@@ -748,7 +762,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       );
       return;
     }
-    Navigator.of(context).push(MaterialPageRoute<void>(
+    Navigator.of(context).push(AppPageRoute<void>(
       builder: (_) => LaneTranscriptScreen(
         client: widget.client,
         laneId: id,
@@ -1012,4 +1026,185 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       _toast('$e');
     }
   }
+}
+
+class CollapsedActivity extends StatefulWidget {
+  final List<Widget> rows;
+  final bool running;
+  final bool open;
+  final ValueChanged<bool>? onOpenChanged;
+
+  const CollapsedActivity(
+    this.rows, {
+    super.key,
+    this.running = false,
+    this.open = false,
+    this.onOpenChanged,
+  });
+
+  @override
+  State<CollapsedActivity> createState() => _CollapsedActivityState();
+}
+
+class _CollapsedActivityState extends State<CollapsedActivity> {
+  bool _localOpen = false;
+
+  bool get _open => widget.onOpenChanged != null ? widget.open : _localOpen;
+
+  void _toggle() {
+    if (widget.onOpenChanged != null) {
+      widget.onOpenChanged!(!widget.open);
+    } else {
+      setState(() => _localOpen = !_localOpen);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // One tool is its own row; a summary header would only hide it.
+    if (widget.rows.length == 1) return widget.rows.single;
+    final steps = [
+      for (final r in widget.rows.whereType<DenseToolRow>())
+        ToolStep(tool: r.tool, args: r.args, result: r.result),
+    ];
+    final text = activitySummary(steps);
+    final summary = text.isEmpty ? 'Activity' : text;
+    final failures = steps.where((s) => !s.running && s.failed).length;
+    final isRunning =
+        widget.running && (steps.isEmpty || steps.any((s) => s.running));
+    final open = _open;
+    final style = sans(kMobile ? 14 : 13, color: AppColors.fg3);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _toggle,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: kMobile ? 32 : 24),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: isRunning
+                      ? const _PulseDot()
+                      : AnimatedRotation(
+                          turns: open ? 0.25 : 0,
+                          duration: Motion.fast,
+                          curve: Curves.easeOutCubic,
+                          child: AppIcon('chevron-right',
+                              size: 14, color: AppColors.fg3),
+                        ),
+                ),
+                const SizedBox(width: S.s8),
+                Flexible(
+                  child: Text.rich(
+                    TextSpan(children: [
+                      TextSpan(text: summary),
+                      if (failures > 0 && !isRunning)
+                        TextSpan(
+                            text: ' · $failures failed',
+                            style: style.copyWith(color: AppColors.danger)),
+                    ]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: style,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedSize(
+          duration: Motion.fast,
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: open
+              ? Padding(
+                  padding: const EdgeInsets.only(top: S.s4, bottom: S.s6),
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 7),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border(
+                            left: BorderSide(color: AppColors.border)),
+                      ),
+                      padding: const EdgeInsets.only(left: S.s12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (var i = 0; i < widget.rows.length; i++) ...[
+                            if (i > 0) const SizedBox(height: S.s2),
+                            widget.rows[i],
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              : const SizedBox(width: double.infinity),
+        ),
+      ],
+    );
+  }
+}
+
+class _PulseDot extends StatefulWidget {
+  const _PulseDot();
+
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1200));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (reduceMotion(context)) {
+      _c.stop();
+      _c.value = 0.5;
+    } else if (!_c.isAnimating) {
+      _c.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: RepaintBoundary(
+        child: FadeTransition(
+          opacity: _c.drive(Tween(begin: 1.0, end: 0.35)),
+          child: AppIcon('chevron-right', size: 14, color: AppColors.accent),
+        ),
+      ),
+    );
+  }
+}
+
+/// Watch events as monitor steps, so they fold into the tool activity.
+Map<String, String>? _watchArgs(String step, String reasoning) {
+  final r = reasoning.trim();
+  switch (step) {
+    case 'watch_added':
+      final m = RegExp(r'^watching "(.*)" \((.*)\)$', dotAll: true).firstMatch(r);
+      return {'action': 'add', 'label': m?.group(1) ?? r, 'path': m?.group(2) ?? ''};
+    case 'watch_removed':
+      final m = RegExp(r'^stopped watching "(.*)"$').firstMatch(r);
+      return {'action': 'remove', 'label': m?.group(1) ?? r};
+    case 'file_watch':
+      final m = RegExp(r'^"(.*?)" — (.*?) grew: ?(.*)$', dotAll: true).firstMatch(reasoning);
+      return {'action': 'fired', 'label': m?.group(1) ?? 'Watched file', 'path': m?.group(2) ?? ''};
+  }
+  return null;
 }

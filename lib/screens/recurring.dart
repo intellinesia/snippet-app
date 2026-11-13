@@ -1040,14 +1040,30 @@ class RecurringScreenState extends State<RecurringScreen>
     // Embedded with a back action → phone drill-down, so THIS level owns the
     // header. Embedded without one → the desktop dialog pane, where the host's
     // section chip strip is the navigation and a back row would duplicate it.
-    if (widget.onBack == null) return body;
+    final child = kMobile && !widget.pane ? CardGroupScope(child: body) : body;
+    if (widget.onBack == null) return child;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        NavBackRow(title: 'Scheduled jobs', onBack: widget.onBack!, trailing: [
-          if (_canAdd && !_adding) HeaderAction('New job', onTap: _add),
-        ]),
-        Expanded(child: body),
+        if (kMobile)
+          SettingsHeader(
+            title: 'Scheduled',
+            compact: true,
+            onBack: widget.onBack!,
+            actions: [
+              if (_canAdd && !_adding)
+                IconBtn('plus',
+                    size: 40,
+                    iconSize: 18,
+                    tooltip: 'New job',
+                    onTap: _add),
+            ],
+          )
+        else
+          NavBackRow(title: 'Scheduled jobs', onBack: widget.onBack!, trailing: [
+            if (_canAdd && !_adding) HeaderAction('New job', onTap: _add),
+          ]),
+        Expanded(child: child),
       ],
     );
   }

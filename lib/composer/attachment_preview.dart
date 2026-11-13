@@ -10,6 +10,7 @@ import 'package:video_player/video_player.dart';
 
 import '../file_actions.dart';
 import '../file_icons.dart';
+import '../glass.dart';
 import '../media_views.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -99,7 +100,7 @@ Future<void> showAttachmentPreview(
       useRootNavigator: true,
       barrierDismissible: true,
       barrierLabel: 'Close preview',
-      barrierColor: AppColors.scrim,
+      barrierColor: AppColors.glassScrim,
       transitionDuration: calm ? Motion.quick : Motion.open,
       pageBuilder: (_, __, ___) => _DesktopPanel(
         session: session,
@@ -244,18 +245,25 @@ class _DesktopPanel extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(S.s24),
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 720, maxHeight: h * 0.8),
-          child: Material(
-            color: AppColors.surface1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(R.lg),
-              side: BorderSide(color: AppColors.border),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: _PreviewContent(
-              session: session,
-              onRemove: onRemove,
-              onInsert: onInsert,
+          constraints: BoxConstraints(maxWidth: 640, maxHeight: h * 0.7),
+          child: Glass(
+            radius: const BorderRadius.all(Radius.circular(R.lg)),
+            border: false,
+            tint: AppColors.windowBg,
+            child: DecoratedBox(
+              position: DecorationPosition.foreground,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(R.lg),
+                border: Border.all(color: AppColors.glassBorder),
+              ),
+              child: Material(
+                type: MaterialType.transparency,
+                child: _PreviewContent(
+                  session: session,
+                  onRemove: onRemove,
+                  onInsert: onInsert,
+                ),
+              ),
             ),
           ),
         ),
@@ -321,7 +329,9 @@ class _PreviewContentState extends State<_PreviewContent> {
 
   TextEditingController _controllerFor(PreviewAttachment a) =>
       _controllers.putIfAbsent(a, () {
-        final c = TextEditingController(text: a.pastedText ?? '');
+        final c = TextEditingController(text: a.pastedText ?? '')
+          // Autofocus would otherwise put the caret at the end and open scrolled down.
+          ..selection = const TextSelection.collapsed(offset: 0);
         s.texts[a] = c.text;
         return c;
       });
@@ -393,6 +403,10 @@ class _PreviewContentState extends State<_PreviewContent> {
     final a = _cur;
     final m = _metaOf(a);
     final parts = <String>[if (!a.isPasted) _kindLabel(a)];
+    if (a.isPasted) {
+      final n = _lines(s.texts[a] ?? a.pastedText ?? '');
+      parts.add('$n ${n == 1 ? 'line' : 'lines'}');
+    }
     if (m.bytes != null) parts.add(formatBytes(m.bytes));
     if (m.dims != null) {
       parts.add('${m.dims!.width.round()} × ${m.dims!.height.round()}');
@@ -408,18 +422,28 @@ class _PreviewContentState extends State<_PreviewContent> {
     final ctl = a.isPasted ? _controllerFor(a) : null;
     final desktop = !_sheet;
     final iconSize = kMobile ? 44.0 : 28.0;
+    final pasted = ctl != null;
+    Widget roundBtn(String icon, String tip, VoidCallback onTap) =>
+        DecoratedBox(
+          decoration:
+              BoxDecoration(color: AppColors.tint1, shape: BoxShape.circle),
+          child: IconBtn(icon,
+              tooltip: tip, size: iconSize, iconSize: 16, onTap: onTap),
+        );
     Widget header = Padding(
-      padding: EdgeInsets.fromLTRB(
-          S.s16, desktop ? S.s12 : S.s4, S.s8, desktop ? S.s12 : S.s8),
+      padding: EdgeInsets.fromLTRB(S.s16, desktop ? S.s12 : S.s4,
+          pasted ? S.s12 : S.s8, desktop ? S.s12 : S.s8),
       child: Row(children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(a.isAudio ? 'Voice note' : a.name,
+              Text(pasted ? 'Pasted text' : (a.isAudio ? 'Voice note' : a.name),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TS.rowTitle()),
+                  style: pasted
+                      ? sans(15, weight: W.label, color: AppColors.fg1)
+                      : TS.rowTitle()),
               Text(_metaLine(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -427,11 +451,24 @@ class _PreviewContentState extends State<_PreviewContent> {
             ],
           ),
         ),
-        if (widget.onRemove != null)
-          IconBtn('trash',
-              tooltip: 'Remove', size: iconSize, iconSize: 16, onTap: _remove),
-        IconBtn('x',
-            tooltip: 'Close', size: iconSize, iconSize: 16, onTap: _close),
+        if (widget.onRemove != null) ...[
+          pasted
+              ? roundBtn('trash', 'Remove', _remove)
+              : IconBtn('trash',
+                  tooltip: 'Remove',
+                  size: iconSize,
+                  iconSize: 16,
+                  onTap: _remove),
+          if (pasted && desktop) const SizedBox(width: S.s4),
+        ],
+        if (!(pasted && _sheet))
+          pasted
+              ? roundBtn('x', 'Close', _close)
+              : IconBtn('x',
+                  tooltip: 'Close',
+                  size: iconSize,
+                  iconSize: 16,
+                  onTap: _close),
       ]),
     );
     if (_sheet) {
@@ -456,12 +493,9 @@ class _PreviewContentState extends State<_PreviewContent> {
     final footer = ctl == null ? null : _footer(ctl);
     final content = Column(mainAxisSize: MainAxisSize.max, children: [
       header,
-      Container(height: 1, color: AppColors.border),
+      if (!pasted) Container(height: 1, color: AppColors.border),
       Expanded(child: body),
-      if (footer != null) ...[
-        Container(height: 1, color: AppColors.border),
-        footer,
-      ],
+      if (footer != null) footer,
       if (_sheet && footer == null) SizedBox(height: widget.bottomInset),
     ]);
 
@@ -487,8 +521,12 @@ class _PreviewContentState extends State<_PreviewContent> {
     );
   }
 
-  Widget _textBody(PreviewAttachment a, TextEditingController c) => Padding(
-        padding: const EdgeInsets.fromLTRB(S.s16, S.s12, S.s16, S.s8),
+  Widget _textBody(PreviewAttachment a, TextEditingController c) => Container(
+        margin: const EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s8),
+        padding: const EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s12),
+        decoration: BoxDecoration(
+            color: AppColors.tint1,
+            borderRadius: BorderRadius.circular(R.card)),
         child: TextField(
           controller: c,
           autofocus: !_sheet,
@@ -508,11 +546,6 @@ class _PreviewContentState extends State<_PreviewContent> {
       );
 
   Widget _footer(TextEditingController c) {
-    final text = c.text;
-    final lines = _lines(text);
-    final counts = Text(
-        '$lines ${lines == 1 ? 'line' : 'lines'} · ${text.length} characters',
-        style: TS.meta());
     final insert = Btn('Insert as text',
         variant: BtnVariant.surface,
         small: !kMobile,
@@ -521,20 +554,16 @@ class _PreviewContentState extends State<_PreviewContent> {
     final done = Btn('Done', small: !kMobile, full: kMobile, onTap: _close);
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          S.s16, S.s12, S.s16, kMobile ? S.s12 + widget.bottomInset : S.s12),
+          S.s16, S.s4, S.s16, kMobile ? S.s12 + widget.bottomInset : S.s16),
       child: kMobile
           ? Column(mainAxisSize: MainAxisSize.min, children: [
-              Align(alignment: Alignment.centerLeft, child: counts),
-              const SizedBox(height: S.s12),
               Row(children: [
                 Expanded(child: insert),
                 const SizedBox(width: S.s8),
                 Expanded(child: done),
               ]),
             ])
-          : Row(children: [
-              counts,
-              const Spacer(),
+          : Row(mainAxisAlignment: MainAxisAlignment.end, children: [
               insert,
               const SizedBox(width: S.s8),
               done,

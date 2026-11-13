@@ -1,10 +1,11 @@
 import 'dart:async';
-import 'dart:ui' show ImageFilter;
 
+import '../desktop_look.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import '../ambient/live_caption.dart';
+import '../ambient/controller.dart';
 import '../api.dart';
 import '../github_models.dart';
 import '../swr.dart';
@@ -26,10 +27,12 @@ import '../share_inbound.dart';
 import '../shells.dart';
 import '../store.dart';
 import '../term.dart' show SessionTermView;
+import '../glass.dart';
 import '../theme.dart';
 import '../media_views.dart';
 import '../widgets.dart';
 import '../crew_widgets.dart' show runCrewAgentAction;
+import '../usage_popover.dart' show showUsagePopover;
 import 'add_instance.dart';
 import 'agent_panel.dart';
 import 'editor.dart';
@@ -37,19 +40,18 @@ import 'files.dart';
 import 'git.dart';
 import 'inbound_share_picker.dart';
 import 'mission_control.dart';
+import 'mission_control/widgets/ambient_stage.dart' show showAmbientStage;
 import 'tasks/task_kanban.dart';
-import 'tasks/tasks_panel.dart';
-import '../tasks_popover.dart';
-import '../usage_popover.dart';
 import 'mobile_chrome.dart';
-import 'mission_control/widgets/ambient_stage.dart';
 import 'mobile_shell.dart';
 import 'new_session_picker.dart';
 import 'new_session_draft.dart';
 import 'session.dart';
 import 'mission_board_panel.dart';
 import 'pull_requests.dart';
+import 'session_list_row.dart' show sessionNeedsYou;
 import 'session_side_panel.dart';
+import 'desktop_settings_page.dart';
 import 'settings_panel.dart';
 import 'shell_card_tab_strip.dart';
 import 'shell_main_pane.dart';
@@ -59,13 +61,13 @@ import 'shell_pane_view.dart';
 import 'shell_rail.dart';
 import 'shell_rail_tools.dart';
 import 'shell_shortcuts.dart';
-import 'agent_rail.dart';
 import 'sidebar_mode.dart';
 import 'shell_sidebar_host.dart';
 import 'shell_split_view.dart';
 import 'shell_welcome.dart';
 import 'shell_window_bar.dart';
 import '../motion.dart';
+import '../window_background.dart';
 
 export 'inbound_share_picker.dart';
 export 'mobile_shell.dart';
@@ -117,6 +119,9 @@ class _DesktopShellState extends State<DesktopShell>
   final PageController _pageController = PageController();
   final ScrollController _stripController = ScrollController();
   final Map<String, GlobalKey> _chipKeys = {};
+  final List<String> _tabHistory = [];
+  int _tabHistoryPos = -1;
+  bool _navigatingHistory = false;
 
   /// Daemon-wide interactive shells.
   ///
@@ -227,6 +232,8 @@ class _DesktopShellState extends State<DesktopShell>
   /// coordination failure can never take the session list down with it.
   bool _sidebarGit = false;
   bool _sidebarHidden = false;
+  bool _settingsOpen = false;
+  double _sidebarWidth = kSidebarWidth;
 
   /// Secondary-pane width, dragged by its handle. Width-driven rather than a
   /// flex ratio because a flex ratio cannot be dragged and has no natural size.
@@ -356,6 +363,12 @@ class _DesktopShellState extends State<DesktopShell>
   /// Close ONE readout tab. Does not collapse the pane — other tabs may remain,
   /// and even an empty pane stays open so the next rail tap lands somewhere.
   Future<Object?> _openShellPanel(ShellPanelRequest request) {
+    if (!kMobile && request.purpose == ShellPanelPurpose.conversation) {
+      request.showSide = _showAgentInfo;
+      request.toggleSide = _togglePanel;
+      _openReadoutTab(_RightTab.request(request, originTabKey: _activeTab?.key));
+      return request.dismissed.future;
+    }
     final existing = _rightTabs.where((t) => t.key == request.key).firstOrNull;
     final tab =
         existing ?? _RightTab.request(request, originTabKey: _activeTab?.key);
@@ -439,21 +452,29 @@ class _DesktopShellState extends State<DesktopShell>
   /// An agent tab's panel holds only the pages opened from its Actions menu.
   bool _agentPanelHidden = true;
 
-  bool get _agentHasPanelTabs => _rightTabs.any((r) =>
-      r.pane == _Pane.right &&
-      (r.originTabKey == null || r.originTabKey == _activeTab?.key));
+  CoordinationAgent? _mcAgent;
 
-  CoordinationAgent? get _activeAgent => _activeTab?.readout?.agent;
+  CoordinationAgent? get _activeAgent =>
+      _activeTab?.readout?.agent ??
+      (!kMobile && _activeTab?.isMissionControl == true ? _mcAgent : null);
 
-  bool get _panelHidden =>
-      _activeAgent != null ? _agentPanelHidden : _sidePanelHidden;
+  /// The active tab docks an info panel (agent, Mission Control or group chat).
+  bool get _dockedInfo =>
+      _activeAgent != null || _activeTab?.readout?.request?.sidePanel != null;
+
+  bool get _panelHidden => _dockedInfo ? _agentPanelHidden : _sidePanelHidden;
 
   void _togglePanel() => setState(() {
-        if (_activeAgent != null) {
+        if (_dockedInfo) {
           _agentPanelHidden = !_agentPanelHidden;
         } else {
           _sidePanelHidden = !_sidePanelHidden;
         }
+      });
+
+  void _showAgentInfo() => setState(() {
+        _agentPanelHidden = false;
+        _activeKey.remove(_Pane.right);
       });
 
   void _agentAction(String action) {
@@ -461,6 +482,7 @@ class _DesktopShellState extends State<DesktopShell>
     final a = _activeAgent;
     if (tab == null || a == null) return;
     final name = a.displayName.trim().isEmpty ? a.id : a.displayName.trim();
+    if (action == 'delete' && a.id == 'mission-control') return;
     if (action == 'desk') {
       _openSession('inbox-${a.id}', '$name desk', null);
     } else if (action == 'delete') {
@@ -489,39 +511,17 @@ class _DesktopShellState extends State<DesktopShell>
     }
   }
 
-  List<Widget> _railTools() => [
-        ...buildShellRailTools(
-          activeTab: _activeTab,
-          macSessionStatus:
-              _activeTab == null ? null : _macSessionStatuses[_activeTab!.key],
-          isRightPanelActive: _rightPanelActive,
-          onToggleRightPanel: _toggleRightPanel,
-          onSessionAction: _dispatchSessionAction,
-          onOpenGoalPopover: _openGoalPopover,
-          onAgentAction: _agentAction,
-        ),
-        if (_activeTab?.sessionId != null ||
-            (_activeAgent != null && _agentHasPanelTabs))
-          Tooltip(
-            message: _panelHidden ? 'Show panel' : 'Hide panel',
-            child: Material(
-              color: _panelHidden ? Colors.transparent : AppColors.surface2,
-              borderRadius: BorderRadius.circular(8),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: _togglePanel,
-                child: SizedBox.square(
-                  dimension: 30,
-                  child: Center(
-                    child: AppIcon('panel-right',
-                        size: 16,
-                        color: _panelHidden ? AppColors.fg3 : AppColors.fg1),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ];
+  List<Widget> _headerTools(_ShellTab t) => buildShellRailTools(
+        activeTab: t,
+        macSessionStatus: _macSessionStatuses[t.key],
+        isRightPanelActive: _rightPanelActive,
+        onToggleRightPanel: _toggleRightPanel,
+        onSessionAction: _dispatchSessionAction,
+        onOpenGoalPopover: _openGoalPopover,
+      );
+
+  // Session, MC, and agent tabs carry their tools in the chat header.
+  List<Widget> _railTools() => const [];
 
   Future<void> _openGoalPopover(BuildContext btnCtx) => showGoalPopover(
         context: context,
@@ -544,8 +544,11 @@ class _DesktopShellState extends State<DesktopShell>
     _startSessionsTicker();
     if (!kMobile) HardwareKeyboard.instance.addHandler(_handleGlobalShortcuts);
     if (!kMobile) {
-      sidebarAgentsFirst.addListener(_onSidebarMode);
       loadSidebarAgentsFirst();
+      WindowBackgroundStore.instance.init();
+      DesktopLook.instance
+        ..addListener(_onLookChanged)
+        ..init();
     }
     if (kMobile) ShareInbound.listen(_onInboundShare);
     // Global shells mirror into tabs whenever the daemon reports a change: a
@@ -554,21 +557,13 @@ class _DesktopShellState extends State<DesktopShell>
     _shells.addListener(_syncGlobalShellTabs);
   }
 
-  late bool _railFolded = sidebarAgentsFirst.value;
-
-  void _onSidebarMode() {
-    if (!mounted) return;
-    setState(() {
-      if (!sidebarAgentsFirst.value) {
-        _railFolded = false;
-      } else if (reduceMotion(context)) {
-        _railFolded = true;
-      }
-    });
+  void _onLookChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    DesktopLook.instance.removeListener(_onLookChanged);
     for (final tab in _rightTabs) {
       tab.request?.complete();
     }
@@ -576,7 +571,6 @@ class _DesktopShellState extends State<DesktopShell>
     WidgetsBinding.instance.removeObserver(this);
     if (!kMobile) {
       HardwareKeyboard.instance.removeHandler(_handleGlobalShortcuts);
-      sidebarAgentsFirst.removeListener(_onSidebarMode);
     }
     _sessionsTicker?.cancel();
     _stopEventsWatch();
@@ -629,6 +623,7 @@ class _DesktopShellState extends State<DesktopShell>
     onOpenCommandPalette: _openCommandPalette,
     onFocusComposer: () =>
         _macSessionControls[_activeTab?.key]?.performAction('focus_composer'),
+    onOpenSettings: _openShellSettings,
     onStopRunningTask: () => _macSessionControls[_activeTab?.key]?.stop(),
     onShowShortcuts: _showDesktopShortcuts,
   );
@@ -764,7 +759,6 @@ class _DesktopShellState extends State<DesktopShell>
         return;
       }
       if (kind == 'ambient_live') {
-        LiveCaptionFeed.instance.apply(frame);
         return;
       }
       if (kind == 'notification' && _active != null) {
@@ -798,6 +792,7 @@ class _DesktopShellState extends State<DesktopShell>
   }
 
   void _syncPage() {
+    _recordTabHistory();
     final currentKey = _activeTab?.key;
     final stale = _rightTabs
         .where((r) => r.originTabKey != null && r.originTabKey != currentKey)
@@ -890,6 +885,32 @@ class _DesktopShellState extends State<DesktopShell>
 
   void _toggleSidebar() {
     setState(() => _sidebarHidden = !_sidebarHidden);
+  }
+
+  Future<void> _loadSidebarWidth() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.get(kSidebarWidthPref);
+    final width = raw is num ? raw.toDouble() : null;
+    if (!mounted || width == null) return;
+    _sidebarWidth = width.clamp(kSidebarMinWidth, kSidebarMaxWidth);
+  }
+
+  void _saveSidebarWidth() {
+    final width = _sidebarWidth;
+    SharedPreferences.getInstance()
+        .then((p) => p.setDouble(kSidebarWidthPref, width));
+  }
+
+  void _resizeSidebar(double delta) {
+    setState(() {
+      _sidebarWidth =
+          (_sidebarWidth + delta).clamp(kSidebarMinWidth, kSidebarMaxWidth);
+    });
+  }
+
+  void _resetSidebarWidth() {
+    setState(() => _sidebarWidth = kSidebarWidth);
+    _saveSidebarWidth();
   }
 
   void _toggleSecondaryPane() {
@@ -1278,6 +1299,7 @@ class _DesktopShellState extends State<DesktopShell>
 
   Future<void> _loadInstances() async {
     final items = await _store.load();
+    if (!kMobile) await _loadSidebarWidth();
     if (!mounted) return;
     setState(() {
       _instances = items;
@@ -1295,7 +1317,7 @@ class _DesktopShellState extends State<DesktopShell>
     _shells.setClient(_client);
     await _restoreTabs(items);
     _ensurePinnedMissionControl();
-    _startOnMission();
+    _startOnChats();
     _connectEventsWatch();
     _loadSessions();
     _refreshHealth();
@@ -1316,7 +1338,10 @@ class _DesktopShellState extends State<DesktopShell>
     }
     _loadTabProviders(c);
     final statusRevision = _liveStatus.revision;
-    unawaited(c.coordinationAgents().then((_) {}, onError: (_) {}));
+    unawaited(c.coordinationAgents().then((all) {
+      final mc = all.where((a) => a.id == 'mission-control').firstOrNull;
+      if (mounted && mc != null) setState(() => _mcAgent = mc);
+    }, onError: (_) {}));
     setState(() => _sessionsLoading = true);
     try {
       final s = await c.sessions(limit: 60);
@@ -1337,10 +1362,16 @@ class _DesktopShellState extends State<DesktopShell>
       });
       _liveStatus.merge(s, since: statusRevision);
       if (mounted) {
+        final profiles = {for (final x in s) x.id: x.profile};
         setState(() {
           _sessions = s;
           _sessionsLoading = false;
           _sessionsError = null;
+          // Restored tabs can carry a stale or empty profile; the list is current.
+          for (final t in _tabs) {
+            final p = profiles[t.sessionId];
+            if (p != null && p.isNotEmpty) t.profile = p;
+          }
         });
       }
       // Decoration only, fired after the list is already on screen. Kept out of
@@ -1439,6 +1470,25 @@ class _DesktopShellState extends State<DesktopShell>
         // answer with its home directory, which is the sane default.
         startPath: null,
         onClose: close,
+        onStart: (folder, workspace, profile, text, attachments) async {
+          try {
+            final id = await c.openSession(folder,
+                workspace: workspace, profile: profile, newConversation: true);
+            _openSession(id, 'New session', profile,
+                share: SharedInbound(
+                  type: attachments.isEmpty ? 'text' : 'file',
+                  text: text,
+                  paths: [for (final a in attachments) a.path],
+                  names: [for (final a in attachments) a.name],
+                  send: true,
+                ));
+            _loadSessions();
+          } catch (e) {
+            if (mounted) toast(context, '$e', danger: true);
+            rethrow;
+          }
+          close();
+        },
         onOpenFolder: (folder, workspace) async {
           try {
             final id = await c.openSession(folder,
@@ -1467,7 +1517,7 @@ class _DesktopShellState extends State<DesktopShell>
     // See `_onInboundShare`: must follow the setState block.
     _shells.setClient(_client);
     _ensurePinnedMissionControl();
-    _startOnMission();
+    _startOnChats();
     _connectEventsWatch();
     _loadSessions();
   }
@@ -1665,7 +1715,6 @@ class _DesktopShellState extends State<DesktopShell>
         health: _health,
         onRefreshHealth: _refreshHealth,
         mobileHome: _mobileHome,
-        mobileTopBar: kMobile ? _mobileTopBar(mission: false) : null,
         onMobileMenu: kMobile ? _openMobileMenu : null,
         onMobileHome: (h) => setState(() {
           _mobileHome = h;
@@ -1777,7 +1826,8 @@ class _DesktopShellState extends State<DesktopShell>
       );
     }
     if (kMobile) return _mobileShell();
-    return ShellPanelScope(
+    return WindowBackground(
+        child: ShellPanelScope(
         open: _openShellPanel,
         client: _client,
         sessionId: _activeTab?.sessionId,
@@ -1871,10 +1921,9 @@ class _DesktopShellState extends State<DesktopShell>
               ]),
             ),
           );
-        }));
+        })));
   }
 }
 
 typedef _MachineList = MachineList;
-typedef _SettingsPanel = SettingsPanel;
 typedef _SettingsPage = SettingsPage;

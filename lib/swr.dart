@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import 'ambient/live_caption.dart';
 import 'api.dart';
 
 typedef DeviceEventFrame = Map<String, dynamic>;
@@ -28,7 +29,12 @@ class DeviceEventHub {
 
   Stream<DeviceEventFrame> get stream => _controller.stream;
 
-  void add(DeviceEventFrame event) => _controller.add(event);
+  void add(DeviceEventFrame event) {
+    if (event['kind'] == 'ambient_live') {
+      LiveCaptionFeed.instance.apply(event);
+    }
+    _controller.add(event);
+  }
 
   void addAttachedToolResults(DeviceEventFrame frame,
       {required String session, required String workspace}) {
@@ -64,7 +70,7 @@ class DeviceEventHub {
             final frame = jsonDecode(raw as String);
             if (frame is Map) {
               _attempt = 0;
-              _controller.add(frame['kind'] == 'resync'
+              add(frame['kind'] == 'resync'
                   ? {'kind': reconnected}
                   : frame.cast<String, dynamic>());
             }

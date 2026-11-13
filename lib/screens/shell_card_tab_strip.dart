@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../chat/agent_cluster.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -117,11 +118,13 @@ class CardTabChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(R.sm),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            AppIcon(
-              tabIconKind(tab),
-              size: 14,
-              color: isActive ? AppColors.accent : AppColors.fg4,
-            ),
+            tabGroupAgentIds(tab) != null
+                ? AgentCluster(ids: tabGroupAgentIds(tab)!, size: 16)
+                : AppIcon(
+                    tabIconKind(tab),
+                    size: 14,
+                    color: isActive ? AppColors.accent : AppColors.fg4,
+                  ),
             const SizedBox(width: S.s6),
             Flexible(
               child: Text(
@@ -161,16 +164,18 @@ class CardTabChip extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.hover : Colors.transparent,
+          color: isActive ? AppColors.tint3 : Colors.transparent,
           borderRadius: BorderRadius.circular(R.sm),
         ),
         child: Row(
           children: [
-            AppIcon(
-              tabIconKind(tab),
-              size: 14,
-              color: isActive ? AppColors.accent : AppColors.fg4,
-            ),
+            tabGroupAgentIds(tab) != null
+                ? AgentCluster(ids: tabGroupAgentIds(tab)!, size: 16)
+                : AppIcon(
+                    tabIconKind(tab),
+                    size: 14,
+                    color: isActive ? AppColors.accent : AppColors.fg4,
+                  ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -263,7 +268,7 @@ class CardTabStrip extends StatelessWidget {
     final compact = kMobile ? M.tabStripHeight : 42.0;
     return Container(
       height: compact,
-      color: AppColors.bg,
+      color: AppColors.paneBg,
       child: Row(children: [
         if (onMenu != null)
           IconBtn('sidebar',

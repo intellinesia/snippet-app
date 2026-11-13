@@ -120,15 +120,15 @@ void main() {
     foregroundNotifications.add({'title': 'First'});
     await tester.pumpWidget(
         const MaterialApp(home: NotificationPopovers(child: Scaffold())));
-    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(seconds: 3));
     foregroundNotifications.add({'title': 'Second'});
     await tester.pump();
     expect(find.text('Second'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
     expect(find.text('Second'), findsOneWidget);
     expect(find.text('First'), findsNothing);
-    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
     expect(find.text('Second'), findsNothing);
     expect(haptics, isEmpty);
@@ -230,7 +230,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Held'), findsNothing);
     expect(find.text('needs you'), findsNothing);
-    await tester.pump(const Duration(seconds: 14));
+    await tester.pump(const Duration(seconds: 11));
     expect(find.text('Next'), findsOneWidget);
     await tester.pump(const Duration(seconds: 1));
     await tester.pump();
@@ -264,7 +264,7 @@ void main() {
         final available = width - 24 - 20 - 30;
         const cap = 420.0;
         expect(rect.width, closeTo(available < cap ? available : cap, .01));
-        expect(rect.top, closeTo(24.0 + (mobile ? 56 + 12 : 44 + 8), .01));
+        expect(rect.top, closeTo(24.0 + (mobile ? 4 : 44 + 8), .01));
         if (mobile) {
           expect(rect.center.dx, closeTo((width + 20 - 30) / 2, .01));
         } else {
@@ -334,5 +334,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(opened.last['title'], 'First');
     expect(find.byType(Dismissible), findsNothing);
+  });
+
+  testWidgets('phone toast clears page title below header and dismisses in 4s',
+      (tester) async {
+    _platform(TargetPlatform.android);
+    foregroundNotifications.add({'title': 'Build ready'});
+    await tester.pumpWidget(MaterialApp(
+      home: MediaQuery(
+        data: const MediaQueryData(padding: EdgeInsets.only(top: 24)),
+        child: NotificationPopovers(
+          child: Scaffold(
+            body: Padding(
+              padding: const EdgeInsets.only(top: 24 + 62),
+              child: const Text('Sessions'),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    final toastRect = tester.getRect(find.byType(Dismissible));
+    final titleRect = tester.getRect(find.text('Sessions'));
+    expect(toastRect.top, closeTo(28.0, 0.1));
+    expect(toastRect.bottom, lessThanOrEqualTo(titleRect.top + 4));
+
+    await tester.pump(const Duration(milliseconds: 3900));
+    expect(find.text('Build ready'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpAndSettle();
+    expect(find.text('Build ready'), findsNothing);
   });
 }

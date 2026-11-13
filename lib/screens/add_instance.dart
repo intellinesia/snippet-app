@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import '../glass.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_zxing/flutter_zxing.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -47,10 +48,13 @@ Future<Instance?> showAddMachineDialog(BuildContext context) {
     pageBuilder: (_, __, ___) => const Center(child: _AddMachineDialog()),
     transitionBuilder: (_, anim, __, child) {
       final curved = CurvedAnimation(parent: anim, curve: Motion.enter);
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-            scale: Tween(begin: 0.98, end: 1.0).animate(curved), child: child),
+      return ModalGlass(
+        child: FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+              scale: Tween(begin: 0.98, end: 1.0).animate(curved),
+              child: child),
+        ),
       );
     },
   );

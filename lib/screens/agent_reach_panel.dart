@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
-import '../menu_widgets.dart';
+import '../chat/chat_info.dart' show DockedInfoNav, dockedPick;
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -15,6 +15,11 @@ Future<void> showAgentReachSettings(
   Offset? point,
 }) {
   final panel = AgentReachPanel(client: client, agentId: agentId);
+  final nav = DockedInfoNav.maybeOf(context);
+  if (nav != null) {
+    nav.push('How it reaches you', (_) => panel);
+    return Future<void>.value();
+  }
   if (kMobile) {
     return showAppSheet(context,
         title: name,
@@ -107,13 +112,25 @@ class _AgentReachPanelState extends State<AgentReachPanel> {
       if (!_routes.any((r) => _sameRoute(r, current)) && current.isNotEmpty)
         current,
     ];
-    final picked = await showAppMenu<int>(anchor, anchor: anchor, items: [
-      for (var i = 0; i < options.length; i++)
-        appMenuItem(
-            value: i,
-            selected: _sameRoute(options[i], current),
-            label: _routeLabel(options[i])),
-    ]);
+    final picked = await dockedPick<int>(
+      context,
+      title: kind,
+      options: [
+        for (var i = 0; i < options.length; i++)
+          (i, _routeLabel(options[i]), null),
+      ],
+      selected: [
+        for (var i = 0; i < options.length; i++)
+          if (_sameRoute(options[i], current)) i,
+      ].firstOrNull,
+      fallback: () => showAppMenu<int>(anchor, anchor: anchor, items: [
+        for (var i = 0; i < options.length; i++)
+          appMenuItem(
+              value: i,
+              selected: _sameRoute(options[i], current),
+              label: _routeLabel(options[i])),
+      ]),
+    );
     if (picked == null || _sameRoute(options[picked], current)) return;
     await _save(policy: {kind: options[picked]});
   }

@@ -6,6 +6,7 @@ import '../api.dart';
 import '../desktop_layout.dart';
 import '../models.dart';
 import '../platform.dart';
+import '../settings_form.dart';
 import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
@@ -131,14 +132,18 @@ class _WakesScreenState extends State<WakesScreen> {
               for (final w in wakes.wakes) _wakeRow(context, w, agents),
             ]),
           if (warmOn.isNotEmpty) ...[
-            const SizedBox(height: S.s20),
-            const SectionLabel('Keep warm'),
+            SizedBox(height: kMobile ? 0 : S.s20),
+            if (kMobile)
+              const SettingsGroupLabel('Keep warm')
+            else
+              const SectionLabel('Keep warm'),
             ListGroup(children: [
               for (final e in warmOn) _warmRow(context, e, agents),
             ]),
             if (warm != null && warm.calls7d > 0)
               Padding(
-                padding: const EdgeInsets.fromLTRB(S.s4, S.s8, S.s4, 0),
+                padding: EdgeInsets.fromLTRB(
+                    kMobile ? S.s16 : S.s4, S.s8, kMobile ? S.s16 : S.s4, 0),
                 child: Text(
                     '${warm.calls7d} warm calls in the last 7 days, ${tokensLabel(warm.cacheReadTokens7d)} tokens read from cache.',
                     style: TS.meta()),
@@ -147,12 +152,17 @@ class _WakesScreenState extends State<WakesScreen> {
         ]);
       },
     );
-    if (widget.onBack == null) return body;
+    final child = kMobile ? CardGroupScope(child: body) : body;
+    if (widget.onBack == null) return child;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        NavBackRow(title: 'Wakes', onBack: widget.onBack!),
-        Expanded(child: body),
+        if (kMobile)
+          SettingsHeader(
+              title: 'Wakes', compact: true, onBack: widget.onBack!)
+        else
+          NavBackRow(title: 'Wakes', onBack: widget.onBack!),
+        Expanded(child: child),
       ],
     );
   }
@@ -176,8 +186,11 @@ class _WakesScreenState extends State<WakesScreen> {
         key: ValueKey('wake-${w.owner}'),
         title: name,
         subtitle: w.lastError != null ? '$sub · ${w.lastError}' : sub,
-        leading: AppIcon('calendar-clock',
-            size: 19, color: w.enabled ? AppColors.fg3 : AppColors.fg4),
+        leading: kMobile
+            ? V5IconTile('calendar-clock',
+                color: w.enabled ? AppColors.fg2 : AppColors.fg4)
+            : AppIcon('calendar-clock',
+                size: 19, color: w.enabled ? AppColors.fg3 : AppColors.fg4),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           if (w.lastStatus != null)
             Container(
@@ -219,7 +232,9 @@ class _WakesScreenState extends State<WakesScreen> {
         key: ValueKey('warm-${e.owner}'),
         title: name,
         subtitle: sub,
-        leading: AppIcon('gauge', size: 19, color: AppColors.fg3),
+        leading: kMobile
+            ? const V5IconTile('gauge')
+            : AppIcon('gauge', size: 19, color: AppColors.fg3),
         trailing: e.warms > 0
             ? Text('${e.warms} warm${e.warms == 1 ? '' : 's'}',
                 style: TS.meta())

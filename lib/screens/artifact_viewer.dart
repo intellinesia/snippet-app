@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../api.dart';
+import '../chat/chat_card.dart';
 import '../gesture_physics.dart';
 import '../models.dart';
 import '../panel.dart';
@@ -190,8 +191,28 @@ Future<void> openArtifact(
   );
 }
 
-/// An artifact in the transcript: one line with its title and version.
-class ArtifactRow extends StatelessWidget {
+String _artifactKindLabel(String kind) => switch (kind) {
+      'html' => 'Web page',
+      'markdown' => 'Document',
+      'image' || 'svg' => 'Image',
+      'csv' => 'Table',
+      'pdf' => 'PDF',
+      'code' => 'Code',
+      'collection' => 'Collection',
+      _ => 'File',
+    };
+
+Widget _artifactIconTile(String kind) => Container(
+      width: 40,
+      height: 40,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+          color: AppColors.surface3, borderRadius: BorderRadius.circular(10)),
+      child: AppIcon(artifactIcon(kind), size: 20, color: AppColors.fg2),
+    );
+
+/// An artifact in the transcript: a card with a preview and a footer.
+class ArtifactRow extends StatefulWidget {
   const ArtifactRow({
     super.key,
     required this.client,
@@ -211,28 +232,175 @@ class ArtifactRow extends StatelessWidget {
   final String kind;
   final String caption;
 
-  String get _kindLabel => switch (kind) {
-        'html' => 'Web page',
-        'markdown' => 'Document',
-        'image' || 'svg' => 'Image',
-        'csv' => 'Table',
-        'pdf' => 'PDF',
-        'code' => 'Code',
-        'collection' => 'Collection',
-        _ => 'File',
-      };
+  @override
+  State<ArtifactRow> createState() => _ArtifactRowState();
+}
 
-  void _open(BuildContext context) => openArtifact(context,
-      client: client, session: session, id: id, version: version);
+class _ArtifactRowState extends State<ArtifactRow> {
+  static const _previewKinds = {'image', 'markdown', 'code', 'csv'};
+  Future<_ArtifactPreview?>? _preview;
 
   @override
-  Widget build(BuildContext context) => MediaRow(
-        icon: artifactIcon(kind),
-        name: title,
-        detail: [_kindLabel, 'v$version', if (caption.isNotEmpty) caption]
-            .join(' · '),
-        onTap: () => _open(context),
-      );
+  void initState() {
+    super.initState();
+    if (_previewKinds.contains(widget.kind)) _preview = _load();
+  }
+
+  Future<_ArtifactPreview?> _load() async {
+    final all = await widget.client.artifacts(widget.session);
+    final a = all.where((a) => a.id == widget.id).firstOrNull;
+    final v = a?.version(widget.version) ?? a?.latest;
+    if (v == null) return null;
+    if (widget.kind == 'image') {
+      return _ArtifactPreview(uri: widget.client.artifactUri(v.url).toString());
+    }
+    final text = await widget.client.artifactText(v.url);
+    return _ArtifactPreview(
+        text: text.length > 600 ? text.substring(0, 600) : text);
+  }
+
+  void _open(BuildContext context) => openArtifact(context,
+      client: widget.client,
+      session: widget.session,
+      id: widget.id,
+      version: widget.version);
+
+  String get _meta => [
+        _artifactKindLabel(widget.kind),
+        'v${widget.version}',
+        if (widget.caption.isNotEmpty) widget.caption
+      ].join(' · ');
+
+  Widget _compact(BuildContext context) => ChatCard(children: [
+        ChatCardFooter(
+          title: widget.title,
+          meta: _meta,
+          leading: _artifactIconTile(widget.kind),
+          divider: false,
+          onTap: () => _open(context),
+        ),
+      ]);
+
+  @override
+  Widget build(BuildContext context) {
+    final f = _preview;
+    if (f == null) return _compact(context);
+    return FutureBuilder<_ArtifactPreview?>(
+      future: f,
+      builder: (context, snap) {
+        if (snap.hasError ||
+            (snap.connectionState == ConnectionState.done &&
+                snap.data == null)) {
+          return _compact(context);
+        }
+        final d = snap.data;
+        Widget body;
+        if (d == null) {
+          body = const ArtifactSkeleton(fill: true);
+        } else if (d.uri != null) {
+          body = Image.network(
+            d.uri!,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (_, __, ___) => Center(
+                child: AppIcon('image', size: 24, color: AppColors.fg4)),
+            frameBuilder: (context, child, frame, sync) {
+              if (sync) return child;
+              return AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: frame == null
+                    ? const ArtifactSkeleton(key: ValueKey('loading'), fill: true)
+                    : KeyedSubtree(key: const ValueKey('loaded'), child: child),
+              );
+            },
+          );
+        } else {
+          body = _TextPreview(text: d.text ?? '');
+        }
+        return ChatCard(children: [
+          Container(
+            height: 150,
+            width: double.infinity,
+            clipBehavior: Clip.hardEdge,
+            decoration: BoxDecoration(color: AppColors.surface2),
+            child: body,
+          ),
+          ChatCardFooter(
+            title: widget.title,
+            meta: _meta,
+            onTap: () => _open(context),
+          ),
+        ]);
+      },
+    );
+  }
+}
+
+class _ArtifactPreview {
+  const _ArtifactPreview({this.uri, this.text});
+  final String? uri;
+  final String? text;
+}
+
+class _TextPreview extends StatelessWidget {
+  const _TextPreview({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final lines = text.trim().split('\n');
+    var i = lines.indexWhere((l) => l.trim().isNotEmpty);
+    if (i < 0) i = 0;
+    final first = lines.isEmpty ? '' : lines[i].replaceFirst(RegExp(r'^#+\s*'), '');
+    final rest = lines.skip(i + 1).join('\n').trim();
+    return Stack(children: [
+      Positioned.fill(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+          child: SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(first,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(15, weight: W.strong, color: AppColors.fg2)),
+              if (rest.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(rest,
+                    maxLines: 8,
+                    overflow: TextOverflow.clip,
+                    style: sans(12, color: AppColors.fg3)),
+              ],
+            ],
+          ),
+          ),
+        ),
+      ),
+      Positioned(
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: 48,
+        child: IgnorePointer(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.surface2.withValues(alpha: 0),
+                  AppColors.surface2
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ]);
+  }
 }
 
 bool artifactShowsInline(String kind, String? display) {
@@ -328,7 +496,7 @@ class _ArtifactInlineState extends State<ArtifactInline>
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.surface1,
+                    color: AppColors.tint1,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: SingleChildScrollView(
@@ -363,18 +531,43 @@ class _ArtifactInlineState extends State<ArtifactInline>
   Widget build(BuildContext context) {
     super.build(context);
     return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: FutureBuilder<ArtifactVersion?>(
-          future: _version,
-          builder: (context, snap) {
-            if (snap.hasError) return _note('${snap.error}');
-            if (snap.connectionState != ConnectionState.done) return _loading();
-            final v = snap.data;
-            if (v == null) return _note('This artifact is no longer available.');
-            return _body(v);
-          },
-        ),
-      );
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: ChatCard(
+        maxWidth: double.infinity,
+        children: [
+          Padding(
+            padding: EdgeInsets.all(ChatCard.pad),
+            child: FutureBuilder<ArtifactVersion?>(
+              future: _version,
+              builder: (context, snap) {
+                if (snap.hasError) return _note('${snap.error}');
+                if (snap.connectionState != ConnectionState.done) {
+                  return _loading();
+                }
+                final v = snap.data;
+                if (v == null) {
+                  return _note('This artifact is no longer available.');
+                }
+                return _body(v);
+              },
+            ),
+          ),
+          ChatCardFooter(
+            title: widget.title,
+            meta: [
+              _artifactKindLabel(widget.kind),
+              'v${widget.version}',
+              if (widget.caption.isNotEmpty) widget.caption
+            ].join(' · '),
+            onTap: () => openArtifact(context,
+                client: widget.client,
+                session: widget.session,
+                id: widget.id,
+                version: widget.version),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -472,7 +665,7 @@ class _ArtifactSkeletonState extends State<ArtifactSkeleton>
 
   @override
   Widget build(BuildContext context) {
-    final block = AppColors.surface2;
+    final block = AppColors.tint2;
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: widget.fill ? MainAxisSize.max : MainAxisSize.min,
@@ -487,10 +680,9 @@ class _ArtifactSkeletonState extends State<ArtifactSkeleton>
         const SizedBox(height: 16),
         if (widget.fill)
           Expanded(
-              child: Skeleton(
-                  height: double.infinity, radius: 12, color: AppColors.surface1))
+              child:           Skeleton(height: double.infinity, radius: 12, color: AppColors.tint1))
         else
-          Skeleton(height: 96, radius: 12, color: AppColors.surface1),
+          Skeleton(height: 96, radius: 12, color: AppColors.tint1),
       ],
     );
     return Semantics(
@@ -1082,7 +1274,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
             height: 64,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppColors.surface2,
+              color: AppColors.tint2,
               borderRadius: BorderRadius.circular(20),
             ),
             child: AppIcon(
@@ -1385,7 +1577,7 @@ class _CsvTable extends StatelessWidget {
             for (var i = 0; i < rows.length; i++)
               TableRow(
                 decoration:
-                    i == 0 ? BoxDecoration(color: AppColors.surface1) : null,
+                    i == 0 ? BoxDecoration(color: AppColors.tint1) : null,
                 children: [
                   for (var c = 0; c < width; c++)
                     cell(c < rows[i].length ? rows[i][c] : '', head: i == 0),

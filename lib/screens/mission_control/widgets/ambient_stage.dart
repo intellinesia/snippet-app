@@ -6,7 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../ambient/capture.dart';
+import '../../../ambient/ambient_edge_glow.dart';
+import '../../../ambient/ambient_model.dart';
+import '../../../ambient/live_caption.dart';
 import '../../../ambient/controller.dart';
 import '../../../ambient/voice.dart';
 import '../../../api.dart';
@@ -17,113 +19,53 @@ import '../../../platform.dart';
 import '../../../settings_form.dart';
 import '../../../theme.dart';
 import '../../../widgets.dart';
+import '../../mobile_voice_page.dart';
+import 'ambient_desktop_panel.dart';
 
 final ValueNotifier<AmbientStateEvent?> _emptyAmbientState = ValueNotifier(null);
 
-Color _modeColor(String mode) =>
-    mode == 'active' ? AppColors.accent : AppColors.ok;
+/// The words being heard right now (or the last finished utterance) under the status line.
+class AmbientHeardLine extends StatelessWidget {
+  const AmbientHeardLine({super.key, required this.wide, this.feed});
 
-Color _stateColor(AmbientSettings? s, AmbientStatus st) {
-  if (s != null && s.enabled && st.error != null) return AppColors.danger;
-  return _modeColor(s?.shownMode ?? 'passive');
-}
-
-class _AmbientModel extends ChangeNotifier {
-  _AmbientModel(this.client) {
-    ambient.addListener(notifyListeners);
-    ambient.bind();
-    ambient.deviceId.then((v) {
-      selfId = v;
-      notifyListeners();
-    });
-    load();
-    _live = Revalidator(
-        client: client,
-        on: (e) => e['kind'] == 'ambient_state' || e['kind'] == 'config',
-        debounce: const Duration(seconds: 1),
-        onRevalidate: ({required bool force}) => load());
-  }
-
-  final DaemonClient client;
-  final AmbientController ambient = AmbientController.instance;
-  AmbientSettings? settings;
-  String selfId = '';
-  String? error;
-  bool busy = false;
-  Revalidator? _live;
-
-  AmbientStatus get status => ambient.status;
-  bool get on => settings?.enabled ?? false;
-  bool get listening => on && status.running;
-
-  Future<void> load() async {
-    try {
-      settings = await client.getAmbientSettings();
-      notifyListeners();
-    } catch (_) {}
-  }
-
-  bool get elsewhere {
-    final id = settings?.listeningId;
-    return id != null && selfId.isNotEmpty && id != selfId;
-  }
-
-  Future<void> press() async {
-    if (on && listening) return toggle(false);
-    if (on) {
-      if (busy) return;
-      busy = true;
-      notifyListeners();
-      error = await ambient.start(client);
-      busy = false;
-      notifyListeners();
-      load();
-      return;
-    }
-    return toggle(true);
-  }
-
-  Future<void> toggle(bool value) async {
-    if (busy) return;
-    busy = true;
-    error = null;
-    notifyListeners();
-    final (saved, err) = await ambient.setEnabled(client, value);
-    if (saved != null) settings = saved;
-    error = err;
-    busy = false;
-    notifyListeners();
-    if (value && err == null && !await ambient.ignoringBattery) {
-      await ambient.requestBatteryExemption();
-    }
-  }
-
-  Future<void> shiftMode(int dir) =>
-      setMode(dir > 0 ? 'active' : 'passive');
-
-  Future<void> setMode(String mode) async {
-    final before = settings;
-    if (before == null ||
-        (before.mode == mode && before.shownMode == mode)) {
-      return;
-    }
-    settings = before.withMode(mode);
-    notifyListeners();
-    try {
-      final saved = await client.setAmbientSettings(mode: mode);
-      settings = saved.withMode(mode);
-    } catch (e) {
-      settings = before;
-      error = '$e';
-    }
-    notifyListeners();
-  }
+  final bool wide;
+  final LiveCaptionFeed? feed;
 
   @override
-  void dispose() {
-    _live?.dispose();
-    ambient.removeListener(notifyListeners);
-    super.dispose();
+  Widget build(BuildContext context) {
+    final f = feed ?? LiveCaptionFeed.instance;
+    final motion =
+        reduceMotion(context) ? Duration.zero : Motion.fast;
+    return AnimatedSize(
+      duration: motion,
+      child: ValueListenableBuilder<String?>(
+        valueListenable: f.text,
+        builder: (context, live, _) =>
+            ValueListenableBuilder<String?>(
+          valueListenable: f.lastFinal,
+          builder: (context, last, _) {
+            final shown = live ?? last;
+            return AnimatedSwitcher(
+              duration: motion,
+              child: shown == null
+                  ? const SizedBox.shrink(key: ValueKey('none'))
+                  : Text(
+                      '\u201C$shown\u201D',
+                      key: ValueKey(shown),
+                      textAlign:
+                          wide ? TextAlign.start : TextAlign.center,
+                      maxLines: wide ? 2 : 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(wide ? 13 : 16,
+                          color: live != null
+                              ? AppColors.fg1
+                              : AppColors.fg2),
+                    ),
+            );
+          },
+        ),
+      ),
+    );
   }
 }
 
@@ -273,15 +215,16 @@ class _OrbState extends State<_Orb> with SingleTickerProviderStateMixin {
 }
 
 class AmbientHeaderOrb extends StatefulWidget {
-  const AmbientHeaderOrb({super.key, required this.client});
+  const AmbientHeaderOrb({super.key, required this.client, this.size = 38});
   final DaemonClient client;
+  final double size;
 
   @override
   State<AmbientHeaderOrb> createState() => _AmbientHeaderOrbState();
 }
 
 class _AmbientHeaderOrbState extends State<AmbientHeaderOrb> {
-  late final _AmbientModel _m = _AmbientModel(widget.client)
+  late final AmbientModel _m = AmbientModel(widget.client)
     ..addListener(_changed);
 
   void _changed() {
@@ -297,13 +240,15 @@ class _AmbientHeaderOrbState extends State<AmbientHeaderOrb> {
 
   @override
   Widget build(BuildContext context) {
-    final color = _stateColor(_m.settings, _m.status);
+    final color = ambientStateColor(_m.settings, _m.status);
     return Semantics(
       button: true,
       label: 'Ambient listening',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => showAmbientStage(context, widget.client),
+        onTap: () => kMobile
+            ? openMobileVoicePage(context, client: widget.client)
+            : showAmbientStage(context, widget.client),
         onLongPress: () {
           if (_m.settings == null) return;
           HapticFeedback.mediumImpact();
@@ -316,11 +261,11 @@ class _AmbientHeaderOrbState extends State<AmbientHeaderOrb> {
           _m.shiftMode(v < 0 ? 1 : -1);
         },
         child: SizedBox(
-          width: 44,
-          height: 44,
+          width: widget.size + 6,
+          height: widget.size + 6,
           child: Center(
             child: _Orb(
-              size: 38,
+              size: widget.size,
               color: color,
               alive: _m.listening,
               level: _m.status.speaking ? 1 : 0,
@@ -367,19 +312,23 @@ class AmbientStage extends StatefulWidget {
 
 class _AmbientStageState extends State<AmbientStage>
     with SingleTickerProviderStateMixin {
-  late final _AmbientModel _m = _AmbientModel(widget.client)
+  late final AmbientModel _m = AmbientModel(widget.client)
     ..addListener(_changed);
   late final CurvedAnimation _a = CurvedAnimation(
       parent: widget.animation, curve: Motion.enter, reverseCurve: Motion.exit);
   List<AmbientEvent> _recent = const [];
+  List<AmbientEvent> _recentAll = const [];
   Revalidator? _recentLive;
-  late final AnimationController _dragC =
-      AnimationController.unbounded(vsync: this)..addListener(_changed);
+  late final AnimationController _dragC;
   double get _drag => _dragC.value;
 
   @override
   void initState() {
     super.initState();
+    // Eager: created lazily, dispose() was the first touch on desktop and
+    // asked an unmounting element for a ticker.
+    _dragC = AnimationController.unbounded(vsync: this)..addListener(_changed);
+    if (!kMobile) scheduleMicrotask(() => AmbientEdgeGlow.suppressed.value = true);
     _loadRecent();
     _recentLive = Revalidator(
         client: widget.client,
@@ -392,15 +341,11 @@ class _AmbientStageState extends State<AmbientStage>
     try {
       final events = await widget.client.ambientEvents(limit: 16);
       if (!mounted) return;
-      setState(() => _recent = events
-          .where((e) =>
-              e.status == 'done' &&
-              e.kept &&
-              e.text.trim().isNotEmpty &&
-              !const {'media', 'noise', 'background', 'echo'}
-                  .contains(e.verdict))
-          .take(3)
-          .toList());
+      final kept = filterAmbientEvents(events);
+      setState(() {
+        _recentAll = kept;
+        _recent = kept.take(3).toList();
+      });
     } catch (_) {}
   }
 
@@ -410,6 +355,8 @@ class _AmbientStageState extends State<AmbientStage>
 
   @override
   void dispose() {
+    // Deferred: the glow sits above this route and the tree is locked here.
+    if (!kMobile) scheduleMicrotask(() => AmbientEdgeGlow.suppressed.value = false);
     _recentLive?.dispose();
     _dragC.dispose();
     _m.removeListener(_changed);
@@ -436,24 +383,14 @@ class _AmbientStageState extends State<AmbientStage>
     _m.setMode(mode);
   }
 
-  String _caption(AmbientStateEvent? event) {
-    if (kIsWeb) return 'Unavailable in browser';
-    if (_m.elsewhere) {
-      return 'On ${_m.settings?.listeningDevice ?? 'another device'}';
-    }
-    if (_m.status.displaced) return 'Paused here';
-    if (_m.busy) return _live ? 'Stopping…' : 'Starting…';
-    if (!_live) return 'Off';
-    if (event != null) {
-      if (event.sub == 'speaking') return 'Speaking';
-      if (event.sub == 'thinking') return 'Thinking';
-      if (event.mode == 'active') return 'In conversation';
-    }
-    if (_m.status.assistantSpeaking) return 'Speaking';
-    if (_m.settings?.conversationOpen ?? false) return 'In conversation';
-    if (_m.status.speaking) return 'Hearing you';
-    return 'Listening';
-  }
+  String _caption(AmbientStateEvent? event) => ambientStatusText(
+        settings: _m.settings,
+        status: _m.status,
+        event: event,
+        elsewhere: _m.elsewhere,
+        busy: _m.busy,
+        liveOverride: _live,
+      );
 
   String _ago(DateTime t) {
     final d = DateTime.now().difference(t);
@@ -502,7 +439,7 @@ class _AmbientStageState extends State<AmbientStage>
 
   Widget _panel(bool wide, double orb) {
     final err = _m.error ?? _m.status.error;
-    final color = _stateColor(_m.settings, _m.status);
+    final color = ambientStateColor(_m.settings, _m.status);
     final popover = wide && widget.anchor != null;
     final orbWidget = Semantics(
       button: true,
@@ -546,6 +483,7 @@ class _AmbientStageState extends State<AmbientStage>
                 _toggleControl(),
               ],
             ),
+            AmbientHeardLine(wide: true),
             const SizedBox(height: 10),
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -570,6 +508,7 @@ class _AmbientStageState extends State<AmbientStage>
             Center(child: orbWidget),
             const SizedBox(height: 12),
             _statusText(fontSize: 15, align: TextAlign.center),
+            AmbientHeardLine(wide: false),
             const SizedBox(height: 20),
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -613,9 +552,94 @@ class _AmbientStageState extends State<AmbientStage>
     );
   }
 
+  Widget _desktopPanel() => ValueListenableBuilder<AmbientVoice?>(
+        valueListenable: AmbientController.instance.voice,
+        builder: (context, voice, _) =>
+            ValueListenableBuilder<AmbientStateEvent?>(
+          valueListenable: voice?.state ?? _emptyAmbientState,
+          builder: (context, event, _) {
+            final word = _caption(event);
+            return AmbientDesktopPanel(
+              stateWord: word,
+              live: _live,
+              color: ambientStateColor(_m.settings, _m.status),
+              canToggle: _canToggle,
+              onToggle: _toggle,
+              onClose: _close,
+              recent: _recentAll,
+              orb: _Orb(
+                size: 112,
+                color: ambientStateColor(_m.settings, _m.status),
+                alive: _live,
+                level: _live &&
+                        (_m.status.speaking || _m.status.assistantSpeaking)
+                    ? 1
+                    : 0,
+              ),
+              error: kIsWeb ? null : (_m.error ?? _m.status.error),
+            );
+          },
+        ),
+      );
+
+  Widget _buildDesktop(Size size) {
+    final anchor = widget.anchor;
+    const w = AmbientDesktopPanel.width, h = AmbientDesktopPanel.height;
+    final double left = anchor == null
+        ? 12.0
+        : anchor.left.clamp(12.0, math.max(12.0, size.width - w - 12));
+    final double bottom = anchor == null
+        ? 12.0
+        : (size.height - anchor.top + 8).clamp(12.0, math.max(12.0, size.height - 120));
+    final still = reduceMotion(context);
+    final panel = ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: size.height - bottom - 12),
+      child: _desktopPanel(),
+    );
+    return CallbackShortcuts(
+      bindings: {const SingleActivator(LogicalKeyboardKey.escape): _close},
+      child: Focus(
+        autofocus: true,
+        child: Material(
+          type: MaterialType.transparency,
+          child: Stack(children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _close,
+                child: AnimatedBuilder(
+                  animation: _a,
+                  builder: (_, __) => ColoredBox(
+                      color: Colors.black
+                          .withValues(alpha: 0.06 * _a.value.clamp(0.0, 1.0))),
+                ),
+              ),
+            ),
+            Positioned(
+              left: left,
+              bottom: bottom,
+              width: w,
+              height: math.min(h, size.height - bottom - 12),
+              child: FadeTransition(
+                opacity: _a,
+                child: still
+                    ? panel
+                    : ScaleTransition(
+                        alignment: Alignment.bottomLeft,
+                        scale: Tween(begin: 0.96, end: 1.0).animate(_a),
+                        child: panel),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    if (!kMobile) return _buildDesktop(size);
     final wide = size.width >= 720;
     final anchor = wide ? widget.anchor : null;
     final still = reduceMotion(context);

@@ -136,7 +136,7 @@ class _PrListPanelState extends State<PrListPanel> {
     return Padding(
       padding: const EdgeInsets.only(right: 4),
       child: Material(
-        color: on ? AppColors.surface3 : Colors.transparent,
+        color: on ? AppColors.tint2 : Colors.transparent,
         borderRadius: BorderRadius.circular(R.pill),
         child: InkWell(
           onTap: () => _pick(key),
@@ -159,7 +159,7 @@ class _PrListPanelState extends State<PrListPanel> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
       child: Material(
-        color: selected ? AppColors.surface2 : Colors.transparent,
+        color: selected ? AppColors.tint2 : Colors.transparent,
         borderRadius: BorderRadius.circular(R.md),
         child: InkWell(
           onTap: () => widget.onSelect(pr.number),
@@ -263,7 +263,7 @@ class _PrListPanelState extends State<PrListPanel> {
           height: 32,
           padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
-            color: AppColors.surface2,
+            color: AppColors.tint2,
             borderRadius: BorderRadius.circular(R.md),
           ),
           child: Row(children: [
@@ -415,7 +415,7 @@ class DesktopPrDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: AppColors.bg,
+        color: AppColors.paneBg,
         child: _DesktopPrDetail(
           client: client,
           session: session,
@@ -462,7 +462,7 @@ class _DesktopPullRequestsState extends State<DesktopPullRequests> {
     final selected = _selected;
     final list = Container(
       decoration: BoxDecoration(
-        color: AppColors.bg,
+        color: AppColors.paneBg,
         border: Border(right: BorderSide(color: AppColors.line)),
       ),
       child: PrListPanel(
@@ -478,7 +478,7 @@ class _DesktopPullRequestsState extends State<DesktopPullRequests> {
       ),
     );
     return Material(
-      color: AppColors.bg,
+      color: AppColors.paneBg,
       child: LayoutBuilder(builder: (context, box) {
         final narrow = box.maxWidth < 760;
         final showList = !_listHidden && (!narrow || selected == null);
@@ -705,7 +705,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
   Widget _branch(String name) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
         decoration: BoxDecoration(
-          color: AppColors.surface2,
+          color: AppColors.tint2,
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(name, style: mono(12, color: AppColors.fg2)),
@@ -808,7 +808,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
-                color: AppColors.surface2,
+                color: AppColors.tint2,
                 borderRadius: BorderRadius.circular(R.pill),
               ),
               child: Text('$count', style: sans(11, weight: W.label, color: AppColors.fg3)),
@@ -946,7 +946,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                       width: 26,
                       height: 26,
                       alignment: Alignment.center,
-                      decoration: BoxDecoration(color: AppColors.surface2, shape: BoxShape.circle),
+                      decoration: BoxDecoration(color: AppColors.tint2, shape: BoxShape.circle),
                       child: AppIcon(icon ?? 'git-commit', size: 12, color: ink ?? AppColors.fg3),
                     ),
             ),
@@ -965,7 +965,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                         width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                         decoration: BoxDecoration(
-                          color: AppColors.surface1,
+                          color: AppColors.tint1,
                           borderRadius: BorderRadius.circular(R.md),
                         ),
                         child: body,
@@ -1025,7 +1025,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                         padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                         margin: EdgeInsets.only(bottom: threads.isEmpty ? 0 : 8),
                         decoration: BoxDecoration(
-                          color: AppColors.surface1,
+                          color: AppColors.tint1,
                           borderRadius: BorderRadius.circular(R.md),
                         ),
                         child: PrCommentBody(e.body),
@@ -1036,7 +1036,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 10),
                           minimumSize: const Size(0, 30),
-                          backgroundColor: AppColors.surface1,
+                          backgroundColor: AppColors.tint1,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.sm)),
                         ),
                         icon: AppIcon('message', size: 13, color: AppColors.accent),
@@ -1205,7 +1205,7 @@ class _DesktopCommitsState extends State<_DesktopCommits> {
     final short = c.oid.length > 7 ? c.oid.substring(0, 7) : c.oid;
     final on = _open == c;
     return Material(
-      color: on ? AppColors.surface2 : Colors.transparent,
+      color: on ? AppColors.tint2 : Colors.transparent,
       borderRadius: BorderRadius.circular(R.md),
       child: InkWell(
         onTap: () => _show(c),

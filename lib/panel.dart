@@ -1,13 +1,16 @@
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
+import 'glass.dart';
 
 import 'platform.dart';
 import 'shell_panel.dart';
 import 'api.dart';
 import 'media_views.dart';
+import 'motion_routes.dart';
 import 'theme.dart';
 
-export 'shell_panel.dart' show ShellPanelPurpose, ShellPanelScope;
+export 'shell_panel.dart'
+    show ShellPanelPurpose, ShellPanelScope, ShellRequestScope;
 
 enum PanelStyle { drawer, dialog }
 
@@ -27,6 +30,9 @@ Future<T?> presentScreen<T>(
   String panelId = '',
   DaemonClient? originClient,
   String? originSessionId,
+  String? title,
+  Widget Function(BuildContext context, VoidCallback closeTab)? sidePanel,
+  List<String>? iconAgentIds,
 }) {
   final host = ShellPanelScope.maybeOf(context);
   if (!kMobile &&
@@ -39,6 +45,9 @@ Future<T?> presentScreen<T>(
           id: panelId,
           client: originClient ?? DaemonScope.maybeOf(context) ?? host.client,
           sessionId: originSessionId ?? host.sessionId,
+          title: title,
+          sidePanel: sidePanel,
+          iconAgentIds: iconAgentIds,
           builder: builder,
         ))
         .then((value) => value as T?);
@@ -80,7 +89,17 @@ Future<T?> presentScreen<T>(
       });
     },
     transitionBuilder: (ctx, anim, _, child) {
-      final curved = CurvedAnimation(parent: anim, curve: Motion.enter);
+      final curved = CurvedAnimation(
+          parent: anim, curve: Motion.enter, reverseCurve: Motion.exit);
+      final narrow = MediaQuery.sizeOf(ctx).width < kDesktopBreakpoint;
+      if (narrow && !reduceMotion(ctx)) {
+        // Full-screen on a phone: rise like a sheet instead of a bare fade.
+        return SlideTransition(
+          position: Tween(begin: const Offset(0, 0.08), end: Offset.zero)
+              .animate(curved),
+          child: FadeTransition(opacity: curved, child: child),
+        );
+      }
       final transition = (style == PanelStyle.dialog)
           ? FadeTransition(
               opacity: curved,
@@ -93,7 +112,9 @@ Future<T?> presentScreen<T>(
                   .animate(curved),
               child: child,
             );
-      return transition;
+      return style == PanelStyle.dialog
+          ? ModalGlass(child: transition)
+          : transition;
     },
   );
 }
@@ -112,7 +133,7 @@ Future<T?> showModal<T>(
   final windowWidth = view.physicalSize.width / view.devicePixelRatio;
   if (windowWidth < kDesktopBreakpoint) {
     return Navigator.of(context)
-        .push<T>(MaterialPageRoute(builder: (_) => child));
+        .push<T>(AppPageRoute<T>(builder: (_) => child));
   }
   return showGeneralDialog<T>(
     context: context,
@@ -131,10 +152,13 @@ Future<T?> showModal<T>(
     ),
     transitionBuilder: (ctx, anim, _, child) {
       final curved = CurvedAnimation(parent: anim, curve: Motion.enter);
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-            scale: Tween(begin: 0.98, end: 1.0).animate(curved), child: child),
+      return ModalGlass(
+        child: FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+              scale: Tween(begin: 0.98, end: 1.0).animate(curved),
+              child: child),
+        ),
       );
     },
   );

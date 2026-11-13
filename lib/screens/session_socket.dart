@@ -25,7 +25,10 @@ extension _SessionScreenSocketExt on _SessionScreenState {
       (msg) {
         if (!identical(ch, _channel)) return; // stale socket — ignore
         _armLivenessWatchdog(ch);
-        if (_state?.status == 'running') _warmSeenAt = DateTime.now();
+        if (_state?.status == 'running') {
+          _warmSeenAt = DateTime.now();
+          if (_cold != null && mounted) _setState(() => _cold = null);
+        }
         // Any frame means a healthy socket — reset backoff + clear the banner.
         if (_reconnectAttempt != 0 || _connError != null) {
           _reconnectAttempt = 0;

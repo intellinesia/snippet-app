@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../chat/chat_info.dart' show DockedInfoNav, dockedPromptText;
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -17,6 +20,18 @@ Future<void> showAgentProfileSettings(
   Offset? point,
   VoidCallback? onChanged,
 }) {
+  final nav = DockedInfoNav.maybeOf(context);
+  if (nav != null) {
+    nav.push(
+        'Model',
+        (_) => AgentProfilePanel(
+            client: client,
+            agent: agent,
+            name: name,
+            onChanged: onChanged,
+            onPicked: nav.pop));
+    return Future<void>.value();
+  }
   Widget buildPanel(BuildContext ctx, {required bool closeOnPick}) =>
       AgentProfilePanel(
         client: client,
@@ -146,7 +161,7 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
   }
 
   Future<void> _editContext() async {
-    final text = await promptText(context,
+    final text = await dockedPromptText(context,
         title: 'Context length for ${widget.name}',
         initial: _context == null ? '' : tokensLabel(_context!),
         hint: 'For example 128k. Minimum 16k; empty uses the model window.');
@@ -301,4 +316,224 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
       ),
     );
   }
+}
+
+/// The chat info card's compact model rows: 'Tasks run on' and 'Desk runs on',
+/// each opening the same inference-profile list [AgentProfilePanel] uses.
+class AgentModelRows extends StatefulWidget {
+  const AgentModelRows({
+    super.key,
+    required this.client,
+    required this.agent,
+    required this.name,
+    this.onChanged,
+  });
+
+  final DaemonClient client;
+  final CoordinationAgent agent;
+  final String name;
+  final VoidCallback? onChanged;
+
+  @override
+  State<AgentModelRows> createState() => _AgentModelRowsState();
+}
+
+class _AgentModelRowsState extends State<AgentModelRows> {
+  ServerConfig? _cfg;
+  late String? _work = widget.agent.profile;
+  late String? _desk = widget.agent.deskModel;
+  late bool _separate = widget.agent.deskModel != null;
+
+  String get _workLabel => _work ?? 'Routing default';
+  String get _deskLabel =>
+      _separate ? (_desk ?? _work ?? 'Routing default') : _workLabel;
+
+  Future<void> _save(Future<void> Function() call, VoidCallback apply,
+      VoidCallback revert,
+      {bool notifyProfile = false}) async {
+    setState(apply);
+    try {
+      await call();
+      if (!mounted) return;
+      if (notifyProfile) {
+        toast(context, 'Model updated');
+        widget.onChanged?.call();
+      } else {
+        widget.onChanged?.call();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(revert);
+      toast(context, '$e', danger: true);
+    }
+  }
+
+  Future<ServerConfig?> _config() async {
+    final cached = _cfg;
+    if (cached != null) return cached;
+    try {
+      final cfg = await widget.client.getConfig();
+      if (!mounted) return null;
+      setState(() => _cfg = cfg);
+      return cfg;
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+      return null;
+    }
+  }
+
+  Widget _pickOptions(BuildContext ctx, ServerConfig cfg,
+          {required bool desk, required void Function(String) onPick}) =>
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _pickRow(
+            ctx,
+            desk ? 'Same as tasks' : 'Routing default',
+            desk ? 'Follows the profile above' : 'Your Routing settings',
+            'layers',
+            selected: desk ? !_separate : _work == null,
+            onTap: () => onPick(''),
+          ),
+          for (final p in cfg.profiles)
+            _pickRow(
+              ctx,
+              p.name,
+              '${p.provider} · ${p.model}',
+              'provider:${p.provider}',
+              selected: desk ? (_separate && _desk == p.name) : _work == p.name,
+              onTap: () => onPick(p.name),
+            ),
+        ],
+      );
+
+  Future<void> _pick({required bool desk}) async {
+    final cfg = await _config();
+    if (cfg == null || !mounted) return;
+    if (cfg.profiles.isEmpty) {
+      toast(context, 'No inference profiles configured', danger: true);
+      return;
+    }
+    final title = desk ? 'Desk runs on' : 'Tasks run on';
+    final nav = DockedInfoNav.maybeOf(context);
+    final String? picked;
+    if (nav != null) {
+      final done = Completer<String?>();
+      nav.push(
+          title,
+          (ctx) => _pickOptions(ctx, cfg,
+              desk: desk,
+              onPick: (v) {
+                if (!done.isCompleted) done.complete(v);
+                nav.pop();
+              }));
+      picked = await done.future;
+    } else {
+      picked = await showAppSheet<String>(
+        context,
+        title: title,
+        maxWidth: 340,
+        maxHeight: 460,
+        child: Builder(
+          builder: (ctx) => _pickOptions(ctx, cfg,
+              desk: desk, onPick: (v) => Navigator.pop(ctx, v)),
+        ),
+      );
+    }
+    if (picked == null || !mounted) return;
+    final name = picked.isEmpty ? null : picked;
+    if (!desk) {
+      if (name == _work) return;
+      final before = _work;
+      _save(() => widget.client.setAgentProfile(widget.agent.id, name),
+          () => _work = name, () => _work = before,
+          notifyProfile: true);
+      return;
+    }
+    if (name == null) {
+      if (!_separate) return;
+      final beforeDesk = _desk;
+      _save(() => widget.client.setAgentDeskProfile(widget.agent.id, null),
+          () {
+        _separate = false;
+        _desk = null;
+      }, () {
+        _separate = true;
+        _desk = beforeDesk;
+      });
+      return;
+    }
+    if (_separate && name == _desk) return;
+    final beforeDesk = _desk;
+    _save(() => widget.client.setAgentDeskProfile(widget.agent.id, name), () {
+      _separate = true;
+      _desk = name;
+    }, () {
+      _separate = beforeDesk != null;
+      _desk = beforeDesk;
+    });
+  }
+
+  Widget _pickRow(
+    BuildContext ctx,
+    String title,
+    String? detail,
+    String icon, {
+    required bool selected,
+    required VoidCallback onTap,
+  }) =>
+      ListRow(
+        title: title,
+        subtitle: detail,
+        selected: selected,
+        leading: AppIcon(icon, size: 16, color: AppColors.fg2),
+        trailing: selected
+            ? AppIcon('check', size: 14, color: AppColors.fg1)
+            : null,
+        onTap: onTap,
+      );
+
+  Widget _row(String label, String value, {required bool desk}) => InkWell(
+        onTap: () => _pick(desk: desk),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: kMobile ? 48 : 40),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: S.s16),
+            child: Row(children: [
+              AppIcon(desk ? 'terminal' : 'cpu',
+                  size: kMobile ? 18 : 16, color: AppColors.fg3),
+              const SizedBox(width: S.s12),
+              Text(label,
+                  maxLines: 1,
+                  style: sans(kMobile ? 15 : 13, color: AppColors.fg1)),
+              const SizedBox(width: S.s8),
+              Expanded(
+                child: Text(value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: sans(13, color: AppColors.fg3)),
+              ),
+              const SizedBox(width: S.s4),
+              AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+            ]),
+          ),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _row('Tasks run on', _workLabel, desk: false),
+          Divider(
+              height: 1,
+              thickness: 1,
+              indent: S.s16,
+              color: AppColors.border),
+          _row('Desk runs on', _deskLabel, desk: true),
+        ],
+      );
 }

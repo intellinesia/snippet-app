@@ -63,47 +63,11 @@ List<Widget> buildShellRailTools({
   void Function(String action)? onAgentAction,
 }) {
   final tab = activeTab;
-  if (tab != null && tab.readout?.isAgent == true && onAgentAction != null) {
-    return [
-      Builder(
-        builder: (ctx) => RailIcon(
-          icon: 'more-horizontal',
-          tooltip: 'Agent actions',
-          onTap: () async {
-            final picked = await showAppMenu<String>(
-              ctx,
-              anchor: ctx,
-              below: true,
-              alignEnd: true,
-              minWidth: 220,
-              maxWidth: 280,
-              items: [
-                appMenuItem(value: 'inbox', icon: 'inbox', label: 'Inbox'),
-                appMenuItem(value: 'board', icon: 'clipboard', label: 'Board'),
-                appMenuItem(
-                    value: 'desk', icon: 'terminal', label: 'Desk session'),
-                appMenuItem(value: 'memory', icon: 'brain', label: 'Memory'),
-                appMenuHeading<String>('Agent'),
-                appMenuItem(
-                    value: 'wakes',
-                    icon: 'calendar-clock',
-                    label: 'Wakes and reporting'),
-                appMenuItem(
-                    value: 'model', icon: 'cpu', label: 'Inference profile'),
-                appMenuItem(
-                    value: 'delete',
-                    icon: 'trash',
-                    label: 'Delete agent',
-                    danger: true),
-              ],
-            );
-            if (picked != null) onAgentAction(picked);
-          },
-        ),
-      ),
-    ];
-  }
+  // Agent options live in the docked info panel, opened from the title.
+  if (tab != null && tab.readout?.isAgent == true) return const [];
   final mc = tab?.isMissionControl ?? false;
+  // Mission Control's options live in its docked details panel.
+  if (mc) return const [];
   final s = macSessionStatus?.state;
   final goalRunning = s?.goal?.ongoing ?? false;
   if (tab != null && tab.isDraft) return const [];
@@ -128,23 +92,6 @@ List<Widget> buildShellRailTools({
   final used = s?.lastPromptTokens ?? 0;
   final frac = win > 0 ? (used / win).clamp(0.0, 1.0) : 0.0;
   String k(int v) => v >= 1000 ? '${(v / 1000).round()}k' : '$v';
-  Widget dots(int n, double size, double gap) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < n; i++)
-            Container(
-              width: size,
-              height: size,
-              margin: EdgeInsets.only(right: gap),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: i < (frac * n).round()
-                    ? (frac > 0.8 ? AppColors.danger : AppColors.fg3)
-                    : AppColors.line,
-              ),
-            ),
-        ],
-      );
 
   Future<void> openMenu(BuildContext ctx) async {
     PopupMenuItem<VoidCallback> item(String icon, String label, VoidCallback fn,
@@ -257,18 +204,6 @@ List<Widget> buildShellRailTools({
   }
 
   return [
-    if (tab != null && win > 0 && used > 0)
-      Tooltip(
-        message: 'Context ${k(used)} of ${k(win)}',
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            dots(8, 4, 2),
-            const SizedBox(width: 4),
-            Text(k(used), style: TS.caption()),
-          ]),
-        ),
-      ),
     Builder(
       builder: (ctx) => railTool(
         'more-horizontal',

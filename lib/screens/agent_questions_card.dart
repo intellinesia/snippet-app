@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../chat/chat_card.dart';
 import '../models.dart';
-import '../platform.dart';
 import '../theme.dart';
 import '../transcript_card.dart';
 import '../widgets.dart';
@@ -19,12 +19,14 @@ class AgentQuestionsCard extends StatefulWidget {
     required this.question,
     required this.client,
     this.events = const [],
+    this.chatStyle = false,
   });
 
   final CoordinationEvent event;
   final Map<dynamic, dynamic> question;
   final DaemonClient client;
   final List<CoordinationEvent> events;
+  final bool chatStyle;
 
   @override
   State<AgentQuestionsCard> createState() => _AgentQuestionsCardState();
@@ -171,9 +173,11 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
 
   /// The answer event for this question, if one exists later in the thread,
   /// plus whether the question went stale (a later agent event, no answer).
-  ({Map<String, dynamic>? answers, bool answered, bool closed}) _resolve() {
+  ({Map<String, dynamic>? answers, bool answered, bool closed, String? body})
+      _resolve() {
     final id = widget.event.eventId;
     Map<String, dynamic>? answers;
+    String? body;
     var answered = false;
     var closed = false;
     var seen = id.isEmpty;
@@ -186,6 +190,8 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
         answered = true;
         final a = e.payload['answers'];
         if (a is Map) answers = a.cast<String, dynamic>();
+        final b = e.body.trim();
+        if (b.isNotEmpty) body = b;
         continue;
       }
       if (e.actorKind != 'human') closed = true;
@@ -194,7 +200,19 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
       answered = true;
       answers = _sentAnswers;
     }
-    return (answers: answers, answered: answered, closed: closed && !answered);
+    return (
+      answers: answers,
+      answered: answered,
+      closed: closed && !answered,
+      body: body,
+    );
+  }
+
+  static const _kSkipped = 'user skipped the question';
+
+  bool _wasSkipped(Map<String, dynamic>? answers, String? body) {
+    if (body != null && body.contains(_kSkipped)) return true;
+    return answers?.values.any((v) => '$v' == _kSkipped) ?? false;
   }
 
   Object? _answerFor(
@@ -299,18 +317,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     return t.isNotEmpty ? t : widget.event.body.trim();
   }
 
-  Future<void> _send() async {
-    if (_sending || _locked) return;
-    final qs = _questions;
-    final drafts = [for (var i = 0; i < qs.length; i++) _draft(qs[i], i)];
-    if (drafts.any((d) => d == null)) return;
-    final answers = <String, dynamic>{};
-    final parts = <String>[];
-    for (var i = 0; i < qs.length; i++) {
-      final d = drafts[i]!;
-      answers[_key(qs[i], i)] = d.value;
-      parts.add('${_questionText(qs[i])}\n→ ${d.text}');
-    }
+  Future<void> _post(Map<String, dynamic> answers, List<String> parts) async {
     final session = '${widget.question['session'] ?? ''}';
     setState(() {
       _sending = true;
@@ -346,6 +353,36 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     }
   }
 
+  Future<void> _send() async {
+    if (_sending || _locked) return;
+    final qs = _questions;
+    final drafts = [for (var i = 0; i < qs.length; i++) _draft(qs[i], i)];
+    if (drafts.any((d) => d == null)) return;
+    final answers = <String, dynamic>{};
+    final parts = <String>[];
+    for (var i = 0; i < qs.length; i++) {
+      final d = drafts[i]!;
+      answers[_key(qs[i], i)] = d.value;
+      parts.add('${_questionText(qs[i])}\n→ ${d.text}');
+    }
+    await _post(answers, parts);
+  }
+
+  /// Skip the whole ask: every question gets the skip marker so the agent
+  /// stops waiting, without a bubble echoing the question text back.
+  Future<void> _skip() async {
+    if (_sending || _locked) return;
+    final qs = _questions;
+    final answers = <String, dynamic>{
+      for (var i = 0; i < qs.length; i++) _key(qs[i], i): _kSkipped,
+    };
+    final parts = [
+      for (var i = 0; i < qs.length; i++)
+        '${_questionText(qs[i])}\n→ $_kSkipped',
+    ];
+    await _post(answers, parts);
+  }
+
   void _pick(int i, _QChoice c, bool multi) {
     final key = _key(_questions[i], i);
     setState(() {
@@ -358,328 +395,212 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     });
   }
 
+  int _step = 0;
+
   @override
   Widget build(BuildContext context) {
     final qs = _questions;
+    if (qs.isEmpty) return const SizedBox.shrink();
     final st = _resolve();
     final closed = st.closed || (_locked && !st.answered);
     final interactive = !st.answered && !closed && !_sending;
-    return TranscriptCard(
-      kind: 'Question',
-      icon: 'help-circle',
-      tone: st.answered ? Tone.ok : (closed ? Tone.neutral : Tone.accent),
-      status: st.answered ? 'Answered' : (closed ? 'Closed' : null),
-      footer: st.answered || (closed && _error == null)
-          ? null
-          : _footer(interactive),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (var i = 0; i < qs.length; i++) ...[
-            if (i > 0) const SizedBox(height: S.s12),
-            _section(
-              qs[i],
-              i,
-              answered: st.answered,
-              interactive: interactive,
-              answers: st.answers,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _section(
-    Map<String, dynamic> q,
-    int i, {
-    required bool answered,
-    required bool interactive,
-    required Map<String, dynamic>? answers,
-  }) {
+    final skipped = st.answered && _wasSkipped(st.answers, st.body);
+    if (st.answered) return _resolved(qs, st.answers, skipped);
+    final step = _step.clamp(0, qs.length - 1);
+    final q = qs[step];
+    final last = step == qs.length - 1;
     final header = '${q['header'] ?? ''}'.trim();
-    final text = '${q['text'] ?? ''}'.trim();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (header.isNotEmpty)
-          Text(
-            header,
-            style: sans(
-              TranscriptCard.bodySize,
-              weight: W.label,
-              height: 1.4,
-              color: AppColors.fg1,
-            ),
-          ),
-        if (text.isNotEmpty) ...[
-          if (header.isNotEmpty) const SizedBox(height: S.s4),
-          Text(
-            text,
-            style: sans(
-              TranscriptCard.bodySize,
-              height: 1.4,
-              color: AppColors.fg2,
-            ),
-          ),
-        ],
-        const SizedBox(height: S.s8),
-        _inputFor(
-          q,
-          i,
-          answered: answered,
-          interactive: interactive,
-          answers: answers,
+    final showActions = !(closed && _error == null);
+    final canNext = interactive && _draft(q, step) != null;
+    final canSend = interactive && _allAnswered;
+    return ChatCard(children: [
+      ChatCardHeader(
+        eyebrow: qs.length > 1
+            ? ChatCardSteps(index: step, total: qs.length)
+            : null,
+        title: _questionText(q),
+        subtitle: header,
+        trailing: closed ? const ChatCardPill('Closed') : null,
+      ),
+      _inputFor(q, step, interactive: interactive),
+      if (_error != null)
+        ChatCardBody(
+          child: Text(_error!,
+              style: sans(TranscriptCard.metaSize, color: AppColors.danger)),
         ),
-      ],
-    );
+      if (showActions)
+        ChatCardActions(
+          buttons: [
+            if (step > 0)
+              ChatCardButton('Back',
+                  kind: ChatCardButtonKind.secondary,
+                  onTap: interactive ? () => setState(() => _step = step - 1) : null),
+            if (last)
+              ChatCardButton('Send',
+                  busy: _sending, onTap: canSend ? _send : null)
+            else
+              ChatCardButton('Next',
+                  onTap: canNext ? () => setState(() => _step = step + 1) : null),
+          ],
+          link: 'Skip',
+          onLink: interactive ? _skip : null,
+        )
+      else
+        const SizedBox(height: 2),
+    ]);
   }
 
-  Widget _footer(bool interactive) {
-    final canSend = interactive && _allAnswered;
+  Widget _resolved(List<Map<String, dynamic>> qs, Map<String, dynamic>? answers,
+      bool skipped) {
+    if (skipped) {
+      return ChatCardResolved(
+        title: qs.length > 1 ? '${qs.length} questions' : _questionText(qs[0]),
+        subtitle: 'Skipped',
+        approved: false,
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Btn('Send', full: true, icon: 'send', disabled: !canSend, onTap: _send),
-        if (_error != null) ...[
-          const SizedBox(height: S.s6),
-          Text(
-            _error!,
-            style: sans(TranscriptCard.metaSize, color: AppColors.danger),
-          ),
+        for (var i = 0; i < qs.length; i++) ...[
+          if (i > 0) const SizedBox(height: S.s6),
+          Builder(builder: (_) {
+            final label = _answeredLabel(qs[i], i, answers);
+            return ChatCardResolved(
+              title: _questionText(qs[i]),
+              subtitle: label.isEmpty ? 'Answered' : 'Answered: $label',
+              approved: true,
+            );
+          }),
         ],
       ],
     );
+  }
+
+  /// How an answered question reads in the collapsed card.
+  String _answeredLabel(
+      Map<String, dynamic> q, int i, Map<String, dynamic>? answers) {
+    final v = _answerFor(q, i, answers);
+    if (v == null) return '';
+    if ('$v' == _kSkipped) return _kSkipped;
+    final kind = _kindOf(q);
+    if (kind == 'single_choice' ||
+        kind == 'multi_choice' ||
+        kind == 'yes_no' ||
+        kind == 'confirm') {
+      final tokens = _tokens(v, multi: kind == 'multi_choice');
+      final labels = [
+        for (final c in _choicesFor(q))
+          if (_choiceMatches(c, tokens)) c.label,
+      ];
+      if (labels.isNotEmpty) return labels.join(', ');
+      return tokens.join(', ');
+    }
+    return v is List ? v.join(', ') : '$v';
   }
 
   Widget _inputFor(
     Map<String, dynamic> q,
     int i, {
-    required bool answered,
     required bool interactive,
-    required Map<String, dynamic>? answers,
   }) {
     final key = _key(q, i);
     final kind = _kindOf(q);
-    final choices = _choicesFor(q);
-    final isChoice =
-        kind == 'single_choice' ||
-        kind == 'multi_choice' ||
-        kind == 'yes_no' ||
-        kind == 'confirm';
-    if (answered) {
-      if (!isChoice) {
-        final v = _answerFor(q, i, answers);
-        final s = v == null ? '' : (v is List ? v.join(', ') : '$v');
-        if (s.isEmpty) return const SizedBox.shrink();
-        return Text(
-          s,
-          style: sans(
-            TranscriptCard.bodySize,
-            height: 1.4,
-            color: AppColors.fg1,
-          ),
-        );
-      }
-      final multi = kind == 'multi_choice';
-      final tokens = _tokens(_answerFor(q, i, answers), multi: multi);
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (var j = 0; j < choices.length; j++) ...[
-            if (j > 0) const SizedBox(height: S.s6),
-            _choiceRow(
-              choices[j],
-              selected: _choiceMatches(choices[j], tokens),
-              multi: multi,
-              readOnly: true,
-              onTap: null,
-            ),
-          ],
-        ],
-      );
-    }
     switch (kind) {
       case 'single_choice':
       case 'multi_choice':
-        final multi = kind == 'multi_choice';
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var j = 0; j < choices.length; j++) ...[
-              if (j > 0) const SizedBox(height: S.s6),
-              _choiceRow(
-                choices[j],
-                selected: multi
-                    ? (_multi[key]?.contains(choices[j].value) ?? false)
-                    : _single[key] == choices[j].value,
-                multi: multi,
-                readOnly: false,
-                onTap: interactive ? () => _pick(i, choices[j], multi) : null,
-              ),
-            ],
-          ],
-        );
       case 'yes_no':
-        return Wrap(
-          spacing: 8,
-          children: [
-            for (final o in choices)
-              _pill(
-                o.label,
-                selected: _single[key] == o.value,
-                enabled: interactive,
-                onTap: () => setState(() => _single[key] = o.value),
-              ),
-          ],
-        );
       case 'confirm':
-        return Wrap(
-          spacing: 8,
-          children: [
-            for (final o in choices)
-              Btn(
-                o.label,
-                variant: BtnVariant.secondary,
-                disabled: !interactive,
-                onTap: () => setState(() => _single[key] = o.value),
-              ),
-          ],
+        final multi = kind == 'multi_choice';
+        final choices = _choicesFor(q);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: S.s12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final c in choices) ...[
+                const ChatCardDivider(),
+                ChatCardOption(
+                  label: c.label,
+                  detail: c.description.isEmpty ? null : c.description,
+                  recommended: c.recommended,
+                  multi: multi,
+                  selected: multi
+                      ? (_multi[key]?.contains(c.value) ?? false)
+                      : _single[key] == c.value,
+                  onTap: interactive ? () => _pick(i, c, multi) : null,
+                ),
+              ],
+              const ChatCardDivider(),
+            ],
+          ),
         );
       default:
-        return AppField(
-          controller: _controllerFor(key),
-          hint: 'Write your answer',
-          minLines: 1,
-          maxLines: 4,
-          enabled: interactive,
+        return ChatCardBody(
+          child: AppField(
+            controller: _controllerFor(key),
+            hint: 'Write your answer',
+            minLines: 1,
+            maxLines: 4,
+            enabled: interactive,
+          ),
         );
     }
   }
+}
 
-  Widget _choiceRow(
-    _QChoice c, {
-    required bool selected,
-    required bool multi,
-    required bool readOnly,
-    VoidCallback? onTap,
-  }) {
-    final mark = multi
-        ? Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              color: selected ? AppColors.accentFill : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(
-                color: selected ? AppColors.accentFill : AppColors.lineStrong,
-                width: 1.5,
-              ),
-            ),
-            child: selected
-                ? AppIcon('check', size: 11, color: AppColors.accentFg)
-                : null,
-          )
-        : SelectCheck(selected, size: 16);
-    final body = Container(
-      padding: kMobile
-          ? const EdgeInsets.fromLTRB(12, 10, 12, 10)
-          : const EdgeInsets.fromLTRB(10, 8, 10, 8),
-      decoration: BoxDecoration(
-        color: selected ? AppColors.accentBg : AppColors.surface2,
-        borderRadius: BorderRadius.circular(kMobile ? 12 : R.md),
-        border: Border.all(
-          color: selected ? AppColors.accent : AppColors.border2,
-          width: selected ? 1.2 : 1,
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(padding: const EdgeInsets.only(top: 2), child: mark),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    Text(
-                      c.label,
-                      style: sans(
-                        kMobile ? 14 : 13,
-                        weight: W.label,
-                        color: selected ? AppColors.fg1 : AppColors.fg2,
-                      ),
-                    ),
-                    if (selected) const Tag('Chosen', tone: Tone.accent),
-                    if (!readOnly && c.recommended)
-                      Text(
-                        'recommended',
-                        style: sans(
-                          TranscriptCard.metaSize,
-                          color: AppColors.fg3,
-                        ),
-                      ),
-                  ],
-                ),
-                if (c.description.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    c.description,
-                    style: sans(
-                      kMobile ? 13 : 12,
-                      height: 1.4,
-                      color: AppColors.fg3,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-    if (readOnly || onTap == null) return body;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: body,
-    );
-  }
 
-  Widget _pill(
-    String label, {
-    required bool selected,
-    required bool enabled,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: selected ? AppColors.accentBg : AppColors.hover,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(kMobile ? R.pill : R.sm),
-        side: BorderSide(
-          color: selected ? AppColors.accent : Colors.transparent,
-          width: 1.2,
-        ),
+/// The centred line a relayed-question answer collapses to in the thread, or
+/// null when [e] is an ordinary message. The question card already shows the
+/// answer, so the composed "question\n→ answer" text must not echo as a bubble.
+String? questionAnswerSystemLine(CoordinationEvent e) {
+  if (e.actorKind != 'human') return null;
+  final auto = '${e.payload['auto'] ?? ''}';
+  if (auto != 'answer' && e.payload['answer_to'] == null) return null;
+  final answers = e.payload['answers'];
+  final skipped = e.body.contains('user skipped the question') ||
+      (answers is Map &&
+          answers.values.any((v) => '$v' == 'user skipped the question'));
+  return skipped ? 'Skipped' : 'Answered';
+}
+
+/// The question card frame on the shared chat card: a quiet label with an
+/// optional right-side pill (or "N questions" from [count]), body and footer.
+class QuestionCardV5 extends StatelessWidget {
+  const QuestionCardV5({
+    super.key,
+    required this.child,
+    this.meta,
+    this.count,
+    this.footer,
+    this.icon = 'help-circle',
+    this.label = 'Question',
+    this.iconColor,
+  });
+
+  final String icon;
+  final String label;
+  final Color? iconColor;
+  final Widget child;
+  final String? meta;
+  final int? count;
+  final Widget? footer;
+
+  @override
+  Widget build(BuildContext context) {
+    final side = meta != null && meta!.isNotEmpty
+        ? meta!
+        : (count == null ? '' : count! > 1 ? '$count questions' : '1 of 1');
+    return ChatCard(children: [
+      ChatCardHeader(
+        title: label,
+        large: false,
+        trailing: side.isEmpty ? null : ChatCardPill(side),
       ),
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(kMobile ? R.pill : R.sm),
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: S.s16,
-            vertical: kMobile ? 11 : 7,
-          ),
-          child: Text(
-            label,
-            style: TS.label(selected ? AppColors.accent : AppColors.fg2),
-          ),
-        ),
-      ),
-    );
+      ChatCardBody(bottom: footer != null, child: child),
+      if (footer != null) ChatCardBody(child: footer!),
+    ]);
   }
 }

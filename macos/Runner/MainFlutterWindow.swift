@@ -343,6 +343,7 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
   private var hotKeyRef: EventHotKeyRef?
   private var hotKeyHandlerRef: EventHandlerRef?
   private var isBackdropOpaque = false
+  private var backgroundImageMode = false
   private var allowTerminate = false
 
   override func awakeFromNib() {
@@ -394,11 +395,15 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
       binaryMessenger: flutterViewController.engine.binaryMessenger
     )
     windowStateChannel.setMethodCallHandler { [weak self] call, result in
-      guard call.method == "isFullscreen" else {
+      switch call.method {
+      case "isFullscreen":
+        result(self?.styleMask.contains(.fullScreen) ?? false)
+      case "setBackgroundImageMode":
+        self?.setBackgroundImageMode((call.arguments as? Bool) ?? false)
+        result(nil)
+      default:
         result(FlutterMethodNotImplemented)
-        return
       }
-      result(self?.styleMask.contains(.fullScreen) ?? false)
     }
 
     let notchChan = FlutterMethodChannel(
@@ -857,8 +862,14 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
     return false
   }
 
+  private func setBackgroundImageMode(_ on: Bool) {
+    backgroundImageMode = on
+    isBackdropOpaque = !on
+    updateBackdropTransparency()
+  }
+
   private func updateBackdropTransparency() {
-    let shouldBeOpaque = hasApplicationWindowBehind()
+    let shouldBeOpaque = backgroundImageMode || hasApplicationWindowBehind()
     guard shouldBeOpaque != isBackdropOpaque else { return }
     isBackdropOpaque = shouldBeOpaque
     if shouldBeOpaque {

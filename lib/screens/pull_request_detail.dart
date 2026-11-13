@@ -195,7 +195,7 @@ MarkdownStyleSheet _compactMarkdown(BuildContext context) {
     h1: sans(17, weight: W.strong, color: AppColors.fg1),
     h2: sans(15, weight: W.strong, color: AppColors.fg1),
     h3: sans(14, weight: W.strong, color: AppColors.fg1),
-    code: codeMono(12, color: AppColors.fg1).copyWith(backgroundColor: AppColors.surface2),
+    code: codeMono(12, color: AppColors.fg1).copyWith(backgroundColor: AppColors.tint2),
     blockSpacing: 8,
   );
 }
@@ -256,7 +256,7 @@ class PrCommentBody extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Container(
-            color: AppColors.surface2,
+            color: AppColors.tint2,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             child: Text('Suggested change', style: TS.meta(AppColors.fg2)),
           ),
@@ -408,7 +408,7 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: selected ? AppColors.surface2 : Colors.transparent,
+            color: selected ? AppColors.tint2 : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(label,
@@ -441,7 +441,7 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 140),
       decoration: BoxDecoration(
-        color: AppColors.surface2,
+        color: AppColors.tint2,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: focused ? AppColors.accent : Colors.transparent, width: 1.4),
       ),
@@ -646,7 +646,7 @@ Widget _diffPlaceholder() => ListView(
         for (var i = 0; i < 3; i++) ...[
           Container(
             height: 34,
-            decoration: BoxDecoration(color: AppColors.surface1, borderRadius: BorderRadius.circular(6)),
+            decoration: BoxDecoration(color: AppColors.tint1, borderRadius: BorderRadius.circular(6)),
           ),
           const SizedBox(height: 8),
           for (final w in const [0.7, 0.5, 0.85, 0.4, 0.6])
@@ -657,7 +657,7 @@ Widget _diffPlaceholder() => ListView(
                 widthFactor: w,
                 child: Container(
                   height: 10,
-                  decoration: BoxDecoration(color: AppColors.surface1, borderRadius: BorderRadius.circular(3)),
+                  decoration: BoxDecoration(color: AppColors.tint1, borderRadius: BorderRadius.circular(3)),
                 ),
               ),
             ),
@@ -1054,7 +1054,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
                   child: TextButton(
                     onPressed: () => _openFiles(path: threads.first.path),
                     style: TextButton.styleFrom(
-                      backgroundColor: AppColors.surface1,
+                      backgroundColor: AppColors.tint1,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kMobile ? R.pill : R.sm)),
                     ),
                     child: Text('${threads.length} comment${threads.length == 1 ? '' : 's'}',
@@ -1111,7 +1111,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
                       height: 24,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: AppColors.surface2,
+                        color: AppColors.tint2,
                         shape: BoxShape.circle,
                       ),
                       child: AppIcon(icon ?? 'git-commit', size: 12, color: ink ?? AppColors.fg3),
@@ -1151,14 +1151,14 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [AppColors.bg.withValues(alpha: 0), AppColors.bg],
+              colors: [AppColors.paneBg.withValues(alpha: 0), AppColors.paneBg],
             ),
           ),
           alignment: Alignment.bottomCenter,
           child: TextButton.icon(
             onPressed: () => setState(() => _bodyOpen = true),
             style: TextButton.styleFrom(
-              backgroundColor: AppColors.surface2,
+              backgroundColor: AppColors.tint2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.pill)),
             ),
             icon: AppIcon('chevron-down', size: 14, color: AppColors.fg1),
@@ -1234,7 +1234,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
   Widget _dockedBar() {
     final pending = _pending.length;
     return Container(
-      color: AppColors.bg,
+      color: AppColors.paneBg,
       padding: EdgeInsets.fromLTRB(16, 8, 16, 10 + MediaQuery.of(context).padding.bottom),
       child: Row(children: [
         Expanded(
@@ -1281,7 +1281,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
 
   Widget _pill({required String icon, required String label, VoidCallback? onTap, bool primary = false}) =>
       Material(
-        color: primary ? AppColors.accentFill : AppColors.surface2,
+        color: primary ? AppColors.accentFill : AppColors.tint2,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(R.pill),
@@ -1306,7 +1306,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
   Widget build(BuildContext context) {
     final pr = _pr;
     return Material(
-      color: AppColors.bg,
+      color: AppColors.paneBg,
       child: SafeArea(
         bottom: false,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -1524,7 +1524,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
       builder: (anchor) => GestureDetector(
         onSecondaryTap: _busy ? null : () => _pickMethod(anchor),
         child: Material(
-          color: enabled ? AppColors.accentFill : AppColors.surface2,
+          color: enabled ? AppColors.accentFill : AppColors.tint2,
           borderRadius: BorderRadius.circular(kMobile ? R.pill : 8),
           child: InkWell(
             onTap: enabled ? onTap : null,
@@ -1558,7 +1558,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
           hintStyle: TS.body(AppColors.fg4),
           isDense: true,
           filled: true,
-          fillColor: AppColors.surface2,
+          fillColor: AppColors.tint2,
           contentPadding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border2)),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border2)),
@@ -1617,7 +1617,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
         onPressed: _busy ? null : onTap,
         style: TextButton.styleFrom(
           minimumSize: const Size.fromHeight(44),
-          backgroundColor: AppColors.surface2,
+          backgroundColor: AppColors.tint2,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kMobile ? R.pill : 8)),
           padding: const EdgeInsets.symmetric(horizontal: 14),
         ),
@@ -2128,7 +2128,7 @@ class _PrFilesScreenState extends State<PrFilesScreen> with _AfterTransition {
       ],
     );
     return Material(
-      color: AppColors.bg,
+      color: AppColors.paneBg,
       child: SafeArea(
         bottom: false,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -2366,7 +2366,7 @@ class _PrFileDiffState extends State<PrFileDiff> {
   Widget _header() {
     final f = widget.file;
     return Material(
-      color: AppColors.surface1,
+      color: AppColors.tint1,
       child: InkWell(
         onTap: () => setState(() => _collapsed = !_collapsed),
         child: Container(
@@ -2702,7 +2702,7 @@ class _PrThreadBoxState extends State<PrThreadBox>
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 10),
       decoration: BoxDecoration(
-        color: AppColors.surface1,
+        color: AppColors.tint1,
         borderRadius: BorderRadius.circular(10),
       ),
       clipBehavior: Clip.antiAlias,
@@ -2819,7 +2819,7 @@ class PrCommitsScreen extends StatelessWidget {
       groups.putIfAbsent(_day(c.date), () => []).add(c);
     }
     return Material(
-      color: AppColors.bg,
+      color: AppColors.paneBg,
       child: SafeArea(
         bottom: false,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -2889,7 +2889,7 @@ class _CommitRowState extends State<_CommitRow> {
                           margin: const EdgeInsets.only(left: 6),
                           padding: const EdgeInsets.symmetric(horizontal: 5),
                           decoration: BoxDecoration(
-                            color: AppColors.surface2,
+                            color: AppColors.tint2,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text('…', style: sans(12, weight: W.strong, color: AppColors.fg2)),
@@ -2923,7 +2923,7 @@ class _CommitRowState extends State<_CommitRow> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
             decoration: BoxDecoration(
-              color: AppColors.surface2,
+              color: AppColors.tint2,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(short, style: mono(12, color: AppColors.fg2)),
@@ -2967,7 +2967,7 @@ class _CommitDiffScreenState extends State<CommitDiffScreen> with _AfterTransiti
     final files = _files;
     final c = widget.commit;
     return Material(
-      color: AppColors.bg,
+      color: AppColors.paneBg,
       child: SafeArea(
         bottom: false,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/gestures.dart';
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import 'platform.dart';
+import 'glass.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -285,12 +287,12 @@ Future<bool> confirmAction(
     result = await showDialog<bool>(
       context: context,
       barrierColor: AppColors.scrim,
-      builder: (ctx) => _DialogFrame(
+      builder: (ctx) => ModalGlass(child: _DialogFrame(
         title: title,
         icon: danger ? 'alert-triangle' : null,
         iconColor: AppColors.danger,
         child: content(ctx),
-      ),
+      )),
     );
   }
   return result == true;
@@ -328,7 +330,7 @@ Future<String?> promptText(BuildContext context,
     return showDialog<String>(
       context: context,
       barrierColor: AppColors.scrim,
-      builder: (_) => _DialogFrame(title: title, maxWidth: 380, child: field),
+      builder: (_) => ModalGlass(child: _DialogFrame(title: title, maxWidth: 380, child: field)),
     );
   }
   return showAppSheet<String>(context, title: title, child: field);
@@ -343,6 +345,33 @@ void trackPointer() {
   GestureBinding.instance.pointerRouter.addGlobalRoute((e) {
     if (e is PointerDownEvent) lastPointerDown = e.position;
   });
+}
+
+/// Phone popovers sit on a frosted blackout of the whole screen; desktop
+/// ones stay anchored over an untouched window.
+Widget popoverBackdrop(Animation<double> animation, Widget child) {
+  if (!kMobile) return child;
+  return Stack(children: [
+    Positioned.fill(
+      child: IgnorePointer(
+        child: AnimatedBuilder(
+          animation: animation,
+          builder: (_, __) {
+            final t = animation.value;
+            final scrim = ColoredBox(
+                color: AppColors.glassScrim
+                    .withValues(alpha: AppColors.glassScrim.a * t));
+            if (!Glass.enabled || t < 0.001) return scrim;
+            return BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 16 * t, sigmaY: 16 * t),
+              child: scrim,
+            );
+          },
+        ),
+      ),
+    ),
+    child,
+  ]);
 }
 
 Future<T?> showPointPopover<T>(BuildContext context,
@@ -394,12 +423,15 @@ Future<T?> showPointPopover<T>(BuildContext context,
     ]),
     transitionBuilder: (_, animation, __, child) {
       final curve = CurvedAnimation(parent: animation, curve: Motion.enter);
-      return FadeTransition(
-        opacity: curve,
-        child: ScaleTransition(
-          scale: Tween(begin: 0.97, end: 1.0).animate(curve),
-          alignment: origin,
-          child: child,
+      return popoverBackdrop(
+        curve,
+        FadeTransition(
+          opacity: curve,
+          child: ScaleTransition(
+            scale: Tween(begin: 0.97, end: 1.0).animate(curve),
+            alignment: origin,
+            child: child,
+          ),
         ),
       );
     },
@@ -562,7 +594,7 @@ Future<T?> showAppSheet<T>(BuildContext context,
     return showDialog<T>(
       context: context,
       barrierColor: AppColors.scrim,
-      builder: (ctx) => _DialogFrame(
+      builder: (ctx) => ModalGlass(child: _DialogFrame(
         title: title,
         maxWidth: maxWidth,
         maxHeight: maxHeight,
@@ -571,13 +603,13 @@ Future<T?> showAppSheet<T>(BuildContext context,
           padding: const EdgeInsets.only(bottom: 4),
           child: child,
         ),
-      ),
+      )),
     );
   }
   return showModalBottomSheet<T>(
     context: context,
     backgroundColor: Colors.transparent,
-    barrierColor: AppColors.scrim,
+    barrierColor: AppColors.glassScrim,
     isScrollControlled: true,
     useSafeArea: false,
     sheetAnimationStyle: sheetMotion,
@@ -703,35 +735,190 @@ Future<T?> showAnchoredPanel<T>(
         top: above ? null : top,
         bottom: above ? bottom : null,
         width: w,
-        child: Material(
-          color: AppColors.surface2,
-          elevation: 10,
-          shadowColor: Colors.black.withValues(alpha: 0.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: BorderSide(color: AppColors.border2),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: room),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(8),
-              child: child,
-            ),
-          ),
-        ),
+        child: kMobile
+            ? Glass(
+                radius: BorderRadius.circular(16),
+                tint: AppColors.surface2.withValues(alpha: 0.7),
+                blur: 28,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: room),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(6),
+                      child: child,
+                    ),
+                  ),
+                ),
+              )
+            : Material(
+                color: AppColors.surface2,
+                elevation: 10,
+                shadowColor: Colors.black.withValues(alpha: 0.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(color: AppColors.border2),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: room),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(8),
+                    child: child,
+                  ),
+                ),
+              ),
       ),
     ]),
     transitionBuilder: (_, animation, __, child) {
       final curve = CurvedAnimation(parent: animation, curve: Motion.enter);
-      return FadeTransition(
-        opacity: curve,
-        child: ScaleTransition(
-          scale: Tween(begin: 0.97, end: 1.0).animate(curve),
-          alignment: grow,
-          child: child,
+      return popoverBackdrop(
+        curve,
+        FadeTransition(
+          opacity: curve,
+          child: ScaleTransition(
+            scale: Tween(begin: 0.97, end: 1.0).animate(curve),
+            alignment: grow,
+            child: child,
+          ),
         ),
       );
     },
   );
+}
+
+/// A form beside its trigger on desktop (no dialog), a sheet on phones.
+Future<T?> showSidePopover<T>(
+  BuildContext context, {
+  BuildContext? anchorContext,
+  required String title,
+  required Widget child,
+  Key? popoverKey,
+  double width = 340,
+}) async {
+  if (kMobile) return showAppSheet<T>(context, title: title, child: child);
+  final box = anchorContext?.findRenderObject() as RenderBox?;
+  final anchor = box == null || !box.attached
+      ? const Rect.fromLTWH(16, 96, 0, 0)
+      : box.localToGlobal(Offset.zero) & box.size;
+  return showGeneralDialog<T>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: title,
+    barrierColor: Colors.transparent,
+    transitionDuration: Motion.quick,
+    pageBuilder: (ctx, _, __) => SafeArea(
+      minimum: const EdgeInsets.all(12),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+        child: LayoutBuilder(builder: (context, constraints) {
+          final origin = (context.findRenderObject() as RenderBox?)
+                  ?.localToGlobal(Offset.zero) ??
+              Offset.zero;
+          return CustomSingleChildLayout(
+            delegate: _SidePopoverLayout(anchor.shift(-origin), width),
+            child: Material(
+              key: popoverKey,
+              color: AppColors.overlay,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(R.lg),
+                  side: BorderSide(color: AppColors.line)),
+              clipBehavior: Clip.antiAlias,
+              elevation: 4,
+              shadowColor: Colors.black.withValues(alpha: 0.4),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(title,
+                        style: sans(13, weight: W.label, color: AppColors.fg1)),
+                    const SizedBox(height: 12),
+                    child,
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    ),
+    transitionBuilder: (_, anim, __, child) => FadeTransition(
+        opacity: CurvedAnimation(parent: anim, curve: Motion.enter),
+        child: child),
+  );
+}
+
+class _SidePopoverLayout extends SingleChildLayoutDelegate {
+  const _SidePopoverLayout(this.anchor, this.width);
+
+  final Rect anchor;
+  final double width;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      BoxConstraints(
+        minWidth: constraints.maxWidth.clamp(0, width),
+        maxWidth: constraints.maxWidth.clamp(0, width),
+        maxHeight: constraints.maxHeight,
+      );
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final right = anchor.right + 8;
+    final left = right + childSize.width <= size.width
+        ? right
+        : anchor.right - childSize.width;
+    return Offset(
+      left.clamp(0, size.width - childSize.width),
+      anchor.top.clamp(0, size.height - childSize.height),
+    );
+  }
+
+  @override
+  bool shouldRelayout(_SidePopoverLayout old) =>
+      anchor != old.anchor || width != old.width;
+}
+
+/// Input container: an inset well that reads against any popover, brighter
+/// edge while a field inside has focus.
+class FieldWell extends StatefulWidget {
+  const FieldWell(
+      {super.key,
+      required this.child,
+      this.padding = EdgeInsets.zero,
+      this.minHeight = 0,
+      this.alignment});
+  final Widget child;
+  final EdgeInsets padding;
+  final double minHeight;
+  final AlignmentGeometry? alignment;
+
+  @override
+  State<FieldWell> createState() => _FieldWellState();
+}
+
+class _FieldWellState extends State<FieldWell> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) => Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: (f) => setState(() => _focused = f),
+        child: AnimatedContainer(
+          duration: Motion.quick,
+          constraints: BoxConstraints(minHeight: widget.minHeight),
+          alignment: widget.alignment,
+          padding: widget.padding,
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: _focused ? AppColors.fg4 : AppColors.lineStrong),
+          ),
+          child: widget.child,
+        ),
+      );
 }

@@ -499,182 +499,219 @@ class VoiceNote extends StatefulWidget {
   final String? url;
   final Duration? duration;
   final Widget? transcript;
+
+  /// Text colour of the bubble it sits in; controls and wave follow it.
+  final Color? ink;
   const VoiceNote(
       {super.key,
       required this.client,
       this.path = '',
       this.url,
       this.duration,
-      this.transcript});
+      this.transcript,
+      this.ink});
 
   @override
   State<VoiceNote> createState() => _VoiceNoteState();
 }
 
-class _VoiceNoteState extends State<VoiceNote> {
+/// One player for every voice note, so playback survives the transcript
+/// rebuilding the card, and starting another note stops the last.
+class VoicePlayback extends ChangeNotifier {
+  VoicePlayback._();
+  static final instance = VoicePlayback._();
+
   AudioPlayer? _player;
-  final List<StreamSubscription<dynamic>> _subs = [];
-  bool _playing = false;
-  bool _loading = false;
-  Duration _position = Duration.zero;
-  Duration _duration = Duration.zero;
-  String? _error;
+  String? source;
+  bool playing = false;
+  bool loading = false;
+  Duration position = Duration.zero;
+  Duration duration = Duration.zero;
+  String? failed;
+
+  AudioPlayer _ensure() {
+    final existing = _player;
+    if (existing != null) return existing;
+    final p = AudioPlayer();
+    p.onPlayerStateChanged.listen((s) {
+      playing = s == PlayerState.playing;
+      if (s == PlayerState.completed) position = Duration.zero;
+      notifyListeners();
+    });
+    p.onPositionChanged.listen((d) {
+      position = d;
+      notifyListeners();
+    });
+    p.onDurationChanged.listen((d) {
+      duration = d;
+      notifyListeners();
+    });
+    return _player = p;
+  }
+
+  Future<void> toggle(String src) async {
+    final p = _ensure();
+    try {
+      if (source == src && playing) {
+        await p.pause();
+      } else if (source == src && p.state == PlayerState.paused) {
+        await p.resume();
+      } else {
+        await p.stop();
+        source = src;
+        failed = null;
+        position = Duration.zero;
+        duration = Duration.zero;
+        loading = true;
+        notifyListeners();
+        await p.play(UrlSource(src));
+      }
+    } catch (_) {
+      failed = src;
+    } finally {
+      loading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> seek(String src, double fraction) async {
+    final p = _player;
+    if (p == null || source != src || duration == Duration.zero) return;
+    await p.seek(duration * fraction.clamp(0.0, 1.0));
+  }
+}
+
+class _VoiceNoteState extends State<VoiceNote> {
+  VoicePlayback get _pb => VoicePlayback.instance;
+
+  String get _src {
+    final u = widget.url;
+    return (u != null && u.isNotEmpty) ? u : widget.client.fileUrl(widget.path);
+  }
+
+  bool get _mine => _pb.source == _src;
+  bool get _playing => _mine && _pb.playing;
+  bool get _loading => _mine && _pb.loading;
+  Duration get _position => _mine ? _pb.position : Duration.zero;
+  Duration get _duration {
+    if (_mine && _pb.duration > Duration.zero) return _pb.duration;
+    final d = widget.duration;
+    return d != null && d > Duration.zero ? d : Duration.zero;
+  }
+
+  String? get _error =>
+      _pb.failed == _src ? "Couldn't play this voice note" : null;
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void initState() {
     super.initState();
-    final d = widget.duration;
-    if (d != null && d > Duration.zero) _duration = d;
-  }
-
-  @override
-  void didUpdateWidget(covariant VoiceNote oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final d = widget.duration;
-    if (_duration == Duration.zero && d != null && d > Duration.zero) {
-      _duration = d;
-    }
-  }
-
-  Future<void> _toggle() async {
-    final player = _player ?? _attach();
-    try {
-      if (_playing) {
-        await player.pause();
-      } else if (player.state == PlayerState.paused) {
-        await player.resume();
-      } else {
-        setState(() => _loading = true);
-        final u = widget.url;
-        final src = (u != null && u.isNotEmpty)
-            ? u
-            : widget.client.fileUrl(widget.path);
-        await player.play(UrlSource(src));
-      }
-    } catch (e) {
-      if (mounted) setState(() => _error = "Couldn't play this voice note");
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  AudioPlayer _attach() {
-    final player = AudioPlayer();
-    _subs
-      ..add(player.onPlayerStateChanged.listen((s) {
-        if (!mounted) return;
-        setState(() {
-          _playing = s == PlayerState.playing;
-          if (s == PlayerState.completed) _position = Duration.zero;
-        });
-      }))
-      ..add(player.onPositionChanged.listen((p) {
-        if (mounted) setState(() => _position = p);
-      }))
-      ..add(player.onDurationChanged.listen((d) {
-        if (mounted) setState(() => _duration = d);
-      }));
-    return _player = player;
+    _pb.addListener(_changed);
   }
 
   @override
   void dispose() {
-    for (final sub in _subs) {
-      sub.cancel();
-    }
-    _player?.dispose();
+    _pb.removeListener(_changed);
     super.dispose();
   }
+
+  Future<void> _toggle() => _pb.toggle(_src);
+
+  Future<void> _seekTo(double fraction) => _pb.seek(_src, fraction);
 
   static String _clock(Duration d) {
     final s = d.inSeconds.clamp(0, 359999);
     return '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
   }
 
-  Future<void> _seekTo(double fraction) async {
-    final player = _player;
-    if (player == null || _duration == Duration.zero) return;
-    await player.seek(_duration * fraction.clamp(0.0, 1.0));
-  }
 
   Widget _mobile(double progress) {
+    final active = _playing || _position > Duration.zero;
     final time = _error ??
         (_duration == Duration.zero
-            ? 'Voice note'
-            : _playing || _position > Duration.zero
-                ? '${_clock(_position)} / ${_clock(_duration)}'
-                : _clock(_duration));
+            ? (active ? _clock(_position) : 'Voice note')
+            : _clock(active ? _position : _duration));
+    final ink = widget.ink ?? AppColors.fg1;
+    final muted = widget.ink?.withValues(alpha: 0.6) ?? AppColors.fg3;
+    final glyph = widget.ink == null
+        ? AppColors.bg
+        : (ink.computeLuminance() > 0.5 ? Colors.black : Colors.white);
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [
+        Row(mainAxisSize: MainAxisSize.min, children: [
           Semantics(
             button: true,
             label: _playing ? 'Pause voice note' : 'Play voice note',
             child: Material(
-              color: AppColors.surface3,
+              color: _error == null ? ink : ink.withValues(alpha: 0.3),
               shape: const CircleBorder(),
               child: InkWell(
                 onTap: _error == null ? _toggle : null,
                 customBorder: const CircleBorder(),
                 child: SizedBox(
-                  width: 32,
-                  height: 32,
+                  width: 36,
+                  height: 36,
                   child: Center(
                     child: _loading
-                        ? Spinner(size: 13, color: AppColors.fg1)
-                        : AppIcon(_playing ? 'pause' : 'play',
-                            size: 13, color: AppColors.fg1),
+                        ? Spinner(size: 14, color: glyph)
+                        : Padding(
+                            padding: EdgeInsets.only(left: _playing ? 0 : 2),
+                            child: AppIcon(_playing ? 'pause' : 'play',
+                                size: 15, color: glyph),
+                          ),
                   ),
                 ),
               ),
             ),
           ),
           const SizedBox(width: 10),
-          Flexible(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 190),
-              child: LayoutBuilder(
-                builder: (_, c) => GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapDown: (d) => _seekTo(d.localPosition.dx / c.maxWidth),
-                  onHorizontalDragUpdate: (d) =>
-                      _seekTo(d.localPosition.dx / c.maxWidth),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: Center(
-                        child: SizedBox(
-                            height: 22,
-                            child: CustomPaint(
-                              painter: _NoteWave(
-                                seed: (widget.url ?? widget.path).hashCode,
-                                progress: progress,
-                                played: AppColors.fg1,
-                                rest: AppColors.fg4.withValues(alpha: 0.5),
-                              ),
-                            ))),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: (d) => _seekTo(d.localPosition.dx / _waveWidth),
+                onHorizontalDragUpdate: (d) =>
+                    _seekTo(d.localPosition.dx / _waveWidth),
+                child: SizedBox(
+                  width: _waveWidth,
+                  height: 26,
+                  child: CustomPaint(
+                    painter: _NoteWave(
+                      seed: (widget.url ?? widget.path).hashCode,
+                      progress: progress,
+                      played: ink,
+                      rest: widget.ink?.withValues(alpha: 0.4) ??
+                          AppColors.fg4.withValues(alpha: 0.5),
+                    ),
                   ),
                 ),
               ),
-            ),
+              const SizedBox(height: 3),
+              Text(time,
+                  style: sans(12,
+                      tabular: true,
+                      color: _error == null ? muted : AppColors.danger)),
+            ],
           ),
-          const SizedBox(width: 10),
-          Text(time,
-              style: sans(12,
-                  tabular: true,
-                  color: _error == null ? AppColors.fg3 : AppColors.danger)),
+          const SizedBox(width: 4),
         ]),
-        if (widget.transcript != null) ...[
+        // Only when the audio can't play: the words are the fallback.
+        if (_error != null && widget.transcript != null) ...[
           const SizedBox(height: 6),
-          Container(height: 1, color: AppColors.line),
-          const SizedBox(height: 4),
           widget.transcript!,
         ],
       ],
     );
   }
+
+  static double get _waveWidth => kMobile ? 168 : 196;
 
   @override
   Widget build(BuildContext context) {
@@ -853,23 +890,25 @@ class _NoteWave extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const step = 4.0;
-    const stroke = 2.5;
-    final count = (size.width / step).floor();
+    const bar = 3.0;
+    const gap = 2.0;
+    final count = ((size.width + gap) / (bar + gap)).floor();
     if (count <= 0) return;
     final rnd = math.Random(seed);
     final paint = Paint()
-      ..strokeWidth = stroke
+      ..strokeWidth = bar
       ..strokeCap = StrokeCap.round;
     final mid = size.height / 2;
+    var prev = 0.5;
     for (var i = 0; i < count; i++) {
       final t = i / count;
-      final envelope = 0.35 + 0.65 * math.sin(math.pi * (0.08 + t * 0.84));
-      final h = math.max(3.0,
-          (size.height - stroke) * envelope * (0.3 + rnd.nextDouble() * 0.7));
-      final x = i * step + stroke / 2;
+      final envelope = 0.45 + 0.55 * math.sin(math.pi * (0.05 + t * 0.9));
+      prev = (prev * 0.35 + rnd.nextDouble() * 0.65).clamp(0.12, 1.0);
+      final h = math.max(bar, (size.height - bar) * envelope * prev);
+      final x = i * (bar + gap) + bar / 2;
       paint.color = t < progress ? played : rest;
-      canvas.drawLine(Offset(x, mid - h / 2), Offset(x, mid + h / 2), paint);
+      canvas.drawLine(Offset(x, mid - h / 2 + bar / 2),
+          Offset(x, mid + h / 2 - bar / 2), paint);
     }
   }
 

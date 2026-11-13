@@ -1101,12 +1101,48 @@ class AgentLastMessage {
 
   static AgentLastMessage? tryParse(Object? j) {
     if (j is! Map) return null;
+    // Reactions arrive as messages with an empty body; they are chips on the
+    // target, never a roster preview.
+    if ('${j['reaction'] ?? ''}'.isNotEmpty || j['kind'] == 'reaction') {
+      return null;
+    }
     final text = '${j['text'] ?? ''}'.trim();
     if (text.isEmpty) return null;
     return AgentLastMessage(
       text: text,
       fromUser: j['from'] == 'user',
       at: DateTime.tryParse('${j['at'] ?? ''}'),
+    );
+  }
+}
+
+/// The daemon's rollup of an agent's live state across its sessions
+/// (`GET /agents` `presence`). Optional: absent on older daemons.
+class AgentPresence {
+  const AgentPresence({
+    required this.state,
+    this.detail = '',
+    this.since,
+    this.session = '',
+  });
+
+  /// idle | thinking | typing | working | waiting | blocked | reviewing
+  final String state;
+  final String detail;
+  final DateTime? since;
+  final String session;
+
+  bool get active => state.isNotEmpty && state != 'idle';
+
+  static AgentPresence? tryParse(Object? j) {
+    if (j is! Map) return null;
+    final state = '${j['state'] ?? ''}'.trim();
+    if (state.isEmpty) return null;
+    return AgentPresence(
+      state: state,
+      detail: '${j['detail'] ?? ''}'.trim(),
+      since: DateTime.tryParse('${j['since'] ?? ''}'),
+      session: '${j['session'] ?? ''}',
     );
   }
 }
@@ -1124,6 +1160,12 @@ class CoordinationAgent {
   /// The newest message to or from this agent, across its direct thread and
   /// sessions. Null when there is none or the daemon predates it.
   final AgentLastMessage? lastMessage;
+
+  /// Live state rolled up across the agent's sessions; null on older daemons.
+  final AgentPresence? presence;
+
+  /// Open questions plus tasks awaiting the user's verdict; 0 when absent.
+  final int needsYou;
 
   /// What the UI shows: the nickname when one is set, else the name.
   String get displayName => nickname ?? fullName;
@@ -1149,8 +1191,24 @@ class CoordinationAgent {
   /// Per-agent ceiling before compaction; null follows the model's window.
   final int? maxContextTokens;
 
+  final Map<String, dynamic> _raw;
+
+  /// The same agent with its preview replaced, e.g. by its direct thread's.
+  CoordinationAgent withLastMessage(AgentLastMessage? m) =>
+      CoordinationAgent.fromJson({
+        ..._raw,
+        'last_message': m == null
+            ? null
+            : {
+                'text': m.text,
+                'from': m.fromUser ? 'user' : 'agent',
+                'at': m.at?.toUtc().toIso8601String(),
+              },
+      });
+
   CoordinationAgent.fromJson(Map<String, dynamic> j)
-      : id = j['id'] as String? ?? '',
+      : _raw = j,
+        id = j['id'] as String? ?? '',
         color = j['color'] as String?,
         shape = j['shape'] as String?,
         profile = (j['profile'] as String?)?.trim().isEmpty ?? true
@@ -1175,6 +1233,8 @@ class CoordinationAgent {
             .whereType<String>()
             .toList(),
         lastMessage = AgentLastMessage.tryParse(j['last_message']),
+        presence = AgentPresence.tryParse(j['presence']),
+        needsYou = (j['needs_you'] as num?)?.toInt() ?? 0,
         taskCounts = j['task_counts'] is Map
             ? {
                 for (final e in (j['task_counts'] as Map).entries)
@@ -1341,6 +1401,9 @@ class GroupSummary {
   final int unread;
   final String createdAt;
 
+  /// The newest post, as "You: …" or "agent: …"; null when the group is empty.
+  final String? preview;
+
   GroupSummary.fromJson(Map<String, dynamic> j)
       : id = j['id'] as String? ?? '',
         title = j['title'] as String? ?? '',
@@ -1353,7 +1416,16 @@ class GroupSummary {
             : (j['lead'] as String),
         lastEventAt = j['last_event_at'] as String?,
         unread = (j['unread'] as num?)?.toInt() ?? 0,
-        createdAt = j['created_at'] as String? ?? '';
+        createdAt = j['created_at'] as String? ?? '',
+        preview = _groupPreview(j['last_message']);
+
+  static String? _groupPreview(Object? m) {
+    if (m is! Map) return null;
+    final body = '${m['body'] ?? ''}'.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (body.isEmpty) return null;
+    final from = m['from_kind'] == 'human' ? 'You' : '${m['from_id'] ?? ''}';
+    return from.isEmpty ? body : '$from: $body';
+  }
 
   List<String> get agentIds =>
       [for (final m in members) if (m.isAgent) m.id];

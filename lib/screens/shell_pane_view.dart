@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../desktop_look.dart';
 import '../api.dart';
 import '../shell_panel.dart';
 import '../media_views.dart';
@@ -37,6 +38,8 @@ class PaneSurface extends StatelessWidget {
       child: ColoredBox(
         color: pane == ShellPane.right ? AppColors.windowBg : readingBg,
         child: Stack(fit: StackFit.expand, children: [
+          if (pane != ShellPane.right && !kMobile)
+            const Positioned.fill(child: ChatWallpaper()),
           pane == ShellPane.right && !kMobile
               ? Theme(
                   data: Theme.of(context)
@@ -135,7 +138,8 @@ class _PaneResizeHandleState extends State<PaneResizeHandle> {
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          // Subtle inside divider line that blends into the background until hovered
+          // On a fill like the sidebar's border; bare, the wallpaper shows through.
+          Positioned.fill(child: ColoredBox(color: AppColors.windowBg)),
           Positioned.fill(
             child: ColoredBox(
               color: _hover
@@ -494,6 +498,8 @@ class RightTabBody extends StatelessWidget {
   final String? activeSessionId;
   final VoidCallback? onClose;
   final void Function(String path, String name)? onOpenFile;
+  final Widget? deskTrailing;
+  final VoidCallback? onDeskInfo;
 
   const RightTabBody({
     super.key,
@@ -504,6 +510,8 @@ class RightTabBody extends StatelessWidget {
     required this.activeSessionId,
     this.onClose,
     this.onOpenFile,
+    this.deskTrailing,
+    this.onDeskInfo,
   });
 
   @override
@@ -534,6 +542,9 @@ class RightTabBody extends StatelessWidget {
         agent: agent,
         client: client,
         embedded: true,
+        tabHeader: true,
+        deskTrailing: deskTrailing,
+        onDeskInfo: onDeskInfo,
       );
     }
     return switch (tab.panel) {

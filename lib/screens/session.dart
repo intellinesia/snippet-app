@@ -20,6 +20,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../chat/chat_card.dart';
+import '../desktop_look.dart';
 import '../approval_code.dart';
 import '../notification_text.dart';
 import '../api.dart';
@@ -33,6 +35,7 @@ import '../platform.dart';
 import 'limit_card.dart';
 import 'routing_screen.dart' show limitLabel;
 import '../motion.dart';
+import '../motion_routes.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
 import '../tool_sheet.dart';
@@ -55,6 +58,7 @@ import '../composer/attachment_preview.dart';
 import '../composer/attachment_tile.dart';
 import '../composer/composer_card.dart';
 import '../media_views.dart';
+import '../chat/chat_style.dart' show ChatHeader;
 import 'agent_messaging.dart';
 import 'package:xterm/xterm.dart';
 import 'files.dart';
@@ -67,10 +71,11 @@ import 'desk_memory.dart';
 import 'recurring.dart';
 import 'file_changes.dart';
 import 'action_list.dart';
+import '../glass.dart' show GlassTopFrame, TopFadeMask;
 import 'mobile_chrome.dart';
+import 'mobile_session_home.dart' show DotField;
 import 'session_panels.dart';
 import 'session_coordination_cards.dart';
-import 'mission_control/widgets/ambient_stage.dart';
 import 'mission_control/widgets/autonomy_panel.dart';
 import 'mission_control/mission_control_state.dart'
     show
@@ -154,6 +159,15 @@ class SessionScreen extends StatefulWidget {
   /// where there are no panes and the drawer is the right shape for a phone.
   final VoidCallback? onOpenScheduled;
 
+  /// Desktop: toggle the shell's right panel from the floating header.
+  final VoidCallback? onTogglePanel;
+
+  /// Desktop Mission Control: the header title opens the docked agent info.
+  final VoidCallback? onDeskInfo;
+
+  /// Desktop: the shell's actions menu, shown in the header instead of the sheet.
+  final Widget Function()? deskActions;
+
   /// Desktop PageView keeps every tab mounted. Only the visible session should
   /// accept file drops — otherwise every keep-alive DropTarget ingests the same
   /// file and the composer chips leak across tabs.
@@ -204,6 +218,9 @@ class SessionScreen extends StatefulWidget {
       this.onShowPullRequests,
       this.onTerminalHost,
       this.onOpenScheduled,
+      this.onTogglePanel,
+      this.onDeskInfo,
+      this.deskActions,
       this.acceptDrops = true,
       this.live,
       this.inboundShare,
@@ -250,7 +267,6 @@ class _SessionActionPanel extends StatelessWidget {
   }
 }
 
-const int _maxAttachments = 5;
 
 int _userEchoCount(List<Map<String, dynamic>> events) => events
     .where((e) => e['kind'] == 'user_input' || e['kind'] == 'steer')
@@ -1387,8 +1403,18 @@ class _SessionScreenState extends State<SessionScreen>
     return 0;
   }
 
+  bool get _glassHeader => kMobile && !widget.readOnly;
+  double _composerH = 0;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => _isMissionControl
+      ? ChatBubbleScope(child: _buildScreen(context))
+      : _buildScreen(context);
+
+  Widget _chatBackdrop(Widget body) =>
+      kMobile ? DotField.chat(child: body) : body;
+
+  Widget _buildScreen(BuildContext context) {
     // Depend on Theme so this rebuilds when the user switches palettes.
     Theme.of(context);
     _syncDraftAttachments();
@@ -1418,7 +1444,7 @@ class _SessionScreenState extends State<SessionScreen>
       backgroundColor:
           widget.embedded && !kMobile ? Colors.transparent : readingBg,
       resizeToAvoidBottomInset: false,
-      body: SafeArea(
+      body: _chatBackdrop(SafeArea(
         bottom: false,
         child: Stack(children: [
           Positioned.fill(
@@ -1436,15 +1462,80 @@ class _SessionScreenState extends State<SessionScreen>
                     // here is what lets the cards be capped and scroll instead.
                     LayoutBuilder(builder: (context, pane) {
                       final barsCap = pane.maxHeight * 0.6;
+                      final bottomBars = <Widget>[
+                            // The question/approval bars are PINNED here (not inside the scroll
+                            // list) so a "needs input" request is always visible — buried at the
+                            // bottom of a scrolled-up transcript it read as "the agent is stuck".
+                            if (!widget.readOnly &&
+                                waiting &&
+                                _pendingApproval(events))
+                              _centerWide(ConstrainedBox(
+                                constraints: BoxConstraints(maxHeight: barsCap),
+                                child: Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                      kMobile
+                                          ? M.gutter
+                                          : (widget.embedded ? 0 : 20),
+                                      6,
+                                      kMobile
+                                          ? M.gutter
+                                          : (widget.embedded ? 0 : 20),
+                                      0),
+                                  child: ApprovalBar(
+                                      events: events,
+                                      onSend: _sendDecision,
+                                      showApproveAll:
+                                          _pendingApprovalTotal(events) > 1),
+                                ),
+                              )),
+                            if (!widget.readOnly &&
+                                waiting &&
+                                s?.pendingQuestion != null)
+                              _centerWide(ConstrainedBox(
+                                constraints: BoxConstraints(maxHeight: barsCap),
+                                child: Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                      kMobile
+                                          ? M.gutter
+                                          : (widget.embedded ? 0 : 20),
+                                      6,
+                                      kMobile
+                                          ? M.gutter
+                                          : (widget.embedded ? 0 : 20),
+                                      0),
+                                  // Keyed by the question set, so a new one
+                                  // starts fresh (selection, step, review).
+                                  child: QuestionBar(
+                                      key: ValueKey(
+                                          jsonEncode(s!.pendingQuestion!)),
+                                      question: s.pendingQuestion!,
+                                      onSend: _sendDecision),
+                                ),
+                              )),
+                            if (!widget.readOnly && _settled)
+                              _centerWide(_settledNotice(),
+                                  extra: 2 * kComposerGutter),
+                            if (!widget.readOnly &&
+                                !(waiting && s?.pendingQuestion != null))
+                              _centerWide(
+                                  _inputBar(running,
+                                      top: !running &&
+                                              !_settled &&
+                                              _cold != null
+                                          ? ColdTab(
+                                              mode: _resumeMode,
+                                              resumeTokens:
+                                                  (_cold!['resume_tokens']
+                                                          as num?)
+                                                      ?.toInt(),
+                                              onPick: _onColdPick)
+                                          : null),
+                                  extra: 2 * kComposerGutter),
+                      ];
                       return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            if (widget.readOnly)
-                              _readOnlyHeader(status)
-                            else if (kMobile)
-                              widget.mobileTopBar
-                                      ?.call(() => _openActionsDrawer(s)) ??
-                                  _mobileHeader(s),
+                            if (widget.readOnly) _readOnlyHeader(status),
                             if (widget.readOnly && widget.banner != null)
                               _centerWide(widget.banner!),
                             // Mission Control's mobile top bar has no status line.
@@ -1544,7 +1635,7 @@ class _SessionScreenState extends State<SessionScreen>
                                               _shownRows.add(rowKey(i));
                                             }
                                           }
-                                          return ScrollConfiguration(
+                                          final list = ScrollConfiguration(
                                             behavior:
                                                 ScrollConfiguration.of(context)
                                                     .copyWith(
@@ -1556,9 +1647,15 @@ class _SessionScreenState extends State<SessionScreen>
                                                   ScrollCacheExtent.pixels(400),
                                               padding: EdgeInsets.fromLTRB(
                                                   kMobile ? M.gutter : 20,
-                                                  16,
+                                                  _glassHeader
+                                                      ? GlassTopFrame.inset + 12
+                                                      : (_deskHeader
+                                                          ? _deskHeaderHeight + 8
+                                                          : 16),
                                                   kMobile ? M.gutter : 20,
-                                                  24),
+                                                  _glassHeader
+                                                      ? _composerH + 12
+                                                      : 24),
                                               itemCount: timeline.length,
                                               itemBuilder: (context, index) {
                                                 final at =
@@ -1592,11 +1689,16 @@ class _SessionScreenState extends State<SessionScreen>
                                               },
                                             ),
                                           );
+                                          return _deskHeader
+                                              ? TopFadeMask(
+                                                  clear: _deskHeaderHeight - 8,
+                                                  child: list)
+                                              : list;
                                         })),
                                 if (!_stickToBottom && s != null)
                                   Positioned(
                                     right: 16,
-                                    bottom: 12,
+                                    bottom: 12 + (_glassHeader ? _composerH : 0),
                                     child: Material(
                                       color: AppColors.surface1,
                                       shape: const CircleBorder(),
@@ -1617,76 +1719,58 @@ class _SessionScreenState extends State<SessionScreen>
                                       ),
                                     ),
                                   ),
+                                if (_glassHeader)
+                                  Positioned(
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    child: _ReportHeight(
+                                      onHeight: (h) {
+                                        if (mounted && h != _composerH) {
+                                          setState(() => _composerH = h);
+                                        }
+                                      },
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [
+                                              AppColors.bg.withValues(alpha: 0),
+                                              AppColors.bg.withValues(alpha: 0.85),
+                                            ],
+                                          ),
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: bottomBars,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                if (_glassHeader)
+                                  Positioned(
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    child: GlassTopFrame(
+                                      child: widget.mobileTopBar?.call(
+                                              () => _openActionsDrawer(s)) ??
+                                          _mobileHeader(s),
+                                    ),
+                                  ),
+                                if (_deskHeader)
+                                  Positioned(
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    child: _deskHeaderBar(s, running),
+                                  ),
                               ]),
                             ),
-                            // The question/approval bars are PINNED here (not inside the scroll
-                            // list) so a "needs input" request is always visible — buried at the
-                            // bottom of a scrolled-up transcript it read as "the agent is stuck".
-                            if (!widget.readOnly &&
-                                waiting &&
-                                _pendingApproval(events))
-                              _centerWide(ConstrainedBox(
-                                constraints: BoxConstraints(maxHeight: barsCap),
-                                child: Padding(
-                                  padding: EdgeInsets.fromLTRB(
-                                      kMobile
-                                          ? M.gutter
-                                          : (widget.embedded ? 0 : 20),
-                                      6,
-                                      kMobile
-                                          ? M.gutter
-                                          : (widget.embedded ? 0 : 20),
-                                      0),
-                                  child: ApprovalBar(
-                                      events: events,
-                                      onSend: _sendDecision,
-                                      showApproveAll:
-                                          _pendingApprovalTotal(events) > 1),
-                                ),
-                              )),
-                            if (!widget.readOnly &&
-                                waiting &&
-                                s?.pendingQuestion != null)
-                              _centerWide(ConstrainedBox(
-                                constraints: BoxConstraints(maxHeight: barsCap),
-                                child: Padding(
-                                  padding: EdgeInsets.fromLTRB(
-                                      kMobile
-                                          ? M.gutter
-                                          : (widget.embedded ? 0 : 20),
-                                      6,
-                                      kMobile
-                                          ? M.gutter
-                                          : (widget.embedded ? 0 : 20),
-                                      0),
-                                  // Keyed by the question set, so a new one
-                                  // starts fresh (selection, step, review).
-                                  child: QuestionBar(
-                                      key: ValueKey(
-                                          jsonEncode(s!.pendingQuestion!)),
-                                      question: s.pendingQuestion!,
-                                      onSend: _sendDecision),
-                                ),
-                              )),
-                            if (!widget.readOnly && _settled)
-                              _centerWide(_settledNotice(),
-                                  extra: 2 * kComposerGutter),
-                            if (!widget.readOnly &&
-                                !(waiting && s?.pendingQuestion != null))
-                              _centerWide(
-                                  _inputBar(running,
-                                      top: !running &&
-                                              !_settled &&
-                                              _cold != null
-                                          ? ColdTab(
-                                              mode: _resumeMode,
-                                              resumeTokens:
-                                                  (_cold!['resume_tokens']
-                                                          as num?)
-                                                      ?.toInt(),
-                                              onPick: _onColdPick)
-                                          : null),
-                                  extra: 2 * kComposerGutter),
+                            if (!_glassHeader) ...bottomBars,
                           ]);
                     }),
                   ),
@@ -1718,14 +1802,8 @@ class _SessionScreenState extends State<SessionScreen>
                   : const SizedBox(key: ValueKey('mobile-chat')),
             ),
           ),
-          if (_isMissionControl && !kMobile)
-            Positioned(
-              top: 8,
-              right: 16,
-              child: AmbientHeaderOrb(client: widget.client),
-            ),
         ]),
-      ),
+      )),
     );
     final guardedScaffold = DaemonScope(
       client: widget.client,
@@ -1785,5 +1863,25 @@ class _RenderRowSizeWatch extends RenderProxyBox {
         if (attached) onResize(this, delta);
       });
     }
+  }
+}
+
+class _ReportHeight extends StatefulWidget {
+  const _ReportHeight({required this.onHeight, required this.child});
+  final ValueChanged<double> onHeight;
+  final Widget child;
+
+  @override
+  State<_ReportHeight> createState() => _ReportHeightState();
+}
+
+class _ReportHeightState extends State<_ReportHeight> {
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final h = context.size?.height;
+      if (mounted && h != null) widget.onHeight(h);
+    });
+    return widget.child;
   }
 }

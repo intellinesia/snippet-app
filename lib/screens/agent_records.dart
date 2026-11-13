@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../clock.dart';
 import '../swr.dart';
 import '../crew_widgets.dart';
 import '../media_views.dart' show DaemonScope;
 import '../models.dart';
+import '../motion_routes.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../pull_refresh.dart';
@@ -31,8 +33,7 @@ double get _gutter => kMobile ? M.gutter : 12;
 
 DateTime? _time(String raw) => DateTime.tryParse(raw)?.toLocal();
 
-String _clock(DateTime t) =>
-    '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+String _clock(DateTime t) => clock12(t);
 
 const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const _months = [
@@ -149,7 +150,7 @@ Future<void> openAgentActions(
   bool views = true,
 }) {
   if (kMobile) {
-    return Navigator.of(context).push<void>(MaterialPageRoute(
+    return Navigator.of(context).push<void>(AppPageRoute<void>(
       builder: (page) => Material(
         color: AppColors.bg,
         child: SafeArea(
@@ -385,7 +386,7 @@ class _RecordsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: readingBg,
+      color: kMobile ? readingBg : Colors.transparent,
       child: SafeArea(
         bottom: false,
         child: Column(
@@ -397,7 +398,7 @@ class _RecordsPage extends StatelessWidget {
               Container(
                 height: 44,
                 padding: const EdgeInsets.only(left: 12, right: 6),
-                color: AppColors.bg,
+                color: AppColors.paneBg,
                 child: Row(children: [
                   Text(title,
                       style: sans(14, weight: W.label, color: AppColors.fg1)),
@@ -711,7 +712,9 @@ class _FilterChip extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 4),
       child: Material(
-        color: selected ? AppColors.surface3 : Colors.transparent,
+        color: selected
+            ? (kMobile ? AppColors.surface3 : AppColors.tint2)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(kMobile ? 18 : 6),
         child: InkWell(
           borderRadius: BorderRadius.circular(kMobile ? 18 : 6),
@@ -813,12 +816,12 @@ class _RecordRow extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: kMobile ? 0 : 6),
       child: Material(
-        color: selected ? AppColors.surface2 : Colors.transparent,
+        color: selected ? AppColors.tint2 : Colors.transparent,
         borderRadius: BorderRadius.circular(kMobile ? 0 : R.md),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          hoverColor: AppColors.surface1,
+          hoverColor: kMobile ? AppColors.surface1 : AppColors.tint3,
           child: Stack(children: [
             Padding(
               padding: EdgeInsets.fromLTRB(_gutter + (kMobile ? 12 : 12),
@@ -959,7 +962,7 @@ class _RecordDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: AppColors.bg,
+        color: AppColors.paneBg,
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Container(

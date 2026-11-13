@@ -27,6 +27,7 @@ class TaskList extends StatelessWidget {
     this.selectedId,
     this.hasMore,
     this.onLoadMore,
+    this.sessionFolders,
   });
 
   final bool Function(TaskStatus status)? hasMore;
@@ -45,6 +46,9 @@ class TaskList extends StatelessWidget {
   /// at rest instead of animating in.
   final DateTime? appearSince;
   final String? selectedId;
+
+  /// session id → folder name, for the phone card's "agent · folder" line.
+  final Map<String, String>? sessionFolders;
 
   List<TaskItem> get _visible => tasks
       .where((t) => filter.isEmpty || filter.contains(t.status))
@@ -111,6 +115,7 @@ class TaskList extends StatelessWidget {
               key: ValueKey('t-${list[i].id}'),
               task: list[i],
               note: noteForTask(list[i], tasks),
+              folder: sessionFolders?[list[i].sessionId],
               onTap: () => onOpen(list[i]),
               divider: i < list.length - 1),
         if (hasMore?.call(status) ?? false) _loadMore(status),
@@ -168,10 +173,9 @@ class TaskStatusHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => kMobile
       ? Padding(
-          padding: const EdgeInsets.fromLTRB(4, 22, 4, 2),
-          child: Text('${status.label.toUpperCase()}  ·  $count',
-              style: sans(12,
-                  weight: W.label, spacing: 0.7, color: AppColors.fg4)),
+          padding: const EdgeInsets.fromLTRB(0, 16, 0, 4),
+          child: Text(status.label,
+              style: sans(13, weight: W.label, color: AppColors.fg3)),
         )
       : Padding(
         padding: const EdgeInsets.fromLTRB(12, 14, 12, 6),
@@ -215,7 +219,8 @@ class TaskRow extends StatelessWidget {
       required this.onTap,
       this.note,
       this.selected = false,
-      this.divider = false});
+      this.divider = false,
+      this.folder});
   final TaskItem task;
   final TaskNote? note;
   final bool selected;
@@ -224,6 +229,9 @@ class TaskRow extends StatelessWidget {
   /// A hairline under the row, between rows of one status on a phone.
   final bool divider;
 
+  /// Project folder name for the phone card's meta line.
+  final String? folder;
+
   @override
   Widget build(BuildContext context) {
     final detail = note?.line ??
@@ -231,83 +239,68 @@ class TaskRow extends StatelessWidget {
         task.description.trim().split('\n').first;
     final age = taskAge(task);
     if (kMobile) {
-      final Widget glyph = switch (task.status) {
-        TaskStatus.inProgress =>
-          WorkingMochi(size: 18, color: mochiPalette.first.$2),
-        TaskStatus.inReview =>
-          AppIcon('eye', size: 18, color: AppColors.accent),
-        TaskStatus.blocked => MochiIcon(color: AppColors.run, size: 18),
-        TaskStatus.done => AppIcon('check-circle', size: 18, color: AppColors.ok),
-        TaskStatus.failed =>
-          AppIcon('alert-triangle', size: 17, color: AppColors.danger),
-        TaskStatus.cancelled => AppIcon('x-circle', size: 18, color: AppColors.fg4),
-        TaskStatus.todo => Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.fg4, width: 1.5),
-            ),
-          ),
-      };
+      // v5 `.pcard`: title, step line, then "agent · folder" with the age.
       final finished = const {TaskStatus.done, TaskStatus.cancelled}
           .contains(task.status);
+      final needsYou = const {
+        TaskStatus.inReview,
+        TaskStatus.blocked,
+        TaskStatus.failed,
+      }.contains(task.status);
+      final agent = task.createdByKind == 'agent' ? task.createdById : '';
+      final folderName = (folder ?? '').trim();
+      final meta = [agent, folderName].where((s) => s.isNotEmpty).join(' · ');
       return InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(4, 13, 4, 13),
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           decoration: BoxDecoration(
-            border: Border(
-                bottom: BorderSide(
-                    color: divider ? AppColors.line : Colors.transparent)),
+            color: kMobile ? AppColors.surface2 : AppColors.tint1,
+            borderRadius: BorderRadius.circular(14),
           ),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            SizedBox(
-                width: 22,
-                height: 21,
-                child: Align(alignment: Alignment.centerLeft, child: glyph)),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    Expanded(
-                      child: Text(task.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(16,
-                              weight: W.strong,
-                              height: 21 / 16,
-                              color: finished ? AppColors.fg3 : AppColors.fg1)),
-                    ),
-                    if (age.isNotEmpty) ...[
-                      const SizedBox(width: 10),
-                      Text(age,
-                          style:
-                              sans(13, color: AppColors.fg4, tabular: true)),
-                    ],
-                  ]),
-                  if (detail.isNotEmpty || task.priority > 0) ...[
-                    const SizedBox(height: 4),
-                    Row(children: [
-                      if (task.priority > 0) ...[
-                        PriorityMark(task.priority),
-                        const SizedBox(width: 8),
-                      ],
-                      Expanded(
-                        child: Text(detail,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(13,
-                                height: 18 / 13, color: AppColors.fg3)),
-                      ),
-                    ]),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(task.title,
+                  style: sans(15,
+                      weight: W.label,
+                      height: 1.3,
+                      color: finished ? AppColors.fg3 : AppColors.fg1)),
+              if (detail.isNotEmpty) ...[
+                const SizedBox(height: 5),
+                Text(detail,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(14, height: 1.4, color: AppColors.fg3)),
+              ],
+              if (meta.isNotEmpty || age.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(children: [
+                  if (task.priority > 0) ...[
+                    PriorityMark(task.priority),
+                    const SizedBox(width: 8),
                   ],
-                ],
-              ),
-            ),
-          ]),
+                  if (agent.isNotEmpty) ...[
+                    AgentMochi(agent, size: 16),
+                    const SizedBox(width: 6),
+                  ],
+                  Expanded(
+                    child: Text(meta,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13, color: AppColors.fg3)),
+                  ),
+                  if (age.isNotEmpty)
+                    Text(age,
+                        style: sans(13,
+                            color: needsYou ? AppColors.run : AppColors.fg3,
+                            tabular: true)),
+                ]),
+              ],
+            ],
+          ),
         ),
       );
     }
@@ -378,7 +371,7 @@ class TaskRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Material(
-        color: AppColors.surface1,
+        color: AppColors.tint1,
         borderRadius: BorderRadius.circular(kMobile ? R.md : R.sm),
         child: InkWell(
           onTap: onTap,

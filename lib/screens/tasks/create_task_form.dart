@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../api.dart';
+import '../../mochi.dart';
 import '../../models.dart';
 import '../../platform.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
-import '../mission_control/mission_control_state.dart' show isDedicatedMcSession;
 
+/// A new task goes to Mission Control as a request: it files the task, picks
+/// or starts the session, and offers it to the chosen agent.
 class CreateTaskForm extends StatefulWidget {
   const CreateTaskForm({
     super.key,
@@ -23,68 +25,26 @@ class CreateTaskForm extends StatefulWidget {
 class _CreateTaskFormState extends State<CreateTaskForm> {
   final _title = TextEditingController();
   final _description = TextEditingController();
-  List<SessionInfo> _sessions = const [];
-  String? _sessionId;
-  String? _sessionLabel;
-  final bool _busy = false;
+  List<CoordinationAgent> _agents = const [];
+  String? _agentId;
+  bool _busy = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadSessions();
+    _loadAgents();
   }
 
-  Future<void> _loadSessions() async {
+  Future<void> _loadAgents() async {
     try {
-      final all = await widget.client.sessions();
+      final all = await widget.client.coordinationAgents();
       if (!mounted) return;
-      final usable = all
-          .where((s) =>
-              !isDedicatedMcSession(s.id) && s.id != 'mission-control')
-          .toList()
-        ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
-      setState(() => _sessions = usable);
+      setState(() => _agents = [
+            for (final a in all)
+              if (!a.isMissionControl) a
+          ]);
     } catch (_) {}
-  }
-
-  Future<void> _pickSession(BuildContext anchor) async {
-    if (_sessions.isEmpty) {
-      setState(() => _error = 'No sessions to route into');
-      return;
-    }
-    final picked = await showAppMenu<String>(
-      context,
-      anchor: anchor,
-      minWidth: kMobile ? 280 : 240,
-      maxWidth: 380,
-      items: [
-        appMenuHeading<String>('Send this work to'),
-        for (final s in _sessions)
-          appMenuRow<String>(
-            value: s.id,
-            icon: 'chat',
-            label: s.title.trim().isEmpty ? s.id : s.title,
-            description: s.projectFolder.trim().isEmpty
-                ? s.id
-                : s.inWorktree
-                    ? '${s.projectFolder} · ${s.branch ?? 'worktree'}'
-                    : s.projectFolder,
-            selected: s.id == _sessionId,
-          ),
-      ],
-    );
-    if (picked == null || !mounted) return;
-    for (final s in _sessions) {
-      if (s.id == picked) {
-        setState(() {
-          _sessionId = s.id;
-          _sessionLabel = s.title.trim().isEmpty ? s.id : s.title;
-          _error = null;
-        });
-        return;
-      }
-    }
   }
 
   @override
@@ -94,59 +54,95 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
     super.dispose();
   }
 
+  String _name(CoordinationAgent a) =>
+      a.displayName.trim().isEmpty ? a.id : a.displayName.trim();
+
   Future<void> _submit() async {
     final title = _title.text.trim();
     if (title.isEmpty) {
       setState(() => _error = 'Give the task a title.');
       return;
     }
-    final sessionId = _sessionId;
-    if (sessionId == null || sessionId.isEmpty) {
-      setState(() => _error = 'Choose the session that should do this.');
+    final agent = _agents.where((a) => a.id == _agentId).firstOrNull;
+    final briefing = _description.text.trim();
+    final body = [
+      'New task from the Tasks board. File it, then pick or start the session '
+          'it should run in and offer it to the agent.',
+      '',
+      'Title: $title',
+      'Agent: ${agent == null ? 'your call' : '${_name(agent)} (${agent.id})'}',
+      if (briefing.isNotEmpty) ...['', 'Briefing:', briefing],
+    ].join('\n');
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final root = Navigator.of(context, rootNavigator: true).context;
+    try {
+      await widget.client.sendAgentMessage(
+        toAgentId: 'mission-control',
+        body: body,
+        idempotencyKey: 'new-task-${title.hashCode}-${DateTime.now().minute}',
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = "Couldn't reach Mission Control: $e";
+        });
+      }
       return;
     }
-    final description = _description.text.trim();
-    final now = DateTime.now().toUtc().toIso8601String();
-    final pendingId = 'pending-${DateTime.now().microsecondsSinceEpoch}';
-    final pending = TaskItem.fromJson({
-      'id': pendingId,
-      'title': title,
-      'description': description,
-      'status': 'todo',
-      'created_by_kind': 'human',
-      'created_at': now,
-      'updated_at': now,
-      'session_id': sessionId,
-    });
-    final client = widget.client;
-    final feed = client.swr.entry<List<TaskItem>>('coordination:tasks');
-    feed.mutate([...?feed.data, pending]);
-    final root = Navigator.of(context, rootNavigator: true).context;
+    if (!mounted) return;
     if (widget.onCreated != null) {
       widget.onCreated!();
     } else {
-      Navigator.of(context).pop(false);
+      Navigator.of(context).pop(true);
     }
-    try {
-      final created = await client.createTask(
-        title: title,
-        sessionId: sessionId,
-        description: description,
-      );
-      feed.mutate([
-        for (final t in feed.data ?? const <TaskItem>[])
-          t.id == pendingId ? created : t
-      ]);
-    } catch (e) {
-      feed.mutate([
-        for (final t in feed.data ?? const <TaskItem>[])
-          if (t.id != pendingId) t
-      ]);
-      if (root.mounted) {
-        toast(root, "Couldn't create “$title”: $e", danger: true);
-      }
-    }
+    if (root.mounted) toast(root, 'Sent to Mission Control');
   }
+
+  Widget _agentChip({
+    required String id,
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) =>
+      Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _busy ? null : onTap,
+          child: SizedBox(
+            width: 64,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              AnimatedContainer(
+                duration: Motion.fast,
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.fg1.withValues(alpha: 0.06),
+                  border: Border.all(
+                    color: selected ? AppColors.accent : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+                child: Center(child: AgentMochi(id, size: 24)),
+              ),
+              const SizedBox(height: S.s6),
+              Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: sans(11,
+                      color: selected ? AppColors.fg1 : AppColors.fg3)),
+            ]),
+          ),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
@@ -155,71 +151,61 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'What needs doing, and which session should do it? The task is routed there and reports back.',
-              style: sans(kMobile ? 13 : 12, color: AppColors.fg3, height: 1.45),
-            ),
-            const SizedBox(height: 14),
             AppField(
               controller: _title,
               label: 'Title',
               hint: 'Ship the coordinator panel',
               autofocus: true,
             ),
-            const SizedBox(height: 12),
-            Text('Session',
+            const SizedBox(height: S.s16),
+            Text('Who',
                 style: sans(12, weight: W.label, color: AppColors.fg3)),
-            const SizedBox(height: 5),
-            Material(
-              color: AppColors.surface1,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: AppColors.line),
-              ),
-              child: Builder(
-                builder: (ctx) => InkWell(
-                  onTap: _busy ? null : () => _pickSession(ctx),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 9),
-                    child: Row(children: [
-                      AppIcon('chat', size: 14, color: AppColors.fg3),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(_sessionLabel ?? 'Choose a session',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(13,
-                                color: _sessionLabel == null
-                                    ? AppColors.fg4
-                                    : AppColors.fg1)),
-                      ),
-                      AppIcon('chevron-down', size: 13, color: AppColors.fg4),
-                    ]),
+            const SizedBox(height: S.s8),
+            SizedBox(
+              height: 66,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _agentChip(
+                    id: 'mission-control',
+                    label: 'MC picks',
+                    selected: _agentId == null,
+                    onTap: () => setState(() => _agentId = null),
                   ),
-                ),
+                  for (final a in _agents)
+                    _agentChip(
+                      id: a.id,
+                      label: _name(a),
+                      selected: _agentId == a.id,
+                      onTap: () => setState(() => _agentId = a.id),
+                    ),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: S.s16),
             AppField(
               controller: _description,
               label: 'Briefing',
-              hint:
-                  'Goal, what done looks like, and the context the agent needs.',
+              hint: 'Goal, what done looks like, and the context it needs.',
               minLines: 4,
               maxLines: 8,
             ),
             if (_error != null) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: S.s8),
               Text(_error!, style: sans(12, color: AppColors.danger)),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: S.s12),
+            Text(
+              'Mission Control files it, picks or starts the session, and '
+              'hands it over.',
+              style: sans(12, color: AppColors.fg4, height: 1.45),
+            ),
+            const SizedBox(height: S.s12),
             Btn(
-              _busy ? 'Creating…' : 'Create task',
+              _busy ? 'Sending…' : 'Send to Mission Control',
               full: true,
               disabled: _busy,
-              icon: 'plus',
+              icon: 'send',
               onTap: _submit,
             ),
           ],

@@ -74,13 +74,31 @@ class _AmbientTaskHandler extends TaskHandler {
   }
 }
 
-class AmbientController extends ChangeNotifier {
+abstract class AmbientControl implements Listenable {
+  AmbientStatus get status;
+  bool get running;
+  ValueListenable<AmbientVoice?> get voice;
+  ValueListenable<AmbientStateEvent?>? get stateListenable => null;
+  bool get supportsMute => false;
+  bool get muted => false;
+  Future<void> toggleMute() async {}
+  Future<void> bind();
+  Future<String> get deviceId;
+  Future<String?> start(DaemonClient client);
+  Future<void> stop();
+  Future<bool> get ignoringBattery;
+  Future<void> requestBatteryExemption();
+  Future<(AmbientSettings?, String?)> setEnabled(DaemonClient client, bool on);
+}
+
+class AmbientController extends ChangeNotifier implements AmbientControl {
   AmbientController._();
   static final AmbientController instance = AmbientController._();
 
   static bool get supported => !kIsWeb;
   static bool get _android => !kIsWeb && Platform.isAndroid;
 
+  @override
   AmbientStatus status = const AmbientStatus();
   AmbientCapture? _local;
   StreamSubscription<AmbientStatus>? _localSub;
@@ -88,10 +106,25 @@ class AmbientController extends ChangeNotifier {
   bool _initialised = false;
   static final ValueNotifier<AmbientVoice?> _emptyVoice = ValueNotifier(null);
 
+  @override
   bool get running => status.running;
 
+  @override
   ValueListenable<AmbientVoice?> get voice => _local?.voiceListenable ?? _emptyVoice;
 
+  @override
+  ValueListenable<AmbientStateEvent?>? get stateListenable => null;
+
+  @override
+  bool get supportsMute => false;
+
+  @override
+  bool get muted => false;
+
+  @override
+  Future<void> toggleMute() async {}
+
+  @override
   Future<String> get deviceId async {
     try {
       return (await _identity).$1;
@@ -127,6 +160,7 @@ class AmbientController extends ChangeNotifier {
     }
   }
 
+  @override
   Future<void> bind() async {
     _init();
     if (_bound) return;
@@ -150,6 +184,7 @@ class AmbientController extends ChangeNotifier {
     }
   }
 
+  @override
   Future<String?> start(DaemonClient client) async {
     if (!supported) return 'Ambient listening is not available in the browser.';
     _init();
@@ -212,6 +247,7 @@ class AmbientController extends ChangeNotifier {
     }
   }
 
+  @override
   Future<void> stop() async {
     if (_android) {
       await FlutterForegroundTask.stopService();
@@ -224,13 +260,16 @@ class AmbientController extends ChangeNotifier {
     notifyListeners();
   }
 
+  @override
   Future<bool> get ignoringBattery async =>
       !_android || await FlutterForegroundTask.isIgnoringBatteryOptimizations;
 
+  @override
   Future<void> requestBatteryExemption() async {
     if (_android) await FlutterForegroundTask.requestIgnoreBatteryOptimization();
   }
 
+  @override
   Future<(AmbientSettings?, String?)> setEnabled(DaemonClient client, bool on) async {
     try {
       if (on) {

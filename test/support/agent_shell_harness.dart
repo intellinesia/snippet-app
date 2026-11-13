@@ -146,7 +146,9 @@ Future<void> openAgentTab(
       theme: buildAppTheme(),
       home: const DesktopShell()));
   await settle(tester);
-  await tester.tap(find.byKey(ValueKey('rail-agent-$agentId')));
+  await tester.tap(find.byKey(const ValueKey('sidebar-mode-agents')));
+  await settle(tester);
+  await tester.tap(find.byKey(ValueKey('agent-card-$agentId')));
   await settle(tester);
 }
 

@@ -54,7 +54,7 @@ class _ArtifactGridState extends State<ArtifactGrid> {
     return Padding(
       padding: const EdgeInsets.only(right: 4),
       child: Material(
-        color: on ? AppColors.surface2 : Colors.transparent,
+        color: on ? AppColors.tint2 : Colors.transparent,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(kMobile ? R.pill : R.sm),
             side: BorderSide(color: on ? Colors.transparent : AppColors.line)),
@@ -183,7 +183,7 @@ class _CardState extends State<_Card> {
           duration: const Duration(milliseconds: 140),
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: AppColors.surface1,
+            color: AppColors.tint1,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
                 color: _hover

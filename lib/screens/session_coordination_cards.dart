@@ -4,6 +4,7 @@ import '../platform.dart';
 import '../transcript_card.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../chat/chat_card.dart';
 import 'mission_control/mission_control_state.dart'
     show
         QuietWakeRun,
@@ -631,15 +632,19 @@ class WorkerQuestionCard extends StatelessWidget {
   final WorkerQuestion question;
 
   @override
-  Widget build(BuildContext context) => _ThreadCard(
-        icon: 'message-text',
-        tone: Tone.run,
-        kind: 'Worker question',
-        title: question.task.isEmpty ? null : question.task,
-        status: 'Waiting',
-        body: question.question,
-        footer: 'Mission Control answers from your brief, or pings you',
-      );
+  Widget build(BuildContext context) => ChatCard(children: [
+        ChatCardHeader(
+          title: question.question.trim(),
+          subtitle: question.task.trim(),
+          trailing: const ChatCardPill('1 of 1'),
+        ),
+        ChatCardBody(
+          child: Text(
+            'Mission Control answers from your brief, or pings you',
+            style: sans(TranscriptCard.metaSize, color: AppColors.fg3),
+          ),
+        ),
+      ]);
 }
 
 class AgentMessageCard extends StatelessWidget {

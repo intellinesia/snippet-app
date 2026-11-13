@@ -1,13 +1,16 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../ambient/controller.dart';
 import '../api.dart';
+import '../glass.dart';
 import '../mochi.dart';
+import '../motion_routes.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'mobile_voice_page.dart';
+import 'tasks/tasks_panel.dart';
 
 BoxDecoration _floating(double radius) => BoxDecoration(
       color: AppColors.surface1,
@@ -18,129 +21,6 @@ BoxDecoration _floating(double radius) => BoxDecoration(
       ],
     );
 
-// Shared by the home list and the top bar so both follow the agents/sessions switch.
-final mobileAgentsList = ValueNotifier<bool>(false);
-const _agentsListPref = 'mobile_home_agents_list';
-
-Future<void> loadMobileAgentsList() async {
-  mobileAgentsList.value =
-      (await SharedPreferences.getInstance()).getBool(_agentsListPref) ?? false;
-}
-
-/// Blurs the home below the header and offers both lists.
-Future<void> showMobileListPicker(BuildContext anchor) {
-  final box = anchor.findRenderObject() as RenderBox?;
-  final top = box == null
-      ? 76.0
-      : box.localToGlobal(Offset(0, box.size.height)).dy + 16;
-  final screen = MediaQuery.sizeOf(anchor).width;
-  final width = (screen - 2 * M.gutter).clamp(0.0, 220.0);
-  final left = (screen - width) / 2;
-  return showGeneralDialog<void>(
-    context: anchor,
-    barrierDismissible: true,
-    barrierLabel: 'Close',
-    barrierColor: Colors.transparent,
-    transitionDuration: Motion.fast,
-    pageBuilder: (context, _, __) {
-      Widget option(String icon, String title, bool agents) {
-        final on = mobileAgentsList.value == agents;
-        return Semantics(
-          button: true,
-          selected: on,
-          label: title,
-          excludeSemantics: true,
-          child: GestureDetector(
-            key: ValueKey(agents ? 'list-pick-agents' : 'list-pick-sessions'),
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              HapticFeedback.selectionClick();
-              if (!on) setMobileAgentsList(agents);
-              Navigator.of(context).pop();
-            },
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: on ? AppColors.surface3 : Colors.transparent,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: on
-                        ? AppColors.accent.withValues(alpha: 0.16)
-                        : AppColors.surface2,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: AppIcon(icon,
-                      size: 18, color: on ? AppColors.accent : AppColors.fg2),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(title,
-                      style: sans(15, weight: W.strong, color: AppColors.fg1)),
-                ),
-                if (on)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8, right: 4),
-                    child: AppIcon('check', size: 16, color: AppColors.accent),
-                  ),
-              ]),
-            ),
-          ),
-        );
-      }
-
-      return Stack(children: [
-        Positioned.fill(
-          child: GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: ColoredBox(color: AppColors.scrim),
-          ),
-        ),
-        Positioned(
-          top: top,
-          left: left,
-          width: width,
-          child: Material(
-            type: MaterialType.transparency,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: _composerLike(20),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                option('list', 'Sessions', false),
-                const SizedBox(height: 4),
-                option('agent', 'Agents', true),
-              ]),
-            ),
-          ),
-        ),
-      ]);
-    },
-    transitionBuilder: (_, a, __, child) => FadeTransition(
-      opacity: CurvedAnimation(parent: a, curve: Motion.enter),
-      child: child,
-    ),
-  );
-}
-
-void setMobileAgentsList(bool agents) {
-  FocusManager.instance.primaryFocus?.unfocus();
-  mobileAgentsList.value = agents;
-  SharedPreferences.getInstance()
-      .then((p) => p.setBool(_agentsListPref, agents));
-}
-
-// The chat composer's card, so the home search row reads as the same control.
-BoxDecoration _composerLike(double radius) => BoxDecoration(
-      color: AppColors.surface1,
-      borderRadius: BorderRadius.circular(radius),
-      border: Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
-    );
-
 class RoundBtn extends StatelessWidget {
   const RoundBtn({
     super.key,
@@ -148,11 +28,14 @@ class RoundBtn extends StatelessWidget {
     this.child,
     required this.tooltip,
     this.onTap,
-    this.size = 44,
-    this.iconSize = 19,
+    this.size = 40,
+    this.iconSize = 18,
     this.badge = false,
+    this.badgeCount = 0,
+    this.bare = false,
   });
 
+  final bool bare;
   final String? icon;
   final Widget? child;
   final String tooltip;
@@ -160,6 +43,7 @@ class RoundBtn extends StatelessWidget {
   final double size;
   final double iconSize;
   final bool badge;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) => Tooltip(
@@ -175,17 +59,16 @@ class RoundBtn extends StatelessWidget {
                     HapticFeedback.selectionClick();
                     onTap!();
                   },
-            child: Container(
-              width: size,
-              height: size,
-              decoration: _floating(size / 2),
-              alignment: Alignment.center,
-              child: Stack(clipBehavior: Clip.none, children: [
-                child ?? AppIcon(icon!, size: iconSize, color: AppColors.fg2),
-                if (badge)
-                  Positioned(
-                    right: -3,
-                    top: -3,
+            child: Stack(clipBehavior: Clip.none, children: [
+              if (bare)
+                _face()
+              else
+                Glass(radius: null, child: _face()),
+              if (badge && badgeCount <= 0)
+                Positioned(
+                  right: 1,
+                  top: 1,
+                  child: IgnorePointer(
                     child: Container(
                       width: 7,
                       height: 7,
@@ -193,145 +76,249 @@ class RoundBtn extends StatelessWidget {
                           color: AppColors.accent, shape: BoxShape.circle),
                     ),
                   ),
+                ),
+              if (badgeCount > 0)
+                Positioned(
+                  right: -2,
+                  top: -2,
+                  child: IgnorePointer(
+                    child: Container(
+                      constraints:
+                          const BoxConstraints(minWidth: 16, minHeight: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentFill,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$badgeCount',
+                        style: TS.caption(AppColors.accentFg).copyWith(
+                            fontSize: 10, fontWeight: W.label, height: 1),
+                      ),
+                    ),
+                  ),
+                ),
+            ]),
+          ),
+        ),
+      );
+
+  Widget _face() => Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        child: child ?? AppIcon(icon!, size: iconSize, color: AppColors.fg2),
+      );
+}
+
+class ListeningPill extends StatelessWidget {
+  const ListeningPill({super.key, this.onTap});
+
+  final VoidCallback? onTap;
+
+  static const _heights = [5.0, 11.0, 7.0, 9.0];
+
+  @override
+  Widget build(BuildContext context) {
+    final pill = Container(
+      height: 26,
+      padding: const EdgeInsets.symmetric(horizontal: 9),
+      decoration: BoxDecoration(
+        color: AppColors.ok.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        SizedBox(
+          height: 12,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              for (var i = 0; i < _heights.length; i++) ...[
+                if (i > 0) const SizedBox(width: 2),
+                Container(
+                  width: 2,
+                  height: _heights[i],
+                  decoration: BoxDecoration(
+                    color: AppColors.ok,
+                    borderRadius: BorderRadius.circular(1),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text('Listening', style: TS.caption(AppColors.ok).copyWith(height: 1)),
+      ]),
+    );
+    if (onTap == null) return pill;
+    return Semantics(
+      button: true,
+      label: 'Voice',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap!();
+        },
+        child: pill,
+      ),
+    );
+  }
+}
+
+class MobileHomeHeader extends StatelessWidget {
+  const MobileHomeHeader({
+    super.key,
+    required this.title,
+    this.mcBadgeCount = 0,
+    this.onMc,
+    this.onBack,
+    this.listening = false,
+    this.onListening,
+    this.trailing = const [],
+  });
+
+  final String title;
+  final int mcBadgeCount;
+  final VoidCallback? onMc;
+  final VoidCallback? onBack;
+  final bool listening;
+  final VoidCallback? onListening;
+  final List<Widget> trailing;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(M.gutter, 6, M.gutter, 6),
+        child: SizedBox(
+          height: 44,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 56),
+                child: Center(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: sans(17, weight: W.strong, color: AppColors.fg1),
+                  ),
+                ),
+              ),
+              Row(children: [
+                if (onBack != null)
+                  RoundBtn(
+                    icon: 'chevron-left',
+                    tooltip: 'Back',
+                    size: 40,
+                    iconSize: 20,
+                    onTap: onBack,
+                  )
+                else
+                  RoundBtn(
+                    tooltip: 'Mission Control',
+                    size: 40,
+                    badgeCount: mcBadgeCount,
+                    onTap: onMc,
+                    child: MochiIcon(color: AppColors.fg1, size: 22),
+                  ),
+                const Spacer(),
+                if (listening) ...[
+                  ListeningPill(
+                    onTap: onListening ?? () => openMobileVoicePage(context),
+                  ),
+                  if (trailing.isNotEmpty) const SizedBox(width: 10),
+                ],
+                ...trailing,
               ]),
-            ),
+            ],
           ),
         ),
       );
 }
 
-class MobileTopBar extends StatelessWidget {
-  const MobileTopBar({
-    super.key,
-    required this.mission,
-    required this.onMission,
-    required this.onSessions,
-    required this.onMenu,
-    required this.onSettings,
-    this.sessionsBusy = false,
-    this.trailingOrb,
-    this.onActions,
-  });
+Future<void> openMobileTasksPage(BuildContext context, DaemonClient client) {
+  return Navigator.of(context).push<void>(AppPageRoute<void>(
+    builder: (_) => Scaffold(
+      backgroundColor: AppColors.bg,
+      body: SafeArea(child: TasksPanel(client: client, phoneHeader: true)),
+    ),
+  ));
+}
 
-  final Widget? trailingOrb;
+class MobileMissionBar extends StatelessWidget {
+  const MobileMissionBar({super.key, this.onActions, this.client});
+
   final VoidCallback? onActions;
-  final bool mission;
-  final VoidCallback onMission;
-  final VoidCallback onSessions;
-  final VoidCallback onMenu;
-  final VoidCallback onSettings;
-  final bool sessionsBusy;
-
-  Widget _segment({
-    Key? key,
-    required bool active,
-    required Widget glyph,
-    required String label,
-    required VoidCallback onTap,
-    VoidCallback? onActiveTap,
-    bool dot = false,
-    bool flips = false,
-  }) {
-    return Semantics(
-      button: true,
-      selected: active,
-      label: label,
-      child: GestureDetector(
-        key: key,
-        behavior: HitTestBehavior.opaque,
-        onTap: active
-            ? (onActiveTap == null
-                ? null
-                : () {
-                    HapticFeedback.selectionClick();
-                    onActiveTap();
-                  })
-            : () {
-                HapticFeedback.selectionClick();
-                onTap();
-              },
-        child: AnimatedContainer(
-          duration: Motion.fast,
-          curve: Motion.enter,
-          height: 36,
-          padding: EdgeInsets.symmetric(horizontal: active ? 14 : 13),
-          decoration: BoxDecoration(
-            color: active ? AppColors.surface3 : Colors.transparent,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Stack(clipBehavior: Clip.none, children: [
-              glyph,
-              if (dot && !active)
-                Positioned(
-                  right: -4,
-                  top: -2,
-                  child: Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                        color: AppColors.accent, shape: BoxShape.circle),
-                  ),
-                ),
-            ]),
-            if (active) ...[
-              const SizedBox(width: 8),
-              Text(label,
-                  style: sans(15, weight: W.strong, color: AppColors.fg1)),
-              if (flips) ...[
-                const SizedBox(width: 6),
-                AppIcon('chevron-down', size: 14, color: AppColors.fg3),
-              ],
-            ],
-          ]),
-        ),
-      ),
-    );
-  }
+  final DaemonClient? client;
 
   @override
   Widget build(BuildContext context) {
+    final c = client;
     return SizedBox(
       height: 60,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: M.gutter),
         child: Row(children: [
-          RoundBtn(icon: 'menu', tooltip: 'Menu', onTap: onMenu),
-          if (trailingOrb != null) const SizedBox(width: 44),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: _floating(24),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              _segment(
-                active: mission,
-                label: 'Mission',
-                glyph: MochiIcon(
-                    color: mission ? mochiPalette.first.$2 : AppColors.fg4,
-                    size: 19),
-                onTap: onMission,
-                onActiveTap: onActions,
-              ),
-              const SizedBox(width: 2),
-              ValueListenableBuilder<bool>(
-                valueListenable: mobileAgentsList,
-                builder: (context, agents, __) => _segment(
-                  key: const ValueKey('home-list-segment'),
-                  active: !mission,
-                  label: agents ? 'Agents' : 'Sessions',
-                  flips: true,
-                  onActiveTap: () => showMobileListPicker(context),
-                  dot: !agents && sessionsBusy,
-                  glyph: AppIcon(agents ? 'agent' : 'list',
-                      size: 18, color: mission ? AppColors.fg3 : AppColors.fg1),
-                  onTap: onSessions,
+          const SizedBox(width: 40),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Center(
+              child: Semantics(
+                button: onActions != null,
+                label: 'Mission Control',
+                hint: 'Session actions',
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onActions,
+                  child: Glass(
+                    radius: BorderRadius.circular(20),
+                    child: Container(
+                      height: 40,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        MochiIcon(size: 20, color: AppColors.fg1),
+                        const SizedBox(width: 7),
+                        Flexible(
+                          child: Text(
+                            'Mission Control',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TS.ui(AppColors.fg1).copyWith(
+                                fontSize: 14,
+                                fontWeight: W.strong,
+                                height: 1.2),
+                          ),
+                        ),
+                      ]),
+                    ),
+                  ),
                 ),
               ),
-            ]),
+            ),
           ),
-          const Spacer(),
-          if (trailingOrb != null) trailingOrb!,
-          RoundBtn(icon: 'settings', tooltip: 'Settings', onTap: onSettings),
+          const SizedBox(width: 10),
+          if (c != null)
+            ListenableBuilder(
+              listenable: AmbientController.instance,
+              builder: (context, _) {
+                final live = AmbientController.instance.running;
+                return RoundBtn(
+                  tooltip: live ? 'Voice call' : 'Start voice',
+                  size: 40,
+                  onTap: () => startMobileVoice(context, c),
+                  child: AppIcon('phone',
+                      size: 18,
+                      color: live ? AppColors.ok : AppColors.fg1),
+                );
+              },
+            )
+          else
+            const SizedBox(width: 40),
         ]),
       ),
     );
@@ -374,7 +361,8 @@ class MobileBackBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pill = onTitleTap != null || subtitle != null;
+    final pill =
+        onTitleTap != null || subtitle != null || subtitleView != null;
     // iOS has no system back for these pages, so only Android loses the button,
     // and only when nothing on the right would leave the bar lopsided.
     final showBack = menu ||
@@ -388,7 +376,6 @@ class MobileBackBar extends StatelessWidget {
             (trailing.isNotEmpty && canPop
                 ? () => Navigator.maybePop(context)
                 : null);
-    final fill = back != null || trailing.isNotEmpty;
     final text = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -399,8 +386,10 @@ class MobileBackBar extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: sans(pill ? 14.5 : 16,
-                    weight: W.strong, color: AppColors.fg1)),
+                style: pill
+                    ? TS.ui(AppColors.fg1).copyWith(
+                        fontSize: 15, fontWeight: W.strong, height: 1.25)
+                    : sans(16, weight: W.strong, color: AppColors.fg1)),
           ),
           if (chevron) ...[
             const SizedBox(width: 4),
@@ -415,7 +404,9 @@ class MobileBackBar extends StatelessWidget {
             child: Text(subtitle!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(12, color: AppColors.fg3)),
+                style: TS
+                    .caption(AppColors.fg3)
+                    .copyWith(fontSize: 12, height: 1.2)),
           ),
       ],
     );
@@ -429,16 +420,18 @@ class MobileBackBar extends StatelessWidget {
     return SizedBox(
       height: 60,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: M.gutter),
         child: Row(children: [
           if (back == null && trailing.isNotEmpty && !pill)
-            const SizedBox(width: 44)
+            const SizedBox(width: 40)
           else if (back != null)
             RoundBtn(
                 icon: menu ? 'menu' : 'chevron-left',
                 tooltip: menu ? 'Menu' : 'Back',
+                size: 40,
+                iconSize: menu ? 18 : 20,
                 onTap: back),
-          if (trailing.length == 2 && !pill) const SizedBox(width: 44),
+          if (trailing.length == 2 && !pill) const SizedBox(width: 40),
           if (back != null || (trailing.isNotEmpty && !pill))
             const SizedBox(width: 10),
           Expanded(
@@ -452,15 +445,9 @@ class MobileBackBar extends StatelessWidget {
                         onTap: onTitleTap,
                         child: Container(
                           height: 44,
-                          constraints: fill
-                              ? const BoxConstraints(minWidth: double.infinity)
-                              : const BoxConstraints(minWidth: 280),
-                          padding: const EdgeInsets.symmetric(horizontal: 18),
-                          decoration: _floating(22),
-                          child: Align(
-                              widthFactor: fill ? null : 1,
-                              child:
-                                  fill ? label : IntrinsicWidth(child: label)),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          alignment: Alignment.center,
+                          child: IntrinsicWidth(child: label),
                         ),
                       ),
                     ),
@@ -472,7 +459,7 @@ class MobileBackBar extends StatelessWidget {
             ...trailing,
           ] else if (back != null && !pill) ...[
             const SizedBox(width: 10),
-            const SizedBox(width: 44),
+            const SizedBox(width: 40),
           ],
         ]),
       ),
@@ -557,39 +544,41 @@ class FloatingSearch extends StatelessWidget {
   final FocusNode? focusNode;
 
   @override
-  Widget build(BuildContext context) => Container(
-        height: 50,
-        decoration: _composerLike(25),
-        padding: const EdgeInsets.only(left: 18, right: 8),
-        child: Row(children: [
-          AppIcon('search', size: 16, color: AppColors.fg4),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              onChanged: onChanged,
-              style: sans(15, color: AppColors.fg1),
-              cursorColor: AppColors.accent,
-              decoration: InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
-                hintText: hint,
-                hintStyle: sans(15, color: AppColors.fg4),
+  Widget build(BuildContext context) => Glass(
+        radius: BorderRadius.circular(22),
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.only(left: 18, right: 8),
+          child: Row(children: [
+            AppIcon('search', size: 16, color: AppColors.fg4),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                onChanged: onChanged,
+                style: TS.ui(AppColors.fg1),
+                cursorColor: AppColors.accent,
+                decoration: InputDecoration(
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  hintText: hint,
+                  hintStyle: TS.ui(AppColors.fg4),
+                ),
               ),
             ),
-          ),
-          ListenableBuilder(
-            listenable: controller,
-            builder: (_, __) => controller.text.isEmpty
-                ? const SizedBox(width: 8)
-                : IconBtn('x', size: 36, iconSize: 16, tooltip: 'Clear',
-                    onTap: () {
-                    controller.clear();
-                    onChanged('');
-                  }),
-          ),
-        ]),
+            ListenableBuilder(
+              listenable: controller,
+              builder: (_, __) => controller.text.isEmpty
+                  ? const SizedBox(width: 8)
+                  : IconBtn('x', size: 36, iconSize: 16, tooltip: 'Clear',
+                      onTap: () {
+                      controller.clear();
+                      onChanged('');
+                    }),
+            ),
+          ]),
+        ),
       );
 }
 
@@ -616,8 +605,8 @@ class AccentFab extends StatelessWidget {
               onTap();
             },
             child: Container(
-              width: 50,
-              height: 50,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                   color: AppColors.accentFill, shape: BoxShape.circle),
               alignment: Alignment.center,

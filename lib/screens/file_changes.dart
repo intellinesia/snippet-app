@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../file_icons.dart';
+import '../motion_routes.dart';
+import '../platform.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
 import '../widgets.dart';
@@ -121,7 +123,7 @@ class FileChangesScreen extends StatelessWidget {
     final changes = fileChanges(steps);
     final total = changes.length + shell.length;
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: AppColors.paneBg,
       body: SafeArea(
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -159,7 +161,7 @@ class FileChangesScreen extends StatelessWidget {
                                   style: sans(13, color: AppColors.danger))
                               : _delta(c.added, c.removed),
                           onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
+                                AppPageRoute<void>(
                                   builder: (_) => FileChangeDetail(
                                       path: c.path, steps: steps),
                                 ),
@@ -234,7 +236,9 @@ class FileChangeDetail extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Color.lerp(AppColors.bg, Colors.black, 0.35),
+        color: kMobile
+            ? Color.lerp(AppColors.bg, Colors.black, 0.35)
+            : AppColors.tint1,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.fg1.withValues(alpha: 0.07)),
       ),
@@ -251,7 +255,7 @@ class FileChangeDetail extends StatelessWidget {
     final (name, dir) = _split(path);
     final edits = _edits;
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: AppColors.paneBg,
       body: SafeArea(
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

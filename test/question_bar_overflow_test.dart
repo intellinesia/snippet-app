@@ -69,11 +69,11 @@ void main() {
     // The ACTIONS must still be on screen and reachable — that is the whole
     // point. An overflow that pushes Submit out of the pane is the defect.
     expect(find.text('Skip'), findsOneWidget);
-    expect(find.text('Submit'), findsOneWidget);
-    final submit = tester.getRect(find.text('Submit'));
+    expect(find.text('Send'), findsOneWidget);
+    final submit = tester.getRect(find.text('Send'));
     final pane = tester.getRect(find.byType(Scaffold));
     expect(submit.bottom, lessThanOrEqualTo(pane.bottom + 0.5),
-        reason: 'Submit must remain inside the pane it is rendered in');
+        reason: 'Send must remain inside the pane it is rendered in');
   });
 
   testWidgets('a long approval summary keeps its buttons reachable',
@@ -97,10 +97,10 @@ void main() {
     await tester.pump();
 
     expect(tester.takeException(), isNull);
-    // Approve/Reject are the decision; they must not be pushed off the edge.
-    expect(find.text('Allow'), findsOneWidget);
-    expect(find.text('Reject'), findsOneWidget);
-    final reject = tester.getRect(find.text('Reject'));
+    // Approve/Deny are the decision; they must not be pushed off the edge.
+    expect(find.text('Approve'), findsOneWidget);
+    expect(find.text('Deny'), findsOneWidget);
+    final reject = tester.getRect(find.text('Deny'));
     final pane = tester.getRect(find.byType(Scaffold));
     expect(reject.bottom, lessThanOrEqualTo(pane.bottom + 0.5));
   });

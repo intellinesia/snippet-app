@@ -193,17 +193,36 @@ class VaultScreenState extends State<VaultScreen> {
       );
     } else {
       final names = _names ?? const [];
-      body = PageBody(children: [
-        const SizedBox(height: 4),
-        SettingsGroup(
-          footer: 'Use these as \$NAME in shell commands. Values stay on '
-              'the machine and are never shown again.',
-          children: [
-            for (final n in names) _secretRow(n),
-            if (_adding) ..._form() else _addRow(names.isEmpty),
-          ],
-        ),
-      ]);
+      if (kMobile) {
+        body = CardGroupScope(
+          child: PageBody(children: [
+            ListGroup(children: [
+              for (final n in names) _secretRow(n),
+              if (_adding) ..._form() else _addRow(names.isEmpty),
+            ]),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+              child: Text(
+                'Use these as \$NAME in shell commands. Values stay on '
+                'the machine and are never shown again.',
+                style: TS.meta(),
+              ),
+            ),
+          ]),
+        );
+      } else {
+        body = PageBody(children: [
+          const SizedBox(height: 4),
+          SettingsGroup(
+            footer: 'Use these as \$NAME in shell commands. Values stay on '
+                'the machine and are never shown again.',
+            children: [
+              for (final n in names) _secretRow(n),
+              if (_adding) ..._form() else _addRow(names.isEmpty),
+            ],
+          ),
+        ]);
+      }
     }
     if (widget.embedded) {
       // See usage.dart: a null back action means the host owns navigation.
@@ -211,7 +230,22 @@ class VaultScreenState extends State<VaultScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          NavBackRow(title: 'Vault', onBack: widget.onBack!, trailing: const []),
+          if (kMobile)
+            SettingsHeader(
+              title: 'Vault',
+              compact: true,
+              onBack: widget.onBack!,
+              actions: [
+                if (!_adding)
+                  IconBtn('plus',
+                      size: 40,
+                      iconSize: 18,
+                      tooltip: 'Add secret',
+                      onTap: _add),
+              ],
+            )
+          else
+            NavBackRow(title: 'Vault', onBack: widget.onBack!, trailing: const []),
           Expanded(child: body),
         ],
       );
@@ -307,7 +341,17 @@ class VaultScreenState extends State<VaultScreen> {
         ),
       ];
 
-  Widget _addRow(bool empty) => SettingsRow(
+  Widget _addRow(bool empty) => kMobile
+      ? V5SettingsRow(
+          label: 'Add secret',
+          subtitle: empty ? 'No secrets yet' : null,
+          leading: V5IconTile('plus', color: AppColors.accent),
+          labelWidget: Text('Add secret',
+              style: sans(15, color: AppColors.accent)),
+          chevron: false,
+          onTap: _add,
+        )
+      : SettingsRow(
         label: 'Add secret',
         sub: empty ? 'No secrets yet' : null,
         labelWidget: Row(children: [
@@ -320,21 +364,26 @@ class VaultScreenState extends State<VaultScreen> {
       );
 
   List<Widget> _form() => [
-        SettingsRow(
+        V5SettingsRow(
           label: 'Name',
+          leading: const V5IconTile('key'),
           trailing: SettingsField(
-              controller: _name, hint: 'STRIPE_KEY', mono: true, width: 260),
+              controller: _name,
+              hint: 'STRIPE_KEY',
+              mono: true,
+              width: kMobile ? 200 : 260),
         ),
-        SettingsRow(
+        V5SettingsRow(
           label: 'Value',
+          leading: const V5IconTile('lock'),
           trailing: SettingsField(
               controller: _value,
               hint: 'sk_live_…',
               mono: true,
               obscure: true,
-              width: 260),
+              width: kMobile ? 200 : 260),
         ),
-        SettingsRow(
+        V5SettingsRow(
           label: _formError ?? '',
           labelWidget: Text(_formError ?? '',
               style: sans(kMobile ? 13 : 12, color: AppColors.danger)),
@@ -346,7 +395,25 @@ class VaultScreenState extends State<VaultScreen> {
         ),
       ];
 
-  Widget _secretRow(String name) => SettingsRow(
+  Widget _secretRow(String name) => kMobile
+      ? V5SettingsRow(
+          label: name,
+          leading: const V5IconTile('key'),
+          trailing: Tooltip(
+            message: 'Remove $name',
+            child: InkResponse(
+              onTap: () => _remove(name),
+              radius: 20,
+              child: SizedBox(
+                width: 36,
+                height: 30,
+                child: Center(
+                    child: AppIcon('trash', size: 16, color: AppColors.fg4)),
+              ),
+            ),
+          ),
+        )
+      : SettingsRow(
         label: name,
         labelWidget: Text(name,
             maxLines: 1,

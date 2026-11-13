@@ -12,6 +12,9 @@ class _QuestionRecord extends StatelessWidget {
   final String? answer;
   const _QuestionRecord(this.event, {this.answer});
 
+  static String _displayAnswer(String s) =>
+      s == 'user skipped the question' ? 'Skipped' : s;
+
   List<Map<String, dynamic>> get _questions {
     final qd = event['questions'];
     final raw = qd is Map ? qd['questions'] : event['questions'];
@@ -20,14 +23,6 @@ class _QuestionRecord extends StatelessWidget {
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
-  }
-
-  String? get _context {
-    final qd = event['questions'];
-    final ctx = qd is Map ? qd['context'] : event['context'];
-    final s = ctx?.toString() ?? '';
-    if (s.isEmpty || s == 'null') return null;
-    return s;
   }
 
   Map<String, String> get _answers {
@@ -65,126 +60,55 @@ class _QuestionRecord extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Theme.of(context);
     final qs = _questions;
     final answers = _answers;
-    final ctx = _context;
-    final answered = answers.isNotEmpty;
-    if (kMobile) {
-      final rows = <(String, String?)>[
-        for (final q in qs)
-          (
-            q['text']?.toString() ?? '',
-            answers[q['id']?.toString() ?? ''] ?? answers['0'],
-          ),
-        if (qs.isEmpty && event['text'] != null)
-          (event['text'].toString(), answers['0']),
-      ];
+    final rows = <(String, String?)>[
+      for (final q in qs)
+        (
+          q['text']?.toString() ?? '',
+          answers[q['id']?.toString() ?? ''] ?? answers['0'],
+        ),
+      if (qs.isEmpty && event['text'] != null)
+        (event['text'].toString(), answers['0']),
+    ];
+    String shown(String? a) =>
+        a == null || a.isEmpty ? 'Not answered' : _displayAnswer(a);
+    if (rows.length <= 1) {
+      final (q, a) = rows.isEmpty ? ('Question', null) : rows.first;
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: ChatCardResolved(
+            title: q.isEmpty ? 'Question' : q,
+            subtitle: shown(a),
+            approved: answers.isNotEmpty),
+      );
+    }
+    final p = ChatCard.pad;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: ChatCard(dimmed: true, children: [
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) const ChatCardDivider(),
           Padding(
-            padding: const EdgeInsets.only(top: 1),
-            child: MochiIcon(
-                color: answered ? mochiPalette.first.$2 : AppColors.fg4,
-                size: 18),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
+            padding: EdgeInsets.symmetric(horizontal: p, vertical: 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final (q, a) in rows) ...[
-                  Text(q,
-                      style:
-                          sans(14, height: 20 / 14.5, color: AppColors.fg2)),
-                  const SizedBox(height: 3),
-                  Text(a == null || a.isEmpty ? 'Not answered' : a,
-                      style: sans(14,
-                          weight: W.label,
-                          height: 20 / 14.5,
-                          color: a == null || a.isEmpty
-                              ? AppColors.fg4
-                              : AppColors.accent)),
-                  const SizedBox(height: 8),
-                ],
+                Text(rows[i].$1,
+                    style: sans(kMobile ? 15 : 13,
+                        weight: W.strong, color: AppColors.fg2)),
+                const SizedBox(height: 2),
+                Text(shown(rows[i].$2),
+                    style: sans(13,
+                        height: 1.4,
+                        color: rows[i].$2 == null || rows[i].$2!.isEmpty
+                            ? AppColors.fg4
+                            : AppColors.fg3)),
               ],
             ),
           ),
-        ]),
-      );
-    }
-    Widget answer(String text) => Container(
-          margin: const EdgeInsets.only(top: S.s6),
-          padding: const EdgeInsets.only(left: S.s8),
-          decoration: BoxDecoration(
-            border: Border(left: BorderSide(color: AppColors.accent, width: 2)),
-          ),
-          child:
-              Text(text, style: sans(13, height: 1.45, color: AppColors.fg2)),
-        );
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Container(
-        width: double.infinity,
-        padding: kMobile
-            ? const EdgeInsets.fromLTRB(14, 12, 14, 13)
-            : const EdgeInsets.fromLTRB(12, 9, 12, 10),
-        decoration: BoxDecoration(
-          color: AppColors.surface1,
-          border: Border.all(
-              color: kMobile
-                  ? AppColors.fg1.withValues(alpha: 0.08)
-                  : AppColors.border),
-          borderRadius: BorderRadius.circular(kMobile ? 16 : R.md),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              AppIcon('message', size: kMobile ? 14 : 12, color: AppColors.fg3),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                    qs.length > 1 ? 'Questions · ${qs.length}' : 'Question',
-                    style: kMobile
-                        ? sans(13, color: AppColors.fg3)
-                        : mono(10, color: AppColors.fg3)),
-              ),
-              Text(answered ? 'answered' : 'no answer',
-                  style: kMobile
-                      ? sans(13, color: answered ? AppColors.ok : AppColors.fg4)
-                      : mono(10,
-                          color: answered ? AppColors.ok : AppColors.fg3)),
-            ]),
-            if (ctx != null) ...[
-              const SizedBox(height: 5),
-              Text(ctx,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(12, height: 1.4, color: AppColors.fg3)),
-            ],
-            for (var i = 0; i < qs.length; i++) ...[
-              SizedBox(height: i == 0 ? 5 : S.s12),
-              Text(
-                  qs.length > 1
-                      ? '${i + 1}. ${qs[i]['text'] ?? ''}'
-                      : qs[i]['text']?.toString() ?? '',
-                  style: sans(13,
-                      height: 1.45, weight: W.label, color: AppColors.fg1)),
-              if (answers[qs[i]['id']?.toString() ?? ''] != null ||
-                  answers['0'] != null)
-                answer(answers[qs[i]['id']?.toString()] ?? answers['0'] ?? ''),
-            ],
-            if (qs.isEmpty && (event['text'] != null)) ...[
-              const SizedBox(height: 5),
-              Text(event['text']?.toString() ?? '',
-                  style: sans(13,
-                      height: 1.45, weight: W.label, color: AppColors.fg1)),
-            ],
-          ],
-        ),
-      ),
+        ],
+      ]),
     );
   }
 }
@@ -256,87 +180,74 @@ class ApprovalBarState extends State<ApprovalBar> {
             _ => 'Allow ${toolTitle(tool).toLowerCase()}?',
           };
     final headline = callLabel.isNotEmpty ? callLabel : action;
-    final question =
-        laneName == null ? headline : 'Lane «$laneName» · $headline';
     final isShell = tool == 'bash' || customTool != null;
 
-    final allow = Btn(_sent ? 'Sending' : 'Allow',
-        small: true,
-        disabled: _sent,
-        onTap: () => _decide({'kind': 'approve'}));
-    final reject = Btn('Reject',
-        small: true,
-        variant: BtnVariant.secondary,
-        disabled: _sent,
-        onTap: () => _decide({'kind': 'deny'}));
     final canAlways = widget.showApproveAll &&
         !isVault &&
         laneName == null &&
         !parsed.newCustomTool;
+    final isKnownTool = tool == 'bash' || tool == 'change_files';
+    final subtitle = laneName != null
+        ? 'Lane «$laneName»'
+        : customTool != null
+            ? 'Custom tool'
+            : tool.isEmpty || (callLabel.isEmpty && isKnownTool)
+                ? null
+                : toolTitle(tool);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, S.s4, 0, S.s6),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(R.card),
-          border: Border.all(color: AppColors.lineStrong),
+      child: ChatCard(children: [
+        Flexible(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ChatCardHeader(
+                  title: headline,
+                  subtitle: subtitle,
+                  trailing: total > 1 ? ChatCardPill('$index of $total') : null,
+                ),
+                if (detail.isNotEmpty)
+                  ChatCardBody(
+                    child: Tactile(
+                      radius: BorderRadius.circular(10),
+                      kind: TactileKind.inset,
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.bg,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.line),
+                        ),
+                        child: ApprovalCode(code: detail, shell: isShell),
+                      ),
+                    ),
+                  ),
+                if (isVault)
+                  ChatCardBody(
+                    child: Wrap(spacing: S.s6, runSpacing: S.s4, children: [
+                      for (final name in secrets)
+                        Tag(name, tone: Tone.run, icon: 'key', mono: true),
+                    ]),
+                  ),
+              ],
+            ),
+          ),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(S.s12, 10, S.s12, 6),
-              child: Row(children: [
-                AppIcon(isVault ? 'lock-key' : toolIcon(tool),
-                    size: 14, color: isVault ? AppColors.run : AppColors.fg3),
-                const SizedBox(width: S.s8),
-                Expanded(
-                  child: Text(question,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(13, weight: W.label, color: AppColors.fg1)),
-                ),
-                if (total > 1) ...[
-                  const SizedBox(width: S.s6),
-                  Tag('$index/$total', mono: true),
-                ],
-              ]),
-            ),
-            if (detail.isNotEmpty)
-              Flexible(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(S.s12, 2, S.s12, 0),
-                  child: ApprovalCode(code: detail, shell: isShell),
-                ),
-              ),
-            if (isVault)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(S.s12, 4, S.s12, 2),
-                child: Wrap(spacing: S.s6, runSpacing: S.s4, children: [
-                  for (final name in secrets)
-                    Tag(name, tone: Tone.run, icon: 'key', mono: true),
-                ]),
-              ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(S.s12, 6, S.s12, 10),
-              child: Row(children: [
-                if (canAlways)
-                  TextAction('Always allow',
-                      onTap: _sent
-                          ? null
-                          : () => _decide({'kind': 'approve_all'})),
-                const Spacer(),
-                reject,
-                const SizedBox(width: S.s6),
-                allow,
-              ]),
-            ),
+        ChatCardActions(
+          stack: tool != 'change_files',
+          buttons: [
+            ChatCardButton('Deny',
+                kind: ChatCardButtonKind.secondary,
+                onTap: _sent ? null : () => _decide({'kind': 'deny'})),
+            ChatCardButton('Approve',
+                busy: _sent, onTap: () => _decide({'kind': 'approve'})),
           ],
+          link: canAlways ? 'Always allow' : null,
+          onLink: _sent ? null : () => _decide({'kind': 'approve_all'}),
         ),
-      ),
+      ]),
     );
   }
 }
@@ -731,250 +642,87 @@ class QuestionBarState extends State<QuestionBar> {
     return KeyEventResult.ignored;
   }
 
-  Widget _freeTextToggle(String id) => InkWell(
-        onTap: _sent ? null : _toggleFreeText,
-        borderRadius: BorderRadius.circular(R.sm),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 7),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            AppIcon(_freeText.contains(id) ? 'check' : 'edit',
-                size: 14, color: AppColors.accent),
-            const SizedBox(width: 6),
-            Text(
-                _freeText.contains(id)
-                    ? 'Writing a response'
-                    : 'Write your own answer',
-                style: TS.label(AppColors.accent)),
-          ]),
-        ),
-      );
-
-  Widget _chip(String label, bool sel, VoidCallback onTap) => Material(
-        color: sel ? AppColors.accentBg : AppColors.hover,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(kMobile ? R.pill : R.sm),
-          side: BorderSide(
-            color: sel ? AppColors.accent : Colors.transparent,
-            width: 1.2,
-          ),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(kMobile ? R.pill : R.sm),
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s6),
-            child: Text(label,
-                style: TS.label(sel ? AppColors.accent : AppColors.fg2)),
-          ),
-        ),
-      );
-
-  /// An option as a card: radio or checkbox, label, a Recommended badge, and
-  /// the one-line description of what it means.
-  Widget _optionCard(
-      _QOption o, int index, bool sel, bool multi, VoidCallback onTap) {
-    final mark = multi
-        ? Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              color: sel ? AppColors.accentFill : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(
-                  color: sel ? AppColors.accentFill : AppColors.lineStrong,
-                  width: 1.5),
-            ),
-            child: sel
-                ? AppIcon('check', size: 11, color: AppColors.accentFg)
-                : null,
-          )
-        : SelectCheck(sel, size: 16);
-    return Material(
-      color: sel
-          ? AppColors.accentBg
-          : (kMobile ? AppColors.surface2 : Colors.transparent),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(kMobile ? 16 : R.md),
-        side: BorderSide(
-          color: sel
-              ? AppColors.accent
-              : (kMobile ? Colors.transparent : AppColors.border2),
-          width: sel ? 1.2 : 1,
-        ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(kMobile ? 16 : R.md),
-        child: Padding(
-          padding: kMobile
-              ? const EdgeInsets.fromLTRB(14, 13, 14, 13)
-              : const EdgeInsets.fromLTRB(12, 9, 12, 9),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Padding(padding: const EdgeInsets.only(top: 2), child: mark),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      Text(o.label,
-                          style: sans(kMobile ? 15 : 13,
-                              weight: W.label,
-                              color: sel ? AppColors.fg1 : AppColors.fg2)),
-                      if (o.recommended)
-                        const Tag('Recommended', tone: Tone.accent),
-                    ],
-                  ),
-                  if (o.description.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(o.description,
-                        style: sans(kMobile ? 13 : 12,
-                            height: 1.4, color: AppColors.fg3)),
-                  ],
-                ],
-              ),
-            ),
-            if (!kMobile && index < 9) ...[
-              const SizedBox(width: 8),
-              Text('${index + 1}',
-                  style: (kMobile
-                      ? sans(13, color: AppColors.fg4)
-                      : mono(10, color: AppColors.fg4))),
-            ],
-          ]),
-        ),
-      ),
-    );
-  }
+  Widget _numberHint(int index) => Text('${index + 1}',
+      style: mono(10, color: AppColors.fg4));
 
   List<Widget> _inputFor(Map<String, dynamic> q) {
     final id = q['id'].toString();
     final k = _kind(q);
     final opts = _options(q);
     final controller = _controllerFor(id);
-    final isCards = k == 'single_choice' || k == 'multi_choice';
+    final multi = k == 'multi_choice';
+    final writing = k == 'free_text' || _freeText.contains(id);
     return [
-      if (isCards)
-        for (var i = 0; i < opts.length; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: S.s6),
-            child: _optionCard(
-              opts[i],
-              i,
-              k == 'multi_choice'
-                  ? (_multi[id]?.contains(opts[i].value) ?? false) &&
-                      !_freeText.contains(id)
-                  : _choice[id] == opts[i].value && !_freeText.contains(id),
-              k == 'multi_choice',
-              () => _pick(q, opts[i]),
-            ),
+      if (k != 'free_text') ...[
+        const ChatCardDivider(),
+        for (var i = 0; i < opts.length; i++) ...[
+          ChatCardOption(
+            label: opts[i].label,
+            detail: opts[i].description,
+            multi: multi,
+            recommended: opts[i].recommended,
+            selected: multi
+                ? (_multi[id]?.contains(opts[i].value) ?? false) &&
+                    !_freeText.contains(id)
+                : _choice[id] == opts[i].value && !_freeText.contains(id),
+            trailing: !kMobile && i < 9 ? _numberHint(i) : null,
+            onTap: _sent ? null : () => _pick(q, opts[i]),
           ),
-      if (k == 'yes_no' || k == 'confirm')
-        Wrap(spacing: 8, children: [
-          for (final o in opts)
-            _chip(o.label, _choice[id] == o.value && !_freeText.contains(id),
-                () => _pick(q, o)),
-        ]),
-      if (k != 'free_text') _freeTextToggle(id),
-      if (k == 'free_text' || _freeText.contains(id))
-        AppField(
-            controller: controller,
-            hint: 'Write your answer',
-            minLines: 2,
-            maxLines: 4,
-            onSubmitted: (_) => _submit()),
+          const ChatCardDivider(),
+        ],
+        ChatCardOption(
+          label: _freeText.contains(id)
+              ? 'Writing a response'
+              : 'Write your own answer',
+          muted: !_freeText.contains(id),
+          multi: multi,
+          selected: _freeText.contains(id),
+          onTap: _sent ? null : _toggleFreeText,
+        ),
+      ],
+      if (writing)
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+              ChatCard.pad, k == 'free_text' ? 0 : 10, ChatCard.pad, 4),
+          child: AppField(
+              controller: controller,
+              hint: 'Write your answer',
+              minLines: 2,
+              maxLines: 4,
+              onSubmitted: (_) => _submit()),
+        ),
     ];
   }
 
-  /// One tab per question; answered ones ticked, tap to jump back.
-  Widget _tabs() {
-    final qs = _questions;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(children: [
-        for (var i = 0; i < qs.length; i++) ...[
-          if (i > 0) const SizedBox(width: 6),
-          _tab(
-            _header(qs[i], i),
-            current: !_review && i == _step,
-            done: _answered(qs[i]),
-            onTap: (i <= _step || _review || _answered(qs[i]))
-                ? () => _goTo(i)
-                : null,
-          ),
-        ],
-        const SizedBox(width: 6),
-        _tab('Review', current: _review, done: false, onTap: null),
-      ]),
-    );
-  }
-
-  Widget _tab(String label,
-      {required bool current, required bool done, VoidCallback? onTap}) {
-    final color = current
-        ? AppColors.accent
-        : done
-            ? AppColors.ok
-            : AppColors.fg3;
-    return InkWell(
-      onTap: _sent ? null : onTap,
-      borderRadius: BorderRadius.circular(R.pill),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-        decoration: BoxDecoration(
-          color: current ? AppColors.accentBg : AppColors.raised,
-          borderRadius: BorderRadius.circular(R.pill),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (done && !current) ...[
-            AppIcon('check', size: 11, color: color),
-            const SizedBox(width: 4),
-          ],
-          Text(label,
-              style: TS.meta(color).copyWith(fontWeight: weightFor(W.label))),
-        ]),
-      ),
-    );
-  }
-
   List<Widget> _reviewRows() => [
-        const SizedBox(height: 8),
-        Text('Check your answers',
-            style: sans(kMobile ? 15 : 14,
-                weight: W.strong, color: AppColors.fg1)),
-        const SizedBox(height: 6),
-        for (var i = 0; i < _questions.length; i++)
+        const ChatCardDivider(),
+        for (var i = 0; i < _questions.length; i++) ...[
+          if (i > 0) const ChatCardDivider(),
           InkWell(
             onTap: _sent ? null : () => _goTo(i),
-            borderRadius: BorderRadius.circular(R.sm),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
+              padding:
+                  EdgeInsets.symmetric(horizontal: ChatCard.pad, vertical: 10),
               child:
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                SizedBox(
-                  width: 96,
-                  child: Text(_header(_questions[i], i),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TS.meta()),
-                ),
                 Expanded(
-                  child: Text(_answerFor(_questions[i]),
-                      style: sans(13, height: 1.4, color: AppColors.fg1)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_header(_questions[i], i), style: TS.meta()),
+                      const SizedBox(height: 2),
+                      Text(_answerFor(_questions[i]),
+                          style: sans(kMobile ? 15 : 13,
+                              height: 1.4, color: AppColors.fg1)),
+                    ],
+                  ),
                 ),
                 const SizedBox(width: 8),
-                Text('Edit',
-                    style: (kMobile
-                        ? sans(13, color: AppColors.accent)
-                        : mono(10, color: AppColors.accent))),
+                Text('Edit', style: sans(13, color: AppColors.fg3)),
               ]),
             ),
           ),
+        ],
       ];
 
   @override
@@ -982,155 +730,67 @@ class QuestionBarState extends State<QuestionBar> {
     final ctx = widget.question['context']?.toString();
     final total = _questions.length;
     final last = _review || total <= 1;
-    final nextLabel = _sent
-        ? 'Sending…'
-        : _review || total <= 1
-            ? 'Submit'
-            : _step < total - 1
-                ? 'Next'
-                : 'Review';
+    final nextLabel = _review || total <= 1
+        ? 'Send'
+        : _step < total - 1
+            ? 'Next'
+            : 'Review';
+    final q = _currentQuestion;
+    final hasCtx = ctx != null && ctx.isNotEmpty && ctx != 'null' && _step == 0;
+    final eyebrow = total > 1
+        ? (_review
+            ? Text('Review', style: sans(13, color: AppColors.fg3))
+            : ChatCardSteps(index: _step, total: total))
+        : null;
     return Focus(
       focusNode: _keys,
       onKeyEvent: _onKey,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(0, S.s4, 0, S.s6),
-        child: Container(
-          width: double.infinity,
-          padding: kMobile
-              ? const EdgeInsets.fromLTRB(16, 14, 16, 14)
-              : const EdgeInsets.fromLTRB(12, 10, 12, 12),
-          decoration: BoxDecoration(
-            color: AppColors.surface1,
-            border: Border.all(
-                color:
-                    AppColors.accent.withValues(alpha: kMobile ? 0.3 : 0.45)),
-            borderRadius: BorderRadius.circular(kMobile ? 22 : R.md),
-          ),
-          child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (kMobile)
-                  Row(children: [
-                    MochiIcon(color: mochiPalette.first.$2, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(_sent ? 'Sending…' : 'Snippet asks',
-                          style: sans(13, color: AppColors.fg3)),
+        child: ChatCard(children: [
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_review) ...[
+                    ChatCardHeader(
+                        title: 'Check your answers', eyebrow: eyebrow),
+                    ..._reviewRows(),
+                  ] else if (q != null) ...[
+                    ChatCardHeader(
+                      title: q['text']?.toString() ?? '',
+                      subtitle: hasCtx ? ctx : null,
+                      eyebrow: eyebrow,
                     ),
-                    if (total > 1)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface2,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                            _review ? 'Review' : '${_step + 1} of $total',
-                            style: sans(13,
-                                tabular: true, color: AppColors.fg2)),
-                      ),
-                  ])
-                else
-                  Row(children: [
-                    AppIcon('message', size: 12, color: AppColors.accent),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                          _sent
-                              ? 'Sending…'
-                              : total > 1
-                                  ? 'Questions'
-                                  : 'Question',
-                          style: (kMobile
-                              ? sans(13, color: AppColors.fg3)
-                              : mono(10, color: AppColors.fg3))),
-                    ),
-                    Text(
-                        total > 1
-                            ? (_review ? 'review' : '${_step + 1} of $total')
-                            : 'waiting on you',
-                        style: (kMobile
-                            ? sans(13, color: AppColors.accent)
-                            : mono(10, color: AppColors.accent))),
-                  ]),
-                if (total > 1) ...[
-                  const SizedBox(height: 8),
-                  _tabs(),
-                ],
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (_review)
-                          ..._reviewRows()
-                        else ...[
-                          if (ctx != null &&
-                              ctx.isNotEmpty &&
-                              ctx != 'null' &&
-                              _step == 0) ...[
-                            const SizedBox(height: 8),
-                            Text(ctx,
-                                style: sans(kMobile ? 13 : 12,
-                                    height: 1.4, color: AppColors.fg3)),
-                          ],
-                          ...() {
-                            final q = _currentQuestion;
-                            if (q == null) return <Widget>[];
-                            return <Widget>[
-                              const SizedBox(height: 8),
-                              Text(q['text']?.toString() ?? '',
-                                  style: sans(kMobile ? 17 : 14,
-                                      height: kMobile ? 1.35 : 1.4,
-                                      weight: W.label,
-                                      color: AppColors.fg1)),
-                              SizedBox(height: kMobile ? 14 : 10),
-                              ..._inputFor(q),
-                            ];
-                          }(),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: S.s8),
-                Row(children: [
-                  if (!_review && kMobile)
-                    Btn('Skip',
-                        small: true,
-                        variant: BtnVariant.ghost,
-                        onTap: _sent ? null : _skip)
-                  else if (!_review)
-                    TextButton(
-                      onPressed: _sent ? null : _skip,
-                      style: TextButton.styleFrom(
-                          foregroundColor: AppColors.fg3,
-                          padding: const EdgeInsets.symmetric(horizontal: 8)),
-                      child: Text('Skip', style: TS.meta()),
-                    ),
-                  if (_step > 0 || _review) ...[
-                    const SizedBox(width: 4),
-                    Btn('Back',
-                        small: true,
-                        variant: BtnVariant.ghost,
-                        onTap: _sent ? null : _back),
+                    ..._inputFor(q),
                   ],
-                  const Spacer(),
-                  if (!kMobile && !_sent)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Text(last ? 'Enter to submit' : 'Enter for next',
-                          style: TS.caption(AppColors.fg4)),
-                    ),
-                  Btn(nextLabel,
-                      small: true,
-                      disabled: !_ready || _sent,
-                      onTap: (_ready && !_sent) ? _submit : null),
-                ]),
-              ]),
-        ),
+                ],
+              ),
+            ),
+          ),
+          if (!kMobile && !_sent)
+            Padding(
+              padding: EdgeInsets.fromLTRB(ChatCard.pad, 8, ChatCard.pad, 0),
+              child: Text(last ? 'Enter to submit' : 'Enter for next',
+                  style: TS.caption(AppColors.fg4)),
+            ),
+          const SizedBox(height: 10),
+          ChatCardActions(
+            stack: !(_step > 0 || _review),
+            buttons: [
+              if (_step > 0 || _review)
+                ChatCardButton('Back',
+                    kind: ChatCardButtonKind.secondary,
+                    onTap: _sent ? null : _back),
+              ChatCardButton(_sent ? 'Sending…' : nextLabel,
+                  busy: _sent,
+                  onTap: (_ready && !_sent) ? _submit : null),
+            ],
+            link: _review ? null : 'Skip',
+            onLink: _sent ? null : _skip,
+          ),
+        ]),
       ),
     );
   }
@@ -1208,6 +868,7 @@ class _SessionActionsPanel extends StatefulWidget {
   final VoidCallback? onPullRequests;
   final VoidCallback onProcesses;
   final VoidCallback onRecurring;
+  final VoidCallback? onTasks;
   final VoidCallback onCompact;
   final VoidCallback onCheckpoints;
   final VoidCallback onMemory;
@@ -1240,6 +901,7 @@ class _SessionActionsPanel extends StatefulWidget {
     this.onPullRequests,
     required this.onProcesses,
     required this.onRecurring,
+    this.onTasks,
     required this.onCompact,
     required this.onCheckpoints,
     required this.onMemory,
@@ -1490,6 +1152,12 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
                   ? '$runningLanes working in the background'
                   : 'Background work, finished',
               onTap: widget.onLanes),
+        if (widget.onTasks != null)
+          _row(
+              icon: 'task',
+              label: 'Tasks',
+              detail: 'Work on the board and its reviews',
+              onTap: widget.onTasks),
         _row(
             icon: 'scheduled',
             label: 'Scheduled',

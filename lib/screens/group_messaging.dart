@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import '../chat/chat_info.dart' show GroupInfoPanel, showGroupInfo;
+import '../motion_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -14,9 +14,14 @@ import '../panel.dart';
 import '../platform.dart';
 import '../pull_refresh.dart';
 import '../swr.dart';
+import '../glass.dart' show TopFadeMask;
 import '../theme.dart';
 import '../widgets.dart';
-import 'mobile_chrome.dart';
+import '../chat/agent_cluster.dart';
+import '../chat/chat_style.dart';
+import 'agent_card.dart' show agentRowTime;
+import 'tasks/tasks_panel.dart' show openTasksPage, openTaskCountFor;
+import 'mobile_session_home.dart' show DotField;
 
 /// An `@token` in a group message: the boundary keeps `mail@fable` from
 /// counting as a mention.
@@ -90,9 +95,7 @@ void openGroupThread(
           group: group,
           onClose: () => Navigator.pop(context),
         );
-    Navigator.of(context).push<void>(defaultTargetPlatform == TargetPlatform.iOS
-        ? CupertinoPageRoute(builder: page)
-        : MaterialPageRoute(builder: page));
+    Navigator.of(context).push<void>(AppPageRoute<void>(builder: page));
     return;
   }
   presentScreen(
@@ -103,6 +106,17 @@ void openGroupThread(
     originClient: client,
     maxWidth: 720,
     maxHeight: 720,
+    title: group.title.trim().isEmpty ? 'Group' : group.title.trim(),
+    iconAgentIds: group.agentIds,
+    sidePanel: (ctx, closeTab) => GroupInfoPanel(
+      key: ValueKey('group-info-${group.id}'),
+      client: client,
+      group: group,
+      docked: true,
+      onOpenTasks: () =>
+          openTasksPage(ctx, client, agentIds: group.agentIds.toSet()),
+      onClose: closeTab,
+    ),
     builder: (_, close) => GroupThreadScreen(
       client: client,
       group: group,
@@ -134,8 +148,10 @@ Future<bool> confirmDeleteGroup(
 
 /// Create a group chat, then open it. Returns the group, or null if cancelled.
 Future<GroupSummary?> createAndOpenGroup(
-    BuildContext context, DaemonClient client) async {
-  final group = await showCreateGroupSheet(context, client: client);
+    BuildContext context, DaemonClient client,
+    {BuildContext? anchorContext}) async {
+  final group = await showCreateGroupSheet(context,
+      client: client, anchorContext: anchorContext);
   if (group == null || !context.mounted) return null;
   openGroupThread(context, client: client, group: group);
   return group;
@@ -158,10 +174,13 @@ class GroupRow extends StatelessWidget {
       '$members ${members == 1 ? 'member' : 'members'}',
       if (group.lead != null) 'lead ${group.lead}',
     ].join(' · ');
+    final sub = group.preview ?? line;
     final shown = agents.take(4).toList();
     final extra = agents.length - shown.length;
     final unread = group.unread;
     if (kMobile) {
+      final at = DateTime.tryParse(group.lastEventAt ?? '')?.toLocal();
+      final time = agentRowTime(at);
       return Pressable(
         kind: PressKind.row,
         child: InkWell(
@@ -169,73 +188,67 @@ class GroupRow extends StatelessWidget {
           highlightColor: Colors.transparent,
           onTap: onTap,
           onLongPress: onLongPress,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 68),
-            child: Row(
-              children: [
-                const SizedBox(width: M.gutter),
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.surface2,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: shown.isEmpty
-                            ? const AppIcon('users', size: 18)
-                            : AgentMochi(shown.first, size: 26),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: M.gutter, vertical: 8),
+            child: Row(children: [
+              SizedBox.square(
+                dimension: 52,
+                child: Stack(alignment: Alignment.center, children: [
+                  if (unread > 0)
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.accent, width: 2),
                       ),
-                      if (shown.length > 1 || extra > 0)
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: Container(
-                            height: 18,
-                            constraints: const BoxConstraints(minWidth: 18),
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface2,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.bg, width: 1),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                                '${shown.length - 1 + (extra > 0 ? extra : 0)}',
-                                style: sans(9, color: AppColors.fg2)),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(name,
+                    ),
+                  if (shown.isEmpty)
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface2,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: const AppIcon('users', size: 20),
+                    )
+                  else
+                    AgentCluster(ids: agents, size: 48),
+                ]),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(children: [
+                      Expanded(
+                        child: Text(name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TS.rowTitle(AppColors.fg1)),
-                        const SizedBox(height: 2),
-                        Text(unread > 0 ? '$line · $unread unread' : line,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TS.meta(AppColors.fg3)),
+                      ),
+                      if (time.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Text(time, style: TS.meta()),
                       ],
-                    ),
-                  ),
+                    ]),
+                    const SizedBox(height: 2),
+                    Text(sub,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13,
+                            color: unread > 0
+                                ? AppColors.fg2
+                                : AppColors.fg3)),
+                  ],
                 ),
-                const SizedBox(width: M.gutter),
-              ],
-            ),
+              ),
+            ]),
           ),
         ),
       );
@@ -308,7 +321,7 @@ class GroupRow extends StatelessWidget {
                     ],
                   ]),
                   const SizedBox(height: 2),
-                  Text(line,
+                  Text(sub,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(11, color: AppColors.fg3)),
@@ -326,13 +339,22 @@ class GroupRow extends StatelessWidget {
 Future<GroupSummary?> showCreateGroupSheet(
   BuildContext context, {
   required DaemonClient client,
+  BuildContext? anchorContext,
 }) =>
-    showAppSheet<GroupSummary>(
-      context,
-      title: 'New group',
-      maxWidth: 380,
-      child: _CreateGroupSheet(client: client),
-    );
+    kMobile
+        ? showAppSheet<GroupSummary>(
+            context,
+            title: 'New group',
+            maxWidth: 380,
+            maxHeight: 720,
+            child: _CreateGroupSheet(client: client),
+          )
+        : showSidePopover<GroupSummary>(context,
+            anchorContext: anchorContext,
+            title: 'New group',
+            popoverKey: const ValueKey('create-group-popover'),
+            width: 360,
+            child: _CreateGroupSheet(client: client));
 
 class _CreateGroupSheet extends StatefulWidget {
   const _CreateGroupSheet({required this.client});
@@ -416,19 +438,31 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
   Widget build(BuildContext context) {
     final canCreate =
         _title.text.trim().isNotEmpty && _selected.isNotEmpty && !_creating;
+    final n = _selected.length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        TextField(
-          controller: _title,
-          autofocus: true,
-          cursorColor: AppColors.accent,
-          onChanged: (_) => setState(() {}),
-          style: TS.body(AppColors.fg1),
-          decoration: ComposerCard.decoration('Group name'),
-        ),
+        Text('Several agents in one conversation. A lead answers first.',
+            style: sans(13, height: 1.45, color: AppColors.fg3)),
         const SizedBox(height: 14),
+        FieldWell(
+          minHeight: kMobile ? 48 : 38,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: TextField(
+            controller: _title,
+            autofocus: true,
+            cursorColor: AppColors.accent,
+            onChanged: (_) => setState(() {}),
+            style: sans(kMobile ? 15 : 13, color: AppColors.fg1),
+            decoration: InputDecoration.collapsed(
+              hintText: 'Group name',
+              hintStyle: sans(kMobile ? 15 : 13, color: AppColors.fg4),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
         if (_loading)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 20),
@@ -449,65 +483,180 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
             child: Text('No agents available.', style: TS.meta()),
           )
         else ...[
-          Text('Agents', style: TS.label(AppColors.fg3)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final a in _agents)
-                _AgentPickChip(
-                  agent: a,
-                  name: _name(a),
-                  selected: _selected.contains(a.id),
-                  onTap: () => setState(() {
-                    if (!_selected.remove(a.id)) _selected.add(a.id);
-                    if (_lead != null && !_selected.contains(_lead)) {
-                      _lead = null;
-                    }
-                  }),
-                ),
-            ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Row(children: [
+              Text('Agents', style: sans(13, color: AppColors.fg3)),
+              const Spacer(),
+              if (n > 0)
+                Text('$n selected', style: sans(13, color: AppColors.fg4)),
+            ]),
           ),
-          if (_selected.length > 1) ...[
-            const SizedBox(height: 14),
-            Text('Lead', style: TS.label(AppColors.fg3)),
-            const SizedBox(height: 6),
-            DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _lead,
-                isExpanded: true,
-                hint: Text('No lead', style: TS.body(AppColors.fg3)),
-                items: [
-                  for (final id in _selected)
-                    DropdownMenuItem<String>(
-                      value: id,
-                      child: Text(
-                        _agents
-                                .where((a) => a.id == id)
-                                .map(_name)
-                                .firstOrNull ??
-                            id,
-                        style: TS.body(AppColors.fg1),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-                onChanged: (v) => setState(() => _lead = v),
-              ),
+          const SizedBox(height: 8),
+          Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.line),
             ),
-          ],
+            child: Material(
+              color: Colors.transparent,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                for (var i = 0; i < _agents.length; i++) ...[
+                  if (i > 0) Container(height: 1, color: AppColors.line),
+                  _AgentPickRow(
+                    agent: _agents[i],
+                    name: _name(_agents[i]),
+                    selected: _selected.contains(_agents[i].id),
+                    showLead: n > 1 && _selected.contains(_agents[i].id),
+                    lead: _lead == _agents[i].id,
+                    onTap: () => setState(() {
+                      final id = _agents[i].id;
+                      if (!_selected.remove(id)) _selected.add(id);
+                      if (_lead != null && !_selected.contains(_lead)) {
+                        _lead = null;
+                      }
+                    }),
+                    onLead: () => setState(() {
+                      final id = _agents[i].id;
+                      _lead = _lead == id ? null : id;
+                    }),
+                  ),
+                ],
+              ]),
+            ),
+          ),
         ],
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
         if (_error != null && _agents.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(_error!, style: TS.meta(AppColors.danger)),
           ),
-        Btn(_creating ? 'Creating…' : 'Create group',
-            full: true, disabled: !canCreate, onTap: _create),
+        Btn(
+            _creating
+                ? 'Creating…'
+                : n == 0
+                    ? 'Create group'
+                    : 'Create group · $n ${n == 1 ? 'agent' : 'agents'}',
+            full: true,
+            small: !kMobile,
+            disabled: !canCreate,
+            onTap: _create),
       ],
+    );
+  }
+}
+
+class _AgentPickRow extends StatelessWidget {
+  const _AgentPickRow({
+    required this.agent,
+    required this.name,
+    required this.selected,
+    required this.showLead,
+    required this.lead,
+    required this.onTap,
+    required this.onLead,
+  });
+
+  final CoordinationAgent agent;
+  final String name;
+  final bool selected;
+  final bool showLead;
+  final bool lead;
+  final VoidCallback onTap;
+  final VoidCallback onLead;
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = (agent.profile ?? '').trim();
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: name,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: kMobile ? 56 : 44),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(children: [
+              AgentMochi(agent.id, size: kMobile ? 28 : 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(kMobile ? 15 : 13, color: AppColors.fg1)),
+                    if (profile.isNotEmpty)
+                      Text(profile,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(13, color: AppColors.fg3)),
+                  ],
+                ),
+              ),
+              if (showLead) ...[
+                Semantics(
+                  button: true,
+                  selected: lead,
+                  label: lead ? '$name is lead' : 'Make $name lead',
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onLead,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: ExcludeSemantics(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: lead ? AppColors.accent : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                                color: lead
+                                    ? AppColors.accent
+                                    : AppColors.lineStrong),
+                          ),
+                          child: Text(lead ? 'Lead' : 'Make lead',
+                              style: sans(12,
+                                  weight: lead ? W.strong : W.body,
+                                  color: lead
+                                      ? AppColors.accentFg
+                                      : AppColors.fg3)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: selected ? AppColors.accent : Colors.transparent,
+                  border: Border.all(
+                      color: selected ? AppColors.accent : AppColors.lineStrong,
+                      width: 1.5),
+                ),
+                child: selected
+                    ? Center(
+                        child: AppIcon('check',
+                            size: 13, color: AppColors.accentFg))
+                    : null,
+              ),
+            ]),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -533,7 +682,7 @@ class _AgentPickChip extends StatelessWidget {
           duration: Motion.fast,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: selected ? AppColors.accentFill : AppColors.surface2,
+            color: selected ? AppColors.accent : AppColors.surface2,
             borderRadius: BorderRadius.circular(16),
             border:
                 Border.all(color: selected ? AppColors.accent : AppColors.line),
@@ -804,7 +953,18 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       if (!mounted) return;
       setState(() => _agents = {for (final a in all) a.id: a});
     } catch (_) {}
+    try {
+      final n = await openTaskCountFor(widget.client, _groupAgentIds);
+      if (mounted) setState(() => _openTaskCount = n);
+    } catch (_) {}
   }
+
+  int? _openTaskCount;
+
+  Set<String> get _groupAgentIds => {
+        for (final m in _group.members)
+          if (m.isAgent) m.id,
+      };
 
   /// Member agent ids plus `everyone`, for mentions and highlighting.
   Set<String> get _mentionIds => {
@@ -923,61 +1083,107 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     }
   }
 
-  Future<void> _openMembers() async {
-    await showAppSheet<void>(
-      context,
-      title: _title,
-      maxWidth: 380,
-      child: GroupMembersSheet(
-        client: widget.client,
-        group: _group,
-        onChanged: (g) {
-          if (mounted) setState(() => _group = g);
-        },
-        onDeleted: () {
-          if (!mounted) return;
-          Navigator.of(context).pop();
-          _closePage();
-        },
-      ),
-    );
+  Future<void> _reloadGroup() async {
+    final List<GroupSummary> all;
+    try {
+      all = await widget.client.groups();
+    } catch (_) {
+      return;
+    }
+    if (!mounted) return;
+    final g = all.where((g) => g.id == _group.id).firstOrNull;
+    if (g == null) {
+      _closePage();
+      return;
+    }
+    setState(() => _group = g);
   }
 
   String get _title =>
       _group.title.trim().isEmpty ? 'Group' : _group.title.trim();
 
-  String get _subtitle {
+  /// Names while they fit the header line, else the member count.
+  String _memberLine(double width) {
     final n = _group.members.length;
-    return '$n ${n == 1 ? 'member' : 'members'}';
+    final fallback = '$n ${n == 1 ? 'member' : 'members'}';
+    final names = [for (final id in _group.agentIds) _agentName(id)];
+    if (names.isEmpty) return fallback;
+    bool fits(String s) {
+      final painter = TextPainter(
+        text: TextSpan(
+            text: s,
+            style: sans(kMobile ? 12 : 11, color: ChatColors.meta)),
+        maxLines: 1,
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: width);
+      return painter.width <= width;
+    }
+
+    if (names.length <= 2) {
+      final s = names.length == 1
+          ? names.first
+          : '${names[0]} and ${names[1]}';
+      return fits(s) ? s : fallback;
+    }
+    final pair = '${names[0]}, ${names[1]} and ${names.length - 2} more';
+    if (fits(pair)) return pair;
+    final single = '${names.first} and ${names.length - 1} more';
+    return fits(single) ? single : fallback;
   }
 
-  Widget _memberMochis() {
-    final agents = _group.agentIds;
-    if (agents.isEmpty) return const AppIcon('users', size: 18);
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      for (var i = 0; i < agents.length && i < 4; i++) ...[
-        if (i > 0) const SizedBox(width: 2),
-        AgentMochi(agents[i], size: 18),
-      ],
-      if (agents.length > 4) ...[
-        const SizedBox(width: 2),
-        Text('+${agents.length - 4}', style: TS.caption(AppColors.fg3)),
-      ],
-    ]);
+  Widget _statusLine() {
+    final typing = _typingStatus();
+    if (typing != null) return ChatHeader.statusText(typing);
+    return LayoutBuilder(
+        builder: (_, box) =>
+            ChatHeader.statusText(_memberLine(box.maxWidth)));
+  }
+
+  String _agentName(String id) => groupMemberName(
+      GroupMember.fromJson({'kind': 'agent', 'id': id}), _agents);
+
+  String? _typingStatus() {
+    final store = widget.client.presence;
+    for (final id in _group.agentIds) {
+      final p = store.presenceForAgentId(id);
+      if (p != null && (p.state == 'typing' || p.state == 'thinking')) {
+        return '${_agentName(id)} is typing';
+      }
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
     final hideChrome = widget.embedded;
     return Material(
-      color: readingBg,
+      color: kMobile ? readingBg : Colors.transparent,
       child: SafeArea(
         top: !hideChrome,
         bottom: false,
         child: Column(
           children: [
-            if (!hideChrome) _header(),
-            Expanded(child: _body()),
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                      child: kMobile
+                          ? DotField.chat(child: _body(hideChrome: hideChrome))
+                          : hideChrome
+                          ? _body(hideChrome: hideChrome)
+                          : TopFadeMask(
+                              clear: ChatHeader.overlap - 24,
+                              child: _body(hideChrome: hideChrome))),
+                  if (!hideChrome)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: _header(),
+                    ),
+                ],
+              ),
+            ),
             _composer(),
           ],
         ),
@@ -986,71 +1192,178 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   }
 
   Widget _header() {
-    if (kMobile) {
-      return MobileStackedTitleBar(
-        title: _title,
-        subtitle: _subtitle,
-        onTap: _openMembers,
-        tapHint: 'Members',
-      );
-    }
-    final canGoBack = !widget.embedded &&
-        widget.showBack &&
-        (widget.onClose != null || Navigator.of(context).canPop());
-    return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: AppColors.bg,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
-      ),
-      child: Row(
-        children: [
-          if (canGoBack)
-            IconBtn(
-              'chevron-left',
-              size: 28,
-              iconSize: 16,
-              tooltip: 'Back',
-              onTap: _closePage,
-            ),
-          const SizedBox(width: 4),
-          _memberMochis(),
-          const SizedBox(width: 8),
-          Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _openMembers,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TS.rowTitle(AppColors.fg1)),
-                  Text(_subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TS.meta(AppColors.fg3)),
-                ],
+    final canPop = Navigator.maybeOf(context)?.canPop() ?? false;
+    final canGoBack = kMobile
+        ? (widget.onClose != null || canPop)
+        : (!widget.embedded &&
+            widget.showBack &&
+            (widget.onClose != null || canPop));
+    final tasksBtn = ChatGlassButton(
+      icon: 'task',
+      tooltip: 'Tasks',
+      badge: (_openTaskCount ?? 0) > 0 ? _openTaskCount : null,
+      onTap: () => openTasksPage(context, widget.client,
+          agentIds: _groupAgentIds),
+    );
+    final docked = kMobile ? null : ShellRequestScope.maybeOf(context);
+    final toggleSide = docked?.sidePanel != null ? docked?.toggleSide : null;
+    // Docked in a shell tab, the group name toggles the info panel.
+    final Widget? trailing = toggleSide != null || kMobile
+        ? null
+        : !kMobile && !widget.embedded && widget.onClose != null
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              tasksBtn,
+              const SizedBox(width: 6),
+              ChatGlassButton(
+                icon: 'x',
+                tooltip: 'Close',
+                onTap: widget.onClose!,
               ),
-            ),
-          ),
-          if (!widget.embedded && widget.onClose != null)
-            IconBtn(
-              'x',
-              size: 28,
-              iconSize: 16,
-              tooltip: 'Close',
-              onTap: widget.onClose!,
-            ),
-        ],
+            ],
+          )
+        : tasksBtn;
+    return ListenableBuilder(
+      listenable: widget.client.presence,
+      builder: (_, __) => ChatHeader(
+        agentIds: _group.agentIds,
+        title: _title,
+        status: _statusLine(),
+        onTitleTap: () {
+          if (toggleSide != null) {
+            toggleSide();
+            return;
+          }
+          unawaited(showGroupInfo(
+            context,
+            client: widget.client,
+            group: _group,
+            onOpenTasks: () => openTasksPage(context, widget.client,
+                agentIds: _groupAgentIds),
+            onChanged: () => unawaited(_reloadGroup()),
+          ));
+        },
+        titleHint: 'Members',
+        onBack: canGoBack && !kMobile ? _closePage : null,
+        trailing: trailing,
       ),
     );
   }
 
-  Widget _body() {
+  static const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  static const _months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  static DateTime? _eventTime(CoordinationEvent e) =>
+      DateTime.tryParse(e.createdAt)?.toLocal();
+
+  static (String, String) _dayTimeStamp(DateTime t) {
+    final now = DateTime.now();
+    final days = DateTime(now.year, now.month, now.day)
+        .difference(DateTime(t.year, t.month, t.day))
+        .inDays;
+    final day = switch (days) {
+      0 => 'Today',
+      1 => 'Yesterday',
+      > 1 && < 7 => _weekdays[t.weekday - 1],
+      _ => t.year == now.year
+          ? '${t.day} ${_months[t.month - 1]}'
+          : '${t.day} ${_months[t.month - 1]} ${t.year}',
+    };
+    final hour = t.hour.toString().padLeft(2, '0');
+    final minute = t.minute.toString().padLeft(2, '0');
+    return (day, '$hour:$minute');
+  }
+
+  String? _systemText(CoordinationEvent e) {
+    final body = e.body.trim();
+    if (e.payload['auto'] == 'ack') return body.isEmpty ? null : body;
+    final kind = e.payload['kind'];
+    if (e.actorKind == 'system' ||
+        kind == 'system' ||
+        kind == 'handoff' ||
+        kind == 'handoff_note' ||
+        e.eventType == 'group.system' ||
+        e.eventType == 'group.handoff' ||
+        e.eventType.startsWith('system.')) {
+      return body.isEmpty ? null : body;
+    }
+    if (e.eventType == 'task.lease_transferred') {
+      if (body.isNotEmpty) return body;
+      final from =
+          _agentName(e.payload['from_agent_id']?.toString() ?? e.actorId);
+      final toId = e.payload['to_agent_id']?.toString() ?? '';
+      return toId.isEmpty
+          ? '$from passed the turn'
+          : '$from passed the turn to ${_agentName(toId)}';
+    }
+    return null;
+  }
+
+  String? _readByLine(CoordinationEvent e) {
+    final ids = <String>[];
+    final readBy = e.payload['read_by'];
+    if (readBy is List) {
+      for (final item in readBy) {
+        final s = item?.toString().trim() ?? '';
+        if (s.isNotEmpty && s != 'human' && s != 'local' && !ids.contains(s)) {
+          ids.add(s);
+        }
+      }
+    }
+    final deliveries = e.payload['deliveries'];
+    if (deliveries is Map) {
+      for (final entry in deliveries.entries) {
+        final k = entry.key.toString().trim();
+        final v = entry.value;
+        if (k.isNotEmpty &&
+            k != 'human' &&
+            k != 'local' &&
+            v is Map &&
+            v['read_at'] != null &&
+            !ids.contains(k)) {
+          ids.add(k);
+        }
+      }
+    } else if (deliveries is List) {
+      for (final item in deliveries) {
+        if (item is Map && item['read_at'] != null) {
+          final k =
+              (item['recipient_id'] ?? item['agent_id'] ?? '').toString().trim();
+          if (k.isNotEmpty &&
+              k != 'human' &&
+              k != 'local' &&
+              !ids.contains(k)) {
+            ids.add(k);
+          }
+        }
+      }
+    }
+    if (ids.isEmpty) return null;
+    final names = [for (final id in ids) _agentName(id)];
+    if (names.length == 1) return 'Read by ${names.first}';
+    if (names.length == 2) return 'Read by ${names[0]} and ${names[1]}';
+    return 'Read by ${names.sublist(0, names.length - 1).join(', ')} and ${names.last}';
+  }
+
+  Widget _body({required bool hideChrome}) {
+    final topPad = hideChrome ? 12.0 : ChatHeader.overlap;
     if (_loading) {
       return const Center(child: Spinner(size: 24));
     }
@@ -1075,13 +1388,16 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     }
     final visible = [
       for (final e in _events)
-        if (!isReactionEvent(e) && e.body.isNotEmpty) e
+        if (!isReactionEvent(e) &&
+            (e.body.isNotEmpty || _systemText(e) != null))
+          e
     ];
     if (visible.isEmpty) {
       return PullToRefresh(
         onRefresh: () => _load(silent: true),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.only(top: topPad),
           children: [
             SizedBox(
               height: MediaQuery.sizeOf(context).height * 0.45,
@@ -1097,82 +1413,150 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         ),
       );
     }
+    final runs = chatRuns<CoordinationEvent>(
+      visible,
+      sender: (e) => e.actorKind == 'human' ? 'human' : e.actorId,
+      at: _eventTime,
+      breaks: (e) => _systemText(e) != null,
+    );
+    int? lastHumanIndex;
+    for (var i = visible.length - 1; i >= 0; i--) {
+      if (visible[i].actorKind == 'human' && _systemText(visible[i]) == null) {
+        lastHumanIndex = i;
+        break;
+      }
+    }
     return PullToRefresh(
       onRefresh: () => _load(silent: true),
       child: ListView.builder(
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        padding: EdgeInsets.fromLTRB(16, topPad, 16, 16),
         itemCount: visible.length,
-        itemBuilder: (_, i) => _wideCap(_bubble(visible[i])),
+        itemBuilder: (_, i) {
+          final e = visible[i];
+          final run = runs[i];
+          final at = _eventTime(e);
+          final prevAt = i > 0 ? _eventTime(visible[i - 1]) : null;
+          final showStamp = at != null &&
+              (prevAt == null ||
+                  !_sameDay(prevAt, at) ||
+                  (run.first &&
+                      at.difference(prevAt).abs() >=
+                          const Duration(minutes: 15)));
+          final stamp = showStamp ? _dayTimeStamp(at) : null;
+          final readLine = i == lastHumanIndex ? _readByLine(e) : null;
+          return _wideCap(
+            _item(
+              e,
+              index: i,
+              run: run,
+              stamp: stamp,
+              readLine: readLine,
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _bubble(CoordinationEvent e) {
-    if (e.payload['auto'] == 'ack') {
+  Widget _senderAvatar(String actorId) {
+    final size = ChatBubbleRow.avatarSize;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: ChatColors.cardButton,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: AgentMochi(actorId, size: size * 0.6),
+    );
+  }
+
+  Widget _item(
+    CoordinationEvent e, {
+    required int index,
+    required ({bool first, bool last}) run,
+    required (String, String)? stamp,
+    required String? readLine,
+  }) {
+    final sys = _systemText(e);
+    final topGap =
+        index == 0 ? 0.0 : (run.first ? ChatColors.groupGap : ChatColors.runGap);
+    if (sys != null) {
       return Padding(
-        padding: const EdgeInsets.all(4),
-        child: Text(e.body, style: sans(12, color: AppColors.fg3)),
-      );
-    }
-    final mine = e.actorKind == 'human';
-    final body = _mentionText(e.body);
-    if (mine) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(14, 9, 14, 10),
-            decoration: BoxDecoration(
-              color: AppColors.surface2,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: DefaultTextStyle.merge(
-              textWidthBasis: TextWidthBasis.longestLine,
-              child: body,
-            ),
-          ),
+        padding: EdgeInsets.only(top: topGap),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (stamp != null) ChatSystemLine(stamp.$2, bold: stamp.$1),
+            ChatSystemLine(sys),
+          ],
         ),
       );
     }
-    final name = groupMemberName(
-        GroupMember.fromJson({'kind': 'agent', 'id': e.actorId}), _agents);
+    final mine = e.actorKind == 'human';
+    Widget buildBubble() => ChatBubble(
+          mine: mine,
+          tail: run.last,
+          child: _mentionText(e.body, mine: mine),
+        );
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.only(top: topGap),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment:
+            mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AgentMochi(e.actorId, size: 15),
-                const SizedBox(width: 5),
-                Text(name,
-                    style: sans(11, weight: W.label, color: AppColors.accent)),
-              ],
+          if (stamp != null) ChatSystemLine(stamp.$2, bold: stamp.$1),
+          if (!mine && run.first)
+            ChatSenderName(
+              _agentName(e.actorId),
+              indent: ChatBubbleRow.avatarSize + 6,
+            ),
+          MessageBubbleInteractive(
+            text: e.body,
+            mine: mine,
+            focusBuilder: (_) => buildBubble(),
+            builder: (_, __, bubbleKey) => ChatBubbleRow(
+              mine: mine,
+              avatar: !mine && run.last ? _senderAvatar(e.actorId) : null,
+              avatarSlot: !mine && !run.last,
+              child: KeyedSubtree(
+                key: bubbleKey,
+                child: buildBubble(),
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: body,
-          ),
+          if (readLine != null)
+            ChatSystemLine(readLine, align: Alignment.centerRight),
         ],
       ),
     );
   }
 
-  Widget _mentionText(String body) => SelectionArea(
-        child: Text.rich(
-          TextSpan(
-            style: TS.reading(AppColors.fg1),
-            children: groupMentionSpans(body, _mentionIds),
-          ),
-        ),
-      );
+  Widget _mentionText(String body, {required bool mine}) {
+    final mentionStyle = mine
+        ? TextStyle(
+            color: ChatColors.sentText,
+            fontWeight: weightFor(W.strong),
+          )
+        : TextStyle(
+            color: ChatColors.receivedText,
+            fontWeight: FontWeight.w500,
+          );
+    final richText = Text.rich(
+      TextSpan(
+        style: chatText(mine: mine),
+        children: [
+          for (final s in groupMentionSpans(body, _mentionIds))
+            s.style == null ? s : TextSpan(text: s.text, style: mentionStyle),
+        ],
+      ),
+    );
+    return kMobile ? richText : MessageSelectionArea(child: richText);
+  }
 
   Widget _wideCap(Widget child) => kMobile
       ? child
@@ -1190,9 +1574,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       padding: EdgeInsets.only(bottom: keyboard),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          kMobile ? M.gutter : (widget.embedded ? kComposerGutter : 20),
+          16,
           8,
-          kMobile ? M.gutter : (widget.embedded ? kComposerGutter : 20),
+          16,
           10 + (keyboard > 0 ? 8 : mq.padding.bottom),
         ),
         child: _wideCap(

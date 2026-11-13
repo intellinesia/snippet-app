@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'desktop_look.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 export 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -19,6 +20,7 @@ import 'components.dart';
 import 'dialog_widgets.dart';
 import 'markdown_widgets.dart';
 import 'menu_widgets.dart';
+import 'chat/chat_style.dart' show ChatBubble, ChatBubbleRow, chatMarkdownStyle;
 import 'screens/artifact_viewer.dart' show openArtifact;
 import 'screens/file_viewer.dart' show openFileForViewing, presentFileOnDesktop;
 import 'screens/session.dart' show SessionScreen;
@@ -744,7 +746,11 @@ class Btn extends StatelessWidget {
       child: Pressable(
         enabled: !disabled && onTap != null,
         haptic: variant == BtnVariant.primary,
-        child: Material(
+        child: Tactile(
+          radius: BorderRadius.circular(radius),
+          enabled: variant == BtnVariant.primary ||
+              variant == BtnVariant.secondary,
+          child: Material(
           color: bg,
           borderRadius: BorderRadius.circular(radius),
           child: InkWell(
@@ -768,6 +774,7 @@ class Btn extends StatelessWidget {
               child: child,
             ),
           ),
+        ),
         ),
       ),
     );
@@ -1085,19 +1092,23 @@ class _HoverSurfaceState extends State<HoverSurface> {
         kind: PressKind.row,
         radius: widget.radius,
         enabled: widget.onTap != null || widget.onLongPress != null,
-        child: AnimatedContainer(
-          duration: reduceMotion(context) ? Duration.zero : Motion.quick,
-          curve: Curves.easeOut,
-          decoration: BoxDecoration(color: color, borderRadius: r),
-          child: Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              borderRadius: r,
-              hoverColor: Colors.transparent,
-              onTap: widget.onTap,
-              onLongPress: widget.onLongPress,
-              onSecondaryTapDown: widget.onSecondaryTapDown,
-              child: widget.child,
+        child: Tactile(
+          radius: r,
+          enabled: widget.selected,
+          child: AnimatedContainer(
+            duration: reduceMotion(context) ? Duration.zero : Motion.quick,
+            curve: Curves.easeOut,
+            decoration: BoxDecoration(color: color, borderRadius: r),
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                borderRadius: r,
+                hoverColor: Colors.transparent,
+                onTap: widget.onTap,
+                onLongPress: widget.onLongPress,
+                onSecondaryTapDown: widget.onSecondaryTapDown,
+                child: widget.child,
+              ),
             ),
           ),
         ),
@@ -1485,6 +1496,18 @@ void _messageActions(BuildContext context, String text) {
       ]));
 }
 
+/// Draws a transcript's replies and sent messages as chat bubbles, the way
+/// agent chat does (Mission Control).
+class ChatBubbleScope extends InheritedWidget {
+  const ChatBubbleScope({super.key, required super.child});
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ChatBubbleScope>() != null;
+
+  @override
+  bool updateShouldNotify(ChatBubbleScope oldWidget) => false;
+}
+
 class Bubble extends StatelessWidget {
   final bool mine;
   final String text;
@@ -1568,6 +1591,27 @@ class Bubble extends StatelessWidget {
     final agent =
         selectable ? SelectionArea(child: agentContent) : agentContent;
 
+    final chatBubbles = ChatBubbleScope.of(context);
+    if (chatBubbles && !mine && shown.isNotEmpty) {
+      final reply = MarkdownBody(
+        data: unwrapCodedLinks(shown),
+        selectable: false,
+        extensionSet: md.ExtensionSet.gitHubFlavored,
+        styleSheet: chatMarkdownStyle(context, mine: false),
+        builders: {'pre': PreBlockBuilder()},
+        onTapLink: (txt, href, title) => openMarkdownLink(href, context, txt),
+      );
+      final body = selectable && !kMobile ? SelectionArea(child: reply) : reply;
+      final bubble = ChatBubbleRow(
+          mine: false, child: ChatBubble(mine: false, child: body));
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: onLongPress != null
+            ? GestureDetector(onLongPress: onLongPress, child: bubble)
+            : (selectable ? _LongPressCopy(text: shown, child: bubble) : bubble),
+      );
+    }
+
     if (!mine && kMobile && selectable) {
       // Phones: no Copy row under every reply. Long-press offers copying the
       // whole message or selecting within it (a long-press can't do both).
@@ -1625,7 +1669,19 @@ class Bubble extends StatelessWidget {
                 m,
                 const SizedBox(height: 6),
               ],
-            if (shown.isNotEmpty)
+            if (shown.isNotEmpty && chatBubbles)
+              ChatBubble(
+                mine: true,
+                child: MarkdownBody(
+                  data: unwrapCodedLinks(shown),
+                  selectable: false,
+                  styleSheet: chatMarkdownStyle(context, mine: true),
+                  builders: {'pre': PreBlockBuilder()},
+                  onTapLink: (txt, href, title) =>
+                      openMarkdownLink(href, context, txt),
+                ),
+              )
+            else if (shown.isNotEmpty)
               Container(
                 padding: kMobile
                     ? const EdgeInsets.fromLTRB(15, 10, 15, 11)
@@ -2273,6 +2329,9 @@ class AppToggle extends StatelessWidget {
 }
 
 const _lucide = <String, IconData>{
+  'crown': LucideIcons.crown,
+  'user-plus': LucideIcons.userPlus,
+  'hash': LucideIcons.hash,
   'chevron-left': LucideIcons.chevronLeft,
   'arrow-left': LucideIcons.arrowLeft,
   'chevron-right': LucideIcons.chevronRight,
@@ -2284,6 +2343,7 @@ const _lucide = <String, IconData>{
   'bell': LucideIcons.bell,
   'alert-circle': LucideIcons.circleAlert,
   'message': LucideIcons.messageSquare,
+  'message-square': LucideIcons.messageSquare,
   'message-text': LucideIcons.messageSquareText,
   'chat-thread': LucideIcons.messagesSquare,
   'users': LucideIcons.users,
@@ -2304,6 +2364,7 @@ const _lucide = <String, IconData>{
   'check-circle': LucideIcons.circleCheck,
   'file-text': LucideIcons.fileText,
   'more-horizontal': LucideIcons.ellipsis,
+  'ellipsis': LucideIcons.ellipsis,
   'more-vertical': LucideIcons.ellipsisVertical,
   'search': LucideIcons.search,
   'settings': LucideIcons.settings,
@@ -2322,11 +2383,14 @@ const _lucide = <String, IconData>{
   'mic': LucideIcons.mic,
   'volume': LucideIcons.volume2,
   'mic-off': LucideIcons.micOff,
+  'phone': LucideIcons.phone,
+  'phone-off': LucideIcons.phoneOff,
   'shield': LucideIcons.shield,
   'goal': LucideIcons.goal,
   'folder': LucideIcons.folder,
   'folder-open': LucideIcons.folderOpen,
   'folder-plus': LucideIcons.folderPlus,
+  'folder-x': LucideIcons.folderX,
   'upload': LucideIcons.upload,
   'download': LucideIcons.download,
   'share': LucideIcons.share,
@@ -2337,6 +2401,7 @@ const _lucide = <String, IconData>{
   'terminal': LucideIcons.terminal,
   'grip': LucideIcons.gripVertical,
   'sidebar': LucideIcons.panelLeft,
+  'panel-left': LucideIcons.panelLeft,
   'menu': LucideIcons.menu,
   'edit': LucideIcons.pencil,
   'pencil-line': LucideIcons.pencilLine,
@@ -2383,6 +2448,7 @@ const _lucide = <String, IconData>{
   'split': LucideIcons.split,
   'processes': LucideIcons.cog,
   'server': LucideIcons.server,
+  'monitor': LucideIcons.monitor,
   'ai-chip': LucideIcons.cpu,
   'analytics': LucideIcons.chartColumn,
   'lock-key': LucideIcons.keyRound,

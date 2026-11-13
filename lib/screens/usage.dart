@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../desktop_layout.dart';
 import '../models.dart';
 import '../platform.dart';
 import '../settings_form.dart';
@@ -165,7 +166,7 @@ class _UsageScreenState extends State<UsageScreen> {
     final Widget body;
     if (kMobile) {
       body = ListView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
           _PeriodTabs(value: _period, onChanged: _setPeriod),
           const SizedBox(height: 18),
@@ -226,7 +227,11 @@ class _UsageScreenState extends State<UsageScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          NavBackRow(title: 'Usage', onBack: widget.onBack!),
+          if (kMobile)
+            SettingsHeader(
+                title: 'Usage', compact: true, onBack: widget.onBack!)
+          else
+            NavBackRow(title: 'Usage', onBack: widget.onBack!),
           Expanded(child: body),
         ],
       );
@@ -382,7 +387,7 @@ class _RateRow extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Container(color: AppColors.surface3),
+                    Container(color: AppColors.tint3),
                     FractionallySizedBox(
                       alignment: Alignment.centerLeft,
                       widthFactor: (remaining / 100).clamp(0.0, 1.0),
@@ -455,7 +460,7 @@ class _PeriodTabs extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: AppColors.surface1,
+        color: AppColors.tint1,
         borderRadius: BorderRadius.circular(9),
         border: Border.all(color: AppColors.line),
       ),
@@ -472,7 +477,7 @@ class _PeriodTabs extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: p == value ? AppColors.surface3 : Colors.transparent,
+                  color: p == value ? AppColors.tint2 : Colors.transparent,
                   borderRadius: BorderRadius.circular(7),
                 ),
                 child: Text(

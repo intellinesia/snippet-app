@@ -3,16 +3,63 @@ import 'package:flutter/material.dart';
 import '../../api.dart';
 import '../../models.dart';
 import '../../motion.dart';
+import '../../motion_routes.dart';
 import '../../platform.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../../desktop_layout.dart';
 import '../list_search_field.dart';
+import '../mobile_chrome.dart' show MobileBackBar;
 import '../shell_nav.dart';
 import 'create_task_form.dart';
 import 'task_common.dart';
 import 'task_detail_screen.dart';
 import 'task_list.dart';
+
+/// A pushed Tasks page, optionally limited to the tasks [agentIds] are on.
+Future<void> openTasksPage(BuildContext context, DaemonClient client,
+    {Set<String>? agentIds}) {
+  return Navigator.of(context).push<void>(AppPageRoute<void>(
+    builder: (page) => Material(
+      color: AppColors.paneBg,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            MobileBackBar(
+              title: 'Tasks',
+              onBack: () => Navigator.of(page).pop(),
+            ),
+            Expanded(
+              child: TasksPanel(
+                client: client,
+                phoneHeader: false,
+                agentIds: agentIds,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ));
+}
+
+/// Open tasks the given agents are on, counted once each.
+Future<int> openTaskCountFor(DaemonClient client, Iterable<String> agentIds) async {
+  const open = {
+    TaskStatus.todo,
+    TaskStatus.inProgress,
+    TaskStatus.inReview,
+    TaskStatus.blocked,
+  };
+  final lists = await Future.wait(
+      [for (final a in agentIds) client.tasks(agentId: a, limit: 500)]);
+  return {
+    for (final l in lists)
+      for (final t in l)
+        if (open.contains(t.status)) t.id,
+  }.length;
+}
 
 class TasksPanel extends StatefulWidget {
   const TasksPanel({
@@ -21,9 +68,13 @@ class TasksPanel extends StatefulWidget {
     this.trailing = const [],
     this.phoneHeader = true,
     this.onOpenTask,
+    this.agentIds,
   });
 
   final DaemonClient client;
+
+  /// Only tasks these agents are on; null shows every task.
+  final Set<String>? agentIds;
   final List<Widget> trailing;
   final bool phoneHeader;
 
@@ -44,6 +95,38 @@ class TasksPanelState extends State<TasksPanel> {
   Set<TaskStatus> _filter = {};
   String? _selectedTaskId;
   bool _creatingTask = false;
+  Map<String, String> _sessionFolders = const {};
+  Set<String>? _agentTaskIds;
+
+  List<TaskItem> get _tasks {
+    if (widget.agentIds == null) return _feed.tasks;
+    final ids = _agentTaskIds;
+    if (ids == null) return const [];
+    return _feed.tasks.where((t) => ids.contains(t.id)).toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFolders();
+    _loadAgentTasks();
+  }
+
+  Future<void> _loadAgentTasks() async {
+    final agents = widget.agentIds;
+    if (agents == null) return;
+    try {
+      final lists = await Future.wait(
+          [for (final a in agents) widget.client.tasks(agentId: a, limit: 500)]);
+      if (!mounted) return;
+      setState(() => _agentTaskIds = {
+            for (final l in lists)
+              for (final t in l) t.id,
+          });
+    } catch (_) {
+      if (mounted) setState(() => _agentTaskIds = const {});
+    }
+  }
 
   @override
   void didUpdateWidget(covariant TasksPanel oldWidget) {
@@ -58,6 +141,19 @@ class TasksPanelState extends State<TasksPanel> {
 
   void _sync() {
     if (mounted) setState(() {});
+  }
+
+  /// session id → last path segment, for the phone card meta line. Best
+  /// effort: an unreachable daemon just leaves the line shorter.
+  Future<void> _loadFolders() async {
+    try {
+      final sessions = await widget.client.sessions();
+      if (!mounted) return;
+      setState(() => _sessionFolders = {
+            for (final s in sessions)
+              s.id: s.projectFolder.split('/').where((p) => p.isNotEmpty).last,
+          });
+    } catch (_) {}
   }
 
   @override
@@ -98,7 +194,7 @@ class TasksPanelState extends State<TasksPanel> {
   static const _stuck = {TaskStatus.blocked, TaskStatus.failed};
 
   Widget _statusStrip() {
-    final tasks = _feed.tasks;
+    final tasks = _tasks;
     int count(Set<TaskStatus> s) =>
         tasks.where((t) => s.contains(t.status)).length;
     final tabs = <(String, Set<TaskStatus>)>[
@@ -112,53 +208,36 @@ class TasksPanelState extends State<TasksPanel> {
     bool same(Set<TaskStatus> a, Set<TaskStatus> b) =>
         a.length == b.length && a.containsAll(b);
     if (kMobile) {
+      // v5 `.pseg`:Needs you / Working / Queued / Done. Tapping the lit chip
+      // again clears back to all.
+      const needsYou = {
+        TaskStatus.inReview,
+        TaskStatus.blocked,
+        TaskStatus.failed,
+      };
+      final chips = <(String, Set<TaskStatus>)>[
+        ('Needs you', needsYou),
+        ('Working', const {TaskStatus.inProgress}),
+        ('Queued', const {TaskStatus.todo}),
+        ('Done', const {TaskStatus.done}),
+      ];
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.only(top: 6, bottom: 2),
-        child: Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                  color: AppColors.fg1.withValues(alpha: 0.08),
-                  spreadRadius: 1),
-            ],
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            for (final (label, set) in tabs)
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => setState(() {
-                  _filter = {...set};
-                  _shownAt = null;
-                }),
-                child: AnimatedContainer(
-                  duration: Motion.fast,
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 13),
-                  decoration: BoxDecoration(
-                    color: same(_filter, set)
-                        ? AppColors.surface3
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text(label,
-                        style: sans(14,
-                            weight: W.label,
-                            color: same(_filter, set)
-                                ? AppColors.fg1
-                                : AppColors.fg3)),
-                    const SizedBox(width: 6),
-                    Text('${set.isEmpty ? tasks.length : count(set)}',
-                        style: sans(13, color: AppColors.fg4, tabular: true)),
-                  ]),
-                ),
-              ),
-          ]),
-        ),
+        padding: const EdgeInsets.fromLTRB(0, 4, 0, 8),
+        child: Row(children: [
+          for (final (label, set) in chips) ...[
+            _FilterChip(
+              label: label,
+              count: count(set),
+              on: same(_filter, set),
+              onTap: () => setState(() {
+                _filter = same(_filter, set) ? const {} : {...set};
+                _shownAt = null;
+              }),
+            ),
+            const SizedBox(width: 6),
+          ],
+        ]),
       );
     }
     return SingleChildScrollView(
@@ -166,7 +245,7 @@ class TasksPanelState extends State<TasksPanel> {
       child: Row(children: [
         for (final (label, set) in tabs) ...[
           Material(
-            color: same(_filter, set) ? AppColors.surface2 : Colors.transparent,
+            color: same(_filter, set) ? AppColors.tint2 : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
             child: InkWell(
               borderRadius: BorderRadius.circular(6),
@@ -241,7 +320,7 @@ class TasksPanelState extends State<TasksPanel> {
         height: 32,
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          color: AppColors.surface1,
+          color: AppColors.tint1,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: AppColors.line),
         ),
@@ -277,7 +356,7 @@ class TasksPanelState extends State<TasksPanel> {
   Widget _wide() {
     final list = TaskList(
       appearSince: _shownAt,
-      tasks: _feed.tasks,
+      tasks: _tasks,
       query: _query,
       filter: _filter,
       selectedId: _selectedTaskId,
@@ -298,7 +377,7 @@ class TasksPanelState extends State<TasksPanel> {
         Btn('Retry', small: true, onTap: _feed.refresh),
       ]);
     } else {
-      _shownAt ??= _feed.tasks.isNotEmpty ? DateTime.now() : null;
+      _shownAt ??= _tasks.isNotEmpty ? DateTime.now() : null;
       rows = list.rows();
       empty = list.emptyState();
     }
@@ -363,7 +442,7 @@ class TasksPanelState extends State<TasksPanel> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (_searchOpen) _desktopSearch(),
-              if (_feed.tasks.isNotEmpty)
+              if (_tasks.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: S.s4),
                   child: _statusStrip(),
@@ -452,7 +531,7 @@ class TasksPanelState extends State<TasksPanel> {
                       height: 32,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: BoxDecoration(
-                        color: AppColors.surface1,
+                        color: AppColors.tint1,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: AppColors.line),
                       ),
@@ -485,7 +564,7 @@ class TasksPanelState extends State<TasksPanel> {
                       ]),
                     ),
                   ),
-          if (_feed.tasks.isNotEmpty)
+          if (_tasks.isNotEmpty)
             Padding(
               padding: kMobile
                   ? const EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 0)
@@ -549,19 +628,56 @@ class TasksPanelState extends State<TasksPanel> {
         ),
       );
     }
-    if (_feed.tasks.isNotEmpty) _shownAt ??= DateTime.now();
+    if (_tasks.isNotEmpty) _shownAt ??= DateTime.now();
     return TaskList(
       appearSince: _shownAt,
-      tasks: _feed.tasks,
+      tasks: _tasks,
       query: _query,
       filter: _filter,
       onOpen: _open,
       onRefresh: _feed.refresh,
       hasMore: _feed.hasMore,
       onLoadMore: _feed.loadMore,
+      sessionFolders: _sessionFolders,
       padding: kMobile
           ? const EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 16)
           : const EdgeInsets.fromLTRB(10, 2, 10, 16),
     );
   }
+}
+
+/// One v5 `.pseg` filter chip: 32px pill, surface fill, lit when [on].
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.count,
+    required this.on,
+    required this.onTap,
+  });
+
+  final String label;
+  final int count;
+  final bool on;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: Motion.fast,
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: on
+                ? (kMobile ? AppColors.surface3 : AppColors.tint2)
+                : (kMobile ? AppColors.surface2 : AppColors.tint1),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Text('$label $count',
+                style: sans(14, color: on ? AppColors.fg1 : AppColors.fg3)),
+          ]),
+        ),
+      );
 }

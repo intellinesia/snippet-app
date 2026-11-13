@@ -1,5 +1,8 @@
+import 'package:flutter/gestures.dart';
+import '../desktop_look.dart';
 import 'package:flutter/material.dart';
 
+import '../chat/agent_cluster.dart';
 import '../mochi.dart';
 
 import '../models.dart';
@@ -40,6 +43,63 @@ class TabDragFeedback extends StatelessWidget {
 }
 
 /// A top-level workspace tab chip in the desktop window bar.
+class _TabChipBox extends StatefulWidget {
+  final bool isActive;
+  final VoidCallback onTap;
+  final Key? chipKey;
+  final EdgeInsetsGeometry padding;
+  final Widget child;
+
+  const _TabChipBox({
+    required this.isActive,
+    required this.onTap,
+    this.chipKey,
+    this.padding = const EdgeInsets.symmetric(horizontal: 10),
+    required this.child,
+  });
+
+  @override
+  State<_TabChipBox> createState() => _TabChipBoxState();
+}
+
+class _TabChipBoxState extends State<_TabChipBox> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Tactile(
+          radius: BorderRadius.circular(R.md),
+          enabled: widget.isActive,
+          child: AnimatedContainer(
+          duration: Motion.quick,
+          key: widget.chipKey,
+          height: 28,
+          padding: widget.padding,
+          decoration: BoxDecoration(
+            color: widget.isActive
+                ? AppColors.tint2
+                : (_hover
+                    ? (kMobile ? AppColors.surface1 : AppColors.tint3)
+                    : Colors.transparent),
+            borderRadius: BorderRadius.circular(R.md),
+            border: Border.all(
+                color:
+                    widget.isActive ? AppColors.border2 : Colors.transparent),
+          ),
+          child: widget.child,
+        ),
+        ),
+      ),
+    );
+  }
+}
+
 class TopWorkspaceTabChip extends StatelessWidget {
   final ShellTab tab;
   final bool isActive;
@@ -49,6 +109,9 @@ class TopWorkspaceTabChip extends StatelessWidget {
   final VoidCallback? onClose;
   final GlobalKey? chipKey;
   final String? provider;
+  final String? agentId;
+  final String? folder;
+  final int attentionCount;
 
   const TopWorkspaceTabChip({
     super.key,
@@ -60,82 +123,121 @@ class TopWorkspaceTabChip extends StatelessWidget {
     this.onClose,
     this.chipKey,
     this.provider,
+    this.agentId,
+    this.folder,
+    this.attentionCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
     final title = tab.title.isEmpty ? '(untitled)' : tab.title;
-    final working = status == 'running' || status == 'waiting_for_input';
-    final showClose = canClose && onClose != null && isActive;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: Motion.quick,
-        key: chipKey,
-        height: 30,
-        padding: EdgeInsets.fromLTRB(11, 0, showClose ? 5 : 11, 0),
-        decoration: BoxDecoration(
-          color: isActive ? AppColors.surface2 : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(
-              color: isActive ? AppColors.line : Colors.transparent),
+    final needsInput = status == 'waiting_for_input' || status == 'in_review';
+    final working = status == 'running' || needsInput;
+    final closable = canClose && onClose != null;
+    final showClose = closable && isActive;
+    // Mission Control is the pinned icon-only tab: Mochi plus the attention
+    // count, no title or status dot (v5 `.tab[data-go=mc]`).
+    if (tab.isMissionControl) {
+      return Tooltip(
+        message: tab.title.isEmpty ? 'Mission Control' : tab.title,
+        waitDuration: const Duration(milliseconds: 600),
+        child: _TabChipBox(
+          isActive: isActive,
+          onTap: onTap,
+          chipKey: chipKey,
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            MochiIcon(color: AppColors.fg1, size: 18),
+            if (attentionCount > 0) ...[
+              const SizedBox(width: 6),
+              Text('$attentionCount', style: mono(11, color: AppColors.fg4)),
+            ],
+          ]),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (tab.isMissionControl)
-              MochiIcon(color: AppColors.accent, size: 14)
-            else if (tab.isPrs)
-              AppIcon('pull-request', size: 13, color: AppColors.ok)
-            else if (provider != null)
-              ProviderLogo(provider, size: 12)
-            else
-              SessionStateIcon(
-                status: working ? null : status,
-                icon: tabIconKind(tab),
-                size: 13,
-              ),
-            const SizedBox(width: 8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 190),
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(kMobile ? 14 : 13,
-                    color: isActive ? AppColors.fg1 : AppColors.fg3),
+      );
+    }
+    final f = folder?.trim();
+    final tip = f != null && f.isNotEmpty ? '$title\n$f' : title;
+    final hasProvider =
+        provider != null && providerLogoAsset(provider) != null;
+    final hasAgent = agentId != null && agentId!.isNotEmpty;
+    final groupIds = tabGroupAgentIds(tab);
+    final chip = _TabChipBox(
+      isActive: isActive,
+      onTap: onTap,
+      chipKey: chipKey,
+      padding: EdgeInsets.fromLTRB(10, 0, showClose ? 6 : 10, 0),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (tab.isPrs)
+            AppIcon('pull-request', size: 13, color: AppColors.ok)
+          else if (tab.isBoard)
+            AppIcon('list',
+                size: 14, color: isActive ? AppColors.fg1 : AppColors.fg3)
+          else if (groupIds != null)
+            AgentCluster(ids: groupIds, size: 17)
+          else if (hasAgent)
+            AgentMochi(agentId!, size: 15)
+          else if (hasProvider)
+            ProviderLogo(provider, size: 13)
+          else
+            SessionStateIcon(
+              status: working ? null : status,
+              icon: tabIconKind(tab),
+              size: 13,
+            ),
+          const SizedBox(width: 7),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 180),
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(kMobile ? 14 : 12,
+                  color: isActive ? AppColors.fg1 : AppColors.fg4),
+            ),
+          ),
+          if (working) ...[
+            const SizedBox(width: 7),
+            Container(
+              width: needsInput ? 7 : 6,
+              height: needsInput ? 7 : 6,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: status == 'running'
+                    ? AppColors.fg2
+                    : Colors.transparent,
+                border: status == 'running'
+                    ? null
+                    : Border.all(color: AppColors.run, width: 1.5),
               ),
             ),
-            if (working) ...[
-              const SizedBox(width: 8),
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: status == 'running'
-                      ? AppColors.accent
-                      : Colors.transparent,
-                  border: status == 'running'
-                      ? null
-                      : Border.all(color: AppColors.accent, width: 1.5),
-                ),
-              ),
-            ],
-            if (showClose) ...[
-              const SizedBox(width: 4),
-              GestureDetector(
-                onTap: onClose,
-                behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: const EdgeInsets.all(5),
-                  child: AppIcon('x', size: 11, color: AppColors.fg4),
-                ),
-              ),
-            ],
           ],
-        ),
+          if (showClose) ...[
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: onClose,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.all(5),
+                child: AppIcon('x', size: 11, color: AppColors.fg4),
+              ),
+            ),
+          ],
+        ],
       ),
+    );
+    return Tooltip(
+      message: tip,
+      waitDuration: const Duration(milliseconds: 600),
+      child: closable
+          ? Listener(
+              onPointerDown: (e) {
+                if ((e.buttons & kMiddleMouseButton) != 0) onClose!();
+              },
+              child: chip,
+            )
+          : chip,
     );
   }
 }
@@ -171,7 +273,7 @@ class TopMachineSwitcher extends StatelessWidget {
         message: 'Switch machine',
         child: Material(
           key: anchorKey,
-          color: AppColors.surface1,
+          color: AppColors.tint1,
           borderRadius: BorderRadius.circular(15),
           child: InkWell(
             onTap: hasInstances ? onOpenList : onAdd,
@@ -185,7 +287,7 @@ class TopMachineSwitcher extends StatelessWidget {
                   height: 20,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: AppColors.surface3,
+                    color: AppColors.tint3,
                     shape: BoxShape.circle,
                   ),
                   child: Text(initial, style: sans(11, color: AppColors.fg1)),
@@ -234,7 +336,7 @@ class TopMachineSwitcher extends StatelessWidget {
                     height: 22,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: AppColors.surface2,
+                      color: AppColors.tint2,
                       shape: BoxShape.circle,
                     ),
                     child: Text(
@@ -252,7 +354,7 @@ class TopMachineSwitcher extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isHealthy == true ? AppColors.ok : AppColors.fg4,
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.bg, width: 1.5),
+                      border: Border.all(color: AppColors.paneBg, width: 1.5),
                     ),
                   ),
                 ),
@@ -277,6 +379,11 @@ class MainTabsStrip extends StatelessWidget {
   final VoidCallback onNewSession;
   final GlobalKey Function(String key) chipKeyFor;
   final String? Function(ShellTab)? providerFor;
+  final String? Function(ShellTab)? agentFor;
+  final String? Function(ShellTab)? folderFor;
+  final int mcAttentionCount;
+  final bool tasksActive;
+  final VoidCallback? onOpenTasks;
 
   const MainTabsStrip({
     super.key,
@@ -290,46 +397,84 @@ class MainTabsStrip extends StatelessWidget {
     required this.onNewSession,
     required this.chipKeyFor,
     this.providerFor,
+    this.agentFor,
+    this.folderFor,
+    this.mcAttentionCount = 0,
+    this.tasksActive = false,
+    this.onOpenTasks,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return CustomScrollView(
       controller: controller,
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.only(right: 4),
-      children: [
-        for (var i = 0; i < tabs.length; i++) ...[
-          if (i > 0 && tabs[i] != activeTab && tabs[i - 1] != activeTab)
-            Center(
-              child: Container(
-                width: 1,
-                height: 14,
-                margin: const EdgeInsets.symmetric(horizontal: 1),
-                color: AppColors.line,
-              ),
-            ),
-          Center(
-            child: TopWorkspaceTabChip(
-              tab: tabs[i],
-              provider: providerFor?.call(tabs[i]),
-              isActive: tabs[i] == activeTab,
-              status: statusForTab(tabs[i]),
-              canClose: canCloseTab(tabs[i]),
-              onTap: () => onActivateTab(tabs[i]),
-              onClose: () => onCloseTab(tabs[i]),
-              chipKey: chipKeyFor(tabs[i].key),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.only(right: 4),
+          sliver: SliverToBoxAdapter(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < tabs.length; i++) ...[
+                  Center(
+                    child: TopWorkspaceTabChip(
+                      tab: tabs[i],
+                      provider: providerFor?.call(tabs[i]),
+                      agentId: agentFor?.call(tabs[i]),
+                      folder: folderFor?.call(tabs[i]),
+                      isActive: tabs[i] == activeTab,
+                      status: statusForTab(tabs[i]),
+                      canClose: canCloseTab(tabs[i]),
+                      onTap: () => onActivateTab(tabs[i]),
+                      onClose: () => onCloseTab(tabs[i]),
+                      chipKey: chipKeyFor(tabs[i].key),
+                      attentionCount:
+                          tabs[i].isMissionControl ? mcAttentionCount : 0,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                if (onOpenTasks != null) ...[
+                  Center(
+                    child: _TabChipBox(
+                      isActive: tasksActive,
+                      onTap: onOpenTasks!,
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        AppIcon('list',
+                            size: 14,
+                            color: tasksActive ? AppColors.fg1 : AppColors.fg3),
+                        const SizedBox(width: 7),
+                        Text('Tasks',
+                            style: sans(kMobile ? 14 : 12,
+                                color: tasksActive
+                                    ? AppColors.fg1
+                                    : AppColors.fg4)),
+                      ]),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                Center(
+                  child: IconBtn(
+                    'plus',
+                    size: 28,
+                    iconSize: 14,
+                    tooltip: 'New session',
+                    onTap: onNewSession,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 2),
-        ],
-        Center(
-          child: IconBtn(
-            'plus',
-            size: 28,
-            iconSize: 14,
-            tooltip: 'New session',
-            onTap: onNewSession,
+        ),
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: GestureDetector(
+            key: const ValueKey('tab-strip-empty-space'),
+            behavior: HitTestBehavior.opaque,
+            onDoubleTap: onNewSession,
+            child: const SizedBox.expand(),
           ),
         ),
       ],
@@ -369,7 +514,7 @@ class MacWindowBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 46,
+      height: 44,
       padding: const EdgeInsets.fromLTRB(8, 0, 10, 0),
       decoration: BoxDecoration(
         color: AppColors.windowBg,
@@ -379,31 +524,32 @@ class MacWindowBar extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (sidebarHidden) ...[
-            if (reserveWindowControls) const SizedBox(width: 72),
-            Center(
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Center(
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (sidebarHidden) ...[
+                if (reserveWindowControls) const SizedBox(width: 72),
                 if (onToggleSidebar != null)
                   IconBtn('sidebar',
                       size: 28,
                       iconSize: 15,
-                      tooltip:
-                          kMacOS ? 'Show sidebar (⌘B)' : 'Show sidebar (Ctrl+B)',
+                      tooltip: kMacOS
+                          ? 'Show sidebar (⌘B)'
+                          : 'Show sidebar (Ctrl+B)',
                       onTap: onToggleSidebar),
-                IconBtn('chevron-left',
-                    size: 28,
-                    iconSize: 16,
-                    tooltip: 'Back',
-                    onTap: canNavigateBack ? onNavigateBack : null),
-                IconBtn('chevron-right',
-                    size: 28,
-                    iconSize: 16,
-                    tooltip: 'Forward',
-                    onTap: canNavigateForward ? onNavigateForward : null),
-                const SizedBox(width: 6),
-              ]),
-            ),
-          ],
+              ],
+              IconBtn('chevron-left',
+                  size: 28,
+                  iconSize: 15,
+                  tooltip: 'Back',
+                  onTap: canNavigateBack ? onNavigateBack : null),
+              IconBtn('chevron-right',
+                  size: 28,
+                  iconSize: 15,
+                  tooltip: 'Forward',
+                  onTap: canNavigateForward ? onNavigateForward : null),
+              const SizedBox(width: 4),
+            ]),
+          ),
           Expanded(child: Align(alignment: Alignment.centerLeft, child: tabsRow)),
           const SizedBox(width: 8),
           Center(

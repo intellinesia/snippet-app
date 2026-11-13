@@ -3,17 +3,19 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
+import 'package:snippet/chat/chat_style.dart';
+import 'package:snippet/chat/message_focus_overlay.dart';
 import 'package:snippet/composer/composer_card.dart';
 import 'package:snippet/message_reactions.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/agent_messaging.dart';
 import 'package:snippet/swr.dart';
-import 'package:snippet/widgets.dart';
 
 CoordinationEvent _ev(
   String id,
@@ -208,8 +210,8 @@ void main() {
 
       await _open(t, client);
 
-      // Only the 2 real messages render as Bubble widgets; the 2 reactions fold.
-      expect(find.byType(Bubble), findsNWidgets(2));
+      // Only the 2 real messages render as ChatBubble widgets; the 2 reactions fold.
+      expect(find.byType(ChatBubble), findsNWidgets(2));
 
       // The reply renders a QuotedReplyLine with the target message text.
       final quoted = find.byType(QuotedReplyLine);
@@ -252,16 +254,14 @@ void main() {
       await t.longPress(find.text('Ready for review on branch feat/x.'));
       await _pumpFrames(t);
 
-      expect(find.byType(MessageActionsView), findsOneWidget);
+      expect(find.byType(MessageFocusOverlay), findsOneWidget);
+      expect(find.byType(MessageActionsView), findsNothing);
       expect(find.text('Reply'), findsOneWidget);
       expect(find.text('Copy'), findsOneWidget);
-      for (final emoji in [
-        ...kMessageReactions,
-        for (final (e, _) in kMoreReactions) e
-      ]) {
+      for (final emoji in kMessageReactions) {
         expect(
           find.descendant(
-              of: find.byType(MessageActionsView), matching: find.text(emoji)),
+              of: find.byType(MessageFocusOverlay), matching: find.text(emoji)),
           findsOneWidget,
         );
       }
@@ -340,6 +340,38 @@ void main() {
     }
   });
 
+  testWidgets('desktop right-click opens the message menu, not the system one',
+      (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      final client = _FakeClient([
+        _ev('m1', 1, 'agent', 'Finished running benchmarks.'),
+      ]);
+      await _open(t, client, size: const Size(1280, 800));
+
+      final gesture = await t.startGesture(
+          t.getCenter(find.text('Finished running benchmarks.')),
+          kind: PointerDeviceKind.mouse,
+          buttons: kSecondaryMouseButton);
+      await gesture.up();
+      await _pumpFrames(t);
+
+      expect(find.text('Select All'), findsNothing);
+      expect(find.text('Reply'), findsOneWidget);
+      expect(find.text('Copy message'), findsOneWidget);
+
+      await t.tap(find.text('✅'));
+      await _pumpFrames(t);
+      expect(client.sent.single['reaction'], '✅');
+      expect(client.sent.single['reply_to'], 'm1');
+      expect(find.text('Copy message'), findsNothing);
+
+      await t.pumpWidget(const SizedBox());
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('holding a message lets me react with a niche emoji', (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
@@ -350,13 +382,19 @@ void main() {
 
       await t.longPress(find.text('Finished running benchmarks.'));
       await _pumpFrames(t);
+      expect(find.byType(MessageFocusOverlay), findsOneWidget);
+
+      await t.tap(find.bySemanticsLabel('More reactions'));
+      await _pumpFrames(t);
+      expect(find.byType(MessageReactionGrid), findsOneWidget);
       expect(find.text('Ship it'), findsOneWidget);
 
       await t.tap(find.text('🚀'));
       await _pumpFrames(t);
 
       expect(client.sent.single['reaction'], '🚀');
-      expect(find.byType(MessageActionsView), findsNothing);
+      expect(find.byType(MessageReactionGrid), findsNothing);
+      expect(find.byType(MessageFocusOverlay), findsNothing);
 
       await t.pumpWidget(const SizedBox());
     } finally {
@@ -384,7 +422,7 @@ void main() {
       expect(
         find.ancestor(
           of: find.text('Initial spec note at top of thread.'),
-          matching: find.byType(Bubble),
+          matching: find.byType(ChatBubble),
         ),
         findsNothing,
       );
@@ -395,7 +433,7 @@ void main() {
       expect(
         find.ancestor(
           of: find.text('Initial spec note at top of thread.'),
-          matching: find.byType(Bubble),
+          matching: find.byType(ChatBubble),
         ),
         findsOneWidget,
       );

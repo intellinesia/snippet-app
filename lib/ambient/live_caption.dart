@@ -12,12 +12,14 @@ class LiveCaptionFeed {
   final Duration finalHold;
   final Duration partialHold;
   final ValueNotifier<String?> text = ValueNotifier(null);
+  final ValueNotifier<String?> lastFinal = ValueNotifier(null);
   Timer? _clear;
 
   void apply(Map<dynamic, dynamic> event) {
     final next = event['text']?.toString().trim() ?? '';
     if (next.isEmpty) return;
     text.value = next;
+    if (event['final'] == true) lastFinal.value = next;
     _clear?.cancel();
     _clear = Timer(event['final'] == true ? finalHold : partialHold, () => text.value = null);
   }

@@ -154,6 +154,24 @@ ThemePreset _palette({
   );
 }
 
+// Modelled on Vercel's Geist dark scale: true black, neutral greys, colour only for status.
+final _black = _palette(
+  name: 'black',
+  label: 'Pure Black',
+  bg: const Color(0xFF000000),
+  surface1: const Color(0xFF0F0F0F),
+  surface2: const Color(0xFF171717),
+  surface3: const Color(0xFF212121),
+  border: const Color(0xFF1F1F1F),
+  border2: const Color(0xFF2E2E2E),
+  accent: const Color(0xFFFAFAFA),
+  accentFg: const Color(0xFF0A0A0A),
+  fg1: const Color(0xFFFAFAFA),
+  fg2: const Color(0xFFC7C7C7),
+  fg3: const Color(0xFFA0A0A0),
+  fg4: const Color(0xFF737373),
+);
+
 final _ember = _palette(
   name: 'ember',
   label: 'Charcoal Violet',
@@ -730,6 +748,7 @@ final _amberPhosphor = _palette(
 );
 
 final List<ThemePreset> allPresets = [
+  _black,
   _ember,
   _stone,
   _crimsonNoir,
@@ -1049,7 +1068,11 @@ Color _lighten(Color c, double amount) {
 // ---------------------------------------------------------------------------
 
 class ThemeManager extends ChangeNotifier {
-  static const _prefsKey = 'theme_index';
+  static const _legacyIndexKey = 'theme_index';
+  static const _prefsKey = 'theme_name';
+  static const defaultTheme = 'black';
+  static const defaultFont = 'Geist';
+  static const defaultMonoFont = 'GeistMono';
   static const _accentPrefsKey = 'accent_name';
   static const _fontPrefsKey = 'ui_font_family';
   static const _monoFontPrefsKey = 'mono_font_family';
@@ -1057,10 +1080,16 @@ class ThemeManager extends ChangeNotifier {
   static final ThemeManager instance = ThemeManager._();
   ThemeManager._();
 
-  int _themeIndex = 0;
+  int _themeIndex = _indexOr(allPresets.map((p) => p.name), defaultTheme);
   int _accentIndex = -1; // -1 = use theme's built-in accent
-  int _fontIndex = 0;
-  int _monoFontIndex = 0;
+  int _fontIndex = _indexOr(allFonts.map((f) => f.family), defaultFont);
+  int _monoFontIndex =
+      _indexOr(allMonoFonts.map((f) => f.family), defaultMonoFont);
+
+  static int _indexOr(Iterable<String> names, String name) {
+    final i = names.toList().indexOf(name);
+    return i < 0 ? 0 : i;
+  }
 
   int get themeIndex => _themeIndex;
   int get accentIndex => _accentIndex;
@@ -1087,8 +1116,16 @@ class ThemeManager extends ChangeNotifier {
 
   Future<void> init() async {
     final p = await SharedPreferences.getInstance();
-    final savedTheme = p.getInt(_prefsKey) ?? 0;
-    _themeIndex = savedTheme.clamp(0, allPresets.length - 1);
+    var name = p.getString(_prefsKey);
+    final legacy = p.getInt(_legacyIndexKey);
+    if (name == null && legacy != null) {
+      // Saved before Pure Black was prepended; index into the old order.
+      final old = allPresets.where((t) => t.name != 'black').toList();
+      name = old[legacy.clamp(0, old.length - 1)].name;
+      await p.setString(_prefsKey, name);
+      await p.remove(_legacyIndexKey);
+    }
+    _themeIndex = _indexOr(allPresets.map((t) => t.name), name ?? defaultTheme);
     final savedAccent = p.getString(_accentPrefsKey);
     if (savedAccent != null && savedAccent.isNotEmpty) {
       _accentIndex = allAccents.indexWhere((a) => a.name == savedAccent);
@@ -1114,7 +1151,7 @@ class ThemeManager extends ChangeNotifier {
     notifyListeners();
     try {
       final p = await SharedPreferences.getInstance();
-      await p.setInt(_prefsKey, i);
+      await p.setString(_prefsKey, allPresets[i].name);
     } catch (_) {}
   }
 
@@ -1191,13 +1228,27 @@ class AppColors {
   static Color get lineStrong => currentTheme.border2;
 
   static const Color scrim = Color(0x99000000);
+  // Lighter, so a glass sheet still shows the page through its blur.
+  static const Color glassScrim = Color(0x59000000);
+  /// Set while a chat wallpaper shows: side chrome goes opaque to frame it.
+  static bool solidChrome = false;
   static Color get windowBg => kMobile
       ? currentTheme.bg
       : Color.lerp(currentTheme.bg, currentTheme.surface1, 0.45)!
-          .withValues(alpha: 0.92);
+          .withValues(alpha: solidChrome ? 1 : 0.92);
   static Color get sidebarPanel => kMobile
       ? currentTheme.surface1
       : currentTheme.surface1.withValues(alpha: 0.92);
+  static Color get paneBg => kMobile ? currentTheme.bg : const Color(0x00000000);
+  static Color get tint1 => kMobile
+      ? currentTheme.surface1
+      : currentTheme.fg1.withValues(alpha: 0.05);
+  static Color get tint2 => kMobile
+      ? currentTheme.surface2
+      : currentTheme.fg1.withValues(alpha: 0.08);
+  static Color get tint3 => kMobile
+      ? currentTheme.surface3
+      : currentTheme.fg1.withValues(alpha: 0.11);
   static Color get glassSurface => currentTheme.surface2;
   static Color get glassBorder => currentTheme.border;
 
@@ -1256,10 +1307,10 @@ class R {
 }
 
 AnimationStyle get sheetMotion => AnimationStyle(
-      duration: Motion.open,
-      reverseDuration: Motion.close,
-      curve: Motion.enter,
-      reverseCurve: Motion.exit,
+      duration: const Duration(milliseconds: 320),
+      reverseDuration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeOutCubic.flipped,
     );
 
 /// The only spacing values the app uses.

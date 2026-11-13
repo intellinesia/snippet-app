@@ -110,18 +110,21 @@ void main() {
 
     expect(find.text('Deploy target'), findsOneWidget);
     expect(find.text('Which deployment target?'), findsOneWidget);
-    expect(find.text('Anything else?'), findsOneWidget);
     expect(find.text('Staging'), findsOneWidget);
-    expect(find.text('recommended'), findsOneWidget);
+    expect(find.text('Recommended'), findsOneWidget);
+    expect(find.text('Send'), findsNothing);
 
-    final send = find.widgetWithText(Btn, 'Send');
-    expect(send, findsOneWidget);
-    expect(t.widget<Btn>(send).disabled, isTrue);
+    await t.tap(find.text('Next'));
+    await t.pump();
+    expect(find.text('Anything else?'), findsOneWidget);
+
+    final send = find.text('Send');
+    await t.tap(send);
+    await t.pump();
+    expect(client.calls, isEmpty);
 
     await t.enterText(find.byType(TextField), 'ship it');
     await t.pump();
-    expect(t.widget<Btn>(send).disabled, isFalse);
-
     await t.tap(send);
     await t.pump();
 
@@ -161,11 +164,10 @@ void main() {
       ),
     );
 
-    expect(find.text('Answered'), findsOneWidget);
-    expect(find.text('Chosen'), findsOneWidget);
-    expect(find.text('looks good'), findsOneWidget);
+    expect(find.text('Answered: Production'), findsOneWidget);
+    expect(find.text('Answered: looks good'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
-    expect(find.widgetWithText(Btn, 'Send'), findsNothing);
+    expect(find.text('Send'), findsNothing);
     expect(client.calls, isEmpty);
     debugDefaultTargetPlatformOverride = null;
   });
@@ -188,14 +190,18 @@ void main() {
       ),
     );
 
+    await t.tap(find.text('Next'));
+    await t.pump();
     await t.enterText(find.byType(TextField), 'ship it');
     await t.pump();
-    await t.tap(find.widgetWithText(Btn, 'Send'));
+    await t.tap(find.text('Send'));
     await t.pump();
 
     expect(find.text('This question is no longer waiting'), findsOneWidget);
     expect(t.widget<AppField>(find.byType(AppField)).enabled, isFalse);
-    expect(t.widget<Btn>(find.widgetWithText(Btn, 'Send')).disabled, isTrue);
+    await t.tap(find.text('Send'));
+    await t.pump();
+    expect(client.calls, hasLength(1));
     debugDefaultTargetPlatformOverride = null;
   });
 

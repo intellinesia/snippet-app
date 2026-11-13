@@ -55,21 +55,16 @@ extension _DesktopShellMobileExt on _DesktopShellState {
   }
 
 
-  void _startOnMission() {
+  void _startOnChats() {
     if (!kMobile || _active == null) return;
-    final i = _tabs.indexWhere(
-        (t) => t.isMissionControl && t.instanceUrl == _active!.url);
-    if (i < 0) return;
-    _activateTab(i);
     _setState(() {
       _mobileHome = MobileHome.chats;
       _mobileAgent = null;
       _mobileSettingsSection = null;
-      _mobileChatsOpen = false;
+      _mobileChatsOpen = true;
       _mobileRouteHistory
         ..clear()
-        ..add(_MobileRoute(
-            home: MobileHome.chats, inSession: true, sessionTabIndex: i));
+        ..add(const _MobileRoute(home: MobileHome.chats));
     });
   }
 
@@ -129,21 +124,8 @@ extension _DesktopShellMobileExt on _DesktopShellState {
     );
   }
 
-  Widget _mobileTopBar({required bool mission, VoidCallback? onActions}) => MobileTopBar(
-        mission: mission,
-        onActions: onActions,
-        sessionsBusy: mission &&
-            (_sessions ?? const <SessionInfo>[]).any((s) =>
-                !isDedicatedMcSession(s.id) &&
-                s.status == 'running'),
-        onMission: _goMission,
-        onSessions: () => _goMobileHome(MobileHome.chats),
-        onMenu: _openMobileMenu,
-        trailingOrb: mission && _client != null
-            ? AmbientHeaderOrb(client: _client!)
-            : null,
-        onSettings: () => _goMobileHome(MobileHome.settings),
-      );
+  Widget _mobileMissionBar({VoidCallback? onActions}) =>
+      MobileMissionBar(onActions: onActions, client: _client);
 
   Widget _mobileShell() {
     final tab = _activeTab;

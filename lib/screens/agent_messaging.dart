@@ -4,16 +4,20 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
-import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
+import '../motion_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:markdown/markdown.dart' as md;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
+import '../chat/chat_info.dart' show showAgentInfo;
+import '../glass.dart';
 import '../api.dart';
+import '../clock.dart';
+import '../chat/chat_style.dart';
 import '../composer/attachment_preview.dart';
 import '../composer/attachment_tile.dart';
 import '../composer/composer_card.dart';
@@ -30,11 +34,12 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../swr.dart';
 import '../pull_refresh.dart';
+import 'agent_questions_card.dart';
 import 'agent_records.dart';
 import 'agent_thread_cards.dart';
 import 'agent_view_switcher.dart';
-import 'mobile_chrome.dart';
-import '../mochi.dart';
+import 'tasks/tasks_panel.dart';
+import 'mobile_session_home.dart' show DotField;
 
 /// Pick one agent from the directory, as an anchored DROPDOWN.
 ///
@@ -325,7 +330,10 @@ class AgentThreadScreen extends StatefulWidget {
     this.subtitle,
     this.onClose,
     this.embedded = false,
+    this.tabHeader = false,
     this.showBack = true,
+    this.deskTrailing,
+    this.onDeskInfo,
   });
 
   final DaemonClient client;
@@ -341,7 +349,14 @@ class AgentThreadScreen extends StatefulWidget {
   /// Nested under a host that already draws `NavBackRow`.
   final bool embedded;
 
+  /// Desktop shell tab: embedded, but keeps the centred header from v5.
+  final bool tabHeader;
+
   final bool showBack;
+  final Widget? deskTrailing;
+
+  /// Desktop shell: the title opens the docked info panel instead of a dialog.
+  final VoidCallback? onDeskInfo;
 
   @override
   State<AgentThreadScreen> createState() => _AgentThreadScreenState();
@@ -360,6 +375,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   bool _fetchedPaused = false;
   String? _fetchedProfile;
   String? _profileProvider;
+  final GlobalKey _headerKey = GlobalKey();
 
   void _loadLine() {
     widget.client.coordinationAgents().then((all) {
@@ -407,24 +423,66 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     }
   }
 
-  Widget _switcher() => AgentViewSwitcher(
-      value: _view, unread: _unread, onChanged: _setView);
+  void _openInfo() => unawaited(showAgentInfo(
+        context,
+        client: widget.client,
+        agentId: widget.agentId,
+        name: widget.agentName,
+        onOpenTasks: _openTasks,
+        onOpenInbox: () => _setView(AgentView.inbox),
+        onOpenBoard: () => _setView(AgentView.board),
+        onOpenDesk: () => openAgentDesk(
+            context, widget.client, widget.agentId, widget.agentName),
+      ));
+
+  void _openTasks() {
+    openTasksPage(context, widget.client, agentIds: {widget.agentId});
+  }
+
+  Future<void> _openSwitcherMenu(BuildContext anchor) async {
+    final picked = await showAppMenu<AgentView>(
+      context,
+      anchor: anchor,
+      below: true,
+      alignEnd: true,
+      minWidth: 180,
+      items: [
+        for (final (v, icon, label) in const [
+          (AgentView.thread, 'message', 'Thread'),
+          (AgentView.inbox, 'inbox', 'Inbox'),
+          (AgentView.board, 'clipboard', 'Board'),
+        ])
+          appMenuRow<AgentView>(
+            value: v,
+            icon: icon,
+            label: label,
+            trailing: v == AgentView.inbox && _unread > 0 ? '$_unread' : null,
+            selected: v == _view,
+          ),
+      ],
+    );
+    if (picked != null && picked != _view && mounted) _setView(picked);
+  }
 
   Widget _viewBody() {
+    final recordsTop = _noChrome ? 0.0 : ChatHeader.overlap;
     final child = switch (_view) {
       AgentView.thread => KeyedSubtree(
           key: const ValueKey(AgentView.thread), child: _body()),
       _ => KeyedSubtree(
           key: ValueKey(_view),
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
-              child: agentRecordsBody(
-                  widget.client, widget.agentId, widget.agentName,
-                  board: _view == AgentView.board,
-                  filter: _filter,
-                  filterChips: !kMobile),
+          child: Padding(
+            padding: EdgeInsets.only(top: recordsTop),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: agentRecordsBody(
+                    widget.client, widget.agentId, widget.agentName,
+                    board: _view == AgentView.board,
+                    filter: _filter,
+                    filterChips: !kMobile),
+              ),
             ),
           )),
     };
@@ -463,11 +521,13 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     return f.isEmpty ? view : '$view \u00b7 ${f.first.$1}';
   }
 
-  /// The phone title menu: the views, the open view's filters, and the rest
+  /// The title menu: the views, the open view's filters, and the rest
   /// of the agent behind More actions.
-  Future<void> _openViewMenu() async {
+  Future<void> _openViewMenu({BuildContext? anchor}) async {
     final picked = await showAppMenu<String>(
       context,
+      anchor: anchor,
+      below: anchor != null,
       minWidth: 240,
       items: [
         for (final (v, icon, label) in const [
@@ -531,7 +591,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       setState(() => _filter = f.isEmpty ? null : f);
     }
   }
-  static const _maxAttachments = 10;
   Duration _maxRecordingDuration = const Duration(minutes: 3);
 
   final _input = TextEditingController();
@@ -1087,17 +1146,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                 Future<Uint8List> Function() readBytes
               })>
           picked) async {
-    final remaining = _maxAttachments - _attachments.length;
-    if (remaining <= 0) {
-      toast(context, 'Max $_maxAttachments attachments reached.');
-      return;
-    }
-    var items = picked;
-    if (items.length > remaining) {
-      items = items.take(remaining).toList();
-      toast(context, 'Added $remaining (max $_maxAttachments).');
-    }
-    final entries = items
+    final entries = picked
         .map((p) => _AgentAttachment(
               name: p.name,
               isImage: _isImageName(p.name),
@@ -1109,7 +1158,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     setState(() => _attachments.addAll(entries));
     final generation = _attachmentGeneration;
     for (var i = 0; i < entries.length; i++) {
-      final p = items[i];
+      final p = picked[i];
       final a = entries[i];
       try {
         final bytes = await p.readBytes();
@@ -1290,16 +1339,35 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     // Wrapped in Material because presentScreen's non-rounded frames are plain
     // Containers — no Material ancestor — while a TextField and the icon buttons
     // here require one.
-    final hideChrome = widget.embedded;
+    final hideChrome = _noChrome;
     return Material(
-      color: readingBg,
+      color: kMobile ? readingBg : Colors.transparent,
       child: SafeArea(
         top: !hideChrome,
         bottom: false,
         child: Column(
           children: [
-            if (!hideChrome) _header(),
-            Expanded(child: _viewBody()),
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                      child: kMobile
+                          ? DotField.chat(child: _viewBody())
+                          : hideChrome
+                          ? _viewBody()
+                          : TopFadeMask(
+                              clear: ChatHeader.overlap - 24,
+                              child: _viewBody())),
+                  if (!hideChrome)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      child: _header(),
+                    ),
+                ],
+              ),
+            ),
             if (_view == AgentView.thread) _composer(),
           ],
         ),
@@ -1307,16 +1375,16 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     );
   }
 
-  Widget _desktopStatusLine(String subtitle) {
+  Widget _headerStatus(String subtitle) {
     final store = widget.client.presence;
     return ListenableBuilder(
       listenable: store,
       builder: (_, __) {
         final p = store.presenceForAgentId(widget.agentId);
-        if (p == null) return _plainStatusLine(subtitle);
+        if (p == null) return _plainHeaderStatus(subtitle);
         final status = _typing ? 'typing…' : PresenceStore.chatWord(p);
         final dots = p.state == 'thinking' || p.state == 'typing';
-        if (status.isEmpty && !dots) return _plainStatusLine(subtitle);
+        if (status.isEmpty && !dots) return _plainHeaderStatus(subtitle);
         final cut = subtitle.indexOf(' \u00b7 ');
         final head = cut < 0 ? '' : subtitle.substring(0, cut);
         final text = status.isEmpty
@@ -1324,152 +1392,199 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             : head.isEmpty
                 ? status
                 : '$head \u00b7 $status';
-        return Row(children: [
-          Flexible(
-            child: Text(text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TS.meta(AppColors.fg3)),
-          ),
-          if (dots) ...[
-            const SizedBox(width: 4),
-            WorkingDots(color: AppColors.fg3, size: 4),
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(child: ChatHeader.statusText(text)),
+            if (dots) ...[
+              const SizedBox(width: 4),
+              WorkingDots(color: ChatColors.meta, size: 4),
+            ],
           ],
-        ]);
+        );
       },
     );
   }
 
-  Widget _plainStatusLine(String subtitle) {
+  Widget _plainHeaderStatus(String subtitle) {
     final logo = widget.subtitle == null && _profileProvider != null;
     if (!logo) {
-      return Text(subtitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TS.meta(AppColors.fg3));
+      return subtitle.isEmpty
+          ? const SizedBox.shrink()
+          : ChatHeader.statusText(subtitle);
     }
-    return Row(children: [
-      if (_fetchedPaused)
-        Flexible(
-          child: Text('Paused \u00b7 ',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TS.meta(AppColors.fg3)),
-        ),
-      Tooltip(
-          message: _fetchedProfile ?? '',
-          child: ProviderLogo(_profileProvider, size: 13)),
-    ]);
-  }
-
-  Widget _header() {
-    final subtitle = (widget.subtitle ?? _fetchedLine ?? '').trim();
-    if (kMobile) {
-      // Back is the system gesture (iOS gets it from the Cupertino route).
-      final store = widget.client.presence;
-      return ListenableBuilder(
-        listenable: store,
-        builder: (_, __) {
-          final p = store.presenceForAgentId(widget.agentId);
-          final chatWord = p == null ? '' : PresenceStore.chatWord(p);
-          final line = _typing
-              ? '$_viewLine \u00b7 typing…'
-              : chatWord.isEmpty
-                  ? _viewLine
-                  : '$_viewLine \u00b7 $chatWord';
-          return MobileStackedTitleBar(
-            title: widget.agentName,
-            subtitle: line,
-            onTap: _openViewMenu,
-            tapHint: 'Switch view',
-          );
-        },
-      );
-    }
-    final canGoBack = !widget.embedded &&
-        widget.showBack &&
-        (widget.onClose != null || Navigator.of(context).canPop());
-    return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: AppColors.bg,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
-      ),
-      child: Row(
-        children: [
-          if (canGoBack)
-            IconBtn(
-              'chevron-left',
-              size: 28,
-              iconSize: 16,
-              tooltip: 'Back',
-              onTap: _closePage,
-            ),
-          const SizedBox(width: 4),
-          AgentMochi(widget.agentId, size: 28),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(widget.agentName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TS.rowTitle(AppColors.fg1)),
-                if (subtitle.isNotEmpty) _desktopStatusLine(subtitle),
-              ],
-            ),
-          ),
-          _switcher(),
-          if (!widget.embedded && widget.onClose != null)
-            IconBtn(
-              'x',
-              size: 28,
-              iconSize: 16,
-              tooltip: 'Close',
-              onTap: widget.onClose!,
-            ),
-        ],
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_fetchedPaused)
+          Flexible(child: ChatHeader.statusText('Paused \u00b7 ')),
+        Tooltip(
+            message: _fetchedProfile ?? '',
+            child: ProviderLogo(_profileProvider, size: 13)),
+      ],
     );
   }
 
+  bool get _noChrome => widget.embedded && !widget.tabHeader;
+
+  Widget _header() {
+    final subtitle = (widget.subtitle ?? _fetchedLine ?? '').trim();
+    final canPop = !widget.embedded &&
+        widget.showBack &&
+        (kMobile
+            ? (widget.onClose != null || Navigator.of(context).canPop())
+            : Navigator.of(context).canPop());
+    final Widget? trailing;
+    if (widget.tabHeader) {
+      trailing = widget.deskTrailing;
+    } else if (kMobile) {
+      // Tasks lives in the info sheet behind the title.
+      trailing = null;
+    } else {
+      final switcher = Builder(
+        builder: (btnCtx) => ChatGlassButton(
+          icon: 'layers',
+          tooltip: 'Switch view',
+          badge: _unread > 0 ? _unread : null,
+          onTap: () => _openSwitcherMenu(btnCtx),
+        ),
+      );
+      trailing = !widget.embedded && widget.onClose != null
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                switcher,
+                const SizedBox(width: 6),
+                ChatGlassButton(
+                  icon: 'x',
+                  tooltip: 'Close',
+                  onTap: widget.onClose!,
+                ),
+              ],
+            )
+          : switcher;
+    }
+    return ChatHeader(
+      key: _headerKey,
+      agentIds: [widget.agentId],
+      title: widget.agentName,
+      status: _view == AgentView.thread
+          ? _headerStatus(subtitle)
+          : ChatHeader.statusText(_viewLine),
+      onTitleTap: _view == AgentView.thread
+          ? (widget.onDeskInfo ?? _openInfo)
+          : () => _openViewMenu(
+              anchor: kMobile ? null : _headerKey.currentContext),
+      titleHint: _view == AgentView.thread ? 'Info' : 'Switch view',
+      onBack: canPop && !kMobile ? _closePage : null,
+      trailing: trailing,
+    );
+  }
+
+  static const _weekdays = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+  static const _months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  static DateTime? _eventTime(CoordinationEvent e) =>
+      DateTime.tryParse(e.createdAt)?.toLocal();
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  static String _clockLabel(DateTime t) => clock12(t);
+
+  static String _dayLabel(DateTime t) {
+    final now = DateTime.now();
+    final days = DateTime(now.year, now.month, now.day)
+        .difference(DateTime(t.year, t.month, t.day))
+        .inDays;
+    if (days == 0) return 'Today';
+    if (days == 1) return 'Yesterday';
+    if (days > 1 && days < 7) return _weekdays[t.weekday - 1];
+    final date = '${t.day} ${_months[t.month - 1]}';
+    return t.year == now.year ? date : '$date ${t.year}';
+  }
+
+  bool _hasTaskOrigin(CoordinationEvent e) {
+    if (e.actorKind == 'human') return false;
+    final origin = e.payload['origin_session'];
+    // Mission Control's session is its own inbox.
+    return origin is String &&
+        origin.isNotEmpty &&
+        origin != 'inbox-${widget.agentId}' &&
+        origin != widget.agentId;
+  }
+
+  String? _deliveryLine(CoordinationEvent e) {
+    final delivery = _deliveries[e.eventId];
+    final readAt = delivery?.readAt;
+    if (readAt != null) return 'Read ${_clockLabel(readAt.toLocal())}';
+    if (delivery?.deliveredAt != null) return 'Delivered';
+    return null;
+  }
+
   Widget _body() {
+    final topPad = _noChrome ? 12.0 : ChatHeader.overlap;
     if (_loading) {
-      return const Center(
-        child: Spinner(size: 24),
+      return Padding(
+        padding: EdgeInsets.only(top: _noChrome ? 0 : ChatHeader.overlap),
+        child: const Center(
+          child: Spinner(size: 24),
+        ),
       );
     }
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppIcon('alert-circle', size: 24, color: AppColors.danger),
-              const SizedBox(height: 10),
-              Text(_error!,
-                  textAlign: TextAlign.center,
-                  style: sans(13, color: AppColors.danger)),
-              const SizedBox(height: 14),
-              Btn('Retry', small: true, onTap: () => _load(silent: false)),
-            ],
+      return Padding(
+        padding: EdgeInsets.only(top: _noChrome ? 0 : ChatHeader.overlap),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppIcon('alert-circle', size: 24, color: AppColors.danger),
+                const SizedBox(height: 10),
+                Text(_error!,
+                    textAlign: TextAlign.center,
+                    style: sans(13, color: AppColors.danger)),
+                const SizedBox(height: 14),
+                Btn('Retry', small: true, onTap: () => _load(silent: false)),
+              ],
+            ),
           ),
         ),
       );
     }
     final visible = [
       for (final e in _events)
-        if (!isReactionEvent(e)) e
+        if (!isReactionEvent(e) && !_isAck(e)) e
     ];
     if (visible.isEmpty) {
       return PullToRefresh(
         onRefresh: () => _load(silent: true),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.only(top: _noChrome ? 0 : ChatHeader.overlap),
           children: [
             SizedBox(
               height: MediaQuery.sizeOf(context).height * 0.45,
@@ -1490,6 +1605,42 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       for (final e in visible)
         if (e.eventId.isNotEmpty) e.eventId: e
     };
+    final cards = Map<CoordinationEvent, Widget>.identity();
+    for (final e in visible) {
+      if (e.actorKind == 'human') continue;
+      final card = agentThreadEventCard(
+        e,
+        client: widget.client,
+        agentId: widget.agentId,
+        events: _events,
+      );
+      if (card != null) cards[e] = card;
+    }
+    final rawRuns = chatRuns<CoordinationEvent>(
+      visible,
+      sender: (e) => '${e.actorKind}/${e.actorId}',
+      at: _eventTime,
+      breaks: cards.containsKey,
+    );
+    final stamps = List<bool>.filled(visible.length, false);
+    final origins = List<bool>.filled(visible.length, false);
+    final splitBefore = List<bool>.filled(visible.length, false);
+    var lastHumanIdx = -1;
+    DateTime? prevAt;
+    for (var i = 0; i < visible.length; i++) {
+      final ev = visible[i];
+      if (ev.actorKind == 'human') lastHumanIdx = i;
+      final at = _eventTime(ev);
+      final isStamp = at != null &&
+          (i == 0 ||
+              prevAt == null ||
+              !_sameDay(prevAt, at) ||
+              at.difference(prevAt).abs() >= const Duration(minutes: 15));
+      stamps[i] = isStamp;
+      origins[i] = _hasTaskOrigin(ev);
+      splitBefore[i] = i == 0 || rawRuns[i].first || isStamp || origins[i];
+      if (at != null) prevAt = at;
+    }
     final reactionsByTarget = groupMessageReactions(_events);
     return PullToRefresh(
       onRefresh: () => _load(silent: true),
@@ -1500,16 +1651,34 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           return ListView.builder(
             controller: _scroll,
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            padding: EdgeInsets.fromLTRB(16, topPad, 16, 16),
             itemCount: visible.length + (typing ? 1 : 0),
             itemBuilder: (_, i) {
-              if (i == visible.length) return _wideCap(_typingRow());
+              if (i == visible.length) {
+                return Padding(
+                  padding: EdgeInsets.only(top: ChatColors.groupGap),
+                  child: _wideCap(_typingRow()),
+                );
+              }
               final ev = visible[i];
-              return _wideCap(
-                _bubble(
-                  ev,
-                  byId: byId,
-                  reactions: reactionsByTarget[ev.eventId] ?? const [],
+              final first = splitBefore[i];
+              final last = i == visible.length - 1 || splitBefore[i + 1];
+              final topGap = i == 0
+                  ? 0.0
+                  : (first ? ChatColors.groupGap : ChatColors.runGap);
+              return Padding(
+                padding: EdgeInsets.only(top: topGap),
+                child: _wideCap(
+                  _messageRow(
+                    ev,
+                    card: cards[ev],
+                    byId: byId,
+                    reactions: reactionsByTarget[ev.eventId] ?? const [],
+                    tail: last,
+                    showStamp: stamps[i],
+                    showOrigin: origins[i],
+                    showDelivery: i == lastHumanIdx,
+                  ),
                 ),
               );
             },
@@ -1519,84 +1688,146 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     );
   }
 
-  Widget _typingRow() => Padding(
+  Widget _typingRow() => ChatBubbleRow(
         key: const Key('agentTypingRow'),
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 4),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AgentMochi(widget.agentId, size: 15),
-                  const SizedBox(width: 5),
-                  Text(
-                    widget.agentName,
-                    style: sans(11, weight: W.label, color: AppColors.accent),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.surface1,
-                borderRadius: BorderRadius.circular(kMobile ? 18 : 20),
-              ),
-              child: const _TypingDots(key: Key('agentTypingDots')),
-            ),
-          ],
+        mine: false,
+        child: ChatBubble(
+          mine: false,
+          tail: true,
+          child: const Padding(
+            padding: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+            child: _TypingDots(key: Key('agentTypingDots')),
+          ),
         ),
       );
 
-  String _timeLabel(CoordinationEvent e) {
-    final at = DateTime.tryParse(e.createdAt)?.toLocal();
-    if (at == null) return '';
-    final hour = at.hour.toString().padLeft(2, '0');
-    final minute = at.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
-
-  Widget _messageMeta(CoordinationEvent e, {required bool mine}) {
-    final delivery = _deliveries[e.eventId];
-    final read = delivery?.readAt != null;
-    final delivered = read || delivery?.deliveredAt != null;
-    final time = _timeLabel(e);
-    return Align(
-      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Padding(
-        padding: EdgeInsets.only(
-            top: 2, left: mine ? 0 : 4, right: mine ? 4 : 0),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (time.isNotEmpty)
-              Text(time, style: sans(11, color: AppColors.fg3)),
-            if (mine) ...[
-              if (time.isNotEmpty) const SizedBox(width: 4),
-              Icon(
-                delivered ? Icons.done_all : Icons.done,
-                size: 14,
-                color: read ? AppColors.accent : AppColors.fg3,
-              ),
-            ],
+  Widget _bubbleBody(CoordinationEvent e, {required bool mine}) {
+    final (pasted, body) = splitPastedBlocks(e.body);
+    final transcripts = audioTranscriptItems(body);
+    final shown = hideAttachmentMarkers(body);
+    final attachments =
+        mine ? parseSentAttachments(e.body) : const <SentAttachment>[];
+    final images = [
+      for (final a in attachments)
+        if (a.kind == MediaKind.image) a.path
+    ];
+    final audio = [
+      for (final a in attachments)
+        if (a.kind == MediaKind.audio) a.path
+    ];
+    final files = [
+      for (final a in attachments)
+        if (a.kind != MediaKind.image && a.kind != MediaKind.audio) a.path
+    ];
+    final textWidget = shown.isNotEmpty
+        ? MarkdownBody(
+            data: unwrapCodedLinks(shown),
+            selectable: false,
+            extensionSet: md.ExtensionSet.gitHubFlavored,
+            styleSheet: chatMarkdownStyle(context, mine: mine),
+            builders: {'pre': PreBlockBuilder()},
+            onTapLink: (txt, href, title) =>
+                openMarkdownLink(href, context, txt),
+          )
+        : null;
+    final styledText = textWidget == null
+        ? null
+        : (kMobile ? textWidget : MessageSelectionArea(child: textWidget));
+    final hasExtras = images.isNotEmpty ||
+        files.isNotEmpty ||
+        audio.isNotEmpty ||
+        pasted.isNotEmpty;
+    if (!hasExtras) return styledText ?? const SizedBox.shrink();
+    final maxWidth =
+        (MediaQuery.sizeOf(context).width - 32).clamp(160.0, 280.0);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (images.isNotEmpty) ...[
+          ImageGallery(client: widget.client, paths: images, maxWidth: maxWidth),
+          if (styledText != null ||
+              files.isNotEmpty ||
+              audio.isNotEmpty ||
+              pasted.isNotEmpty)
+            const SizedBox(height: 6),
+        ],
+        if (files.isNotEmpty) ...[
+          for (var i = 0; i < files.length; i++) ...[
+            if (i > 0) const SizedBox(height: 6),
+            FileChip(client: widget.client, path: files[i]),
           ],
-        ),
-      ),
+          if (styledText != null || audio.isNotEmpty || pasted.isNotEmpty)
+            const SizedBox(height: 6),
+        ],
+        for (var i = 0; i < audio.length; i++) ...[
+          VoiceNote(
+            client: widget.client,
+            path: audio[i],
+            ink: mine ? ChatColors.sentText : ChatColors.receivedText,
+            transcript: i < transcripts.length
+                ? AudioTranscriptCard(items: [transcripts[i]])
+                : (transcripts.isEmpty
+                    ? Text('Transcribing…', style: chatText(mine: mine))
+                    : null),
+          ),
+          if (styledText != null || pasted.isNotEmpty || i < audio.length - 1)
+            const SizedBox(height: 6),
+        ],
+        if (styledText != null) styledText,
+        for (final block in pasted) ...[
+          const SizedBox(height: 6),
+          PastedTextCard(text: block),
+        ],
+      ],
     );
   }
 
-  Widget _bubble(
+  /// iMessage tapback: the reactions ride the bubble's top corner, on the
+  /// right of a received bubble and the left of a sent one.
+  Widget _withTapback(Widget bubble, Widget? chips, {required bool mine}) {
+    if (chips == null) return bubble;
+    return Padding(
+      padding: const EdgeInsets.only(top: MessageReactionChips.rise),
+      child: Stack(clipBehavior: Clip.none, children: [
+        bubble,
+        Positioned(
+          top: -MessageReactionChips.rise,
+          left: mine ? -MessageReactionChips.overhang : null,
+          right: mine ? null : -MessageReactionChips.overhang,
+          child: chips,
+        ),
+      ]),
+    );
+  }
+
+  Widget _messageRow(
     CoordinationEvent e, {
+    Widget? card,
     Map<String, CoordinationEvent> byId = const {},
     List<ReactionGroup> reactions = const [],
+    required bool tail,
+    required bool showStamp,
+    required bool showOrigin,
+    required bool showDelivery,
   }) {
-    if (isReactionEvent(e)) return const SizedBox.shrink();
-    if (_isAck(e)) return const SizedBox.shrink();
     // The local human is the only `human` actor, so everything else is the peer.
     final mine = e.actorKind == 'human';
+    final at = _eventTime(e);
+    final answerLine = questionAnswerSystemLine(e);
+    if (answerLine != null) {
+      return KeyedSubtree(
+        key: e.eventId.isEmpty ? null : _keyForEvent(e.eventId),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (showStamp && at != null)
+              ChatSystemLine(_clockLabel(at), bold: _dayLabel(at)),
+            ChatSystemLine(answerLine),
+          ],
+        ),
+      );
+    }
     final replyToId = e.replyTo;
     final quotedTarget = replyToId == null ? null : byId[replyToId];
     final quotedLine = replyToId == null
@@ -1617,100 +1848,94 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             mine: mine,
             onReact: (name) => unawaited(_sendReaction(e, name)),
           );
-    final rowKey = e.eventId.isEmpty ? null : _keyForEvent(e.eventId);
-    if (mine) {
-      return KeyedSubtree(
-        key: rowKey,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: MessageBubbleInteractive(
-            text: e.body,
-            onReply: () => _startReply(e),
-            onReact: (name) => unawaited(_sendReaction(e, name)),
-            builder: (_, openActions) => Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (quotedLine != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 2, right: 4),
-                    child: quotedLine,
-                  ),
-                Bubble(
-                  mine: true,
-                  text: e.body,
-                  client: widget.client,
-                  onLongPress: openActions,
-                ),
-                _messageMeta(e, mine: true),
-                if (chips != null) chips,
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-    final origin = e.payload['origin_session'];
     final aboutTask = e.payload['about_task'];
-    // Mission Control's session is its own inbox.
-    final fromTask = origin is String &&
-        origin.isNotEmpty &&
-        origin != 'inbox-${widget.agentId}' &&
-        origin != widget.agentId;
-    return KeyedSubtree(
-      key: rowKey,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: MessageBubbleInteractive(
-          text: e.body,
-          onReply: () => _startReply(e),
-          onReact: (name) => unawaited(_sendReaction(e, name)),
-          builder: (_, openActions) => Column(
+    final delivery = showDelivery ? _deliveryLine(e) : null;
+    final rowKey = e.eventId.isEmpty ? null : _keyForEvent(e.eventId);
+
+    final Widget content = MessageBubbleInteractive(
+      text: e.body,
+      mine: mine,
+      onReply: () => _startReply(e),
+      onReact: (name) => unawaited(_sendReaction(e, name)),
+      focusBuilder: (_) =>
+          card ??
+          ChatBubble(
+            mine: mine,
+            tail: tail,
+            child: _bubbleBody(e, mine: mine),
+          ),
+      builder: (_, __, bubbleKey) {
+        if (card != null) {
+          final keyedCard = KeyedSubtree(key: bubbleKey, child: card);
+          final cappedCard = kMobile
+              ? ChatBubbleRow(mine: false, child: keyedCard)
+              : Align(
+                  alignment: Alignment.centerLeft,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 440),
+                    child: keyedCard,
+                  ),
+                );
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (fromTask)
-                Padding(
-                  padding: const EdgeInsets.only(left: 4, bottom: 2),
-                  child: Text(
-                      aboutTask is String && aboutTask.isNotEmpty
-                          ? 'from task $aboutTask'
-                          : 'from a work session',
-                      style: sans(12, color: AppColors.fg3)),
-                ),
-              Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 4),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AgentMochi(widget.agentId, size: 15),
-                    const SizedBox(width: 5),
-                    Text(
-                      widget.agentName,
-                      style: sans(11, weight: W.label, color: AppColors.accent),
-                    ),
-                  ],
-                ),
-              ),
               if (quotedLine != null)
                 Padding(
                   padding: const EdgeInsets.only(left: 4, bottom: 2),
                   child: quotedLine,
                 ),
-              agentThreadEventCard(
-                    e,
-                    client: widget.client,
-                    agentId: widget.agentId,
-                    events: _events,
-                  ) ??
-                  Bubble(mine: false, text: e.body, onLongPress: openActions),
-              _messageMeta(e, mine: false),
-              if (chips != null)
+              _withTapback(cappedCard, chips, mine: false),
+            ],
+          );
+        }
+        return ChatBubbleRow(
+          mine: mine,
+          child: Column(
+            crossAxisAlignment:
+                mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+              if (quotedLine != null)
                 Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: chips,
+                  padding: EdgeInsets.only(
+                      bottom: 2, left: mine ? 0 : 4, right: mine ? 4 : 0),
+                  child: quotedLine,
                 ),
+              _withTapback(
+                KeyedSubtree(
+                  key: bubbleKey,
+                  child: ChatBubble(
+                    mine: mine,
+                    tail: tail,
+                    child: _bubbleBody(e, mine: mine),
+                  ),
+                ),
+                chips,
+                mine: mine,
+              ),
             ],
           ),
-        ),
+        );
+      },
+    );
+
+    return KeyedSubtree(
+      key: rowKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (showStamp && at != null)
+            ChatSystemLine(_clockLabel(at), bold: _dayLabel(at)),
+          if (showOrigin)
+            ChatSystemLine(
+              aboutTask is String && aboutTask.isNotEmpty
+                  ? 'from task $aboutTask'
+                  : 'from a work session',
+              align: Alignment.centerLeft,
+            ),
+          content,
+          if (delivery != null)
+            ChatSystemLine(delivery, align: Alignment.centerRight),
+        ],
       ),
     );
   }
@@ -1738,90 +1963,73 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         onPlay: () => unawaited(_toggleRecordingPlayback()),
         onStop: () => unawaited(_stopRecording()),
         onSend: () => unawaited(_send()),
-        onMore: reviewing && _attachments.length < _maxAttachments - 1
+        onMore: reviewing
             ? () => unawaited(_recordMore())
             : null,
       );
     }
-    Widget roundBtn(String icon, String tip, VoidCallback onTap,
-            {Color? fill, Color? ink}) =>
-        Tooltip(
-          message: tip,
-          child: Material(
-            color: fill ?? AppColors.surface2,
-            borderRadius: BorderRadius.circular(14),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: onTap,
-              child: SizedBox.square(
-                dimension: 46,
-                child: Center(
-                    child:
-                        AppIcon(icon, size: 19, color: ink ?? AppColors.fg1)),
-              ),
+    Widget btn(String icon, String tip, VoidCallback onTap, {Color? color}) =>
+        Semantics(
+            button: true,
+            label: tip,
+            child: ComposerIconButton(icon,
+                tooltip: tip, onTap: onTap, color: color));
+    Widget slot(Widget w) => SizedBox(height: 36, child: Center(child: w));
+    return Glass(
+      radius: BorderRadius.circular(ComposerCard.radius),
+      tint: AppColors.surface1.withValues(alpha: 0.78),
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: Row(children: [
+          if (reviewing) ...[
+            slot(btn('trash', 'Discard', () => unawaited(_discardRecording()))),
+            slot(btn(
+                _isPlayingRecording ? 'pause' : 'play',
+                _isPlayingRecording ? 'Pause' : 'Play',
+                () => unawaited(_toggleRecordingPlayback()),
+                color: AppColors.fg1)),
+          ] else
+            slot(Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: StatusDot(
+                  status: 'running', size: 8, color: AppColors.danger),
+            )),
+          Expanded(
+            child: SizedBox(
+              height: 28,
+              child: LiveRecordingWave(
+                  buffer: _waveform, live: _isRecording, progress: progress),
             ),
           ),
-        );
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.raised,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(children: [
-        if (reviewing) ...[
-          roundBtn('trash', 'Discard', () => unawaited(_discardRecording()),
-              ink: AppColors.fg3),
           const SizedBox(width: 10),
-          roundBtn(
-              _isPlayingRecording ? 'pause' : 'play',
-              _isPlayingRecording ? 'Pause' : 'Play',
-              () => unawaited(_toggleRecordingPlayback())),
-          const SizedBox(width: 10),
-        ],
-        Expanded(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                if (!reviewing) ...[
-                  StatusDot(
-                      status: 'running', size: 8, color: AppColors.danger),
-                  const SizedBox(width: 6),
-                ],
-                Text(reviewing ? 'Voice note' : 'Recording',
-                    style: sans(13, color: AppColors.fg2)),
-                const Spacer(),
-                Text(time,
-                    style: sans(13,
-                        tabular: true,
-                        color: reviewing ? AppColors.fg3 : AppColors.danger)),
-              ]),
-              const SizedBox(height: 6),
-              SizedBox(
-                height: 30,
-                width: double.infinity,
-                child: LiveRecordingWave(
-                    buffer: _waveform, live: _isRecording, progress: progress),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 10),
-        if (_isRecording)
-          roundBtn('stop', 'Stop', () => unawaited(_stopRecording()),
-              fill: AppColors.surface3)
-        else ...[
-          if (_attachments.length < _maxAttachments - 1) ...[
-            roundBtn('mic', 'Record more', () => unawaited(_recordMore())),
-            const SizedBox(width: 10),
+          Text(time,
+              style: sans(13,
+                  tabular: true,
+                  color: reviewing ? AppColors.fg3 : AppColors.danger)),
+          const SizedBox(width: 6),
+          if (_isRecording)
+            slot(Semantics(
+              button: true,
+              label: 'Stop',
+              child: ComposerSendButton(
+                  enabled: true,
+                  stop: true,
+                  onTap: () => unawaited(_stopRecording())),
+            ))
+          else ...[
+            slot(btn('mic', 'Record more', () => unawaited(_recordMore()))),
+            const SizedBox(width: 4),
+            slot(Semantics(
+              button: true,
+              label: 'Send voice note',
+              child: ComposerSendButton(
+                  enabled: !_sending,
+                  sending: _sending,
+                  onTap: _sending ? null : () => unawaited(_send())),
+            )),
           ],
-          roundBtn('arrow-up', 'Send voice note', () => unawaited(_send()),
-              fill: AppColors.accentFill, ink: AppColors.accentFg),
-        ],
-      ]),
+        ]),
+      ),
     );
   }
 
@@ -1934,9 +2142,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       padding: EdgeInsets.only(bottom: keyboard),
       child: LiveCaptionAnchor(
         padding: EdgeInsets.fromLTRB(
-          kMobile ? M.gutter : (widget.embedded ? kComposerGutter : 20),
+          M.gutter,
           8,
-          kMobile ? M.gutter : (widget.embedded ? kComposerGutter : 20),
+          M.gutter,
           10 + (keyboard > 0 ? 8 : mq.padding.bottom),
         ),
         child: Swap(
@@ -1994,10 +2202,7 @@ void openAgentThread(
           agentName: agentName,
           onClose: () => Navigator.pop(context),
         );
-    Navigator.of(context).push<void>(
-        defaultTargetPlatform == TargetPlatform.iOS
-            ? CupertinoPageRoute(builder: page)
-            : MaterialPageRoute(builder: page));
+    Navigator.of(context).push<void>(AppPageRoute<void>(builder: page));
     return;
   }
   presentScreen(
@@ -2092,7 +2297,7 @@ class _TypingDotsState extends State<_TypingDots>
         height: 6,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: AppColors.fg3
+          color: ChatColors.meta
               .withValues(alpha: still ? 0.8 : 0.35 + 0.65 * pulse),
         ),
       ),

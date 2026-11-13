@@ -61,7 +61,7 @@ void main() {
 
       expect(find.text('Check your answers'), findsOneWidget);
       expect(find.text('Android, macOS'), findsOneWidget);
-      await tester.tap(find.text('Submit'));
+      await tester.tap(find.text('Send'));
       await tester.pump();
 
       expect(sent?['kind'], 'answer');

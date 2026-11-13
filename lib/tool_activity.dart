@@ -162,6 +162,20 @@ String toolObject(ToolStep step) {
       step.args is Map ? step.args as Map : null, step.data,
       running: isRunning);
   if (coordination != null) return coordination;
+  if (name == 'monitor' && step.args is Map) {
+    final a = step.args as Map;
+    final subject = a['label']?.toString().trim() ?? '';
+    if (subject.isNotEmpty) {
+      switch (a['action']) {
+        case 'add':
+          return ('Watching', subject);
+        case 'remove':
+          return ('Stopped watching', subject);
+        case 'fired':
+          return (subject, 'updated');
+      }
+    }
+  }
   final label = name == 'bash' && step.args is Map
       ? ((step.args as Map)['label']?.toString().trim() ?? '')
       : '';
@@ -227,12 +241,8 @@ List<FileChange> fileChanges(Iterable<ToolStep> steps) {
 
 String _plural(int n, String one, String many) => n == 1 ? one : many;
 
-String _joinPhrases(List<String> parts) {
-  if (parts.length < 2) return parts.join();
-  return '${parts.sublist(0, parts.length - 1).join(', ')} and ${parts.last}';
-}
-
 String activitySummary(List<ToolStep> steps) {
+  if (steps.isEmpty) return '';
   if (steps.length == 1) return toolSentence(steps.first);
   final edited = fileChanges(steps).length;
   var ran = 0, read = 0, searched = 0, pages = 0, other = 0;
@@ -256,21 +266,23 @@ String activitySummary(List<ToolStep> steps) {
         other++;
     }
   }
-  final changeSteps = steps.where((s) => toolBaseName(s.tool) == 'change_files').length;
+  final changeSteps =
+      steps.where((s) => toolBaseName(s.tool) == 'change_files').length;
   final parts = [
+    if (read > 0) 'read $read ${_plural(read, 'file', 'files')}',
     if (ran > 0) 'ran $ran ${_plural(ran, 'command', 'commands')}',
+    if (searched > 0)
+      'searched $searched ${_plural(searched, 'time', 'times')}',
+    if (pages > 0) 'read $pages ${_plural(pages, 'page', 'pages')}',
     if (changeSteps > 0)
       edited > 0
           ? 'edited $edited ${_plural(edited, 'file', 'files')}'
           : 'made $changeSteps ${_plural(changeSteps, 'change', 'changes')}',
-    if (read > 0) 'read $read ${_plural(read, 'file', 'files')}',
-    if (searched > 0)
-      'searched $searched ${_plural(searched, 'time', 'times')}',
-    if (pages > 0) 'read $pages ${_plural(pages, 'page', 'pages')}',
     if (other > 0)
-      _otherPhrase(other, hasOthers: ran + changeSteps + read + searched + pages > 0),
+      _otherPhrase(other,
+          hasOthers: ran + changeSteps + read + searched + pages > 0),
   ];
-  final sentence = _joinPhrases(parts);
+  final sentence = parts.join(' · ');
   return '${sentence[0].toUpperCase()}${sentence.substring(1)}';
 }
 

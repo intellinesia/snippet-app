@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../desktop_layout.dart';
 import '../models.dart';
 import '../platform.dart';
 import '../settings_form.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import 'shell_nav.dart';
 
 const _routeDefs = <(String, String, String)>[
   ('mission', 'Mission Control', 'Plans and dispatches work'),
@@ -337,15 +337,10 @@ class _RoutingScreenState extends State<RoutingScreen> {
     );
   }
 
-  Widget _mobileRouteRow(String key, String title, String about, bool isLast) {
+  Widget _mobileRouteRow(String key, String title, String about) {
     final chosen = _routes[key] ?? const [];
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      decoration: BoxDecoration(
-        border: isLast
-            ? null
-            : Border(bottom: BorderSide(color: AppColors.line)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -403,45 +398,24 @@ class _RoutingScreenState extends State<RoutingScreen> {
       body = ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 14),
-            child: Text(
-              'Which model does each kind of work, and who steps in when it hits a limit.',
-              style: sans(13, height: 1.5, color: AppColors.fg3),
-            ),
-          ),
-          Container(
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: AppColors.surface1,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.line),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var i = 0; i < _routeDefs.length; i++)
-                  _mobileRouteRow(
-                    _routeDefs[i].$1,
-                    _routeDefs[i].$2,
-                    _routeDefs[i].$3,
-                    i == _routeDefs.length - 1,
-                  ),
-              ],
-            ),
-          ),
+          ListGroup(children: [
+            for (final (key, title, about) in _routeDefs)
+              _mobileRouteRow(key, title, about),
+          ]),
         ],
       );
     }
+    final scoped = CardGroupScope(child: body);
     if (widget.embedded && widget.onBack != null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          NavBackRow(title: 'Routing', onBack: widget.onBack!),
-          Expanded(child: body),
+          SettingsHeader(
+              title: 'Routing', compact: true, onBack: widget.onBack!),
+          Expanded(child: scoped),
         ],
       );
     }
-    return body;
+    return scoped;
   }
 }

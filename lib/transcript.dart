@@ -26,8 +26,11 @@ double get _objectSize => kMobile ? 13 : 12;
 enum _NodeState { ok, failed, running, neutral }
 
 class _Node extends StatefulWidget {
-  const _Node(this.state);
+  const _Node(this.state, {this.icon});
   final _NodeState state;
+
+  /// The tool's own icon, in place of the dot.
+  final String? icon;
 
   @override
   State<_Node> createState() => _NodeState2();
@@ -64,12 +67,37 @@ class _NodeState2 extends State<_Node> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final icon = widget.icon;
+    if (icon != null) {
+      final color = switch (widget.state) {
+        _NodeState.failed => AppColors.danger,
+        _NodeState.running => AppColors.accent,
+        _ => AppColors.fg3,
+      };
+      final glyph = SizedBox.square(
+        dimension: 16,
+        child: Center(child: AppIcon(icon, size: 14, color: color)),
+      );
+      if (widget.state != _NodeState.running) return Center(child: glyph);
+      return RepaintBoundary(
+        child: Center(
+          child: AnimatedBuilder(
+            animation: _c,
+            builder: (_, child) => Opacity(
+              opacity: 0.45 + 0.55 * (1 - (2 * _c.value - 1).abs()),
+              child: child,
+            ),
+            child: glyph,
+          ),
+        ),
+      );
+    }
     const size = 9.0;
     final (fill, border) = switch (widget.state) {
-      _NodeState.ok => (readingBg, AppColors.ok),
+      _NodeState.ok => (Colors.transparent, AppColors.ok),
       _NodeState.failed => (AppColors.danger, AppColors.danger),
       _NodeState.running => (AppColors.accent, AppColors.accent),
-      _NodeState.neutral => (readingBg, AppColors.fg4),
+      _NodeState.neutral => (Colors.transparent, AppColors.fg4),
     };
     final dot = Container(
       width: size,
@@ -185,7 +213,9 @@ class _DenseToolRowState extends State<DenseToolRow> {
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: kMobile ? 32 : 26),
             child: Row(children: [
-              SizedBox(width: 16, child: _Node(_nodeFor(step))),
+              SizedBox(
+                  width: 16,
+                  child: _Node(_nodeFor(step), icon: toolIcon(step.tool))),
               const SizedBox(width: S.s8),
               Flexible(child: _sentence(verb, object)),
               if (added > 0) ...[
@@ -386,7 +416,8 @@ class _ToolRunState extends State<ToolRun> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: kMobile ? 32 : 26),
                 child: Row(children: [
-                  SizedBox(width: 16, child: _Node(summaryNode)),
+                  SizedBox(
+                      width: 16, child: _Node(summaryNode, icon: 'layers')),
                   const SizedBox(width: S.s8),
                   Flexible(
                     child: Text(activitySummary(steps),
