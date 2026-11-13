@@ -503,14 +503,18 @@ class _FilterChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(7),
         hoverColor: AppColors.surface2.withValues(alpha: 0.5),
-        child: Container(
+        child: SizedBox(
           height: 26,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: sans(12,
-                color: selected ? AppColors.fg1 : AppColors.fg3),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Center(
+              widthFactor: 1,
+              child: Text(
+                label,
+                style: sans(12,
+                    color: selected ? AppColors.fg1 : AppColors.fg3),
+              ),
+            ),
           ),
         ),
       ),
@@ -644,7 +648,7 @@ class _TaskCardState extends State<_TaskCard> {
                   Btn(
                     'Approve',
                     small: true,
-                    variant: BtnVariant.primary,
+                    variant: BtnVariant.secondary,
                     onTap: widget.onApprove,
                   ),
                   const SizedBox(width: 8),
