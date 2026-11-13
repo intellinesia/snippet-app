@@ -28,16 +28,6 @@ GroupSummary _group() => GroupSummary.fromJson({
       'created_at': '2026-11-12T00:00:00Z',
     });
 
-CoordinationEvent _event(String body) => CoordinationEvent.fromJson({
-      'event_id': 'e-${body.hashCode}',
-      'thread_id': 't',
-      'sequence': 1,
-      'event_type': 'message',
-      'actor_kind': 'agent',
-      'actor_id': 'scout',
-      'payload': {'body': body},
-    });
-
 class _Client extends FakeWakeClient {
   _Client({this.agent, this.group, this.threadEvents = const []});
 
@@ -148,7 +138,7 @@ void _phone(WidgetTester tester) {
 }
 
 void main() {
-  testWidgets('phone agent sheet shows identity, actions, tabs and model rows; '
+  testWidgets('phone agent sheet shows identity, actions and model rows, no Files/Links; '
       'X closes it', (tester) async {
     _phone(tester);
     final client = _Client(agent: _agent(), threadEvents: const []);
@@ -178,8 +168,8 @@ void main() {
     for (final label in ['Tasks', 'Inbox', 'Board', 'Desk']) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
-    for (final tab in ['Info', 'Files', 'Links']) {
-      expect(find.text(tab), findsOneWidget, reason: tab);
+    for (final tab in ['Files', 'Links']) {
+      expect(find.text(tab), findsNothing, reason: tab);
     }
     expect(find.text('Tasks run on'), findsOneWidget);
     expect(find.text('Desk runs on'), findsOneWidget);
@@ -220,34 +210,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(client.added, ['snippet']);
     expect(client.group!.agentIds, contains('snippet'));
-    debugDefaultTargetPlatformOverride = null;
-  });
-
-  testWidgets('Links tab extracts URLs from thread events', (tester) async {
-    _phone(tester);
-    final client = _Client(
-      group: _group(),
-      threadEvents: [
-        _event('look https://example.com/a and [docs](https://foo.dev/b)'),
-      ],
-    );
-    await tester.pumpWidget(_app(Builder(
-      builder: (ctx) => Center(
-        child: TextButton(
-          onPressed: () =>
-              showGroupInfo(ctx, client: client, group: _group()),
-          child: const Text('open'),
-        ),
-      ),
-    )));
-    await tester.tap(find.text('open'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Links'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('example.com'), findsOneWidget);
-    expect(find.text('foo.dev'), findsOneWidget);
-    expect(find.text('No links in this conversation yet'), findsNothing);
     debugDefaultTargetPlatformOverride = null;
   });
 
