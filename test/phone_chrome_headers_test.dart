@@ -17,7 +17,6 @@ import 'package:snippet/screens/mission_control/coordination_agent_detail.dart';
 import 'package:snippet/screens/session.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
-import 'package:snippet/widgets.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -236,7 +235,7 @@ void main() {
   });
 
   testWidgets(
-      'Session header drops leading avatar and model, shows folder when idle, and WorkingDots + layers when active',
+      'Session header drops leading avatar and model, shows folder when idle, and WorkingDots without a lanes button when active',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     final socket = _Socket();
@@ -296,11 +295,7 @@ void main() {
 
     expect(find.byType(WorkingDots), findsOneWidget);
     expect(find.textContaining('Working 4m · snippet-mobile'), findsOneWidget);
-    final layers = find.byTooltip('Parallel agents');
-    expect(layers, findsOneWidget);
-    final layersIcon = tester.widget<AppIcon>(
-        find.descendant(of: layers, matching: find.byType(AppIcon)).first);
-    expect(layersIcon.name, 'layers');
+    expect(find.byTooltip('Parallel agents'), findsNothing);
     expect(
         find.descendant(
             of: find.byType(MobileBackBar),

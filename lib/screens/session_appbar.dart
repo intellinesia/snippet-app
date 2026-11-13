@@ -446,16 +446,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       onTitleTap: stuck ? _retryNow : () => _openActionsDrawer(s),
       onTitleTapHint: stuck ? 'Retry connection' : 'Session actions',
       trailing: [
-        if (s != null && s.lanes.any((l) => l.running)) ...[
-          RoundBtn(
-            icon: 'layers',
-            tooltip: 'Parallel agents',
-            size: 40,
-            iconSize: 18,
-            onTap: _showLanes,
-          ),
-          const SizedBox(width: 8),
-        ],
         RoundBtn(
           icon: 'terminal',
           tooltip: 'Shell',
