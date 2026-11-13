@@ -335,13 +335,13 @@ void main() {
     ));
     await tester.pump(const Duration(milliseconds: 300));
 
-    // Fixed header with Files | Changes 6 and more button; lanes are a menu
-    // toggle, not a default tab.
+    // Fixed header with Files | Changes 6; no overflow menu (actions live in
+    // the session header).
     expect(find.text('Files'), findsOneWidget);
     expect(find.text('Changes'), findsOneWidget);
     expect(find.text('6'), findsOneWidget);
     expect(find.text('Lanes'), findsNothing);
-    expect(find.byTooltip('Scheduled, checkpoints'), findsOneWidget);
+    expect(find.byTooltip('Scheduled, checkpoints'), findsNothing);
     // Standalone header is hidden when hosted inside SessionSidePanel.
     expect(find.text('File Tree'), findsNothing);
 

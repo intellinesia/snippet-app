@@ -245,53 +245,8 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
     );
   }
 
-  Future<void> _openMoreMenu(BuildContext anchor) async {
-    final host = widget.host;
-    final readout = _readout;
-    final fn = await showAppMenu<VoidCallback>(
-      anchor,
-      anchor: anchor,
-      below: true,
-      alignEnd: true,
-      minWidth: 200,
-      maxWidth: 240,
-      items: [
-        if (widget.onTogglePanel != null) ...[
-          appMenuItem(
-            value: () => widget.onTogglePanel!(RightPanel.recurring),
-            icon: 'scheduled',
-            label: 'Scheduled',
-          ),
-          appMenuItem(
-            value: () => widget.onTogglePanel!(RightPanel.checkpoints),
-            icon: 'history',
-            label: 'Checkpoints',
-          ),
-        ],
-        if (host != null)
-          appMenuItem(
-            value: () {
-              setState(() => _termsOpen = true);
-              host.newTerminal();
-            },
-            icon: 'terminal',
-            label: 'New terminal',
-          ),
-        if (readout != null && widget.onExpandReadout != null)
-          appMenuItem(
-            value: () => widget.onExpandReadout!(readout),
-            icon: 'maximize-2',
-            label: 'Open as tab',
-          ),
-      ],
-    );
-    fn?.call();
-  }
-
   Widget _panelHeader(bool reading) {
-    final hasMenu = widget.onTogglePanel != null ||
-        widget.host != null ||
-        (_readout != null && widget.onExpandReadout != null);
+    final readout = _readout;
     return Container(
       height: 44,
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
@@ -305,15 +260,13 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
             ]),
           ),
         ),
-        if (hasMenu)
-          Builder(
-            builder: (ctx) => IconBtn(
-              'more-horizontal',
-              size: 28,
-              iconSize: 14,
-              tooltip: 'Scheduled, checkpoints',
-              onTap: () => _openMoreMenu(ctx),
-            ),
+        if (readout != null && widget.onExpandReadout != null)
+          IconBtn(
+            'maximize-2',
+            size: 28,
+            iconSize: 14,
+            tooltip: 'Open as tab',
+            onTap: () => widget.onExpandReadout!(readout),
           ),
       ]),
     );
