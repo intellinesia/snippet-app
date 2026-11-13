@@ -156,8 +156,7 @@ class SidebarState extends State<Sidebar> {
       !_selecting &&
       widget.mobileHome != MobileHome.tasks &&
       !(widget.mobileHome == MobileHome.agents && widget.agent != null) &&
-      !(widget.mobileHome == MobileHome.settings &&
-          widget.settingsSection != null);
+      widget.mobileHome != MobileHome.settings;
 
   double get _scrollBottomPad =>
       _selecting ? 24.0 : (_showMobileBottomBar ? _bottomClearance : 0.0);
@@ -660,8 +659,7 @@ class SidebarState extends State<Sidebar> {
 
   Widget _mobileSettingsHeader() => MobileHomeHeader(
         title: 'Settings',
-        mcBadgeCount: _mcAttentionCount,
-        onMc: widget.onOpenMissionControl,
+        onBack: () => widget.onMobileHome(_lastMainHome),
       );
 
   Widget _emptySessions({bool searching = false}) => Padding(

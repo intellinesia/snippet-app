@@ -220,7 +220,9 @@ void main() {
     await tester.pumpWidget(buildSidebar(MobileHome.settings));
     await tester.pumpAndSettle();
     expect(find.byType(MobileHomeHeader), findsWidgets);
-    expect(find.byType(MobileBottomBar), findsOneWidget);
+    expect(find.byType(MobileBottomBar), findsNothing);
+    expect(find.byTooltip('Back'), findsOneWidget);
+    expect(find.byTooltip('Mission Control'), findsNothing);
 
     await tester.pumpWidget(buildSidebar(
       MobileHome.settings,

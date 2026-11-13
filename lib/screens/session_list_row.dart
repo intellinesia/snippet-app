@@ -158,11 +158,17 @@ class _SessionGroupHeaderState extends State<SessionGroupHeader> {
         child: MouseRegion(
           onEnter: (_) => setState(() => _hover = true),
           onExit: (_) => setState(() => _hover = false),
-          child: HoverSurface(
-            radius: 8,
-            onTap: widget.onToggle,
-            child: row,
-          ),
+          child: kMobile
+              ? GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: widget.onToggle,
+                  child: row,
+                )
+              : HoverSurface(
+                  radius: 8,
+                  onTap: widget.onToggle,
+                  child: row,
+                ),
         ),
       ),
     );
@@ -233,7 +239,7 @@ class SessionListRow extends StatelessWidget {
     final diff = sessionDiff(s);
     final branch = s.branch?.trim() ?? '';
     final attn = needsYou ? _attentionState(s) : null;
-    final noRepo = !showProject && branch.isEmpty && diff == null;
+    final noRepo = !showProject && branch.isEmpty && !s.isGit;
     final hasMeta = showProject || needsYou || branch.isNotEmpty || diff != null || noRepo;
 
     final stateLabel = attn?.label ??
@@ -317,15 +323,23 @@ class SessionListRow extends StatelessWidget {
                         )
                       else if (noRepo)
                         Expanded(
-                          child: Text('No git repo',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TS.meta(AppColors.fg4)),
+                          child: Row(children: [
+                            AppIcon('folder-x',
+                                size: 11, color: AppColors.fg4),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text('No git repo',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TS.meta(AppColors.fg4)),
+                            ),
+                          ]),
                         )
                       else if (diff != null)
                         const Spacer(),
                       if (diff != null) ...[
-                        if (branch.isNotEmpty) const SizedBox(width: 8),
+                        if (branch.isNotEmpty || noRepo)
+                          const SizedBox(width: 8),
                         if (diff.added > 0)
                           Text('+${compactCount(diff.added)}',
                               maxLines: 1, style: TS.meta(AppColors.ok)),

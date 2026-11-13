@@ -67,47 +67,59 @@ class GlassTopFrame extends StatelessWidget {
   /// Room the transcript leaves at its top so the newest-first scroll can
   /// still reach the oldest row from under the header.
   static const double inset = 60;
-  static const double fade = 14;
+  static const double fade = 22;
+  static const _steps = 8;
 
   @override
   Widget build(BuildContext context) {
     final bg = color ?? AppColors.bg;
-    final strip = DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            bg.withValues(alpha: Glass.enabled ? 0.78 : 0.96),
-            bg.withValues(alpha: Glass.enabled ? 0.52 : 0.9),
-          ],
-        ),
-      ),
-      child: child,
-    );
-    return Column(mainAxisSize: MainAxisSize.min, children: [
-      ClipRect(
-        child: Glass.enabled
-            ? BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                child: strip)
-            : strip,
-      ),
-      IgnorePointer(
-        child: Container(
-          height: fade,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                bg.withValues(alpha: Glass.enabled ? 0.52 : 0.9),
-                bg.withValues(alpha: 0),
-              ],
+    final on = Glass.enabled;
+    return Stack(children: [
+      Positioned.fill(
+        child: IgnorePointer(
+          child: Stack(children: [
+            if (on)
+              // Many small stacked blurs, each a little shorter: the frost
+              // tapers with no visible step. A masked blur renders unblurred.
+              Positioned.fill(child: LayoutBuilder(builder: (context, c) {
+                final h = c.maxHeight;
+                return Stack(children: [
+                  for (var i = 0; i < _steps; i++)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: h * (1 - 0.55 * i / (_steps - 1)),
+                      child: ClipRect(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
+                    ),
+                ]);
+              })),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: const [0, 0.5, 0.8, 1],
+                    colors: [
+                      bg.withValues(alpha: on ? 0.72 : 0.96),
+                      bg.withValues(alpha: on ? 0.55 : 0.9),
+                      bg.withValues(alpha: on ? 0.2 : 0.5),
+                      bg.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
+          ]),
         ),
       ),
+      Padding(padding: const EdgeInsets.only(bottom: fade), child: child),
     ]);
   }
 }

@@ -2329,6 +2329,7 @@ const _lucide = <String, IconData>{
   'folder': LucideIcons.folder,
   'folder-open': LucideIcons.folderOpen,
   'folder-plus': LucideIcons.folderPlus,
+  'folder-x': LucideIcons.folderX,
   'upload': LucideIcons.upload,
   'download': LucideIcons.download,
   'share': LucideIcons.share,
