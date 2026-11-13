@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../../api.dart';
 import '../../mochi.dart';
 import '../../models.dart';
+import '../../platform.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../list_search_field.dart';
@@ -187,7 +188,7 @@ class _TaskKanbanState extends State<TaskKanban> {
   Widget build(BuildContext context) {
     final showBoard = !_feed.loading && _feed.error == null;
     return ColoredBox(
-      color: readingBg,
+      color: kMobile ? readingBg : Colors.transparent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -302,7 +303,9 @@ class _TaskKanbanState extends State<TaskKanban> {
           width: _columnWidth,
           decoration: BoxDecoration(
             color: hovering
-                ? AppColors.surface2.withValues(alpha: 0.45)
+                ? (kMobile
+                    ? AppColors.surface2.withValues(alpha: 0.45)
+                    : AppColors.tint3)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(R.lg),
           ),
@@ -483,8 +486,8 @@ class _TaskCardState extends State<_TaskCard> {
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
           decoration: BoxDecoration(
             color: _hover || widget.lifted
-                ? AppColors.surface2
-                : AppColors.surface1,
+                ? (kMobile ? AppColors.surface2 : AppColors.tint3)
+                : AppColors.tint1,
             borderRadius: BorderRadius.circular(R.md),
             border: Border.all(
               color: _hover || widget.lifted

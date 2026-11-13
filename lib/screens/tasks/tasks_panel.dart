@@ -21,7 +21,7 @@ Future<void> openTasksPage(BuildContext context, DaemonClient client,
     {Set<String>? agentIds}) {
   return Navigator.of(context).push<void>(AppPageRoute<void>(
     builder: (page) => Material(
-      color: AppColors.bg,
+      color: AppColors.paneBg,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -245,7 +245,7 @@ class TasksPanelState extends State<TasksPanel> {
       child: Row(children: [
         for (final (label, set) in tabs) ...[
           Material(
-            color: same(_filter, set) ? AppColors.surface2 : Colors.transparent,
+            color: same(_filter, set) ? AppColors.tint2 : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
             child: InkWell(
               borderRadius: BorderRadius.circular(6),
@@ -320,7 +320,7 @@ class TasksPanelState extends State<TasksPanel> {
         height: 32,
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          color: AppColors.surface1,
+          color: AppColors.tint1,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: AppColors.line),
         ),
@@ -531,7 +531,7 @@ class TasksPanelState extends State<TasksPanel> {
                       height: 32,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: BoxDecoration(
-                        color: AppColors.surface1,
+                        color: AppColors.tint1,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: AppColors.line),
                       ),
@@ -669,7 +669,9 @@ class _FilterChip extends StatelessWidget {
           height: 32,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: on ? AppColors.surface3 : AppColors.surface2,
+            color: on
+                ? (kMobile ? AppColors.surface3 : AppColors.tint2)
+                : (kMobile ? AppColors.surface2 : AppColors.tint1),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [

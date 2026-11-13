@@ -654,8 +654,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget build(BuildContext context) {
     final t = task;
     return Scaffold(
-      backgroundColor:
-          !kMobile && (widget.embedded || widget.pane) ? Colors.transparent : AppColors.bg,
+      backgroundColor: AppColors.paneBg,
       body: SafeArea(
         bottom: false,
         child: Column(children: [
@@ -897,7 +896,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         height: 22,
         padding: const EdgeInsets.symmetric(horizontal: S.s8),
         decoration: BoxDecoration(
-          color: lit ? AppColors.runBg : AppColors.surface2,
+          color: lit ? AppColors.runBg : AppColors.tint2,
           borderRadius: BorderRadius.circular(11),
         ),
         alignment: Alignment.center,
@@ -918,7 +917,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           height: 40,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: primary ? AppColors.accentFill : AppColors.surface2,
+            color: primary ? AppColors.accentFill : AppColors.tint2,
             borderRadius: BorderRadius.circular(12),
             border: primary ? null : Border.all(color: AppColors.line),
           ),
@@ -937,7 +936,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget _v5Card({required Widget child, EdgeInsets? padding}) => Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: AppColors.surface1,
+          color: AppColors.tint1,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppColors.line),
         ),
@@ -1161,8 +1160,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             // Same chip rule as the board's filter bar: the
                             // surface STEP separates, never a hairline.
                             color: s == t.status
-                                ? (kMobile ? AppColors.surface3 : AppColors.surface2)
-                                : (kMobile ? Colors.transparent : AppColors.surface3),
+                                ? (kMobile
+                                    ? AppColors.surface3
+                                    : AppColors.tint2)
+                                : (kMobile
+                                    ? Colors.transparent
+                                    : AppColors.tint1),
                             borderRadius:
                                 BorderRadius.circular(kMobile ? 18 : R.chip),
                           ),
@@ -1232,7 +1235,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           else
             Container(
               decoration: BoxDecoration(
-                color: AppColors.surface1,
+                color: AppColors.tint1,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppColors.line),
               ),
@@ -1358,7 +1361,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   BoxDecoration get _sheetCardDecoration => BoxDecoration(
-        color: AppColors.surface1,
+        color: AppColors.tint1,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.line),
       );
@@ -1750,7 +1753,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           height: 28,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: on ? AppColors.surface3 : Colors.transparent,
+            color: on
+                ? (kMobile ? AppColors.surface3 : AppColors.tint2)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(9),
           ),
           child: Row(
@@ -1891,7 +1896,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.surface2,
+                      color: AppColors.tint2,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.line),
                     ),
@@ -1992,7 +1997,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               constraints: const BoxConstraints(minHeight: 36),
               padding: const EdgeInsets.fromLTRB(12, 4, 6, 4),
               decoration: BoxDecoration(
-                color: AppColors.surface1,
+                color: AppColors.tint1,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppColors.line),
               ),

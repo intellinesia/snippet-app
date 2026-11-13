@@ -257,7 +257,7 @@ class TaskRow extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           decoration: BoxDecoration(
-            color: AppColors.surface2,
+            color: kMobile ? AppColors.surface2 : AppColors.tint1,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Column(
@@ -371,7 +371,7 @@ class TaskRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Material(
-        color: AppColors.surface1,
+        color: AppColors.tint1,
         borderRadius: BorderRadius.circular(kMobile ? R.md : R.sm),
         child: InkWell(
           onTap: onTap,
