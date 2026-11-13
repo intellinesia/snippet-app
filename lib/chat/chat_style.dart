@@ -387,7 +387,7 @@ class ChatHeader extends StatelessWidget {
   /// Desktop only: a left button where the back pill would be.
   final Widget? leading;
 
-  static double get overlap => kMobile ? 106 : 94;
+  static double get overlap => kMobile ? 92 : 94;
 
   static Widget statusText(String text) => Text(text,
       maxLines: 1,
@@ -396,7 +396,7 @@ class ChatHeader extends StatelessWidget {
       style: sans(kMobile ? 12 : 11, color: ChatColors.meta));
 
   Widget _avatar() {
-    final big = kMobile ? 44.0 : 36.0;
+    const big = 36.0;
     if (agentIds.length < 2) {
       return MochiDisc(id: agentIds.isEmpty ? '' : agentIds.first, size: big);
     }
@@ -467,14 +467,18 @@ class ChatHeader extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTitleTap,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          _avatar(),
-          Transform.translate(
-              offset: Offset(0, kMobile ? -4 : -3), child: _pill()),
-          if (status != null)
-            Padding(
-              padding: EdgeInsets.only(top: kMobile ? 0 : 0),
-              child: status!,
-            ),
+          Stack(
+            alignment: Alignment.topCenter,
+            clipBehavior: Clip.none,
+            children: [
+              _avatar(),
+              Padding(
+                padding: EdgeInsets.only(top: 36.0 - (kMobile ? 4 : 3)),
+                child: _pill(),
+              ),
+            ],
+          ),
+          if (status != null) status!,
         ]),
       ),
     );
@@ -482,7 +486,7 @@ class ChatHeader extends StatelessWidget {
       height: overlap - GlassTopFrame.fade,
       child: Padding(
           padding: EdgeInsets.fromLTRB(
-              kMobile ? 16 : 12, kMobile ? 6 : 8, kMobile ? 16 : 12, 0),
+              kMobile ? 16 : 12, kMobile ? 4 : 8, kMobile ? 16 : 12, 0),
           child: Stack(children: [
             Align(alignment: Alignment.topCenter, child: centre),
             if (onBack != null || leading != null)

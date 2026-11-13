@@ -175,7 +175,10 @@ void main() {
       (tester) async {
     await _phone(tester, TaskDetailScreen(client: _Daemon(), taskId: 't1'));
 
-    expect(find.text('Fix the demo voice'), findsWidgets);
+    final barTitle = tester.widget<Text>(find.text('Fix the demo voice').first);
+    expect(barTitle.style?.fontSize, 17);
+    expect(barTitle.style?.fontWeight, FontWeight.w500);
+    expect(find.text('Fix the demo voice'), findsOneWidget);
     expect(find.textContaining('In review'), findsWidgets);
     expect(find.text('Approve'), findsOneWidget);
     expect(find.text('Send back'), findsOneWidget);

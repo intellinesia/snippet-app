@@ -797,20 +797,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   // ---- phone v5 layout ----
 
-  /// v5 `.ptop`: back chevron left, overflow right. No centred title — the
-  /// page title below carries it.
-  Widget _mobileTopBar(TaskItem? t) => Padding(
-        padding: const EdgeInsets.fromLTRB(M.gutter, 10, M.gutter, 0),
-        child: Row(children: [
-          RoundBtn(
-            icon: 'chevron-left',
-            size: 40,
-            iconSize: 20,
-            tooltip: 'Back',
-            onTap: widget.onClose ??
-                () => Navigator.of(context).maybePop(),
-          ),
-          const Spacer(),
+  Widget _mobileTopBar(TaskItem? t) => MobileHomeHeader(
+        title: t?.title ?? 'Task',
+        onBack: widget.onClose ?? () => Navigator.of(context).maybePop(),
+        trailing: [
           RoundBtn(
             icon: 'more-horizontal',
             size: 40,
@@ -818,7 +808,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             tooltip: 'Task actions',
             onTap: t == null ? null : _statusMenu,
           ),
-        ]),
+        ],
       );
 
   /// The status moves the old column picker offered, behind the ⋯ button.
@@ -884,10 +874,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           _v5Pill(t.id.length > 8 ? t.id.substring(0, 8) : t.id,
               code: true),
         ]),
-        const SizedBox(height: S.s8),
-        Text(t.title,
-            style: sans(24,
-                weight: W.strong, height: 1.25, color: AppColors.fg1)),
         if (t.goalTitle != null) ...[
           const SizedBox(height: S.s4),
           Text('Goal: ${t.goalTitle}',

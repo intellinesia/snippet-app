@@ -24,7 +24,7 @@ void main() {
   });
 
   testWidgets(
-      'MobileHomeHeader renders MC badge, 28px title, listening pill, trailing action, and settings back mode',
+      'MobileHomeHeader renders compact 44px bar, MC badge, 17px strong title, listening pill, trailing action, and settings back mode',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
@@ -62,9 +62,18 @@ void main() {
     final badgeText = tester.widget<Text>(find.text('3'));
     expect(badgeText.style?.color, AppColors.accentFg);
 
+    final headerRect = tester.getRect(find.byType(MobileHomeHeader));
+    expect(headerRect.height, 56);
+
     final title = tester.widget<Text>(find.text('Sessions'));
-    expect(title.style?.fontSize, 28);
+    expect(title.style?.fontSize, 17);
     expect(title.style?.fontWeight, FontWeight.w500);
+    expect(title.maxLines, 1);
+    expect(title.overflow, TextOverflow.ellipsis);
+    expect(
+      tester.getCenter(find.text('Sessions')).dx,
+      closeTo(headerRect.center.dx, 1.0),
+    );
 
     await tester.tap(find.byTooltip('Mission Control'));
     await tester.tap(find.byTooltip('More'));
@@ -86,7 +95,8 @@ void main() {
     expect(find.byTooltip('Mission Control'), findsNothing);
     expect(find.byType(ListeningPill), findsNothing);
     final settingsTitle = tester.widget<Text>(find.text('Settings'));
-    expect(settingsTitle.style?.fontSize, 28);
+    expect(settingsTitle.style?.fontSize, 17);
+    expect(settingsTitle.style?.fontWeight, FontWeight.w500);
       await tester.tap(find.byTooltip('Back'));
       expect(backTaps, 1);
     } finally {
