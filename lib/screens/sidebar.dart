@@ -674,7 +674,8 @@ class SidebarState extends State<Sidebar> {
 
   Widget _mobileSettingsHeader() => MobileHomeHeader(
         title: 'Settings',
-        onBack: () => Navigator.maybePop(context),
+        mcBadgeCount: _mcAttentionCount,
+        onMc: widget.onOpenMissionControl,
       );
 
   Widget _emptySessions({bool searching = false}) => Padding(

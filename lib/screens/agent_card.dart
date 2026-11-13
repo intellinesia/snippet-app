@@ -53,6 +53,9 @@ String cleanAgentStatusText(String text,
   t = t.replaceAll(RegExp(r'\btask\s+' + _uuidToken.pattern), '');
   t = t.replaceAll(_uuidToken, '');
   t = t
+      .replaceAll('`', '')
+      .replaceAll(RegExp(r'\(\s*[,·]?\s*\)'), '')
+      .replaceAll(RegExp(r'\(\s*,\s*'), '(')
       .replaceAll(RegExp(r'\s{2,}'), ' ')
       .replaceAll(RegExp(r'\s*·\s*'), ' · ')
       .replaceAll(RegExp(r'^[\s·\-–—:,→]+'), '')

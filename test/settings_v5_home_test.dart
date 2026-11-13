@@ -66,7 +66,7 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   testWidgets('phone settings home shows v5 groups and rows', (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
+    tester.view.physicalSize = const Size(390, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(MaterialApp(
@@ -89,7 +89,6 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Settings'), findsWidgets);
     expect(find.text('desk'), findsWidgets);
     expect(find.textContaining('Connected · 1 live'), findsOneWidget);
     for (final label in [

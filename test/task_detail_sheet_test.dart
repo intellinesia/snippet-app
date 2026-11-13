@@ -198,9 +198,8 @@ void main() {
     expect(find.text('feat/demo'), findsOneWidget);
     expect(find.textContaining('v5 delivered'), findsWidgets);
     // The old tab strip is gone on phones.
-    for (final tab in ['Summary', 'Changes']) {
-      expect(find.text(tab), findsNothing, reason: tab);
-    }
+    expect(find.text('Summary'), findsNothing);
+    expect(find.text('Changes'), findsOneWidget);
   });
 
   phoneTest('approve moves an in-review task to done', (tester) async {

@@ -647,10 +647,6 @@ class SettingsPanelState extends State<SettingsPanel> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(0, 4, 0, 2),
-          child: Text('Settings', style: TS.pageTitle()),
-        ),
         ListGroup(children: [
           ListRow(
             title: name.isEmpty ? 'No machine yet' : name,
@@ -1470,6 +1466,17 @@ class SettingsPanelState extends State<SettingsPanel> {
   }
 
   Widget _notifRow() {
+    if (kMobile) {
+      return ListRow(
+        title: 'Notifications',
+        subtitle: 'When a chat needs you or finishes',
+        leading: _settingsIconTile('bell'),
+        onTap: _notifBusy ? null : () => _toggleNotif(!_notif),
+        trailing: _notifBusy
+            ? const DelayedSpinner(size: 18)
+            : AppSwitch(on: _notif, onChanged: _toggleNotif),
+      );
+    }
     return Padding(
       padding: kMobile
           ? const EdgeInsets.fromLTRB(16, 14, 16, 14)
@@ -1607,14 +1614,27 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
       builder: (anchor) => ListRow(
         title: 'Approvals',
         subtitle: kMobile ? null : 'Applies to every session on this machine',
-        leading: AppIcon(kMobile ? 'shield-check' : 'shield',
-            size: 19, color: AppColors.fg3),
+        leading: kMobile
+            ? Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppColors.surface2,
+                  borderRadius: BorderRadius.circular(R.md),
+                ),
+                child: Center(
+                  child: AppIcon('shield-check',
+                      size: 16, color: AppColors.fg2),
+                ),
+              )
+            : AppIcon('shield', size: 19, color: AppColors.fg3),
         onTap: () => _pick(anchor),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           Text(manual == null ? '' : (manual ? 'Ask' : 'Yolo'),
               style: sans(13, color: AppColors.fg3)),
           const SizedBox(width: S.s6),
-          AppIcon('chevron-down', size: 14, color: AppColors.fg3),
+          AppIcon(kMobile ? 'chevron-right' : 'chevron-down',
+              size: 14, color: AppColors.fg3),
         ]),
       ),
     );

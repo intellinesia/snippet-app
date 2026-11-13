@@ -17,6 +17,7 @@ import '../swr.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../chat/chat_style.dart';
+import 'agent_card.dart' show agentRowTime;
 
 /// An `@token` in a group message: the boundary keeps `mail@fable` from
 /// counting as a mention.
@@ -162,6 +163,9 @@ class GroupRow extends StatelessWidget {
     final extra = agents.length - shown.length;
     final unread = group.unread;
     if (kMobile) {
+      final at = DateTime.tryParse(group.lastEventAt ?? '')?.toLocal();
+      final time = agentRowTime(at);
+      final more = shown.length - 1 + (extra > 0 ? extra : 0);
       return Pressable(
         kind: PressKind.row,
         child: InkWell(
@@ -169,73 +173,78 @@ class GroupRow extends StatelessWidget {
           highlightColor: Colors.transparent,
           onTap: onTap,
           onLongPress: onLongPress,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 68),
-            child: Row(
-              children: [
-                const SizedBox(width: M.gutter),
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: Stack(
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: M.gutter, vertical: 8),
+            child: Row(children: [
+              SizedBox.square(
+                dimension: 52,
+                child: Stack(alignment: Alignment.center, children: [
+                  Container(
+                    width: unread > 0 ? 52 : 48,
+                    height: unread > 0 ? 52 : 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface2,
+                      shape: BoxShape.circle,
+                      border: unread > 0
+                          ? Border.all(color: AppColors.accent, width: 2)
+                          : null,
+                    ),
                     alignment: Alignment.center,
-                    children: [
-                      Container(
+                    child: shown.isEmpty
+                        ? const AppIcon('users', size: 20)
+                        : AgentMochi(shown.first, size: 28),
+                  ),
+                  if (more > 0)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        height: 20,
+                        constraints: const BoxConstraints(minWidth: 20),
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
                         decoration: BoxDecoration(
-                          color: AppColors.surface2,
-                          shape: BoxShape.circle,
+                          color: AppColors.surface3,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.bg, width: 2),
                         ),
                         alignment: Alignment.center,
-                        child: shown.isEmpty
-                            ? const AppIcon('users', size: 18)
-                            : AgentMochi(shown.first, size: 26),
+                        child: Text('+$more',
+                            style: sans(10, color: AppColors.fg2)),
                       ),
-                      if (shown.length > 1 || extra > 0)
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: Container(
-                            height: 18,
-                            constraints: const BoxConstraints(minWidth: 18),
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface2,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.bg, width: 1),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                                '${shown.length - 1 + (extra > 0 ? extra : 0)}',
-                                style: sans(9, color: AppColors.fg2)),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(name,
+                    ),
+                ]),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(children: [
+                      Expanded(
+                        child: Text(name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TS.rowTitle(AppColors.fg1)),
-                        const SizedBox(height: 2),
-                        Text(unread > 0 ? '$line · $unread unread' : line,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TS.meta(AppColors.fg3)),
+                      ),
+                      if (time.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Text(time, style: TS.meta()),
                       ],
-                    ),
-                  ),
+                    ]),
+                    const SizedBox(height: 2),
+                    Text(unread > 0 ? '$unread unread · $line' : line,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13,
+                            color: unread > 0
+                                ? AppColors.fg2
+                                : AppColors.fg3)),
+                  ],
                 ),
-                const SizedBox(width: M.gutter),
-              ],
-            ),
+              ),
+            ]),
           ),
         ),
       );
