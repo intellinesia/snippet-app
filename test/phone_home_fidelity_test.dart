@@ -130,7 +130,7 @@ void main() {
       expect(find.text('2'), findsOneWidget);
 
       final mcMochi = tester.widget<MochiIcon>(find.byType(MochiIcon));
-      expect(mcMochi.size, 22);
+      expect(mcMochi.size, 24);
       expect(mcMochi.color, AppColors.ok);
 
       await tester.tap(find.byTooltip('Mission Control, voice on'));

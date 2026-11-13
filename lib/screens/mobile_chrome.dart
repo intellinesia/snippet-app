@@ -34,8 +34,10 @@ class RoundBtn extends StatelessWidget {
     this.iconSize = 18,
     this.badge = false,
     this.badgeCount = 0,
+    this.bare = false,
   });
 
+  final bool bare;
   final String? icon;
   final Widget? child;
   final String tooltip;
@@ -60,16 +62,10 @@ class RoundBtn extends StatelessWidget {
                     onTap!();
                   },
             child: Stack(clipBehavior: Clip.none, children: [
-              Glass(
-                radius: null,
-                child: Container(
-                  width: size,
-                  height: size,
-                  alignment: Alignment.center,
-                  child:
-                      child ?? AppIcon(icon!, size: iconSize, color: AppColors.fg2),
-                ),
-              ),
+              if (bare)
+                _face()
+              else
+                Glass(radius: null, child: _face()),
               if (badge && badgeCount <= 0)
                 Positioned(
                   right: 1,
@@ -108,6 +104,13 @@ class RoundBtn extends StatelessWidget {
             ]),
           ),
         ),
+      );
+
+  Widget _face() => Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        child: child ?? AppIcon(icon!, size: iconSize, color: AppColors.fg2),
       );
 }
 

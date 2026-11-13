@@ -189,10 +189,11 @@ class MissionControlDock extends StatelessWidget {
                   child: RoundBtn(
                     tooltip: live ? 'Mission Control, voice on' : 'Mission Control',
                     size: 44,
+                    bare: true,
                     badgeCount: badgeCount,
                     onTap: onOpen,
                     child: MochiIcon(
-                        color: live ? AppColors.ok : AppColors.fg1, size: 22),
+                        color: live ? AppColors.ok : AppColors.fg1, size: 24),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -203,29 +204,13 @@ class MissionControlDock extends StatelessWidget {
                       style: sans(15, color: AppColors.fg3)),
                 ),
                 if (onCall != null)
-                  Tooltip(
-                    message: live ? 'Voice call' : 'Start voice',
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        onCall!();
-                      },
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: live
-                              ? AppColors.ok.withValues(alpha: 0.16)
-                              : AppColors.surface3,
-                        ),
-                        alignment: Alignment.center,
-                        child: AppIcon('phone',
-                            size: 18,
-                            color: live ? AppColors.ok : AppColors.fg1),
-                      ),
-                    ),
+                  RoundBtn(
+                    tooltip: live ? 'Voice call' : 'Start voice',
+                    size: 44,
+                    bare: true,
+                    onTap: onCall,
+                    child: AppIcon('phone',
+                        size: 20, color: live ? AppColors.ok : AppColors.fg2),
                   ),
                 const SizedBox(width: 6),
               ]),
