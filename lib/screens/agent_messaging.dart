@@ -13,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
+import '../chat/chat_info.dart' show showAgentInfo;
 import '../glass.dart';
 import '../api.dart';
 import '../chat/chat_style.dart';
@@ -414,6 +415,18 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       });
     }
   }
+
+  void _openInfo() => unawaited(showAgentInfo(
+        context,
+        client: widget.client,
+        agentId: widget.agentId,
+        name: widget.agentName,
+        onOpenTasks: _openTasks,
+        onOpenInbox: () => _setView(AgentView.inbox),
+        onOpenBoard: () => _setView(AgentView.board),
+        onOpenDesk: () => openAgentDesk(
+            context, widget.client, widget.agentId, widget.agentName),
+      ));
 
   void _openTasks() {
     openTasksPage(context, widget.client, agentIds: {widget.agentId});
@@ -1455,9 +1468,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       status: _view == AgentView.thread
           ? _headerStatus(subtitle)
           : ChatHeader.statusText(_viewLine),
-      onTitleTap: () => _openViewMenu(
-          anchor: kMobile ? null : _headerKey.currentContext),
-      titleHint: 'Switch view',
+      onTitleTap: _view == AgentView.thread
+          ? _openInfo
+          : () => _openViewMenu(
+              anchor: kMobile ? null : _headerKey.currentContext),
+      titleHint: _view == AgentView.thread ? 'Info' : 'Switch view',
       onBack: canPop ? _closePage : null,
       trailing: trailing,
     );

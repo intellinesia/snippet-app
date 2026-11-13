@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../chat/chat_info.dart' show showGroupInfo;
 import '../motion_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -930,24 +931,20 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     }
   }
 
-  Future<void> _openMembers() async {
-    await showAppSheet<void>(
-      context,
-      title: _title,
-      maxWidth: 380,
-      child: GroupMembersSheet(
-        client: widget.client,
-        group: _group,
-        onChanged: (g) {
-          if (mounted) setState(() => _group = g);
-        },
-        onDeleted: () {
-          if (!mounted) return;
-          Navigator.of(context).pop();
-          _closePage();
-        },
-      ),
-    );
+  Future<void> _reloadGroup() async {
+    final List<GroupSummary> all;
+    try {
+      all = await widget.client.groups();
+    } catch (_) {
+      return;
+    }
+    if (!mounted) return;
+    final g = all.where((g) => g.id == _group.id).firstOrNull;
+    if (g == null) {
+      _closePage();
+      return;
+    }
+    setState(() => _group = g);
   }
 
   String get _title =>
@@ -1069,7 +1066,14 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         agentIds: _group.agentIds,
         title: _title,
         status: _statusLine(),
-        onTitleTap: _openMembers,
+        onTitleTap: () => unawaited(showGroupInfo(
+              context,
+              client: widget.client,
+              group: _group,
+              onOpenTasks: () => openTasksPage(context, widget.client,
+                  agentIds: _groupAgentIds),
+              onChanged: () => unawaited(_reloadGroup()),
+            )),
         titleHint: 'Members',
         onBack: canGoBack ? _closePage : null,
         trailing: trailing,

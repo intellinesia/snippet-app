@@ -208,13 +208,25 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     final agent = widget.agent;
     final actions = <_CircleAction>[
       if (widget.onOpenTasks != null)
-        _CircleAction('task', 'Tasks', widget.onOpenTasks!),
+        _CircleAction('task', 'Tasks', () {
+          _close();
+          widget.onOpenTasks!();
+        }),
       if (widget.onOpenInbox != null)
-        _CircleAction('inbox', 'Inbox', widget.onOpenInbox!),
+        _CircleAction('inbox', 'Inbox', () {
+          _close();
+          widget.onOpenInbox!();
+        }),
       if (widget.onOpenBoard != null)
-        _CircleAction('kanban', 'Board', widget.onOpenBoard!),
+        _CircleAction('kanban', 'Board', () {
+          _close();
+          widget.onOpenBoard!();
+        }),
       if (widget.onOpenDesk != null)
-        _CircleAction('terminal', 'Desk', widget.onOpenDesk!),
+        _CircleAction('terminal', 'Desk', () {
+          _close();
+          widget.onOpenDesk!();
+        }),
     ];
     return _InfoFrame(
       onClose: _close,
@@ -489,7 +501,10 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
     final title = _group.title.trim().isEmpty ? 'Group' : _group.title.trim();
     final actions = <_CircleAction>[
       if (widget.onOpenTasks != null)
-        _CircleAction('task', 'Tasks', widget.onOpenTasks!),
+        _CircleAction('task', 'Tasks', () {
+          _close();
+          widget.onOpenTasks!();
+        }),
       _CircleAction('users', 'Add', _pickAdd),
     ];
     return _InfoFrame(
@@ -691,19 +706,22 @@ class _ActionCircle extends StatelessWidget {
   final _CircleAction action;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: action.label,
+        excludeSemantics: true,
+        child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: action.onTap,
+        child: SizedBox(
         width: 64,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: action.onTap,
-            child: Glass(
-              child: SizedBox.square(
-                dimension: 48,
-                child: Center(
-                    child: AppIcon(action.icon,
-                        size: 20, color: AppColors.fg1)),
-              ),
+          Glass(
+            child: SizedBox.square(
+              dimension: 48,
+              child: Center(
+                  child: AppIcon(action.icon,
+                      size: 20, color: AppColors.fg1)),
             ),
           ),
           const SizedBox(height: S.s6),
@@ -712,7 +730,7 @@ class _ActionCircle extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: sans(11, color: AppColors.fg3)),
         ]),
-      );
+      )));
 }
 
 class _Segmented extends StatelessWidget {

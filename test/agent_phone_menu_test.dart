@@ -92,10 +92,10 @@ void main() {
 
     await t.tap(find.text('Growth').first);
     await _settle(t);
-    for (final row in ['Inbox', 'Board', 'Desk session', 'More actions']) {
+    // The chat title opens the info sheet; its circles switch views.
+    for (final row in ['Tasks', 'Inbox', 'Board', 'Desk']) {
       expect(find.text(row), findsOneWidget, reason: row);
     }
-    expect(find.text('Show'), findsNothing);
     await t.tap(find.text('Board'));
     await _settle(t);
 
