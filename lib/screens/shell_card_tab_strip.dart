@@ -161,7 +161,7 @@ class CardTabChip extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.hover : Colors.transparent,
+          color: isActive ? AppColors.tint3 : Colors.transparent,
           borderRadius: BorderRadius.circular(R.sm),
         ),
         child: Row(
@@ -263,7 +263,7 @@ class CardTabStrip extends StatelessWidget {
     final compact = kMobile ? M.tabStripHeight : 42.0;
     return Container(
       height: compact,
-      color: AppColors.bg,
+      color: AppColors.paneBg,
       child: Row(children: [
         if (onMenu != null)
           IconBtn('sidebar',

@@ -78,8 +78,10 @@ class _TabChipBoxState extends State<_TabChipBox> {
           padding: widget.padding,
           decoration: BoxDecoration(
             color: widget.isActive
-                ? AppColors.surface2
-                : (_hover ? AppColors.surface1 : Colors.transparent),
+                ? AppColors.tint2
+                : (_hover
+                    ? (kMobile ? AppColors.surface1 : AppColors.tint3)
+                    : Colors.transparent),
             borderRadius: BorderRadius.circular(R.md),
             border: Border.all(
                 color:
@@ -262,7 +264,7 @@ class TopMachineSwitcher extends StatelessWidget {
         message: 'Switch machine',
         child: Material(
           key: anchorKey,
-          color: AppColors.surface1,
+          color: AppColors.tint1,
           borderRadius: BorderRadius.circular(15),
           child: InkWell(
             onTap: hasInstances ? onOpenList : onAdd,
@@ -276,7 +278,7 @@ class TopMachineSwitcher extends StatelessWidget {
                   height: 20,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: AppColors.surface3,
+                    color: AppColors.tint3,
                     shape: BoxShape.circle,
                   ),
                   child: Text(initial, style: sans(11, color: AppColors.fg1)),
@@ -325,7 +327,7 @@ class TopMachineSwitcher extends StatelessWidget {
                     height: 22,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: AppColors.surface2,
+                      color: AppColors.tint2,
                       shape: BoxShape.circle,
                     ),
                     child: Text(
@@ -343,7 +345,7 @@ class TopMachineSwitcher extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isHealthy == true ? AppColors.ok : AppColors.fg4,
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.bg, width: 1.5),
+                      border: Border.all(color: AppColors.paneBg, width: 1.5),
                     ),
                   ),
                 ),
@@ -506,7 +508,7 @@ class MacWindowBar extends StatelessWidget {
       height: 44,
       padding: const EdgeInsets.fromLTRB(8, 0, 10, 0),
       decoration: BoxDecoration(
-        color: AppColors.windowBg,
+        color: AppColors.paneBg,
         border: Border(
             bottom: BorderSide(color: AppColors.line.withValues(alpha: 0.65))),
       ),

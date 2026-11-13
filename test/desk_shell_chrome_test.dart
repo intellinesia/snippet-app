@@ -212,7 +212,7 @@ void main() {
         final d = w.decoration;
         if (d is! BoxDecoration) return false;
         final border = d.border;
-        return d.color == AppColors.surface2 &&
+        return d.color == AppColors.tint2 &&
             border is Border &&
             border.top.color == AppColors.border2;
       }),
