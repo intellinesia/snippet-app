@@ -686,6 +686,57 @@ DirectMessage? parseCoordinationReply(String text) {
   );
 }
 
+/// A `[watch]` envelope: an agent's own background script reported new lines.
+class WatchEnvelope {
+  final String name;
+  final String mode;
+  final String event;
+  final int held;
+  final List<String> lines;
+  const WatchEnvelope({
+    required this.name,
+    required this.mode,
+    required this.event,
+    required this.held,
+    required this.lines,
+  });
+}
+
+WatchEnvelope? parseWatchEnvelope(String text) {
+  final t = text.trim();
+  if (!t.startsWith('[watch]')) return null;
+  final first = t.indexOf('\n---\n');
+  if (first < 0) return null;
+  final header = <String, String>{};
+  for (final line in t.substring('[watch]'.length, first).split('\n')) {
+    final i = line.indexOf(':');
+    if (i > 0) {
+      header[line.substring(0, i).trim()] = line.substring(i + 1).trim();
+    }
+  }
+  final rest = t.substring(first + 5);
+  final second = rest.lastIndexOf('\n---\nnote:');
+  final body = second >= 0 ? rest.substring(0, second) : rest;
+  return WatchEnvelope(
+    name: header['name'] ?? 'watch',
+    mode: header['mode'] ?? '',
+    event: header['event'] ?? 'change',
+    held: int.tryParse(header['held'] ?? '') ?? 0,
+    lines: body.split('\n').where((l) => l.trim().isNotEmpty).toList(),
+  );
+}
+
+/// A `[wake]` envelope: the note an agent left itself with `schedule_wake`.
+String? parseWakeNote(String text) {
+  final t = text.trim();
+  if (!t.startsWith('[wake]')) return null;
+  final parts = t.substring('[wake]'.length).trim().split('\n\n');
+  if (parts.length >= 3) {
+    return parts.sublist(1, parts.length - 1).join('\n\n').trim();
+  }
+  return parts.length == 2 ? parts[1].trim() : '';
+}
+
 /// A message from the agent that delegated a lane, delivered into the lane.
 String? parseParentMessage(String text) {
   final t = text.trim();

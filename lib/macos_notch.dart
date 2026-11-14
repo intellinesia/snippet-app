@@ -28,6 +28,8 @@ import 'screens/mission_control/mission_control_state.dart'
         parseMissionEnvelope,
         parseParentMessage,
         parseRoutingNote,
+        parseWakeNote,
+        parseWatchEnvelope,
         parseWorkerQuestion,
         supersededAmbientTurns,
         userQuestionLead;
@@ -572,6 +574,8 @@ class MacosNotch {
             parseGroupMessage(text) != null ||
             parseCoordinationReply(text) != null ||
             parseParentMessage(text) != null ||
+            parseWatchEnvelope(text) != null ||
+            parseWakeNote(text) != null ||
             parseAssignmentEnvelope(text) != null) {
           continue;
         }

@@ -295,6 +295,16 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             addEvent(key, DirectMessageCard(message: reply));
             break;
           }
+          final watchEnvelope = parseWatchEnvelope(text);
+          if (watchEnvelope != null) {
+            addEvent(key, WatchEnvelopeCard(watch: watchEnvelope));
+            break;
+          }
+          final wakeNote = parseWakeNote(text);
+          if (wakeNote != null) {
+            addEvent(key, WakeNoteCard(note: wakeNote));
+            break;
+          }
           final parent = parseParentMessage(text);
           if (parent != null) {
             addEvent(key, ParentMessageCard(body: parent));
