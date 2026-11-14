@@ -8,6 +8,7 @@ import 'package:snippet/models.dart';
 import 'package:snippet/screens/group_messaging.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/chat/chat_style.dart';
+import 'package:snippet/message_reactions.dart';
 
 void main() {
   group('GroupSummary', () {
@@ -118,6 +119,65 @@ void main() {
       expect(mention, isNotNull);
       expect(mention!.style?.color, ChatColors.receivedText);
       expect(mention.style?.fontWeight, FontWeight.w500);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('a reaction on a post renders as a chip, not a message',
+        (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      tester.view.physicalSize = const Size(390, 844) * 3;
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      final group = GroupSummary.fromJson({
+        'id': 'g1',
+        'title': 'Launch',
+        'members': [
+          {'kind': 'agent', 'id': 'argon'},
+          {'kind': 'human', 'id': 'local'},
+        ],
+      });
+      final at = DateTime.now().toUtc().toIso8601String();
+      final client = _GroupClient([
+        CoordinationEvent.fromJson({
+          'event_id': 'e1',
+          'sequence': 1,
+          'event_type': 'group_message',
+          'actor_kind': 'agent',
+          'actor_id': 'argon',
+          'idempotency_key': 'k1',
+          'created_at': at,
+          'payload': {'body': 'shipped'},
+        }),
+        CoordinationEvent.fromJson({
+          'event_id': 'e2',
+          'sequence': 2,
+          'event_type': 'group_message',
+          'actor_kind': 'human',
+          'actor_id': 'human',
+          'idempotency_key': 'k2',
+          'created_at': at,
+          'payload': {
+            'body': '',
+            'kind': 'reaction',
+            'reaction': 'thumbs_up',
+            'reply_to': 'e1',
+            'in_reply_to': 'e1',
+          },
+        }),
+      ]);
+
+      await tester.pumpWidget(MaterialApp(
+        home: GroupThreadScreen(client: client, group: group),
+      ));
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(find.text('shipped'), findsOneWidget);
+      expect(find.byType(MessageReactionChips), findsOneWidget);
+      expect(find.byType(ChatBubble), findsOneWidget,
+          reason: 'the reaction is a chip on the post, not its own bubble');
       debugDefaultTargetPlatformOverride = null;
     });
 

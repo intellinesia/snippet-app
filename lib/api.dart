@@ -1979,6 +1979,8 @@ class DaemonClient {
     String id, {
     required String body,
     List<String>? mentions,
+    String? inReplyTo,
+    String? reaction,
   }) async {
     final r = await _post(
       _uri('/groups/${Uri.encodeComponent(id)}/post'),
@@ -1986,6 +1988,8 @@ class DaemonClient {
       body: jsonEncode({
         'body': body,
         if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
+        if (inReplyTo != null && inReplyTo.isNotEmpty) 'in_reply_to': inReplyTo,
+        if (reaction != null && reaction.isNotEmpty) 'reaction': reaction,
       }),
     );
     if (r.statusCode != 200 && r.statusCode != 201 && r.statusCode != 202) {
