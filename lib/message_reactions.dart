@@ -54,11 +54,22 @@ class ReactionGroup {
     required this.name,
     required this.count,
     required this.mine,
+    this.actors = const [],
   });
 
   final String name;
   final int count;
   final bool mine;
+
+  /// `kind:id` of everyone who reacted, first first.
+  final List<String> actors;
+}
+
+String reactionActorLabel(String actor) {
+  final i = actor.indexOf(':');
+  if (i < 0) return actor;
+  if (actor.substring(0, i) == 'human') return 'You';
+  return actor.substring(i + 1);
 }
 
 bool isReactionEvent(CoordinationEvent e) =>
@@ -78,18 +89,25 @@ Map<String, List<ReactionGroup>> groupMessageReactions(
     final byName = raw.putIfAbsent(target, () => <String, Set<String>>{});
     final actors = byName.putIfAbsent(name, () => <String>{});
     final actor = '${e.actorKind}:${e.actorId.isEmpty ? e.eventId : e.actorId}';
-    actors.add(actor);
+    if (e.payload['removed'] == true) {
+      actors.removeWhere((a) => a == actor || (e.actorKind == 'human' && a.startsWith('human:')));
+    } else {
+      actors.add(actor);
+    }
   }
   final out = <String, List<ReactionGroup>>{};
   raw.forEach((target, byName) {
-    out[target] = [
+    final groups = [
       for (final entry in byName.entries)
-        ReactionGroup(
-          name: entry.key,
-          count: entry.value.length,
-          mine: entry.value.any((a) => a.startsWith('human:')),
-        ),
+        if (entry.value.isNotEmpty)
+          ReactionGroup(
+            name: entry.key,
+            count: entry.value.length,
+            mine: entry.value.any((a) => a.startsWith('human:')),
+            actors: entry.value.toList(),
+          ),
     ];
+    if (groups.isNotEmpty) out[target] = groups;
   });
   return out;
 }
@@ -245,7 +263,11 @@ class MessageReactionChips extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               for (final r in reactions)
-                _ReactionChip(group: r, onTap: () => onReact(r.name)),
+                _ReactionChip(
+                  group: r,
+                  onTap: () => onReact(r.name),
+                  onLongPress: () => showReactionPeople(context, reactions),
+                ),
               if (total > 1)
                 Padding(
                   padding: const EdgeInsets.only(left: 2, right: 2),
@@ -281,10 +303,15 @@ class MessageReactionChips extends StatelessWidget {
 }
 
 class _ReactionChip extends StatelessWidget {
-  const _ReactionChip({required this.group, required this.onTap});
+  const _ReactionChip({
+    required this.group,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   final ReactionGroup group;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -293,6 +320,8 @@ class _ReactionChip extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: onTap,
+          onLongPress: onLongPress,
+          onSecondaryTap: onLongPress,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Text(group.name, style: _emojiStyle(14)),
@@ -908,4 +937,26 @@ class _SwipeRightReplyRecognizer extends HorizontalDragGestureRecognizer {
       _lastTotal.dx > _lastTotal.dy.abs() * 1.5 &&
       super.hasSufficientGlobalDistanceToAccept(
           pointerDeviceKind, deviceTouchSlop);
+}
+
+/// Who reacted with what; tapping your own chip removes it.
+void showReactionPeople(BuildContext context, List<ReactionGroup> reactions) {
+  showAppSheet(context,
+      title: 'Reactions',
+      subtitle: reactions.any((r) => r.mine) ? 'Tap your reaction to remove it' : null,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        for (final r in reactions)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SizedBox(width: 32, child: Text(r.name, style: _emojiStyle(18))),
+              Expanded(
+                child: Text(
+                  r.actors.map(reactionActorLabel).join(', '),
+                  style: sans(14, height: 1.4, color: AppColors.fg2),
+                ),
+              ),
+            ]),
+          ),
+      ]));
 }

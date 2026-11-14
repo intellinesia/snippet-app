@@ -1766,6 +1766,7 @@ class DaemonClient {
     String? originSession,
     String? replyTo,
     String? reaction,
+    bool remove = false,
   }) async {
     final payload = <String, dynamic>{
       'from_kind': fromKind,
@@ -1785,6 +1786,7 @@ class DaemonClient {
     }
     if (reaction != null && reaction.isNotEmpty) {
       payload['reaction'] = reaction;
+      if (remove) payload['remove'] = true;
     }
     final r = await _post(
       _uri('/coordination/direct/messages'),
@@ -2039,6 +2041,7 @@ class DaemonClient {
     List<String>? mentions,
     String? inReplyTo,
     String? reaction,
+    bool remove = false,
   }) async {
     final r = await _post(
       _uri('/groups/${Uri.encodeComponent(id)}/post'),
@@ -2048,6 +2051,7 @@ class DaemonClient {
         if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
         if (inReplyTo != null && inReplyTo.isNotEmpty) 'in_reply_to': inReplyTo,
         if (reaction != null && reaction.isNotEmpty) 'reaction': reaction,
+        if (remove) 'remove': true,
       }),
     );
     if (r.statusCode != 200 && r.statusCode != 201 && r.statusCode != 202) {

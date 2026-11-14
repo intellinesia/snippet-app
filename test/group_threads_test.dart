@@ -721,6 +721,7 @@ class _GroupClient extends DaemonClient {
     List<String>? mentions,
     String? inReplyTo,
     String? reaction,
+    bool remove = false,
   }) async {
     posted.add((groupId: id, body: body, mentions: mentions));
     final ev = CoordinationEvent.fromJson({
