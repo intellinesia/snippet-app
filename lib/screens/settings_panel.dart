@@ -2504,7 +2504,11 @@ class AppearanceScreen extends StatelessWidget {
               header: 'Surfaces and wallpaper',
               footer:
                   'Wallpaper sits behind the chat and fades into the theme so text stays readable.',
-              children: [_TactileRow(), _ChatWallpaperPicker()],
+              children: [
+                _TactileRow(),
+                _ChromeOpacityRow(),
+                _ChatWallpaperPicker()
+              ],
             ),
             if (shaderSurfaceSupported)
               const SettingsGroup(
@@ -2598,6 +2602,54 @@ class _TactileRow extends StatelessWidget {
         onTap: () => look.setTactile(!look.tactile),
         trailing: SettingsSwitch(value: look.tactile, onChanged: look.setTactile),
       ),
+    );
+  }
+}
+
+class _ChromeOpacityRow extends StatelessWidget {
+  const _ChromeOpacityRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final look = DesktopLook.instance;
+    return ListenableBuilder(
+      listenable: look,
+      builder: (context, _) {
+        final v = look.chromeOpacity;
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          SettingsRow(
+            label: 'Sidebar opacity',
+            sub: v == null
+                ? 'Default. Lower it to let a scene or the desktop show through the sidebar and panes.'
+                : '${(v * 100).round()}%',
+            trailing: v == null
+                ? null
+                : TextButton(
+                    onPressed: () => look.setChromeOpacity(null),
+                    child: const Text('Reset')),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+            child: SliderTheme(
+              data: SliderThemeData(
+                trackHeight: 3,
+                activeTrackColor: AppColors.accent,
+                inactiveTrackColor: AppColors.surface3,
+                thumbColor: AppColors.accent,
+                overlayColor: AppColors.accentBg,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+              ),
+              child: Slider(
+                key: const Key('chrome-opacity'),
+                value: v ?? 0.92,
+                onChanged: (x) => look.setChromeOpacity(x, persist: false),
+                onChangeEnd: look.setChromeOpacity,
+              ),
+            ),
+          ),
+        ]);
+      },
     );
   }
 }

@@ -37,15 +37,22 @@ class ChatScene extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       _scene = prefs.getString(_key) ?? none;
-      _marker = File('${(await getApplicationSupportDirectory()).path}/chat_scene_starting');
+      final dir = (await getApplicationSupportDirectory()).path;
+      _marker = File('$dir/chat_scene_starting');
+      final log = File('$dir/chat_scene_crash.log');
       if (_marker!.existsSync()) {
         _marker!.deleteSync();
         if (_scene != none) {
           _scene = none;
-          _error = 'Turned off: the app closed while the scene was starting.';
+          final why = log.existsSync() ? log.readAsStringSync().trim() : '';
+          _error = why.isEmpty
+              ? 'Turned off: the app closed while the scene was starting.'
+              : 'Turned off after a crash: ${why.split('\n').last}';
           await prefs.setString(_key, none);
         }
       }
+      if (log.existsSync()) log.deleteSync();
+      setCrashLog(log.path);
     } catch (_) {}
     notifyListeners();
   }

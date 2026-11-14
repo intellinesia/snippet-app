@@ -37,12 +37,14 @@ class PaneSurface extends StatelessWidget {
     Theme.of(context);
     return ClipRect(
       child: ColoredBox(
-        color: pane == ShellPane.right ? AppColors.windowBg : readingBg,
+        color: pane == ShellPane.right
+            ? AppColors.windowBg
+            : ChatScene.instance.active && !kMobile
+                ? Colors.transparent
+                : readingBg,
         child: Stack(fit: StackFit.expand, children: [
           if (pane != ShellPane.right && !kMobile)
             const Positioned.fill(child: ChatWallpaper()),
-          if (pane != ShellPane.right && !kMobile)
-            const Positioned.fill(child: ChatSceneLayer()),
           pane == ShellPane.right && !kMobile
               ? Theme(
                   data: Theme.of(context)

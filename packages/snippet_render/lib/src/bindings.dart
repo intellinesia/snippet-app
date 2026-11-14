@@ -44,3 +44,6 @@ external void sr_destroy(Pointer<Void> surface);
 
 @Native<Void Function(Pointer<Char>)>()
 external void sr_free_string(Pointer<Char> p);
+
+@Native<Void Function(Pointer<Char>)>()
+external void sr_set_crash_log(Pointer<Char> path);

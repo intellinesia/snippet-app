@@ -1232,13 +1232,15 @@ class AppColors {
   static const Color glassScrim = Color(0x59000000);
   /// Set while a chat wallpaper shows: side chrome goes opaque to frame it.
   static bool solidChrome = false;
+  /// The user's chrome opacity; overrides [solidChrome] when set.
+  static double? chromeAlpha;
   static Color get windowBg => kMobile
       ? currentTheme.bg
       : Color.lerp(currentTheme.bg, currentTheme.surface1, 0.45)!
-          .withValues(alpha: solidChrome ? 1 : 0.92);
+          .withValues(alpha: chromeAlpha ?? (solidChrome ? 1 : 0.92));
   static Color get sidebarPanel => kMobile
       ? currentTheme.surface1
-      : currentTheme.surface1.withValues(alpha: 0.92);
+      : currentTheme.surface1.withValues(alpha: chromeAlpha ?? 0.92);
   static Color get paneBg => kMobile ? currentTheme.bg : const Color(0x00000000);
   static Color get tint1 => kMobile
       ? currentTheme.surface1

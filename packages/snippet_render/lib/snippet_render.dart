@@ -34,6 +34,11 @@ T _withCstr<T>(String s, T Function(Pointer<Char>) f) {
   }
 }
 
+/// Records native panics to [path] so a crash can be explained next launch.
+void setCrashLog(String path) {
+  if (shaderSurfaceSupported) _withCstr(path, sr_set_crash_log);
+}
+
 /// The compiler's message, or null when [source] compiles (or when there is
 /// no native renderer on this platform).
 String? checkShader(String source, ShaderLang lang) => shaderSurfaceSupported
