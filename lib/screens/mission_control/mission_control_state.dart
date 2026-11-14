@@ -82,6 +82,43 @@ class MissionEnvelope {
   }
 }
 
+const _envelopeNames = {
+  'direct_message': 'Message',
+  'agent_reply': 'Reply',
+  'group_message': 'Group message',
+  'coordination_board_message': 'Task room post',
+  'task_offer': 'Task offer',
+  'mission_control_task': 'Task',
+  'mission_task_report': 'Task report',
+  'review_request': 'Review request',
+  'review_findings': 'Review findings',
+  'owed_reply': 'Reply owed',
+  'lane_report': 'Lane report',
+  'watch': 'Watch',
+  'wake': 'Wake',
+};
+
+/// A one-line label for a queued harness envelope, or null for plain text.
+String? queuedEnvelopeLabel(String text) {
+  final t = text.trimLeft();
+  final tag = RegExp(r'^\[([a-z_]+)\]').firstMatch(t)?.group(1);
+  if (tag == null) return null;
+  String field(String name) =>
+      RegExp('^$name:[ \t]*(.*)\$', multiLine: true)
+          .firstMatch(t)
+          ?.group(1)
+          ?.trim() ??
+      '';
+  final kind = _envelopeNames[tag] ?? tag.replaceAll('_', ' ');
+  var from = field('from');
+  if (from.isEmpty) from = field('from_id');
+  from = from.contains(':') ? from.split(':').last : from;
+  final detail = [field('body'), field('task_title'), field('title')]
+      .firstWhere((s) => s.isNotEmpty, orElse: () => '');
+  final head = from.isEmpty ? kind : '$kind from $from';
+  return detail.isEmpty ? head : '$head: $detail';
+}
+
 MissionEnvelope? parseMissionEnvelope(String text) {
   final t = text.trim();
   final isRecurring = t.startsWith('[recurring_run_report]');

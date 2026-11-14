@@ -299,6 +299,13 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     _armAckWatchdog();
   }
 
+  void _interruptAndSendQueuedAt(int visible) {
+    final held = _heldQueue;
+    if (visible < 0 || visible >= held.length) return;
+    _send({'kind': 'interrupt'});
+    _steerQueuedAt(visible);
+  }
+
   Widget _queuedCard() {
     final queue = _heldQueue;
     if (queue.isEmpty) return const SizedBox.shrink();
@@ -354,11 +361,13 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     final counts = _queuedAttachCounts(item.text);
     final images = _queuedImagePaths(item.text);
     final others = counts.$1 + counts.$3;
-    final label = text.isNotEmpty
-        ? text.replaceAll('\n', ' ')
-        : images.isNotEmpty
-            ? (images.length == 1 ? 'Image' : '${images.length} images')
-            : 'Attachment';
+    final envelope = queuedEnvelopeLabel(text);
+    final label = envelope ??
+        (text.isNotEmpty
+            ? text.replaceAll('\n', ' ')
+            : images.isNotEmpty
+                ? (images.length == 1 ? 'Image' : '${images.length} images')
+                : 'Attachment');
     final dpr = MediaQuery.devicePixelRatioOf(context);
     Widget thumb(String path) => Container(
           width: 22,
@@ -451,6 +460,9 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               ]),
             ),
           ),
+          if (_state?.status == 'running')
+            iconAction('stop', 'Interrupt and send',
+                () => _interruptAndSendQueuedAt(qi)),
           iconAction('arrow-up', 'Send now', () => _steerQueuedAt(qi),
               color: AppColors.accent),
         ]),
