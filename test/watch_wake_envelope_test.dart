@@ -23,4 +23,16 @@ void main() {
     expect(parseWakeNote('hello'), isNull);
     expect(parseWatchEnvelope('[wake]\nx'), isNull);
   });
+
+  test('labels queued envelopes by kind and sender', () {
+    expect(
+        queuedEnvelopeLabel(
+            '[direct_message]\nevent_id: e1\nfrom: agent:mission-control\nfrom_kind: agent\n[task_offer]\ntask_id: t1\ntitle: Run scrape\n'),
+        'Message from mission-control: Run scrape');
+    expect(
+        queuedEnvelopeLabel(
+            '[agent_reply]\nfrom: agent:mission-control\nbody: Task is done.\n'),
+        'Reply from mission-control: Task is done.');
+    expect(queuedEnvelopeLabel('plain [text]'), isNull);
+  });
 }
