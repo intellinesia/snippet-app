@@ -2031,6 +2031,20 @@ class DaemonClient {
     ];
   }
 
+  /// Every event in a group, oldest first. The daemon pages from the oldest
+  /// event and marks read only up to each page, so read until a short page.
+  Future<List<CoordinationEvent>> groupEventsAll(String id) async {
+    const page = 500;
+    final out = <CoordinationEvent>[];
+    var after = 0;
+    while (true) {
+      final batch = await groupEvents(id, after: after, limit: page);
+      out.addAll(batch);
+      if (batch.length < page || batch.last.sequence <= after) return out;
+      after = batch.last.sequence;
+    }
+  }
+
   /// POST /groups/{id}/post — append a message to a group thread.
   ///
   /// [mentions] carries the `@id` tokens the sender addressed; `everyone`
