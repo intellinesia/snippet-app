@@ -38,7 +38,6 @@ import 'agent_questions_card.dart';
 import 'agent_records.dart';
 import 'agent_thread_cards.dart';
 import 'agent_view_switcher.dart';
-import 'tasks/tasks_panel.dart';
 import 'mobile_session_home.dart' show DotField;
 
 /// Pick one agent from the directory, as an anchored DROPDOWN.
@@ -428,16 +427,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         client: widget.client,
         agentId: widget.agentId,
         name: widget.agentName,
-        onOpenTasks: _openTasks,
         onOpenInbox: () => _setView(AgentView.inbox),
         onOpenBoard: () => _setView(AgentView.board),
         onOpenDesk: () => openAgentDesk(
             context, widget.client, widget.agentId, widget.agentName),
       ));
-
-  void _openTasks() {
-    openTasksPage(context, widget.client, agentIds: {widget.agentId});
-  }
 
   Future<void> _openSwitcherMenu(BuildContext anchor) async {
     final picked = await showAppMenu<AgentView>(

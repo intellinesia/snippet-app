@@ -197,7 +197,6 @@ Future<void> showAgentInfo(
   required String agentId,
   required String name,
   CoordinationAgent? agent,
-  VoidCallback? onOpenTasks,
   VoidCallback? onOpenInbox,
   VoidCallback? onOpenBoard,
   VoidCallback? onOpenDesk,
@@ -208,7 +207,6 @@ Future<void> showAgentInfo(
         agentId: agentId,
         name: name,
         agent: agent,
-        onOpenTasks: onOpenTasks,
         onOpenInbox: onOpenInbox,
         onOpenBoard: onOpenBoard,
         onOpenDesk: onOpenDesk,
@@ -258,7 +256,6 @@ class AgentInfoPanel extends StatefulWidget {
     required this.agentId,
     required this.name,
     this.agent,
-    this.onOpenTasks,
     this.onOpenInbox,
     this.onOpenBoard,
     this.onOpenDesk,
@@ -282,7 +279,6 @@ class AgentInfoPanel extends StatefulWidget {
   final VoidCallback? onCompact;
   final VoidCallback? onAutonomy;
   final VoidCallback? onScheduled;
-  final VoidCallback? onOpenTasks;
   final VoidCallback? onOpenInbox;
   final VoidCallback? onOpenBoard;
   final VoidCallback? onOpenDesk;
@@ -475,11 +471,6 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
   Widget build(BuildContext context) {
     final agent = widget.agent;
     final actions = <_CircleAction>[
-      if (widget.onOpenTasks != null && !widget.docked && !_mc)
-        _CircleAction('task', 'Tasks', () {
-          if (!widget.docked) _close();
-          widget.onOpenTasks!();
-        }),
       if (widget.onOpenInbox != null)
         _CircleAction('inbox', 'Inbox', () {
           if (!widget.docked) _close();

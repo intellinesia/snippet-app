@@ -167,7 +167,6 @@ void main() {
             agentId: 'scout',
             name: 'Revenue Scout',
             agent: _agent(),
-            onOpenTasks: () {},
             onOpenInbox: () {},
             onOpenBoard: () {},
             onOpenDesk: () {},
@@ -181,9 +180,10 @@ void main() {
 
     expect(find.text('Revenue Scout'), findsOneWidget);
     expect(find.text('Active'), findsOneWidget);
-    for (final label in ['Tasks', 'Inbox', 'Board', 'Desk']) {
+    for (final label in ['Inbox', 'Board', 'Desk']) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
+    expect(find.text('Tasks'), findsNothing);
     for (final tab in ['Files', 'Links']) {
       expect(find.text(tab), findsNothing, reason: tab);
     }
@@ -245,7 +245,6 @@ void main() {
         agentId: 'scout',
         name: 'Revenue Scout',
         agent: _agent(),
-        onOpenTasks: () {},
         onChanged: () {},
         onClose: () {},
       ),
