@@ -5,12 +5,15 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../desktop_layout.dart';
 import '../models.dart';
+import '../panel.dart';
 import '../platform.dart';
 import '../settings_form.dart';
+import '../shell_panel.dart';
 import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
 import 'agent_wake_panel.dart';
+import 'session.dart';
 import 'shell_nav.dart';
 
 /// Every agent and session wake schedule, with keep-warm status below.
@@ -64,7 +67,12 @@ class _WakesScreenState extends State<WakesScreen> {
     return (wakes, warm, agents);
   }
 
-  void _refresh() => setState(() => _future = _load());
+  void _refresh() {
+    final next = _load();
+    setState(() {
+      _future = next;
+    });
+  }
 
   String _name(String owner, List<CoordinationAgent> agents) {
     for (final a in agents) {
@@ -120,19 +128,24 @@ class _WakesScreenState extends State<WakesScreen> {
             if (e.enabled) e
         ];
         return page([
-          if (wakes.wakes.isEmpty)
+          if (wakes.wakes.isEmpty && warmOn.isEmpty)
             const EmptyState(
               icon: 'calendar-clock',
               title: 'No wakes yet',
               body:
                   'Give an agent a timetable and a brief from its menu in the crew list. It reports back to Mission Control.',
             )
-          else
+          else if (wakes.wakes.isNotEmpty) ...[
+            if (kMobile)
+              const SettingsGroupLabel('Schedules')
+            else
+              const SectionLabel('Schedules'),
             ListGroup(children: [
               for (final w in wakes.wakes) _wakeRow(context, w, agents),
             ]),
+          ],
           if (warmOn.isNotEmpty) ...[
-            SizedBox(height: kMobile ? 0 : S.s20),
+            if (wakes.wakes.isNotEmpty) SizedBox(height: kMobile ? 0 : S.s20),
             if (kMobile)
               const SettingsGroupLabel('Keep warm')
             else
@@ -239,8 +252,49 @@ class _WakesScreenState extends State<WakesScreen> {
             ? Text('${e.warms} warm${e.warms == 1 ? '' : 's'}',
                 style: TS.meta())
             : null,
-        onTap: session ? null : () => _open(ctx, e.owner, name, agents),
+        onTap: session
+            ? () => unawaited(_sessionWarmMenu(ctx, e, name))
+            : () => _open(ctx, e.owner, name, agents),
       ),
     );
+  }
+
+  Future<void> _sessionWarmMenu(
+      BuildContext ctx, KeepWarmEntry e, String name) async {
+    final picked = await showAppMenu<String>(ctx,
+        anchor: ctx,
+        point: kMobile ? null : lastPointerDown,
+        items: [
+          appMenuItem(
+              value: 'open', label: 'Open conversation', icon: 'message'),
+          appMenuItem(
+              value: 'off',
+              label: 'Stop keeping warm',
+              icon: 'gauge',
+              danger: true),
+        ]);
+    if (!mounted || picked == null) return;
+    final id = e.sessionId.isNotEmpty ? e.sessionId : e.owner;
+    if (picked == 'open') {
+      final tab = openSessionInTab;
+      if (!kMobile && tab != null) {
+        tab(widget.client, id, name);
+        return;
+      }
+      unawaited(presentScreen(context,
+          builder: (_, close) => SessionScreen(
+              client: widget.client,
+              sessionId: id,
+              title: name,
+              onMenu: close)));
+      return;
+    }
+    try {
+      await widget.client.setKeepWarm(e.owner, enabled: false);
+    } catch (err) {
+      if (mounted) toast(context, '$err', danger: true);
+      return;
+    }
+    _refresh();
   }
 }
