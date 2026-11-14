@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet_render/snippet_render.dart';
 
+import 'platform.dart';
 import 'theme.dart';
 
 /// An animated shader behind the chat, drawn by the native renderer.
@@ -173,10 +174,15 @@ class ChatSceneLayer extends StatelessWidget {
         return IgnorePointer(
           child: RepaintBoundary(
             child: Stack(fit: StackFit.expand, children: [
-              ShaderSurface(
-                source: sceneSource(scene.scene),
-                onError: scene.reportError,
-              ),
+              kMobile
+                  ? ShaderView(
+                      source: sceneSource(scene.scene),
+                      onError: scene.reportError,
+                    )
+                  : ShaderSurface(
+                      source: sceneSource(scene.scene),
+                      onError: scene.reportError,
+                    ),
               DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -196,5 +202,21 @@ class ChatSceneLayer extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+/// Puts the scene behind [child] on a phone. The slot is always present so
+/// switching the scene never remounts [child].
+class SceneBackdrop extends StatelessWidget {
+  const SceneBackdrop({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!kMobile) return child;
+    return Stack(fit: StackFit.expand, children: [
+      const Positioned.fill(child: ChatSceneLayer()),
+      child,
+    ]);
   }
 }

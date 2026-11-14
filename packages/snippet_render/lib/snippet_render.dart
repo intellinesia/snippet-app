@@ -10,6 +10,8 @@ import 'package:irondash_engine_context/irondash_engine_context.dart';
 
 import 'src/bindings.dart';
 
+export 'shared_surface.dart';
+
 /// `wgsl` shaders define `fn main_image(p: vec2<f32>) -> vec4<f32>` and read
 /// `u.time` and `u.resolution`; `glsl` shaders are Shadertoy's `mainImage`
 /// with `iTime` and `iResolution`.

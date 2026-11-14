@@ -32,6 +32,7 @@ import 'agent_questions_card.dart' show questionAnswerSystemLine;
 import 'agent_thread_cards.dart' show agentThreadEventCard;
 import 'tasks/tasks_panel.dart' show openTasksPage, openTaskCountFor;
 import 'mobile_session_home.dart' show DotField;
+import '../chat_scene.dart' show SceneBackdrop;
 
 /// An `@token` in a group message: the boundary keeps `mail@fable` from
 /// counting as a mention.
@@ -1287,7 +1288,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                 children: [
                   Positioned.fill(
                       child: kMobile
-                          ? DotField.chat(child: _body(hideChrome: hideChrome))
+                          ? SceneBackdrop(
+                              child: DotField.chat(
+                                  child: _body(hideChrome: hideChrome)))
                           : hideChrome
                           ? _body(hideChrome: hideChrome)
                           : TopFadeMask(

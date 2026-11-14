@@ -2465,7 +2465,7 @@ class AppearanceScreen extends StatelessWidget {
                     const SettingsGroupLabel('Home'),
                     const ListGroup(children: [_HomeFirstRow()]),
                     if (shaderSurfaceSupported) ...[
-                      const SettingsGroupLabel('Chat scene'),
+                      const SettingsGroupLabel('Background'),
                       const ListGroup(children: [_ChatSceneRow()]),
                     ],
                     const SettingsGroupLabel('Palette'),
@@ -2514,7 +2514,7 @@ class AppearanceScreen extends StatelessWidget {
             ),
             if (shaderSurfaceSupported)
               const SettingsGroup(
-                header: 'Chat scene',
+                header: 'Background',
                 footer:
                     'An animated scene behind the chat, drawn on the GPU. It pauses in the background and with reduced motion.',
                 children: [_ChatSceneRow()],
@@ -2665,7 +2665,7 @@ class _ChatSceneRow extends StatelessWidget {
     return ListenableBuilder(
       listenable: scene,
       builder: (context, _) => SettingsRow(
-        label: 'Scene',
+        label: 'Animated background',
         sub: scene.error ?? 'Animated background behind the chat',
         trailing: Pills<String>(
           key: const Key('chat-scene'),

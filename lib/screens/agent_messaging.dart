@@ -31,6 +31,7 @@ import 'agent_records.dart';
 import 'agent_thread_cards.dart';
 import 'agent_view_switcher.dart';
 import 'mobile_session_home.dart' show DotField;
+import '../chat_scene.dart' show SceneBackdrop;
 
 /// Pick one agent from the directory, as an anchored DROPDOWN.
 ///
@@ -921,7 +922,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                 children: [
                   Positioned.fill(
                       child: kMobile
-                          ? DotField.chat(child: _viewBody())
+                          ? SceneBackdrop(child: DotField.chat(child: _viewBody()))
                           : hideChrome
                           ? _viewBody()
                           : TopFadeMask(
