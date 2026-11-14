@@ -365,6 +365,9 @@ class _FileViewerState extends State<FileViewer> {
     final barActions =
         !widget.embedded || kMacOS ? actions : const <Widget>[];
     final merged = !kMobile;
+    final meta = f == null || f.binary || _isMedia
+        ? null
+        : '${_controller.text.split('\n').length} lines · ${formatBytes(f.size)}${f.truncated ? ' · truncated' : ''}';
     return Scaffold(
       backgroundColor:
           widget.embedded && !kMobile ? Colors.transparent : readingBg,
@@ -375,7 +378,7 @@ class _FileViewerState extends State<FileViewer> {
           if (!widget.embedded)
             SnAppBar(
                 title: widget.name,
-                subtitle: widget.path,
+                subtitle: meta,
                 onBack: widget.onClose ?? () => Navigator.pop(context),
                 actions: merged ? const [] : actions),
           if (merged && (_isMedia || f == null || f.binary) &&
@@ -457,6 +460,7 @@ class _FileViewerState extends State<FileViewer> {
               ),
             )
           else ...[
+            if (widget.embedded || _isMarkdown || merged || _inline)
             _FileToolbar(
               leading: [
                 if (_isMarkdown) ...[
@@ -467,8 +471,7 @@ class _FileViewerState extends State<FileViewer> {
                       'Source', _source, () => setState(() => _source = true)),
                 ],
               ],
-              meta:
-                  '${_controller.text.split('\n').length} lines · ${formatBytes(f.size)}${f.truncated ? ' · truncated' : ''}',
+              meta: widget.embedded ? meta : null,
               actions: [
                 if (_inline && (_dirty || _saving))
                   Padding(
