@@ -337,7 +337,7 @@ class _SessionRailState extends State<SessionRail> {
     return [
       if (widget.isMissionControl && widget.onAutonomy != null)
         _RailRow(
-            icon: 'activity',
+            icon: 'repeat',
             label: 'Automated wakes',
             chevron: true,
             onTap: widget.onAutonomy),
