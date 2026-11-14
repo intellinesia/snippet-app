@@ -1,17 +1,12 @@
 import 'package:snippet/ambient/hold.dart';
 import 'package:snippet/ambient/live_caption.dart';
 import 'dart:async';
-import 'dart:io';
 
-import 'package:audioplayers/audioplayers.dart';
 import '../motion_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:markdown/markdown.dart' as md;
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:record/record.dart';
 
 import '../chat/chat_info.dart' show showAgentInfo;
 import '../glass.dart';
@@ -21,7 +16,7 @@ import '../chat/chat_style.dart';
 import '../composer/attachment_preview.dart';
 import '../composer/attachment_tile.dart';
 import '../composer/composer_card.dart';
-import '../composer_strip.dart';
+import '../composer/voice_note.dart';
 import '../media_views.dart';
 import '../message_reactions.dart';
 import '../motion.dart';
@@ -585,8 +580,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       setState(() => _filter = f.isEmpty ? null : f);
     }
   }
-  Duration _maxRecordingDuration = const Duration(minutes: 3);
-
   final _input = TextEditingController();
   final _inputFocus = FocusNode();
   final _scroll = ScrollController();
@@ -607,42 +600,14 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         ..uploading = false));
   int _attachmentGeneration = 0;
 
-  final AudioRecorder _recorder = HeldRecorder();
-  AudioPlayer? _player;
-
-  AudioPlayer get _audioPlayer {
-    final existing = _player;
-    if (existing != null) return existing;
-    final player = AudioPlayer();
-    _playerStateSub = player.onPlayerStateChanged.listen((state) {
-      if (!mounted) return;
-      setState(() => _isPlayingRecording = state == PlayerState.playing);
-    });
-    _positionSub = player.onPositionChanged.listen((position) {
-      if (!mounted) return;
-      setState(() => _playbackPosition = position);
-    });
-    _durationSub = player.onDurationChanged.listen((duration) {
-      if (!mounted) return;
-      setState(() => _playbackDuration = duration);
-    });
-    return _player = player;
-  }
-
-  StreamSubscription<Amplitude>? _amplitudeSub;
-  StreamSubscription<PlayerState>? _playerStateSub;
-  StreamSubscription<Duration>? _positionSub;
-  StreamSubscription<Duration>? _durationSub;
-  Timer? _recordingTimer;
-
-  bool _isRecording = false;
-  String? _recordingPath;
-  Uint8List? _recordingBytes;
-  Duration _recordingElapsed = Duration.zero;
-  Duration _playbackPosition = Duration.zero;
-  Duration _playbackDuration = Duration.zero;
-  bool _isPlayingRecording = false;
-  final WaveBuffer _waveform = WaveBuffer();
+  late final VoiceNoteController _voice = VoiceNoteController(
+    client: widget.client,
+    filePrefix: 'snippet-agent-voice',
+    onToast: (msg, {bool danger = false}) {
+      if (mounted) toast(context, msg, danger: danger);
+    },
+    onConfirmTake: _attachVoiceBytes,
+  );
 
   @override
   void initState() {
@@ -665,26 +630,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   @override
   void dispose() {
     _thread.dispose();
-    _amplitudeSub?.cancel();
-    _recordingTimer?.cancel();
-    _playerStateSub?.cancel();
-    _positionSub?.cancel();
-    _durationSub?.cancel();
-    if (_isRecording) {
-      unawaited(_recorder.cancel());
-    }
-    if (kCanRecord) {
-      unawaited(_recorder.dispose());
-    }
-    final player = _player;
-    if (player != null) unawaited(player.dispose());
-    final pendingPath = _recordingPath;
-    if (pendingPath != null) {
-      try {
-        final f = File(pendingPath);
-        if (f.existsSync()) f.deleteSync();
-      } catch (_) {}
-    }
+    _voice.dispose();
     _input.dispose();
     _inputFocus.dispose();
     _scroll.dispose();
@@ -763,271 +709,14 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     });
   }
 
-  Future<void> _onMicTap() async {
-    if (_isRecording) {
-      await _stopRecording();
-    } else {
-      await _startRecording();
-    }
-  }
-
-  Future<void> _startRecording() async {
-    if (!kCanRecord) return;
-    if (mounted) {
-      setState(() {
-        _isRecording = true;
-        _recordingElapsed = Duration.zero;
-        _waveform
-          ..clear()
-          ..add(0.08);
-      });
-    }
-    final granted = kMobile
-        ? (await Permission.microphone.request()).isGranted
-        : await _recorder.hasPermission();
-    if (!granted) {
-      if (mounted) setState(() => _isRecording = false);
-      if (mounted) {
-        toast(
-          context,
-          kMobile
-              ? 'Microphone permission is required.'
-              : 'Microphone permission is required by macOS.',
-          danger: true,
-        );
-        if (kMobile) {
-          final status = await Permission.microphone.status;
-          if (status.isPermanentlyDenied) await openAppSettings();
-        }
-      }
-      return;
-    }
-    try {
-      final voice = (await widget.client
-              .getConfig()
-              .timeout(const Duration(seconds: 3)))
-          .voice;
-      if (!voice.enabled) {
-        if (mounted) {
-          setState(() => _isRecording = false);
-          toast(context, 'Voice notes are turned off in Settings → Voice.');
-        }
-        return;
-      }
-      _maxRecordingDuration = Duration(seconds: voice.maxSeconds);
-    } catch (_) {
-    }
-    try {
-      if (_recordingPath != null || _recordingBytes != null) {
-        await _discardRecording();
-      }
-      final tempDir = await getTemporaryDirectory();
-      final path =
-          '${tempDir.path}/snippet-agent-voice-${DateTime.now().microsecondsSinceEpoch}.$voiceNoteExtension';
-      await _recorder.start(
-        RecordConfig(
-          encoder: AudioEncoder.aacLc,
-          bitRate: 96000,
-          sampleRate: kMobile ? 16000 : 44100,
-          numChannels: 1,
-          androidConfig: const AndroidRecordConfig(manageBluetooth: false),
-        ),
-        path: path,
-      );
-      if (!await _recorder.isRecording()) {
-        await _recorder.cancel();
-        if (mounted) setState(() => _isRecording = false);
-        if (mounted) toast(context, 'Could not start recording.', danger: true);
-        return;
-      }
-      _amplitudeSub?.cancel();
-      _amplitudeSub = _recorder
-          .onAmplitudeChanged(const Duration(milliseconds: 120))
-          .listen((a) {
-        final level = ((a.current + 60) / 60).clamp(0.04, 1.0).toDouble();
-        if (!mounted) return;
-        _waveform.add(level);
-      });
-      _recordingTimer?.cancel();
-      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (!mounted) return;
-        final next = _recordingElapsed + const Duration(seconds: 1);
-        if (next >= _maxRecordingDuration) {
-          setState(() => _recordingElapsed = _maxRecordingDuration);
-          unawaited(_stopRecording());
-          final d = _maxRecordingDuration;
-          toast(context,
-              'Recording stopped at the ${d.inSeconds % 60 == 0 ? '${d.inMinutes}-minute' : '${d.inSeconds}-second'} limit.');
-        } else {
-          setState(() => _recordingElapsed = next);
-        }
-      });
-      if (mounted) setState(() => _recordingPath = path);
-    } catch (e) {
-      if (mounted) setState(() => _isRecording = false);
-      if (mounted) {
-        toast(context, 'Could not start recording: $e', danger: true);
-      }
-    }
-  }
-
-  Future<void> _stopRecording() async {
-    if (!_isRecording) return;
-    if (mounted) setState(() => _isRecording = false);
-    _amplitudeSub?.cancel();
-    _amplitudeSub = null;
-    _recordingTimer?.cancel();
-    _recordingTimer = null;
-    try {
-      final stoppedPath = await _recorder.stop();
-      final path = stoppedPath ?? _recordingPath;
-      if (path == null) {
-        if (mounted) toast(context, 'No recording was captured.');
-        return;
-      }
-      final bytes = await _waitForRecordingFile(path);
-      if (bytes == null || bytes.isEmpty) {
-        await _discardRecording();
-        if (mounted) toast(context, 'The recording was empty.');
-        return;
-      }
-      if (mounted) {
-        setState(() {
-          _recordingPath = path;
-          _recordingBytes = bytes;
-        });
-      } else {
-        _recordingPath = path;
-        _recordingBytes = bytes;
-      }
-    } catch (e) {
-      await _discardRecording();
-      if (mounted) {
-        toast(context, 'Could not finish recording: $e', danger: true);
-      }
-    }
-  }
-
-  Future<Uint8List?> _waitForRecordingFile(String path) async {
-    final file = File(path.startsWith('file://') ? Uri.parse(path).toFilePath() : path);
-    const attempts = 120;
-    for (var i = 0; i < attempts; i++) {
-      try {
-        if (await file.exists()) {
-          final bytes = await file.readAsBytes();
-          if (bytes.isNotEmpty) return bytes;
-        }
-      } catch (_) {}
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    }
-    return null;
-  }
-
-  Future<void> _discardRecording() async {
-    final path = _recordingPath;
-    if (_isRecording) {
-      try {
-        await _recorder.cancel();
-      } catch (_) {}
-    }
-    _amplitudeSub?.cancel();
-    _amplitudeSub = null;
-    _recordingTimer?.cancel();
-    _recordingTimer = null;
-    try {
-      await _player?.stop();
-    } catch (_) {}
-    if (path != null) {
-      try {
-        final file = File(path);
-        if (await file.exists()) await file.delete();
-      } catch (_) {}
-    }
-    if (mounted) {
-      setState(() {
-        _isRecording = false;
-        _recordingPath = null;
-        _recordingBytes = null;
-        _recordingElapsed = Duration.zero;
-        _playbackPosition = Duration.zero;
-        _playbackDuration = Duration.zero;
-        _waveform.clear();
-        _isPlayingRecording = false;
-      });
-    }
-  }
-
-  Future<void> _recordMore() async {
-    if (await _confirmRecording()) await _startRecording();
-  }
-
-  Future<bool> _confirmRecording() async {
-    final path = _recordingPath;
-    final bytes = _recordingBytes;
-    if (path == null && bytes == null) return false;
-    try {
-      if (bytes == null || bytes.isEmpty) {
-        await _discardRecording();
-        if (mounted) toast(context, 'The recording was empty.');
-        return false;
-      }
-      await _ingest([
+  Future<void> _attachVoiceBytes(Uint8List bytes) => _ingest([
         (
-          name: 'voice-${DateTime.now().microsecondsSinceEpoch}.$voiceNoteExtension',
+          name:
+              'voice-${DateTime.now().microsecondsSinceEpoch}.$voiceNoteExtension',
           localPath: null,
           readBytes: () async => bytes,
         )
       ]);
-      await _player?.stop();
-      if (path != null) {
-        try {
-          final file = File(path);
-          if (await file.exists()) await file.delete();
-        } catch (_) {}
-      }
-      if (mounted) {
-        setState(() {
-          _isRecording = false;
-          _recordingPath = null;
-          _recordingBytes = null;
-          _recordingElapsed = Duration.zero;
-          _waveform.clear();
-          _playbackPosition = Duration.zero;
-          _playbackDuration = Duration.zero;
-          _isPlayingRecording = false;
-        });
-      }
-      return true;
-    } catch (e) {
-      if (mounted) {
-        toast(context, 'Could not attach recording: $e', danger: true);
-      }
-      return false;
-    }
-  }
-
-  Future<void> _toggleRecordingPlayback() async {
-    final path = _recordingPath;
-    if (path == null || _isRecording) return;
-    try {
-      if (_isPlayingRecording) {
-        await _audioPlayer.pause();
-      } else if (_audioPlayer.state == PlayerState.paused) {
-        await _audioPlayer.resume();
-      } else {
-        await _audioPlayer.play(DeviceFileSource(path));
-      }
-    } catch (e) {
-      if (mounted) toast(context, 'Could not play preview: $e', danger: true);
-    }
-  }
-
-  String _audioTime(Duration d) {
-    final seconds = d.inSeconds.clamp(0, 5999);
-    final minutes = seconds ~/ 60;
-    final remainder = seconds % 60;
-    return '$minutes:${remainder.toString().padLeft(2, '0')}';
-  }
 
   bool _isImageName(String n) {
     final l = n.toLowerCase();
@@ -1172,11 +861,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
 
   Future<void> _send() async {
     if (_sending) return;
-    if (_isRecording) {
-      await _stopRecording();
+    if (_voice.isRecording) {
+      await _voice.stop();
     }
-    if (_recordingPath != null) {
-      final ok = await _confirmRecording();
+    if (_voice.hasTake) {
+      final ok = await _voice.confirmTake(_attachVoiceBytes);
       if (!ok) return;
     }
     if (_attachments.any((a) => a.uploading)) {
@@ -1216,7 +905,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     _input.clear();
     _attachmentGeneration++;
     _attachments.clear();
-    _discardRecording();
+    unawaited(_voice.discard());
     _unechoed.add(pending);
     setState(() {
       _replyTo = null;
@@ -1934,99 +1623,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     );
   }
 
-  Widget _mobileRecorder() {
-    final reviewing = !_isRecording && _recordingPath != null;
-    final total = _playbackDuration > Duration.zero
-        ? _playbackDuration
-        : _recordingElapsed;
-    final time = reviewing
-        ? '${_audioTime(_playbackPosition)} / ${_audioTime(total)}'
-        : _audioTime(_recordingElapsed);
-    final progress = !reviewing || total.inMilliseconds <= 0
-        ? null
-        : (_playbackPosition.inMilliseconds / total.inMilliseconds)
-            .clamp(0.0, 1.0);
-    if (!kMobile) {
-      return DesktopRecorderStrip(
-        recording: _isRecording,
-        time: time,
-        wave: LiveRecordingWave(
-            buffer: _waveform, live: _isRecording, progress: progress),
-        playing: _isPlayingRecording,
-        onDiscard: () => unawaited(_discardRecording()),
-        onPlay: () => unawaited(_toggleRecordingPlayback()),
-        onStop: () => unawaited(_stopRecording()),
-        onSend: () => unawaited(_send()),
-        onMore: reviewing
-            ? () => unawaited(_recordMore())
-            : null,
-      );
-    }
-    Widget btn(String icon, String tip, VoidCallback onTap, {Color? color}) =>
-        Semantics(
-            button: true,
-            label: tip,
-            child: ComposerIconButton(icon,
-                tooltip: tip, onTap: onTap, color: color));
-    Widget slot(Widget w) => SizedBox(height: 36, child: Center(child: w));
-    return Glass(
-      radius: BorderRadius.circular(ComposerCard.radius),
-      tint: AppColors.surface1.withValues(alpha: 0.78),
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Row(children: [
-          if (reviewing) ...[
-            slot(btn('trash', 'Discard', () => unawaited(_discardRecording()))),
-            slot(btn(
-                _isPlayingRecording ? 'pause' : 'play',
-                _isPlayingRecording ? 'Pause' : 'Play',
-                () => unawaited(_toggleRecordingPlayback()),
-                color: AppColors.fg1)),
-          ] else
-            slot(Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: StatusDot(
-                  status: 'running', size: 8, color: AppColors.danger),
-            )),
-          Expanded(
-            child: SizedBox(
-              height: 28,
-              child: LiveRecordingWave(
-                  buffer: _waveform, live: _isRecording, progress: progress),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Text(time,
-              style: sans(13,
-                  tabular: true,
-                  color: reviewing ? AppColors.fg3 : AppColors.danger)),
-          const SizedBox(width: 6),
-          if (_isRecording)
-            slot(Semantics(
-              button: true,
-              label: 'Stop',
-              child: ComposerSendButton(
-                  enabled: true,
-                  stop: true,
-                  onTap: () => unawaited(_stopRecording())),
-            ))
-          else ...[
-            slot(btn('mic', 'Record more', () => unawaited(_recordMore()))),
-            const SizedBox(width: 4),
-            slot(Semantics(
-              button: true,
-              label: 'Send voice note',
-              child: ComposerSendButton(
-                  enabled: !_sending,
-                  sending: _sending,
-                  onTap: _sending ? null : () => unawaited(_send())),
-            )),
-          ],
-        ]),
-      ),
-    );
-  }
-
   Widget _attachmentBar() => ComposerAttachmentBar(tiles: [
         for (final a in _attachments)
           ComposerAttachmentTile(
@@ -2104,18 +1700,17 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         attach:
             ComposerIconButton('plus', tooltip: 'Attach', onTap: _onAttachTap),
         mic: kCanRecord
-            ? ComposerIconButton(_isRecording ? 'mic-off' : 'mic',
+            ? ComposerIconButton(_voice.isRecording ? 'mic-off' : 'mic',
                 tooltip: 'Record',
-                onTap: _onMicTap,
-                color: _isRecording ? AppColors.danger : null)
+                onTap: () => unawaited(_voice.toggleRecording()),
+                color: _voice.isRecording ? AppColors.danger : null)
             : null,
         send: ValueListenableBuilder<TextEditingValue>(
           valueListenable: _input,
           builder: (_, val, __) {
             final canSend = (val.text.trim().isNotEmpty ||
                     _attachments.isNotEmpty ||
-                    _isRecording ||
-                    _recordingPath != null) &&
+                    _voice.isActive) &&
                 !_sending;
             return ComposerSendButton(
               enabled: canSend,
@@ -2129,7 +1724,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   Widget _composer() {
     final mq = MediaQuery.of(context);
     final keyboard = mq.viewInsets.bottom;
-    final recording = _isRecording || _recordingPath != null;
     return AnimatedPadding(
       duration: Motion.fast,
       curve: Motion.enter,
@@ -2141,19 +1735,30 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           M.gutter,
           10 + (keyboard > 0 ? 8 : mq.padding.bottom),
         ),
-        child: Swap(
-          stateKey: recording ? 'recorder' : 'composer',
-          alignment: Alignment.bottomCenter,
-          child: _wideCap(recording
-              ? _mobileRecorder()
-              : Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (_attachments.isNotEmpty) _attachmentBar(),
-                    _composerCard(),
-                  ],
-                )),
+        child: ListenableBuilder(
+          listenable: _voice,
+          builder: (context, _) {
+            final recording = _voice.isActive;
+            return Swap(
+              stateKey: recording ? 'recorder' : 'composer',
+              alignment: Alignment.bottomCenter,
+              child: _wideCap(recording
+                  ? VoiceNoteRecorderStrip(
+                      controller: _voice,
+                      sending: _sending,
+                      onMore: () => unawaited(_voice.recordMore()),
+                      onSend: () => unawaited(_send()),
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (_attachments.isNotEmpty) _attachmentBar(),
+                        _composerCard(),
+                      ],
+                    )),
+            );
+          },
         ),
       ),
     );

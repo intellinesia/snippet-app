@@ -5,11 +5,14 @@ import '../motion_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../ambient/hold.dart';
 import '../api.dart';
 import '../composer/composer_card.dart';
+import '../composer/voice_note.dart';
 import '../message_reactions.dart';
 import '../models.dart';
 import '../mochi.dart';
+import '../motion.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../pull_refresh.dart';
@@ -878,6 +881,7 @@ class GroupThreadScreen extends StatefulWidget {
     this.onClose,
     this.embedded = false,
     this.showBack = true,
+    @visibleForTesting this.voiceController,
   });
 
   final DaemonClient client;
@@ -887,6 +891,9 @@ class GroupThreadScreen extends StatefulWidget {
   /// Nested under a host that already draws `NavBackRow`.
   final bool embedded;
   final bool showBack;
+
+  @visibleForTesting
+  final VoiceNoteController? voiceController;
 
   @override
   State<GroupThreadScreen> createState() => _GroupThreadScreenState();
@@ -919,6 +926,15 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   /// The `@query` under the cursor, when the completion list should show.
   ({int start, String query})? _mention;
 
+  late final VoiceNoteController _voice = widget.voiceController ??
+      VoiceNoteController(
+        client: widget.client,
+        filePrefix: 'snippet-group-voice',
+        onToast: (msg, {bool danger = false}) {
+          if (mounted) toast(context, msg, danger: danger);
+        },
+      );
+
   @override
   void initState() {
     super.initState();
@@ -940,6 +956,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   @override
   void dispose() {
     _thread.dispose();
+    if (widget.voiceController == null) {
+      _voice.dispose();
+    }
     _input.removeListener(_onInputChanged);
     _input.dispose();
     _inputFocus.dispose();
@@ -1060,10 +1079,32 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   }
 
   Future<void> _send() async {
-    final body = _input.text.trim();
-    if (body.isEmpty || _sending) return;
+    if (_sending) return;
+    if (_voice.isRecording) {
+      await _voice.stop();
+    }
+    final hasTake = _voice.hasTake;
+    final takeBytes = _voice.bytes;
+    if (hasTake && (takeBytes == null || takeBytes.isEmpty)) {
+      await _voice.discard();
+      if (mounted) toast(context, 'The recording was empty.');
+      return;
+    }
+    final typed = _input.text.trim();
+    if (typed.isEmpty && !hasTake) return;
     setState(() => _sending = true);
     try {
+      var body = typed;
+      if (takeBytes != null && takeBytes.isNotEmpty) {
+        final remotePath = await widget.client.uploadFile(
+          takeBytes,
+          name:
+              'voice-${DateTime.now().microsecondsSinceEpoch}.$voiceNoteExtension',
+        );
+        final marker =
+            '[attached file — read it at this exact path: $remotePath]';
+        body = body.isEmpty ? marker : '$body\n\n$marker';
+      }
       final mentions = extractGroupMentions(_input.text, _mentionIds);
       final ev = await widget.client.postGroup(
         widget.group.id,
@@ -1073,6 +1114,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       if (!mounted) return;
       _pending.add(ev);
       _input.clear();
+      await _voice.discard();
+      if (!mounted) return;
       setState(() => _mention = null);
       _thread.refresh();
       _jumpToBottom();
@@ -1643,6 +1686,52 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
               constraints: const BoxConstraints(maxWidth: 740),
               child: SizedBox(width: double.infinity, child: child)));
 
+  Widget _composerCard() => ComposerCard(
+        text: _input,
+        field: CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.enter): () {
+              if (!kMobile) _send();
+            },
+            const SingleActivator(LogicalKeyboardKey.enter, meta: true): _send,
+            const SingleActivator(LogicalKeyboardKey.enter, control: true):
+                _send,
+          },
+          child: TextField(
+            controller: _input,
+            focusNode: _inputFocus,
+            minLines: 1,
+            maxLines: 8,
+            cursorColor: AppColors.accent,
+            onSubmitted: (_) {
+              if (!kMobile) _send();
+            },
+            style: TS.body(AppColors.fg1),
+            decoration: ComposerCard.decoration('Message the group…'),
+          ),
+        ),
+        mic: kCanRecord
+            ? ComposerIconButton(
+                _voice.isRecording ? 'mic-off' : 'mic',
+                tooltip: 'Record',
+                onTap: () => unawaited(_voice.toggleRecording()),
+                color: _voice.isRecording ? AppColors.danger : null,
+              )
+            : null,
+        send: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _input,
+          builder: (_, val, __) {
+            final canSend =
+                (val.text.trim().isNotEmpty || _voice.isActive) && !_sending;
+            return ComposerSendButton(
+              enabled: canSend,
+              sending: _sending,
+              onTap: canSend ? _send : null,
+            );
+          },
+        ),
+      );
+
   Widget _composer() {
     final mq = MediaQuery.of(context);
     final keyboard = mq.viewInsets.bottom;
@@ -1657,51 +1746,32 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           16,
           10 + (keyboard > 0 ? 8 : mq.padding.bottom),
         ),
-        child: _wideCap(
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (_mention != null && _mentionCandidates.isNotEmpty)
-                _mentionList(),
-              ComposerCard(
-                field: CallbackShortcuts(
-                  bindings: {
-                    const SingleActivator(LogicalKeyboardKey.enter): () {
-                      if (!kMobile) _send();
-                    },
-                    const SingleActivator(LogicalKeyboardKey.enter, meta: true):
-                        _send,
-                    const SingleActivator(LogicalKeyboardKey.enter,
-                        control: true): _send,
-                  },
-                  child: TextField(
-                    controller: _input,
-                    focusNode: _inputFocus,
-                    minLines: 1,
-                    maxLines: 8,
-                    cursorColor: AppColors.accent,
-                    onSubmitted: (_) {
-                      if (!kMobile) _send();
-                    },
-                    style: TS.body(AppColors.fg1),
-                    decoration: ComposerCard.decoration('Message the group…'),
-                  ),
-                ),
-                send: ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _input,
-                  builder: (_, val, __) {
-                    final canSend = val.text.trim().isNotEmpty && !_sending;
-                    return ComposerSendButton(
-                      enabled: canSend,
-                      sending: _sending,
-                      onTap: canSend ? _send : null,
-                    );
-                  },
-                ),
+        child: ListenableBuilder(
+          listenable: _voice,
+          builder: (context, _) {
+            final recording = _voice.isActive;
+            return Swap(
+              stateKey: recording ? 'recorder' : 'composer',
+              alignment: Alignment.bottomCenter,
+              child: _wideCap(
+                recording
+                    ? VoiceNoteRecorderStrip(
+                        controller: _voice,
+                        sending: _sending,
+                        onSend: () => unawaited(_send()),
+                      )
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (_mention != null && _mentionCandidates.isNotEmpty)
+                            _mentionList(),
+                          _composerCard(),
+                        ],
+                      ),
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

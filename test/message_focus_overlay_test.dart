@@ -405,7 +405,7 @@ void main() {
   });
 
   group('Group chat interactions', () {
-    testWidgets('long-press shows Copy only (no Reply, no reactions)', (t) async {
+    testWidgets('long-press shows Copy and quick reactions, no Reply', (t) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       t.view.physicalSize = const Size(390, 844) * 3;
       t.view.devicePixelRatio = 3;
@@ -448,9 +448,8 @@ void main() {
       expect(find.byType(MessageFocusOverlay), findsOneWidget);
       expect(find.text('Copy'), findsOneWidget);
       expect(find.text('Reply'), findsNothing);
-      expect(find.bySemanticsLabel('More reactions'), findsNothing);
       for (final emoji in kMessageReactions) {
-        expect(find.text(emoji), findsNothing);
+        expect(find.text(emoji), findsOneWidget, reason: emoji);
       }
       } finally {
         debugDefaultTargetPlatformOverride = null;
