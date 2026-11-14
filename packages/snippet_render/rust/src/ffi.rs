@@ -97,31 +97,3 @@ pub unsafe extern "C" fn sr_free_string(p: *mut c_char) {
         drop(unsafe { CString::from_raw(p) });
     }
 }
-
-static CRASH_LOG: std::sync::OnceLock<String> = std::sync::OnceLock::new();
-
-/// Appends any later panic (ours or a dependency's) to [path] before the
-/// process can abort, so the app can show it on the next launch.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn sr_set_crash_log(path: *const c_char) {
-    if CRASH_LOG.set(unsafe { text(path) }).is_err() {
-        return;
-    }
-    let prev = std::panic::take_hook();
-    std::panic::set_hook(Box::new(move |info| {
-        if let Some(path) = CRASH_LOG.get() {
-            use std::io::Write;
-            let thread = std::thread::current();
-            let line = format!("[{}] {info}\n", thread.name().unwrap_or("?"));
-            if let Ok(mut f) = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(path)
-            {
-                let _ = f.write_all(line.as_bytes());
-                let _ = f.sync_all();
-            }
-        }
-        prev(info);
-    }));
-}

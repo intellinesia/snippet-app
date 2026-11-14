@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet_render/snippet_render.dart';
@@ -40,27 +39,14 @@ class ChatScene extends ChangeNotifier {
       _scene = prefs.getString(_key) ?? none;
       final dir = (await getApplicationSupportDirectory()).path;
       _marker = File('$dir/chat_scene_starting');
-      final log = File('$dir/chat_scene_crash.log');
       if (_marker!.existsSync()) {
         _marker!.deleteSync();
         if (_scene != none) {
           _scene = none;
-          var why = log.existsSync() ? log.readAsStringSync().trim() : '';
-          if (why.isEmpty && Platform.isAndroid) {
-            try {
-              why = await const MethodChannel('snippet/exit_info')
-                      .invokeMethod<String>('lastCrash') ??
-                  '';
-            } catch (_) {}
-          }
-          _error = why.isEmpty
-              ? 'Turned off: the app closed while the scene was starting.'
-              : 'Turned off after a crash: $why';
+          _error = 'Turned off: the app closed while the scene was starting.';
           await prefs.setString(_key, none);
         }
       }
-      if (log.existsSync()) log.deleteSync();
-      setCrashLog(log.path);
     } catch (_) {}
     notifyListeners();
   }
@@ -95,7 +81,7 @@ class ChatScene extends ChangeNotifier {
   }
 
   void reportError(String e) {
-    _error = e;
+    _error = e.split('\n').first;
     notifyListeners();
   }
 }

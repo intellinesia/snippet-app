@@ -28,45 +28,12 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "snippet/exit_info")
-            .setMethodCallHandler { call, result ->
-                if (call.method == "lastCrash") result.success(lastCrash()) else result.notImplemented()
-            }
         deliver(intent, fromNewIntent = false)
-    }
-
-    // Why the previous process died, with readable frames from a native tombstone.
-    private fun lastCrash(): String? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
-        val am = getSystemService(android.app.ActivityManager::class.java) ?: return null
-        val info = am.getHistoricalProcessExitReasons(packageName, 0, 1).firstOrNull() ?: return null
-        val native = info.reason == android.app.ApplicationExitInfo.REASON_CRASH_NATIVE
-        if (!native && info.reason != android.app.ApplicationExitInfo.REASON_CRASH) return null
-        val head = (if (native) "native crash" else "crash") + (info.description?.let { ": $it" } ?: "")
-        val javaCrash = java.io.File(filesDir, "java_crash.txt")
-        if (!native && javaCrash.exists()) {
-            val stack = try { javaCrash.readText() } catch (_: Exception) { "" }
-            javaCrash.delete()
-            return (listOf(head) + stack.lines().map { it.trim() }.filter { it.isNotEmpty() }.take(16)).joinToString("\n")
-        }
-        val bytes = try { info.traceInputStream?.use { it.readBytes() } } catch (_: Exception) { null }
-            ?: return head
-        val text = String(bytes.map { b -> val c = b.toInt() and 0xff; if (c in 32..126) c.toChar() else '\n' }.toCharArray())
-        val frames = text.split('\n').map { it.trim() }.filter { it.length >= 4 }
-            .filter { it.contains(".so") || it.startsWith("SIG") || it.contains("Abort") || it.contains("panic") || it.contains("::") }
-            .distinct().take(24)
-        return (listOf(head) + frames).joinToString("\n")
     }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val previous = Thread.getDefaultUncaughtExceptionHandler()
-        val crashFile = java.io.File(filesDir, "java_crash.txt")
-        Thread.setDefaultUncaughtExceptionHandler { thread, e ->
-            try { crashFile.writeText("[${thread.name}] " + android.util.Log.getStackTraceString(e)) } catch (_: Exception) {}
-            previous?.uncaughtException(thread, e)
-        }
         // Intent is also handled after the engine is ready so a cold start
         // still reaches Dart.
     }
