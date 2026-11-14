@@ -19,7 +19,7 @@ import 'inference_profiles.dart';
 import 'recurring.dart';
 import 'routing_screen.dart';
 import 'mobile_session_home.dart'
-    show LiveSessionCard, MissionControlDock, MobileSectionLabel;
+    show LiveSessionCard, MobileSectionLabel;
 import 'session_list_row.dart' show SessionListRow;
 import 'shell_nav.dart';
 import 'usage.dart';
@@ -3182,8 +3182,8 @@ class _AccentSwatchStrip extends StatelessWidget {
 
 /// Scaled-down phone home that follows the active theme, accent and fonts.
 class _AppearancePreviewCard extends StatelessWidget {
-  static const _w = 360.0;
-  static const _h = 420.0;
+  static const _peek = 236.0;
+  static const _h = 360.0;
 
   @override
   Widget build(BuildContext context) {
@@ -3209,6 +3209,7 @@ class _AppearancePreviewCard extends StatelessWidget {
       'origin_folder': '/home/you/code/technoxi-xdr-bridge',
       'total_changes': {'files': 6, 'added': 412, 'removed': 38},
     });
+    // A real-scale crop of the top of home, faded out, over the page's own background.
     return ListenableBuilder(
       listenable: ThemeManager.instance,
       builder: (context, _) => Semantics(
@@ -3217,28 +3218,28 @@ class _AppearancePreviewCard extends StatelessWidget {
         child: TickerMode(
           enabled: false,
           child: IgnorePointer(
-            child: Container(
-              height: 248,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.tint1,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: FittedBox(
-                fit: BoxFit.contain,
-                child: Container(
-                  width: _w,
-                  height: _h,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    color: AppColors.bg,
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: AppColors.line, width: 2),
-                  ),
-                  child: MediaQuery(
-                    data: const MediaQueryData(size: Size(_w, _h)),
-                    child: _home(live, row),
+            child: SizedBox(
+              height: _peek,
+              child: ShaderMask(
+                blendMode: BlendMode.dstIn,
+                shaderCallback: (r) => const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: [0.6, 1],
+                  colors: [Color(0xFFFFFFFF), Color(0x00FFFFFF)],
+                ).createShader(r),
+                child: ClipRect(
+                  child: LayoutBuilder(
+                    builder: (context, c) => OverflowBox(
+                      alignment: Alignment.topCenter,
+                      minHeight: _h,
+                      maxHeight: _h,
+                      child: MediaQuery(
+                        data: MediaQuery.of(context)
+                            .copyWith(size: Size(c.maxWidth, _h)),
+                        child: _home(live, row),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -3250,7 +3251,7 @@ class _AppearancePreviewCard extends StatelessWidget {
   }
 
   Widget _home(SessionInfo live, SessionInfo row) => Padding(
-        padding: const EdgeInsets.fromLTRB(M.gutter, 14, M.gutter, 12),
+        padding: const EdgeInsets.only(top: 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -3282,8 +3283,6 @@ class _AppearancePreviewCard extends StatelessWidget {
                 session: live, pinned: true, onTap: null),
             SessionListRow(
                 session: row, onTap: null, showProject: true, divider: false),
-            const Spacer(),
-            MissionControlDock(onOpen: () {}),
           ],
         ),
       );
