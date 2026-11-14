@@ -70,6 +70,18 @@ void main() {
     });
   });
 
+  group('groupMarkdownWithMentions', () {
+    const ids = {'argon', 'fable'};
+    test('bolds member mentions and leaves code alone', () {
+      expect(
+        groupMarkdownWithMentions(
+            'hi @argon, see `@fable` and **done**\n```\n@argon\n```', ids),
+        'hi **@argon**, see `@fable` and **done**\n```\n@argon\n```',
+      );
+      expect(groupMarkdownWithMentions('@nobody here', ids), '@nobody here');
+    });
+  });
+
   group('GroupThreadScreen', () {
     setUp(() {
       SharedPreferences.setMockInitialValues({});
