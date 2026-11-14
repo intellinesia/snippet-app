@@ -1,23 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart' show AppIcon;
+import 'shell_models.dart' show MobileHome;
 
 /// Desktop sidebar: sessions first (agents in the rail) or agents first.
 final sidebarAgentsFirst = ValueNotifier<bool>(false);
 const _agentsFirstPref = 'desktop_sidebar_agents_first';
 
+/// Settings choice: the home tab the app opens on, phone and desktop.
+final homeAgentsFirst = ValueNotifier<bool>(false);
+const _homeFirstPref = 'home_agents_first';
+
 Future<void> loadSidebarAgentsFirst() async {
   final prefs = await SharedPreferences.getInstance();
-  sidebarAgentsFirst.value = prefs.getBool(_agentsFirstPref) ?? false;
+  homeAgentsFirst.value = prefs.getBool(_homeFirstPref) ??
+      prefs.getBool(_agentsFirstPref) ??
+      false;
+  if (!kMobile) sidebarAgentsFirst.value = homeAgentsFirst.value;
+}
+
+MobileHome homeFirstTab() =>
+    homeAgentsFirst.value ? MobileHome.agents : MobileHome.chats;
+
+void setHomeAgentsFirst(bool agents) {
+  if (homeAgentsFirst.value == agents) return;
+  homeAgentsFirst.value = agents;
+  if (!kMobile) setSidebarAgentsFirst(agents);
+  SharedPreferences.getInstance()
+      .then((p) => p.setBool(_homeFirstPref, agents));
 }
 
 void setSidebarAgentsFirst(bool agents) {
   if (sidebarAgentsFirst.value == agents) return;
   sidebarAgentsFirst.value = agents;
-  SharedPreferences.getInstance()
-      .then((p) => p.setBool(_agentsFirstPref, agents));
 }
 
 /// Two-way switch in the sidebar header: sessions or agents first.

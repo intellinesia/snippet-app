@@ -58,13 +58,13 @@ extension _DesktopShellMobileExt on _DesktopShellState {
   void _startOnChats() {
     if (!kMobile || _active == null) return;
     _setState(() {
-      _mobileHome = MobileHome.chats;
+      _mobileHome = homeFirstTab();
       _mobileAgent = null;
       _mobileSettingsSection = null;
       _mobileChatsOpen = true;
       _mobileRouteHistory
         ..clear()
-        ..add(const _MobileRoute(home: MobileHome.chats));
+        ..add(_MobileRoute(home: _mobileHome));
     });
   }
 

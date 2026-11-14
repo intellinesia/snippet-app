@@ -189,9 +189,14 @@ Future<GroupSummary?> createAndOpenGroup(
 
 class GroupRow extends StatelessWidget {
   const GroupRow(
-      {super.key, required this.group, required this.onTap, this.onLongPress});
+      {super.key,
+      required this.group,
+      required this.onTap,
+      this.onLongPress,
+      this.pinned = false});
 
   final GroupSummary group;
+  final bool pinned;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
@@ -262,6 +267,10 @@ class GroupRow extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: TS.rowTitle(AppColors.fg1)),
                       ),
+                      if (pinned) ...[
+                        const SizedBox(width: 6),
+                        AppIcon('pin', size: 12, color: AppColors.fg3),
+                      ],
                       if (time.isNotEmpty) ...[
                         const SizedBox(width: 8),
                         Text(time, style: TS.meta()),
@@ -345,6 +354,10 @@ class GroupRow extends StatelessWidget {
                           style:
                               sans(13, weight: W.body, color: AppColors.fg1)),
                     ),
+                    if (pinned) ...[
+                      const SizedBox(width: 6),
+                      AppIcon('pin', size: 11, color: AppColors.fg3),
+                    ],
                     if (unread > 0) ...[
                       const SizedBox(width: 6),
                       Text('$unread',

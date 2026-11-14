@@ -229,7 +229,7 @@ class SessionInfo {
       : id = j['id'] as String? ?? '',
         folder = j['folder'] as String? ?? '',
         conversation = j['conversation'] as String? ?? '',
-        title = j['title'] as String? ?? '',
+        title = describeAttachments(j['title'] as String? ?? '', labels: false),
         status = j['status'] as String? ?? '',
         lastActive = (j['last_active'] as num?)?.toInt() ?? 0,
         running = j['running'] == true,

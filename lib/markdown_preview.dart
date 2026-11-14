@@ -11,8 +11,65 @@ final _quote = RegExp(r'^\s*>\s?', multiLine: true);
 final _emph = RegExp(r'(\*\*|__|~~|`)');
 final _ws = RegExp(r'\s+');
 
+final _attach =
+    RegExp(r'\[attached (image|file)(?: —[^\]]*?)?:\s*([^\]\s]+)\]');
+final _attachCut = RegExp(r'\[attached (image|file)\b[^\]]*$');
+final _transcript = RegExp(r'\[Audio transcript for [^\]\r\n]+\]\r?\n?');
+final _noTranscript = RegExp(r'\[Audio transcription unavailable:[^\]]*\]');
+final _audioExt = RegExp(r'\.(m4a|mp3|wav|ogg|oga|opus|aac|flac|amr|3gp)$',
+    caseSensitive: false);
+
+String _count(int n, String one, String many) => n == 1 ? one : '$n $many';
+
+/// Daemon attachment and transcript markers as short labels
+/// ("Voice note · …", "Photo", "File report.pdf"). With [labels] false the
+/// markers are dropped and the labels only stand in for an empty text.
+String describeAttachments(String raw, {bool labels = true}) {
+  if (!raw.contains('[attached ') && !raw.contains('[Audio transcri')) {
+    return raw;
+  }
+  var images = 0, voice = 0;
+  final files = <String>[];
+  for (final m in _attach.allMatches(raw)) {
+    final path = m[2] ?? '';
+    if (m[1] == 'image') {
+      images++;
+    } else if (_audioExt.hasMatch(path)) {
+      voice++;
+    } else {
+      files.add(path.split('/').last);
+    }
+  }
+  final cut = _attachCut.firstMatch(raw);
+  if (cut != null) {
+    if (cut[1] == 'image') {
+      images++;
+    } else {
+      files.add('');
+    }
+  }
+  final hasTranscript = _transcript.hasMatch(raw);
+  if (voice == 0 && (hasTranscript || _noTranscript.hasMatch(raw))) voice = 1;
+  final text = raw
+      .replaceAll(_attach, '')
+      .replaceAll(_attachCut, '')
+      .replaceAll(_transcript, '')
+      .replaceAll(_noTranscript, '')
+      .trim();
+  final parts = [
+    if (voice > 0) _count(voice, 'Voice note', 'voice notes'),
+    if (images > 0) _count(images, 'Photo', 'photos'),
+    if (files.length == 1) 'File ${files.first}'.trim(),
+    if (files.length > 1) '${files.length} files',
+  ];
+  final label = parts.join(', ');
+  if (text.isEmpty) return label;
+  if (!labels || label.isEmpty) return text;
+  return '$label · $text';
+}
+
 /// One line of text from markdown: block syntax goes, inline marks stay.
-String flattenMarkdown(String raw) => raw
+String flattenMarkdown(String raw) => describeAttachments(raw)
     .replaceAll(_fence, '')
     .replaceAllMapped(_link, (m) => m[1] ?? '')
     .replaceAll(_heading, '')

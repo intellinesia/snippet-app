@@ -181,7 +181,7 @@ class _DesktopShellState extends State<DesktopShell>
   /// Owned by the SHELL, not the sidebar: `_mobileShell`'s back handler must see
   /// it, or pressing back from Settings would exit the app instead of returning
   /// to Chats. Desktop navigates with the sidebar rail, so this is phone-only.
-  _MobileHome _mobileHome = _MobileHome.chats;
+  _MobileHome _mobileHome = homeFirstTab();
 
   /// Phone drill-down: which settings section is open, and which agent's detail.
   ///
@@ -192,7 +192,7 @@ class _DesktopShellState extends State<DesktopShell>
   CoordinationAgent? _mobileAgent;
 
   final List<_MobileRoute> _mobileRouteHistory = [
-    const _MobileRoute(home: MobileHome.chats),
+    _MobileRoute(home: homeFirstTab()),
   ];
 
   // url → reachable, from a short /health ping (drives the machine status dots).
@@ -1555,12 +1555,12 @@ class _DesktopShellState extends State<DesktopShell>
       _activeKey[root.pane] = root.key;
       if (kMobile) {
         if (fromNotification) {
-          _mobileHome = MobileHome.chats;
+          _mobileHome = homeFirstTab();
           _mobileAgent = null;
           _mobileSettingsSection = null;
           _mobileRouteHistory
             ..clear()
-            ..add(const _MobileRoute(home: MobileHome.chats));
+            ..add(_MobileRoute(home: _mobileHome));
         }
         _mobileChatsOpen = false;
         _pushMobileRoute(_MobileRoute(
