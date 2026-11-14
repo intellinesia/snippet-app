@@ -63,7 +63,7 @@ impl Surface {
         let shared = Arc::new(Shared {
             cmd: Mutex::new(Command {
                 shader: Some((source, lang)),
-                width: width.max(1),
+                width: row_aligned(width),
                 height: height.max(1),
                 fps: fps.clamp(1, 60),
                 paused: false,
@@ -78,17 +78,18 @@ impl Surface {
         let provider = Arc::new(Provider(frame.clone()));
         let on_main = shared.clone();
         // Textures are made on the platform thread; Dart may call from another.
-        let made = EngineContext::perform_on_main_thread(move || {
-            match Texture::new_with_provider(engine, provider) {
-                Ok(t) => {
-                    let id = t.id();
-                    *on_main.texture.lock().unwrap() = Some(t.into_sendable_texture());
-                    on_main.texture_id.store(id, Ordering::SeqCst);
-                    on_main.wake.notify_all();
+        let made =
+            EngineContext::perform_on_main_thread(move || {
+                match Texture::new_with_provider(engine, provider) {
+                    Ok(t) => {
+                        let id = t.id();
+                        *on_main.texture.lock().unwrap() = Some(t.into_sendable_texture());
+                        on_main.texture_id.store(id, Ordering::SeqCst);
+                        on_main.wake.notify_all();
+                    }
+                    Err(e) => *on_main.error.lock().unwrap() = Some(format!("texture: {e:?}")),
                 }
-                Err(e) => *on_main.error.lock().unwrap() = Some(format!("texture: {e:?}")),
-            }
-        });
+            });
         if let Err(e) = made {
             *shared.error.lock().unwrap() = Some(format!("engine context: {e:?}"));
         }
@@ -120,7 +121,7 @@ impl Surface {
     }
 
     pub fn resize(&self, width: u32, height: u32) {
-        self.update(|c| (c.width, c.height) = (width.max(1), height.max(1)));
+        self.update(|c| (c.width, c.height) = (row_aligned(width), height.max(1)));
     }
 
     pub fn set_paused(&self, paused: bool) {
@@ -196,6 +197,13 @@ fn run(shared: Arc<Shared>, frame: Arc<Mutex<Frame>>) {
         let budget = Duration::from_secs_f32(1.0 / fps as f32);
         let cmd = shared.cmd.lock().unwrap();
         let wait = budget.saturating_sub(started.elapsed());
-        let _ = shared.wake.wait_timeout_while(cmd, wait, |c| !c.stop && !c.dirty);
+        let _ = shared
+            .wake
+            .wait_timeout_while(cmd, wait, |c| !c.stop && !c.dirty);
     }
+}
+
+// macOS wraps frames in an IOSurface with bytesPerRow = width * 4; Metal rejects unaligned rows.
+fn row_aligned(width: u32) -> u32 {
+    width.max(1).div_ceil(16) * 16
 }
