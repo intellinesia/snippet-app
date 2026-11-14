@@ -419,7 +419,11 @@ void main() {
 
     expect(find.byType(SessionContextBar), findsOneWidget);
     expect(find.byType(SessionContextFooter), findsOneWidget);
-    expect(find.textContaining('Lanes'), findsNothing);
+    expect(
+        find.descendant(
+            of: find.byType(SessionContextBar),
+            matching: find.textContaining('Lanes')),
+        findsNothing);
     expect(find.text('1 terminal'), findsOneWidget);
     expect(find.text('80% context'), findsOneWidget);
     expect(find.textContaining('42k cached'), findsOneWidget);

@@ -1058,6 +1058,67 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     );
   }
 
+  bool _railVisible(double columnWidth) =>
+      !kMobile &&
+      !widget.readOnly &&
+      _inboxAgentId(widget.sessionId) == null &&
+      columnWidth >= kSessionRailMinColumn;
+
+  void _cycleResumeMode() {
+    const order = ['ask', 'lean', 'full'];
+    final next = order[(order.indexOf(_resumeMode) + 1) % order.length];
+    _setResumeMode(next);
+  }
+
+  void _openProcesses() => presentScreen(context,
+      style: PanelStyle.drawer,
+      purpose: ShellPanelPurpose.processes,
+      originClient: widget.client,
+      originSessionId: widget.sessionId,
+      builder: (_, close) => ProcessesScreen(
+          client: widget.client, sessionId: widget.sessionId, onClose: close));
+
+  Widget _sessionRail(HarnessState? s) {
+    final mc = _isMissionControl;
+    final open = widget.onOpenRightPanel;
+    final goalOn = s?.goal?.ongoing ?? false;
+    final profile = (_currentProfile ?? widget.profile ?? '').trim();
+    return SessionRail(
+      client: widget.client,
+      sessionId: widget.sessionId,
+      state: s,
+      isMissionControl: mc,
+      profileLabel: profile.isEmpty ? 'Default model' : profile,
+      resumeMode: _resumeMode,
+      github: _github != null,
+      onModel: () => _switchModel(_modelChipKey.currentContext ?? context),
+      onWakes: _openWakes,
+      onGoal: () {
+        if (goalOn) {
+          s!.goal!.paused ? _resumeGoal() : _cancelGoal();
+        } else {
+          _setGoal();
+        }
+      },
+      onCycleResume: _cycleResumeMode,
+      onAutonomy: mc ? _openAutonomy : null,
+      onChanges: mc
+          ? null
+          : () => open != null
+              ? open('changes')
+              : _performMacAction('file_changes'),
+      onGit: mc ? null : () => _performMacAction('git'),
+      onPullRequests: _github == null ? null : _openPullRequests,
+      onLanes: () => open != null ? open('lanes') : _showLanes(),
+      onProcesses: mc ? null : _openProcesses,
+      onShell: mc ? null : _openTerm,
+      onCheckpoints: () =>
+          open != null ? open('checkpoints') : _showCheckpoints(),
+      onMemory: () => _performMacAction('memory'),
+      onOpenTask: (id) => openTaskDetail(context, widget.client, id),
+    );
+  }
+
   Widget _disconnectedBanner() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

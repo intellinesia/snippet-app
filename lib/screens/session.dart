@@ -50,6 +50,7 @@ import '../plain_text.dart';
 import '../turn_changes_card.dart';
 import 'artifact_viewer.dart';
 import 'tasks/task_common.dart' show openTaskDetail;
+import 'session_rail.dart';
 import 'pull_requests.dart';
 import '../github_models.dart';
 import 'presented_file_card.dart';
@@ -162,6 +163,10 @@ class SessionScreen extends StatefulWidget {
   /// where there are no panes and the drawer is the right shape for a phone.
   final VoidCallback? onOpenScheduled;
 
+  /// Desktop: opens a shell right-pane readout ('changes', 'lanes',
+  /// 'checkpoints') for the session rail.
+  final void Function(String panel)? onOpenRightPanel;
+
   /// Desktop: toggle the shell's right panel from the floating header.
   final VoidCallback? onTogglePanel;
 
@@ -221,6 +226,7 @@ class SessionScreen extends StatefulWidget {
       this.onShowPullRequests,
       this.onTerminalHost,
       this.onOpenScheduled,
+      this.onOpenRightPanel,
       this.onTogglePanel,
       this.onDeskInfo,
       this.deskActions,
@@ -1451,7 +1457,7 @@ class _SessionScreenState extends State<SessionScreen>
         bottom: false,
         child: Stack(children: [
           Positioned.fill(
-            child: Row(
+            child: LayoutBuilder(builder: (context, column) => Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
@@ -1778,8 +1784,9 @@ class _SessionScreenState extends State<SessionScreen>
                     }),
                   ),
                 ),
+                if (_railVisible(column.maxWidth)) _sessionRail(s),
               ],
-            ),
+            )),
           ),
           Positioned.fill(
             child: AnimatedSwitcher(
