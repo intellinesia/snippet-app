@@ -20,7 +20,7 @@ import 'agent_profile_panel.dart';
 /// Which section of the phone's Agents page an agent belongs to.
 enum AgentGroup { needsYou, working, recent }
 
-/// Group an agent for the phone list: waiting on the boss, busy, or recent.
+/// Group an agent for the phone list: waiting on the user, busy, or recent.
 AgentGroup agentGroupFor(CoordinationAgent agent, {Presence? presence}) {
   final p = presence;
   final waitingYou = p != null &&
