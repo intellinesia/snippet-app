@@ -14,13 +14,15 @@ void freezeWakeClock() {
 
 Map<String, dynamic> wakeJson({
   String owner = 'scout',
+  String? name,
   bool enabled = true,
   String? lastError,
 }) =>
     {
       'owner': owner,
+      'name': name,
       'owner_kind': 'agent',
-      'job_id': 'wake-$owner',
+      'job_id': name == null ? 'wake-$owner' : 'wake-$owner-$name',
       'session_id': 'inbox-$owner',
       'title': 'Wake Scout',
       'brief': 'Check the revenue pipeline and flag anything stalled.',
@@ -103,7 +105,15 @@ class FakeWakeClient extends DaemonClient {
   }) : super('https://daemon.invalid', 'test');
 
   WakeSchedule? wakeState;
+
+  /// Named wakes beside [wakeState], keyed by name.
+  final named = <String, WakeSchedule>{};
+  List<GroupSummary> groupList = const [];
+  final clearedNames = <String?>[];
   List<SessionInfo> sessionList = const [];
+
+  @override
+  Future<List<GroupSummary>> groups() async => groupList;
 
   @override
   Future<List<SessionInfo>> sessions({String? folder, int? limit}) async =>
@@ -118,11 +128,12 @@ class FakeWakeClient extends DaemonClient {
   bool cleared = false;
 
   @override
-  Future<WakeSchedule?> wake(String owner) async => wakeState;
+  Future<WakeSchedule?> wake(String owner, {String? name}) async =>
+      name == null ? wakeState : named[name];
 
   @override
-  Future<WakeList> wakes() async =>
-      WakeList([if (wakeState != null) wakeState!], const WakeLimits());
+  Future<WakeList> wakes() async => WakeList(
+      [if (wakeState != null) wakeState!, ...named.values], const WakeLimits());
 
   @override
   Future<List<WakeRun>> wakeRuns({String? owner, int limit = 10}) async =>
@@ -148,17 +159,26 @@ class FakeWakeClient extends DaemonClient {
   @override
   Future<WakeSchedule> setWake(String owner, Map<String, dynamic> body) async {
     puts.add(body);
-    final merged = wakeJson(owner: owner);
+    final name = body['name'] as String?;
+    final merged = wakeJson(owner: owner, name: name);
     if (body['schedule'] is String) merged['schedule'] = body['schedule'];
     if (body['schedule'] is String) merged['schedule_text'] = body['schedule'];
     if (body['enabled'] is bool) merged['enabled'] = body['enabled'];
-    return wakeState = WakeSchedule.fromJson(merged);
+    if (body['report'] is Map) merged['report'] = body['report'];
+    final wake = WakeSchedule.fromJson(merged);
+    if (name != null) return named[name] = wake;
+    return wakeState = wake;
   }
 
   @override
-  Future<void> clearWake(String owner) async {
+  Future<void> clearWake(String owner, {String? name}) async {
     cleared = true;
-    wakeState = null;
+    clearedNames.add(name);
+    if (name == null) {
+      wakeState = null;
+    } else {
+      named.remove(name);
+    }
   }
 
   @override

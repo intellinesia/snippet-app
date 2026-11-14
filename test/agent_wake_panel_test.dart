@@ -104,6 +104,51 @@ void main() {
     expect(find.text('Ping every'), findsOneWidget);
   });
 
+  phone('named wakes switch, save and clear by name', (tester) async {
+    final c = FakeWakeClient(wakeState: WakeSchedule.fromJson(wakeJson()));
+    c.named['linkedin-sync'] = WakeSchedule.fromJson({
+      ...wakeJson(name: 'linkedin-sync'),
+      'schedule': 'daily 21:00',
+      'schedule_text': 'Daily at 21:00',
+      'report': {
+        'to': 'group',
+        'group': 'group:abc',
+        'task_id': null,
+        'only_on_change': false
+      },
+    });
+    await _pump(tester, _panel(c));
+    expect(find.byKey(const ValueKey('wake-switcher')), findsOneWidget);
+    expect(find.text('Default'), findsOneWidget);
+    expect(find.text('New'), findsOneWidget);
+    expect(find.text('Weekdays at 09:00'), findsOneWidget);
+
+    await tester.tap(find.text('linkedin-sync'));
+    await tester.pumpAndSettle();
+    expect(find.text('Daily at 21:00'), findsOneWidget);
+    expect(find.text('Group'), findsOneWidget);
+
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(c.puts.last['name'], 'linkedin-sync');
+    expect((c.puts.last['report'] as Map)['group'], 'group:abc');
+    expect(find.text('daily 21:00'), findsOneWidget);
+
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove'));
+    await tester.pumpAndSettle();
+    expect(c.clearedNames, ['linkedin-sync']);
+    expect(find.text('Weekdays at 09:00'), findsOneWidget);
+  });
+
+  test('wake names slug like the daemon', () {
+    expect(wakeNameSlug('  LinkedIn Sync! '), 'linkedin-sync');
+    expect(wakeNameSlug('--'), '');
+  });
+
   phone('overview lists wakes with agent names', (tester) async {
     final c = FakeWakeClient(
       wakeState: WakeSchedule.fromJson(wakeJson(lastError: 'Session was busy')),

@@ -1538,9 +1538,10 @@ class DaemonClient {
     return WakeList.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
-  /// GET /wakes/{owner} — null when the owner has no wake schedule.
-  Future<WakeSchedule?> wake(String owner) async {
-    final r = await _get(_uri(_ownerPath('/wakes', owner)));
+  /// GET /wakes/{owner}[?name=] — null when the owner has no such wake.
+  Future<WakeSchedule?> wake(String owner, {String? name}) async {
+    final r = await _get(_uri(
+        _ownerPath('/wakes', owner), name == null ? null : {'name': name}));
     if (r.statusCode == 404) return null;
     if (r.statusCode != 200) throw _err('read wake', r);
     return WakeSchedule.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
@@ -1554,9 +1555,10 @@ class DaemonClient {
     return WakeSchedule.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
-  /// DELETE /wakes/{owner}.
-  Future<void> clearWake(String owner) async {
-    final r = await _delete(_uri(_ownerPath('/wakes', owner)));
+  /// DELETE /wakes/{owner}[?name=].
+  Future<void> clearWake(String owner, {String? name}) async {
+    final r = await _delete(_uri(
+        _ownerPath('/wakes', owner), name == null ? null : {'name': name}));
     if (r.statusCode != 200 && r.statusCode != 404) {
       throw _err('clear wake', r);
     }
@@ -1640,8 +1642,7 @@ class DaemonClient {
   }
 
   /// GET /agents/{id}/watches/{watch_id}/events.
-  Future<List<AgentWatchEvent>> agentWatchEvents(
-      String agentId, String watchId,
+  Future<List<AgentWatchEvent>> agentWatchEvents(String agentId, String watchId,
       {int limit = 20}) async {
     final r = await _get(_uri(
         '/agents/${Uri.encodeComponent(agentId)}/watches/${Uri.encodeComponent(watchId)}/events',
@@ -2427,8 +2428,7 @@ class AgentNowPresence {
   final String since;
   final String session;
 
-  factory AgentNowPresence.fromJson(Map<String, dynamic> j) =>
-      AgentNowPresence(
+  factory AgentNowPresence.fromJson(Map<String, dynamic> j) => AgentNowPresence(
         state: j['state'] as String? ?? '',
         detail: j['detail'] as String? ?? '',
         since: j['since'] as String? ?? '',
@@ -2523,8 +2523,7 @@ class AgentNowBoardRow {
   final String at;
   final String summary;
 
-  factory AgentNowBoardRow.fromJson(Map<String, dynamic> j) =>
-      AgentNowBoardRow(
+  factory AgentNowBoardRow.fromJson(Map<String, dynamic> j) => AgentNowBoardRow(
         at: j['at'] as String? ?? '',
         summary: j['summary'] as String? ?? '',
       );

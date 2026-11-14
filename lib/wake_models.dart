@@ -63,6 +63,9 @@ class WakeReport {
 
 class WakeSchedule {
   final String owner;
+
+  /// Tells one owner's wakes apart; null is the owner's default wake.
+  final String? name;
   final String ownerKind;
   final String jobId;
   final String sessionId;
@@ -86,6 +89,7 @@ class WakeSchedule {
 
   WakeSchedule.fromJson(Map<String, dynamic> j)
       : owner = j['owner'] as String? ?? '',
+        name = _str(j['name']),
         ownerKind = j['owner_kind'] as String? ?? 'agent',
         jobId = j['job_id'] as String? ?? '',
         sessionId = j['session_id'] as String? ?? '',
