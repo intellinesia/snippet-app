@@ -52,7 +52,8 @@ class ApprovalSummary {
     var text = command;
     for (final _ in secrets) {
       for (final name in secrets) {
-        text = text.replaceFirst(RegExp('^$name="?\\\$$name"?\\s+'), '');
+        text = text.replaceFirst(
+            RegExp('^\\w+="?\\\$\\{?$name\\}?"?\\s+'), '');
       }
     }
     return text;
