@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../desktop_look.dart';
+import '../chat_scene.dart';
 import '../api.dart';
 import '../shell_panel.dart';
 import '../media_views.dart';
@@ -40,6 +41,8 @@ class PaneSurface extends StatelessWidget {
         child: Stack(fit: StackFit.expand, children: [
           if (pane != ShellPane.right && !kMobile)
             const Positioned.fill(child: ChatWallpaper()),
+          if (pane != ShellPane.right && !kMobile)
+            const Positioned.fill(child: ChatSceneLayer()),
           pane == ShellPane.right && !kMobile
               ? Theme(
                   data: Theme.of(context)

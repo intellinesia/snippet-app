@@ -5,6 +5,8 @@ import 'sidebar_mode.dart' show homeAgentsFirst, setHomeAgentsFirst;
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'package:snippet_render/snippet_render.dart';
+
 import '../api.dart';
 import '../models.dart';
 import '../notifications.dart';
@@ -12,6 +14,7 @@ import '../panel.dart';
 import '../platform.dart';
 import '../settings_form.dart';
 import '../store.dart';
+import '../chat_scene.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'add_instance.dart';
@@ -2459,6 +2462,10 @@ class AppearanceScreen extends StatelessWidget {
                     _AppearancePreviewCard(),
                     const SettingsGroupLabel('Home'),
                     const ListGroup(children: [_HomeFirstRow()]),
+                    if (shaderSurfaceSupported) ...[
+                      const SettingsGroupLabel('Chat scene'),
+                      const ListGroup(children: [_ChatSceneRow()]),
+                    ],
                     const SettingsGroupLabel('Palette'),
                     ListGroup(children: paletteChildren),
                     Padding(
@@ -2499,6 +2506,13 @@ class AppearanceScreen extends StatelessWidget {
                   'Wallpaper sits behind the chat and fades into the theme so text stays readable.',
               children: [_TactileRow(), _ChatWallpaperPicker()],
             ),
+            if (shaderSurfaceSupported)
+              const SettingsGroup(
+                header: 'Chat scene',
+                footer:
+                    'An animated scene behind the chat, drawn on the GPU. It pauses in the background and with reduced motion.',
+                children: [_ChatSceneRow()],
+              ),
             const SettingsGroup(
               header: 'Window background',
               footer:
@@ -2583,6 +2597,31 @@ class _TactileRow extends StatelessWidget {
         sub: 'Soft highlights on raised controls, inset wells for fields',
         onTap: () => look.setTactile(!look.tactile),
         trailing: SettingsSwitch(value: look.tactile, onChanged: look.setTactile),
+      ),
+    );
+  }
+}
+
+class _ChatSceneRow extends StatelessWidget {
+  const _ChatSceneRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final scene = ChatScene.instance;
+    return ListenableBuilder(
+      listenable: scene,
+      builder: (context, _) => SettingsRow(
+        label: 'Scene',
+        sub: scene.error ?? 'Animated background behind the chat',
+        trailing: Pills<String>(
+          key: const Key('chat-scene'),
+          items: [
+            (ChatScene.none, 'Off'),
+            for (final e in ChatScene.presets.entries) (e.key, e.value),
+          ],
+          selected: scene.active ? scene.scene : ChatScene.none,
+          onSelect: scene.set,
+        ),
       ),
     );
   }

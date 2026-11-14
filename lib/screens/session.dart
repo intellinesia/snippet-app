@@ -36,6 +36,7 @@ import 'limit_card.dart';
 import 'routing_screen.dart' show limitLabel;
 import '../motion.dart';
 import '../motion_routes.dart';
+import '../chat_scene.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
 import '../tool_sheet.dart';
@@ -1414,8 +1415,12 @@ class _SessionScreenState extends State<SessionScreen>
       ? ChatBubbleScope(child: _buildScreen(context))
       : _buildScreen(context);
 
-  Widget _chatBackdrop(Widget body) =>
-      kMobile ? DotField.chat(child: body) : body;
+  Widget _chatBackdrop(Widget body) => kMobile
+      ? Stack(fit: StackFit.expand, children: [
+          const Positioned.fill(child: ChatSceneLayer()),
+          DotField.chat(child: body),
+        ])
+      : body;
 
   Widget _buildScreen(BuildContext context) {
     // Depend on Theme so this rebuilds when the user switches palettes.

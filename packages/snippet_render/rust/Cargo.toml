@@ -1,0 +1,25 @@
+[package]
+name = "snippet_render"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[features]
+default = ["flutter"]
+flutter = ["dep:irondash_texture", "dep:irondash_run_loop", "dep:irondash_engine_context"]
+
+[dependencies]
+wgpu = { version = "30", default-features = false, features = ["wgsl", "glsl", "naga-ir", "metal", "vulkan", "gles", "std"] }
+naga = { version = "30", features = ["wgsl-in", "glsl-in"] }
+pollster = "1"
+irondash_texture = { version = "0.6.0-dev.0", optional = true }
+irondash_run_loop = { version = "0.7.0-dev.0", optional = true }
+irondash_engine_context = { version = "0.7.0-dev.0", optional = true }
+
+[profile.release]
+lto = true
+opt-level = "s"
+strip = true
