@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'sidebar_mode.dart' show homeAgentsFirst, setHomeAgentsFirst;
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -2456,6 +2457,8 @@ class AppearanceScreen extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
                   children: [
                     _AppearancePreviewCard(),
+                    const SettingsGroupLabel('Home'),
+                    const ListGroup(children: [_HomeFirstRow()]),
                     const SettingsGroupLabel('Palette'),
                     ListGroup(children: paletteChildren),
                     Padding(
@@ -2487,6 +2490,10 @@ class AppearanceScreen extends StatelessWidget {
             _AppearancePreviewCard(),
             const SizedBox(height: S.s16),
             const SettingsGroup(
+              header: 'Home',
+              children: [_HomeFirstRow()],
+            ),
+            const SettingsGroup(
               header: 'Surfaces and wallpaper',
               footer:
                   'Wallpaper sits behind the chat and fades into the theme so text stays readable.',
@@ -2515,6 +2522,52 @@ class AppearanceScreen extends StatelessWidget {
       },
     );
   }
+}
+
+class _HomeFirstRow extends StatelessWidget {
+  const _HomeFirstRow();
+
+  Widget _cell(String label, bool on, bool agents) => Semantics(
+        button: true,
+        selected: on,
+        child: GestureDetector(
+          key: ValueKey('home-first-${agents ? 'agents' : 'sessions'}'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setHomeAgentsFirst(agents),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: on ? AppColors.surface3 : Colors.transparent,
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Text(label,
+                style: sans(13,
+                    weight: on ? W.label : W.body,
+                    color: on ? AppColors.fg1 : AppColors.fg3)),
+          ),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+        valueListenable: homeAgentsFirst,
+        builder: (context, agents, _) => SettingsRow(
+          label: 'Open on',
+          sub: 'The tab the app starts on',
+          trailing: Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: AppColors.surface1,
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(color: AppColors.line),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              _cell('Sessions', !agents, false),
+              _cell('Agents', agents, true),
+            ]),
+          ),
+        ),
+      );
 }
 
 class _TactileRow extends StatelessWidget {

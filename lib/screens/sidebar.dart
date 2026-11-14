@@ -1100,22 +1100,45 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     var n = 0;
     final pinned = _pinnedSessions(sorted);
     final pinnedIds = {for (final s in pinned) s.id};
+    Widget liveCard(SessionInfo s, {bool pinned = false}) => Appear(
+          key: ValueKey('chat-${s.id}'),
+          index: n++,
+          since: _chatsShownAt,
+          child: LiveSessionCard(
+            session: s,
+            pinned: pinned,
+            leading: _agentBadge(s),
+            onTap: () => _selecting
+                ? _toggleSelected(s.id)
+                : widget.onOpenSession(s.id, s.title, s.profile),
+            onLongPress: () =>
+                _selecting ? _toggleSelected(s.id) : _sessionActions(s),
+          ),
+        );
     if (pinned.isNotEmpty) {
       out.add(MobileSectionLabel('Pinned',
           icon: 'pin', count: pinned.length, top: 2));
-      out.add(Appear(
-        key: const ValueKey('folder-pinned'),
-        index: n++,
-        since: _chatsShownAt,
-        child: MobileGroupCard(children: [
-          for (var i = 0; i < pinned.length; i++)
-            _listRow(pinned[i],
-                above: i > 0 ? pinned[i - 1] : null,
-                below: i + 1 < pinned.length ? pinned[i + 1] : null,
-                divider: i + 1 < pinned.length,
-                showProject: true),
-        ]),
-      ));
+      bool isLive(SessionInfo s) =>
+          !filtering && (sessionNeedsYou(s) || sessionIsActive(s.status));
+      for (final s in pinned) {
+        if (isLive(s)) out.add(liveCard(s, pinned: true));
+      }
+      final rest = [for (final s in pinned) if (!isLive(s)) s];
+      if (rest.isNotEmpty) {
+        out.add(Appear(
+          key: const ValueKey('folder-pinned'),
+          index: n++,
+          since: _chatsShownAt,
+          child: MobileGroupCard(children: [
+            for (var i = 0; i < rest.length; i++)
+              _listRow(rest[i],
+                  above: i > 0 ? rest[i - 1] : null,
+                  below: i + 1 < rest.length ? rest[i + 1] : null,
+                  divider: i + 1 < rest.length,
+                  showProject: true),
+          ]),
+        ));
+      }
     }
     final remaining = [
       for (final s in sorted)
@@ -1133,20 +1156,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       out.add(MobileSectionLabel('Now',
           count: live.length, top: pinned.isEmpty ? 2 : 18));
       for (final s in live) {
-        out.add(Appear(
-          key: ValueKey('chat-${s.id}'),
-          index: n++,
-          since: _chatsShownAt,
-          child: LiveSessionCard(
-            session: s,
-            leading: _agentBadge(s),
-            onTap: () => _selecting
-                ? _toggleSelected(s.id)
-                : widget.onOpenSession(s.id, s.title, s.profile),
-            onLongPress: () =>
-                _selecting ? _toggleSelected(s.id) : _sessionActions(s),
-          ),
-        ));
+        out.add(liveCard(s));
       }
     }
     final liveIds = {for (final s in live) s.id};

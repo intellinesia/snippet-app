@@ -289,12 +289,14 @@ class LiveSessionCard extends StatelessWidget {
     required this.onTap,
     this.onLongPress,
     this.leading,
+    this.pinned = false,
   });
 
   final SessionInfo session;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final Widget? leading;
+  final bool pinned;
 
   static String _since(int? t) {
     if (t == null || t <= 0) return '';
@@ -358,6 +360,10 @@ class LiveSessionCard extends StatelessWidget {
                     Text(since.isEmpty ? label : '$label · $since',
                         style: sans(12, weight: W.label, color: tone)),
                     const Spacer(),
+                    if (pinned) ...[
+                      AppIcon('pin', size: 12, color: AppColors.fg3),
+                      const SizedBox(width: 8),
+                    ],
                     if (leading != null)
                       SizedBox.square(
                           dimension: 18, child: Center(child: leading)),

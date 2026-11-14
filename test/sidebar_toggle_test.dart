@@ -86,7 +86,7 @@ void main() {
         findsWidgets);
     expect(tester.state(find.byType(ShellSplitView)), same(before));
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getBool('desktop_sidebar_agents_first'), isTrue);
+    expect(prefs.getBool('home_agents_first'), isNull);
 
     // A row opens the agent beside the chat, not the phone route.
     tester

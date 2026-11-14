@@ -52,7 +52,7 @@ void main() async {
   await Drafts.instance.init();
   await Pins.instance.load();
   try {
-    if (!kMobile) await loadSidebarAgentsFirst();
+    await loadSidebarAgentsFirst();
   } catch (_) {}
   await ResponseCache.instance.init();
   if (kCanNotify) {

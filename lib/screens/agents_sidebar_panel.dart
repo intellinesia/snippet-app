@@ -503,23 +503,11 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         key: ValueKey('group-row-${g.id}'),
         onSecondaryTapUp:
             kMobile ? null : (d) => _groupActions(g, point: d.globalPosition),
-        child: Stack(
-          children: [
-            GroupRow(
-              group: g,
-              onTap: () => _openGroup(g),
-              onLongPress: () => _groupActions(g),
-            ),
-            if (pinned)
-              Positioned(
-                top: kMobile ? 10 : 8,
-                right: kMobile ? M.gutter : 10,
-                child: IgnorePointer(
-                  child: AppIcon('pin',
-                      size: kMobile ? 12 : 11, color: AppColors.fg3),
-                ),
-              ),
-          ],
+        child: GroupRow(
+          group: g,
+          pinned: pinned,
+          onTap: () => _openGroup(g),
+          onLongPress: () => _groupActions(g),
         ),
       );
     }
