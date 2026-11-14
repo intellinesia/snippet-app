@@ -22,28 +22,38 @@ class WakeQuietHours {
   String get label => '$start to $end';
 }
 
-/// Where a wake's result is sent: mission_control, user, task_room or none.
+/// Where a wake's result is sent: mission_control, user, task_room, group or none.
 class WakeReport {
   final String to;
   final String? taskId;
+  final String? group;
   final bool onlyOnChange;
   const WakeReport(
-      {this.to = 'mission_control', this.taskId, this.onlyOnChange = true});
+      {this.to = 'mission_control',
+      this.taskId,
+      this.group,
+      this.onlyOnChange = true});
 
   factory WakeReport.fromJson(dynamic j) => j is Map
       ? WakeReport(
           to: _str(j['to']) ?? 'mission_control',
           taskId: _str(j['task_id']),
+          group: _str(j['group']),
           onlyOnChange: j['only_on_change'] as bool? ?? true)
       : const WakeReport();
 
-  Map<String, dynamic> toJson() =>
-      {'to': to, 'task_id': taskId, 'only_on_change': onlyOnChange};
+  Map<String, dynamic> toJson() => {
+        'to': to,
+        'task_id': taskId,
+        if (group != null) 'group': group,
+        'only_on_change': onlyOnChange
+      };
 
   static String labelFor(String to) => switch (to) {
         'mission_control' => 'Mission Control',
         'user' => 'You',
         'task_room' => 'Task room',
+        'group' => 'Group',
         'none' => 'Nobody',
         _ => to,
       };
