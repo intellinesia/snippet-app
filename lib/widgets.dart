@@ -41,7 +41,6 @@ class AppLoading extends StatelessWidget {
   Widget build(BuildContext context) => PageLoader(label: label);
 }
 
-/// [onSelect] null disables the whole row (e.g. a locked field).
 /// Phone-only haptics: light for taps, selection for toggles and tabs,
 /// medium for long-press menus. No-ops elsewhere.
 void tapHaptic() {
@@ -56,6 +55,7 @@ void holdHaptic() {
   if (kMobile) HapticFeedback.mediumImpact();
 }
 
+/// [onSelect] null disables the whole row (e.g. a locked field).
 class Pills<T> extends StatelessWidget {
   final List<(T, String)> items;
   final T selected;
