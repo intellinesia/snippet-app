@@ -16,6 +16,7 @@ import 'mission_control/mission_control_state.dart'
         DirectMessage,
         MissionEnvelope,
         WorkerQuestion,
+        WatchEnvelope,
         parseTaskOffer;
 
 class CardMarkdownBody extends StatefulWidget {
@@ -862,4 +863,50 @@ class SpeakCard extends StatelessWidget {
       body: text,
     );
   }
+}
+
+class WatchEnvelopeCard extends StatelessWidget {
+  const WatchEnvelopeCard({super.key, required this.watch});
+  final WatchEnvelope watch;
+
+  @override
+  Widget build(BuildContext context) {
+    final error = watch.event == 'error';
+    final n = watch.lines.length;
+    final status = error
+        ? 'Failing'
+        : n == 1
+            ? '1 new line'
+            : '$n new lines';
+    return TranscriptCard(
+      icon: error ? 'alert-triangle' : 'eye',
+      tone: error ? Tone.danger : Tone.accent,
+      kind: watch.mode.isEmpty ? 'Watch' : 'Watch · ${watch.mode}',
+      title: watch.name,
+      status: status,
+      body: watch.lines.join('\n'),
+      maxLines: 4,
+      footer: watch.held > 0
+          ? Text('${watch.held} held during quiet hours or the daily cap',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(TranscriptCard.metaSize,
+                  height: 1.35, color: AppColors.fg4))
+          : null,
+    );
+  }
+}
+
+class WakeNoteCard extends StatelessWidget {
+  const WakeNoteCard({super.key, required this.note});
+  final String note;
+
+  @override
+  Widget build(BuildContext context) => _ThreadCard(
+        icon: 'clock',
+        tone: Tone.neutral,
+        kind: 'Scheduled wake',
+        status: 'Due',
+        body: note,
+      );
 }

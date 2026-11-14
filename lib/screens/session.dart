@@ -88,6 +88,8 @@ import 'mission_control/mission_control_state.dart'
         parseGroupMessage,
         parseCoordinationReply,
         parseParentMessage,
+        parseWatchEnvelope,
+        parseWakeNote,
         parseAssignmentEnvelope,
         parseAmbientTurn,
         supersededAmbientTurns,
