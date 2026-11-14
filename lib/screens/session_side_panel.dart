@@ -164,30 +164,27 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
           },
           child: AnimatedContainer(
             duration: reduced ? Duration.zero : Motion.fast,
-            height: 26,
+            height: 24,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: on
-                  ? AppColors.fg1.withValues(alpha: 0.12)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(R.pill),
+              color: on ? AppColors.surface2 : Colors.transparent,
+              borderRadius: BorderRadius.circular(7),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(label,
-                  style: sans(13,
-                      weight: on ? W.label : W.body,
-                      color: on ? AppColors.fg1 : AppColors.fg3)),
+                  style: sans(12,
+                      color: on ? AppColors.fg1 : AppColors.fg4)),
               if (count > 0) ...[
                 const SizedBox(width: 6),
                 Container(
-                  constraints: const BoxConstraints(minWidth: 18),
-                  height: 18,
+                  constraints: const BoxConstraints(minWidth: 16),
+                  height: 16,
                   padding: const EdgeInsets.symmetric(horizontal: 5),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: AppColors.accent.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(R.pill),
+                    borderRadius: BorderRadius.circular(5),
                   ),
                   child: Text('$count',
                       style: mono(11, color: AppColors.accent)),
@@ -200,13 +197,16 @@ class _SessionSidePanelState extends State<SessionSidePanel> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(3),
+      height: 30,
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: AppColors.tint1,
-        borderRadius: BorderRadius.circular(R.pill),
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: AppColors.line),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         btn(_SideTab.files, 'Files', 0),
+        const SizedBox(width: 2),
         btn(_SideTab.changes, 'Changes', changes),
       ]),
     );
