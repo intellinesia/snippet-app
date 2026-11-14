@@ -34,9 +34,11 @@ T _withCstr<T>(String s, T Function(Pointer<Char>) f) {
   }
 }
 
-/// The compiler's message, or null when [source] compiles.
-String? checkShader(String source, ShaderLang lang) =>
-    _take(_withCstr(source, (p) => sr_check(p, lang.index)));
+/// The compiler's message, or null when [source] compiles (or when there is
+/// no native renderer on this platform).
+String? checkShader(String source, ShaderLang lang) => shaderSurfaceSupported
+    ? _take(_withCstr(source, (p) => sr_check(p, lang.index)))
+    : null;
 
 /// Draws [source] with the native GPU renderer, filling its box.
 class ShaderSurface extends StatefulWidget {
