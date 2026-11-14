@@ -18,6 +18,9 @@ import 'add_instance.dart';
 import 'inference_profiles.dart';
 import 'recurring.dart';
 import 'routing_screen.dart';
+import 'mobile_session_home.dart'
+    show LiveSessionCard, MissionControlDock, MobileSectionLabel;
+import 'session_list_row.dart' show SessionListRow;
 import 'shell_nav.dart';
 import 'usage.dart';
 import 'vault.dart';
@@ -3177,63 +3180,127 @@ class _AccentSwatchStrip extends StatelessWidget {
   }
 }
 
+/// Scaled-down phone home that follows the active theme, accent and fonts.
 class _AppearancePreviewCard extends StatelessWidget {
+  static const _w = 360.0;
+  static const _h = 420.0;
+
   @override
   Widget build(BuildContext context) {
-    final tm = ThemeManager.instance;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.tint1,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Container(
-              width: 8,
-              height: 8,
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final live = SessionInfo.fromJson({
+      'id': 'preview-live',
+      'folder': '/home/you/code/snippet-mobile',
+      'title': 'Route task questions, approvals and results',
+      'status': 'running',
+      'running': true,
+      'running_since': now,
+      'branch': 'native-shader-renderer',
+      'origin_folder': '/home/you/code/snippet-mobile',
+      'total_changes': {'files': 64, 'added': 21900, 'removed': 20000},
+    });
+    final row = SessionInfo.fromJson({
+      'id': 'preview-row',
+      'folder': '/home/you/code/technoxi-xdr-bridge',
+      'title': 'DefenseClaw XDR bridge',
+      'status': 'idle',
+      'last_active': now - 3600,
+      'branch': 'main',
+      'origin_folder': '/home/you/code/technoxi-xdr-bridge',
+      'total_changes': {'files': 6, 'added': 412, 'removed': 38},
+    });
+    return ListenableBuilder(
+      listenable: ThemeManager.instance,
+      builder: (context, _) => Semantics(
+        label: 'Preview of the home screen',
+        excludeSemantics: true,
+        child: TickerMode(
+          enabled: false,
+          child: IgnorePointer(
+            child: Container(
+              height: 248,
+              padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.accent,
-                shape: BoxShape.circle,
+                color: AppColors.tint1,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: Container(
+                  width: _w,
+                  height: _h,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    color: AppColors.bg,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: AppColors.line, width: 2),
+                  ),
+                  child: MediaQuery(
+                    data: const MediaQueryData(size: Size(_w, _h)),
+                    child: _home(live, row),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                '${tm.baseTheme.label} · ${tm.currentFont.label}',
-                style: sans(13, weight: W.strong, color: AppColors.fg1),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppColors.accentBg,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppColors.accentLine),
-              ),
-              child: Text(
-                tm.currentMonoFont.label,
-                style: mono(11, color: AppColors.accent),
-              ),
-            ),
-          ]),
-          const SizedBox(height: 6),
-          Text(
-            'Round the corner, into the light — live preview of your active theme, accent and typography.',
-            style: sans(13, height: 1.4, color: AppColors.fg2),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'git commit -m "Apply ${tm.baseTheme.name} + ${tm.currentFont.family}"',
-            style: mono(12, color: AppColors.fg3),
-          ),
-        ],
+        ),
       ),
     );
   }
+
+  Widget _home(SessionInfo live, SessionInfo row) => Padding(
+        padding: const EdgeInsets.fromLTRB(M.gutter, 14, M.gutter, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              height: 40,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: AppColors.tint2,
+                borderRadius: BorderRadius.circular(R.pill),
+              ),
+              child: Row(children: [
+                _seg('Sessions', true),
+                _seg('Agents', false),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 18, 4, 0),
+              child: Text.rich(TextSpan(children: [
+                TextSpan(
+                    text: '48.6M',
+                    style: sans(26, weight: W.strong, color: AppColors.fg1)),
+                TextSpan(
+                    text: ' tokens today',
+                    style: sans(14, color: AppColors.fg3)),
+              ])),
+            ),
+            const MobileSectionLabel('Pinned', top: 14),
+            LiveSessionCard(
+                session: live, pinned: true, onTap: null),
+            SessionListRow(
+                session: row, onTap: null, showProject: true, divider: false),
+            const Spacer(),
+            MissionControlDock(onOpen: () {}),
+          ],
+        ),
+      );
+
+  Widget _seg(String label, bool on) => Expanded(
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: on ? AppColors.surface3 : Colors.transparent,
+            borderRadius: BorderRadius.circular(R.pill),
+          ),
+          child: Text(label,
+              style: sans(14,
+                  weight: on ? W.label : W.body,
+                  color: on ? AppColors.fg1 : AppColors.fg3)),
+        ),
+      );
 }
 
 /// v5 `.pgi`: a 46px row, 30px tile, 15px label, 15px muted value, chevron.
