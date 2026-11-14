@@ -277,9 +277,6 @@ void main() {
       ),
     )));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Members'));
-    await tester.pumpAndSettle();
-
     await tester.tap(find.text('Add member'));
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsNothing);
