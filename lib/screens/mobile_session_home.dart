@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../glass.dart';
 import '../models.dart';
 import '../mochi.dart';
+import '../notification_text.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'mobile_chrome.dart';
@@ -413,6 +414,8 @@ class LiveSessionCard extends StatelessWidget {
   static String? _attentionText(SessionInfo s) {
     final a = s.attention;
     if (a == null) return null;
+    final approval = approvalPreview(a);
+    if (approval != null) return approval;
     for (final k in const ['summary', 'text', 'question', 'message']) {
       final v = a[k];
       if (v is String && v.trim().isNotEmpty) return v.trim();
