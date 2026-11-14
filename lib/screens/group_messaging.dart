@@ -4,13 +4,13 @@ import '../chat/chat_info.dart' show GroupInfoPanel, showGroupInfo;
 import '../motion_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:markdown/markdown.dart' as md;
 
 import '../ambient/hold.dart';
 import '../api.dart';
 import '../composer/composer_card.dart';
 import '../composer/voice_note.dart';
 import '../markdown_preview.dart';
+import '../chat/message_body.dart';
 import '../message_reactions.dart';
 import '../models.dart';
 import '../mochi.dart';
@@ -1094,12 +1094,12 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       if (_scroll.hasClients) {
         if (animated) {
           _scroll.animateTo(
-            _scroll.position.maxScrollExtent,
+            0,
             duration: Motion.fast,
             curve: Motion.enter,
           );
         } else {
-          _scroll.jumpTo(_scroll.position.maxScrollExtent);
+          _scroll.jumpTo(0);
         }
       }
     });
@@ -1513,39 +1513,39 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         break;
       }
     }
-    return PullToRefresh(
-      onRefresh: () => _load(silent: true),
-      child: ListView.builder(
-        controller: _scroll,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(16, topPad, 16, 16),
-        itemCount: visible.length,
-        itemBuilder: (_, i) {
-          final e = visible[i];
-          final run = runs[i];
-          final at = _eventTime(e);
-          final prevAt = i > 0 ? _eventTime(visible[i - 1]) : null;
-          final showStamp = at != null &&
-              (prevAt == null ||
-                  !_sameDay(prevAt, at) ||
-                  (run.first &&
-                      at.difference(prevAt).abs() >=
-                          const Duration(minutes: 15)));
-          final stamp = showStamp ? _dayTimeStamp(at) : null;
-          final readLine = i == lastHumanIndex ? _readByLine(e) : null;
-          return _wideCap(
-            _item(
-              e,
-              card: cards[e],
-              index: i,
-              run: run,
-              stamp: stamp,
-              readLine: readLine,
-              reactions: reactionsByTarget[e.eventId] ?? const [],
-            ),
-          );
-        },
-      ),
+    // Reversed so the thread opens at its newest post with no jump.
+    return ListView.builder(
+      controller: _scroll,
+      reverse: true,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(16, topPad, 16, 16),
+      itemCount: visible.length,
+      itemBuilder: (_, index) {
+        final i = visible.length - 1 - index;
+        final e = visible[i];
+        final run = runs[i];
+        final at = _eventTime(e);
+        final prevAt = i > 0 ? _eventTime(visible[i - 1]) : null;
+        final showStamp = at != null &&
+            (prevAt == null ||
+                !_sameDay(prevAt, at) ||
+                (run.first &&
+                    at.difference(prevAt).abs() >=
+                        const Duration(minutes: 15)));
+        final stamp = showStamp ? _dayTimeStamp(at) : null;
+        final readLine = i == lastHumanIndex ? _readByLine(e) : null;
+        return _wideCap(
+          _item(
+            e,
+            card: cards[e],
+            index: i,
+            run: run,
+            stamp: stamp,
+            readLine: readLine,
+            reactions: reactionsByTarget[e.eventId] ?? const [],
+          ),
+        );
+      },
     );
   }
 
@@ -1657,7 +1657,12 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         ChatBubble(
           mine: mine,
           tail: run.last,
-          child: _mentionText(e.body, mine: mine),
+          child: ChatMessageBody(
+            client: widget.client,
+            body: e.body,
+            mine: mine,
+            markdown: (text) => groupMarkdownWithMentions(text, _mentionIds),
+          ),
         );
     return Padding(
       padding: EdgeInsets.only(top: topGap),
@@ -1702,18 +1707,6 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         ],
       ),
     );
-  }
-
-  Widget _mentionText(String body, {required bool mine}) {
-    final text = MarkdownBody(
-      data: unwrapCodedLinks(groupMarkdownWithMentions(body, _mentionIds)),
-      selectable: false,
-      extensionSet: md.ExtensionSet.gitHubFlavored,
-      styleSheet: chatMarkdownStyle(context, mine: mine),
-      builders: {'pre': PreBlockBuilder()},
-      onTapLink: (txt, href, title) => openMarkdownLink(href, context, txt),
-    );
-    return kMobile ? text : MessageSelectionArea(child: text);
   }
 
   Widget _wideCap(Widget child) => kMobile
