@@ -133,5 +133,20 @@ void main() {
     expect(find.text('Conversation · Paused for quiet hours'), findsOneWidget);
     expect(find.textContaining('snippet-mobile-8f8d'), findsNothing);
     expect(find.text('0 warms'), findsNothing);
+    expect(find.text('No wakes yet'), findsNothing);
+
+    await tester.tap(find.text('Wave 2 merge'));
+    await tester.pumpAndSettle();
+    expect(find.text('Open conversation'), findsOneWidget);
+    await tester.tap(find.text('Stop keeping warm'));
+    await tester.pumpAndSettle();
+    expect(c.warmPuts.single['enabled'], isFalse);
+  });
+
+  phone('with no schedules and nothing kept warm the empty state shows',
+      (tester) async {
+    final c = FakeWakeClient();
+    await _pump(tester, WakesScreen(client: c, embedded: true), scroll: false);
+    expect(find.text('No wakes yet'), findsOneWidget);
   });
 }
