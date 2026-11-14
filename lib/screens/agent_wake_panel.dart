@@ -80,10 +80,46 @@ String wakeWhen(int unixSec, {int? now}) {
 }
 
 Color wakeStatusColor(String? status) => switch (status) {
-      'ok' || 'done' || 'completed' || 'success' => AppColors.ok,
+      'ok' ||
+      'done' ||
+      'completed' ||
+      'success' ||
+      'running' ||
+      'fired' ||
+      'started' =>
+        AppColors.ok,
       'error' || 'failed' => AppColors.danger,
       _ => AppColors.fg4,
     };
+
+Widget _statusDot(String? status) => Container(
+      width: 7,
+      height: 7,
+      decoration: BoxDecoration(
+          color: wakeStatusColor(status), shape: BoxShape.circle),
+    );
+
+Widget _panelDivider() => Padding(
+      padding: const EdgeInsets.symmetric(vertical: S.s12),
+      child: Divider(height: 1, thickness: 1, color: AppColors.border),
+    );
+
+Widget _panelLine(String label, String value,
+        {Color? color, Key? key, int maxLines = 3}) =>
+    Padding(
+      key: key,
+      padding: const EdgeInsets.symmetric(horizontal: S.s4, vertical: 3.5),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(
+            width: 82,
+            child: Text(label, style: sans(13, color: AppColors.fg4))),
+        Expanded(
+            child: Text(value,
+                maxLines: maxLines,
+                overflow: TextOverflow.ellipsis,
+                style: sans(13, color: color ?? AppColors.fg1))),
+      ]),
+    );
 
 class AgentWakePanel extends StatefulWidget {
   const AgentWakePanel({
@@ -108,6 +144,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
   WakeLimits _wakeLimits = const WakeLimits();
   List<WakeRun> _runs = const [];
   List<TaskItem> _tasks = const [];
+  List<AgentWatch> _watches = const [];
   KeepWarmEntry? _warm;
   KeepWarmLimits _warmLimits = const KeepWarmLimits();
   bool _loading = true;
@@ -158,6 +195,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         c.wakes().then<Object?>((l) => l.limits).catchError((_) => null),
         c.keepWarm().then<Object?>((l) => l.limits).catchError((_) => null),
         c.tasks().then<Object?>((t) => t).catchError((_) => const <TaskItem>[]),
+        c.agentWatches(widget.owner).catchError((_) => const <AgentWatch>[]),
       ]);
       if (!mounted) return;
       setState(() {
@@ -167,6 +205,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         _wakeLimits = lists[0] as WakeLimits? ?? _wakeLimits;
         _warmLimits = lists[1] as KeepWarmLimits? ?? _warmLimits;
         _tasks = lists[2] as List<TaskItem>? ?? const [];
+        _watches = lists[3] as List<AgentWatch>? ?? const [];
         _loading = false;
         _error = null;
       });
@@ -478,16 +517,15 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
             child: Text(_error!, style: sans(12, color: AppColors.danger)),
           ),
         _wakeSection(),
-        _divider(),
+        _panelDivider(),
         _warmSection(),
+        if (_watches.isNotEmpty) ...[
+          _panelDivider(),
+          _watchesSection(),
+        ],
       ],
     ));
   }
-
-  Widget _divider() => Padding(
-        padding: const EdgeInsets.symmetric(vertical: S.s12),
-        child: Divider(height: 1, thickness: 1, color: AppColors.border),
-      );
 
   Widget _head(String text, {String? icon, Widget? trailing}) => Padding(
         padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
@@ -522,20 +560,8 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         ),
       );
 
-  Widget _line(String label, String value, {Color? color, Key? key}) => Padding(
-        key: key,
-        padding: const EdgeInsets.symmetric(horizontal: S.s4, vertical: 3.5),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(
-              width: 82,
-              child: Text(label, style: sans(13, color: AppColors.fg4))),
-          Expanded(
-              child: Text(value,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(13, color: color ?? AppColors.fg1))),
-        ]),
-      );
+  Widget _line(String label, String value, {Color? color, Key? key}) =>
+      _panelLine(label, value, color: color, key: key);
 
   Widget _wakeSection() {
     final w = _wake;
@@ -614,11 +640,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(
             padding: const EdgeInsets.only(top: 5, right: S.s8),
-            child: Container(
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(
-                    color: wakeStatusColor(r.status), shape: BoxShape.circle)),
+            child: _statusDot(r.status),
           ),
           Expanded(
             child: Text(
@@ -822,4 +844,300 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
       ),
     ]);
   }
+
+  Widget _watchesSection() =>
+      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        _head('Watches', icon: 'eye'),
+        for (final w in _watches) _watchRow(w),
+      ]);
+
+  Widget _watchRow(AgentWatch w) {
+    final statusLabel = w.effectiveStatus;
+    final sub = [
+      w.modeLabel,
+      statusLabel,
+      if (w.lastFiredAt != null) 'fired ${wakeWhen(w.lastFiredAt!)}',
+    ].join(' · ');
+    return Builder(
+      builder: (ctx) => ListRow(
+        key: ValueKey('watch-${w.id}'),
+        title: w.name,
+        subtitle: sub,
+        leading: _statusDot(statusLabel),
+        trailing: AppSwitch(
+          on: w.enabled,
+          onChanged: (on) => _toggleWatch(w, on),
+        ),
+        onTap: () => _openWatch(ctx, w),
+      ),
+    );
+  }
+
+  Future<void> _toggleWatch(AgentWatch watch, bool on) async {
+    try {
+      final updated =
+          await widget.client.setAgentWatchEnabled(widget.owner, watch.id, on);
+      if (!mounted) return;
+      setState(() {
+        _watches = [
+          for (final w in _watches) w.id == watch.id ? updated : w,
+        ];
+      });
+      widget.onChanged?.call();
+    } catch (e) {
+      _fail(e);
+    }
+  }
+
+  void _openWatch(BuildContext ctx, AgentWatch watch) {
+    final nav = DockedInfoNav.maybeOf(ctx);
+    final detail = _AgentWatchDetail(
+      client: widget.client,
+      owner: widget.owner,
+      watch: watch,
+      onDeleted: () {
+        if (!mounted) return;
+        setState(() {
+          _watches = [
+            for (final w in _watches)
+              if (w.id != watch.id) w,
+          ];
+        });
+        widget.onChanged?.call();
+      },
+      onClose: (detailCtx) {
+        if (nav != null) {
+          nav.pop();
+        } else {
+          Navigator.of(detailCtx).maybePop();
+        }
+      },
+    );
+    if (nav != null) {
+      nav.push(watch.name, (_) => detail);
+      return;
+    }
+    showAppSheet<void>(
+      ctx,
+      title: watch.name,
+      subtitle: watch.modeLabel,
+      maxWidth: 520,
+      maxHeight: 680,
+      child: detail,
+    );
+  }
+}
+
+class _AgentWatchDetail extends StatefulWidget {
+  const _AgentWatchDetail({
+    required this.client,
+    required this.owner,
+    required this.watch,
+    required this.onDeleted,
+    required this.onClose,
+  });
+
+  final DaemonClient client;
+  final String owner;
+  final AgentWatch watch;
+  final VoidCallback onDeleted;
+  final void Function(BuildContext detailContext) onClose;
+
+  @override
+  State<_AgentWatchDetail> createState() => _AgentWatchDetailState();
+}
+
+class _AgentWatchDetailState extends State<_AgentWatchDetail> {
+  List<AgentWatchEvent> _events = const [];
+  String _script = '';
+  String? _eventsError;
+  String? _scriptError;
+  bool _loading = true;
+  bool _deleting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final c = widget.client;
+    final eventsFuture = c
+        .agentWatchEvents(widget.owner, widget.watch.id)
+        .then<(List<AgentWatchEvent>, String?)>(
+          (v) => (v, null),
+          onError: (Object e) => (const <AgentWatchEvent>[], '$e'),
+        );
+    final scriptFuture = c
+        .agentWatchScript(widget.owner, widget.watch.id)
+        .then<(String, String?)>(
+          (v) => (v, null),
+          onError: (Object e) => ('', '$e'),
+        );
+    final results = await Future.wait<Object>([eventsFuture, scriptFuture]);
+    if (!mounted) return;
+    final (events, eventsErr) = results[0] as (List<AgentWatchEvent>, String?);
+    final (script, scriptErr) = results[1] as (String, String?);
+    setState(() {
+      _events = events;
+      _eventsError = eventsErr;
+      _script = script;
+      _scriptError = scriptErr;
+      _loading = false;
+    });
+  }
+
+  Future<void> _deleteWatch() async {
+    final ok = await confirmAction(
+      context,
+      title: 'Delete ${widget.watch.name}?',
+      body: 'This stops the watch and removes its script and event history.',
+      confirmLabel: 'Delete',
+    );
+    if (!ok || !mounted) return;
+    setState(() => _deleting = true);
+    try {
+      await widget.client.deleteAgentWatch(widget.owner, widget.watch.id);
+      if (!mounted) return;
+      widget.onDeleted();
+      widget.onClose(context);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _deleting = false);
+        toast(context, '$e', danger: true);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final w = widget.watch;
+    final statusLabel = w.effectiveStatus;
+    final statusColor = switch (statusLabel) {
+      'running' => AppColors.ok,
+      'error' => AppColors.danger,
+      _ => null,
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _panelLine('Status', statusLabel, color: statusColor),
+        _panelLine('Mode', w.modeLabel),
+        if (w.filter != null) _panelLine('Filter', w.filter!),
+        if (w.quietStart != null && w.quietEnd != null)
+          _panelLine('Quiet hours', '${w.quietStart} to ${w.quietEnd}'),
+        _panelLine('Today', '${w.firesLastDay} of ${w.maxWakesPerDay} wakes'),
+        if (w.lastRunAt != null) _panelLine('Last run', wakeWhen(w.lastRunAt!)),
+        if (w.lastFiredAt != null)
+          _panelLine('Last fired', wakeWhen(w.lastFiredAt!)),
+        if (w.lastError != null)
+          _panelLine('Error', w.lastError!,
+              color: AppColors.danger, maxLines: 6),
+        _panelDivider(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6),
+          child: Text('Recent events',
+              style: sans(12, weight: FontWeight.w600, color: AppColors.fg3)),
+        ),
+        if (_loading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: S.s16),
+            child: Center(
+                child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))),
+          )
+        else ...[
+          if (_eventsError != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: S.s4),
+              child: Text(_eventsError!,
+                  style: sans(12, color: AppColors.danger)),
+            )
+          else if (_events.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: S.s4),
+              child: Text('No events yet.',
+                  style: sans(13, color: AppColors.fg4)),
+            )
+          else
+            for (final e in _events) _eventRow(e),
+          _panelDivider(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6),
+            child: Text('Script',
+                style: sans(12, weight: FontWeight.w600, color: AppColors.fg3)),
+          ),
+          if (w.scriptPath.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6),
+              child: Text(w.scriptPath,
+                  style: codeMono(11, color: AppColors.fg4)),
+            ),
+          if (_scriptError != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: S.s4),
+              child: Text(_scriptError!,
+                  style: sans(12, color: AppColors.danger)),
+            )
+          else
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(S.s12),
+              decoration: BoxDecoration(
+                color: AppColors.canvas,
+                borderRadius: BorderRadius.circular(R.md),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: SelectableText(
+                _script.isEmpty ? '# Empty script' : _script,
+                style: codeMono(12, height: 1.45, color: AppColors.fg2),
+              ),
+            ),
+        ],
+        const SizedBox(height: S.s16),
+        Row(children: [
+          Btn(
+            _deleting ? 'Deleting' : 'Delete',
+            variant: BtnVariant.danger,
+            small: true,
+            disabled: _deleting,
+            onTap: _deleteWatch,
+          ),
+        ]),
+      ],
+    );
+  }
+
+  Widget _eventRow(AgentWatchEvent e) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: S.s4, vertical: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(children: [
+              _statusDot(e.kind),
+              const SizedBox(width: S.s8),
+              Expanded(
+                child: Text(e.kind,
+                    style: sans(13, weight: W.label, color: AppColors.fg2)),
+              ),
+              if (e.at != null)
+                Text(wakeWhen(e.at!), style: mono(11, color: AppColors.fg4)),
+            ]),
+            if (e.excerpt != null) ...[
+              const SizedBox(height: S.s4),
+              Padding(
+                padding: const EdgeInsets.only(left: 15),
+                child: Text(
+                  e.excerpt!,
+                  style: codeMono(12, height: 1.45, color: AppColors.fg3),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
 }

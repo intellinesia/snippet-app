@@ -111,6 +111,7 @@ class FakeWakeClient extends DaemonClient {
 
   KeepWarmEntry? warmState;
   List<WakeRun>? runs;
+  List<AgentWatch> watchList = const [];
   final puts = <Map<String, dynamic>>[];
   final warmPuts = <Map<String, dynamic>>[];
   final contexts = <int?>[];
@@ -126,6 +127,9 @@ class FakeWakeClient extends DaemonClient {
   @override
   Future<List<WakeRun>> wakeRuns({String? owner, int limit = 10}) async =>
       runs ?? const [];
+
+  @override
+  Future<List<AgentWatch>> agentWatches(String agentId) async => watchList;
 
   @override
   Future<KeepWarmEntry?> keepWarmFor(String owner) async => warmState;

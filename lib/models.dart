@@ -2297,3 +2297,79 @@ class AmbientSettings {
             VoiceprintInfo.fromJson((vp as Map).cast<String, dynamic>())
         ];
 }
+
+int? _optEpochSeconds(dynamic raw) {
+  if (raw == null) return null;
+  if (raw is num) {
+    final v = raw.toInt();
+    return v > 0 ? v : null;
+  }
+  if (raw is String) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+    final asInt = int.tryParse(trimmed);
+    if (asInt != null) return asInt > 0 ? asInt : null;
+    final parsed = DateTime.tryParse(trimmed);
+    if (parsed != null) return parsed.millisecondsSinceEpoch ~/ 1000;
+  }
+  return null;
+}
+
+class AgentWatch {
+  final String id;
+  final String owner;
+  final String name;
+  final String mode;
+  final int intervalMinutes;
+  final String? filter;
+  final int maxWakesPerDay;
+  final String? quietStart;
+  final String? quietEnd;
+  final bool enabled;
+  final String status;
+  final String? lastError;
+  final int? lastRunAt;
+  final int? lastFiredAt;
+  final int firesLastDay;
+  final String scriptPath;
+  final int? createdAt;
+  final int? updatedAt;
+
+  AgentWatch.fromJson(Map<String, dynamic> j)
+      : id = j['id'] as String? ?? '',
+        owner = j['owner'] as String? ?? '',
+        name = j['name'] as String? ?? '',
+        mode = _optText(j['mode']) ?? 'poll',
+        intervalMinutes = (j['interval_minutes'] as num?)?.toInt() ?? 5,
+        filter = _optText(j['filter']),
+        maxWakesPerDay = (j['max_wakes_per_day'] as num?)?.toInt() ?? 48,
+        quietStart = _optText(j['quiet_start']),
+        quietEnd = _optText(j['quiet_end']),
+        enabled = j['enabled'] is bool
+            ? j['enabled'] as bool
+            : (j['enabled'] is num ? j['enabled'] != 0 : true),
+        status = _optText(j['status']) ?? 'idle',
+        lastError = _optText(j['last_error']),
+        lastRunAt = _optEpochSeconds(j['last_run_at']),
+        lastFiredAt = _optEpochSeconds(j['last_fired_at']),
+        firesLastDay = (j['fires_last_day'] as num?)?.toInt() ?? 0,
+        scriptPath = j['script_path'] as String? ?? '',
+        createdAt = _optEpochSeconds(j['created_at']),
+        updatedAt = _optEpochSeconds(j['updated_at']);
+
+  String get modeLabel =>
+      mode == 'stream' ? 'stream' : 'poll every ${intervalMinutes}m';
+
+  String get effectiveStatus => enabled ? status : 'paused';
+}
+
+class AgentWatchEvent {
+  final String kind;
+  final int? at;
+  final String? excerpt;
+
+  AgentWatchEvent.fromJson(Map<String, dynamic> j)
+      : kind = j['kind'] as String? ?? '',
+        at = _optEpochSeconds(j['at']),
+        excerpt = _optText(j['excerpt']);
+}

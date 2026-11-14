@@ -1605,6 +1605,64 @@ class DaemonClient {
     return KeepWarmEntry.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
+  /// GET /agents/{id}/watches.
+  Future<List<AgentWatch>> agentWatches(String agentId) async {
+    final r =
+        await _get(_uri('/agents/${Uri.encodeComponent(agentId)}/watches'));
+    if (r.statusCode == 404) return const [];
+    if (r.statusCode != 200) throw _err('list agent watches', r);
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return [
+      for (final e in (body['watches'] as List?) ?? const [])
+        if (e is Map<String, dynamic>) AgentWatch.fromJson(e)
+    ];
+  }
+
+  /// POST /agents/{id}/watches/{watch_id} — pause or resume a watch.
+  Future<AgentWatch> setAgentWatchEnabled(
+      String agentId, String watchId, bool enabled) async {
+    final r = await _post(
+        _uri(
+            '/agents/${Uri.encodeComponent(agentId)}/watches/${Uri.encodeComponent(watchId)}'),
+        headers: _json,
+        body: jsonEncode({'enabled': enabled}));
+    if (r.statusCode != 200) throw _err('update agent watch', r);
+    return AgentWatch.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  /// DELETE /agents/{id}/watches/{watch_id}.
+  Future<void> deleteAgentWatch(String agentId, String watchId) async {
+    final r = await _delete(_uri(
+        '/agents/${Uri.encodeComponent(agentId)}/watches/${Uri.encodeComponent(watchId)}'));
+    if (r.statusCode != 200 && r.statusCode != 404) {
+      throw _err('delete agent watch', r);
+    }
+  }
+
+  /// GET /agents/{id}/watches/{watch_id}/events.
+  Future<List<AgentWatchEvent>> agentWatchEvents(
+      String agentId, String watchId,
+      {int limit = 20}) async {
+    final r = await _get(_uri(
+        '/agents/${Uri.encodeComponent(agentId)}/watches/${Uri.encodeComponent(watchId)}/events',
+        {'limit': '$limit'}));
+    if (r.statusCode != 200) throw _err('list agent watch events', r);
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return [
+      for (final e in (body['events'] as List?) ?? const [])
+        if (e is Map<String, dynamic>) AgentWatchEvent.fromJson(e)
+    ];
+  }
+
+  /// GET /agents/{id}/watches/{watch_id}/script.
+  Future<String> agentWatchScript(String agentId, String watchId) async {
+    final r = await _get(_uri(
+        '/agents/${Uri.encodeComponent(agentId)}/watches/${Uri.encodeComponent(watchId)}/script'));
+    if (r.statusCode != 200) throw _err('read agent watch script', r);
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    return body['script'] as String? ?? '';
+  }
+
   /// The board with paging, and the dispatches still waiting for a report.
   /// [outstanding] narrows to those dispatches.
   /// [group] is `task` or `folder`: one row per group, newest activity first.
