@@ -64,13 +64,21 @@ List<String> extractGroupMentions(String body, Set<String> memberIds) {
   return (start: at, query: query);
 }
 
-/// Text spans for a group message: `@member` and `@everyone` in accent.
+/// Tokens agents use to mention the user.
+const _humanMentions = {'human', 'boss'};
+
+/// Text spans for a group message: `@member`, `@everyone` and the user's
+/// `@boss` / `@human` in accent.
 List<TextSpan> groupMentionSpans(String text, Set<String> memberIds) {
   final spans = <TextSpan>[];
   var at = 0;
   for (final m in _mentionToken.allMatches(text)) {
     final id = m.group(1)!;
-    if (!memberIds.contains(id) && id != 'everyone') continue;
+    if (!memberIds.contains(id) &&
+        id != 'everyone' &&
+        !_humanMentions.contains(id.toLowerCase())) {
+      continue;
+    }
     final tokenStart = m.end - id.length - 1;
     if (tokenStart > at) {
       spans.add(TextSpan(text: text.substring(at, tokenStart)));

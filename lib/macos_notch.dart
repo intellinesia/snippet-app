@@ -1019,6 +1019,7 @@ String notchChannel(Map<String, dynamic> payload, String title) {
     return 'Mission Control';
   }
   if (kind == 'direct_message.sent') return 'Message';
+  if (kind == 'group_mention') return 'Mention';
   final head = title.trim();
   if (head.isNotEmpty && head != 'Snippet') return head;
   final workspace = (payload['workspace'] ?? '').toString().trim();
