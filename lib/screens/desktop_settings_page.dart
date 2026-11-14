@@ -224,7 +224,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                 child: Stack(children: [
                   Positioned.fill(
                     child: ColoredBox(
-                  color: kMobile ? readingBg : Colors.transparent,
+                  color: kMobile ? AppColors.pageCanvas : Colors.transparent,
                   child: SettingsSectionView(
                     client: widget.client,
                     instances: widget.instances,

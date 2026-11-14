@@ -65,7 +65,7 @@ class _NoConnection extends StatelessWidget {
         ? agent.id
         : agent.displayName.trim();
     return Material(
-      color: AppColors.bg,
+      color: kMobile ? AppColors.pageBg : AppColors.bg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

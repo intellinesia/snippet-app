@@ -1277,7 +1277,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   Widget build(BuildContext context) {
     final hideChrome = widget.embedded;
     return Material(
-      color: kMobile ? readingBg : Colors.transparent,
+      color: kMobile ? AppColors.pageCanvas : Colors.transparent,
       child: SafeArea(
         top: !hideChrome,
         bottom: false,

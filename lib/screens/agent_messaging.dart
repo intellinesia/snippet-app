@@ -911,7 +911,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     // here require one.
     final hideChrome = _noChrome;
     return Material(
-      color: kMobile ? readingBg : Colors.transparent,
+      color: kMobile ? AppColors.pageCanvas : Colors.transparent,
       child: SafeArea(
         top: !hideChrome,
         bottom: false,

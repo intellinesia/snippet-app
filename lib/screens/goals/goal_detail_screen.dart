@@ -67,7 +67,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     final d = _detail;
     final title = d?.goal.title.isNotEmpty == true ? d!.goal.title : 'Goal';
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: AppColors.pageBg,
       body: SafeArea(
         bottom: false,
         child: Column(children: [

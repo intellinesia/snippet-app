@@ -456,7 +456,7 @@ class TasksPanelState extends State<TasksPanel> {
     // the list the room instead.
     if (widget.onOpenTask != null) {
       return ColoredBox(
-        color: kMobile ? AppColors.bg : Colors.transparent,
+        color: kMobile ? AppColors.pageBg : Colors.transparent,
         child: Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
@@ -465,7 +465,7 @@ class TasksPanelState extends State<TasksPanel> {
       );
     }
     return ColoredBox(
-      color: kMobile ? AppColors.bg : Colors.transparent,
+      color: kMobile ? AppColors.pageBg : Colors.transparent,
       child: MasterDetail(masterWidth: 380, master: master, detail: detail),
     );
   }
@@ -473,7 +473,7 @@ class TasksPanelState extends State<TasksPanel> {
   Widget _stacked() {
     if (!kMobile && _selectedTaskId != null) {
       return ColoredBox(
-        color: kMobile ? AppColors.bg : Colors.transparent,
+        color: kMobile ? AppColors.pageBg : Colors.transparent,
         child: TaskDetailScreen(
           key: ValueKey('sidebar-task-$_selectedTaskId'),
           client: widget.client,
@@ -488,7 +488,7 @@ class TasksPanelState extends State<TasksPanel> {
     }
     if (!kMobile && _creatingTask) {
       return ColoredBox(
-        color: kMobile ? AppColors.bg : Colors.transparent,
+        color: kMobile ? AppColors.pageBg : Colors.transparent,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -508,7 +508,7 @@ class TasksPanelState extends State<TasksPanel> {
       );
     }
     return ColoredBox(
-      color: kMobile ? AppColors.bg : Colors.transparent,
+      color: kMobile ? AppColors.pageBg : Colors.transparent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

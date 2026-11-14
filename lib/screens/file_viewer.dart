@@ -367,7 +367,9 @@ class _FileViewerState extends State<FileViewer> {
     final merged = !kMobile;
     return Scaffold(
       backgroundColor:
-          widget.embedded && !kMobile ? Colors.transparent : readingBg,
+          widget.embedded && !kMobile
+              ? Colors.transparent
+              : AppColors.pageCanvas,
       body: SafeArea(
         bottom: false,
         child: Column(children: [
