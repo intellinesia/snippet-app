@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet_render/snippet_render.dart';
@@ -44,10 +45,17 @@ class ChatScene extends ChangeNotifier {
         _marker!.deleteSync();
         if (_scene != none) {
           _scene = none;
-          final why = log.existsSync() ? log.readAsStringSync().trim() : '';
+          var why = log.existsSync() ? log.readAsStringSync().trim() : '';
+          if (why.isEmpty && Platform.isAndroid) {
+            try {
+              why = await const MethodChannel('snippet/exit_info')
+                      .invokeMethod<String>('lastCrash') ??
+                  '';
+            } catch (_) {}
+          }
           _error = why.isEmpty
               ? 'Turned off: the app closed while the scene was starting.'
-              : 'Turned off after a crash: ${why.split('\n').last}';
+              : 'Turned off after a crash: $why';
           await prefs.setString(_key, none);
         }
       }
