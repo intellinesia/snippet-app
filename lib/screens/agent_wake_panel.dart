@@ -139,8 +139,22 @@ class AgentWakePanel extends StatefulWidget {
   State<AgentWakePanel> createState() => _AgentWakePanelState();
 }
 
+/// A wake name as the daemon stores it: lowercase words joined by `-`.
+String wakeNameSlug(String raw) => raw
+    .trim()
+    .toLowerCase()
+    .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+    .replaceAll(RegExp(r'^-+|-+$'), '');
+
 class _AgentWakePanelState extends State<AgentWakePanel> {
+  /// Every wake this owner holds, the default (unnamed) one first.
+  List<WakeSchedule> _wakes = const [];
+
+  /// The wake shown and edited; null is the owner's default wake.
+  String? _name;
   WakeSchedule? _wake;
+  List<GroupSummary> _groups = const [];
+  String? _group;
   WakeLimits _wakeLimits = const WakeLimits();
   List<WakeRun> _runs = const [];
   List<TaskItem> _tasks = const [];
@@ -186,20 +200,31 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
   Future<void> _load() async {
     final c = widget.client;
     try {
-      final wake = await c.wake(widget.owner);
+      final list = await c.wakes();
+      final mine = _sorted(list.wakes.where((w) => w.owner == widget.owner));
       final runs = await c
-          .wakeRuns(owner: widget.owner, limit: 3)
+          .wakeRuns(owner: widget.owner, limit: 20)
           .catchError((_) => <WakeRun>[]);
+      final groups = await c
+          .groups()
+          .then((all) => [
+                for (final g in all)
+                  if (g.members.any((m) => m.id == widget.owner)) g
+              ])
+          .catchError((_) => <GroupSummary>[]);
       final warm = await c.keepWarmFor(widget.owner).catchError((_) => null);
       final lists = await Future.wait<Object?>([
-        c.wakes().then<Object?>((l) => l.limits).catchError((_) => null),
+        Future<Object?>.value(list.limits),
         c.keepWarm().then<Object?>((l) => l.limits).catchError((_) => null),
         c.tasks().then<Object?>((t) => t).catchError((_) => const <TaskItem>[]),
         c.agentWatches(widget.owner).catchError((_) => const <AgentWatch>[]),
       ]);
       if (!mounted) return;
       setState(() {
-        _wake = wake;
+        _wakes = mine;
+        _wake = _pick(mine, _name);
+        _name = _wake?.name;
+        _groups = groups;
         _runs = runs;
         _warm = warm;
         _wakeLimits = lists[0] as WakeLimits? ?? _wakeLimits;
@@ -219,6 +244,55 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
     }
   }
 
+  static List<WakeSchedule> _sorted(Iterable<WakeSchedule> wakes) =>
+      [...wakes]..sort((a, b) => (a.name ?? '').compareTo(b.name ?? ''));
+
+  static WakeSchedule? _pick(List<WakeSchedule> wakes, String? name) {
+    for (final w in wakes) {
+      if (w.name == name) return w;
+    }
+    return wakes.isEmpty ? null : wakes.first;
+  }
+
+  void _keep(WakeSchedule wake) {
+    _wakes = _sorted([
+      for (final w in _wakes)
+        if (w.name != wake.name) w,
+      wake,
+    ]);
+    _wake = wake;
+    _name = wake.name;
+  }
+
+  List<WakeRun> get _shownRuns => [
+        for (final r in _runs)
+          if (_wake == null || r.jobId == _wake!.jobId) r
+      ].take(3).toList();
+
+  void _select(String? name) {
+    setState(() {
+      _name = name;
+      _wake = _pick(_wakes, name);
+      _editing = false;
+    });
+  }
+
+  Future<void> _newWake() async {
+    final raw = await dockedPromptText(context,
+        title: 'New wake',
+        hint: 'Name, for example linkedin-sync',
+        anchored: true);
+    if (raw == null || !mounted) return;
+    final name = wakeNameSlug(raw);
+    if (name.isEmpty) return;
+    if (_wakes.any((w) => w.name == name)) return _select(name);
+    setState(() {
+      _name = name;
+      _wake = null;
+    });
+    _startEdit();
+  }
+
   void _fail(Object e) {
     if (mounted) toast(context, '$e', danger: true);
   }
@@ -230,6 +304,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
     _quietStart.text = w?.quietHours?.start ?? '';
     _quietEnd.text = w?.quietHours?.end ?? '';
     _taskId.text = w?.report.taskId ?? '';
+    _group = w?.report.group;
     _cap.text = '${w?.maxRunsPerDay ?? _wakeLimits.defaultMaxRunsPerDay}';
     setState(() {
       _enabled = w?.enabled ?? true;
@@ -248,11 +323,14 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
     setState(() => _saving = true);
     try {
       final wake = await widget.client.setWake(widget.owner, {
+        if (_name != null) 'name': _name,
         'schedule': schedule,
         'brief': _brief.text.trim(),
         'title': _wake?.title.isNotEmpty == true
             ? _wake!.title
-            : 'Wake ${widget.name}',
+            : _name == null
+                ? 'Wake ${widget.name}'
+                : '${widget.name}: $_name',
         'enabled': _enabled,
         'quiet_start': _quietStart.text.trim(),
         'quiet_end': _quietEnd.text.trim(),
@@ -262,7 +340,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
                     _reportTo == 'task_room' && _taskId.text.trim().isNotEmpty
                         ? _taskId.text.trim()
                         : null,
-                group: _reportTo == 'group' ? _wake?.report.group : null,
+                group: _reportTo == 'group' ? _group : null,
                 onlyOnChange: _onlyOnChange)
             .toJson(),
         if (int.tryParse(_cap.text.trim()) != null)
@@ -270,7 +348,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
       });
       if (!mounted) return;
       setState(() {
-        _wake = wake;
+        _keep(wake);
         _editing = false;
         _saving = false;
       });
@@ -283,10 +361,15 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
 
   Future<void> _remove() async {
     try {
-      await widget.client.clearWake(widget.owner);
+      await widget.client.clearWake(widget.owner, name: _name);
       if (!mounted) return;
       setState(() {
-        _wake = null;
+        _wakes = [
+          for (final w in _wakes)
+            if (w.name != _name) w
+        ];
+        _wake = _pick(_wakes, null);
+        _name = _wake?.name;
         _editing = false;
       });
       widget.onChanged?.call();
@@ -299,8 +382,9 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
     final before = _wake;
     if (before == null) return;
     try {
-      final wake = await widget.client.setWake(widget.owner, {'enabled': on});
-      if (mounted) setState(() => _wake = wake);
+      final wake = await widget.client.setWake(
+          widget.owner, {'enabled': on, if (_name != null) 'name': _name});
+      if (mounted) setState(() => _keep(wake));
       widget.onChanged?.call();
     } catch (e) {
       _fail(e);
@@ -312,6 +396,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
       ('mission_control', 'Mission Control', 'Summarised in its feed'),
       ('user', 'You', 'Sent as a notification'),
       ('task_room', 'Task room', 'Posted on a task'),
+      ('group', 'Group', 'Posted in a group'),
       ('none', 'Nobody', 'Runs silently'),
     ];
     final picked = await dockedPick<String>(
@@ -346,7 +431,57 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         final first = active.isNotEmpty ? active.first : _tasks.first;
         setState(() => _taskId.text = first.id);
       }
+      if (picked == 'group' && _group == null && _groups.isNotEmpty) {
+        setState(() => _group = _groups.first.id);
+      }
     }
+  }
+
+  String _reportLabel(WakeReport r) {
+    if (r.to != 'group' || r.group == null) return r.label;
+    for (final g in _groups) {
+      if (g.id == r.group && g.title.isNotEmpty) return 'Group: ${g.title}';
+    }
+    return r.label;
+  }
+
+  String _selectedGroupLabel() {
+    final id = _group;
+    if (id == null) {
+      return _groups.isEmpty ? 'Not in any group' : 'Select group…';
+    }
+    for (final g in _groups) {
+      if (g.id == id) return g.title.isNotEmpty ? g.title : g.id;
+    }
+    return id;
+  }
+
+  Future<void> _pickGroup(BuildContext anchor) async {
+    if (_groups.isEmpty) return;
+    final picked = await dockedPick<String>(
+      context,
+      title: 'Group',
+      options: [
+        for (final g in _groups)
+          (g.id, g.title.isEmpty ? g.id : g.title, 'users')
+      ],
+      selected: _group ?? '',
+      fallback: () => showAppMenu<String>(
+        context,
+        anchor: anchor,
+        minWidth: 240,
+        maxWidth: 320,
+        items: [
+          for (final g in _groups)
+            appMenuRow<String>(
+                value: g.id,
+                icon: 'users',
+                label: g.title.isEmpty ? g.id : g.title,
+                selected: g.id == _group),
+        ],
+      ),
+    );
+    if (picked != null && mounted) setState(() => _group = picked);
   }
 
   String _selectedTaskLabel() {
@@ -578,6 +713,26 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
                   _startEdit,
                   icon: w == null ? 'plus' : 'edit',
                 )),
+      if (_wakes.isNotEmpty && !_editing)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
+          child: Pills<String>(
+            key: const ValueKey('wake-switcher'),
+            items: [
+              for (final x in _wakes) (x.name ?? '', x.name ?? 'Default'),
+              ('__new__', 'New'),
+            ],
+            selected: _name ?? '',
+            onSelect: (v) =>
+                v == '__new__' ? _newWake() : _select(v.isEmpty ? null : v),
+          ),
+        ),
+      if (_editing && _name != null && w == null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
+          child:
+              Text('New wake: $_name', style: sans(13, color: AppColors.fg3)),
+        ),
       if (w == null && !_editing)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: S.s4),
@@ -591,7 +746,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         if (w.brief.isNotEmpty) _line('Brief', w.brief),
         _line('Quiet hours', w.quietHours?.label ?? 'None'),
         _line('Reports to',
-            '${w.report.label}${w.report.onlyOnChange ? ', only on change' : ''}'),
+            '${_reportLabel(w.report)}${w.report.onlyOnChange ? ', only on change' : ''}'),
         _line(
             'Next',
             !w.enabled
@@ -625,14 +780,14 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         ),
       ],
       Reveal(show: _editing, child: _form()),
-      if (_runs.isNotEmpty && !_editing) ...[
+      if (_shownRuns.isNotEmpty && !_editing) ...[
         const SizedBox(height: S.s8),
         Padding(
           padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s4),
           child: Text('Recent runs',
               style: sans(12, weight: FontWeight.w600, color: AppColors.fg3)),
         ),
-        for (final r in _runs) _runRow(r),
+        for (final r in _shownRuns) _runRow(r),
       ],
     ]);
   }
@@ -726,6 +881,32 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
                 AppIcon('chevron-down', size: 15, color: AppColors.fg4),
               ]),
               onTap: () => _pickTask(ctx),
+            ),
+          ),
+        ),
+      ),
+      Reveal(
+        show: _reportTo == 'group',
+        child: Padding(
+          padding: const EdgeInsets.only(top: S.s4),
+          child: Builder(
+            builder: (ctx) => ListRow(
+              title: 'Group',
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 180),
+                  child: Text(
+                    _selectedGroupLabel(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13,
+                        color: _group == null ? AppColors.fg4 : AppColors.fg2),
+                  ),
+                ),
+                const SizedBox(width: S.s6),
+                AppIcon('chevron-down', size: 15, color: AppColors.fg4),
+              ]),
+              onTap: () => _pickGroup(ctx),
             ),
           ),
         ),
