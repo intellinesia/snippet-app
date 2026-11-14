@@ -508,8 +508,6 @@ dependencies = [
 [[package]]
 name = "irondash_texture"
 version = "0.6.0-dev.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e4fe0301874a2253dd5ecdf4709511b129df157b3896cf03a0edff8119028f4"
 dependencies = [
  "core-foundation",
  "cstr",

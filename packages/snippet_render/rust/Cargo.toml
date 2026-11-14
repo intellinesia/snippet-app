@@ -23,3 +23,6 @@ irondash_engine_context = { version = "0.7.0-dev.0", optional = true }
 lto = true
 opt-level = "s"
 strip = true
+
+[patch.crates-io]
+irondash_texture = { path = "vendor/irondash_texture" }
