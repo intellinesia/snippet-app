@@ -2516,7 +2516,7 @@ class AppearanceScreen extends StatelessWidget {
               const SettingsGroup(
                 header: 'Background',
                 footer:
-                    'An animated scene behind the chat, drawn on the GPU. It pauses in the background and with reduced motion.',
+                    'An animated scene behind every screen, drawn on the GPU. It pauses in the background and with reduced motion.',
                 children: [_ChatSceneRow()],
               ),
             const SettingsGroup(
@@ -2547,44 +2547,17 @@ class AppearanceScreen extends StatelessWidget {
 class _HomeFirstRow extends StatelessWidget {
   const _HomeFirstRow();
 
-  Widget _cell(String label, bool on, bool agents) => Semantics(
-        button: true,
-        selected: on,
-        child: GestureDetector(
-          key: ValueKey('home-first-${agents ? 'agents' : 'sessions'}'),
-          behavior: HitTestBehavior.opaque,
-          onTap: () => setHomeAgentsFirst(agents),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: on ? AppColors.surface3 : Colors.transparent,
-              borderRadius: BorderRadius.circular(7),
-            ),
-            child: Text(label,
-                style: sans(13,
-                    weight: on ? W.label : W.body,
-                    color: on ? AppColors.fg1 : AppColors.fg3)),
-          ),
-        ),
-      );
-
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<bool>(
         valueListenable: homeAgentsFirst,
         builder: (context, agents, _) => SettingsRow(
           label: 'Open on',
           sub: 'The tab the app starts on',
-          trailing: Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              color: AppColors.surface1,
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: AppColors.line),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              _cell('Sessions', !agents, false),
-              _cell('Agents', agents, true),
-            ]),
+          trailing: Pills<bool>(
+            key: const Key('home-first'),
+            items: const [(false, 'Sessions'), (true, 'Agents')],
+            selected: agents,
+            onSelect: setHomeAgentsFirst,
           ),
         ),
       );
@@ -2666,7 +2639,7 @@ class _ChatSceneRow extends StatelessWidget {
       listenable: scene,
       builder: (context, _) => SettingsRow(
         label: 'Animated background',
-        sub: scene.error ?? 'Animated background behind the chat',
+        sub: scene.error ?? 'Moves behind every screen',
         trailing: Pills<String>(
           key: const Key('chat-scene'),
           items: [
