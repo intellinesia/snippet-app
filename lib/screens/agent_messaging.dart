@@ -5,21 +5,19 @@ import 'dart:async';
 import '../motion_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../chat/chat_info.dart' show showAgentInfo;
+import '../chat/choices.dart';
 import '../glass.dart';
 import '../api.dart';
 import '../clock.dart';
 import '../chat/chat_style.dart';
 import '../chat/message_body.dart';
-import '../composer/attachment_preview.dart';
-import '../composer/attachment_tile.dart';
+import '../composer/composer_attachments.dart';
 import '../composer/composer_card.dart';
 import '../composer/voice_note.dart';
 import '../message_reactions.dart';
 import '../motion.dart';
-import '../desktop_pick.dart';
 import '../models.dart';
 import '../presence.dart';
 import '../panel.dart';
@@ -591,13 +589,16 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   String? _error;
   late final Swr<DirectThreadPage> _thread;
 
-  final List<_AgentAttachment> _attachments = [];
+  late final ComposerAttachmentController _attachments =
+      ComposerAttachmentController(
+    client: widget.client,
+    onToast: (msg, {bool danger = false}) {
+      if (mounted) toast(context, msg, danger: danger);
+    },
+  );
 
   @visibleForTesting
-  void debugSeedAttachment(String name) => setState(() => _attachments
-      .add(_AgentAttachment(name: name, isImage: false, isAudio: false)
-        ..uploading = false));
-  int _attachmentGeneration = 0;
+  void debugSeedAttachment(String name) => _attachments.debugSeed(name);
 
   late final VoiceNoteController _voice = VoiceNoteController(
     client: widget.client,
@@ -629,6 +630,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   @override
   void dispose() {
     _thread.dispose();
+    _attachments.dispose();
     _voice.dispose();
     _input.dispose();
     _inputFocus.dispose();
@@ -708,7 +710,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     });
   }
 
-  Future<void> _attachVoiceBytes(Uint8List bytes) => _ingest([
+  Future<void> _attachVoiceBytes(Uint8List bytes) => _attachments.ingest([
         (
           name:
               'voice-${DateTime.now().microsecondsSinceEpoch}.$voiceNoteExtension',
@@ -716,147 +718,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           readBytes: () async => bytes,
         )
       ]);
-
-  bool _isImageName(String n) {
-    final l = n.toLowerCase();
-    return const [
-      '.png',
-      '.jpg',
-      '.jpeg',
-      '.gif',
-      '.webp',
-      '.bmp',
-      '.heic',
-      '.heif'
-    ].any(l.endsWith);
-  }
-
-  Future<void> _onAttachTap() async {
-    if (!kMobile) {
-      await _pickFiles();
-      return;
-    }
-    final choice = await showAppSheet<String>(
-      context,
-      title: 'Attach',
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Row(
-          children: [
-            _attachOption('camera', 'Camera', 'camera'),
-            const SizedBox(width: 10),
-            _attachOption('image', 'Photos', 'photos'),
-            const SizedBox(width: 10),
-            _attachOption('file', 'Files', 'files'),
-          ],
-        ),
-      ),
-    );
-    if (choice == 'camera') {
-      await _pickCamera();
-    } else if (choice == 'photos') {
-      await _pickPhotos();
-    } else if (choice == 'files') {
-      await _pickFiles();
-    }
-  }
-
-  Widget _attachOption(String icon, String label, String value) {
-    return Expanded(
-      child: Material(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.md),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(R.md),
-          onTap: () => Navigator.pop(context, value),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppIcon(icon, size: 22, color: AppColors.fg2),
-                const SizedBox(height: 8),
-                Text(label, style: sans(12, color: AppColors.fg1)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _pickPhotos() async {
-    final xs =
-        await ImagePicker().pickMultiImage(imageQuality: 85, maxWidth: 2200);
-    if (xs.isEmpty) return;
-    await _ingest(xs
-        .map((x) => (name: x.name, localPath: x.path, readBytes: x.readAsBytes))
-        .toList());
-  }
-
-  Future<void> _pickCamera() async {
-    final x = await ImagePicker().pickImage(
-        source: ImageSource.camera, imageQuality: 85, maxWidth: 2200);
-    if (x == null) return;
-    await _ingest(
-        [(name: x.name, localPath: x.path, readBytes: x.readAsBytes)]);
-  }
-
-  Future<void> _pickFiles() async {
-    List<PickedLocalFile> files;
-    try {
-      files = await pickLocalFiles();
-    } catch (e) {
-      if (mounted) toast(context, '$e', danger: true);
-      return;
-    }
-    if (files.isEmpty) return;
-    await _ingest(files
-        .map((f) => (
-              name: f.name,
-              localPath: f.path,
-              readBytes: f.readAsBytes,
-            ))
-        .toList());
-  }
-
-  Future<void> _ingest(
-      List<
-              ({
-                String name,
-                String? localPath,
-                Future<Uint8List> Function() readBytes
-              })>
-          picked) async {
-    final entries = picked
-        .map((p) => _AgentAttachment(
-              name: p.name,
-              isImage: _isImageName(p.name),
-              isAudio: isAudioAttachmentPath(p.name),
-              localPath: p.localPath,
-            ))
-        .toList();
-    if (entries.isEmpty) return;
-    setState(() => _attachments.addAll(entries));
-    final generation = _attachmentGeneration;
-    for (var i = 0; i < entries.length; i++) {
-      final p = picked[i];
-      final a = entries[i];
-      try {
-        final bytes = await p.readBytes();
-        final path = await widget.client.uploadFile(bytes, name: p.name);
-        if (!mounted || generation != _attachmentGeneration) return;
-        setState(() {
-          a.remotePath = path;
-          a.uploading = false;
-        });
-      } catch (e) {
-        if (!mounted) return;
-        setState(() => _attachments.remove(a));
-        toast(context, 'Upload failed: ${p.name}', danger: true);
-      }
-    }
-  }
 
   Future<void> _send() async {
     if (_sending) return;
@@ -867,23 +728,12 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       final ok = await _voice.confirmTake(_attachVoiceBytes);
       if (!ok) return;
     }
-    if (_attachments.any((a) => a.uploading)) {
+    if (_attachments.isUploading) {
       if (!mounted) return;
       toast(context, 'Please wait for attachments to upload');
       return;
     }
-    final ready = _attachments.where((a) => a.remotePath != null).toList();
-    final markers = ready
-        .map((a) => a.isImage
-            ? '[attached image — call view_image on this exact path to see it: ${a.remotePath}]'
-            : '[attached file — read it at this exact path: ${a.remotePath}]')
-        .toList();
-    var body = _input.text.trim();
-    if (markers.isNotEmpty) {
-      body = body.isEmpty
-          ? markers.join('\n\n')
-          : '$body\n\n${markers.join('\n\n')}';
-    }
+    final body = _attachments.appendMarkers(_input.text);
     if (body.isEmpty) return;
     final typed = _input.text;
     final replyTarget = _replyTo;
@@ -902,7 +752,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       'created_at': DateTime.now().toUtc().toIso8601String(),
     });
     _input.clear();
-    _attachmentGeneration++;
     _attachments.clear();
     unawaited(_voice.discard());
     _unechoed.add(pending);
@@ -966,6 +815,44 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         replyTo: target.eventId,
         reaction: reaction,
         remove: remove,
+      );
+      if (!mounted) return;
+      await _load(silent: true);
+    } catch (e) {
+      _unechoed.removeWhere((p) => p.eventId == key);
+      if (!mounted) return;
+      setState(() => _events = [
+            for (final ev in _events)
+              if (ev.eventId != key) ev
+          ]);
+      toast(context, '$e', danger: true);
+    }
+  }
+
+  Future<void> _sendChoice(CoordinationEvent target, String choice) async {
+    if (target.eventId.isEmpty) return;
+    final key = 'local-choice-${DateTime.now().microsecondsSinceEpoch}';
+    final pending = CoordinationEvent.fromJson({
+      'event_id': key,
+      'event_type': 'direct_message.sent',
+      'actor_kind': 'human',
+      'actor_id': 'local',
+      'payload': {
+        'body': choice,
+        'reply_to': target.eventId,
+      },
+      'idempotency_key': key,
+      'created_at': DateTime.now().toUtc().toIso8601String(),
+    });
+    _unechoed.add(pending);
+    setState(() => _events = [..._events, pending]);
+    _jumpToBottom(animated: true);
+    try {
+      await widget.client.sendAgentMessage(
+        toAgentId: widget.agentId,
+        body: choice,
+        idempotencyKey: key,
+        replyTo: target.eventId,
       );
       if (!mounted) return;
       await _load(silent: true);
@@ -1302,7 +1189,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       visible,
       sender: (e) => '${e.actorKind}/${e.actorId}',
       at: _eventTime,
-      breaks: cards.containsKey,
+      breaks: (e) => cards.containsKey(e) || eventChoices(e).isNotEmpty,
     );
     final stamps = List<bool>.filled(visible.length, false);
     final origins = List<bool>.filled(visible.length, false);
@@ -1454,6 +1341,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     final aboutTask = e.payload['about_task'];
     final delivery = showDelivery ? _deliveryLine(e) : null;
     final rowKey = e.eventId.isEmpty ? null : _keyForEvent(e.eventId);
+    final choices = eventChoices(e);
+    final chosen = choices.isEmpty ? null : chosenReplyFor(e, _events);
 
     final Widget content = MessageBubbleInteractive(
       text: e.body,
@@ -1536,44 +1425,37 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               align: Alignment.centerLeft,
             ),
           content,
+          if (choices.isNotEmpty)
+            LayoutBuilder(
+              builder: (_, box) {
+                final max = box.maxWidth.isFinite
+                    ? box.maxWidth * ChatColors.maxShare
+                    : 520.0;
+                return Align(
+                  alignment:
+                      mine ? Alignment.centerRight : Alignment.centerLeft,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: max),
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        top: 6,
+                        left: mine ? 0 : (card != null ? 0 : 5),
+                        right: mine ? (card != null ? 0 : 5) : 0,
+                      ),
+                      child: ChatChoices(
+                        choices: choices,
+                        chosen: chosen,
+                        onPick: (choice) => unawaited(_sendChoice(e, choice)),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           if (delivery != null)
             ChatSystemLine(delivery, align: Alignment.centerRight),
         ],
       ),
-    );
-  }
-
-  Widget _attachmentBar() => ComposerAttachmentBar(tiles: [
-        for (final a in _attachments)
-          ComposerAttachmentTile(
-            name: a.name,
-            isImage: a.isImage,
-            isAudio: a.isAudio,
-            uploading: a.uploading,
-            localPath: a.localPath,
-            onOpen: () => _previewAttachment(a),
-            onRemove: () => setState(() => _attachments.remove(a)),
-          ),
-      ]);
-
-  Future<void> _previewAttachment(_AgentAttachment a) {
-    final pairs = {
-      for (final x in _attachments)
-        PreviewAttachment(
-          name: x.name,
-          isImage: x.isImage,
-          isAudio: x.isAudio,
-          localPath: x.localPath,
-          imageProvider: x.remotePath == null
-              ? null
-              : widget.client.imageProvider(x.remotePath!),
-        ): x
-    };
-    return showAttachmentPreview(
-      context,
-      pairs.keys.toList(),
-      _attachments.indexOf(a),
-      onRemove: (p) => setState(() => _attachments.remove(pairs[p])),
     );
   }
 
@@ -1617,18 +1499,21 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             decoration: ComposerCard.decoration('Message ${widget.agentName}…'),
           ),
         ),
-        attach:
-            ComposerIconButton('plus', tooltip: 'Attach', onTap: _onAttachTap),
+        attach: ComposerIconButton(
+          'plus',
+          tooltip: 'Attach',
+          onTap: () => unawaited(_attachments.pickFromSheet(context)),
+        ),
         mic: kCanRecord
             ? ComposerIconButton(_voice.isRecording ? 'mic-off' : 'mic',
                 tooltip: 'Record',
                 onTap: () => unawaited(_voice.toggleRecording()),
                 color: _voice.isRecording ? AppColors.danger : null)
             : null,
-        send: ValueListenableBuilder<TextEditingValue>(
-          valueListenable: _input,
-          builder: (_, val, __) {
-            final canSend = (val.text.trim().isNotEmpty ||
+        send: ListenableBuilder(
+          listenable: Listenable.merge([_input, _attachments]),
+          builder: (_, __) {
+            final canSend = (_input.text.trim().isNotEmpty ||
                     _attachments.isNotEmpty ||
                     _voice.isActive) &&
                 !_sending;
@@ -1656,7 +1541,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           10 + (keyboard > 0 ? 8 : mq.padding.bottom),
         ),
         child: ListenableBuilder(
-          listenable: _voice,
+          listenable: Listenable.merge([_voice, _attachments]),
           builder: (context, _) {
             final recording = _voice.isActive;
             return Swap(
@@ -1673,7 +1558,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (_attachments.isNotEmpty) _attachmentBar(),
+                        if (_attachments.isNotEmpty)
+                          _attachments.buildBar(context),
                         _composerCard(),
                       ],
                     )),
@@ -1742,20 +1628,7 @@ void openAgentThread(
   );
 }
 
-class _AgentAttachment {
-  final String name;
-  final bool isImage;
-  final bool isAudio;
-  final String? localPath;
-  String? remotePath;
-  bool uploading;
-  _AgentAttachment({
-    required this.name,
-    required this.isImage,
-    required this.isAudio,
-    this.localPath,
-  }) : uploading = true;
-}
+
 
 class _TypingDots extends StatefulWidget {
   const _TypingDots({super.key});

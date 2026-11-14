@@ -7,8 +7,11 @@ import 'package:flutter/services.dart';
 
 import '../ambient/hold.dart';
 import '../api.dart';
+import '../chat/choices.dart';
+import '../composer/composer_attachments.dart';
 import '../composer/composer_card.dart';
 import '../composer/voice_note.dart';
+import '../desktop_pick.dart';
 import '../markdown_preview.dart';
 import '../chat/message_body.dart';
 import '../message_reactions.dart';
@@ -909,6 +912,7 @@ class GroupThreadScreen extends StatefulWidget {
     this.embedded = false,
     this.showBack = true,
     @visibleForTesting this.voiceController,
+    @visibleForTesting this.pickFiles,
   });
 
   final DaemonClient client;
@@ -921,6 +925,9 @@ class GroupThreadScreen extends StatefulWidget {
 
   @visibleForTesting
   final VoiceNoteController? voiceController;
+
+  @visibleForTesting
+  final Future<List<PickedLocalFile>> Function()? pickFiles;
 
   @override
   State<GroupThreadScreen> createState() => _GroupThreadScreenState();
@@ -953,6 +960,15 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   /// The `@query` under the cursor, when the completion list should show.
   ({int start, String query})? _mention;
 
+  late final ComposerAttachmentController _attachments =
+      ComposerAttachmentController(
+    client: widget.client,
+    onToast: (msg, {bool danger = false}) {
+      if (mounted) toast(context, msg, danger: danger);
+    },
+    pickFilesOverride: widget.pickFiles,
+  );
+
   late final VoiceNoteController _voice = widget.voiceController ??
       VoiceNoteController(
         client: widget.client,
@@ -983,6 +999,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   @override
   void dispose() {
     _thread.dispose();
+    _attachments.dispose();
     if (widget.voiceController == null) {
       _voice.dispose();
     }
@@ -1117,20 +1134,30 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       if (mounted) toast(context, 'The recording was empty.');
       return;
     }
+    if (_attachments.isUploading) {
+      if (mounted) toast(context, 'Please wait for attachments to upload');
+      return;
+    }
     final typed = _input.text.trim();
-    if (typed.isEmpty && !hasTake) return;
+    if (typed.isEmpty && !hasTake && _attachments.isEmpty) return;
     setState(() => _sending = true);
     try {
       var body = typed;
+      final extraMarkers = <String>[
+        ..._attachments.markers(),
+      ];
       if (takeBytes != null && takeBytes.isNotEmpty) {
         final remotePath = await widget.client.uploadFile(
           takeBytes,
           name:
               'voice-${DateTime.now().microsecondsSinceEpoch}.$voiceNoteExtension',
         );
-        final marker =
-            '[attached file — read it at this exact path: $remotePath]';
-        body = body.isEmpty ? marker : '$body\n\n$marker';
+        extraMarkers
+            .add('[attached file — read it at this exact path: $remotePath]');
+      }
+      if (extraMarkers.isNotEmpty) {
+        final joined = extraMarkers.join('\n\n');
+        body = body.isEmpty ? joined : '$body\n\n$joined';
       }
       final mentions = extractGroupMentions(_input.text, _mentionIds);
       final ev = await widget.client.postGroup(
@@ -1141,6 +1168,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       if (!mounted) return;
       _pending.add(ev);
       _input.clear();
+      _attachments.clear();
       await _voice.discard();
       if (!mounted) return;
       setState(() => _mention = null);
@@ -1475,7 +1503,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         if (!isReactionEvent(e) &&
             (cards.containsKey(e) ||
                 e.body.isNotEmpty ||
-                _systemText(e) != null))
+                _systemText(e) != null ||
+                eventChoices(e).isNotEmpty))
           e
     ];
     final reactionsByTarget = groupMessageReactions(_events);
@@ -1504,7 +1533,10 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       visible,
       sender: (e) => e.actorKind == 'human' ? 'human' : e.actorId,
       at: _eventTime,
-      breaks: (e) => _systemText(e) != null || cards.containsKey(e),
+      breaks: (e) =>
+          _systemText(e) != null ||
+          cards.containsKey(e) ||
+          eventChoices(e).isNotEmpty,
     );
     int? lastHumanIndex;
     for (var i = visible.length - 1; i >= 0; i--) {
@@ -1611,6 +1643,47 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     }
   }
 
+  Future<void> _sendChoice(CoordinationEvent target, String choice) async {
+    if (target.eventId.isEmpty) return;
+    final key = 'local-choice-${DateTime.now().microsecondsSinceEpoch}';
+    final local = CoordinationEvent.fromJson({
+      'event_id': key,
+      'thread_id': widget.group.id,
+      'event_type': 'group_message',
+      'actor_kind': 'human',
+      'actor_id': 'human',
+      'payload': {
+        'body': choice,
+        'reply_to': target.eventId,
+        'in_reply_to': target.eventId,
+      },
+      'idempotency_key': key,
+      'created_at': DateTime.now().toUtc().toIso8601String(),
+    });
+    _pending.add(local);
+    setState(() => _events = [..._events, local]);
+    _jumpToBottom(animated: true);
+    try {
+      final ev = await widget.client.postGroup(
+        widget.group.id,
+        body: choice,
+        inReplyTo: target.eventId,
+      );
+      if (!mounted) return;
+      _pending.removeWhere((p) => p.eventId == key);
+      _pending.add(ev);
+      _thread.refresh();
+    } catch (e) {
+      _pending.removeWhere((p) => p.eventId == key);
+      if (!mounted) return;
+      setState(() => _events = [
+            for (final ev in _events)
+              if (ev.eventId != key) ev
+          ]);
+      toast(context, '$e', danger: true);
+    }
+  }
+
   Widget _withTapback(Widget bubble, Widget? chips, {required bool mine}) {
     if (chips == null) return bubble;
     return Padding(
@@ -1652,6 +1725,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       );
     }
     final mine = e.actorKind == 'human';
+    final choices = eventChoices(e);
+    final chosen = choices.isEmpty ? null : chosenReplyFor(e, _events);
     Widget buildContent() =>
         card ??
         ChatBubble(
@@ -1702,6 +1777,29 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
               ),
             ),
           ),
+          if (choices.isNotEmpty)
+            LayoutBuilder(
+              builder: (_, box) {
+                final max = box.maxWidth.isFinite
+                    ? box.maxWidth * ChatColors.maxShare
+                    : 520.0;
+                return Padding(
+                  padding: EdgeInsets.only(
+                    top: 6,
+                    left: mine ? 0 : ChatBubbleRow.avatarSize + 6 + 5,
+                    right: mine ? 5 : 0,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: max),
+                    child: ChatChoices(
+                      choices: choices,
+                      chosen: chosen,
+                      onPick: (choice) => unawaited(_sendChoice(e, choice)),
+                    ),
+                  ),
+                );
+              },
+            ),
           if (readLine != null)
             ChatSystemLine(readLine, align: Alignment.centerRight),
         ],
@@ -1740,6 +1838,11 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             decoration: ComposerCard.decoration('Message the group…'),
           ),
         ),
+        attach: ComposerIconButton(
+          'plus',
+          tooltip: 'Attach',
+          onTap: () => unawaited(_attachments.pickFromSheet(context)),
+        ),
         mic: kCanRecord
             ? ComposerIconButton(
                 _voice.isRecording ? 'mic-off' : 'mic',
@@ -1748,11 +1851,13 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                 color: _voice.isRecording ? AppColors.danger : null,
               )
             : null,
-        send: ValueListenableBuilder<TextEditingValue>(
-          valueListenable: _input,
-          builder: (_, val, __) {
-            final canSend =
-                (val.text.trim().isNotEmpty || _voice.isActive) && !_sending;
+        send: ListenableBuilder(
+          listenable: Listenable.merge([_input, _attachments]),
+          builder: (_, __) {
+            final canSend = (_input.text.trim().isNotEmpty ||
+                    _attachments.isNotEmpty ||
+                    _voice.isActive) &&
+                !_sending;
             return ComposerSendButton(
               enabled: canSend,
               sending: _sending,
@@ -1777,7 +1882,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           10 + (keyboard > 0 ? 8 : mq.padding.bottom),
         ),
         child: ListenableBuilder(
-          listenable: _voice,
+          listenable: Listenable.merge([_voice, _attachments]),
           builder: (context, _) {
             final recording = _voice.isActive;
             return Swap(
@@ -1796,6 +1901,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                         children: [
                           if (_mention != null && _mentionCandidates.isNotEmpty)
                             _mentionList(),
+                          if (_attachments.isNotEmpty)
+                            _attachments.buildBar(context),
                           _composerCard(),
                         ],
                       ),
