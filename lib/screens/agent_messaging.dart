@@ -938,11 +938,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
 
   Future<void> _sendReaction(CoordinationEvent target, String reaction) async {
     if (target.eventId.isEmpty) return;
-    final already = _events.any((e) =>
-        e.actorKind == 'human' &&
-        e.replyTo == target.eventId &&
-        e.reaction == reaction);
-    if (already) return;
+    final shown = messageReactionEmoji(reaction);
+    final remove = (groupMessageReactions(_events)[target.eventId] ?? const [])
+        .any((r) => r.mine && r.name == shown);
     final key = 'local-react-${DateTime.now().microsecondsSinceEpoch}';
     final pending = CoordinationEvent.fromJson({
       'event_id': key,
@@ -954,6 +952,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         'kind': 'reaction',
         'reply_to': target.eventId,
         'reaction': reaction,
+        if (remove) 'removed': true,
       },
       'idempotency_key': key,
       'created_at': DateTime.now().toUtc().toIso8601String(),
@@ -967,6 +966,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         idempotencyKey: key,
         replyTo: target.eventId,
         reaction: reaction,
+        remove: remove,
       );
       if (!mounted) return;
       await _load(silent: true);

@@ -87,6 +87,7 @@ class _FakeClient extends DaemonClient {
     String? originSession,
     String? replyTo,
     String? reaction,
+    bool remove = false,
   }) async {
     sent.add({
       'to': toAgentId,
