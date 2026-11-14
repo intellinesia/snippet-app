@@ -521,16 +521,17 @@ void toast(BuildContext context, String message, {bool danger = false}) {
   });
 }
 
-/// Where toasts sit: under the status bar on phones, so they never cover the
-/// composer or the bottom bar; bottom-centre on desktop.
+/// Toasts sit where notification cards do: top-centre on phones, top-right
+/// on desktop.
 Widget _toastSlot(BuildContext ctx, Widget card) {
   final pad = MediaQuery.of(ctx).padding;
   return Positioned(
-    left: 0,
-    right: 0,
-    top: kMobile ? pad.top + S.s12 : null,
-    bottom: kMobile ? null : pad.bottom + 24,
-    child: Center(child: card),
+    left: S.s12,
+    right: S.s12,
+    top: pad.top + (kMobile ? S.s4 : 44 + S.s8),
+    child: Align(
+        alignment: kMobile ? Alignment.topCenter : Alignment.topRight,
+        child: card),
   );
 }
 
@@ -552,7 +553,7 @@ class _ToastCardState extends State<_ToastCard>
   @override
   void initState() {
     super.initState();
-    _c = AnimationController(vsync: this, duration: Motion.base)..forward();
+    _c = AnimationController(vsync: this, duration: Motion.open)..forward();
   }
 
   @override
@@ -564,58 +565,51 @@ class _ToastCardState extends State<_ToastCard>
   @override
   Widget build(BuildContext context) {
     Theme.of(context); // Rebuild on theme change
+    if (reduceMotion(context)) _c.value = 1;
     final curve = CurvedAnimation(parent: _c, curve: Motion.enter);
-    // Only the icon carries the tone; the message stays readable.
     final tone = widget.danger ? AppColors.danger : AppColors.ok;
-    // Material ancestor: without it, text floating in the root Overlay falls back
-    // to the debug default style (the yellow underline). It also gives clean ink.
+    // Material ancestor: without it, overlay text gets the debug style.
     return Material(
       type: MaterialType.transparency,
       child: FadeTransition(
         opacity: curve,
         child: SlideTransition(
-          position:
-              Tween(begin: Offset(0, kMobile ? -0.25 : 0.25), end: Offset.zero)
-                  .animate(curve),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 420),
-            margin: const EdgeInsets.symmetric(horizontal: M.gutter),
-            padding: kMobile
-                ? const EdgeInsets.fromLTRB(10, 10, 16, 10)
-                : const EdgeInsets.fromLTRB(12, 10, 14, 10),
-            decoration: BoxDecoration(
-              color: kMobile ? AppColors.surface3 : AppColors.surface2,
-              borderRadius: BorderRadius.circular(kMobile ? 18 : R.card),
-              border: kMobile ? null : Border.all(color: AppColors.lineStrong),
-              boxShadow: overlayShadow,
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              if (kMobile)
-                Container(
-                  width: 28,
-                  height: 28,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: widget.danger ? AppColors.dangerBg : AppColors.okBg,
-                    shape: BoxShape.circle,
-                  ),
-                  child: AppIcon(widget.danger ? 'alert-triangle' : 'check',
-                      size: 14, color: tone),
-                )
-              else
-                AppIcon(widget.danger ? 'alert-triangle' : 'check-circle',
-                    size: 15, color: tone),
-              SizedBox(width: kMobile ? 12 : 10),
-              Flexible(
-                child: Text(widget.message,
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(kMobile ? 14 : 13,
-                            height: kMobile ? 19 / 14 : 1.4,
-                            color: AppColors.fg1)
-                        .copyWith(decoration: TextDecoration.none)),
+          position: Tween(
+                  begin: kMobile ? const Offset(0, -.2) : const Offset(0, -.08),
+                  end: Offset.zero)
+              .animate(curve),
+          child: ScaleTransition(
+            alignment: Alignment.topRight,
+            scale: Tween(begin: kMobile ? 1.0 : .96, end: 1.0).animate(curve),
+            child: Container(
+              constraints: BoxConstraints(maxWidth: kMobile ? 300 : 420),
+              padding: EdgeInsets.symmetric(
+                  horizontal: kMobile ? 18 : 14, vertical: kMobile ? 12 : 10),
+              decoration: BoxDecoration(
+                color: AppColors.surface2,
+                border: Border.all(color: AppColors.lineStrong),
+                borderRadius: BorderRadius.circular(kMobile ? 28 : 10),
+                boxShadow: overlayShadow,
               ),
-            ]),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(widget.message,
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(kMobile ? 14 : 13,
+                              weight: W.label,
+                              height: 1.35,
+                              color: AppColors.fg1)
+                          .copyWith(decoration: TextDecoration.none)),
+                ),
+              ]),
+            ),
           ),
         ),
       ),
