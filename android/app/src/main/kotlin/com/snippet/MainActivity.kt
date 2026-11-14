@@ -43,6 +43,12 @@ class MainActivity : FlutterActivity() {
         val native = info.reason == android.app.ApplicationExitInfo.REASON_CRASH_NATIVE
         if (!native && info.reason != android.app.ApplicationExitInfo.REASON_CRASH) return null
         val head = (if (native) "native crash" else "crash") + (info.description?.let { ": $it" } ?: "")
+        val javaCrash = java.io.File(filesDir, "java_crash.txt")
+        if (!native && javaCrash.exists()) {
+            val stack = try { javaCrash.readText() } catch (_: Exception) { "" }
+            javaCrash.delete()
+            return (listOf(head) + stack.lines().map { it.trim() }.filter { it.isNotEmpty() }.take(16)).joinToString("\n")
+        }
         val bytes = try { info.traceInputStream?.use { it.readBytes() } } catch (_: Exception) { null }
             ?: return head
         val text = String(bytes.map { b -> val c = b.toInt() and 0xff; if (c in 32..126) c.toChar() else '\n' }.toCharArray())
@@ -55,6 +61,12 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        val crashFile = java.io.File(filesDir, "java_crash.txt")
+        Thread.setDefaultUncaughtExceptionHandler { thread, e ->
+            try { crashFile.writeText("[${thread.name}] " + android.util.Log.getStackTraceString(e)) } catch (_: Exception) {}
+            previous?.uncaughtException(thread, e)
+        }
         // Intent is also handled after the engine is ready so a cold start
         // still reaches Dart.
     }

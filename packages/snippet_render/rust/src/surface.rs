@@ -78,18 +78,21 @@ impl Surface {
         let provider = Arc::new(Provider(frame.clone()));
         let on_main = shared.clone();
         // Textures are made on the platform thread; Dart may call from another.
-        let made =
-            EngineContext::perform_on_main_thread(move || {
-                match Texture::new_with_provider(engine, provider) {
-                    Ok(t) => {
-                        let id = t.id();
-                        *on_main.texture.lock().unwrap() = Some(t.into_sendable_texture());
-                        on_main.texture_id.store(id, Ordering::SeqCst);
-                        on_main.wake.notify_all();
-                    }
-                    Err(e) => *on_main.error.lock().unwrap() = Some(format!("texture: {e:?}")),
+        let made = EngineContext::perform_on_main_thread(move || {
+            let made = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                Texture::new_with_provider(engine, provider)
+            }));
+            match made {
+                Err(_) => *on_main.error.lock().unwrap() = Some("texture: panicked".into()),
+                Ok(Ok(t)) => {
+                    let id = t.id();
+                    *on_main.texture.lock().unwrap() = Some(t.into_sendable_texture());
+                    on_main.texture_id.store(id, Ordering::SeqCst);
+                    on_main.wake.notify_all();
                 }
-            });
+                Ok(Err(e)) => *on_main.error.lock().unwrap() = Some(format!("texture: {e}")),
+            }
+        });
         if let Err(e) = made {
             *shared.error.lock().unwrap() = Some(format!("engine context: {e:?}"));
         }

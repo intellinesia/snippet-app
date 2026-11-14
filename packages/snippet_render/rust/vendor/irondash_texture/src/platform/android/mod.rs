@@ -1,7 +1,10 @@
 use std::{cell::RefCell, marker::PhantomData, slice, sync::Arc};
 
 use irondash_engine_context::EngineContext;
-use jni::objects::{GlobalRef, JObject};
+use jni::{
+    JNIEnv,
+    objects::{GlobalRef, JObject, JString, JValue},
+};
 use ndk_sys::{
     AHardwareBuffer_Format, ANativeWindow, ANativeWindow_Buffer, ANativeWindow_acquire,
     ANativeWindow_fromSurface, ANativeWindow_lock, ANativeWindow_release,
@@ -9,9 +12,33 @@ use ndk_sys::{
 };
 
 use crate::{
-    log::OkLog, BoxedPixelData, PayloadProvider, PixelFormat, PlatformTextureWithProvider,
-    PlatformTextureWithoutProvider, Result,
+    BoxedPixelData, Error, PayloadProvider, PixelFormat, PlatformTextureWithProvider,
+    PlatformTextureWithoutProvider, Result, log::OkLog,
 };
+
+// A JNI call that throws leaves the exception pending; returning to the looper
+// with it pending crashes the app, so clear it and keep its stack as the error.
+fn take_exception(env: &mut JNIEnv) -> Option<String> {
+    if !env.exception_check().unwrap_or(false) {
+        return None;
+    }
+    let ex = env.exception_occurred().ok();
+    env.exception_clear().ok();
+    let text = ex.and_then(|ex| {
+        let v = env
+            .call_static_method(
+                "android/util/Log",
+                "getStackTraceString",
+                "(Ljava/lang/Throwable;)Ljava/lang/String;",
+                &[JValue::Object(&ex)],
+            )
+            .and_then(|v| v.l())
+            .ok()?;
+        env.get_string(&JString::from(v)).ok().map(String::from)
+    });
+    env.exception_clear().ok();
+    Some(text.unwrap_or_else(|| "Java exception".into()))
+}
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 struct Geometry {
@@ -43,6 +70,20 @@ impl<Type> PlatformTexture<Type> {
     ) -> Result<Self> {
         let java_vm = EngineContext::get_java_vm()?;
         let mut env = java_vm.attach_current_thread()?;
+        env.push_local_frame(16)?;
+        let res = match Self::create(&mut env, engine_handle, pixel_buffer_provider) {
+            Err(e) => Err(take_exception(&mut env).map_or(e, Error::JavaException)),
+            ok => ok,
+        };
+        unsafe { env.pop_local_frame(&JObject::null()) }.ok();
+        res
+    }
+
+    fn create(
+        env: &mut JNIEnv,
+        engine_handle: i64,
+        pixel_buffer_provider: Option<Arc<dyn PayloadProvider<BoxedPixelData>>>,
+    ) -> Result<Self> {
         let engine_context = EngineContext::get()?;
         let texture_registry = engine_context.get_texture_registry(engine_handle)?;
         let texture_entry = env
@@ -61,22 +102,18 @@ impl<Type> PlatformTexture<Type> {
                 &[],
             )?
             .l()?;
-        let surface_class = env.find_class("android/view/Surface")?;
-
-        env.push_local_frame(16)?;
-
         let surface = env.new_object(
-            surface_class,
+            "android/view/Surface",
             "(Landroid/graphics/SurfaceTexture;)V",
             &[(&surface_texture).into()],
         )?;
-
         let native_window =
             unsafe { ANativeWindow_fromSurface(env.get_native_interface(), surface.as_raw()) };
-
+        if native_window.is_null() {
+            return Err(Error::TextureRegistrationFailed);
+        }
         let id = env.call_method(&texture_entry, "id", "()J", &[])?.j()?;
-
-        let res = Self {
+        Ok(Self {
             id,
             texture_entry: env.new_global_ref(texture_entry)?,
             surface: env.new_global_ref(surface)?,
@@ -84,20 +121,22 @@ impl<Type> PlatformTexture<Type> {
             last_geometry: RefCell::new(None),
             pixel_data_provider: pixel_buffer_provider,
             _phantom: PhantomData {},
-        };
-        unsafe {
-            env.pop_local_frame(&JObject::null())?;
-        }
-        Ok(res)
+        })
     }
 
     fn destroy(&mut self) -> Result<()> {
         let java_vm = EngineContext::get_java_vm()?;
         let mut env = java_vm.attach_current_thread()?;
-        env.call_method(self.texture_entry.as_obj(), "release", "()V", &[])?;
+        let released = env.call_method(self.texture_entry.as_obj(), "release", "()V", &[]);
         unsafe {
             ANativeWindow_release(self.native_window);
         }
+        if released.is_err() {
+            if let Some(e) = take_exception(&mut env) {
+                return Err(Error::JavaException(e));
+            }
+        }
+        released?;
         Ok(())
     }
 
@@ -134,8 +173,9 @@ impl<Type> PlatformTexture<Type> {
             let dst_stride = buf.stride.max(0) as usize * 4;
             let src_stride = payload.width.max(0) as usize * 4;
             let row_bytes = src_stride.min(buf.width.max(0) as usize * 4);
-            let data =
-                unsafe { slice::from_raw_parts_mut(buf.bits as *mut u8, buf.height as usize * dst_stride) };
+            let data = unsafe {
+                slice::from_raw_parts_mut(buf.bits as *mut u8, buf.height as usize * dst_stride)
+            };
             for y in 0..rows {
                 let (src, dst) = (y * src_stride, y * dst_stride);
                 if src + row_bytes > payload.data.len() {

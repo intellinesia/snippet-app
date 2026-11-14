@@ -7,6 +7,8 @@ pub enum Error {
     TextureRegistrationFailed,
     #[cfg(target_os = "android")]
     JNIError(jni::errors::Error),
+    #[cfg(target_os = "android")]
+    JavaException(String),
 }
 
 impl Display for Error {
@@ -16,6 +18,8 @@ impl Display for Error {
             Error::TextureRegistrationFailed => write!(f, "texture registration failed"),
             #[cfg(target_os = "android")]
             Error::JNIError(e) => e.fmt(f),
+            #[cfg(target_os = "android")]
+            Error::JavaException(e) => f.write_str(e),
         }
     }
 }
