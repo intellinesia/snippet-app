@@ -1230,6 +1230,8 @@ class AppColors {
   static const Color scrim = Color(0x99000000);
   // Lighter, so a glass sheet still shows the page through its blur.
   static const Color glassScrim = Color(0x59000000);
+  /// Behind every centred desktop dialog, Settings included.
+  static const Color modalScrim = Color(0x61000000);
   /// Set while a chat wallpaper shows: side chrome goes opaque to frame it.
   static bool solidChrome = false;
   static Color get windowBg => kMobile

@@ -286,7 +286,7 @@ Future<bool> confirmAction(
   } else {
     result = await showDialog<bool>(
       context: context,
-      barrierColor: AppColors.scrim,
+      barrierColor: AppColors.modalScrim,
       builder: (ctx) => ModalGlass(child: _DialogFrame(
         title: title,
         icon: danger ? 'alert-triangle' : null,
@@ -329,7 +329,7 @@ Future<String?> promptText(BuildContext context,
   if (!kMobile) {
     return showDialog<String>(
       context: context,
-      barrierColor: AppColors.scrim,
+      barrierColor: AppColors.modalScrim,
       builder: (_) => ModalGlass(child: _DialogFrame(title: title, maxWidth: 380, child: field)),
     );
   }
@@ -593,7 +593,7 @@ Future<T?> showAppSheet<T>(BuildContext context,
   if (!kMobile) {
     return showDialog<T>(
       context: context,
-      barrierColor: AppColors.scrim,
+      barrierColor: AppColors.modalScrim,
       builder: (ctx) => ModalGlass(child: _DialogFrame(
         title: title,
         maxWidth: maxWidth,
