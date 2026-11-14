@@ -320,9 +320,20 @@ class SessionListRow extends StatelessWidget {
                       if (showProject || branch.isNotEmpty || diff != null || noRepo)
                         const SizedBox(width: 8),
                     ],
-                    if (showProject)
-                      _ProjectChip(label: projectLabel(s))
-                    else ...[
+                    if (showProject) ...[
+                      _ProjectChip(label: projectLabel(s)),
+                      if (branch.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        AppIcon('git-branch', size: 11, color: AppColors.fg4),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(branch,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TS.meta()),
+                        ),
+                      ],
+                    ] else ...[
                       if (branch.isNotEmpty)
                         Expanded(
                           child: Row(children: [
