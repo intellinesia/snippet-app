@@ -14,6 +14,7 @@ import 'package:snippet/screens/agent_messaging.dart';
 import 'package:snippet/screens/agent_questions_card.dart';
 import 'package:snippet/screens/agent_thread_cards.dart';
 import 'package:snippet/screens/artifact_viewer.dart';
+import 'package:snippet/shell_panel.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/transcript.dart';
@@ -553,5 +554,74 @@ void main() {
     expect(find.text('Needs the full suite before the PR.'), findsOneWidget);
     expect(find.text('Approve'), findsOneWidget);
     expect(find.text('Deny'), findsOneWidget);
+  });
+
+  testWidgets(
+      'task_result renders in direct agent thread with tone and opens session',
+      (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    String? openedSession;
+    String? openedTitle;
+    openSessionInTab = (_, id, title) {
+      openedSession = id;
+      openedTitle = title;
+    };
+    addTearDown(() => openSessionInTab = null);
+
+    await _open(t, [
+      _ev(1, 'agent', 'Done', {
+        'task_result': {
+          'task_id': 't-1',
+          'title': 'Index docs',
+          'status': 'done',
+          'summary': 'Indexed **42** pages.',
+          'session_id': 'sess-idx',
+        },
+      }),
+      _ev(2, 'agent', 'Blocked', {
+        'task_result': {
+          'task_id': 't-2',
+          'title': 'Push release',
+          'status': 'blocked',
+          'summary': 'Needs signing key.',
+          'session_id': 'sess-rel',
+        },
+      }),
+      _ev(3, 'agent', 'Failed', {
+        'task_result': {
+          'task_id': 't-3',
+          'title': 'Run suite',
+          'status': 'failed',
+          'summary': '2 assertions failed.',
+          'session_id': 'sess-fail',
+        },
+      }),
+    ]);
+
+    expect(find.byType(TaskResultCard), findsNWidgets(3));
+    expect(find.text('Index docs'), findsOneWidget);
+    expect(find.text('Push release'), findsOneWidget);
+    expect(find.text('Run suite'), findsOneWidget);
+
+    expect(t.widget<ChatCardPill>(find.ancestor(
+      of: find.text('Done'),
+      matching: find.byType(ChatCardPill),
+    )).tone, ChatCardTone.ok);
+    expect(t.widget<ChatCardPill>(find.ancestor(
+      of: find.text('Blocked'),
+      matching: find.byType(ChatCardPill),
+    )).tone, ChatCardTone.warn);
+    expect(t.widget<ChatCardPill>(find.ancestor(
+      of: find.text('Failed'),
+      matching: find.byType(ChatCardPill),
+    )).tone, ChatCardTone.danger);
+
+    await t.tap(find.text('Push release'));
+    await t.pump();
+    expect(openedSession, 'sess-rel');
+    expect(openedTitle, 'Push release');
+
+    await t.pumpWidget(const SizedBox());
+    debugDefaultTargetPlatformOverride = null;
   });
 }

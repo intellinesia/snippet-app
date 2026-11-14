@@ -1,6 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stream_channel/stream_channel.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:snippet/api.dart';
 import 'package:snippet/models.dart';
@@ -229,4 +234,160 @@ void main() {
     expect(find.byType(TextField), findsNothing);
     debugDefaultTargetPlatformOverride = null;
   });
+
+  testWidgets('session question uses quickSend with QuestionBar answer format',
+      (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    final ch = _WsChannel();
+    Uri? wsUri;
+    DaemonClient.wsConnector = (uri, {connectTimeout, pingInterval}) {
+      wsUri = uri;
+      Timer(const Duration(milliseconds: 10),
+          () => ch.incoming.add('{"wire":"snapshot"}'));
+      return ch;
+    };
+    addTearDown(() => DaemonClient.wsConnector = null);
+
+    final client = _Client();
+    final q = _ev('eq-sess', 'agent', {
+      'body': 'Session needs input',
+      'question': {
+        'session': 'sess-work-1',
+        'question_id': 'attn-work-1',
+        'task_id': 't-1',
+        'task_title': 'Ship feature',
+        'questions': [
+          {
+            'id': 'q1',
+            'text': 'Which target?',
+            'answer_kind': {
+              'kind': 'single_choice',
+              'choices': [
+                {'value': 'staging', 'label': 'Staging', 'recommended': true},
+                {'value': 'prod', 'label': 'Production'},
+              ],
+            },
+          },
+          {
+            'id': 'q2',
+            'text': 'Platforms?',
+            'answer_kind': {
+              'kind': 'multi_choice',
+              'choices': [
+                {'value': 'ios', 'label': 'iOS', 'recommended': true},
+                {'value': 'android', 'label': 'Android'},
+              ],
+            },
+          },
+        ],
+      },
+    });
+    final question = q.payload['question'] as Map<dynamic, dynamic>;
+    await _pump(
+      t,
+      AgentQuestionsCard(
+        event: q,
+        question: question,
+        client: client,
+        events: [q],
+      ),
+    );
+
+    expect(find.text('Ship feature'), findsOneWidget);
+    await t.tap(find.text('Production'));
+    await t.pump();
+    await t.tap(find.text('Next'));
+    await t.pump();
+    await t.tap(find.text('Android'));
+    await t.pump();
+    await t.tap(find.text('Send'));
+    await t.pump(const Duration(milliseconds: 50));
+    await t.pump(const Duration(milliseconds: 50));
+
+    expect(client.calls, isEmpty);
+    expect(wsUri?.queryParameters['session'], 'sess-work-1');
+    final frame = jsonDecode(ch.sent.single as String) as Map;
+    expect(frame['kind'], 'answer');
+    expect(
+      frame['value'],
+      'Which target?\n→ Production (prod)\n\nPlatforms?\n→ iOS, Android',
+    );
+    expect(frame['nonce'], isNotEmpty);
+    expect(find.text('Answered: Production'), findsOneWidget);
+    expect(find.text('Answered: iOS, Android'), findsOneWidget);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('session question shows error when quickSend fails', (t) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    DaemonClient.wsConnector = (_, {connectTimeout, pingInterval}) {
+      throw Exception('offline');
+    };
+    addTearDown(() => DaemonClient.wsConnector = null);
+
+    final client = _Client();
+    final q = _ev('eq-fail', 'agent', {
+      'question': {
+        'session': 'sess-work-2',
+        'question_id': 'attn-work-2',
+        'questions': [
+          {
+            'id': 'q1',
+            'text': 'Proceed?',
+            'answer_kind': {'kind': 'yes_no'},
+          },
+        ],
+      },
+    });
+    await _pump(
+      t,
+      AgentQuestionsCard(
+        event: q,
+        question: q.payload['question'] as Map<dynamic, dynamic>,
+        client: client,
+        events: [q],
+      ),
+    );
+
+    await t.tap(find.text('Yes'));
+    await t.pump();
+    await t.tap(find.text('Send'));
+    await t.pump();
+
+    expect(find.text('Could not reach the session.'), findsOneWidget);
+    expect(find.text('Send'), findsOneWidget);
+    debugDefaultTargetPlatformOverride = null;
+  });
+}
+
+class _WsChannel extends StreamChannelMixin implements WebSocketChannel {
+  final incoming = StreamController<dynamic>.broadcast();
+  final sent = <dynamic>[];
+  @override
+  Stream get stream => incoming.stream;
+  @override
+  late final WebSocketSink sink = _WsSink(this);
+  @override
+  int? get closeCode => null;
+  @override
+  String? get closeReason => null;
+  @override
+  String? get protocol => null;
+  @override
+  Future<void> get ready => Future.value();
+}
+
+class _WsSink implements WebSocketSink {
+  _WsSink(this.ch);
+  final _WsChannel ch;
+  @override
+  void add(dynamic data) => ch.sent.add(data);
+  @override
+  void addError(Object error, [StackTrace? stackTrace]) {}
+  @override
+  Future addStream(Stream stream) async {}
+  @override
+  Future close([int? closeCode, String? closeReason]) async {}
+  @override
+  Future get done => Future.value();
 }

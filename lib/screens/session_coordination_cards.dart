@@ -23,8 +23,13 @@ class CardMarkdownBody extends StatefulWidget {
   final String body;
   final String? preview;
   final bool collapsible;
+  final bool selectable;
   const CardMarkdownBody(
-      {super.key, required this.body, this.preview, this.collapsible = true});
+      {super.key,
+      required this.body,
+      this.preview,
+      this.collapsible = true,
+      this.selectable = true});
 
   @override
   State<CardMarkdownBody> createState() => _CardMarkdownBodyState();
@@ -96,7 +101,7 @@ class _CardMarkdownBodyState extends State<CardMarkdownBody> {
                           physics: const NeverScrollableScrollPhysics(),
                           child: MarkdownBody(
                             data: unwrapCodedLinks(body),
-                            selectable: _open || !long,
+                            selectable: widget.selectable && (_open || !long),
                             styleSheet: sheet,
                             builders: {'pre': PreBlockBuilder()},
                             onTapLink: (_, href, __) =>
