@@ -4,6 +4,7 @@ import '../chat/chat_info.dart' show GroupInfoPanel, showGroupInfo;
 import '../motion_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:markdown/markdown.dart' as md;
 
 import '../ambient/hold.dart';
 import '../api.dart';
@@ -77,6 +78,26 @@ List<TextSpan> groupMentionSpans(String text, Set<String> memberIds) {
   }
   if (at < text.length) spans.add(TextSpan(text: text.substring(at)));
   return spans;
+}
+
+final RegExp _codeSegment = RegExp(r'```[\s\S]*?(?:```|$)|`[^`\n]*`');
+
+/// [body] as markdown with member `@id` mentions bolded, leaving code alone.
+String groupMarkdownWithMentions(String body, Set<String> memberIds) {
+  String bold(String text) => [
+        for (final s in groupMentionSpans(text, memberIds))
+          s.style == null ? s.text! : '**${s.text}**',
+      ].join();
+  final out = StringBuffer();
+  var at = 0;
+  for (final m in _codeSegment.allMatches(body)) {
+    out
+      ..write(bold(body.substring(at, m.start)))
+      ..write(m[0]);
+    at = m.end;
+  }
+  out.write(bold(body.substring(at)));
+  return out.toString();
 }
 
 String groupMemberName(GroupMember m, Map<String, CoordinationAgent> agents) {
@@ -1662,25 +1683,15 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   }
 
   Widget _mentionText(String body, {required bool mine}) {
-    final mentionStyle = mine
-        ? TextStyle(
-            color: ChatColors.sentText,
-            fontWeight: weightFor(W.strong),
-          )
-        : TextStyle(
-            color: ChatColors.receivedText,
-            fontWeight: FontWeight.w500,
-          );
-    final richText = Text.rich(
-      TextSpan(
-        style: chatText(mine: mine),
-        children: [
-          for (final s in groupMentionSpans(body, _mentionIds))
-            s.style == null ? s : TextSpan(text: s.text, style: mentionStyle),
-        ],
-      ),
+    final text = MarkdownBody(
+      data: unwrapCodedLinks(groupMarkdownWithMentions(body, _mentionIds)),
+      selectable: false,
+      extensionSet: md.ExtensionSet.gitHubFlavored,
+      styleSheet: chatMarkdownStyle(context, mine: mine),
+      builders: {'pre': PreBlockBuilder()},
+      onTapLink: (txt, href, title) => openMarkdownLink(href, context, txt),
     );
-    return kMobile ? richText : MessageSelectionArea(child: richText);
+    return kMobile ? text : MessageSelectionArea(child: text);
   }
 
   Widget _wideCap(Widget child) => kMobile
