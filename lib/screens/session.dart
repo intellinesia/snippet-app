@@ -1876,12 +1876,26 @@ class _ReportHeight extends StatefulWidget {
 }
 
 class _ReportHeightState extends State<_ReportHeight> {
-  @override
-  Widget build(BuildContext context) {
+  final _child = GlobalKey();
+
+  void _report() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final h = context.size?.height;
+      final h = _child.currentContext?.size?.height;
       if (mounted && h != null) widget.onHeight(h);
     });
-    return widget.child;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _report();
+    // A child that resizes on its own setState (a question card moving to a
+    // shorter step) never rebuilds this widget, so listen at layout time too.
+    return NotificationListener<SizeChangedLayoutNotification>(
+      onNotification: (_) {
+        _report();
+        return true;
+      },
+      child: SizeChangedLayoutNotifier(key: _child, child: widget.child),
+    );
   }
 }
