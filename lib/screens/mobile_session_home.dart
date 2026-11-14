@@ -42,7 +42,6 @@ class _MobileHomeTopBarState extends State<MobileHomeTopBar> {
   late bool _searching = widget.controller.text.isNotEmpty;
 
   void _open() {
-    HapticFeedback.selectionClick();
     setState(() => _searching = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) widget.focusNode.requestFocus();
@@ -180,7 +179,10 @@ class MissionControlDock extends StatelessWidget {
         label: 'Ask Mission Control',
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: onOpen,
+          onTap: () {
+            tapHaptic();
+            onOpen();
+          },
           child: Glass(
             radius: BorderRadius.circular(28),
             child: SizedBox(
@@ -329,11 +331,21 @@ class LiveSessionCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: onTap,
+            overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+            splashFactory: NoSplash.splashFactory,
+            highlightColor: Colors.transparent,
+            hoverColor: Colors.transparent,
+            focusColor: Colors.transparent,
+            onTap: onTap == null
+                ? null
+                : () {
+                    tapHaptic();
+                    onTap!();
+                  },
             onLongPress: onLongPress == null
                 ? null
                 : () {
-                    HapticFeedback.selectionClick();
+                    holdHaptic();
                     onLongPress!();
                   },
             child: Container(

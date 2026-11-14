@@ -107,7 +107,12 @@ class ActionRow extends StatelessWidget {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: onTap,
+              onTap: onTap == null
+                  ? null
+                  : () {
+                      tapHaptic();
+                      onTap!();
+                    },
               splashFactory: kMobile ? NoSplash.splashFactory : null,
               highlightColor: kMobile ? Colors.transparent : null,
               child: Container(

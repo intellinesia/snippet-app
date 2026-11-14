@@ -42,6 +42,20 @@ class AppLoading extends StatelessWidget {
 }
 
 /// [onSelect] null disables the whole row (e.g. a locked field).
+/// Phone-only haptics: light for taps, selection for toggles and tabs,
+/// medium for long-press menus. No-ops elsewhere.
+void tapHaptic() {
+  if (kMobile) HapticFeedback.lightImpact();
+}
+
+void pickHaptic() {
+  if (kMobile) HapticFeedback.selectionClick();
+}
+
+void holdHaptic() {
+  if (kMobile) HapticFeedback.mediumImpact();
+}
+
 class Pills<T> extends StatelessWidget {
   final List<(T, String)> items;
   final T selected;
@@ -649,7 +663,12 @@ class AppCard extends StatelessWidget {
         color: AppColors.surface1,
         borderRadius: BorderRadius.circular(R.card),
         child: InkWell(
-          onTap: onTap,
+          onTap: onTap == null
+              ? null
+              : () {
+                  tapHaptic();
+                  onTap!();
+                },
           borderRadius: BorderRadius.circular(R.card),
           child: Padding(padding: padding, child: child),
         ),
@@ -745,7 +764,6 @@ class Btn extends StatelessWidget {
       opacity: disabled ? 0.45 : 1,
       child: Pressable(
         enabled: !disabled && onTap != null,
-        haptic: variant == BtnVariant.primary,
         child: Tactile(
           radius: BorderRadius.circular(radius),
           enabled: variant == BtnVariant.primary ||
@@ -757,6 +775,7 @@ class Btn extends StatelessWidget {
             onTap: disabled || onTap == null
                 ? null
                 : () {
+                    tapHaptic();
                     onTap!();
                   },
             borderRadius: BorderRadius.circular(radius),
@@ -798,7 +817,12 @@ class PillBtn extends StatelessWidget {
           color: AppColors.accentFill,
           borderRadius: BorderRadius.circular(kMobile ? R.pill : R.md),
           child: InkWell(
-            onTap: onTap,
+            onTap: onTap == null
+                ? null
+                : () {
+                    tapHaptic();
+                    onTap!();
+                  },
             borderRadius: BorderRadius.circular(kMobile ? R.pill : R.md),
             child: Container(
               height: kMobile ? 48 : 36,
@@ -1104,8 +1128,18 @@ class _HoverSurfaceState extends State<HoverSurface> {
               child: InkWell(
                 borderRadius: r,
                 hoverColor: Colors.transparent,
-                onTap: widget.onTap,
-                onLongPress: widget.onLongPress,
+                onTap: widget.onTap == null
+                    ? null
+                    : () {
+                        tapHaptic();
+                        widget.onTap!();
+                      },
+                onLongPress: widget.onLongPress == null
+                    ? null
+                    : () {
+                        holdHaptic();
+                        widget.onLongPress!();
+                      },
                 onSecondaryTapDown: widget.onSecondaryTapDown,
                 child: widget.child,
               ),
@@ -1162,7 +1196,12 @@ class IconBtn extends StatelessWidget {
         color: active ? AppColors.surface2 : Colors.transparent,
         borderRadius: BorderRadius.circular(R.md),
         child: InkWell(
-          onTap: onTap,
+          onTap: onTap == null
+              ? null
+              : () {
+                  tapHaptic();
+                  onTap!();
+                },
           borderRadius: BorderRadius.circular(R.md),
           child: SizedBox(
             width: box,
@@ -1625,13 +1664,13 @@ class Bubble extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onLongPress: onLongPress != null
                 ? () {
-                    HapticFeedback.selectionClick();
+                    holdHaptic();
                     onLongPress!();
                   }
                 : (shown.isEmpty
                     ? null
                     : () {
-                        HapticFeedback.selectionClick();
+                        holdHaptic();
                         _messageActions(context, shown);
                       }),
             child: agentContent,

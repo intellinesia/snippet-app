@@ -137,7 +137,10 @@ class ComposerIconButton extends StatelessWidget {
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(R.sm),
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          tapHaptic();
+          onTap();
+        },
         borderRadius: BorderRadius.circular(R.sm),
         child: SizedBox.square(
           dimension: kMobile ? 34 : 30,
@@ -182,7 +185,12 @@ class ComposerSendButton extends StatelessWidget {
       shape: shape,
       child: InkWell(
         customBorder: shape,
-        onTap: onTap,
+        onTap: stop && onTap != null
+            ? () {
+                tapHaptic();
+                onTap!();
+              }
+            : onTap,
         child: SizedBox.square(
           dimension: kMobile ? 36 : 32,
           child: Center(
@@ -222,7 +230,10 @@ class ComposerChip extends StatelessWidget {
         color: selected ? AppColors.accentBg : Colors.transparent,
         borderRadius: BorderRadius.circular(9),
         child: InkWell(
-          onTap: onTap,
+          onTap: () {
+            pickHaptic();
+            onTap();
+          },
           borderRadius: BorderRadius.circular(9),
           child: Container(
             height: 28,
