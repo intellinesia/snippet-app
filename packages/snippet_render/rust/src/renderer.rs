@@ -70,8 +70,9 @@ pub fn wrap(source: &str, lang: Lang) -> String {
 pub fn compile(source: &str, lang: Lang) -> Result<naga::Module, Error> {
     let code = wrap(source, lang);
     let module = match lang {
-        Lang::Wgsl => naga::front::wgsl::parse_str(&code)
-            .map_err(|e| Error(e.emit_to_string(source)))?,
+        Lang::Wgsl => {
+            naga::front::wgsl::parse_str(&code).map_err(|e| Error(e.emit_to_string(source)))?
+        }
         Lang::Glsl => {
             let opts = naga::front::glsl::Options::from(naga::ShaderStage::Fragment);
             naga::front::glsl::Frontend::default()
@@ -102,6 +103,8 @@ pub struct Renderer {
     width: u32,
     height: u32,
     pixels: Vec<u8>,
+    // A readback still in flight after a GPU wait timed out.
+    mapping: bool,
 }
 
 fn padded_row(width: u32) -> u32 {
@@ -119,7 +122,8 @@ impl Renderer {
         height: u32,
     ) -> Result<Self, Error> {
         let module = compile(source, lang)?;
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+        let instance =
+            wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::LowPower,
             ..Default::default()
@@ -127,8 +131,8 @@ impl Renderer {
         .map_err(|e| Error(format!("no GPU adapter: {e}")))?;
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             label: Some("snippet_render"),
-            required_limits: wgpu::Limits::downlevel_webgl2_defaults()
-                .using_resolution(adapter.limits()),
+            required_limits:
+                wgpu::Limits::downlevel_webgl2_defaults().using_resolution(adapter.limits()),
             ..Default::default()
         }))
         .map_err(|e| Error(format!("no GPU device: {e}")))?;
@@ -163,7 +167,10 @@ impl Renderer {
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &bind_layout,
-            entries: &[wgpu::BindGroupEntry { binding: 0, resource: uniforms.as_entire_binding() }],
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: uniforms.as_entire_binding(),
+            }],
         });
         let format = match format {
             Format::Rgba => wgpu::TextureFormat::Rgba8Unorm,
@@ -185,6 +192,7 @@ impl Renderer {
             width,
             height,
             pixels: vec![0; (width * height * 4) as usize],
+            mapping: false,
         })
     }
 
@@ -240,7 +248,11 @@ impl Renderer {
     ) -> (wgpu::Texture, wgpu::Buffer) {
         let target = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("target"),
-            size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -259,8 +271,14 @@ impl Renderer {
 
     pub fn set_shader(&mut self, source: &str, lang: Lang) -> Result<(), Error> {
         let module = compile(source, lang)?;
-        self.pipeline =
-            Self::pipeline(&self.device, &self.vertex, &self.layout, self.format, module, lang)?;
+        self.pipeline = Self::pipeline(
+            &self.device,
+            &self.vertex,
+            &self.layout,
+            self.format,
+            module,
+            lang,
+        )?;
         Ok(())
     }
 
@@ -273,14 +291,19 @@ impl Renderer {
         self.width = width;
         self.height = height;
         self.pixels = vec![0; (width * height * 4) as usize];
+        self.mapping = false;
     }
 
     pub fn size(&self) -> (u32, u32) {
         (self.width, self.height)
     }
 
-    /// Draws one frame at `time` seconds and returns tightly packed pixels.
-    pub fn render(&mut self, time: f32) -> Result<&[u8], Error> {
+    /// Draws one frame at `time` seconds and returns tightly packed pixels,
+    /// or None while the GPU is too slow to answer (the frame is skipped).
+    pub fn render(&mut self, time: f32) -> Result<Option<&[u8]>, Error> {
+        if self.mapping {
+            return self.read_back();
+        }
         let globals = [self.width as f32, self.height as f32, time, 0.0];
         let bytes: Vec<u8> = globals.iter().flat_map(|f| f.to_ne_bytes()).collect();
         self.queue.write_buffer(&self.uniforms, 0, &bytes);
@@ -318,23 +341,46 @@ impl Renderer {
                     rows_per_image: None,
                 },
             },
-            wgpu::Extent3d { width: self.width, height: self.height, depth_or_array_layers: 1 },
+            wgpu::Extent3d {
+                width: self.width,
+                height: self.height,
+                depth_or_array_layers: 1,
+            },
         );
         self.queue.submit([enc.finish()]);
+        self.readback
+            .slice(..)
+            .map_async(wgpu::MapMode::Read, |_| {});
+        self.mapping = true;
+        self.read_back()
+    }
+
+    fn read_back(&mut self) -> Result<Option<&[u8]>, Error> {
+        let wait = wgpu::PollType::Wait {
+            submission_index: None,
+            timeout: Some(std::time::Duration::from_secs(2)),
+        };
+        match self.device.poll(wait) {
+            Ok(_) => {}
+            Err(wgpu::PollError::Timeout) => return Ok(None),
+            Err(e) => return Err(Error(e.to_string())),
+        }
+        self.mapping = false;
+        let row = padded_row(self.width);
         let slice = self.readback.slice(..);
-        slice.map_async(wgpu::MapMode::Read, |_| {});
-        self.device
-            .poll(wgpu::PollType::wait_indefinitely())
-            .map_err(|e| Error(e.to_string()))?;
         {
             let data = slice.get_mapped_range().map_err(|e| Error(e.to_string()))?;
             let tight = (self.width * 4) as usize;
-            for (y, chunk) in data.chunks(row as usize).take(self.height as usize).enumerate() {
+            for (y, chunk) in data
+                .chunks(row as usize)
+                .take(self.height as usize)
+                .enumerate()
+            {
                 self.pixels[y * tight..(y + 1) * tight].copy_from_slice(&chunk[..tight]);
             }
         }
         self.readback.unmap();
-        Ok(&self.pixels)
+        Ok(Some(&self.pixels))
     }
 }
 
@@ -352,10 +398,19 @@ mod tests {
 
     #[test]
     fn bad_shaders_report_where_they_fail() {
-        let e = compile("fn main_image(p: vec2<f32>) -> vec4<f32> { return nope; }", Lang::Wgsl)
-            .unwrap_err();
+        let e = compile(
+            "fn main_image(p: vec2<f32>) -> vec4<f32> { return nope; }",
+            Lang::Wgsl,
+        )
+        .unwrap_err();
         assert!(e.0.contains("nope"), "{e}");
-        assert!(compile("void mainImage(out vec4 c, in vec2 p) { c = 1; }", Lang::Glsl).is_err());
+        assert!(
+            compile(
+                "void mainImage(out vec4 c, in vec2 p) { c = 1; }",
+                Lang::Glsl
+            )
+            .is_err()
+        );
         assert!(compile(GRADIENT, Lang::Wgsl).is_ok());
         assert!(compile(TOY, Lang::Glsl).is_ok());
     }
@@ -364,7 +419,7 @@ mod tests {
     fn renders_wgsl_and_glsl_pixels() {
         for (src, lang) in [(GRADIENT, Lang::Wgsl), (TOY, Lang::Glsl)] {
             let mut r = Renderer::new(src, lang, Format::Rgba, 100, 10).unwrap();
-            let px = r.render(0.5).unwrap().to_vec();
+            let px = r.render(0.5).unwrap().unwrap().to_vec();
             assert_eq!(px.len(), 100 * 10 * 4);
             let at = |x: usize| &px[x * 4..x * 4 + 4];
             assert!(at(0)[0] < 10, "{:?}", at(0));
@@ -372,7 +427,7 @@ mod tests {
             assert!((at(50)[2] as i32 - 128).abs() < 4, "{:?}", at(50));
             assert_eq!(at(50)[3], 255);
             r.resize(37, 5);
-            assert_eq!(r.render(0.0).unwrap().len(), 37 * 5 * 4);
+            assert_eq!(r.render(0.0).unwrap().unwrap().len(), 37 * 5 * 4);
         }
     }
 }

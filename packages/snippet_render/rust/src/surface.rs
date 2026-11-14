@@ -185,7 +185,8 @@ fn run(shared: Arc<Shared>, frame: Arc<Mutex<Frame>>) {
         last = started;
         let (w, h) = renderer.size();
         match renderer.render(clock) {
-            Ok(px) => {
+            Ok(None) => {}
+            Ok(Some(px)) => {
                 let mut f = frame.lock().unwrap();
                 f.width = w as i32;
                 f.height = h as i32;
