@@ -9,6 +9,7 @@ import '../ambient/hold.dart';
 import '../api.dart';
 import '../composer/composer_card.dart';
 import '../composer/voice_note.dart';
+import '../markdown_preview.dart';
 import '../message_reactions.dart';
 import '../models.dart';
 import '../mochi.dart';
@@ -241,13 +242,15 @@ class GroupRow extends StatelessWidget {
                       ],
                     ]),
                     const SizedBox(height: 2),
-                    Text(sub,
+                    Text.rich(
+                        markdownPreviewSpan(
+                            sub,
+                            sans(13,
+                                color: unread > 0
+                                    ? AppColors.fg2
+                                    : AppColors.fg3)),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(13,
-                            color: unread > 0
-                                ? AppColors.fg2
-                                : AppColors.fg3)),
+                        overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
@@ -324,10 +327,11 @@ class GroupRow extends StatelessWidget {
                     ],
                   ]),
                   const SizedBox(height: 2),
-                  Text(sub,
+                  Text.rich(
+                      markdownPreviewSpan(
+                          sub, sans(11, color: AppColors.fg3)),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(11, color: AppColors.fg3)),
+                      overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),

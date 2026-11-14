@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'approval_code.dart';
+import 'markdown_preview.dart';
 import 'notification_text.dart';
 import 'platform.dart';
 import 'session_quick_send.dart';
@@ -37,26 +38,6 @@ CardAction cardActionFor(Map<String, dynamic> p) {
   }
   return CardAction.none;
 }
-
-final _fence = RegExp(r'```[^\n]*\n?');
-final _link = RegExp(r'!?\[([^\]]*)\]\([^)]*\)');
-final _heading = RegExp(r'^\s{0,3}#{1,6}\s+', multiLine: true);
-final _bullet = RegExp(r'^\s*(?:[-*+]|\d+\.)\s+', multiLine: true);
-final _quote = RegExp(r'^\s*>\s?', multiLine: true);
-final _emph = RegExp(r'(\*\*|__|~~|`)');
-final _ws = RegExp(r'\s+');
-
-String plainPreview(String raw) => raw
-    .replaceAll(_fence, '')
-    .replaceAllMapped(_link, (m) => m[1] ?? '')
-    .replaceAll(_heading, '')
-    .replaceAll(_bullet, '')
-    .replaceAll(_quote, '')
-    .replaceAll(_emph, '')
-    .split('\n')
-    .map((l) => l.replaceAll(_ws, ' ').trim())
-    .where((l) => l.isNotEmpty)
-    .join(' · ');
 
 String _ago(Object? createdAt) {
   final DateTime? t = switch (createdAt) {

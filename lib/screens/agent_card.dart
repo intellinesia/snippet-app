@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../api.dart';
 import '../clock.dart';
+import '../markdown_preview.dart';
 import '../models.dart';
 import '../platform.dart';
 import '../presence.dart';
@@ -43,7 +44,7 @@ final _uuidToken = RegExp(
 /// the group's title when known, otherwise it is dropped.
 String cleanAgentStatusText(String text,
     {Map<String, String> groupTitles = const {}}) {
-  var t = text;
+  var t = flattenMarkdown(text);
   t = t.replaceAllMapped(
       RegExp(r'\bgroup:([0-9A-Za-z][0-9A-Za-z-]*)', caseSensitive: false),
       (m) {
@@ -53,7 +54,6 @@ String cleanAgentStatusText(String text,
   t = t.replaceAll(RegExp(r'\btask\s+' + _uuidToken.pattern), '');
   t = t.replaceAll(_uuidToken, '');
   t = t
-      .replaceAll('`', '')
       .replaceAll(RegExp(r'\(\s*[,·]?\s*\)'), '')
       .replaceAll(RegExp(r'\(\s*,\s*'), '(')
       .replaceAll(RegExp(r'\s{2,}'), ' ')
@@ -378,10 +378,11 @@ class _AgentCardState extends State<AgentCard> {
                           ],
                         ]),
                         const SizedBox(height: 2),
-                        Text(status,
+                        Text.rich(
+                            markdownPreviewSpan(
+                                status, sans(13, color: AppColors.fg3)),
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(13, color: AppColors.fg3)),
+                            overflow: TextOverflow.ellipsis),
                       ],
                     ),
                   ),
@@ -475,10 +476,11 @@ class _AgentCardState extends State<AgentCard> {
                     const SizedBox(height: 2),
                     Row(children: [
                       Expanded(
-                        child: Text(line,
+                        child: Text.rich(
+                            markdownPreviewSpan(
+                                line, sans(metaSize, color: AppColors.fg3)),
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(metaSize, color: AppColors.fg3)),
+                            overflow: TextOverflow.ellipsis),
                       ),
                       if (summary != null) ...[
                         const SizedBox(width: 8),
