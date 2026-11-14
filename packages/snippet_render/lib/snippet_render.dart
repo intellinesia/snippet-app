@@ -111,6 +111,10 @@ class _ShaderSurfaceState extends State<ShaderSurface>
       (p) =>
           sr_create(engine, p, widget.lang.index, size.$1, size.$2, widget.fps),
     );
+    if (_surface == nullptr) {
+      widget.onError?.call('The renderer failed to start.');
+      return;
+    }
     _size = size;
     _syncPaused();
     _poll = Timer.periodic(const Duration(milliseconds: 200), (_) => _check());

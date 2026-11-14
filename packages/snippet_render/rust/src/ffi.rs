@@ -1,4 +1,5 @@
 use std::ffi::{CStr, CString, c_char};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use crate::renderer::{Lang, compile};
 use crate::surface::Surface;
@@ -22,7 +23,9 @@ fn owned(s: Option<String>) -> *mut c_char {
 /// Null when the shader compiles, else the compiler's message.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn sr_check(source: *const c_char, lang_code: i32) -> *mut c_char {
-    owned(compile(&unsafe { text(source) }, lang(lang_code)).err().map(|e| e.0))
+    let src = unsafe { text(source) };
+    let res = catch_unwind(|| compile(&src, lang(lang_code)).err().map(|e| e.0));
+    owned(res.unwrap_or_else(|_| Some("shader compiler crashed".into())))
 }
 
 #[unsafe(no_mangle)]
@@ -34,8 +37,11 @@ pub unsafe extern "C" fn sr_create(
     height: u32,
     fps: u32,
 ) -> *mut Surface {
-    let s = Surface::new(engine, unsafe { text(source) }, lang(lang_code), width, height, fps);
-    Box::into_raw(Box::new(s))
+    let src = unsafe { text(source) };
+    catch_unwind(AssertUnwindSafe(|| {
+        Surface::new(engine, src, lang(lang_code), width, height, fps)
+    }))
+    .map_or(std::ptr::null_mut(), |s| Box::into_raw(Box::new(s)))
 }
 
 /// -1 until the platform thread has registered the texture.
@@ -80,7 +86,8 @@ pub unsafe extern "C" fn sr_set_fps(s: *mut Surface, fps: u32) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn sr_destroy(s: *mut Surface) {
     if !s.is_null() {
-        drop(unsafe { Box::from_raw(s) });
+        let s = unsafe { Box::from_raw(s) };
+        let _ = catch_unwind(AssertUnwindSafe(move || drop(s)));
     }
 }
 

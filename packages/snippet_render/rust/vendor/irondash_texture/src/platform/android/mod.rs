@@ -123,31 +123,25 @@ impl<Type> PlatformTexture<Type> {
                 last_geometry.replace(geometry);
             }
             let mut buf: ANativeWindow_Buffer = unsafe { std::mem::zeroed() };
-
-            let data = unsafe {
-                ANativeWindow_lock(self.native_window, &mut buf as *mut _, std::ptr::null_mut());
-                slice::from_raw_parts_mut(
-                    buf.bits as *mut u8,
-                    (buf.height * buf.stride * 4) as usize,
-                )
+            // A failed lock leaves `bits` null; upstream asserted here and aborted the app.
+            let locked = unsafe {
+                ANativeWindow_lock(self.native_window, &mut buf as *mut _, std::ptr::null_mut())
             };
-
-            if buf.stride == buf.width {
-                assert!(buf.stride * buf.height * 4 == payload.data.len() as i32);
-                data.copy_from_slice(payload.data);
-            } else {
-                let src_stride = payload.width * 4;
-                let dst_stride = buf.stride * 4;
-                let min_stride = std::cmp::min(src_stride, dst_stride);
-                let mut src_offset: usize = 0;
-                let mut dst_offset: usize = 0;
-                for _ in 0..payload.height {
-                    let src_slice = &payload.data[src_offset..src_offset + min_stride as usize];
-                    let dst_slice = &mut data[dst_offset..dst_offset + min_stride as usize];
-                    dst_slice.copy_from_slice(src_slice);
-                    src_offset += src_stride as usize;
-                    dst_offset += dst_stride as usize;
+            if locked != 0 || buf.bits.is_null() {
+                return Ok(());
+            }
+            let rows = buf.height.min(payload.height).max(0) as usize;
+            let dst_stride = buf.stride.max(0) as usize * 4;
+            let src_stride = payload.width.max(0) as usize * 4;
+            let row_bytes = src_stride.min(buf.width.max(0) as usize * 4);
+            let data =
+                unsafe { slice::from_raw_parts_mut(buf.bits as *mut u8, buf.height as usize * dst_stride) };
+            for y in 0..rows {
+                let (src, dst) = (y * src_stride, y * dst_stride);
+                if src + row_bytes > payload.data.len() {
+                    break;
                 }
+                data[dst..dst + row_bytes].copy_from_slice(&payload.data[src..src + row_bytes]);
             }
 
             unsafe { ANativeWindow_unlockAndPost(self.native_window) };

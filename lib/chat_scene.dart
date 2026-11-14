@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet_render/snippet_render.dart';
 
@@ -16,24 +20,59 @@ class ChatScene extends ChangeNotifier {
   String _scene = none;
   String? _error;
   bool _loaded = false;
+  File? _marker;
+  bool _armed = false;
+  bool _arming = false;
 
   String get scene => _scene;
   String? get error => _error;
   bool get active => shaderSurfaceSupported && presets.containsKey(_scene);
 
+  /// Active and safe to start: the crash marker is on disk.
+  bool get ready => active && _armed;
+
   Future<void> init() async {
     if (_loaded) return;
     _loaded = true;
     try {
-      _scene = (await SharedPreferences.getInstance()).getString(_key) ?? none;
+      final prefs = await SharedPreferences.getInstance();
+      _scene = prefs.getString(_key) ?? none;
+      _marker = File('${(await getApplicationSupportDirectory()).path}/chat_scene_starting');
+      if (_marker!.existsSync()) {
+        _marker!.deleteSync();
+        if (_scene != none) {
+          _scene = none;
+          _error = 'Turned off: the app closed while the scene was starting.';
+          await prefs.setString(_key, none);
+        }
+      }
     } catch (_) {}
     notifyListeners();
+  }
+
+  /// Native code can take the process down; a marker that outlives a crash
+  /// lets the next launch switch the scene off instead of crashing again.
+  void arm() {
+    if (_armed || _arming || !active) return;
+    _arming = true;
+    try {
+      _marker?.writeAsStringSync(_scene, flush: true);
+    } catch (_) {}
+    _armed = true;
+    _arming = false;
+    Timer(const Duration(seconds: 5), () {
+      try {
+        _marker?.deleteSync();
+      } catch (_) {}
+    });
+    scheduleMicrotask(notifyListeners);
   }
 
   Future<void> set(String scene) async {
     if (scene == _scene) return;
     _scene = scene;
     _error = null;
+    _armed = false;
     notifyListeners();
     try {
       (await SharedPreferences.getInstance()).setString(_key, scene);
@@ -125,6 +164,10 @@ class ChatSceneLayer extends StatelessWidget {
       listenable: scene,
       builder: (context, _) {
         if (!scene.active) return const SizedBox.shrink();
+        if (!scene.ready) {
+          scene.arm();
+          return const SizedBox.shrink();
+        }
         final bg = AppColors.bg;
         return IgnorePointer(
           child: RepaintBoundary(
