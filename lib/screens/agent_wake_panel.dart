@@ -95,8 +95,8 @@ Color wakeStatusColor(String? status) => switch (status) {
 Widget _statusDot(String? status) => Container(
       width: 7,
       height: 7,
-      decoration: BoxDecoration(
-          color: wakeStatusColor(status), shape: BoxShape.circle),
+      decoration:
+          BoxDecoration(color: wakeStatusColor(status), shape: BoxShape.circle),
     );
 
 Widget _panelDivider() => Padding(
@@ -262,6 +262,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
                     _reportTo == 'task_room' && _taskId.text.trim().isNotEmpty
                         ? _taskId.text.trim()
                         : null,
+                group: _reportTo == 'group' ? _wake?.report.group : null,
                 onlyOnChange: _onlyOnChange)
             .toJson(),
         if (int.tryParse(_cap.text.trim()) != null)
@@ -316,7 +317,9 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
     final picked = await dockedPick<String>(
       context,
       title: 'Report to',
-      options: [for (final (v, label, _) in reports) (v, label, 'check-circle')],
+      options: [
+        for (final (v, label, _) in reports) (v, label, 'check-circle')
+      ],
       selected: _reportTo,
       fallback: () => showAppMenu<String>(
         context,
@@ -1054,14 +1057,14 @@ class _AgentWatchDetailState extends State<_AgentWatchDetail> {
           if (_eventsError != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: S.s4),
-              child: Text(_eventsError!,
-                  style: sans(12, color: AppColors.danger)),
+              child:
+                  Text(_eventsError!, style: sans(12, color: AppColors.danger)),
             )
           else if (_events.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: S.s4),
-              child: Text('No events yet.',
-                  style: sans(13, color: AppColors.fg4)),
+              child:
+                  Text('No events yet.', style: sans(13, color: AppColors.fg4)),
             )
           else
             for (final e in _events) _eventRow(e),
@@ -1074,14 +1077,14 @@ class _AgentWatchDetailState extends State<_AgentWatchDetail> {
           if (w.scriptPath.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6),
-              child: Text(w.scriptPath,
-                  style: codeMono(11, color: AppColors.fg4)),
+              child:
+                  Text(w.scriptPath, style: codeMono(11, color: AppColors.fg4)),
             ),
           if (_scriptError != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: S.s4),
-              child: Text(_scriptError!,
-                  style: sans(12, color: AppColors.danger)),
+              child:
+                  Text(_scriptError!, style: sans(12, color: AppColors.danger)),
             )
           else
             Container(
