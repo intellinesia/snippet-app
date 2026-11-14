@@ -197,6 +197,7 @@ class SessionListRow extends StatelessWidget {
     this.divider = false,
     this.showProject = false,
     this.unread = false,
+    this.pinned = false,
     this.renameField,
     this.leading,
   });
@@ -216,6 +217,7 @@ class SessionListRow extends StatelessWidget {
   final bool divider;
   final bool showProject;
   final bool unread;
+  final bool pinned;
 
   /// Replaces the title while renaming.
   final Widget? renameField;
@@ -285,6 +287,10 @@ class SessionListRow extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: titleStyle),
                   ),
+                  if (pinned && renameField == null) ...[
+                    const SizedBox(width: 6),
+                    AppIcon('pin', size: 11, color: AppColors.fg3),
+                  ],
                   if (s.keepAwake && renameField == null) ...[
                     const SizedBox(width: 6),
                     AppIcon('lock', size: 11, color: AppColors.fg3),

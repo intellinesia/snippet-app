@@ -2475,6 +2475,8 @@ const _lucide = <String, IconData>{
   'reply': LucideIcons.reply,
   'thumbs-up': LucideIcons.thumbsUp,
   'help-circle': LucideIcons.circleHelp,
+  'pin': LucideIcons.pin,
+  'pin-off': LucideIcons.pinOff,
 };
 
 String? providerLogoAsset(String? provider) {

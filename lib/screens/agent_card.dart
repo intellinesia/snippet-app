@@ -5,6 +5,7 @@ import '../api.dart';
 import '../clock.dart';
 import '../markdown_preview.dart';
 import '../models.dart';
+import '../pins.dart';
 import '../platform.dart';
 import '../presence.dart';
 import '../theme.dart';
@@ -115,6 +116,8 @@ class AgentCard extends StatefulWidget {
 
   /// Group id → title, so `group:<id>` refs in the status line can be named.
   final Map<String, String>? groupTitles;
+  final bool pinned;
+  final VoidCallback? onTogglePin;
 
   const AgentCard({
     super.key,
@@ -124,6 +127,8 @@ class AgentCard extends StatefulWidget {
     this.onDelete,
     this.onChanged,
     this.groupTitles,
+    this.pinned = false,
+    this.onTogglePin,
   });
 
   @override
@@ -172,15 +177,42 @@ class _AgentCardState extends State<AgentCard> {
           point: point,
           onChanged: widget.onChanged);
 
+  bool get _isPinned =>
+      widget.pinned ||
+      Pins.instance
+          .isPinned(Pins.agent, widget.agent.id, host: widget.client.baseUrl);
+
+  void _togglePin() {
+    if (widget.onTogglePin != null) {
+      widget.onTogglePin!();
+    } else {
+      Pins.instance
+          .toggle(Pins.agent, widget.agent.id, host: widget.client.baseUrl);
+    }
+  }
+
   Future<void> _actions(Offset? point) async {
     final name = widget.agent.displayName.trim().isEmpty
         ? widget.agent.id
         : widget.agent.displayName.trim();
+    final pinned = _isPinned;
     if (kMobile) {
       showAppSheet(context,
           title: name,
           subtitle: 'Agent',
           child: SheetActions([
+            if (!widget.agent.isMissionControl)
+              SheetAction(
+                pinned ? 'pin-off' : 'pin',
+                pinned ? 'Unpin' : 'Pin',
+                () {
+                  Navigator.pop(context);
+                  _togglePin();
+                },
+                detail: pinned
+                    ? 'Remove from the top of the list'
+                    : 'Keep at the top of the list',
+              ),
             if (!widget.agent.isMissionControl)
               SheetAction('edit', _nicknameLabel, () {
                 Navigator.pop(context);
@@ -217,6 +249,11 @@ class _AgentCardState extends State<AgentCard> {
       anchor: point == null ? context : null,
       items: [
         if (!widget.agent.isMissionControl)
+          appMenuItem(
+              value: 'pin',
+              icon: pinned ? 'pin-off' : 'pin',
+              label: pinned ? 'Unpin' : 'Pin'),
+        if (!widget.agent.isMissionControl)
           appMenuItem(value: 'nickname', icon: 'edit', label: _nicknameLabel),
         appMenuItem(value: 'appearance', icon: 'sparkles', label: 'Appearance'),
         if (!widget.agent.isMissionControl)
@@ -236,6 +273,7 @@ class _AgentCardState extends State<AgentCard> {
               danger: true),
       ],
     );
+    if (picked == 'pin') _togglePin();
     if (picked == 'delete') widget.onDelete?.call();
     if (picked == 'nickname' && mounted) _editNickname(point: point);
     if (picked == 'wakes' && mounted) _openWakes(name, point);
@@ -372,6 +410,10 @@ class _AgentCardState extends State<AgentCard> {
                                     ? AppColors.fg1
                                     : AppColors.fg3)),
                           ),
+                          if (_isPinned) ...[
+                            const SizedBox(width: 6),
+                            AppIcon('pin', size: 12, color: AppColors.fg3),
+                          ],
                           if (time.isNotEmpty) ...[
                             const SizedBox(width: 8),
                             Text(time, style: TS.meta()),
@@ -466,6 +508,10 @@ class _AgentCardState extends State<AgentCard> {
                                     ? AppColors.fg1
                                     : AppColors.fg3)),
                       ),
+                      if (_isPinned) ...[
+                        const SizedBox(width: 6),
+                        AppIcon('pin', size: 11, color: AppColors.fg3),
+                      ],
                       if (deskTime.isNotEmpty) ...[
                         const SizedBox(width: 6),
                         Text(deskTime,
