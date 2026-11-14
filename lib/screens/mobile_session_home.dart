@@ -383,7 +383,14 @@ class LiveSessionCard extends StatelessWidget {
                   ],
                   const SizedBox(height: 10),
                   Row(children: [
-                    _Tag(projectLabel(s)),
+                    AppIcon('folder', size: 11, color: AppColors.fg4),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(projectLabel(s),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TS.meta()),
+                    ),
                     if (branch.isNotEmpty) ...[
                       const SizedBox(width: 8),
                       AppIcon('git-branch', size: 11, color: AppColors.fg4),
@@ -428,24 +435,6 @@ class LiveSessionCard extends StatelessWidget {
     }
     return null;
   }
-}
-
-class _Tag extends StatelessWidget {
-  const _Tag(this.label);
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-        decoration: BoxDecoration(
-          color: AppColors.tint2,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: sans(11, color: AppColors.fg3)),
-      );
 }
 
 /// A breathing ring that marks a control as live, such as Mission Control
