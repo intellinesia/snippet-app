@@ -1274,6 +1274,8 @@ Future<bool?> _showApprovalsMenu(
     showAppMenu<bool>(
       context,
       anchor: anchor,
+      below: true,
+      alignEnd: true,
       minWidth: 260,
       maxWidth: 320,
       items: [

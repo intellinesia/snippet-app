@@ -100,7 +100,7 @@ Future<void> showAttachmentPreview(
       useRootNavigator: true,
       barrierDismissible: true,
       barrierLabel: 'Close preview',
-      barrierColor: AppColors.glassScrim,
+      barrierColor: AppColors.modalScrim,
       transitionDuration: calm ? Motion.quick : Motion.open,
       pageBuilder: (_, __, ___) => _DesktopPanel(
         session: session,
@@ -246,23 +246,23 @@ class _DesktopPanel extends StatelessWidget {
         padding: const EdgeInsets.all(S.s24),
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: 640, maxHeight: h * 0.7),
-          child: Glass(
-            radius: const BorderRadius.all(Radius.circular(R.lg)),
-            border: false,
-            tint: AppColors.windowBg,
-            child: DecoratedBox(
-              position: DecorationPosition.foreground,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(R.lg),
-                border: Border.all(color: AppColors.glassBorder),
-              ),
-              child: Material(
-                type: MaterialType.transparency,
-                child: _PreviewContent(
-                  session: session,
-                  onRemove: onRemove,
-                  onInsert: onInsert,
-                ),
+          // Same frame as the Settings dialog.
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: AppColors.bg,
+              borderRadius: BorderRadius.circular(R.lg),
+            ),
+            foregroundDecoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(R.lg),
+              border: Border.all(color: AppColors.border2),
+            ),
+            child: Material(
+              type: MaterialType.transparency,
+              child: _PreviewContent(
+                session: session,
+                onRemove: onRemove,
+                onInsert: onInsert,
               ),
             ),
           ),
@@ -423,6 +423,7 @@ class _PreviewContentState extends State<_PreviewContent> {
     final desktop = !_sheet;
     final iconSize = kMobile ? 44.0 : 28.0;
     final pasted = ctl != null;
+    final round = pasted && !desktop;
     Widget roundBtn(String icon, String tip, VoidCallback onTap) =>
         DecoratedBox(
           decoration:
@@ -430,20 +431,45 @@ class _PreviewContentState extends State<_PreviewContent> {
           child: IconBtn(icon,
               tooltip: tip, size: iconSize, iconSize: 16, onTap: onTap),
         );
-    Widget header = Padding(
+    final title = pasted ? 'Pasted text' : (a.isAudio ? 'Voice note' : a.name);
+    Widget header = desktop
+        ? Padding(
+            padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s8, S.s8),
+            child: Row(children: [
+              Expanded(
+                child: Row(children: [
+                  Flexible(
+                    child: Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13, weight: W.label, color: AppColors.fg1)),
+                  ),
+                  const SizedBox(width: S.s8),
+                  Text(_metaLine(), maxLines: 1, style: TS.meta()),
+                ]),
+              ),
+              if (widget.onRemove != null)
+                IconBtn('trash',
+                    tooltip: 'Remove', size: 26, iconSize: 14, onTap: _remove),
+              IconBtn('x', tooltip: 'Close', size: 26, iconSize: 14, onTap: _close),
+            ]),
+          )
+        : Padding(
       padding: EdgeInsets.fromLTRB(S.s16, desktop ? S.s12 : S.s4,
-          pasted ? S.s12 : S.s8, desktop ? S.s12 : S.s8),
+          round ? S.s12 : S.s8, desktop ? S.s12 : S.s8),
       child: Row(children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(pasted ? 'Pasted text' : (a.isAudio ? 'Voice note' : a.name),
+              Text(title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: pasted
-                      ? sans(15, weight: W.label, color: AppColors.fg1)
-                      : TS.rowTitle()),
+                  style: desktop
+                      ? sans(14, weight: W.label, color: AppColors.fg1)
+                      : pasted
+                          ? sans(15, weight: W.label, color: AppColors.fg1)
+                          : TS.rowTitle()),
               Text(_metaLine(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -452,17 +478,17 @@ class _PreviewContentState extends State<_PreviewContent> {
           ),
         ),
         if (widget.onRemove != null) ...[
-          pasted
+          round
               ? roundBtn('trash', 'Remove', _remove)
               : IconBtn('trash',
                   tooltip: 'Remove',
                   size: iconSize,
                   iconSize: 16,
                   onTap: _remove),
-          if (pasted && desktop) const SizedBox(width: S.s4),
+          if (desktop) const SizedBox(width: S.s4),
         ],
         if (!(pasted && _sheet))
-          pasted
+          round
               ? roundBtn('x', 'Close', _close)
               : IconBtn('x',
                   tooltip: 'Close',
@@ -493,7 +519,7 @@ class _PreviewContentState extends State<_PreviewContent> {
     final footer = ctl == null ? null : _footer(ctl);
     final content = Column(mainAxisSize: MainAxisSize.max, children: [
       header,
-      if (!pasted) Container(height: 1, color: AppColors.border),
+      if (!pasted || desktop) Container(height: 1, color: AppColors.border),
       Expanded(child: body),
       if (footer != null) footer,
       if (_sheet && footer == null) SizedBox(height: widget.bottomInset),
@@ -522,7 +548,7 @@ class _PreviewContentState extends State<_PreviewContent> {
   }
 
   Widget _textBody(PreviewAttachment a, TextEditingController c) => Container(
-        margin: const EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s8),
+        margin: EdgeInsets.fromLTRB(S.s16, _sheet ? S.s4 : S.s12, S.s16, S.s8),
         padding: const EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s12),
         decoration: BoxDecoration(
             color: AppColors.tint1,

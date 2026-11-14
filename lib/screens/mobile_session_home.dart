@@ -370,7 +370,7 @@ class LiveSessionCard extends StatelessWidget {
                   ]),
                   const SizedBox(height: 6),
                   Text(title,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(16,
                           weight: W.label, height: 1.35, color: AppColors.fg1)),

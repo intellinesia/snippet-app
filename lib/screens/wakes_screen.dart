@@ -144,6 +144,21 @@ class _WakesScreenState extends State<WakesScreen> {
               for (final w in wakes.wakes) _wakeRow(context, w, agents),
             ]),
           ],
+          if (warmOn.isEmpty) ...[
+            SizedBox(height: kMobile ? 0 : S.s20),
+            if (kMobile)
+              const SettingsGroupLabel('Keep warm')
+            else
+              const SectionLabel('Keep warm'),
+            Padding(
+              key: const Key('keep-warm-empty'),
+              padding: EdgeInsets.fromLTRB(
+                  kMobile ? S.s16 : S.s4, S.s4, kMobile ? S.s16 : S.s4, 0),
+              child: Text(
+                  'No session is kept warm. Turn it on per session or agent from its actions: Wakes and keep warm. A warm session keeps its prompt cache while idle, so the next turn is cheaper.',
+                  style: TS.meta()),
+            ),
+          ],
           if (warmOn.isNotEmpty) ...[
             if (wakes.wakes.isNotEmpty) SizedBox(height: kMobile ? 0 : S.s20),
             if (kMobile)

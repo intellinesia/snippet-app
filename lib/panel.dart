@@ -56,7 +56,7 @@ Future<T?> presentScreen<T>(
     context: context,
     barrierDismissible: dismissible,
     barrierLabel: 'panel',
-    barrierColor: AppColors.scrim,
+    barrierColor: AppColors.modalScrim,
     transitionDuration: Motion.fast,
     pageBuilder: (ctx, _, __) {
       void close() => Navigator.of(ctx).pop();
@@ -139,7 +139,7 @@ Future<T?> showModal<T>(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'modal',
-    barrierColor: AppColors.scrim,
+    barrierColor: AppColors.modalScrim,
     transitionDuration: Motion.fast,
     pageBuilder: (ctx, _, __) => Center(
       child: Padding(

@@ -667,7 +667,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Close settings',
-      barrierColor: Colors.black.withValues(alpha: 0.38),
+      barrierColor: AppColors.modalScrim,
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (ctx, a1, a2) {
         final size = MediaQuery.sizeOf(ctx);

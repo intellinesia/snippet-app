@@ -1717,7 +1717,7 @@ Future<void> _showDesktopInfo(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Close',
-    barrierColor: AppColors.scrim,
+    barrierColor: AppColors.modalScrim,
     transitionDuration: Motion.base,
     pageBuilder: (ctx, _, __) => Stack(children: [
       Positioned(
