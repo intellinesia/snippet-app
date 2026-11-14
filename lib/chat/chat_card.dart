@@ -12,12 +12,14 @@ class ChatCard extends StatelessWidget {
   const ChatCard({
     super.key,
     required this.children,
-    this.maxWidth = 460,
+    this.maxWidth,
     this.dimmed = false,
   });
 
   final List<Widget> children;
-  final double maxWidth;
+
+  /// Defaults to 460 on phones and the full transcript width on desktop.
+  final double? maxWidth;
 
   /// Resolved cards recede.
   final bool dimmed;
@@ -30,7 +32,8 @@ class ChatCard extends StatelessWidget {
         // Without it a height-capped slot centres the card in the cap.
         heightFactor: 1,
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxWidth),
+          constraints: BoxConstraints(
+              maxWidth: maxWidth ?? (kMobile ? 460 : double.infinity)),
           child: Tactile(
             radius: BorderRadius.circular(16),
             child: Container(
