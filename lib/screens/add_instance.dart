@@ -43,7 +43,7 @@ Future<Instance?> showAddMachineDialog(BuildContext context) {
     context: context,
     barrierDismissible: true,
     barrierLabel: 'add-machine',
-    barrierColor: AppColors.scrim,
+    barrierColor: AppColors.modalScrim,
     transitionDuration: Motion.fast,
     pageBuilder: (_, __, ___) => const Center(child: _AddMachineDialog()),
     transitionBuilder: (_, anim, __, child) {
