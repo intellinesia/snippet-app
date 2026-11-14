@@ -27,6 +27,8 @@ class ChatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Align(
         alignment: Alignment.centerLeft,
+        // Without it a height-capped slot centres the card in the cap.
+        heightFactor: 1,
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: maxWidth),
           child: Tactile(
