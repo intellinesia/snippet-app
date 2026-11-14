@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../models.dart';
+import '../pins.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -94,9 +95,14 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   bool busy = false;
   late final Swr<List<GroupSummary>> _groups;
 
+  void _onPinsChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
+    Pins.instance.addListener(_onPinsChanged);
     _groups = Swr<List<GroupSummary>>(
       client: widget.client,
       key: widget.groupsKey ?? 'groups',
@@ -136,6 +142,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
 
   @override
   void dispose() {
+    Pins.instance.removeListener(_onPinsChanged);
     _groups.dispose();
     super.dispose();
   }
@@ -163,6 +170,83 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   void _openGroup(GroupSummary g) {
     openGroupThread(context, client: widget.client, group: g);
     _groups.refresh();
+  }
+
+  String get _pinHost => widget.client.baseUrl;
+
+  bool _isPinnedAgent(CoordinationAgent a) =>
+      Pins.instance.isPinned(Pins.agent, a.id, host: _pinHost);
+
+  bool _isPinnedGroup(GroupSummary g) =>
+      Pins.instance.isPinned(Pins.group, g.id, host: _pinHost);
+
+  int? _entryPinnedAt(Object item) => item is CoordinationAgent
+      ? Pins.instance.pinnedAt(Pins.agent, item.id, host: _pinHost)
+      : Pins.instance
+          .pinnedAt(Pins.group, (item as GroupSummary).id, host: _pinHost);
+
+  Future<void> _groupActions(GroupSummary g, {Offset? point}) async {
+    final name = g.title.trim().isEmpty ? 'Group' : g.title.trim();
+    final pinned = _isPinnedGroup(g);
+    if (kMobile) {
+      showAppSheet(
+        context,
+        title: name,
+        subtitle: 'Group',
+        child: SheetActions([
+          SheetAction(
+            pinned ? 'pin-off' : 'pin',
+            pinned ? 'Unpin' : 'Pin',
+            () {
+              Navigator.pop(context);
+              Pins.instance.toggle(Pins.group, g.id, host: _pinHost);
+            },
+            detail: pinned
+                ? 'Remove from the top of the list'
+                : 'Keep at the top of the list',
+          ),
+          SheetAction(
+            'trash',
+            'Delete group',
+            () async {
+              Navigator.pop(context);
+              if (await confirmDeleteGroup(context, widget.client, g)) {
+                _groups.refresh();
+              }
+            },
+            danger: true,
+            detail: 'Remove this group chat and its messages',
+          ),
+        ]),
+      );
+      return;
+    }
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final pos = point ?? overlay.size.center(Offset.zero);
+    final picked = await showAppMenu<String>(
+      context,
+      point: pos,
+      items: [
+        appMenuItem(
+            value: 'pin',
+            icon: pinned ? 'pin-off' : 'pin',
+            label: pinned ? 'Unpin' : 'Pin'),
+        const PopupMenuDivider(height: 9),
+        appMenuItem(
+            value: 'delete',
+            icon: 'trash',
+            label: 'Delete group',
+            danger: true),
+      ],
+    );
+    if (picked == 'pin') {
+      await Pins.instance.toggle(Pins.group, g.id, host: _pinHost);
+    } else if (picked == 'delete' && mounted) {
+      if (await confirmDeleteGroup(context, widget.client, g)) {
+        _groups.refresh();
+      }
+    }
   }
 
   Future<void> refresh() async {
@@ -370,16 +454,29 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         .where((g) => q.isEmpty || g.title.toLowerCase().contains(q))
         .toList();
     final groupTitles = {for (final g in groups) g.id: g.title};
-    final entries = <({Object item, DateTime? at, String name})>[
+    final entries = <({Object item, DateTime? at, String name, int? pinnedAt})>[
       for (final a in ordered)
-        (item: a, at: a.lastMessage?.at, name: a.displayName.toLowerCase()),
+        (
+          item: a,
+          at: a.lastMessage?.at,
+          name: a.displayName.toLowerCase(),
+          pinnedAt: _entryPinnedAt(a),
+        ),
       for (final g in groups)
         (
           item: g,
           at: DateTime.tryParse(g.lastEventAt ?? g.createdAt),
-          name: g.title.toLowerCase()
+          name: g.title.toLowerCase(),
+          pinnedAt: _entryPinnedAt(g),
         ),
     ]..sort((a, b) {
+        final ap = a.pinnedAt;
+        final bp = b.pinnedAt;
+        if (ap != bp) {
+          if (ap == null) return 1;
+          if (bp == null) return -1;
+          return bp.compareTo(ap);
+        }
         if (a.at != b.at) {
           if (a.at == null) return 1;
           if (b.at == null) return -1;
@@ -391,22 +488,41 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
           key: ValueKey('agent-card-${a.id}'),
           client: widget.client,
           agent: a,
+          pinned: _isPinnedAgent(a),
+          onTogglePin: () =>
+              Pins.instance.toggle(Pins.agent, a.id, host: _pinHost),
           groupTitles: groupTitles,
           onOpen: () => widget.onOpenAgent?.call(a),
           onDelete: () => _deleteAgent(a),
           onChanged: refresh,
         );
 
-    Widget groupTile(GroupSummary g) => GroupRow(
-          key: ValueKey('group-row-${g.id}'),
-          group: g,
-          onTap: () => _openGroup(g),
-          onLongPress: () async {
-            if (await confirmDeleteGroup(context, widget.client, g)) {
-              _groups.refresh();
-            }
-          },
-        );
+    Widget groupTile(GroupSummary g) {
+      final pinned = _isPinnedGroup(g);
+      return GestureDetector(
+        key: ValueKey('group-row-${g.id}'),
+        onSecondaryTapUp:
+            kMobile ? null : (d) => _groupActions(g, point: d.globalPosition),
+        child: Stack(
+          children: [
+            GroupRow(
+              group: g,
+              onTap: () => _openGroup(g),
+              onLongPress: () => _groupActions(g),
+            ),
+            if (pinned)
+              Positioned(
+                top: kMobile ? 10 : 8,
+                right: kMobile ? M.gutter : 10,
+                child: IgnorePointer(
+                  child: AppIcon('pin',
+                      size: kMobile ? 12 : 11, color: AppColors.fg3),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
 
     Widget row(int i) {
       final e = entries[i].item;
@@ -448,6 +564,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 margin: const EdgeInsets.symmetric(horizontal: M.gutter),
                 color: AppColors.border);
             if (q.isEmpty) {
+              final pinnedRows = <Widget>[];
               final buckets = <AgentGroup, List<Widget>>{
                 for (final g in AgentGroup.values) g: <Widget>[],
               };
@@ -468,24 +585,44 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                   bucket =
                       g.hasUnread ? AgentGroup.needsYou : AgentGroup.recent;
                 }
-                buckets[bucket]!.add(Appear(
+                final wrapped = Appear(
                     key: ValueKey('appear-${tile.key}-$i'),
                     index: i++,
                     since: _shownAt,
-                    child: tile));
+                    child: tile);
+                if (e.pinnedAt != null) {
+                  pinnedRows.add(wrapped);
+                } else {
+                  buckets[bucket]!.add(wrapped);
+                }
               }
               final sectionDefs = <(AgentGroup, String, Color)>[
                 (AgentGroup.needsYou, 'Needs you', AppColors.accent),
                 (AgentGroup.working, 'Working', AppColors.fg3),
                 (AgentGroup.recent, 'Recent', AppColors.fg3),
               ];
-              final totalRows =
+              final totalRows = pinnedRows.length +
                   buckets.values.fold(0, (s, l) => s + l.length);
               var rowCount = 0;
+              if (pinnedRows.isNotEmpty) {
+                children.add(Padding(
+                  padding:
+                      const EdgeInsets.fromLTRB(M.gutter, 14, M.gutter, 4),
+                  child: Text('Pinned',
+                      style: sans(13, weight: W.label, color: AppColors.fg3)),
+                ));
+                for (final r in pinnedRows) {
+                  children.add(r);
+                  rowCount++;
+                  if (rowCount < totalRows) {
+                    children.add(hairline());
+                  }
+                }
+              }
               for (final (grp, label, color) in sectionDefs) {
                 final rows = buckets[grp]!;
                 if (rows.isEmpty) continue;
-                if (grp != AgentGroup.recent) {
+                if (grp != AgentGroup.recent || pinnedRows.isNotEmpty) {
                   children.add(Padding(
                     padding: const EdgeInsets.fromLTRB(
                         M.gutter, 14, M.gutter, 4),
@@ -521,10 +658,11 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 }
               }
             }
-            if (emptyState != null)
+            if (emptyState != null) {
               children.add(Padding(
                   padding: const EdgeInsets.symmetric(horizontal: M.gutter),
                   child: emptyState));
+            }
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.fromLTRB(

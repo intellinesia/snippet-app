@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../api.dart';
 import '../drafts.dart';
 import '../models.dart';
+import '../pins.dart';
 import '../settled_sessions.dart';
 import 'sidebar_mode.dart';
 import '../platform.dart';
@@ -256,6 +257,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   void initState() {
     super.initState();
     Drafts.instance.addListener(_onDrafts);
+    Pins.instance.addListener(_onDrafts);
     _loadProviders();
     _mountedHomes.add(_currentHome);
     if (kMobile) _loadTodayUsage();
@@ -307,6 +309,24 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     if (mounted) setState(() {});
   }
 
+  String? get _pinHost => widget.client?.baseUrl ?? widget.active?.url;
+
+  bool _isPinnedSession(SessionInfo s) =>
+      Pins.instance.isPinned(Pins.session, s.id, host: _pinHost);
+
+  int? _sessionPinnedAt(SessionInfo s) =>
+      Pins.instance.pinnedAt(Pins.session, s.id, host: _pinHost);
+
+  List<SessionInfo> _pinnedSessions(List<SessionInfo> sessions) {
+    final pinned = [
+      for (final s in sessions)
+        if (_isPinnedSession(s)) s,
+    ];
+    pinned.sort((a, b) =>
+        (_sessionPinnedAt(b) ?? 0).compareTo(_sessionPinnedAt(a) ?? 0));
+    return pinned;
+  }
+
   /// Whether a chat you are not looking at has unsent text waiting.
   bool _hasDraft(SessionInfo s) {
     final c = widget.client;
@@ -319,6 +339,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   void dispose() {
     sidebarAgentsFirst.removeListener(_onAgentsList);
     Drafts.instance.removeListener(_onDrafts);
+    Pins.instance.removeListener(_onDrafts);
     _homeAnimC?.dispose();
     _renameCtl.dispose();
     _renameFocus.dispose();
@@ -1070,23 +1091,47 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     );
   }
 
-  /// Phone list: live sessions as cards, then each folder in its own card.
+  /// Phone list: pinned sessions first, live sessions as cards, then each folder in its own card.
   List<Widget> _mobileGroupedRows(List<SessionInfo> sorted) {
     if (sorted.isEmpty) return const [];
     final out = <Widget>[];
     final filtering = _filterQuery.trim().isNotEmpty;
     _chatsShownAt ??= DateTime.now();
     var n = 0;
+    final pinned = _pinnedSessions(sorted);
+    final pinnedIds = {for (final s in pinned) s.id};
+    if (pinned.isNotEmpty) {
+      out.add(MobileSectionLabel('Pinned',
+          icon: 'pin', count: pinned.length, top: 2));
+      out.add(Appear(
+        key: const ValueKey('folder-pinned'),
+        index: n++,
+        since: _chatsShownAt,
+        child: MobileGroupCard(children: [
+          for (var i = 0; i < pinned.length; i++)
+            _listRow(pinned[i],
+                above: i > 0 ? pinned[i - 1] : null,
+                below: i + 1 < pinned.length ? pinned[i + 1] : null,
+                divider: i + 1 < pinned.length,
+                showProject: true),
+        ]),
+      ));
+    }
+    final remaining = [
+      for (final s in sorted)
+        if (!pinnedIds.contains(s.id)) s,
+    ];
     final live = filtering
         ? const <SessionInfo>[]
         : [
-            for (final s in sorted)
+            for (final s in remaining)
               if (sessionNeedsYou(s)) s,
-            for (final s in sorted)
+            for (final s in remaining)
               if (!sessionNeedsYou(s) && sessionIsActive(s.status)) s,
           ];
     if (live.isNotEmpty) {
-      out.add(MobileSectionLabel('Now', count: live.length, top: 2));
+      out.add(MobileSectionLabel('Now',
+          count: live.length, top: pinned.isEmpty ? 2 : 18));
       for (final s in live) {
         out.add(Appear(
           key: ValueKey('chat-${s.id}'),
@@ -1106,7 +1151,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     }
     final liveIds = {for (final s in live) s.id};
     final byFolder = <String, List<SessionInfo>>{};
-    for (final s in sorted) {
+    for (final s in remaining) {
       if (liveIds.contains(s.id)) continue;
       byFolder.putIfAbsent(projectKey(s), () => []).add(s);
     }
@@ -1115,7 +1160,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       final l = projectLabel(rows.first);
       labelCount[l] = (labelCount[l] ?? 0) + 1;
     }
-    var first = live.isEmpty;
+    var first = pinned.isEmpty && live.isEmpty;
     for (final rows in byFolder.values) {
       var label = projectLabel(rows.first);
       if ((labelCount[label] ?? 0) > 1) label = _projectPath(rows.first);
@@ -1196,14 +1241,41 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     _chatsShownAt ??= DateTime.now();
     var n = 0;
 
+    final pinnedRows = _pinnedSessions(sorted);
+    final pinnedIds = {for (final s in pinnedRows) s.id};
+    if (pinnedRows.isNotEmpty) {
+      out.add(SessionGroupHeader(
+        'Pinned',
+        count: pinnedRows.length,
+      ));
+      for (var i = 0; i < pinnedRows.length; i++) {
+        out.add(Appear(
+          key: ValueKey('chat-${pinnedRows[i].id}'),
+          index: n++,
+          since: _chatsShownAt,
+          child: _listRow(
+            pinnedRows[i],
+            above: i > 0 ? pinnedRows[i - 1] : null,
+            below: i + 1 < pinnedRows.length ? pinnedRows[i + 1] : null,
+            divider: kMobile && i + 1 < pinnedRows.length,
+            showProject: true,
+          ),
+        ));
+      }
+    }
+    final unpinned = [
+      for (final s in sorted)
+        if (!pinnedIds.contains(s.id)) s,
+    ];
+
     final List<SessionInfo> groupedSource;
     if (pin) {
       final needsYouRows = [
-        for (final s in sorted)
+        for (final s in unpinned)
           if (sessionNeedsYou(s)) s,
       ];
       groupedSource = [
-        for (final s in sorted)
+        for (final s in unpinned)
           if (!sessionNeedsYou(s)) s,
       ];
       if (needsYouRows.isNotEmpty) {
@@ -1227,7 +1299,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         }
       }
     } else {
-      groupedSource = sorted;
+      groupedSource = unpinned;
     }
 
     if (groupedSource.isEmpty) return out;
@@ -1329,6 +1401,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       joinAbove: checked && above != null && _selected.contains(above.id),
       joinBelow: checked && below != null && _selected.contains(below.id),
       draft: !renaming && _hasDraft(s),
+      pinned: _isPinnedSession(s),
       divider:
           divider && !(below != null && _selected.contains(below.id)),
       showProject: showProject,
@@ -1584,9 +1657,10 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     ]);
   }
 
-  // Long-press / right-click a session → rename or delete.
+  // Long-press / right-click a session → pin, rename, settle or delete.
   Future<void> _sessionActions(SessionInfo s, {Offset? position}) async {
     if (isDedicatedMcSession(s.id)) return;
+    final pinned = _isPinnedSession(s);
     if (!kMobile) {
       final overlay =
           Overlay.of(context).context.findRenderObject() as RenderBox;
@@ -1595,6 +1669,10 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         context,
         point: point,
         items: [
+          appMenuItem(
+              value: 'pin',
+              icon: pinned ? 'pin-off' : 'pin',
+              label: pinned ? 'Unpin' : 'Pin'),
           appMenuItem(value: 'rename', icon: 'edit', label: 'Rename'),
           appMenuItem(value: 'select', icon: 'check', label: 'Select'),
           if (s.settled)
@@ -1606,7 +1684,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
               value: 'delete', icon: 'trash', label: 'Delete', danger: true),
         ],
       );
-      if (selected == 'select') {
+      if (selected == 'pin') {
+        await Pins.instance.toggle(Pins.session, s.id, host: _pinHost);
+      } else if (selected == 'select') {
         _enterSelect(seed: s.id);
       } else if (selected == 'settle' || selected == 'wake') {
         await _setSettled(s, selected == 'settle');
@@ -1622,6 +1702,13 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         title: s.title.isEmpty ? '(untitled)' : s.title,
         subtitle: project.isEmpty ? 'Chat' : project,
         child: SheetActions([
+          SheetAction(pinned ? 'pin-off' : 'pin', pinned ? 'Unpin' : 'Pin', () {
+            Navigator.pop(context);
+            Pins.instance.toggle(Pins.session, s.id, host: _pinHost);
+          },
+              detail: pinned
+                  ? 'Remove from the Pinned section'
+                  : 'Keep at the top of the list'),
           SheetAction('edit', 'Rename', () {
             Navigator.pop(context);
             _beginRename(s);

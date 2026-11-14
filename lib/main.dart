@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'drafts.dart';
+import 'pins.dart';
 import 'screens/sidebar_mode.dart' show loadSidebarAgentsFirst;
 import 'ambient/ambient_edge_glow.dart';
 import 'notifications.dart';
@@ -49,6 +50,7 @@ void main() async {
     await ThemeManager.instance.init();
   } catch (_) {}
   await Drafts.instance.init();
+  await Pins.instance.load();
   try {
     if (!kMobile) await loadSidebarAgentsFirst();
   } catch (_) {}

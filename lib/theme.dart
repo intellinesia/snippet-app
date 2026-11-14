@@ -1917,6 +1917,10 @@ List<List<dynamic>> hugeIconFor(String name) {
       return HugeIcons.strokeRoundedLockKey;
     case 'repeat':
       return HugeIcons.strokeRoundedRepeat;
+    case 'pin':
+      return HugeIcons.strokeRoundedPin;
+    case 'pin-off':
+      return HugeIcons.strokeRoundedPinOff;
     default:
       return HugeIcons.strokeRoundedCircle;
   }
