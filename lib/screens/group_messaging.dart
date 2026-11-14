@@ -1392,6 +1392,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             (e.body.isNotEmpty || _systemText(e) != null))
           e
     ];
+    final reactionsByTarget = groupMessageReactions(_events);
     if (visible.isEmpty) {
       return PullToRefresh(
         onRefresh: () => _load(silent: true),
@@ -1453,6 +1454,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
               run: run,
               stamp: stamp,
               readLine: readLine,
+              reactions: reactionsByTarget[e.eventId] ?? const [],
             ),
           );
         },
@@ -1474,12 +1476,77 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     );
   }
 
+  Future<void> _sendReaction(CoordinationEvent target, String reaction) async {
+    if (target.eventId.isEmpty) return;
+    final already = _events.any((e) =>
+        e.actorKind == 'human' &&
+        e.replyTo == target.eventId &&
+        e.reaction == reaction);
+    if (already) return;
+    final key = 'local-react-${DateTime.now().microsecondsSinceEpoch}';
+    final local = CoordinationEvent.fromJson({
+      'event_id': key,
+      'thread_id': widget.group.id,
+      'event_type': 'group_message',
+      'actor_kind': 'human',
+      'actor_id': 'human',
+      'payload': {
+        'body': '',
+        'kind': 'reaction',
+        'reply_to': target.eventId,
+        'in_reply_to': target.eventId,
+        'reaction': reaction,
+      },
+      'idempotency_key': key,
+      'created_at': DateTime.now().toUtc().toIso8601String(),
+    });
+    _pending.add(local);
+    setState(() => _events = [..._events, local]);
+    try {
+      final ev = await widget.client.postGroup(
+        widget.group.id,
+        body: '',
+        inReplyTo: target.eventId,
+        reaction: reaction,
+      );
+      if (!mounted) return;
+      _pending.removeWhere((p) => p.eventId == key);
+      _pending.add(ev);
+      _thread.refresh();
+    } catch (e) {
+      _pending.removeWhere((p) => p.eventId == key);
+      if (!mounted) return;
+      setState(() => _events = [
+            for (final ev in _events)
+              if (ev.eventId != key) ev
+          ]);
+      toast(context, '$e', danger: true);
+    }
+  }
+
+  Widget _withTapback(Widget bubble, Widget? chips, {required bool mine}) {
+    if (chips == null) return bubble;
+    return Padding(
+      padding: const EdgeInsets.only(top: MessageReactionChips.rise),
+      child: Stack(clipBehavior: Clip.none, children: [
+        bubble,
+        Positioned(
+          top: -MessageReactionChips.rise,
+          left: mine ? -MessageReactionChips.overhang : null,
+          right: mine ? null : -MessageReactionChips.overhang,
+          child: chips,
+        ),
+      ]),
+    );
+  }
+
   Widget _item(
     CoordinationEvent e, {
     required int index,
     required ({bool first, bool last}) run,
     required (String, String)? stamp,
     required String? readLine,
+    List<ReactionGroup> reactions = const [],
   }) {
     final sys = _systemText(e);
     final topGap =
@@ -1518,14 +1585,25 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           MessageBubbleInteractive(
             text: e.body,
             mine: mine,
+            onReact: (name) => unawaited(_sendReaction(e, name)),
             focusBuilder: (_) => buildBubble(),
             builder: (_, __, bubbleKey) => ChatBubbleRow(
               mine: mine,
               avatar: !mine && run.last ? _senderAvatar(e.actorId) : null,
               avatarSlot: !mine && !run.last,
-              child: KeyedSubtree(
-                key: bubbleKey,
-                child: buildBubble(),
+              child: _withTapback(
+                KeyedSubtree(
+                  key: bubbleKey,
+                  child: buildBubble(),
+                ),
+                reactions.isEmpty
+                    ? null
+                    : MessageReactionChips(
+                        reactions: reactions,
+                        mine: mine,
+                        onReact: (name) => unawaited(_sendReaction(e, name)),
+                      ),
+                mine: mine,
               ),
             ),
           ),
