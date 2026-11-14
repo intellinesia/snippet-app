@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
+import 'package:snippet/composer/voice_note.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/group_messaging.dart';
 import 'package:snippet/swr.dart';
@@ -267,6 +268,60 @@ void main() {
 
       debugDefaultTargetPlatformOverride = null;
     });
+
+    testWidgets(
+        'sending a confirmed voice note uploads it and posts the marker',
+        (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      tester.view.physicalSize = const Size(390, 844) * 3;
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      final group = GroupSummary.fromJson({
+        'id': 'g1',
+        'title': 'Launch',
+        'members': [
+          {'kind': 'agent', 'id': 'argon'},
+          {'kind': 'human', 'id': 'local'},
+        ],
+      });
+      final client = _GroupClient([]);
+      final voice = VoiceNoteController(client: client);
+      addTearDown(voice.dispose);
+
+      await tester.pumpWidget(MaterialApp(
+        home: GroupThreadScreen(
+          client: client,
+          group: group,
+          voiceController: voice,
+        ),
+      ));
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      voice.debugSeedTake(Uint8List.fromList([1, 2, 3, 4]));
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 60));
+      }
+
+      expect(find.byType(VoiceNoteRecorderStrip), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('Send voice note'));
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 60));
+      }
+
+      expect(client.uploads, hasLength(1));
+      expect(client.posted, hasLength(1));
+      expect(
+        client.posted.single.body,
+        contains('[attached file — read it at this exact path:'),
+      );
+      expect(voice.hasTake, isFalse);
+
+      await tester.pumpWidget(const SizedBox());
+      debugDefaultTargetPlatformOverride = null;
+    });
   });
 }
 
@@ -284,6 +339,9 @@ InlineSpan? _findSpan(InlineSpan span, String needle) {
 class _GroupClient extends DaemonClient {
   _GroupClient(this.thread) : super('https://daemon.invalid', 'test-token');
   final List<CoordinationEvent> thread;
+  final List<({String? name, int length})> uploads = [];
+  final List<({String groupId, String body, List<String>? mentions})> posted =
+      [];
   final _deviceEvents = DeviceEventHub.local();
 
   @override
@@ -296,6 +354,36 @@ class _GroupClient extends DaemonClient {
     int limit = 100,
   }) async =>
       thread;
+
+  @override
+  Future<String> uploadFile(List<int> bytes,
+      {String? name, String? dir}) async {
+    uploads.add((name: name, length: bytes.length));
+    return '/tmp/uploads/${name ?? 'voice'}';
+  }
+
+  @override
+  Future<CoordinationEvent> postGroup(
+    String id, {
+    required String body,
+    List<String>? mentions,
+    String? inReplyTo,
+    String? reaction,
+  }) async {
+    posted.add((groupId: id, body: body, mentions: mentions));
+    final ev = CoordinationEvent.fromJson({
+      'event_id': 'posted-${posted.length}',
+      'sequence': thread.length + 1,
+      'event_type': 'group_message',
+      'actor_kind': 'human',
+      'actor_id': 'local',
+      'idempotency_key': 'kp-${posted.length}',
+      'created_at': DateTime.now().toUtc().toIso8601String(),
+      'payload': {'body': body},
+    });
+    thread.add(ev);
+    return ev;
+  }
 
   @override
   Future<List<CoordinationAgent>> coordinationAgents() async => [
