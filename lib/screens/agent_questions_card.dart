@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../chat/chat_card.dart';
 import '../models.dart';
+import '../session_quick_send.dart';
 import '../theme.dart';
 import '../transcript_card.dart';
 import '../widgets.dart';
@@ -47,6 +48,7 @@ class _QChoice {
 }
 
 class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
+  static final Map<String, Map<String, dynamic>> _sessionAnswers = {};
   final Map<String, TextEditingController> _texts = {};
   final Map<String, String> _single = {};
   final Map<String, Set<String>> _multi = {};
@@ -54,6 +56,11 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
   bool _sending = false;
   bool _locked = false;
   Map<String, dynamic>? _sentAnswers;
+
+  String get _session => '${widget.question['session'] ?? ''}'.trim();
+  String get _questionId => '${widget.question['question_id'] ?? ''}'.trim();
+  bool get _isSessionQuestion => _session.isNotEmpty && _questionId.isNotEmpty;
+  String get _sessionKey => '$_session:$_questionId';
 
   List<Map<String, dynamic>> get _questions {
     final raw = widget.question['questions'];
@@ -176,6 +183,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
   ({Map<String, dynamic>? answers, bool answered, bool closed, String? body})
       _resolve() {
     final id = widget.event.eventId;
+    final taskId = '${widget.question['task_id'] ?? ''}'.trim();
     Map<String, dynamic>? answers;
     String? body;
     var answered = false;
@@ -194,11 +202,28 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
         if (b.isNotEmpty) body = b;
         continue;
       }
-      if (e.actorKind != 'human') closed = true;
+      if (_isSessionQuestion) {
+        final result = e.payload['task_result'];
+        final nextQ = e.payload['question'];
+        if (result is Map &&
+            taskId.isNotEmpty &&
+            '${result['task_id'] ?? ''}'.trim() == taskId) {
+          closed = true;
+        } else if (nextQ is Map &&
+            '${nextQ['session'] ?? ''}'.trim() == _session) {
+          closed = true;
+        }
+      } else if (e.actorKind != 'human') {
+        closed = true;
+      }
     }
-    if (!answered && _sentAnswers != null) {
-      answered = true;
-      answers = _sentAnswers;
+    if (!answered) {
+      final cached = _sentAnswers ??
+          (_isSessionQuestion ? _sessionAnswers[_sessionKey] : null);
+      if (cached != null) {
+        answered = true;
+        answers = cached;
+      }
     }
     return (
       answers: answers,
@@ -318,16 +343,35 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
   }
 
   Future<void> _post(Map<String, dynamic> answers, List<String> parts) async {
-    final session = '${widget.question['session'] ?? ''}';
+    final session = _session;
+    final text = parts.join('\n\n');
     setState(() {
       _sending = true;
       _error = null;
     });
+    if (_isSessionQuestion) {
+      final ok = await quickSend(
+        client: widget.client,
+        session: session,
+        action: QuickAnswer(text),
+      );
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        if (ok) {
+          _sessionAnswers[_sessionKey] = answers;
+          _sentAnswers = answers;
+        } else {
+          _error = 'Could not reach the session.';
+        }
+      });
+      return;
+    }
     try {
       await widget.client.answerAgentQuestion(
         session: session,
         questionEventId: widget.event.eventId,
-        text: parts.join('\n\n'),
+        text: text,
         answers: answers,
       );
       if (!mounted) return;
@@ -410,6 +454,8 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     final q = qs[step];
     final last = step == qs.length - 1;
     final header = '${q['header'] ?? ''}'.trim();
+    final taskTitle = '${widget.question['task_title'] ?? ''}'.trim();
+    final subtitle = header.isNotEmpty ? header : taskTitle;
     final showActions = !(closed && _error == null);
     final canNext = interactive && _draft(q, step) != null;
     final canSend = interactive && _allAnswered;
@@ -419,7 +465,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
             ? ChatCardSteps(index: step, total: qs.length)
             : null,
         title: _questionText(q),
-        subtitle: header,
+        subtitle: subtitle,
         trailing: closed ? const ChatCardPill('Closed') : null,
       ),
       _inputFor(q, step, interactive: interactive),

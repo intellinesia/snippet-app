@@ -25,6 +25,8 @@ import '../widgets.dart';
 import '../chat/agent_cluster.dart';
 import '../chat/chat_style.dart';
 import 'agent_card.dart' show agentRowTime;
+import 'agent_questions_card.dart' show questionAnswerSystemLine;
+import 'agent_thread_cards.dart' show agentThreadEventCard;
 import 'tasks/tasks_panel.dart' show openTasksPage, openTaskCountFor;
 import 'mobile_session_home.dart' show DotField;
 
@@ -1360,6 +1362,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   }
 
   String? _systemText(CoordinationEvent e) {
+    final answerLine = questionAnswerSystemLine(e);
+    if (answerLine != null) return answerLine;
     final body = e.body.trim();
     if (e.payload['auto'] == 'ack') return body.isEmpty ? null : body;
     final kind = e.payload['kind'];
@@ -1454,10 +1458,24 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         ),
       );
     }
+    final cards = Map<CoordinationEvent, Widget>.identity();
+    for (final e in _events) {
+      if (isReactionEvent(e) || _systemText(e) != null) continue;
+      if (e.actorKind == 'human') continue;
+      final card = agentThreadEventCard(
+        e,
+        client: widget.client,
+        agentId: e.actorId,
+        events: _events,
+      );
+      if (card != null) cards[e] = card;
+    }
     final visible = [
       for (final e in _events)
         if (!isReactionEvent(e) &&
-            (e.body.isNotEmpty || _systemText(e) != null))
+            (cards.containsKey(e) ||
+                e.body.isNotEmpty ||
+                _systemText(e) != null))
           e
     ];
     final reactionsByTarget = groupMessageReactions(_events);
@@ -1486,7 +1504,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       visible,
       sender: (e) => e.actorKind == 'human' ? 'human' : e.actorId,
       at: _eventTime,
-      breaks: (e) => _systemText(e) != null,
+      breaks: (e) => _systemText(e) != null || cards.containsKey(e),
     );
     int? lastHumanIndex;
     for (var i = visible.length - 1; i >= 0; i--) {
@@ -1518,6 +1536,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           return _wideCap(
             _item(
               e,
+              card: cards[e],
               index: i,
               run: run,
               stamp: stamp,
@@ -1610,6 +1629,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
 
   Widget _item(
     CoordinationEvent e, {
+    Widget? card,
     required int index,
     required ({bool first, bool last}) run,
     required (String, String)? stamp,
@@ -1632,7 +1652,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       );
     }
     final mine = e.actorKind == 'human';
-    Widget buildBubble() => ChatBubble(
+    Widget buildContent() =>
+        card ??
+        ChatBubble(
           mine: mine,
           tail: run.last,
           child: _mentionText(e.body, mine: mine),
@@ -1654,7 +1676,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             text: e.body,
             mine: mine,
             onReact: (name) => unawaited(_sendReaction(e, name)),
-            focusBuilder: (_) => buildBubble(),
+            focusBuilder: (_) => buildContent(),
             builder: (_, __, bubbleKey) => ChatBubbleRow(
               mine: mine,
               avatar: !mine && run.last ? _senderAvatar(e.actorId) : null,
@@ -1662,7 +1684,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
               child: _withTapback(
                 KeyedSubtree(
                   key: bubbleKey,
-                  child: buildBubble(),
+                  child: buildContent(),
                 ),
                 reactions.isEmpty
                     ? null

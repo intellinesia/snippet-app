@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../desktop_look.dart';
 import '../api.dart';
-import '../chat/chat_style.dart' show ChatColors;
 import '../approval_code.dart';
 import '../chat/chat_card.dart';
 import '../chat/chat_style.dart';
 import '../media_views.dart';
 import '../models.dart';
 import '../notification_text.dart';
+import '../panel.dart';
 import '../platform.dart';
 import '../session_quick_send.dart';
+import '../shell_panel.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
 import '../transcript.dart';
@@ -18,6 +19,8 @@ import '../widgets.dart';
 import 'agent_questions_card.dart';
 import 'artifact_viewer.dart';
 import 'presented_file_card.dart';
+import 'session.dart' show SessionScreen;
+import 'session_coordination_cards.dart' show CardMarkdownBody;
 
 String daemonRelativeUrl(DaemonClient client, String url) {
   final raw = url.trim();
@@ -98,6 +101,14 @@ Widget? agentThreadEventCard(
           event: e, approval: approval, client: client);
     }
     return _approvalCard(e, approval);
+  }
+  final taskResult = payload['task_result'];
+  if (taskResult is Map) {
+    return TaskResultCard(
+      event: e,
+      result: taskResult,
+      client: client,
+    );
   }
   final tools = payload['tool_activity'];
   if (tools is List && tools.isNotEmpty) {
@@ -1110,5 +1121,112 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
         ChatCardButton('Approve', onTap: _busy ? null : () => _decide(true)),
       ]),
     ]);
+  }
+}
+
+/// Compact summary card for a completed, blocked, or failed task.
+class TaskResultCard extends StatelessWidget {
+  const TaskResultCard({
+    super.key,
+    required this.event,
+    required this.result,
+    required this.client,
+  });
+
+  final CoordinationEvent event;
+  final Map<dynamic, dynamic> result;
+  final DaemonClient client;
+
+  String _s(String key) => '${result[key] ?? ''}'.trim();
+
+  (String, ChatCardTone) _status() => switch (_s('status').toLowerCase()) {
+        'done' => ('Done', ChatCardTone.ok),
+        'blocked' => ('Blocked', ChatCardTone.warn),
+        'failed' => ('Failed', ChatCardTone.danger),
+        final other when other.isNotEmpty => (
+            '${other[0].toUpperCase()}${other.substring(1)}',
+            ChatCardTone.neutral,
+          ),
+        _ => ('', ChatCardTone.neutral),
+      };
+
+  void _openSession(BuildContext context, String sessionId, String title) {
+    if (sessionId.isEmpty) return;
+    final tab = openSessionInTab;
+    if (!kMobile && tab != null) {
+      tab(client, sessionId, title);
+      return;
+    }
+    final open =
+        context.findAncestorWidgetOfExactType<SessionScreen>()?.onOpenSession;
+    if (open != null) {
+      open(sessionId, title, null);
+      return;
+    }
+    presentScreen(
+      context,
+      builder: (_, close) => SessionScreen(
+        client: client,
+        sessionId: sessionId,
+        title: title,
+        onMenu: close,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rawTitle = _s('title');
+    final fallback = event.body.trim();
+    final title = rawTitle.isNotEmpty
+        ? rawTitle
+        : (fallback.isNotEmpty ? fallback : 'Task result');
+    final rawSummary = _s('summary');
+    final summary = rawSummary.isNotEmpty
+        ? rawSummary
+        : (rawTitle.isNotEmpty && fallback != rawTitle ? fallback : '');
+    final sessionId = _s('session_id');
+    final (statusLabel, tone) = _status();
+    final trailing = (statusLabel.isEmpty && sessionId.isEmpty)
+        ? null
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (statusLabel.isNotEmpty) ChatCardPill(statusLabel, tone: tone),
+              if (sessionId.isNotEmpty) ...[
+                if (statusLabel.isNotEmpty) const SizedBox(width: 6),
+                AppIcon('chevron-right', size: 15, color: AppColors.fg4),
+              ],
+            ],
+          );
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ChatCardHeader(
+          title: title,
+          large: false,
+          padBottom: summary.isEmpty,
+          trailing: trailing,
+        ),
+        if (summary.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          ChatCardBody(
+            child: CardMarkdownBody(body: summary, selectable: false),
+          ),
+        ],
+      ],
+    );
+    return ChatCard(
+      children: [
+        if (sessionId.isNotEmpty)
+          InkWell(
+            onTap: () => _openSession(context, sessionId, title),
+            child: content,
+          )
+        else
+          content,
+      ],
+    );
   }
 }
