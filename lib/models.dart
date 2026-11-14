@@ -2,6 +2,7 @@
 // omits when empty/None are treated as optional here.
 
 import 'package:flutter/foundation.dart';
+import 'markdown_preview.dart';
 
 /// A saved daemon connection (one `snippet serve` instance).
 class Instance {
@@ -1421,7 +1422,7 @@ class GroupSummary {
 
   static String? _groupPreview(Object? m) {
     if (m is! Map) return null;
-    final body = '${m['body'] ?? ''}'.trim().replaceAll(RegExp(r'\s+'), ' ');
+    final body = flattenMarkdown('${m['body'] ?? ''}');
     if (body.isEmpty) return null;
     final from = m['from_kind'] == 'human' ? 'You' : '${m['from_id'] ?? ''}';
     return from.isEmpty ? body : '$from: $body';
