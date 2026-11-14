@@ -457,11 +457,13 @@ class ChatCardResolved extends StatelessWidget {
     required this.title,
     required this.approved,
     this.subtitle,
+    this.icon,
   });
 
   final String title;
   final String? subtitle;
   final bool approved;
+  final String? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -470,7 +472,7 @@ class ChatCardResolved extends StatelessWidget {
       Padding(
         padding: EdgeInsets.symmetric(horizontal: p, vertical: 12),
         child: Row(children: [
-          AppIcon(approved ? 'check' : 'x',
+          AppIcon(icon ?? (approved ? 'check' : 'x'),
               size: 16, color: approved ? AppColors.ok : AppColors.fg4),
           const SizedBox(width: 12),
           Expanded(

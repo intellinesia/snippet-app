@@ -4,6 +4,7 @@ import '../desktop_look.dart';
 import '../api.dart';
 import '../approval_code.dart';
 import '../chat/chat_card.dart';
+import '../chat/session_attention.dart';
 import '../chat/chat_style.dart';
 import '../media_views.dart';
 import '../models.dart';
@@ -1035,6 +1036,17 @@ class DeskApprovalCard extends StatefulWidget {
 class _DeskApprovalCardState extends State<DeskApprovalCard> {
   static final _decided = <String, bool>{};
   bool _busy = false;
+  bool _outdated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    SessionAttentionProbe.isOutdated(widget.client,
+            session: _s('session'), type: 'approval', id: _s('approval_id'))
+        .then((v) {
+      if (mounted && v) setState(() => _outdated = true);
+    });
+  }
 
   String _s(String k) => '${widget.approval[k] ?? ''}'.trim();
   String get _key => '${_s('session')}:${_s('approval_id')}';
@@ -1075,6 +1087,14 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
         title: title,
         subtitle: decided ? 'Approved' : 'Denied',
         approved: decided,
+      );
+    }
+    if (_outdated) {
+      return ChatCardResolved(
+        title: title,
+        subtitle: 'Outdated: no longer waiting on this',
+        approved: false,
+        icon: 'clock',
       );
     }
     return ChatCard(children: [

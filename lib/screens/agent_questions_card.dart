@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../chat/chat_card.dart';
+import '../chat/session_attention.dart';
 import '../models.dart';
 import '../session_quick_send.dart';
 import '../theme.dart';
@@ -55,6 +56,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
   String? _error;
   bool _sending = false;
   bool _locked = false;
+  bool _outdated = false;
   Map<String, dynamic>? _sentAnswers;
 
   String get _session => '${widget.question['session'] ?? ''}'.trim();
@@ -145,6 +147,13 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
   @override
   void initState() {
     super.initState();
+    if (_session.isNotEmpty) {
+      SessionAttentionProbe.isOutdated(widget.client,
+              session: _session, type: 'question', id: _questionId)
+          .then((v) {
+        if (mounted && v) setState(() => _outdated = true);
+      });
+    }
     final qs = _questions;
     for (var i = 0; i < qs.length; i++) {
       final q = qs[i];
@@ -450,6 +459,14 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     final interactive = !st.answered && !closed && !_sending;
     final skipped = st.answered && _wasSkipped(st.answers, st.body);
     if (st.answered) return _resolved(qs, st.answers, skipped);
+    if (_outdated) {
+      return ChatCardResolved(
+        title: _questionText(qs.first),
+        subtitle: 'Outdated: no longer waiting on this',
+        approved: false,
+        icon: 'clock',
+      );
+    }
     final step = _step.clamp(0, qs.length - 1);
     final q = qs[step];
     final last = step == qs.length - 1;

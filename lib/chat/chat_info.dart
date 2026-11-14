@@ -542,8 +542,6 @@ class GroupInfoPanel extends StatefulWidget {
 }
 
 class _GroupInfoPanelState extends State<GroupInfoPanel> {
-  static const _tabs = ['Info', 'Members'];
-  int _tab = 0;
   late GroupSummary _group = widget.group;
   List<CoordinationAgent> _agents = const [];
   Map<String, CoordinationAgent> _byId = const {};
@@ -734,7 +732,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
 
   Widget _memberRow(GroupMember m) {
     final lead = m.id == _group.lead;
-    final role = m.isHuman ? 'You' : (lead ? 'Lead' : 'Member');
+    final role = m.isHuman ? null : (lead ? 'Lead' : 'Member');
     return _LongPressRow(
       onLongPress: _busy || m.isHuman
           ? null
@@ -763,9 +761,10 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(15, color: AppColors.fg1)),
-                  Text(role,
-                      style: sans(12,
-                          color: lead ? AppColors.accent : AppColors.fg3)),
+                  if (role != null)
+                    Text(role,
+                        style: sans(12,
+                            color: lead ? AppColors.accent : AppColors.fg3)),
                 ],
               ),
             ),
@@ -805,7 +804,6 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
           if (!widget.docked) _close();
           widget.onOpenTasks!();
         }),
-      _CircleAction('users', 'Add', _pickAdd),
     ];
     return _InfoFrame(
       onClose: widget.docked ? null : _close,
@@ -816,10 +814,10 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
           '${_group.members.length == 1 ? 'member' : 'members'}',
           style: sans(13, color: AppColors.fg3)),
       actions: actions,
-      tabs: _tabs,
-      tab: _tab,
-      onTab: (i) => setState(() => _tab = i),
-      body: _tab == 1 ? _membersSection() : _infoTab(),
+      tabs: const [],
+      tab: 0,
+      onTab: (_) {},
+      body: _infoTab(),
     );
   }
 }
