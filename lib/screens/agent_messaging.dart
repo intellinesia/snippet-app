@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import '../chat/chat_info.dart' show showAgentInfo;
 import '../chat/choices.dart';
 import '../glass.dart';
+import '../ambient_loop.dart';
 import '../api.dart';
 import '../clock.dart';
 import '../chat/chat_style.dart';
@@ -1638,18 +1639,17 @@ class _TypingDots extends StatefulWidget {
   State<_TypingDots> createState() => _TypingDotsState();
 }
 
-class _TypingDotsState extends State<_TypingDots>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 600));
+class _TypingDotsState extends State<_TypingDots> {
+  final _c = AmbientLoop(const Duration(milliseconds: 600));
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _c.bind(context);
     if (MediaQuery.disableAnimationsOf(context)) {
       _c.stop();
-    } else if (!_c.isAnimating) {
-      _c.repeat();
+    } else {
+      _c.start();
     }
   }
 

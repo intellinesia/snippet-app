@@ -22,6 +22,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../chat/chat_card.dart';
 import '../desktop_look.dart';
+import '../ambient_loop.dart';
 import '../approval_code.dart';
 import '../notification_text.dart';
 import '../api.dart';

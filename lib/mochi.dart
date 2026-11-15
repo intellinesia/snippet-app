@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'ambient_loop.dart';
 import 'theme.dart';
 
 const mochiPalette = <(String, Color)>[
@@ -135,12 +136,9 @@ class WorkingMochi extends StatefulWidget {
   State<WorkingMochi> createState() => _WorkingMochiState();
 }
 
-class _WorkingMochiState extends State<WorkingMochi>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-    vsync: this,
-    duration: Duration(milliseconds: widget.squeeze ? 1800 : 1400),
-  );
+class _WorkingMochiState extends State<WorkingMochi> {
+  late final _c =
+      AmbientLoop(Duration(milliseconds: widget.squeeze ? 1800 : 1400));
   final _rng = math.Random();
   Timer? _mood;
   MochiEyes _eyes = MochiEyes.dot;
@@ -148,8 +146,18 @@ class _WorkingMochiState extends State<WorkingMochi>
   @override
   void initState() {
     super.initState();
-    _c.repeat();
     _nextMood();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _c.bind(context);
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
+      _c.stop();
+    } else {
+      _c.start();
+    }
   }
 
   void _nextMood() {
@@ -217,10 +225,8 @@ class _WorkingMochiState extends State<WorkingMochi>
           }
         }
         final blink = _eyes == MochiEyes.dot && t > .9 && t < .96 ? 1.0 : 0.0;
-        final look = math.sin(_c.lastElapsedDuration == null
-                ? 0
-                : _c.lastElapsedDuration!.inMilliseconds / 900) *
-            3;
+        final look =
+            math.sin(AmbientClock.instance.seconds * 1000 / 900) * 3;
         return Transform.translate(
           offset: Offset(0, dy),
           child: Transform(

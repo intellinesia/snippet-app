@@ -1,8 +1,11 @@
 import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' show PointMode;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../ambient_loop.dart';
 import '../glass.dart';
 import '../models.dart';
 import '../mochi.dart';
@@ -460,14 +463,13 @@ class LiveRing extends StatefulWidget {
   State<LiveRing> createState() => _LiveRingState();
 }
 
-class _LiveRingState extends State<LiveRing>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1600));
+class _LiveRingState extends State<LiveRing> {
+  final _c = AmbientLoop(const Duration(milliseconds: 1600), reverse: true);
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _c.bind(context);
     _sync();
   }
 
@@ -479,10 +481,9 @@ class _LiveRingState extends State<LiveRing>
 
   void _sync() {
     if (widget.live && !reduceMotion(context)) {
-      if (!_c.isAnimating) _c.repeat(reverse: true);
+      _c.start();
     } else {
-      _c.stop();
-      _c.value = widget.live ? 1 : 0;
+      _c.stop(at: widget.live ? 1 : 0);
     }
   }
 
@@ -543,15 +544,35 @@ class _DotGridPainter extends CustomPainter {
 
   final Color color;
 
-  @override
-  void paint(Canvas canvas, Size size) {
+  static Size? _size;
+  static Float32List? _points;
+
+  // One point batch instead of thousands of circles; Impeller redraws it every frame.
+  static Float32List _grid(Size size) {
+    if (size == _size && _points != null) return _points!;
     const step = 12.0;
-    final p = Paint()..color = color;
-    for (var y = step / 2; y < size.height; y += step) {
-      for (var x = step / 2; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 0.9, p);
+    final cols = (size.width / step).ceil(), rows = (size.height / step).ceil();
+    final out = Float32List(cols * rows * 2);
+    var i = 0;
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        out[i++] = step / 2 + c * step;
+        out[i++] = step / 2 + r * step;
       }
     }
+    _size = size;
+    return _points = out;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRawPoints(
+        PointMode.points,
+        _grid(size),
+        Paint()
+          ..color = color
+          ..strokeWidth = 1.8
+          ..strokeCap = StrokeCap.round);
   }
 
   @override
@@ -758,9 +779,7 @@ class _DotMatrixPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final on = Paint()..color = color;
-    final off = Paint()..color = color.withValues(alpha: color.a * 0.08);
-    final r = cell * 0.36;
+    final on = <double>[], off = <double>[];
     var x = 0;
     for (final ch in digits.split('')) {
       final g = _glyphs[ch];
@@ -768,12 +787,19 @@ class _DotMatrixPainter extends CustomPainter {
       final w = g[0].length;
       for (var row = 0; row < 7; row++) {
         for (var col = 0; col < w; col++) {
-          final c = Offset((x + col + 0.5) * cell, (row + 0.5) * cell);
-          canvas.drawCircle(c, r, g[row][col] == '1' ? on : off);
+          (g[row][col] == '1' ? on : off)
+              .addAll([(x + col + 0.5) * cell, (row + 0.5) * cell]);
         }
       }
       x += w + 1;
     }
+    Paint dots(Color c) => Paint()
+      ..color = c
+      ..strokeWidth = cell * 0.72
+      ..strokeCap = StrokeCap.round;
+    canvas.drawRawPoints(PointMode.points, Float32List.fromList(off),
+        dots(color.withValues(alpha: color.a * 0.08)));
+    canvas.drawRawPoints(PointMode.points, Float32List.fromList(on), dots(color));
   }
 
   @override
