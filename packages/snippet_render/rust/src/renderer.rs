@@ -338,7 +338,9 @@ impl Renderer {
         let surface = unsafe {
             self.instance
                 .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
-                    raw_display_handle: None,
+                    raw_display_handle: Some(wgpu::rwh::RawDisplayHandle::Android(
+                        wgpu::rwh::AndroidDisplayHandle::new(),
+                    )),
                     raw_window_handle: handle,
                 })
         }
