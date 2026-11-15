@@ -218,6 +218,45 @@ impl NativeWindow {
     pub fn get_native_window(&self) -> *mut ANativeWindow {
         self.native_window
     }
+
+    /// Sizes the window's buffers; only call when the size changes.
+    pub fn set_geometry(&self, width: i32, height: i32) {
+        unsafe {
+            ANativeWindow_setBuffersGeometry(
+                self.native_window,
+                width,
+                height,
+                AHardwareBuffer_Format::AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM.0 as i32,
+            );
+        }
+    }
+
+    /// Copies RGBA rows `stride` bytes apart into the next buffer and posts it.
+    /// Safe from any thread: the window is the producer end of a buffer queue.
+    pub fn post_rgba(&self, width: i32, height: i32, src: &[u8], stride: usize) -> bool {
+        let mut buf: ANativeWindow_Buffer = unsafe { std::mem::zeroed() };
+        let locked = unsafe {
+            ANativeWindow_lock(self.native_window, &mut buf as *mut _, std::ptr::null_mut())
+        };
+        if locked != 0 || buf.bits.is_null() {
+            return false;
+        }
+        let rows = buf.height.min(height).max(0) as usize;
+        let dst_stride = buf.stride.max(0) as usize * 4;
+        let row_bytes = buf.width.min(width).max(0) as usize * 4;
+        let dst = unsafe {
+            slice::from_raw_parts_mut(buf.bits as *mut u8, buf.height.max(0) as usize * dst_stride)
+        };
+        for y in 0..rows {
+            let s = y * stride;
+            if s + row_bytes > src.len() {
+                break;
+            }
+            dst[y * dst_stride..y * dst_stride + row_bytes].copy_from_slice(&src[s..s + row_bytes]);
+        }
+        unsafe { ANativeWindow_unlockAndPost(self.native_window) };
+        true
+    }
 }
 
 impl Clone for NativeWindow {

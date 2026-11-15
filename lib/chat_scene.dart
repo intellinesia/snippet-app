@@ -177,6 +177,8 @@ class ChatSceneLayer extends StatelessWidget {
               kMobile
                   ? ShaderView(
                       source: sceneSource(scene.scene),
+                      // Aurora is soft, so a third of the pixels look the same.
+                      scale: scene.scene == 'aurora' ? 1 / 3 : .5,
                       onError: scene.reportError,
                     )
                   : ShaderSurface(

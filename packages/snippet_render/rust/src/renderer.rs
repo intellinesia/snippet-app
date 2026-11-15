@@ -102,7 +102,6 @@ pub struct Renderer {
     readback: wgpu::Buffer,
     width: u32,
     height: u32,
-    pixels: Vec<u8>,
     // A readback still in flight after a GPU wait timed out.
     mapping: bool,
 }
@@ -191,7 +190,6 @@ impl Renderer {
             readback,
             width,
             height,
-            pixels: vec![0; (width * height * 4) as usize],
             mapping: false,
         })
     }
@@ -290,7 +288,6 @@ impl Renderer {
         (self.target, self.readback) = Self::targets(&self.device, self.format, width, height);
         self.width = width;
         self.height = height;
-        self.pixels = vec![0; (width * height * 4) as usize];
         self.mapping = false;
     }
 
@@ -298,11 +295,28 @@ impl Renderer {
         (self.width, self.height)
     }
 
-    /// Draws one frame at `time` seconds and returns tightly packed pixels,
-    /// or None while the GPU is too slow to answer (the frame is skipped).
-    pub fn render(&mut self, time: f32) -> Result<Option<&[u8]>, Error> {
+    /// Draws one frame at `time` seconds and returns tightly packed pixels.
+    pub fn render(&mut self, time: f32) -> Result<Option<Vec<u8>>, Error> {
+        let (w, h) = (self.width as usize * 4, self.height as usize);
+        self.render_with(time, |data, stride| {
+            let mut px = Vec::with_capacity(w * h);
+            for y in 0..h {
+                px.extend_from_slice(&data[y * stride..y * stride + w]);
+            }
+            px
+        })
+    }
+
+    /// Draws one frame at `time` seconds and hands the mapped rows, `stride` bytes
+    /// apart, to `sink`, so callers copy once straight to where pixels are shown.
+    /// None means the GPU was too slow to answer and the frame is skipped.
+    pub fn render_with<R>(
+        &mut self,
+        time: f32,
+        sink: impl FnOnce(&[u8], usize) -> R,
+    ) -> Result<Option<R>, Error> {
         if self.mapping {
-            return self.read_back();
+            return self.read_back(sink);
         }
         let globals = [self.width as f32, self.height as f32, time, 0.0];
         let bytes: Vec<u8> = globals.iter().flat_map(|f| f.to_ne_bytes()).collect();
@@ -352,10 +366,10 @@ impl Renderer {
             .slice(..)
             .map_async(wgpu::MapMode::Read, |_| {});
         self.mapping = true;
-        self.read_back()
+        self.read_back(sink)
     }
 
-    fn read_back(&mut self) -> Result<Option<&[u8]>, Error> {
+    fn read_back<R>(&mut self, sink: impl FnOnce(&[u8], usize) -> R) -> Result<Option<R>, Error> {
         let wait = wgpu::PollType::Wait {
             submission_index: None,
             timeout: Some(std::time::Duration::from_secs(2)),
@@ -366,21 +380,17 @@ impl Renderer {
             Err(e) => return Err(Error(e.to_string())),
         }
         self.mapping = false;
-        let row = padded_row(self.width);
-        let slice = self.readback.slice(..);
-        {
-            let data = slice.get_mapped_range().map_err(|e| Error(e.to_string()))?;
-            let tight = (self.width * 4) as usize;
-            for (y, chunk) in data
-                .chunks(row as usize)
-                .take(self.height as usize)
-                .enumerate()
-            {
-                self.pixels[y * tight..(y + 1) * tight].copy_from_slice(&chunk[..tight]);
-            }
-        }
+        let stride = padded_row(self.width) as usize;
+        let out = {
+            let data = self
+                .readback
+                .slice(..)
+                .get_mapped_range()
+                .map_err(|e| Error(e.to_string()))?;
+            sink(&data, stride)
+        };
         self.readback.unmap();
-        Ok(Some(&self.pixels))
+        Ok(Some(out))
     }
 }
 

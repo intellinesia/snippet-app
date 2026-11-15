@@ -3,26 +3,167 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use irondash_engine_context::EngineContext;
-use irondash_texture::{
-    BoxedPixelData, PayloadProvider, PixelData, PixelFormat, SendableTexture, SimplePixelData,
-    Texture,
-};
+use irondash_texture::{SendableTexture, Texture};
 
 use crate::renderer::{Format, Lang, Renderer};
 
-#[derive(Default)]
-struct Frame {
-    width: i32,
-    height: i32,
-    data: Vec<u8>,
+// Android: the texture is a window the render thread posts to directly, so frames
+// never touch the platform thread and are copied once, from GPU memory.
+#[cfg(target_os = "android")]
+mod out {
+    use super::*;
+    use irondash_texture::NativeWindow;
+
+    pub type Payload = NativeWindow;
+
+    pub struct Window(NativeWindow);
+    // ANativeWindow is refcounted and its producer calls are thread-safe.
+    unsafe impl Send for Window {}
+
+    #[derive(Default)]
+    pub struct Out {
+        pub window: Mutex<Option<Window>>,
+    }
+
+    pub fn make(engine: i64, out: &Arc<Out>) -> irondash_texture::Result<Texture<Payload>> {
+        let t = Texture::<NativeWindow>::new(engine)?;
+        *out.window.lock().unwrap() = Some(Window(t.get()));
+        Ok(t)
+    }
+
+    pub struct Writer {
+        out: Arc<Out>,
+        window: Option<Window>,
+        size: (i32, i32),
+    }
+
+    impl Writer {
+        pub fn new(out: Arc<Out>) -> Self {
+            Self {
+                out,
+                window: None,
+                size: (0, 0),
+            }
+        }
+
+        pub fn write(&mut self, renderer: &mut Renderer, clock: f32) -> Result<(), String> {
+            if self.window.is_none() {
+                self.window = self.out.window.lock().unwrap().take();
+            }
+            let (w, h) = renderer.size();
+            let (w, h) = (w as i32, h as i32);
+            let Some(win) = self.window.as_ref() else {
+                return Ok(());
+            };
+            if self.size != (w, h) {
+                win.0.set_geometry(w, h);
+                self.size = (w, h);
+            }
+            renderer
+                .render_with(clock, |data, stride| win.0.post_rgba(w, h, data, stride))
+                .map(|_| ())
+                .map_err(|e| e.0)
+        }
+
+        pub fn posted(&self, _t: &Arc<SendableTexture<Payload>>) {}
+    }
 }
 
-struct Provider(Arc<Mutex<Frame>>);
+// Elsewhere Flutter pulls the latest frame on its raster thread. Frames are shared
+// by reference and buffers reused, so a pull costs no copy or allocation.
+#[cfg(not(target_os = "android"))]
+mod out {
+    use super::*;
+    use irondash_texture::{BoxedPixelData, PayloadProvider, PixelData, PixelDataProvider};
 
-impl PayloadProvider<BoxedPixelData> for Provider {
-    fn get_payload(&self) -> BoxedPixelData {
-        let f = self.0.lock().unwrap();
-        SimplePixelData::new_boxed(f.width, f.height, f.data.clone())
+    pub type Payload = BoxedPixelData;
+
+    #[derive(Default, Clone)]
+    struct Frame {
+        width: i32,
+        height: i32,
+        data: Arc<Vec<u8>>,
+    }
+
+    impl PixelDataProvider for Frame {
+        fn get(&self) -> PixelData<'_> {
+            PixelData {
+                width: self.width,
+                height: self.height,
+                data: &self.data,
+            }
+        }
+    }
+
+    #[derive(Default)]
+    pub struct Out {
+        front: Mutex<Frame>,
+    }
+
+    struct Provider(Arc<Out>);
+
+    impl PayloadProvider<BoxedPixelData> for Provider {
+        fn get_payload(&self) -> BoxedPixelData {
+            Box::new(self.0.front.lock().unwrap().clone())
+        }
+    }
+
+    pub fn make(engine: i64, out: &Arc<Out>) -> irondash_texture::Result<Texture<Payload>> {
+        Texture::new_with_provider(engine, Arc::new(Provider(out.clone())))
+    }
+
+    pub struct Writer {
+        out: Arc<Out>,
+        back: Arc<Vec<u8>>,
+        fresh: bool,
+    }
+
+    impl Writer {
+        pub fn new(out: Arc<Out>) -> Self {
+            Self {
+                out,
+                back: Arc::default(),
+                fresh: false,
+            }
+        }
+
+        pub fn write(&mut self, renderer: &mut Renderer, clock: f32) -> Result<(), String> {
+            let (w, h) = renderer.size();
+            let tight = w as usize * 4;
+            // Reuse the buffer unless Flutter still holds it from the last pull.
+            if Arc::get_mut(&mut self.back).is_none() {
+                self.back = Arc::default();
+            }
+            let back = Arc::get_mut(&mut self.back).unwrap();
+            let done = renderer
+                .render_with(clock, |data, stride| {
+                    back.clear();
+                    for y in 0..h as usize {
+                        back.extend_from_slice(&data[y * stride..y * stride + tight]);
+                    }
+                })
+                .map_err(|e| e.0)?;
+            if done.is_some() {
+                let mut f = self.out.front.lock().unwrap();
+                (f.width, f.height) = (w as i32, h as i32);
+                std::mem::swap(&mut f.data, &mut self.back);
+                self.fresh = true;
+            }
+            Ok(())
+        }
+
+        pub fn posted(&mut self, t: &Arc<SendableTexture<Payload>>) {
+            if std::mem::take(&mut self.fresh) {
+                t.mark_frame_available();
+            }
+        }
+    }
+}
+
+fn format() -> Format {
+    match irondash_texture::PixelData::FORMAT {
+        irondash_texture::PixelFormat::BGRA => Format::Bgra,
+        irondash_texture::PixelFormat::RGBA => Format::Rgba,
     }
 }
 
@@ -40,7 +181,7 @@ struct Shared {
     cmd: Mutex<Command>,
     wake: Condvar,
     texture_id: AtomicI64,
-    texture: Mutex<Option<Arc<SendableTexture<BoxedPixelData>>>>,
+    texture: Mutex<Option<Arc<SendableTexture<out::Payload>>>>,
     error: Mutex<Option<String>>,
 }
 
@@ -50,16 +191,9 @@ pub struct Surface {
     thread: Option<JoinHandle<()>>,
 }
 
-fn format() -> Format {
-    match PixelData::FORMAT {
-        PixelFormat::BGRA => Format::Bgra,
-        PixelFormat::RGBA => Format::Rgba,
-    }
-}
-
 impl Surface {
     pub fn new(engine: i64, source: String, lang: Lang, width: u32, height: u32, fps: u32) -> Self {
-        let frame = Arc::new(Mutex::new(Frame::default()));
+        let out = Arc::new(out::Out::default());
         let shared = Arc::new(Shared {
             cmd: Mutex::new(Command {
                 shader: Some((source, lang)),
@@ -75,12 +209,12 @@ impl Surface {
             texture: Mutex::new(None),
             error: Mutex::new(None),
         });
-        let provider = Arc::new(Provider(frame.clone()));
         let on_main = shared.clone();
+        let made_out = out.clone();
         // Textures are made on the platform thread; Dart may call from another.
         let made = EngineContext::perform_on_main_thread(move || {
             let made = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                Texture::new_with_provider(engine, provider)
+                out::make(engine, &made_out)
             }));
             match made {
                 Err(_) => *on_main.error.lock().unwrap() = Some("texture: panicked".into()),
@@ -99,7 +233,7 @@ impl Surface {
         let worker = shared.clone();
         let thread = std::thread::Builder::new()
             .name("snippet-render".into())
-            .spawn(move || run(worker, frame))
+            .spawn(move || run(worker, out::Writer::new(out)))
             .ok();
         Self { shared, thread }
     }
@@ -145,7 +279,7 @@ impl Drop for Surface {
     }
 }
 
-fn run(shared: Arc<Shared>, frame: Arc<Mutex<Frame>>) {
+fn run(shared: Arc<Shared>, mut writer: out::Writer) {
     let fail = |e: String| *shared.error.lock().unwrap() = Some(e);
     let (source, lang, width, height) = {
         let mut cmd = shared.cmd.lock().unwrap();
@@ -183,20 +317,11 @@ fn run(shared: Arc<Shared>, frame: Arc<Mutex<Frame>>) {
             clock += started.duration_since(last).as_secs_f32();
         }
         last = started;
-        let (w, h) = renderer.size();
-        match renderer.render(clock) {
-            Ok(None) => {}
-            Ok(Some(px)) => {
-                let mut f = frame.lock().unwrap();
-                f.width = w as i32;
-                f.height = h as i32;
-                f.data.clear();
-                f.data.extend_from_slice(px);
-            }
-            Err(e) => return fail(e.0),
+        if let Err(e) = writer.write(&mut renderer, clock) {
+            return fail(e);
         }
         if let Some(t) = shared.texture.lock().unwrap().as_ref() {
-            t.mark_frame_available();
+            writer.posted(t);
         }
         let budget = Duration::from_secs_f32(1.0 / fps as f32);
         let cmd = shared.cmd.lock().unwrap();
