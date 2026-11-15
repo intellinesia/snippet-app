@@ -329,7 +329,7 @@ void main() {
     expect(find.byType(ChatBubble), findsNWidgets(2));
     expect(find.text('Can you check the logs?'), findsOneWidget);
     expect(find.text('All clear, no errors found.'), findsOneWidget);
-    final bubbles = t.widgetList<ChatBubble>(find.byType(ChatBubble)).toList();
+    final bubbles = t.widgetList<ChatBubble>(find.byType(ChatBubble)).toList().reversed.toList();
     expect(bubbles[0].mine, isTrue);
     expect(bubbles[1].mine, isFalse);
     await t.pumpWidget(const SizedBox());
