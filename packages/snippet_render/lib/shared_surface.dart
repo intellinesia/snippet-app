@@ -108,7 +108,7 @@ class SharedShaderSurface extends ChangeNotifier with WidgetsBindingObserver {
 
   String _source = '';
   ShaderLang _lang = ShaderLang.wgsl;
-  int _fps = 30;
+  int _fps = 20;
   ValueChanged<String>? _onError;
 
   int get textureId => _textureId;
@@ -120,7 +120,7 @@ class SharedShaderSurface extends ChangeNotifier with WidgetsBindingObserver {
   void configure({
     required String source,
     ShaderLang lang = ShaderLang.wgsl,
-    int fps = 30,
+    int fps = 20,
     ValueChanged<String>? onError,
   }) {
     _onError = onError;
