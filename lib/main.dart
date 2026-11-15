@@ -9,6 +9,7 @@ import 'notification_popovers.dart';
 import 'android_reconciliation.dart';
 import 'platform.dart';
 import 'screens/adaptive_home.dart';
+import 'chat_scene.dart';
 import 'theme.dart';
 import 'widgets.dart';
 import 'response_cache.dart';
@@ -48,6 +49,9 @@ void main() async {
   // the app remains usable and the feature can be retried from Settings.
   try {
     await ThemeManager.instance.init();
+  } catch (_) {}
+  try {
+    await ChatScene.instance.init();
   } catch (_) {}
   await Drafts.instance.init();
   await Pins.instance.load();

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../desktop_look.dart';
+import '../chat_scene.dart';
 import '../api.dart';
 import '../shell_panel.dart';
 import '../media_views.dart';
@@ -34,9 +35,21 @@ class PaneSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
+    final scene = ChatScene.instance;
+    return ListenableBuilder(
+      listenable: scene,
+      builder: (context, _) => _surface(context, scene.active && !kMobile),
+    );
+  }
+
+  Widget _surface(BuildContext context, bool clear) {
     return ClipRect(
       child: ColoredBox(
-        color: pane == ShellPane.right ? AppColors.windowBg : readingBg,
+        color: clear
+            ? Colors.transparent
+            : pane == ShellPane.right
+                ? AppColors.windowBg
+                : readingBg,
         child: Stack(fit: StackFit.expand, children: [
           if (pane != ShellPane.right && !kMobile)
             const Positioned.fill(child: ChatWallpaper()),
@@ -442,7 +455,7 @@ class PaneStrip extends StatelessWidget {
     final compact = !kMobile;
     return Container(
       height: compact ? 38 : 46,
-      color: kMobile ? readingBg : Colors.transparent,
+      color: kMobile ? AppColors.pageCanvas : Colors.transparent,
       child: Stack(fit: StackFit.expand, children: [
         LayoutBuilder(builder: (context, c) {
           final fit = kPaneTabWidth(c.maxWidth - 12, count);

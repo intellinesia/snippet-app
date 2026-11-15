@@ -5,6 +5,8 @@ import 'sidebar_mode.dart' show homeAgentsFirst, setHomeAgentsFirst;
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'package:snippet_render/snippet_render.dart';
+
 import '../api.dart';
 import '../models.dart';
 import '../notifications.dart';
@@ -12,12 +14,16 @@ import '../panel.dart';
 import '../platform.dart';
 import '../settings_form.dart';
 import '../store.dart';
+import '../chat_scene.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'add_instance.dart';
 import 'inference_profiles.dart';
 import 'recurring.dart';
 import 'routing_screen.dart';
+import 'mobile_session_home.dart'
+    show LiveSessionCard, MobileSectionLabel;
+import 'session_list_row.dart' show SessionListRow;
 import 'shell_nav.dart';
 import 'usage.dart';
 import 'vault.dart';
@@ -447,7 +453,7 @@ class SettingsPanelState extends State<SettingsPanel> {
         // Same surface as the other phone destinations (chats, agents). This was
         // `surface1`, one step lighter, which made Settings read as a different
         // app the moment you tapped into it.
-        color: AppColors.bg,
+        color: AppColors.pageBg,
         child: CardGroupScope(
           child: SafeArea(
             bottom: false,
@@ -2461,6 +2467,10 @@ class AppearanceScreen extends StatelessWidget {
                     _AppearancePreviewCard(),
                     const SettingsGroupLabel('Home'),
                     const ListGroup(children: [_HomeFirstRow()]),
+                    if (shaderSurfaceSupported) ...[
+                      const SettingsGroupLabel('Background'),
+                      const ListGroup(children: [_ChatSceneRow()]),
+                    ],
                     const SettingsGroupLabel('Palette'),
                     ListGroup(children: paletteChildren),
                     Padding(
@@ -2499,8 +2509,19 @@ class AppearanceScreen extends StatelessWidget {
               header: 'Surfaces and wallpaper',
               footer:
                   'Wallpaper sits behind the chat and fades into the theme so text stays readable.',
-              children: [_TactileRow(), _ChatWallpaperPicker()],
+              children: [
+                _TactileRow(),
+                _ChromeOpacityRow(),
+                _ChatWallpaperPicker()
+              ],
             ),
+            if (shaderSurfaceSupported)
+              const SettingsGroup(
+                header: 'Background',
+                footer:
+                    'An animated scene behind every screen, drawn on the GPU. It pauses in the background and with reduced motion.',
+                children: [_ChatSceneRow()],
+              ),
             const SettingsGroup(
               header: 'Window background',
               footer:
@@ -2529,44 +2550,17 @@ class AppearanceScreen extends StatelessWidget {
 class _HomeFirstRow extends StatelessWidget {
   const _HomeFirstRow();
 
-  Widget _cell(String label, bool on, bool agents) => Semantics(
-        button: true,
-        selected: on,
-        child: GestureDetector(
-          key: ValueKey('home-first-${agents ? 'agents' : 'sessions'}'),
-          behavior: HitTestBehavior.opaque,
-          onTap: () => setHomeAgentsFirst(agents),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: on ? AppColors.surface3 : Colors.transparent,
-              borderRadius: BorderRadius.circular(7),
-            ),
-            child: Text(label,
-                style: sans(13,
-                    weight: on ? W.label : W.body,
-                    color: on ? AppColors.fg1 : AppColors.fg3)),
-          ),
-        ),
-      );
-
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<bool>(
         valueListenable: homeAgentsFirst,
         builder: (context, agents, _) => SettingsRow(
           label: 'Open on',
           sub: 'The tab the app starts on',
-          trailing: Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              color: AppColors.surface1,
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: AppColors.line),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              _cell('Sessions', !agents, false),
-              _cell('Agents', agents, true),
-            ]),
+          trailing: Pills<bool>(
+            key: const Key('home-first'),
+            items: const [(false, 'Sessions'), (true, 'Agents')],
+            selected: agents,
+            onSelect: setHomeAgentsFirst,
           ),
         ),
       );
@@ -2585,6 +2579,79 @@ class _TactileRow extends StatelessWidget {
         sub: 'Soft highlights on raised controls, inset wells for fields',
         onTap: () => look.setTactile(!look.tactile),
         trailing: SettingsSwitch(value: look.tactile, onChanged: look.setTactile),
+      ),
+    );
+  }
+}
+
+class _ChromeOpacityRow extends StatelessWidget {
+  const _ChromeOpacityRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final look = DesktopLook.instance;
+    return ListenableBuilder(
+      listenable: look,
+      builder: (context, _) {
+        final v = look.chromeOpacity;
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          SettingsRow(
+            label: 'Sidebar opacity',
+            sub: v == null
+                ? 'Default. Lower it to let a scene or the desktop show through the sidebar and panes.'
+                : '${(v * 100).round()}%',
+            trailing: v == null
+                ? null
+                : TextButton(
+                    onPressed: () => look.setChromeOpacity(null),
+                    child: const Text('Reset')),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+            child: SliderTheme(
+              data: SliderThemeData(
+                trackHeight: 3,
+                activeTrackColor: AppColors.accent,
+                inactiveTrackColor: AppColors.surface3,
+                thumbColor: AppColors.accent,
+                overlayColor: AppColors.accentBg,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+              ),
+              child: Slider(
+                key: const Key('chrome-opacity'),
+                value: v ?? 0.92,
+                onChanged: (x) => look.setChromeOpacity(x, persist: false),
+                onChangeEnd: look.setChromeOpacity,
+              ),
+            ),
+          ),
+        ]);
+      },
+    );
+  }
+}
+
+class _ChatSceneRow extends StatelessWidget {
+  const _ChatSceneRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final scene = ChatScene.instance;
+    return ListenableBuilder(
+      listenable: scene,
+      builder: (context, _) => SettingsRow(
+        label: 'Animated background',
+        sub: scene.error ?? 'Moves behind every screen',
+        trailing: Pills<String>(
+          key: const Key('chat-scene'),
+          items: [
+            (ChatScene.none, 'Off'),
+            for (final e in ChatScene.presets.entries) (e.key, e.value),
+          ],
+          selected: scene.active ? scene.scene : ChatScene.none,
+          onSelect: scene.set,
+        ),
       ),
     );
   }
@@ -3177,63 +3244,126 @@ class _AccentSwatchStrip extends StatelessWidget {
   }
 }
 
+/// Scaled-down phone home that follows the active theme, accent and fonts.
 class _AppearancePreviewCard extends StatelessWidget {
+  static const _peek = 236.0;
+  static const _h = 360.0;
+
   @override
   Widget build(BuildContext context) {
-    final tm = ThemeManager.instance;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.tint1,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: AppColors.accent,
-                shape: BoxShape.circle,
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final live = SessionInfo.fromJson({
+      'id': 'preview-live',
+      'folder': '/home/you/code/weather-app',
+      'title': 'Add hourly forecast view',
+      'status': 'running',
+      'running': true,
+      'running_since': now,
+      'branch': 'hourly-forecast',
+      'origin_folder': '/home/you/code/weather-app',
+      'total_changes': {'files': 64, 'added': 21900, 'removed': 20000},
+    });
+    final row = SessionInfo.fromJson({
+      'id': 'preview-row',
+      'folder': '/home/you/code/notes-sync',
+      'title': 'Fix offline conflict merge',
+      'status': 'idle',
+      'last_active': now - 3600,
+      'branch': 'main',
+      'origin_folder': '/home/you/code/notes-sync',
+      'total_changes': {'files': 6, 'added': 412, 'removed': 38},
+    });
+    // A real-scale crop of the top of home, faded out, over the page's own background.
+    return ListenableBuilder(
+      listenable: ThemeManager.instance,
+      builder: (context, _) => Semantics(
+        label: 'Preview of the home screen',
+        excludeSemantics: true,
+        child: TickerMode(
+          enabled: false,
+          child: IgnorePointer(
+            child: SizedBox(
+              height: _peek,
+              child: ShaderMask(
+                blendMode: BlendMode.dstIn,
+                shaderCallback: (r) => const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: [0.6, 1],
+                  colors: [Color(0xFFFFFFFF), Color(0x00FFFFFF)],
+                ).createShader(r),
+                child: ClipRect(
+                  child: LayoutBuilder(
+                    builder: (context, c) => OverflowBox(
+                      alignment: Alignment.topCenter,
+                      minHeight: _h,
+                      maxHeight: _h,
+                      child: MediaQuery(
+                        data: MediaQuery.of(context)
+                            .copyWith(size: Size(c.maxWidth, _h)),
+                        child: _home(live, row),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                '${tm.baseTheme.label} · ${tm.currentFont.label}',
-                style: sans(13, weight: W.strong, color: AppColors.fg1),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppColors.accentBg,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppColors.accentLine),
-              ),
-              child: Text(
-                tm.currentMonoFont.label,
-                style: mono(11, color: AppColors.accent),
-              ),
-            ),
-          ]),
-          const SizedBox(height: 6),
-          Text(
-            'Round the corner, into the light — live preview of your active theme, accent and typography.',
-            style: sans(13, height: 1.4, color: AppColors.fg2),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'git commit -m "Apply ${tm.baseTheme.name} + ${tm.currentFont.family}"',
-            style: mono(12, color: AppColors.fg3),
-          ),
-        ],
+        ),
       ),
     );
   }
+
+  Widget _home(SessionInfo live, SessionInfo row) => Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              height: 40,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: AppColors.tint2,
+                borderRadius: BorderRadius.circular(R.pill),
+              ),
+              child: Row(children: [
+                _seg('Sessions', true),
+                _seg('Agents', false),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 18, 4, 0),
+              child: Text.rich(TextSpan(children: [
+                TextSpan(
+                    text: '48.6M',
+                    style: sans(26, weight: W.strong, color: AppColors.fg1)),
+                TextSpan(
+                    text: ' tokens today',
+                    style: sans(14, color: AppColors.fg3)),
+              ])),
+            ),
+            const MobileSectionLabel('Pinned', top: 14),
+            LiveSessionCard(
+                session: live, pinned: true, onTap: null),
+            SessionListRow(
+                session: row, onTap: null, showProject: true, divider: false),
+          ],
+        ),
+      );
+
+  Widget _seg(String label, bool on) => Expanded(
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: on ? AppColors.surface3 : Colors.transparent,
+            borderRadius: BorderRadius.circular(R.pill),
+          ),
+          child: Text(label,
+              style: sans(14,
+                  weight: on ? W.label : W.body,
+                  color: on ? AppColors.fg1 : AppColors.fg3)),
+        ),
+      );
 }
 
 /// v5 `.pgi`: a 46px row, 30px tile, 15px label, 15px muted value, chevron.

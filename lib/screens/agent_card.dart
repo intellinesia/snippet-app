@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '../ambient_loop.dart';
 import '../api.dart';
 import '../clock.dart';
 import '../markdown_preview.dart';
@@ -365,9 +365,12 @@ class _AgentCardState extends State<AgentCard> {
           child: InkWell(
             splashFactory: NoSplash.splashFactory,
             highlightColor: Colors.transparent,
-            onTap: widget.onOpen,
+            onTap: () {
+              tapHaptic();
+              widget.onOpen();
+            },
             onLongPress: () {
-              HapticFeedback.selectionClick();
+              holdHaptic();
               _actions(null);
             },
             child: Opacity(
@@ -448,7 +451,7 @@ class _AgentCardState extends State<AgentCard> {
         child: InkWell(
           onTap: widget.onOpen,
           onLongPress: () {
-            HapticFeedback.selectionClick();
+            holdHaptic();
             _actions(null);
           },
           borderRadius: BorderRadius.circular(8),
@@ -554,18 +557,17 @@ class WorkingRing extends StatefulWidget {
   State<WorkingRing> createState() => _WorkingRingState();
 }
 
-class _WorkingRingState extends State<WorkingRing>
-    with SingleTickerProviderStateMixin {
-  late final _spin = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1400));
+class _WorkingRingState extends State<WorkingRing> {
+  final _spin = AmbientLoop(const Duration(milliseconds: 1400));
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _spin.bind(context);
     if (reduceMotion(context)) {
       _spin.stop();
-    } else if (!_spin.isAnimating) {
-      _spin.repeat();
+    } else {
+      _spin.start();
     }
   }
 

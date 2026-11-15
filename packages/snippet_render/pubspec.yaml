@@ -1,0 +1,21 @@
+name: snippet_render
+description: Native wgpu renderer for shader backgrounds, shown as a Flutter texture.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.10.0-0
+  flutter: ">=3.44.0"
+
+dependencies:
+  code_assets: ^1.0.0
+  ffi: ^2.1.0
+  flutter:
+    sdk: flutter
+  hooks: ^2.0.2
+  irondash_engine_context: 0.6.0-dev.0
+  native_toolchain_rust: ">=1.0.4 <1.0.7"
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter

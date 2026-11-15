@@ -1167,19 +1167,17 @@ class _PulseDot extends StatefulWidget {
   State<_PulseDot> createState() => _PulseDotState();
 }
 
-class _PulseDotState extends State<_PulseDot>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1200));
+class _PulseDotState extends State<_PulseDot> {
+  final _c = AmbientLoop(const Duration(milliseconds: 1200), reverse: true);
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _c.bind(context);
     if (reduceMotion(context)) {
-      _c.stop();
-      _c.value = 0.5;
-    } else if (!_c.isAnimating) {
-      _c.repeat(reverse: true);
+      _c.stop(at: 0.5);
+    } else {
+      _c.start();
     }
   }
 
