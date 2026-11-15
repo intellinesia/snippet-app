@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../models.dart';
 import '../platform.dart';
@@ -165,7 +164,10 @@ class _SessionGroupHeaderState extends State<SessionGroupHeader> {
               : kMobile
               ? GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: widget.onToggle,
+                  onTap: () {
+                    pickHaptic();
+                    widget.onToggle!();
+                  },
                   child: row,
                 )
               : HoverSurface(
@@ -386,7 +388,7 @@ class SessionListRow extends StatelessWidget {
     );
 
     void longPress() {
-      HapticFeedback.selectionClick();
+      holdHaptic();
       onLongPress?.call();
     }
 
@@ -412,9 +414,17 @@ class SessionListRow extends StatelessWidget {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: onTap,
+                  onTap: onTap == null
+                      ? null
+                      : () {
+                          tapHaptic();
+                          onTap!();
+                        },
                   splashFactory: NoSplash.splashFactory,
                   highlightColor: Colors.transparent,
+                  hoverColor: Colors.transparent,
+                  focusColor: Colors.transparent,
+                  overlayColor: const WidgetStatePropertyAll(Colors.transparent),
                   onLongPress: onLongPress == null ? null : longPress,
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     ConstrainedBox(
