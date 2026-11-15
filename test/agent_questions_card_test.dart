@@ -67,6 +67,13 @@ class _Client extends DaemonClient {
   _Client() : super('https://daemon.invalid', 'test-token');
   final List<_AnswerCall> calls = [];
   Object? answerError;
+  int sessionsCalls = 0;
+
+  @override
+  Future<List<SessionInfo>> sessions({String? folder, int? limit}) async {
+    sessionsCalls++;
+    return const [];
+  }
 
   @override
   Future<String> answerAgentQuestion({
@@ -357,6 +364,137 @@ void main() {
     expect(find.text('Could not reach the session.'), findsOneWidget);
     expect(find.text('Send'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
+  });
+
+  group('stored outcomes', () {
+    CoordinationEvent sessionAsk({Map<String, dynamic>? outcome}) =>
+        _ev('eq-out', 'agent', {
+          'auto': 'ask',
+          'body': 'Two quick questions',
+          'question': {
+            'session': 'sess-1',
+            'question_id': 'attn-1',
+            if (outcome != null) 'outcome': outcome,
+            'questions': [
+              {
+                'id': 'target',
+                'header': 'Deploy target',
+                'text': 'Which deployment target?',
+                'answer_kind': {
+                  'kind': 'single_choice',
+                  'choices': [
+                    {'value': 'staging', 'label': 'Staging', 'recommended': true},
+                    {'value': 'prod', 'label': 'Production'},
+                  ],
+                },
+              },
+              {
+                'id': 'notes',
+                'text': 'Anything else?',
+                'answer_kind': {'kind': 'free_text'},
+              },
+            ],
+          },
+        });
+
+    testWidgets('live card with no outcome renders inputs and makes no network call',
+        (t) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      final client = _Client();
+      final q = sessionAsk();
+      await _pump(
+        t,
+        AgentQuestionsCard(
+          event: q,
+          question: q.payload['question'] as Map<dynamic, dynamic>,
+          client: client,
+          events: [q],
+        ),
+      );
+
+      expect(client.sessionsCalls, 0);
+      expect(find.text('Which deployment target?'), findsOneWidget);
+      expect(find.text('Next'), findsOneWidget);
+      expect(find.text('Skip'), findsOneWidget);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('answered outcome without later event renders Answered with no network call',
+        (t) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      final client = _Client();
+      final q = sessionAsk(
+        outcome: {'state': 'answered', 'at': '2026-11-15T12:00:00Z'},
+      );
+      await _pump(
+        t,
+        AgentQuestionsCard(
+          event: q,
+          question: q.payload['question'] as Map<dynamic, dynamic>,
+          client: client,
+          events: [q],
+        ),
+      );
+
+      expect(client.sessionsCalls, 0);
+      expect(find.text('Answered'), findsNWidgets(2));
+      expect(find.text('Next'), findsNothing);
+      expect(find.text('Send'), findsNothing);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('answered outcome derives answer text from later answer event',
+        (t) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      final client = _Client();
+      final q = sessionAsk(
+        outcome: {'state': 'answered', 'at': '2026-11-15T12:00:00Z'},
+      );
+      final answer = _ev('ea-out', 'human', {
+        'auto': 'answer',
+        'answer_to': 'eq-out',
+        'answers': {'target': 'prod', 'notes': 'looks good'},
+      });
+      await _pump(
+        t,
+        AgentQuestionsCard(
+          event: q,
+          question: q.payload['question'] as Map<dynamic, dynamic>,
+          client: client,
+          events: [q, answer],
+        ),
+      );
+
+      expect(client.sessionsCalls, 0);
+      expect(find.text('Answered: Production'), findsOneWidget);
+      expect(find.text('Answered: looks good'), findsOneWidget);
+      expect(find.text('Send'), findsNothing);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('outdated outcome renders outdated look with no network call',
+        (t) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      final client = _Client();
+      final q = sessionAsk(
+        outcome: {'state': 'outdated', 'at': '2026-11-15T12:00:00Z'},
+      );
+      await _pump(
+        t,
+        AgentQuestionsCard(
+          event: q,
+          question: q.payload['question'] as Map<dynamic, dynamic>,
+          client: client,
+          events: [q],
+        ),
+      );
+
+      expect(client.sessionsCalls, 0);
+      expect(find.text('Outdated: no longer waiting on this'), findsOneWidget);
+      expect(find.text('Next'), findsNothing);
+      expect(find.text('Send'), findsNothing);
+      debugDefaultTargetPlatformOverride = null;
+    });
   });
 }
 

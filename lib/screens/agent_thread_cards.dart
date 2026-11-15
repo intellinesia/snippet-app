@@ -4,7 +4,6 @@ import '../desktop_look.dart';
 import '../api.dart';
 import '../approval_code.dart';
 import '../chat/chat_card.dart';
-import '../chat/session_attention.dart';
 import '../chat/chat_style.dart';
 import '../media_views.dart';
 import '../models.dart';
@@ -1034,22 +1033,21 @@ class DeskApprovalCard extends StatefulWidget {
 }
 
 class _DeskApprovalCardState extends State<DeskApprovalCard> {
-  static final _decided = <String, bool>{};
   bool _busy = false;
-  bool _outdated = false;
+  bool? _decided;
 
   @override
-  void initState() {
-    super.initState();
-    SessionAttentionProbe.isOutdated(widget.client,
-            session: _s('session'), type: 'approval', id: _s('approval_id'))
-        .then((v) {
-      if (mounted && v) setState(() => _outdated = true);
-    });
+  void didUpdateWidget(DeskApprovalCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.event.eventId != widget.event.eventId ||
+        '${oldWidget.approval['approval_id'] ?? ''}'.trim() !=
+            _s('approval_id')) {
+      _decided = null;
+      _busy = false;
+    }
   }
 
   String _s(String k) => '${widget.approval[k] ?? ''}'.trim();
-  String get _key => '${_s('session')}:${_s('approval_id')}';
 
   Future<void> _decide(bool approve) async {
     setState(() => _busy = true);
@@ -1061,7 +1059,7 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
     if (!mounted) return;
     setState(() {
       _busy = false;
-      if (ok) _decided[_key] = approve;
+      if (ok) _decided = approve;
     });
     if (!ok) toast(context, 'Could not reach the session', danger: true);
   }
@@ -1080,21 +1078,37 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
     final index = (widget.approval['index'] as num?)?.toInt();
     final total = (widget.approval['total'] as num?)?.toInt();
     final context_ = '${widget.event.payload['context'] ?? ''}'.trim();
-    final decided = _decided[_key];
     final title = parsed.headline(tool);
-    if (decided != null) {
+    final outcome = widget.approval['outcome'];
+    final outcomeState =
+        outcome is Map ? '${outcome['state'] ?? ''}'.trim() : '';
+    if (outcomeState == 'approved') {
       return ChatCardResolved(
         title: title,
-        subtitle: decided ? 'Approved' : 'Denied',
-        approved: decided,
+        subtitle: 'Approved',
+        approved: true,
       );
     }
-    if (_outdated) {
+    if (outcomeState == 'denied') {
+      return ChatCardResolved(
+        title: title,
+        subtitle: 'Denied',
+        approved: false,
+      );
+    }
+    if (outcomeState == 'outdated') {
       return ChatCardResolved(
         title: title,
         subtitle: 'Outdated: no longer waiting on this',
         approved: false,
         icon: 'clock',
+      );
+    }
+    if (_decided != null) {
+      return ChatCardResolved(
+        title: title,
+        subtitle: _decided! ? 'Approved' : 'Denied',
+        approved: _decided!,
       );
     }
     return ChatCard(children: [

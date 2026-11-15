@@ -234,7 +234,18 @@ class Swr<T> {
   }
 
   static bool coordination(DeviceEventFrame e) =>
-      e['kind'] == 'coordination_event';
+      e['kind'] == 'coordination_event' ||
+      e['kind'] == 'coordination_event_updated';
+
+  static bool coordinationForThread(DeviceEventFrame e, String? threadId) {
+    if (e['kind'] == 'coordination_event') return true;
+    if (e['kind'] != 'coordination_event_updated') return false;
+    final updatedThread = '${e['thread_id'] ?? ''}'.trim();
+    if (updatedThread.isEmpty || threadId == null || threadId.isEmpty) {
+      return true;
+    }
+    return updatedThread == threadId;
+  }
 
   static bool sessionStatus(DeviceEventFrame e) =>
       (e['status'] as String?)?.isNotEmpty == true;
