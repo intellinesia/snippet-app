@@ -357,12 +357,14 @@ fn run(shared: Arc<Shared>, mut writer: out::Writer) {
     // Time only advances while running, so a paused scene resumes where it was.
     let mut clock = 0f32;
     let mut last = Instant::now();
+    let mut due = Instant::now();
     loop {
         let (fps, paused) = {
             let mut cmd = shared.cmd.lock().unwrap();
             while !cmd.stop && cmd.paused && !cmd.dirty {
                 cmd = shared.wake.wait(cmd).unwrap();
                 last = Instant::now();
+                due = last;
             }
             if cmd.stop {
                 return;
@@ -387,9 +389,16 @@ fn run(shared: Arc<Shared>, mut writer: out::Writer) {
         if let Some(t) = shared.texture.lock().unwrap().as_ref() {
             writer.posted(t);
         }
+        // Fixed deadlines rather than "budget after this frame" keep the cadence
+        // even against vsync; a late frame resets the schedule instead of bursting.
         let budget = Duration::from_secs_f32(1.0 / fps as f32);
+        due += budget;
+        let now = Instant::now();
+        if due < now {
+            due = now + budget;
+        }
         let cmd = shared.cmd.lock().unwrap();
-        let wait = budget.saturating_sub(started.elapsed());
+        let wait = due.saturating_duration_since(now);
         let _ = shared
             .wake
             .wait_timeout_while(cmd, wait, |c| !c.stop && !c.dirty);
