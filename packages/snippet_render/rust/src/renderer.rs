@@ -156,13 +156,13 @@ impl Renderer {
     /// Draws one frame into `view` and returns once the GPU has finished it.
     pub fn draw_into(&self, view: &wgpu::TextureView, time: f32) -> Result<(), Error> {
         let index = self.queue.submit([self.encode(view, time).finish()]);
-        self.device
-            .poll(wgpu::PollType::Wait {
-                submission_index: Some(index),
-                timeout: Some(std::time::Duration::from_millis(500)),
-            })
-            .map(|_| ())
-            .map_err(|e| Error(format!("gpu: {e}")))
+        match self.device.poll(wgpu::PollType::Wait {
+            submission_index: Some(index),
+            timeout: Some(std::time::Duration::from_millis(500)),
+        }) {
+            Ok(_) | Err(wgpu::PollError::Timeout) => Ok(()),
+            Err(e) => Err(Error(format!("gpu: {e}"))),
+        }
     }
 }
 
@@ -188,6 +188,10 @@ impl Renderer {
             ..Default::default()
         }))
         .map_err(|e| Error(format!("no GPU device: {e}")))?;
+        // wgpu's default handler panics; a bad frame should not take the thread down.
+        device.on_uncaptured_error(std::sync::Arc::new(|e| {
+            eprintln!("snippet_render: gpu: {e}")
+        }));
         let vertex = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("vertex"),
             source: wgpu::ShaderSource::Wgsl(VERTEX.into()),
@@ -415,6 +419,10 @@ impl Renderer {
                 win.surface.configure(&self.device, &win.config);
                 return Ok(false);
             }
+            wgpu::CurrentSurfaceTexture::Lost => {
+                self.window = None;
+                return Ok(false);
+            }
             other => return Err(Error(format!("surface: {other:?}"))),
         };
         let view = frame.texture.create_view(&Default::default());
@@ -451,6 +459,10 @@ impl Renderer {
             pass.draw(0..3, 0..1);
         }
         enc
+    }
+
+    pub fn attached(&self) -> bool {
+        self.window.is_some()
     }
 
     pub fn size(&self) -> (u32, u32) {

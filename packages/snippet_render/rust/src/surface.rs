@@ -110,7 +110,7 @@ mod out {
                     return Ok(());
                 }
             }
-            if self.size != renderer.size() {
+            if self.size != renderer.size() || (self.cpu.is_none() && !renderer.attached()) {
                 self.attach(renderer)?;
             }
             if let Some(win) = self.cpu.as_ref() {
@@ -489,7 +489,15 @@ impl Surface {
         let worker = shared.clone();
         let thread = std::thread::Builder::new()
             .name("snippet-render".into())
-            .spawn(move || run(worker, out::Writer::new(out)))
+            .spawn(move || {
+                let report = worker.clone();
+                let ran = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    run(worker, out::Writer::new(out))
+                }));
+                if ran.is_err() {
+                    *report.error.lock().unwrap() = Some("render thread panicked".into());
+                }
+            })
             .ok();
         Self { shared, thread }
     }
@@ -522,8 +530,10 @@ impl Surface {
     }
 
     /// Draws a frame now, so it lands with the app's own redraw.
+    // Not dirty: a kick only moves the next frame up to its budget.
     pub fn kick(&self) {
-        self.update(|c| c.kicked = true);
+        self.shared.cmd.lock().unwrap().kicked = true;
+        self.shared.wake.notify_all();
     }
 
     pub fn set_fps(&self, fps: u32) {
@@ -556,7 +566,7 @@ fn run(shared: Arc<Shared>, mut writer: out::Writer) {
     let mut last = Instant::now();
     let mut due = Instant::now();
     loop {
-        let (fps, paused, kicked) = {
+        let (fps, paused, kicked, shader, size) = {
             let mut cmd = shared.cmd.lock().unwrap();
             while !cmd.stop && cmd.paused && !cmd.dirty {
                 cmd = shared.wake.wait(cmd).unwrap();
@@ -566,15 +576,23 @@ fn run(shared: Arc<Shared>, mut writer: out::Writer) {
             if cmd.stop {
                 return;
             }
-            if let Some((s, l)) = cmd.shader.take()
-                && let Err(e) = renderer.set_shader(&s, l)
-            {
-                fail(e.0);
-            }
-            renderer.resize(cmd.width, cmd.height);
             cmd.dirty = false;
-            (cmd.fps, cmd.paused, std::mem::take(&mut cmd.kicked))
+            let shader = cmd.shader.take();
+            let size = (cmd.width, cmd.height);
+            (
+                cmd.fps,
+                cmd.paused,
+                std::mem::take(&mut cmd.kicked),
+                shader,
+                size,
+            )
         };
+        if let Some((s, l)) = shader
+            && let Err(e) = renderer.set_shader(&s, l)
+        {
+            fail(e.0);
+        }
+        renderer.resize(size.0, size.1);
         let started = Instant::now();
         if !paused {
             clock += started.duration_since(last).as_secs_f32();
@@ -599,11 +617,12 @@ fn run(shared: Arc<Shared>, mut writer: out::Writer) {
         if due < now {
             due = now + budget;
         }
+        let early = started + budget.mul_f32(0.9);
         let cmd = shared.cmd.lock().unwrap();
         let wait = due.saturating_duration_since(now);
-        let _ = shared
-            .wake
-            .wait_timeout_while(cmd, wait, |c| !c.stop && !c.dirty);
+        let _ = shared.wake.wait_timeout_while(cmd, wait, |c| {
+            !c.stop && !c.dirty && !(c.kicked && Instant::now() >= early)
+        });
     }
 }
 
