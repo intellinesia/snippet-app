@@ -8,13 +8,16 @@ import 'package:flutter/widgets.dart';
 /// Shared low-rate heartbeat for decorative loops.
 ///
 /// A vsync ticker schedules a frame every refresh, and Impeller re-rasterises
-/// the whole screen on each one; a 15 Hz timer keeps idle screens cheap.
+/// the whole screen on each one; a 20 Hz timer keeps idle screens cheap.
 class AmbientClock extends ChangeNotifier {
   AmbientClock._();
 
   static final AmbientClock instance = AmbientClock._();
 
-  static const interval = Duration(milliseconds: 66);
+  static const interval = Duration(milliseconds: 50);
+
+  /// Runs on each tick; the scene uses it to draw its frame in the same redraw.
+  static VoidCallback? onTick;
 
   Timer? _timer;
   Stopwatch? _watch;
@@ -42,7 +45,10 @@ class AmbientClock extends ChangeNotifier {
     _timer = Timer(interval, _tick);
     _last = seconds;
     _rideNextFrame();
-    if (notify) notifyListeners();
+    if (notify) {
+      onTick?.call();
+      notifyListeners();
+    }
   }
 
   // Updates on a frame something else already drew (the scene, a scroll),
