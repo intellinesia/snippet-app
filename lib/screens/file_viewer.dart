@@ -367,7 +367,7 @@ class _FileViewerState extends State<FileViewer> {
     final merged = !kMobile;
     final meta = f == null || f.binary || _isMedia
         ? null
-        : '${_controller.text.split('\n').length} lines · ${formatBytes(f.size)}${f.truncated ? ' · truncated' : ''}';
+        : '${_controller.lineCount} lines · ${formatBytes(f.size)}${f.truncated ? ' · truncated' : ''}';
     return Scaffold(
       backgroundColor:
           widget.embedded && !kMobile ? Colors.transparent : readingBg,
@@ -378,7 +378,7 @@ class _FileViewerState extends State<FileViewer> {
           if (!widget.embedded)
             SnAppBar(
                 title: widget.name,
-                subtitle: meta,
+                subtitle: meta == null ? widget.path : '$meta · ${widget.path}',
                 onBack: widget.onClose ?? () => Navigator.pop(context),
                 actions: merged ? const [] : actions),
           if (merged && (_isMedia || f == null || f.binary) &&
