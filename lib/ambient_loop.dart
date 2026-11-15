@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 /// Shared low-rate heartbeat for decorative loops.
@@ -18,6 +19,8 @@ class AmbientClock extends ChangeNotifier {
   Timer? _timer;
   Stopwatch? _watch;
   double _base = 0;
+  double _last = 0;
+  int? _ride;
 
   /// Seconds the clock has run while listened to.
   double get seconds =>
@@ -31,7 +34,33 @@ class AmbientClock extends ChangeNotifier {
     if (_timer != null) return;
     // From `clock` so fake-async tests see fake time.
     _watch = clock.stopwatch()..start();
-    _timer = Timer.periodic(interval, (_) => notifyListeners());
+    _tick(notify: false);
+  }
+
+  void _tick({bool notify = true}) {
+    _timer?.cancel();
+    _timer = Timer(interval, _tick);
+    _last = seconds;
+    _rideNextFrame();
+    if (notify) notifyListeners();
+  }
+
+  // Updates on a frame something else already drew (the scene, a scroll),
+  // so the two cadences coalesce instead of interleaving.
+  void _rideNextFrame() {
+    if (_ride != null) return;
+    _ride = SchedulerBinding.instance
+        .scheduleFrameCallback(_onFrame, scheduleNewFrame: false);
+  }
+
+  void _onFrame(Duration _) {
+    _ride = null;
+    if (_timer == null) return;
+    if (seconds - _last >= interval.inMicroseconds * 0.6 / 1e6) {
+      _tick();
+    } else {
+      _rideNextFrame();
+    }
   }
 
   @override
@@ -41,6 +70,10 @@ class AmbientClock extends ChangeNotifier {
     _base = seconds;
     _timer!.cancel();
     _timer = null;
+    if (_ride != null) {
+      SchedulerBinding.instance.cancelFrameCallbackWithId(_ride!);
+      _ride = null;
+    }
     _watch = null;
   }
 }
