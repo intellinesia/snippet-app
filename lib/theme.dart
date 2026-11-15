@@ -1188,6 +1188,18 @@ class ThemeManager extends ChangeNotifier {
   ThemeManager._();
 
   ResolvedTheme _resolved = ResolvedTheme.fromPreset(_black);
+  ResolvedTheme? _signedFor;
+  String _signature = '';
+
+  /// Changes only when the resolved tokens do, so list refreshes and
+  /// reconnects do not force a full-tree rebuild.
+  String get tokenSignature {
+    if (!identical(_signedFor, _resolved)) {
+      _signedFor = _resolved;
+      _signature = jsonEncode(_resolved.toJson());
+    }
+    return _signature;
+  }
   List<ThemeSummary> _daemonThemes = const [];
   List<String> _liveGroups = const [];
   String? _activeId;

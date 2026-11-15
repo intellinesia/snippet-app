@@ -97,9 +97,14 @@ class _SnippetAppState extends State<SnippetApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  String? _tokens;
+
   void _onThemeChange() {
     if (!mounted) return;
     setState(() {});
+    final next = ThemeManager.instance.tokenSignature;
+    if (next == _tokens) return;
+    _tokens = next;
     rebuildThemeElements(context);
   }
 
