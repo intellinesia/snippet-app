@@ -175,6 +175,55 @@ void main() {
   });
 
   group('MobileShell session slide & Android edge swipe', () {
+    testWidgets('slide frames do not rebuild the layer contents', (t) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      try {
+        var chatsOpen = true;
+        var tabBuilds = 0;
+        var sideBuilds = 0;
+        late StateSetter hostSetState;
+        await t.pumpWidget(MaterialApp(
+          theme: buildAppTheme(),
+          home: StatefulBuilder(
+            builder: (ctx, setState) {
+              hostSetState = setState;
+              return MobileShell(
+                activeTabBody: _BuildCounter(() => tabBuilds++),
+                sidebar: _BuildCounter(() => sideBuilds++),
+                hasActiveTab: true,
+                chatsOpen: chatsOpen,
+                drilledDown: false,
+                mobileHome: MobileHome.chats,
+                onClearDrillDown: () {},
+                onMobileHome: (_) {},
+                onCloseChats: () {},
+                onOpenChats: () => setState(() => chatsOpen = true),
+              );
+            },
+          ),
+        ));
+        await t.pumpAndSettle();
+        hostSetState(() => chatsOpen = false);
+        await t.pump();
+        await t.pump(const Duration(milliseconds: 50));
+        final tab = tabBuilds, side = sideBuilds;
+        var shellRebuilds = 0;
+        debugOnRebuildDirtyWidget = (e, _) {
+          if (e.widget is MobileShell) shellRebuilds++;
+        };
+        addTearDown(() => debugOnRebuildDirtyWidget = null);
+        for (var i = 0; i < 5; i++) {
+          await t.pump(const Duration(milliseconds: 30));
+        }
+        expect(tabBuilds, tab);
+        expect(sideBuilds, side);
+        expect(shellRebuilds, 0);
+        await t.pumpAndSettle();
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
     testWidgets('slides session in from right and edge-swipes back past 1/3',
         (t) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
@@ -328,4 +377,15 @@ void main() {
       }
     });
   });
+}
+
+class _BuildCounter extends StatelessWidget {
+  final VoidCallback onBuild;
+  const _BuildCounter(this.onBuild);
+
+  @override
+  Widget build(BuildContext context) {
+    onBuild();
+    return const SizedBox.expand();
+  }
 }
