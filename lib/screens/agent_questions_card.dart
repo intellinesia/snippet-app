@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../chat/chat_card.dart';
-import '../chat/session_attention.dart';
 import '../models.dart';
 import '../session_quick_send.dart';
 import '../theme.dart';
@@ -56,7 +55,6 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
   String? _error;
   bool _sending = false;
   bool _locked = false;
-  bool _outdated = false;
   Map<String, dynamic>? _sentAnswers;
 
   String get _session => '${widget.question['session'] ?? ''}'.trim();
@@ -147,13 +145,6 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
   @override
   void initState() {
     super.initState();
-    if (_session.isNotEmpty) {
-      SessionAttentionProbe.isOutdated(widget.client,
-              session: _session, type: 'question', id: _questionId)
-          .then((v) {
-        if (mounted && v) setState(() => _outdated = true);
-      });
-    }
     final qs = _questions;
     for (var i = 0; i < qs.length; i++) {
       final q = qs[i];
@@ -192,7 +183,6 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
   ({Map<String, dynamic>? answers, bool answered, bool closed, String? body})
       _resolve() {
     final id = widget.event.eventId;
-    final taskId = '${widget.question['task_id'] ?? ''}'.trim();
     Map<String, dynamic>? answers;
     String? body;
     var answered = false;
@@ -211,18 +201,9 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
         if (b.isNotEmpty) body = b;
         continue;
       }
-      if (_isSessionQuestion) {
-        final result = e.payload['task_result'];
-        final nextQ = e.payload['question'];
-        if (result is Map &&
-            taskId.isNotEmpty &&
-            '${result['task_id'] ?? ''}'.trim() == taskId) {
-          closed = true;
-        } else if (nextQ is Map &&
-            '${nextQ['session'] ?? ''}'.trim() == _session) {
-          closed = true;
-        }
-      } else if (e.actorKind != 'human') {
+      // Session questions get their lifecycle from `outcome`; only desk
+      // ask_user cards infer closure from a later non-human message.
+      if (!_isSessionQuestion && e.actorKind != 'human') {
         closed = true;
       }
     }
@@ -454,12 +435,10 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
   Widget build(BuildContext context) {
     final qs = _questions;
     if (qs.isEmpty) return const SizedBox.shrink();
-    final st = _resolve();
-    final closed = st.closed || (_locked && !st.answered);
-    final interactive = !st.answered && !closed && !_sending;
-    final skipped = st.answered && _wasSkipped(st.answers, st.body);
-    if (st.answered) return _resolved(qs, st.answers, skipped);
-    if (_outdated) {
+    final outcome = widget.question['outcome'];
+    final outcomeState =
+        outcome is Map ? '${outcome['state'] ?? ''}'.trim() : '';
+    if (outcomeState == 'outdated') {
       return ChatCardResolved(
         title: _questionText(qs.first),
         subtitle: 'Outdated: no longer waiting on this',
@@ -467,6 +446,14 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
         icon: 'clock',
       );
     }
+    final st = _resolve();
+    final answered = outcomeState == 'answered' || st.answered;
+    if (answered) {
+      final skipped = _wasSkipped(st.answers, st.body);
+      return _resolved(qs, st.answers, skipped);
+    }
+    final closed = st.closed || _locked;
+    final interactive = !closed && !_sending;
     final step = _step.clamp(0, qs.length - 1);
     final q = qs[step];
     final last = step == qs.length - 1;
