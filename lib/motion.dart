@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'ambient_loop.dart';
 import 'theme.dart';
 
 /// Fades and lifts its child into place once, when it first mounts.
@@ -154,19 +155,17 @@ class WorkingDots extends StatefulWidget {
   State<WorkingDots> createState() => _WorkingDotsState();
 }
 
-class _WorkingDotsState extends State<WorkingDots>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1200));
+class _WorkingDotsState extends State<WorkingDots> {
+  final _c = AmbientLoop(const Duration(milliseconds: 1200));
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _c.bind(context);
     if (reduceMotion(context)) {
-      _c.stop();
-      _c.value = 0.25;
-    } else if (!_c.isAnimating) {
-      _c.repeat();
+      _c.stop(at: 0.25);
+    } else {
+      _c.start();
     }
   }
 
@@ -224,17 +223,17 @@ class Shimmer extends StatefulWidget {
   State<Shimmer> createState() => _ShimmerState();
 }
 
-class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1800));
+class _ShimmerState extends State<Shimmer> {
+  final _c = AmbientLoop(const Duration(milliseconds: 1800));
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _c.bind(context);
     if (reduceMotion(context)) {
       _c.stop();
-    } else if (!_c.isAnimating) {
-      _c.repeat();
+    } else {
+      _c.start();
     }
   }
 
