@@ -1198,6 +1198,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     final n = visible.length;
     return PullToRefresh(
       onRefresh: () => _load(silent: true),
+      reverse: true,
+      indicatorTop: topPad + 6,
       child: ListView.builder(
         controller: _scroll,
         reverse: true,
