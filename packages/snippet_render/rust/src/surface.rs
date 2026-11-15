@@ -3,69 +3,109 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use irondash_engine_context::EngineContext;
-use irondash_texture::{SendableTexture, Texture};
 
 use crate::renderer::{Format, Lang, Renderer};
 
-// Android: the texture is a window the render thread posts to directly, so frames
-// never touch the platform thread and are copied once, from GPU memory.
+// Android: the render thread draws straight into the buffers Flutter composites,
+// through a Vulkan swapchain on a SurfaceProducer window. Nothing is read back
+// or copied, and the platform thread is never involved.
 #[cfg(target_os = "android")]
 mod out {
     use super::*;
-    use irondash_texture::NativeWindow;
+    use irondash_texture::{NativeWindow, SurfaceProducer};
+    use std::ptr::NonNull;
+    use wgpu::rwh::{AndroidNdkWindowHandle, RawWindowHandle};
 
-    pub type Payload = NativeWindow;
-
-    pub struct Window(NativeWindow);
     // ANativeWindow is refcounted and its producer calls are thread-safe.
+    struct Window(NativeWindow);
     unsafe impl Send for Window {}
+
+    /// Keeps the texture registered; Flutter only releases it on the platform thread.
+    pub struct Handle(Option<Arc<SurfaceProducer>>);
+
+    impl Drop for Handle {
+        fn drop(&mut self) {
+            if let Some(p) = self.0.take() {
+                let _ = EngineContext::perform_on_main_thread(move || drop(p));
+            }
+        }
+    }
 
     #[derive(Default)]
     pub struct Out {
-        pub window: Mutex<Option<Window>>,
+        producer: Mutex<Option<Arc<SurfaceProducer>>>,
     }
 
-    pub fn make(engine: i64, out: &Arc<Out>) -> irondash_texture::Result<Texture<Payload>> {
-        let t = Texture::<NativeWindow>::new(engine)?;
-        *out.window.lock().unwrap() = Some(Window(t.get()));
-        Ok(t)
+    pub fn make(engine: i64, out: &Arc<Out>) -> irondash_texture::Result<(i64, Handle)> {
+        let p = Arc::new(SurfaceProducer::new(engine)?);
+        *out.producer.lock().unwrap() = Some(p.clone());
+        Ok((p.id(), Handle(Some(p))))
     }
 
     pub struct Writer {
         out: Arc<Out>,
-        window: Option<Window>,
-        size: (i32, i32),
+        producer: Option<Arc<SurfaceProducer>>,
+        size: (u32, u32),
+        // Set when the GPU cannot present to the window: copy frames in on the CPU.
+        cpu: Option<Window>,
     }
 
     impl Writer {
         pub fn new(out: Arc<Out>) -> Self {
             Self {
                 out,
-                window: None,
+                producer: None,
                 size: (0, 0),
+                cpu: None,
             }
+        }
+
+        fn attach(&mut self, renderer: &mut Renderer) -> Result<(), String> {
+            let Some(p) = self.producer.as_ref() else {
+                return Ok(());
+            };
+            let (w, h) = renderer.size();
+            let win = p
+                .window(w as i32, h as i32)
+                .map_err(|e| format!("window: {e}"))?;
+            let ptr = NonNull::new(win.get_native_window().cast()).ok_or("window: null")?;
+            let handle = RawWindowHandle::AndroidNdk(AndroidNdkWindowHandle::new(ptr));
+            let keep = Box::new(Window(win.clone()));
+            match unsafe { renderer.attach(handle, keep) } {
+                Ok(()) => self.cpu = None,
+                Err(_) => {
+                    renderer.detach();
+                    win.set_geometry(w as i32, h as i32);
+                    self.cpu = Some(Window(win));
+                }
+            }
+            self.size = (w, h);
+            Ok(())
         }
 
         pub fn write(&mut self, renderer: &mut Renderer, clock: f32) -> Result<(), String> {
-            if self.window.is_none() {
-                self.window = self.out.window.lock().unwrap().take();
+            if self.producer.is_none() {
+                self.producer = self.out.producer.lock().unwrap().take();
+                if self.producer.is_none() {
+                    return Ok(());
+                }
             }
-            let (w, h) = renderer.size();
-            let (w, h) = (w as i32, h as i32);
-            let Some(win) = self.window.as_ref() else {
-                return Ok(());
-            };
-            if self.size != (w, h) {
-                win.0.set_geometry(w, h);
-                self.size = (w, h);
+            if self.size != renderer.size() {
+                self.attach(renderer)?;
             }
-            renderer
-                .render_with(clock, |data, stride| win.0.post_rgba(w, h, data, stride))
-                .map(|_| ())
-                .map_err(|e| e.0)
+            if let Some(win) = self.cpu.as_ref() {
+                let (w, h) = self.size;
+                return renderer
+                    .render_with(clock, |data, stride| {
+                        win.0.post_rgba(w as i32, h as i32, data, stride)
+                    })
+                    .map(|_| ())
+                    .map_err(|e| e.0);
+            }
+            renderer.present(clock).map(|_| ()).map_err(|e| e.0)
         }
 
-        pub fn posted(&self, _t: &Arc<SendableTexture<Payload>>) {}
+        pub fn posted(&mut self, _t: &Handle) {}
     }
 }
 
@@ -74,7 +114,9 @@ mod out {
 #[cfg(not(target_os = "android"))]
 mod out {
     use super::*;
-    use irondash_texture::{BoxedPixelData, PayloadProvider, PixelData, PixelDataProvider};
+    use irondash_texture::{
+        BoxedPixelData, PayloadProvider, PixelData, PixelDataProvider, SendableTexture, Texture,
+    };
 
     pub type Payload = BoxedPixelData;
 
@@ -108,8 +150,11 @@ mod out {
         }
     }
 
-    pub fn make(engine: i64, out: &Arc<Out>) -> irondash_texture::Result<Texture<Payload>> {
-        Texture::new_with_provider(engine, Arc::new(Provider(out.clone())))
+    pub type Handle = Arc<SendableTexture<Payload>>;
+
+    pub fn make(engine: i64, out: &Arc<Out>) -> irondash_texture::Result<(i64, Handle)> {
+        let t = Texture::new_with_provider(engine, Arc::new(Provider(out.clone())))?;
+        Ok((t.id(), t.into_sendable_texture()))
     }
 
     pub struct Writer {
@@ -152,7 +197,7 @@ mod out {
             Ok(())
         }
 
-        pub fn posted(&mut self, t: &Arc<SendableTexture<Payload>>) {
+        pub fn posted(&mut self, t: &Handle) {
             if std::mem::take(&mut self.fresh) {
                 t.mark_frame_available();
             }
@@ -181,7 +226,7 @@ struct Shared {
     cmd: Mutex<Command>,
     wake: Condvar,
     texture_id: AtomicI64,
-    texture: Mutex<Option<Arc<SendableTexture<out::Payload>>>>,
+    texture: Mutex<Option<out::Handle>>,
     error: Mutex<Option<String>>,
 }
 
@@ -218,9 +263,8 @@ impl Surface {
             }));
             match made {
                 Err(_) => *on_main.error.lock().unwrap() = Some("texture: panicked".into()),
-                Ok(Ok(t)) => {
-                    let id = t.id();
-                    *on_main.texture.lock().unwrap() = Some(t.into_sendable_texture());
+                Ok(Ok((id, handle))) => {
+                    *on_main.texture.lock().unwrap() = Some(handle);
                     on_main.texture_id.store(id, Ordering::SeqCst);
                     on_main.wake.notify_all();
                 }

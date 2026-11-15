@@ -168,6 +168,7 @@ mod android {
     // These can be obtained from texture using Texture::get(&self).
     pub type NativeWindow = super::platform::NativeWindow;
     pub type Surface = super::platform::Surface;
+    pub type SurfaceProducer = super::platform::SurfaceProducer;
 }
 #[cfg(target_os = "android")]
 pub use android::*;

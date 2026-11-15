@@ -283,6 +283,104 @@ impl PlatformTextureWithoutProvider for NativeWindow {
     }
 }
 
+/// Flutter's ImageReader-backed texture. Impeller samples its buffers directly;
+/// a SurfaceTexture on Vulkan costs a GL copy and a fence wait every frame.
+pub struct SurfaceProducer {
+    id: i64,
+    entry: GlobalRef,
+}
+
+impl SurfaceProducer {
+    /// Call on the platform thread.
+    pub fn new(engine_handle: i64) -> Result<Self> {
+        let java_vm = EngineContext::get_java_vm()?;
+        let mut env = java_vm.attach_current_thread()?;
+        env.push_local_frame(8)?;
+        let res = (|| -> Result<Self> {
+            let registry = EngineContext::get()?.get_texture_registry(engine_handle)?;
+            let entry = env
+                .call_method(
+                    registry.as_obj(),
+                    "createSurfaceProducer",
+                    "()Lio/flutter/view/TextureRegistry$SurfaceProducer;",
+                    &[],
+                )?
+                .l()?;
+            let id = env.call_method(&entry, "id", "()J", &[])?.j()?;
+            Ok(Self {
+                id,
+                entry: env.new_global_ref(entry)?,
+            })
+        })();
+        let res = match res {
+            Err(e) => Err(take_exception(&mut env).map_or(e, Error::JavaException)),
+            ok => ok,
+        };
+        unsafe { env.pop_local_frame(&JObject::null()) }.ok();
+        res
+    }
+
+    pub fn id(&self) -> i64 {
+        self.id
+    }
+
+    /// Sizes the buffers and returns the window to draw into. Resizing replaces
+    /// the window, so call again after every size change.
+    pub fn window(&self, width: i32, height: i32) -> Result<NativeWindow> {
+        let java_vm = EngineContext::get_java_vm()?;
+        let mut env = java_vm.attach_current_thread()?;
+        env.push_local_frame(8)?;
+        let res = (|| -> Result<NativeWindow> {
+            env.call_method(
+                self.entry.as_obj(),
+                "setSize",
+                "(II)V",
+                &[JValue::Int(width), JValue::Int(height)],
+            )?;
+            let surface = env
+                .call_method(
+                    self.entry.as_obj(),
+                    "getSurface",
+                    "()Landroid/view/Surface;",
+                    &[],
+                )?
+                .l()?;
+            let raw =
+                unsafe { ANativeWindow_fromSurface(env.get_native_interface(), surface.as_raw()) };
+            if raw.is_null() {
+                return Err(Error::TextureRegistrationFailed);
+            }
+            // fromSurface returned an owned reference; NativeWindow takes its own.
+            let window = NativeWindow::new(raw);
+            unsafe { ANativeWindow_release(raw) };
+            Ok(window)
+        })();
+        let res = match res {
+            Err(e) => Err(take_exception(&mut env).map_or(e, Error::JavaException)),
+            ok => ok,
+        };
+        unsafe { env.pop_local_frame(&JObject::null()) }.ok();
+        res
+    }
+}
+
+impl Drop for SurfaceProducer {
+    fn drop(&mut self) {
+        let Ok(java_vm) = EngineContext::get_java_vm() else {
+            return;
+        };
+        let Ok(mut env) = java_vm.attach_current_thread() else {
+            return;
+        };
+        if env
+            .call_method(self.entry.as_obj(), "release", "()V", &[])
+            .is_err()
+        {
+            take_exception(&mut env);
+        }
+    }
+}
+
 pub struct Surface(pub GlobalRef);
 
 impl PlatformTextureWithoutProvider for Surface {

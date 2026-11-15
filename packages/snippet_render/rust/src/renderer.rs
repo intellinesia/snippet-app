@@ -90,6 +90,9 @@ pub fn compile(source: &str, lang: Lang) -> Result<naga::Module, Error> {
 }
 
 pub struct Renderer {
+    instance: wgpu::Instance,
+    adapter: wgpu::Adapter,
+    window: Option<Window>,
     device: wgpu::Device,
     queue: wgpu::Queue,
     vertex: wgpu::ShaderModule,
@@ -104,6 +107,13 @@ pub struct Renderer {
     height: u32,
     // A readback still in flight after a GPU wait timed out.
     mapping: bool,
+}
+
+// Field order matters: the surface must drop before the window it draws into.
+struct Window {
+    surface: wgpu::Surface<'static>,
+    config: wgpu::SurfaceConfiguration,
+    _keep: Box<dyn std::any::Any + Send>,
 }
 
 fn padded_row(width: u32) -> u32 {
@@ -178,6 +188,9 @@ impl Renderer {
         let pipeline = Self::pipeline(&device, &vertex, &layout, format, module, lang)?;
         let (target, readback) = Self::targets(&device, format, width, height);
         Ok(Self {
+            instance,
+            adapter,
+            window: None,
             device,
             queue,
             vertex,
@@ -291,6 +304,110 @@ impl Renderer {
         self.mapping = false;
     }
 
+    /// Draws into `handle` from now on, skipping the readback. `keep` holds
+    /// whatever keeps the handle alive and is dropped after the surface.
+    ///
+    /// # Safety
+    /// `handle` must stay valid while `keep` is alive.
+    pub unsafe fn attach(
+        &mut self,
+        handle: wgpu::rwh::RawWindowHandle,
+        keep: Box<dyn std::any::Any + Send>,
+    ) -> Result<(), Error> {
+        self.window = None;
+        let surface = unsafe {
+            self.instance
+                .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
+                    raw_display_handle: None,
+                    raw_window_handle: handle,
+                })
+        }
+        .map_err(|e| Error(format!("surface: {e}")))?;
+        let caps = surface.get_capabilities(&self.adapter);
+        if !caps.formats.contains(&self.format) {
+            return Err(Error(format!("surface lacks {:?}", self.format)));
+        }
+        let config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: self.format,
+            width: self.width,
+            height: self.height,
+            present_mode: wgpu::PresentMode::Fifo,
+            desired_maximum_frame_latency: 2,
+            alpha_mode: caps.alpha_modes[0],
+            view_formats: vec![],
+            color_space: Default::default(),
+        };
+        surface.configure(&self.device, &config);
+        self.window = Some(Window {
+            surface,
+            config,
+            _keep: keep,
+        });
+        Ok(())
+    }
+
+    pub fn detach(&mut self) {
+        self.window = None;
+    }
+
+    /// Draws one frame into the attached window. False means it was skipped.
+    pub fn present(&mut self, time: f32) -> Result<bool, Error> {
+        let Some(win) = self.window.as_mut() else {
+            return Ok(false);
+        };
+        if (win.config.width, win.config.height) != (self.width, self.height) {
+            (win.config.width, win.config.height) = (self.width, self.height);
+            win.surface.configure(&self.device, &win.config);
+        }
+        let frame = match win.surface.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(f) => f,
+            wgpu::CurrentSurfaceTexture::Suboptimal(f) => f,
+            wgpu::CurrentSurfaceTexture::Timeout | wgpu::CurrentSurfaceTexture::Occluded => {
+                return Ok(false);
+            }
+            wgpu::CurrentSurfaceTexture::Outdated => {
+                win.surface.configure(&self.device, &win.config);
+                return Ok(false);
+            }
+            other => return Err(Error(format!("surface: {other:?}"))),
+        };
+        let view = frame.texture.create_view(&Default::default());
+        let enc = self.encode(&view, time);
+        self.queue.submit([enc.finish()]);
+        self.queue.present(frame);
+        Ok(true)
+    }
+
+    fn encode(&self, view: &wgpu::TextureView, time: f32) -> wgpu::CommandEncoder {
+        let globals = [self.width as f32, self.height as f32, time, 0.0];
+        let bytes: Vec<u8> = globals.iter().flat_map(|f| f.to_ne_bytes()).collect();
+        self.queue.write_buffer(&self.uniforms, 0, &bytes);
+        let mut enc = self.device.create_command_encoder(&Default::default());
+        {
+            let mut pass = enc.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: None,
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, &self.bind_group, &[]);
+            pass.draw(0..3, 0..1);
+        }
+        enc
+    }
+
     pub fn size(&self) -> (u32, u32) {
         (self.width, self.height)
     }
@@ -318,32 +435,8 @@ impl Renderer {
         if self.mapping {
             return self.read_back(sink);
         }
-        let globals = [self.width as f32, self.height as f32, time, 0.0];
-        let bytes: Vec<u8> = globals.iter().flat_map(|f| f.to_ne_bytes()).collect();
-        self.queue.write_buffer(&self.uniforms, 0, &bytes);
         let view = self.target.create_view(&Default::default());
-        let mut enc = self.device.create_command_encoder(&Default::default());
-        {
-            let mut pass = enc.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: None,
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    depth_slice: None,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-                multiview_mask: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &self.bind_group, &[]);
-            pass.draw(0..3, 0..1);
-        }
+        let mut enc = self.encode(&view, time);
         let row = padded_row(self.width);
         enc.copy_texture_to_buffer(
             self.target.as_image_copy(),
