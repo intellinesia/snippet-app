@@ -11,6 +11,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'mission_control/mission_control_state.dart' show isDedicatedMcSession;
 import 'mobile_chrome.dart';
+import '../chat_scene.dart' show SceneBackdrop;
 
 /// New-session composer on phones, with folder browsing tucked into a sheet.
 class NewSessionPicker extends StatefulWidget {
@@ -362,7 +363,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       resizeToAvoidBottomInset: true,
-      body: SafeArea(
+      body: SceneBackdrop(child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -435,7 +436,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 

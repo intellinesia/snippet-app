@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
   desktop_drop
   file_selector_windows
+  irondash_engine_context
   pasteboard
   permission_handler_windows
   record_windows

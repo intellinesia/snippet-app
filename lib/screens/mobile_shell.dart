@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../gesture_physics.dart';
+import '../glass.dart' show StatusInset;
 import '../theme.dart';
 import 'shell_models.dart';
+import '../chat_scene.dart' show SceneBackdrop;
 
 /// Full-screen mobile shell layout with sliding sidebar and platform back handling.
 class MobileShell extends StatefulWidget {
@@ -51,7 +53,19 @@ class _MobileShellState extends State<MobileShell>
   // 0 = sessions list in front, 1 = the tab body in front. Dragged 1:1.
   late final AnimationController _v =
       AnimationController.unbounded(vsync: this, value: _chatsVisible ? 0 : 1)
-        ..addListener(() => setState(() {}));
+        ..addListener(_onV);
+  (bool, bool, bool) _vEnds = (false, false, false);
+  late final Animation<double> _vUnit = _v.drive(_Unit());
+
+  // Only the discrete states (offstage, tickers) rebuild; transforms follow _v.
+  static (bool, bool, bool) _endsOf(double v) => (v == 0.0, v == 1.0, v > 0);
+
+  void _onV() {
+    final e = _endsOf(_v.value);
+    if (e == _vEnds) return;
+    setState(() => _vEnds = e);
+  }
+
   double _base = 0;
   double _raw = 0;
   double? _commitVelocity;
@@ -108,6 +122,13 @@ class _MobileShellState extends State<MobileShell>
     _v.value = v;
   }
 
+  // On Android gesture navigation an edge swipe is also a system back; let
+  // whichever lands first win so one swipe never navigates twice.
+  DateTime? _swipeNavAt;
+  DateTime? _systemBackAt;
+  static bool _recent(DateTime? t) =>
+      t != null && DateTime.now().difference(t) < const Duration(milliseconds: 600);
+
   /// [onCommit] runs when the drag carries far or fast enough to switch.
   void _dragEnd(double velocityPx, double width, VoidCallback onCommit,
       {double? distanceThreshold, double? velocityThreshold}) {
@@ -124,6 +145,11 @@ class _MobileShellState extends State<MobileShell>
             velocity: vAlong,
             distanceThreshold: distanceThreshold ?? 80,
             velocityThreshold: vThresh)) {
+      if (_recent(_systemBackAt)) {
+        springTo(_v, _chatsVisible ? 0.0 : 1.0, vel, epsilon: 0.001);
+        return;
+      }
+      _swipeNavAt = DateTime.now();
       HapticFeedback.selectionClick();
       _commitVelocity = vel;
       onCommit();
@@ -179,8 +205,8 @@ class _MobileShellState extends State<MobileShell>
       }
     }
 
+    _vEnds = _endsOf(_v.value);
     final reduced = reduceMotion(context);
-    final vClamped = _v.value.clamp(0.0, 1.0);
     final chatLayer = activeTabBody == null
         ? null
         : Positioned.fill(
@@ -188,25 +214,40 @@ class _MobileShellState extends State<MobileShell>
               offstage: !missionPair && chatsVisible && _v.value == 0.0,
               child: IgnorePointer(
                 ignoring: chatsVisible,
-                child: FractionalTranslation(
-                  translation: reduced
-                      ? Offset.zero
-                      : missionPair
-                          ? Offset(-0.25 * (1 - vClamped), 0)
-                          : Offset(1 - vClamped, 0),
-                  child: Opacity(
-                    opacity: reduced || missionPair ? vClamped : 1.0,
+                child: AnimatedBuilder(
+                  animation: _v,
+                  child: RepaintBoundary(
                     child: Material(
                       color: AppColors.bg,
                       child: TickerMode(
                         enabled: _v.value > 0,
-                        child: SafeArea(
-                          bottom: false,
-                          child: activeTabBody,
+                        child: SceneBackdrop(
+                          child: StatusInset(
+                            top: MediaQuery.paddingOf(context).top,
+                            child: SafeArea(
+                              bottom: false,
+                              child: activeTabBody,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
+                  builder: (context, child) {
+                    final vc = _v.value.clamp(0.0, 1.0);
+                    Widget c = child!;
+                    if (reduced || missionPair) {
+                      c = FadeTransition(opacity: _vUnit, child: c);
+                    }
+                    return FractionalTranslation(
+                      translation: reduced
+                          ? Offset.zero
+                          : missionPair
+                              ? Offset(-0.25 * (1 - vc), 0)
+                              : Offset(1 - vc, 0),
+                      child: c,
+                    );
+                  },
                 ),
               ),
             ),
@@ -216,36 +257,52 @@ class _MobileShellState extends State<MobileShell>
         offstage: !chatsVisible && _v.value == 1.0,
         child: IgnorePointer(
           ignoring: !chatsVisible,
-          child: FractionalTranslation(
-            translation: reduced
-                ? Offset.zero
-                : missionPair
-                    ? Offset(_exitX * _v.value, 0)
-                    : Offset(-0.3 * vClamped, 0),
+          child: AnimatedBuilder(
+            animation: _v,
+            builder: (context, child) => FractionalTranslation(
+              translation: reduced
+                  ? Offset.zero
+                  : missionPair
+                      ? Offset(_exitX * _v.value, 0)
+                      : Offset(-0.3 * _v.value.clamp(0.0, 1.0), 0),
+              child: child,
+            ),
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Material(
-                  color: AppColors.bg,
-                  child: TickerMode(
-                    enabled: chatsVisible || _v.value < 1.0,
-                    child: SafeArea(
-                      child: AnimatedSlide(
-                        offset: Offset(_homePull, 0),
-                        duration: _homeDrag == true
-                            ? Duration.zero
-                            : const Duration(milliseconds: 220),
-                        curve: Curves.easeOutCubic,
-                        child: sidebar,
+                RepaintBoundary(
+                  child: Material(
+                    color: AppColors.bg,
+                    child: TickerMode(
+                      enabled: chatsVisible || _v.value < 1.0,
+                      child: SceneBackdrop(
+                        child: SafeArea(
+                          child: AnimatedSlide(
+                            offset: Offset(_homePull, 0),
+                            duration: _homeDrag == true
+                                ? Duration.zero
+                                : const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            child: sidebar,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-                if (!missionPair && !reduced && vClamped > 0)
+                if (!missionPair && !reduced)
                   Positioned.fill(
                     child: IgnorePointer(
-                      child: ColoredBox(
-                        color: Colors.black.withValues(alpha: 0.18 * vClamped),
+                      child: AnimatedBuilder(
+                        animation: _v,
+                        builder: (context, _) {
+                          final vc = _v.value.clamp(0.0, 1.0);
+                          return vc > 0
+                              ? ColoredBox(
+                                  color: Colors.black
+                                      .withValues(alpha: 0.18 * vc))
+                              : const SizedBox.expand();
+                        },
                       ),
                     ),
                   ),
@@ -345,7 +402,8 @@ class _MobileShellState extends State<MobileShell>
       return PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, _) {
-          if (didPop) return;
+          if (didPop || _recent(_swipeNavAt)) return;
+          _systemBackAt = DateTime.now();
           handleBack();
         },
         child: body,
@@ -355,7 +413,8 @@ class _MobileShellState extends State<MobileShell>
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
-        if (didPop) return;
+        if (didPop || _recent(_swipeNavAt)) return;
+        _systemBackAt = DateTime.now();
         if (ModalRoute.of(context)?.willHandlePopInternally ?? false) {
           Navigator.of(context).pop();
           return;
@@ -365,6 +424,11 @@ class _MobileShellState extends State<MobileShell>
       child: body,
     );
   }
+}
+
+class _Unit extends Animatable<double> {
+  @override
+  double transform(double t) => t.clamp(0.0, 1.0);
 }
 
 typedef _DragEnd = void Function(double velocityPx, double width);

@@ -12,6 +12,7 @@ class DesktopLook extends ChangeNotifier {
   @override
   void notifyListeners() {
     AppColors.solidChrome = hasWallpaper;
+    AppColors.chromeAlpha = kMobile ? null : _chrome;
     super.notifyListeners();
   }
 
@@ -22,6 +23,7 @@ class DesktopLook extends ChangeNotifier {
   static const _wallKey = 'desktop_chat_wallpaper';
   static const _wallImageKey = 'desktop_chat_wallpaper_image';
   static const _wallStrengthKey = 'desktop_chat_wallpaper_strength';
+  static const chromeKey = 'desktop_chrome_opacity';
 
   static const none = 'none';
   static const image = 'image';
@@ -30,12 +32,16 @@ class DesktopLook extends ChangeNotifier {
   String _wallpaper = none;
   String? _imagePath;
   double _strength = 0.7;
+  double? _chrome;
   bool _loaded = false;
 
   bool get tactile => !kMobile && _tactile;
   String get wallpaper => _wallpaper;
   String? get imagePath => _imagePath;
   double get strength => _strength;
+
+  /// Opacity of the sidebar, title bar and right pane; null keeps the default.
+  double? get chromeOpacity => _chrome;
   bool get hasWallpaper =>
       !kMobile && _wallpaper == image && _imagePath != null;
 
@@ -48,6 +54,7 @@ class DesktopLook extends ChangeNotifier {
     final img = p.getString(_wallImageKey);
     _imagePath = img != null && File(img).existsSync() ? img : null;
     _strength = (p.getDouble(_wallStrengthKey) ?? 0.7).clamp(0.0, 1.0);
+    _chrome = p.getDouble(chromeKey)?.clamp(0.0, 1.0);
     if (_wallpaper != image || _imagePath == null) _wallpaper = none;
     notifyListeners();
   }
@@ -76,6 +83,17 @@ class DesktopLook extends ChangeNotifier {
         File(old).deleteSync();
       } catch (_) {}
     }
+  }
+
+  Future<void> setChromeOpacity(double? v, {bool persist = true}) async {
+    _chrome = v?.clamp(0.0, 1.0);
+    notifyListeners();
+    if (!persist) return;
+    try {
+      final p = await SharedPreferences.getInstance();
+      final c = _chrome;
+      c == null ? await p.remove(chromeKey) : await p.setDouble(chromeKey, c);
+    } catch (_) {}
   }
 
   Future<void> setStrength(double v, {bool persist = true}) async {

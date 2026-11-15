@@ -604,7 +604,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
   Widget build(BuildContext context) {
     Theme.of(context);
     return ColoredBox(
-      color: AppColors.bg,
+      color: kMobile ? AppColors.pageBg : AppColors.bg,
       child: kMobile ? _phone() : _desktop(),
     );
   }

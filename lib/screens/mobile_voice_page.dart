@@ -16,6 +16,7 @@ import '../swr.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'mobile_chrome.dart';
+import '../chat_scene.dart' show SceneBackdrop;
 
 final ValueNotifier<AmbientStateEvent?> _emptyVoiceState = ValueNotifier(null);
 
@@ -231,7 +232,7 @@ class _MobileVoicePageState extends State<MobileVoicePage>
     final reply = widget.replyText?.trim() ?? '';
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: SafeArea(
+      body: SceneBackdrop(child: SafeArea(
         child: _stateBuilder(context, (context, event) {
           final live = _m.liveOrRunning && !_m.elsewhere && !_m.status.displaced;
           final statusText = ambientStatusText(
@@ -392,7 +393,7 @@ class _MobileVoicePageState extends State<MobileVoicePage>
             ],
           );
         }),
-      ),
+      )),
     );
   }
 

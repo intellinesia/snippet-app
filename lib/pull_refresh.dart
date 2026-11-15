@@ -17,23 +17,31 @@ class PullToRefresh extends StatefulWidget {
     super.key,
     required this.onRefresh,
     required this.child,
+    this.reverse = false,
+    this.indicatorTop = 6,
   });
 
   final Future<void> Function() onRefresh;
   final Widget child;
+
+  /// The list is reversed: its oldest end, at the top of the screen, refreshes.
+  /// RefreshIndicator only watches the leading edge, so phones use the pull detector too.
+  final bool reverse;
+  final double indicatorTop;
 
   @override
   State<PullToRefresh> createState() => _PullToRefreshState();
 }
 
 class _PullToRefreshState extends State<PullToRefresh> {
-  static const _threshold = 260.0;
+  static double get _threshold => kMobile ? 100.0 : 260.0;
   static const _window = Duration(milliseconds: 450);
 
   bool _atTop = true;
   double _pull = 0;
   DateTime _lastPull = DateTime.fromMillisecondsSinceEpoch(0);
   bool _refreshing = false;
+  bool _fired = false;
 
   void _addPull(double amount) {
     if (_refreshing || amount <= 0) return;
@@ -43,6 +51,7 @@ class _PullToRefreshState extends State<PullToRefresh> {
     _pull += amount;
     if (_pull >= _threshold) {
       _pull = 0;
+      _fired = true;
       unawaited(_run());
     }
   }
@@ -57,23 +66,46 @@ class _PullToRefreshState extends State<PullToRefresh> {
     }
   }
 
+  bool _atEdge(ScrollMetrics m) => widget.reverse
+      ? m.pixels >= m.maxScrollExtent - 0.5
+      : m.pixels <= m.minScrollExtent + 0.5;
+
   bool _onScroll(ScrollNotification n) {
     if (n.depth != 0 || n.metrics.axis != Axis.vertical) return false;
     final m = n.metrics;
-    _atTop = m.pixels <= m.minScrollExtent + 0.5;
-    if (n is OverscrollNotification && n.overscroll < 0) {
-      _addPull(-n.overscroll);
+    _atTop = _atEdge(m);
+    // Past the edge, a reversed list moves towards larger offsets.
+    final sign = widget.reverse ? 1.0 : -1.0;
+    final beyond = widget.reverse
+        ? m.pixels > m.maxScrollExtent
+        : m.pixels < m.minScrollExtent;
+    if (kMobile) {
+      // Only the finger pulls, measured undamped, once per drag; a fling coasting in does not.
+      if (n is ScrollEndNotification) _fired = false;
+      final drag = n is OverscrollNotification
+          ? n.dragDetails
+          : n is ScrollUpdateNotification
+              ? n.dragDetails
+              : null;
+      final past = n is OverscrollNotification || beyond;
+      if (drag != null && past && !_fired && drag.delta.dy > 0) {
+        _addPull(drag.delta.dy);
+      }
+      return false;
+    }
+    if (n is OverscrollNotification && n.overscroll * sign > 0) {
+      _addPull(n.overscroll * sign);
     } else if (n is ScrollUpdateNotification &&
-        m.pixels < m.minScrollExtent &&
-        (n.scrollDelta ?? 0) < 0) {
-      _addPull(-(n.scrollDelta ?? 0));
+        beyond &&
+        (n.scrollDelta ?? 0) * sign > 0) {
+      _addPull((n.scrollDelta ?? 0) * sign);
     }
     return false;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (kMobile) {
+    if (kMobile && !widget.reverse) {
       return RefreshIndicator(
         color: AppColors.accent,
         backgroundColor: AppColors.surface3,
@@ -92,14 +124,14 @@ class _PullToRefreshState extends State<PullToRefresh> {
         child: NotificationListener<ScrollMetricsNotification>(
           onNotification: (n) {
             if (n.depth == 0 && n.metrics.axis == Axis.vertical) {
-              _atTop = n.metrics.pixels <= n.metrics.minScrollExtent + 0.5;
+              _atTop = _atEdge(n.metrics);
             }
             return false;
           },
           child: Stack(children: [
             widget.child,
             Positioned(
-              top: 6,
+              top: widget.indicatorTop,
               left: 0,
               right: 0,
               child: IgnorePointer(

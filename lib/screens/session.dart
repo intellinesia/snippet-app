@@ -22,6 +22,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../chat/chat_card.dart';
 import '../desktop_look.dart';
+import '../ambient_loop.dart';
 import '../approval_code.dart';
 import '../notification_text.dart';
 import '../api.dart';
@@ -36,6 +37,7 @@ import 'limit_card.dart';
 import 'routing_screen.dart' show limitLabel;
 import '../motion.dart';
 import '../motion_routes.dart';
+import '../chat_scene.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
 import '../tool_sheet.dart';
@@ -1421,7 +1423,7 @@ class _SessionScreenState extends State<SessionScreen>
       : _buildScreen(context);
 
   Widget _chatBackdrop(Widget body) =>
-      kMobile ? DotField.chat(child: body) : body;
+      kMobile ? SceneBackdrop(child: DotField.chat(child: body)) : body;
 
   Widget _buildScreen(BuildContext context) {
     // Depend on Theme so this rebuilds when the user switches palettes.
@@ -1451,7 +1453,9 @@ class _SessionScreenState extends State<SessionScreen>
       // Tap-only: the default edge drag competes with transcript gestures.
       endDrawerEnableOpenDragGesture: false,
       backgroundColor:
-          widget.embedded && !kMobile ? Colors.transparent : readingBg,
+          widget.embedded && !kMobile
+              ? Colors.transparent
+              : AppColors.pageCanvas,
       resizeToAvoidBottomInset: false,
       body: _chatBackdrop(SafeArea(
         bottom: false,
@@ -1552,7 +1556,8 @@ class _SessionScreenState extends State<SessionScreen>
                                 (!kMobile || widget.mobileTopBar != null))
                               _disconnectedBanner(),
                             Expanded(
-                              child: Stack(children: [
+                              // The glass header's frost reaches up behind the status bar.
+                              child: Stack(clipBehavior: Clip.none, children: [
                                 s == null
                                     ? Center(child: DelayedSpinner(size: 22))
                                     : NotificationListener<ScrollNotification>(

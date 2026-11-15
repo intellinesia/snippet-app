@@ -4,11 +4,13 @@ import 'dart:async';
 
 import '../motion_routes.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import '../chat/chat_info.dart' show showAgentInfo;
 import '../chat/choices.dart';
 import '../glass.dart';
+import '../ambient_loop.dart';
 import '../api.dart';
 import '../clock.dart';
 import '../chat/chat_style.dart';
@@ -31,6 +33,7 @@ import 'agent_records.dart';
 import 'agent_thread_cards.dart';
 import 'agent_view_switcher.dart';
 import 'mobile_session_home.dart' show DotField;
+import '../chat_scene.dart' show SceneBackdrop;
 
 /// Pick one agent from the directory, as an anchored DROPDOWN.
 ///
@@ -624,7 +627,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     _events = _thread.data?.events ?? const [];
     _deliveries = _thread.data?.deliveries ?? const {};
     _loading = _thread.data == null;
-    if (_events.isNotEmpty) _jumpToBottom();
   }
 
   @override
@@ -645,7 +647,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
 
   static bool _isAck(CoordinationEvent e) => e.payload['auto'] == 'ack';
 
-  bool get _typing {
+  static bool _busyPresence(Presence? p) =>
+      p?.state == 'running' || p?.state == 'tool';
+
+  bool get _awaitingReply {
     CoordinationEvent? last;
     for (final e in _events.reversed) {
       if (!_isAck(e) && !isReactionEvent(e)) {
@@ -654,10 +659,12 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       }
     }
     if (last == null || last.actorKind != 'human') return false;
-    if (_deliveries[last.eventId]?.readAt == null) return false;
-    final p = widget.client.presence.presenceForAgentId(widget.agentId);
-    return p?.state == 'running' || p?.state == 'tool';
+    return _deliveries[last.eventId]?.readAt != null;
   }
+
+  bool get _typing =>
+      _awaitingReply &&
+      _busyPresence(widget.client.presence.presenceForAgentId(widget.agentId));
 
   void _sync() {
     if (!mounted) return;
@@ -684,7 +691,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     });
     if (hadNew) {
       unawaitedMarkRead();
-      _jumpToBottom(animated: !first);
+      if (!first) _jumpToBottom();
     }
   }
 
@@ -694,17 +701,18 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         .catchError((_) {});
   }
 
-  void _jumpToBottom({bool animated = false}) {
+  // The transcript is reversed, so the newest message is offset 0.
+  void _jumpToBottom({bool animated = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) {
         if (animated) {
           _scroll.animateTo(
-            _scroll.position.maxScrollExtent,
+            0,
             duration: Motion.fast,
             curve: Motion.enter,
           );
         } else {
-          _scroll.jumpTo(_scroll.position.maxScrollExtent);
+          _scroll.jumpTo(0);
         }
       }
     });
@@ -759,7 +767,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       _replyTo = null;
       _events = [..._events, pending];
     });
-    _jumpToBottom(animated: true);
+    _jumpToBottom();
     try {
       await widget.client.sendAgentMessage(
         toAgentId: widget.agentId,
@@ -846,7 +854,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     });
     _unechoed.add(pending);
     setState(() => _events = [..._events, pending]);
-    _jumpToBottom(animated: true);
+    _jumpToBottom();
     try {
       await widget.client.sendAgentMessage(
         toAgentId: widget.agentId,
@@ -894,7 +902,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     final idx = visible.indexWhere((e) => e.eventId == eventId);
     if (idx < 0) return;
     final fraction = (idx / visible.length).clamp(0.0, 1.0);
-    _scroll.jumpTo(_scroll.position.maxScrollExtent * fraction);
+    _scroll.jumpTo(_scroll.position.maxScrollExtent * (1 - fraction));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final after = _messageKeys[eventId]?.currentContext;
       if (after != null) {
@@ -903,6 +911,18 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     });
   }
 
+  // Scene and dots sit outside the SafeArea so the header frost can reach
+  // up behind the status bar, as on the session screen.
+  Widget _chrome(Widget body, bool hideChrome) => kMobile
+      ? SceneBackdrop(
+          child: DotField.chat(
+            child: StatusInset(
+                top: hideChrome ? 0 : MediaQuery.paddingOf(context).top,
+                child: body),
+          ),
+        )
+      : body;
+
   @override
   Widget build(BuildContext context) {
     // Wrapped in Material because presentScreen's non-rounded frames are plain
@@ -910,18 +930,19 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     // here require one.
     final hideChrome = _noChrome;
     return Material(
-      color: kMobile ? readingBg : Colors.transparent,
-      child: SafeArea(
+      color: kMobile ? AppColors.pageCanvas : Colors.transparent,
+      child: _chrome(SafeArea(
         top: !hideChrome,
         bottom: false,
         child: Column(
           children: [
             Expanded(
               child: Stack(
+                clipBehavior: Clip.none,
                 children: [
                   Positioned.fill(
                       child: kMobile
-                          ? DotField.chat(child: _viewBody())
+                          ? _viewBody()
                           : hideChrome
                           ? _viewBody()
                           : TopFadeMask(
@@ -940,7 +961,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             if (_view == AgentView.thread) _composer(),
           ],
         ),
-      ),
+      ), hideChrome),
     );
   }
 
@@ -950,10 +971,12 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       listenable: store,
       builder: (_, __) {
         final p = store.presenceForAgentId(widget.agentId);
-        if (p == null) return _plainHeaderStatus(subtitle);
+        if (p == null) return _reserveStatus(_plainHeaderStatus(subtitle));
         final status = _typing ? 'typing…' : PresenceStore.chatWord(p);
         final dots = p.state == 'thinking' || p.state == 'typing';
-        if (status.isEmpty && !dots) return _plainHeaderStatus(subtitle);
+        if (status.isEmpty && !dots) {
+          return _reserveStatus(_plainHeaderStatus(subtitle));
+        }
         final cut = subtitle.indexOf(' \u00b7 ');
         final head = cut < 0 ? '' : subtitle.substring(0, cut);
         final text = status.isEmpty
@@ -961,7 +984,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             : head.isEmpty
                 ? status
                 : '$head \u00b7 $status';
-        return Row(
+        return _reserveStatus(Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Flexible(child: ChatHeader.statusText(text)),
@@ -970,10 +993,19 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               WorkingDots(color: ChatColors.meta, size: 4),
             ],
           ],
-        );
+        ));
       },
     );
   }
+
+  // Fixed-height line so the late subtitle fades in instead of shifting the header.
+  Widget _reserveStatus(Widget child) => SizedBox(
+        height: 16,
+        child: AnimatedSwitcher(
+          duration: Motion.fast,
+          child: KeyedSubtree(key: ValueKey(child is SizedBox), child: child),
+        ),
+      );
 
   Widget _plainHeaderStatus(String subtitle) {
     final logo = widget.subtitle == null && _profileProvider != null;
@@ -1170,6 +1202,70 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         ),
       );
     }
+    final d = _derivedFor(visible);
+    final byId = d.byId;
+    final cards = d.cards;
+    final stamps = d.stamps;
+    final origins = d.origins;
+    final splitBefore = d.splitBefore;
+    final lastHumanIdx = d.lastHumanIdx;
+    final reactionsByTarget = d.reactions;
+    final n = visible.length;
+    return PullToRefresh(
+      onRefresh: () => _load(silent: true),
+      reverse: true,
+      indicatorTop: topPad + 6,
+      child: ListView.builder(
+        controller: _scroll,
+        reverse: true,
+        scrollCacheExtent: ScrollCacheExtent.pixels(400),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(16, topPad, 16, 16),
+        itemCount: n + 1,
+        itemBuilder: (_, i) {
+          if (i == 0) {
+            return _TypingSlot(
+              store: widget.client.presence,
+              agentId: widget.agentId,
+              enabled: _awaitingReply,
+              child: Padding(
+                padding: EdgeInsets.only(top: ChatColors.groupGap),
+                child: _wideCap(_typingRow()),
+              ),
+            );
+          }
+          debugAgentMessageRowBuilds++;
+          final at = n - i;
+          final ev = visible[at];
+          final first = splitBefore[at];
+          final last = at == n - 1 || splitBefore[at + 1];
+          final topGap =
+              at == 0 ? 0.0 : (first ? ChatColors.groupGap : ChatColors.runGap);
+          return Padding(
+            padding: EdgeInsets.only(top: topGap),
+            child: _wideCap(
+              _messageRow(
+                ev,
+                card: cards[ev],
+                byId: byId,
+                reactions: reactionsByTarget[ev.eventId] ?? const [],
+                tail: last,
+                showStamp: stamps[at],
+                showOrigin: origins[at],
+                showDelivery: at == lastHumanIdx,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  _Derived? _derived;
+
+  _Derived _derivedFor(List<CoordinationEvent> visible) {
+    final cached = _derived;
+    if (cached != null && identical(cached.source, _events)) return cached;
     final byId = {
       for (final e in visible)
         if (e.eventId.isNotEmpty) e.eventId: e
@@ -1210,50 +1306,15 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       splitBefore[i] = i == 0 || rawRuns[i].first || isStamp || origins[i];
       if (at != null) prevAt = at;
     }
-    final reactionsByTarget = groupMessageReactions(_events);
-    return PullToRefresh(
-      onRefresh: () => _load(silent: true),
-      child: ListenableBuilder(
-        listenable: widget.client.presence,
-        builder: (_, __) {
-          final typing = _typing;
-          return ListView.builder(
-            controller: _scroll,
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(16, topPad, 16, 16),
-            itemCount: visible.length + (typing ? 1 : 0),
-            itemBuilder: (_, i) {
-              if (i == visible.length) {
-                return Padding(
-                  padding: EdgeInsets.only(top: ChatColors.groupGap),
-                  child: _wideCap(_typingRow()),
-                );
-              }
-              final ev = visible[i];
-              final first = splitBefore[i];
-              final last = i == visible.length - 1 || splitBefore[i + 1];
-              final topGap = i == 0
-                  ? 0.0
-                  : (first ? ChatColors.groupGap : ChatColors.runGap);
-              return Padding(
-                padding: EdgeInsets.only(top: topGap),
-                child: _wideCap(
-                  _messageRow(
-                    ev,
-                    card: cards[ev],
-                    byId: byId,
-                    reactions: reactionsByTarget[ev.eventId] ?? const [],
-                    tail: last,
-                    showStamp: stamps[i],
-                    showOrigin: origins[i],
-                    showDelivery: i == lastHumanIdx,
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
+    return _derived = _Derived(
+      source: _events,
+      byId: byId,
+      cards: cards,
+      stamps: stamps,
+      origins: origins,
+      splitBefore: splitBefore,
+      lastHumanIdx: lastHumanIdx,
+      reactions: groupMessageReactions(_events),
     );
   }
 
@@ -1630,6 +1691,77 @@ void openAgentThread(
 
 
 
+@visibleForTesting
+int debugAgentMessageRowBuilds = 0;
+
+class _Derived {
+  _Derived({
+    required this.source,
+    required this.byId,
+    required this.cards,
+    required this.stamps,
+    required this.origins,
+    required this.splitBefore,
+    required this.lastHumanIdx,
+    required this.reactions,
+  });
+
+  final List<CoordinationEvent> source;
+  final Map<String, CoordinationEvent> byId;
+  final Map<CoordinationEvent, Widget> cards;
+  final List<bool> stamps;
+  final List<bool> origins;
+  final List<bool> splitBefore;
+  final int lastHumanIdx;
+  final Map<String, List<ReactionGroup>> reactions;
+}
+
+/// Listens to presence on its own so a tick rebuilds this slot, not the list.
+class _TypingSlot extends StatefulWidget {
+  const _TypingSlot({
+    required this.store,
+    required this.agentId,
+    required this.enabled,
+    required this.child,
+  });
+
+  final PresenceStore store;
+  final String agentId;
+  final bool enabled;
+  final Widget child;
+
+  @override
+  State<_TypingSlot> createState() => _TypingSlotState();
+}
+
+class _TypingSlotState extends State<_TypingSlot> {
+  late bool _busy = _read();
+
+  bool _read() => _AgentThreadScreenState._busyPresence(
+      widget.store.presenceForAgentId(widget.agentId));
+
+  void _onPresence() {
+    final next = _read();
+    if (next != _busy) setState(() => _busy = next);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.store.addListener(_onPresence);
+  }
+
+  @override
+  void dispose() {
+    widget.store.removeListener(_onPresence);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      widget.enabled && _busy ? widget.child : const SizedBox.shrink();
+}
+
 class _TypingDots extends StatefulWidget {
   const _TypingDots({super.key});
 
@@ -1637,18 +1769,17 @@ class _TypingDots extends StatefulWidget {
   State<_TypingDots> createState() => _TypingDotsState();
 }
 
-class _TypingDotsState extends State<_TypingDots>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 600));
+class _TypingDotsState extends State<_TypingDots> {
+  final _c = AmbientLoop(const Duration(milliseconds: 600));
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _c.bind(context);
     if (MediaQuery.disableAnimationsOf(context)) {
       _c.stop();
-    } else if (!_c.isAnimating) {
-      _c.repeat();
+    } else {
+      _c.start();
     }
   }
 

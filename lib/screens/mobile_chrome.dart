@@ -56,7 +56,7 @@ class RoundBtn extends StatelessWidget {
             onTap: onTap == null
                 ? null
                 : () {
-                    HapticFeedback.selectionClick();
+                    tapHaptic();
                     onTap!();
                   },
             child: Stack(clipBehavior: Clip.none, children: [
@@ -244,7 +244,7 @@ class MobileHomeHeader extends StatelessWidget {
 Future<void> openMobileTasksPage(BuildContext context, DaemonClient client) {
   return Navigator.of(context).push<void>(AppPageRoute<void>(
     builder: (_) => Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: AppColors.pageBg,
       body: SafeArea(child: TasksPanel(client: client, phoneHeader: true)),
     ),
   ));
@@ -676,7 +676,10 @@ class _MobileMenu extends StatelessWidget {
   final ValueChanged<MobileMenuPick> onPick;
 
   Widget _row(String icon, String label, MobileMenuPick pick) => InkWell(
-        onTap: () => onPick(pick),
+        onTap: () {
+          tapHaptic();
+          onPick(pick);
+        },
         child: SizedBox(
           height: M.minTarget + 8,
           child: Row(children: [
@@ -706,7 +709,10 @@ class _MobileMenu extends StatelessWidget {
                     borderRadius: BorderRadius.circular(R.lg),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
-                      onTap: () => onPick(MobileMenuPick.newSession),
+                      onTap: () {
+                        tapHaptic();
+                        onPick(MobileMenuPick.newSession);
+                      },
                       child: Padding(
                         padding: const EdgeInsets.all(14),
                         child: Row(children: [

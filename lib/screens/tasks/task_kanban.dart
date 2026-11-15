@@ -188,7 +188,7 @@ class _TaskKanbanState extends State<TaskKanban> {
   Widget build(BuildContext context) {
     final showBoard = !_feed.loading && _feed.error == null;
     return ColoredBox(
-      color: kMobile ? readingBg : Colors.transparent,
+      color: kMobile ? AppColors.pageCanvas : Colors.transparent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

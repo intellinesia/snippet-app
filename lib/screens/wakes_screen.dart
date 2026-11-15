@@ -127,15 +127,34 @@ class _WakesScreenState extends State<WakesScreen> {
           for (final e in warm?.entries ?? const <KeepWarmEntry>[])
             if (e.enabled) e
         ];
+        if (wakes.wakes.isEmpty && warmOn.isEmpty) {
+          // One empty state that fills the pane; a scrolling column cannot centre it.
+          const empty = EmptyState(
+            icon: 'calendar-clock',
+            title: 'No wakes yet',
+            body:
+                'Schedule an agent or keep a session warm from its actions, under Wakes and keep warm.',
+          );
+          if (!desk) return empty;
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 0),
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 680),
+                  child: const SettingsHeader(
+                    title: 'Wakes',
+                    subtitle: 'Agent schedules and keep-warm.',
+                  ),
+                ),
+              ),
+            ),
+            const Expanded(child: empty),
+          ]);
+        }
         return page([
-          if (wakes.wakes.isEmpty && warmOn.isEmpty)
-            const EmptyState(
-              icon: 'calendar-clock',
-              title: 'No wakes yet',
-              body:
-                  'Give an agent a timetable and a brief from its menu in the crew list. It reports back to Mission Control.',
-            )
-          else if (wakes.wakes.isNotEmpty) ...[
+          if (wakes.wakes.isNotEmpty) ...[
             if (kMobile)
               const SettingsGroupLabel('Schedules')
             else
@@ -155,7 +174,7 @@ class _WakesScreenState extends State<WakesScreen> {
               padding: EdgeInsets.fromLTRB(
                   kMobile ? S.s16 : S.s4, S.s4, kMobile ? S.s16 : S.s4, 0),
               child: Text(
-                  'No session is kept warm. Turn it on per session or agent from its actions: Wakes and keep warm. A warm session keeps its prompt cache while idle, so the next turn is cheaper.',
+                  'No session is kept warm. A warm session keeps its prompt cache while idle, so the next turn is cheaper.',
                   style: TS.meta()),
             ),
           ],
