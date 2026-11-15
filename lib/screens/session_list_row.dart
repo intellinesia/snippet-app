@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../ambient_loop.dart';
 import '../models.dart';
 import '../platform.dart';
 import '../settled_sessions.dart';
@@ -521,11 +522,19 @@ class WorkingDots extends StatefulWidget {
   State<WorkingDots> createState() => _WorkingDotsState();
 }
 
-class _WorkingDotsState extends State<WorkingDots>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 900));
-  bool _running = false;
+class _WorkingDotsState extends State<WorkingDots> {
+  final _c = AmbientLoop(const Duration(milliseconds: 900));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _c.bind(context);
+    if (reduceMotion(context)) {
+      _c.stop();
+    } else {
+      _c.start();
+    }
+  }
 
   @override
   void dispose() {
@@ -542,13 +551,6 @@ class _WorkingDotsState extends State<WorkingDots>
   @override
   Widget build(BuildContext context) {
     final still = reduceMotion(context);
-    if (still && _running) {
-      _c.stop();
-      _running = false;
-    } else if (!still && !_running) {
-      _c.repeat();
-      _running = true;
-    }
     return Semantics(
       label: 'Working',
       excludeSemantics: true,

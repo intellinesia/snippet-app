@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../ambient_loop.dart';
 import '../glass.dart';
 import '../models.dart';
 import '../mochi.dart';
@@ -460,14 +461,13 @@ class LiveRing extends StatefulWidget {
   State<LiveRing> createState() => _LiveRingState();
 }
 
-class _LiveRingState extends State<LiveRing>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1600));
+class _LiveRingState extends State<LiveRing> {
+  final _c = AmbientLoop(const Duration(milliseconds: 1600), reverse: true);
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _c.bind(context);
     _sync();
   }
 
@@ -479,10 +479,9 @@ class _LiveRingState extends State<LiveRing>
 
   void _sync() {
     if (widget.live && !reduceMotion(context)) {
-      if (!_c.isAnimating) _c.repeat(reverse: true);
+      _c.start();
     } else {
-      _c.stop();
-      _c.value = widget.live ? 1 : 0;
+      _c.stop(at: widget.live ? 1 : 0);
     }
   }
 

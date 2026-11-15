@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'ambient_loop.dart';
 import 'api.dart' show DaemonClient;
 import 'crew_widgets.dart' show AgentProviderMark;
 import 'mochi.dart';
@@ -36,20 +37,19 @@ class _Node extends StatefulWidget {
   State<_Node> createState() => _NodeState2();
 }
 
-class _NodeState2 extends State<_Node> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1400));
+class _NodeState2 extends State<_Node> {
+  final _c = AmbientLoop(const Duration(milliseconds: 1400));
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _c.bind(context);
     final animate =
         widget.state == _NodeState.running && !reduceMotion(context);
-    if (animate && !_c.isAnimating) {
-      _c.repeat();
-    } else if (!animate && _c.isAnimating) {
-      _c.stop();
-      _c.value = 0;
+    if (animate) {
+      _c.start();
+    } else if (_c.isRunning) {
+      _c.stop(at: 0);
     }
   }
 
