@@ -905,6 +905,18 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     });
   }
 
+  // Scene and dots sit outside the SafeArea so the header frost can reach
+  // up behind the status bar, as on the session screen.
+  Widget _chrome(Widget body, bool hideChrome) => kMobile
+      ? SceneBackdrop(
+          child: DotField.chat(
+            child: StatusInset(
+                top: hideChrome ? 0 : MediaQuery.paddingOf(context).top,
+                child: body),
+          ),
+        )
+      : body;
+
   @override
   Widget build(BuildContext context) {
     // Wrapped in Material because presentScreen's non-rounded frames are plain
@@ -913,17 +925,18 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     final hideChrome = _noChrome;
     return Material(
       color: kMobile ? AppColors.pageCanvas : Colors.transparent,
-      child: SafeArea(
+      child: _chrome(SafeArea(
         top: !hideChrome,
         bottom: false,
         child: Column(
           children: [
             Expanded(
               child: Stack(
+                clipBehavior: Clip.none,
                 children: [
                   Positioned.fill(
                       child: kMobile
-                          ? SceneBackdrop(child: DotField.chat(child: _viewBody()))
+                          ? _viewBody()
                           : hideChrome
                           ? _viewBody()
                           : TopFadeMask(
@@ -942,7 +955,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             if (_view == AgentView.thread) _composer(),
           ],
         ),
-      ),
+      ), hideChrome),
     );
   }
 
