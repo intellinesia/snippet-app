@@ -28,6 +28,8 @@ class ChatScene extends ChangeNotifier {
   String _scene = none;
   String? _error;
   bool _loaded = false;
+  bool _userChosen = false;
+  bool _listeningTheme = false;
   File? _marker;
   bool _armed = false;
   bool _arming = false;
@@ -35,16 +37,52 @@ class ChatScene extends ChangeNotifier {
   String get scene => _scene;
   String? get error => _error;
   bool get active => shaderSurfaceSupported && presets.containsKey(_scene);
+  bool get userChosen => _userChosen;
 
   /// Active and safe to start: the crash marker is on disk.
   bool get ready => active && _armed;
 
+  String _themeDefaultScene() {
+    final s = ThemeManager.instance.resolved.backdrop.scene;
+    return (s == none || presets.containsKey(s)) ? s : none;
+  }
+
+  void _ensureThemeListener() {
+    if (_listeningTheme) return;
+    _listeningTheme = true;
+    ThemeManager.instance.addListener(_onThemeChanged);
+  }
+
+  void _onThemeChanged() {
+    if (_userChosen) return;
+    final next = _themeDefaultScene();
+    if (next == _scene) return;
+    _scene = next;
+    _error = null;
+    _armed = false;
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  void resetForTest() {
+    _scene = none;
+    _error = null;
+    _loaded = false;
+    _userChosen = false;
+    _armed = false;
+    _arming = false;
+    notifyListeners();
+  }
+
   Future<void> init() async {
     if (_loaded) return;
     _loaded = true;
+    _ensureThemeListener();
     try {
       final prefs = await SharedPreferences.getInstance();
-      _scene = prefs.getString(_key) ?? none;
+      final saved = prefs.getString(_key);
+      _userChosen = saved != null;
+      _scene = saved ?? _themeDefaultScene();
       final dir = (await getApplicationSupportDirectory()).path;
       _marker = File('$dir/chat_scene_starting');
       if (_marker!.existsSync()) {
@@ -52,10 +90,13 @@ class ChatScene extends ChangeNotifier {
         if (_scene != none) {
           _scene = none;
           _error = 'Turned off: the app closed while the scene was starting.';
+          _userChosen = true;
           await prefs.setString(_key, none);
         }
       }
-    } catch (_) {}
+    } catch (_) {
+      if (!_userChosen) _scene = _themeDefaultScene();
+    }
     notifyListeners();
   }
 
@@ -78,11 +119,14 @@ class ChatScene extends ChangeNotifier {
   }
 
   Future<void> set(String scene) async {
-    if (scene == _scene) return;
+    final changed = scene != _scene;
+    _userChosen = true;
     _scene = scene;
-    _error = null;
-    _armed = false;
-    notifyListeners();
+    if (changed) {
+      _error = null;
+      _armed = false;
+      notifyListeners();
+    }
     try {
       (await SharedPreferences.getInstance()).setString(_key, scene);
     } catch (_) {}

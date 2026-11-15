@@ -391,7 +391,7 @@ class TasksPanelState extends State<TasksPanel> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(
+                padding: EdgeInsets.fromLTRB(
                     S.s40, S.s32, S.s40, S.s16),
                 child: Text('New task',
                     style: sans(20,
@@ -434,7 +434,7 @@ class TasksPanelState extends State<TasksPanel> {
                 active: _searchOpen,
                 tooltip: 'Search tasks',
                 onTap: _toggleSearch),
-            const SizedBox(width: S.s4),
+            SizedBox(width: S.s4),
             HeaderAction('New task', onTap: create),
             ...widget.trailing,
           ],
@@ -444,7 +444,7 @@ class TasksPanelState extends State<TasksPanel> {
               if (_searchOpen) _desktopSearch(),
               if (_tasks.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: S.s4),
+                  padding: EdgeInsets.only(top: S.s4),
                   child: _statusStrip(),
                 ),
             ],
@@ -517,7 +517,7 @@ class TasksPanelState extends State<TasksPanel> {
           if (_searchOpen)
             kMobile
                 ? Padding(
-                    padding: const EdgeInsets.fromLTRB(
+                    padding: EdgeInsets.fromLTRB(
                         M.gutter, 2, M.gutter, 4),
                     child: ListSearchField(
                       controller: _search,
@@ -567,7 +567,7 @@ class TasksPanelState extends State<TasksPanel> {
           if (_tasks.isNotEmpty)
             Padding(
               padding: kMobile
-                  ? const EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 0)
+                  ? EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 0)
                   : const EdgeInsets.fromLTRB(10, 2, 10, 4),
               child: _statusStrip(),
             ),
@@ -585,7 +585,7 @@ class TasksPanelState extends State<TasksPanel> {
   }
 
   Widget _phoneHeader() => Padding(
-        padding: const EdgeInsets.fromLTRB(M.gutter, 16, M.gutter, 6),
+        padding: EdgeInsets.fromLTRB(M.gutter, 16, M.gutter, 6),
         child: Row(children: [
           Text('Tasks', style: TS.pageTitle()),
           const Spacer(),
@@ -640,7 +640,7 @@ class TasksPanelState extends State<TasksPanel> {
       onLoadMore: _feed.loadMore,
       sessionFolders: _sessionFolders,
       padding: kMobile
-          ? const EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 16)
+          ? EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 16)
           : const EdgeInsets.fromLTRB(10, 2, 10, 16),
     );
   }

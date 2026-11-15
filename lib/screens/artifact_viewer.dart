@@ -72,7 +72,7 @@ Future<void> showArtifactSheet(
     enableDrag: false,
     backgroundColor: AppColors.bg,
     sheetAnimationStyle: sheetMotion,
-    shape: const RoundedRectangleBorder(
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
     ),
     clipBehavior: Clip.antiAlias,

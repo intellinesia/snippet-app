@@ -273,9 +273,9 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
       title: 'Add context',
       child: Row(children: [
         _attachOption('camera', 'Camera', 'camera'),
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         _attachOption('image', 'Photos', 'photos'),
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         _attachOption('file', 'Files', 'files'),
       ]),
     );
@@ -368,7 +368,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(M.gutter, 10, M.gutter, 0),
+              padding: EdgeInsets.fromLTRB(M.gutter, 10, M.gutter, 0),
               child: Row(children: [
                 RoundBtn(
                   icon: 'chevron-left',
@@ -382,7 +382,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
             Expanded(
               child: LayoutBuilder(
                 builder: (context, box) => SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: M.gutter),
+                  padding: EdgeInsets.symmetric(horizontal: M.gutter),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       minHeight: box.maxHeight,
@@ -426,7 +426,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(M.gutter, 8, M.gutter, 16),
+              padding: EdgeInsets.fromLTRB(M.gutter, 8, M.gutter, 16),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 660),
@@ -1022,7 +1022,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(M.gutter, 4, 8, 6),
+                  padding: EdgeInsets.fromLTRB(M.gutter, 4, 8, 6),
                   child: Row(children: [
                     Expanded(
                       child: Text('Choose folder', style: TS.sectionTitle()),
@@ -1060,7 +1060,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
   Widget _breadcrumbs() {
     final crumbs = _crumbs;
     return Container(
-      margin: const EdgeInsets.fromLTRB(M.gutter, 2, M.gutter, 8),
+      margin: EdgeInsets.fromLTRB(M.gutter, 2, M.gutter, 8),
       padding: const EdgeInsets.only(left: 14, right: 4),
       decoration: BoxDecoration(
         color: AppColors.surface1,
@@ -1146,7 +1146,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
       for (final f in files) _fileRow(f),
     ];
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 10),
+      padding: EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 10),
       itemCount: rows.length,
       itemBuilder: (_, i) => rows[i],
     );
@@ -1160,7 +1160,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
               width: 22,
               child:
                   Center(child: AppIcon('file', size: 16, color: AppColors.fg4))),
-          const SizedBox(width: S.s12),
+          SizedBox(width: S.s12),
           Expanded(
             child: Text(e.name,
                 maxLines: 1,
@@ -1186,7 +1186,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
                   child: Center(
                       child: AppIcon('folder',
                           size: 19, color: AppColors.fg3))),
-              const SizedBox(width: S.s12),
+              SizedBox(width: S.s12),
               Expanded(
                 child: Text(e.name,
                     maxLines: 1,
@@ -1314,7 +1314,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
         );
     return Container(
       color: AppColors.bg,
-      padding: const EdgeInsets.fromLTRB(M.gutter, 10, M.gutter, 0),
+      padding: EdgeInsets.fromLTRB(M.gutter, 10, M.gutter, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

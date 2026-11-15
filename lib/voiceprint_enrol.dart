@@ -168,14 +168,14 @@ class VoiceprintGroup extends StatelessWidget {
                 child: Text(title,
                     style: sans(kMobile ? 16 : 14,
                         weight: W.label, color: AppColors.fg1))),
-            const SizedBox(width: S.s8),
+            SizedBox(width: S.s8),
             Tag(tag, tone: tone),
           ]),
-          const SizedBox(height: S.s4),
+          SizedBox(height: S.s4),
           Text(sub, style: sans(13, color: AppColors.fg3, height: 1.4)),
-          const SizedBox(height: S.s12),
+          SizedBox(height: S.s12),
           _Steps(done: n, active: phase != EnrolPhase.idle, tone: tone),
-          const SizedBox(height: S.s12),
+          SizedBox(height: S.s12),
           switch (phase) {
             EnrolPhase.recording => _recording(n),
             EnrolPhase.saving => Text('Checking your sample…',
@@ -196,9 +196,9 @@ class VoiceprintGroup extends StatelessWidget {
           _Sentence(text: enrolSentences[n % enrolSentences.length], n: n),
         if (error != null) ...[
           Text(error!, style: sans(13, color: AppColors.danger, height: 1.4)),
-          const SizedBox(height: S.s8),
+          SizedBox(height: S.s8),
         ],
-        if (!done && error == null) const SizedBox(height: S.s12),
+        if (!done && error == null) SizedBox(height: S.s12),
         Wrap(
             alignment: WrapAlignment.start,
             spacing: S.s8,
@@ -237,21 +237,21 @@ class VoiceprintGroup extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _Sentence(text: enrolSentences[n % enrolSentences.length], n: n),
-            const SizedBox(height: S.s12),
+            SizedBox(height: S.s12),
             Row(children: [
               Expanded(child: _Meter(levels: l.levels)),
-              const SizedBox(width: S.s12),
+              SizedBox(width: S.s12),
               Text('${secs.toStringAsFixed(1)} / 5 s',
                   style: TS.codeSmall(AppColors.fg2)),
             ]),
-            const SizedBox(height: S.s8),
+            SizedBox(height: S.s8),
             _Bar(frac: frac),
-            const SizedBox(height: S.s8),
+            SizedBox(height: S.s8),
             Text(
               canStop ? 'Good. Stop now or keep going.' : 'Keep reading…',
               style: sans(13, color: AppColors.fg3),
             ),
-            const SizedBox(height: S.s12),
+            SizedBox(height: S.s12),
             Wrap(spacing: S.s8, runSpacing: S.s8, children: [
               Btn('Stop',
                   small: true, disabled: !canStop, onTap: canStop ? onStop : null),
@@ -276,7 +276,7 @@ class _Steps extends StatelessWidget {
     final (fg, _) = toneColors(tone == Tone.neutral ? Tone.accent : tone);
     return Row(children: [
       for (var i = 0; i < kEnrolTarget; i++) ...[
-        if (i > 0) const SizedBox(width: S.s8),
+        if (i > 0) SizedBox(width: S.s8),
         Container(
           width: 28,
           height: 6,
@@ -288,7 +288,7 @@ class _Steps extends StatelessWidget {
           ),
         ),
       ],
-      const SizedBox(width: S.s12),
+      SizedBox(width: S.s12),
       Text('${done.clamp(0, kEnrolTarget)}/$kEnrolTarget',
           style: TS.codeSmall(AppColors.fg3)),
     ]);
@@ -303,14 +303,14 @@ class _Sentence extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(S.s12),
+      padding: EdgeInsets.all(S.s12),
       decoration: BoxDecoration(
         color: AppColors.surface2,
         borderRadius: BorderRadius.circular(R.md),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('READ ALOUD', style: TS.overline(AppColors.fg4)),
-        const SizedBox(height: S.s4),
+        SizedBox(height: S.s4),
         Text('“$text”',
             style: sans(kMobile ? 16 : 15, color: AppColors.fg1, height: 1.4)),
       ]),

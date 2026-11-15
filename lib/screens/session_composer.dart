@@ -317,22 +317,22 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           behavior: HitTestBehavior.opaque,
           child: Padding(
             padding:
-                const EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
+                EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
             child: Text(label, style: sans(12, color: color)),
           ),
         );
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: S.s6),
+      padding: EdgeInsets.only(bottom: S.s6),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (count > 1)
             Padding(
-              padding: const EdgeInsets.only(bottom: S.s4),
+              padding: EdgeInsets.only(bottom: S.s4),
               child: Row(children: [
-                const SizedBox(width: S.s6),
+                SizedBox(width: S.s6),
                 Text('$count queued', style: sans(12, color: AppColors.fg4)),
                 const Spacer(),
                 textAction('Clear', _cancelAllQueued, AppColors.fg4),
@@ -345,7 +345,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               shrinkWrap: true,
               padding: EdgeInsets.zero,
               itemCount: count,
-              separatorBuilder: (_, __) => const SizedBox(height: S.s4),
+              separatorBuilder: (_, __) => SizedBox(height: S.s4),
               itemBuilder: (_, qi) => _queuedItemRow(qi, queue[qi]),
             ),
           ),
@@ -435,7 +435,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               Text('+${images.length - 3}',
                   style: sans(11, tabular: true, color: AppColors.fg4)),
           ],
-          const SizedBox(width: S.s8),
+          SizedBox(width: S.s8),
           Expanded(
             child: Text(
               label,
@@ -446,7 +446,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             ),
           ),
           if (others > 0) ...[
-            const SizedBox(width: S.s6),
+            SizedBox(width: S.s6),
             AttachmentPill(audio: counts.$1, images: 0, files: counts.$3),
           ],
           AnimatedOpacity(

@@ -891,7 +891,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
       body = ListView(
         padding: kMobile
             ? const EdgeInsets.fromLTRB(16, 8, 16, 40)
-            : const EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s40),
+            : EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s40),
         children: _groups(v),
       );
     }

@@ -197,12 +197,12 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                     ),
                     Expanded(
                       child: ListView(
-                        padding: const EdgeInsets.fromLTRB(
+                        padding: EdgeInsets.fromLTRB(
                             S.s8, 0, S.s8, S.s12),
                         children: [
                           for (final (group, entries) in _groups) ...[
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(
+                              padding: EdgeInsets.fromLTRB(
                                   10, 14, 10, S.s4),
                               child: Text(group,
                                   style: sans(12, color: AppColors.fg4)),
@@ -273,7 +273,7 @@ class _NavRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final iconColor = selected ? AppColors.fg1 : AppColors.fg3;
     return Padding(
-      padding: const EdgeInsets.only(bottom: S.s2),
+      padding: EdgeInsets.only(bottom: S.s2),
       child: HoverSurface(
         onTap: onTap,
         selected: selected,

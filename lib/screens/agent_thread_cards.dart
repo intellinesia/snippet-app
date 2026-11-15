@@ -543,7 +543,7 @@ Widget _approvalCard(CoordinationEvent e, Map<dynamic, dynamic> approval) {
                   collapsedLines: 4,
                 ),
               if (parsed.secrets.isNotEmpty) ...[
-                if (code.isNotEmpty) const SizedBox(height: S.s6),
+                if (code.isNotEmpty) SizedBox(height: S.s6),
                 Wrap(
                   spacing: S.s6,
                   runSpacing: S.s4,
@@ -993,7 +993,7 @@ class _ToolActivityCardState extends State<_ToolActivityCard> {
         ),
         if (_open)
           Padding(
-            padding: const EdgeInsets.only(top: S.s4),
+            padding: EdgeInsets.only(top: S.s4),
             child: Stack(
               children: [
                 Positioned(

@@ -191,7 +191,7 @@ class MobileHomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(M.gutter, 6, M.gutter, 6),
+        padding: EdgeInsets.fromLTRB(M.gutter, 6, M.gutter, 6),
         child: SizedBox(
           height: 44,
           child: Stack(
@@ -262,7 +262,7 @@ class MobileMissionBar extends StatelessWidget {
     return SizedBox(
       height: 60,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: M.gutter),
+        padding: EdgeInsets.symmetric(horizontal: M.gutter),
         child: Row(children: [
           const SizedBox(width: 40),
           const SizedBox(width: 10),
@@ -420,7 +420,7 @@ class MobileBackBar extends StatelessWidget {
     return SizedBox(
       height: 60,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: M.gutter),
+        padding: EdgeInsets.symmetric(horizontal: M.gutter),
         child: Row(children: [
           if (back == null && trailing.isNotEmpty && !pill)
             const SizedBox(width: 40)
@@ -746,7 +746,7 @@ class _MobileMenu extends StatelessWidget {
                       ),
                     ),
                   ),
-                const SizedBox(height: S.s8),
+                SizedBox(height: S.s8),
                 if (client != null) ...[
                   _row('task', 'Tasks', MobileMenuPick.tasks),
                   _row('analytics', 'Usage', MobileMenuPick.usage),

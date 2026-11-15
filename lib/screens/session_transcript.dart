@@ -1107,7 +1107,7 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
                               size: 14, color: AppColors.fg3),
                         ),
                 ),
-                const SizedBox(width: S.s8),
+                SizedBox(width: S.s8),
                 Flexible(
                   child: Text.rich(
                     TextSpan(children: [
@@ -1132,7 +1132,7 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
           alignment: Alignment.topCenter,
           child: open
               ? Padding(
-                  padding: const EdgeInsets.only(top: S.s4, bottom: S.s6),
+                  padding: EdgeInsets.only(top: S.s4, bottom: S.s6),
                   child: Padding(
                     padding: const EdgeInsets.only(left: 7),
                     child: Container(
@@ -1140,12 +1140,12 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
                         border: Border(
                             left: BorderSide(color: AppColors.border)),
                       ),
-                      padding: const EdgeInsets.only(left: S.s12),
+                      padding: EdgeInsets.only(left: S.s12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           for (var i = 0; i < widget.rows.length; i++) ...[
-                            if (i > 0) const SizedBox(height: S.s2),
+                            if (i > 0) SizedBox(height: S.s2),
                             widget.rows[i],
                           ],
                         ],

@@ -155,7 +155,7 @@ class PresentedFileCard extends StatelessWidget {
         width: double.infinity,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SingleImage(client: client, path: path),
-          const SizedBox(height: S.s4),
+          SizedBox(height: S.s4),
           Row(children: [
             Expanded(
               child: Text(caption.isNotEmpty ? caption : _name,
@@ -309,7 +309,7 @@ class _PresentedFilesState extends State<PresentedFiles> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(2, S.s4, 0, S.s2),
+          padding: EdgeInsets.fromLTRB(2, S.s4, 0, S.s2),
           child: Row(children: [
             Expanded(
               child: Text('Shared ${files.length} files',
@@ -344,7 +344,7 @@ class _PresentedFilesState extends State<PresentedFiles> {
             behavior: HitTestBehavior.opaque,
             onTap: () => setState(() => _all = !_all),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(2, S.s4, 0, S.s4),
+              padding: EdgeInsets.fromLTRB(2, S.s4, 0, S.s4),
               child: Text(_all ? 'Show fewer' : 'Show $hidden more',
                   style: TS.meta(AppColors.accent)),
             ),

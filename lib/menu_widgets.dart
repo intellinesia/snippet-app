@@ -62,7 +62,7 @@ PopupMenuItem<T> appMenuItem<T>({
       ),
       if (detail != null) Text(detail, style: TS.meta()),
       if (selected) ...[
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         AppIcon('check', size: 14, color: AppColors.accent),
       ],
     ]),
@@ -213,7 +213,7 @@ class _SheetRowBody extends StatelessWidget {
                         ? AppColors.danger
                         : AppColors.fg3));
     return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: M.minTarget + 8),
+      constraints: BoxConstraints(minHeight: M.minTarget + 8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 11),
         child: Row(children: [
@@ -276,8 +276,8 @@ class SheetGrabHandle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: compact
-            ? const EdgeInsets.only(top: S.s4)
-            : const EdgeInsets.only(top: S.s8, bottom: S.s8),
+            ? EdgeInsets.only(top: S.s4)
+            : EdgeInsets.only(top: S.s8, bottom: S.s8),
         child: Center(
           child: Container(
             width: 36,
@@ -466,7 +466,7 @@ List<Widget> _appMenuSheetEntries<T>(
   for (var i = 0; i < items.length; i++) {
     final entry = items[i];
     if (entry is PopupMenuDivider) {
-      out.add(const SizedBox(height: S.s8));
+      out.add(SizedBox(height: S.s8));
       prevRow = false;
       continue;
     }
@@ -483,7 +483,7 @@ List<Widget> _appMenuSheetEntries<T>(
       out.add(Padding(
         padding: heading
             ? EdgeInsets.only(top: out.isEmpty ? S.s4 : S.s16, bottom: S.s4)
-            : const EdgeInsets.symmetric(vertical: S.s4),
+            : EdgeInsets.symmetric(vertical: S.s4),
         child: child,
       ));
       prevRow = false;

@@ -160,11 +160,11 @@ class NotificationStack extends StatelessWidget {
           ]);
         }),
         Padding(
-          padding: const EdgeInsets.only(top: S.s6),
+          padding: EdgeInsets.only(top: S.s6),
           child: Align(
             alignment: kMobile ? Alignment.topCenter : Alignment.topRight,
             child: Container(
-              padding: const EdgeInsets.all(S.s2),
+              padding: EdgeInsets.all(S.s2),
               decoration: BoxDecoration(
                 color: AppColors.surface2,
                 border: Border.all(color: AppColors.lineStrong),
@@ -205,7 +205,7 @@ class NotificationStack extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: S.s4),
+          SizedBox(height: S.s4),
           for (final (i, p) in rows.indexed) ...[
             if (i > 0)
               Padding(
@@ -235,7 +235,7 @@ class NotificationStack extends StatelessWidget {
             Text('Notifications',
                 style: sans(kMobile ? 14 : 13,
                     weight: W.label, color: AppColors.fg1)),
-            const SizedBox(width: S.s8),
+            SizedBox(width: S.s8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
@@ -247,7 +247,7 @@ class NotificationStack extends StatelessWidget {
             ),
             const Spacer(),
             _QuietButton('Clear all', onClearAll),
-            const SizedBox(width: S.s4),
+            SizedBox(width: S.s4),
             _Toggle(
                 label: 'Collapse',
                 icon: 'chevron-up',
@@ -260,7 +260,7 @@ class NotificationStack extends StatelessWidget {
           child: ConstrainedBox(
             constraints: BoxConstraints(maxHeight: maxH),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: S.s6),
+              padding: EdgeInsets.only(bottom: S.s6),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -326,12 +326,12 @@ class _Toggle extends StatelessWidget {
                   ),
               ]),
             ),
-            const SizedBox(width: S.s6),
+            SizedBox(width: S.s6),
           ],
           Text(label,
               style: sans(kMobile ? 13 : 12,
                   weight: W.label, color: AppColors.fg2, tabular: true)),
-          const SizedBox(width: S.s4),
+          SizedBox(width: S.s4),
           AppIcon(icon, size: 13, color: AppColors.fg3),
         ]),
       ),

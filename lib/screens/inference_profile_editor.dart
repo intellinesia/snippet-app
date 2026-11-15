@@ -681,7 +681,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
               small: true, disabled: !canSave, onTap: _save),
         ],
       ),
-      const SizedBox(height: S.s8),
+      SizedBox(height: S.s8),
       SettingsGroup(
         header: 'Model',
         footer: _modelHint,
@@ -1214,7 +1214,7 @@ class _ModelPickerSheetState extends State<_ModelPickerSheet> {
             // just a grab handle and a labelled field, so nothing named the
             // surface or offered a visible way out.
             Padding(
-              padding: const EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s12),
+              padding: EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s12),
               child: Row(children: [
                 AppIcon('cpu', size: 16, color: AppColors.fg2),
                 const SizedBox(width: 9),

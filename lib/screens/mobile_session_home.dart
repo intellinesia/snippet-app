@@ -60,7 +60,7 @@ class _MobileHomeTopBarState extends State<MobileHomeTopBar> {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(M.gutter, 6, M.gutter, 10),
+        padding: EdgeInsets.fromLTRB(M.gutter, 6, M.gutter, 10),
         child: SizedBox(
           height: 44,
           child: AnimatedSwitcher(

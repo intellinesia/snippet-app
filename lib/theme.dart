@@ -1,6 +1,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -1187,6 +1188,18 @@ class ThemeManager extends ChangeNotifier {
   ThemeManager._();
 
   ResolvedTheme _resolved = ResolvedTheme.fromPreset(_black);
+  ResolvedTheme? _signedFor;
+  String _signature = '';
+
+  /// Changes only when the resolved tokens do, so list refreshes and
+  /// reconnects do not force a full-tree rebuild.
+  String get tokenSignature {
+    if (!identical(_signedFor, _resolved)) {
+      _signedFor = _resolved;
+      _signature = jsonEncode(_resolved.toJson());
+    }
+    return _signature;
+  }
   List<ThemeSummary> _daemonThemes = const [];
   List<String> _liveGroups = const [];
   String? _activeId;
@@ -1234,11 +1247,25 @@ class ThemeManager extends ChangeNotifier {
         _resolved.accentName,
         _resolved.type.uiFont,
         _resolved.type.codeFont,
+        _resolved.type.scale,
+        Object.hash(
+          _resolved.type.weights.body,
+          _resolved.type.weights.label,
+          _resolved.type.weights.title,
+          _resolved.type.weights.strong,
+        ),
+        _resolved.shape.radiusScale,
+        _resolved.space.density,
+        _resolved.motion.speed,
         _resolved.colorPreset.bg.toARGB32(),
         _resolved.colorPreset.accent.toARGB32(),
         _resolved.chat.sentRaw,
         _resolved.chat.sentTextRaw,
         _resolved.chat.fontSize.current,
+        Object.hashAll([
+          for (final e in _resolved.syntax.entries)
+            Object.hash(e.key, e.value.toARGB32()),
+        ]),
       );
 
   ThemePreset get baseTheme {
@@ -1725,6 +1752,16 @@ class ThemeManager extends ChangeNotifier {
 /// Convenience accessor — same as `ThemeManager.instance.current`.
 ThemePreset get currentTheme => ThemeManager.instance.current;
 
+/// Marks every descendant element dirty so theme token updates reach subtrees
+/// that read static getters without depending on [Theme.of].
+void rebuildThemeElements(BuildContext context) {
+  void rebuild(Element e) {
+    e.markNeedsBuild();
+    e.visitChildren(rebuild);
+  }
+  (context as Element).visitChildren(rebuild);
+}
+
 // ---------------------------------------------------------------------------
 // AppColors — dynamic getters that read from the active theme preset. Every
 // `AppColors.xxx` call site works unchanged; the value shifts when the user
@@ -1829,35 +1866,41 @@ Color get readingBg => AppColors.canvas;
 // ---------------------------------------------------------------------------
 
 class R {
-  static const xs = 4.0;
-  static const sm = 6.0;
-  static const chip = 6.0;
-  static const md = 8.0;
-  static const card = 10.0;
-  static const lg = 12.0;
-  static const sheetTop = 20.0;
-  static const pill = 999.0;
+  static ThemeShapeTokens get _shape => ThemeManager.instance.resolved.shape;
+  static double get _scale => math.max(0.0, _shape.radiusScale);
+
+  static double get xs => _shape.radii.xs * _scale;
+  static double get sm => _shape.radii.sm * _scale;
+  static double get chip => _shape.radii.chip * _scale;
+  static double get md => _shape.radii.md * _scale;
+  static double get card => _shape.radii.card * _scale;
+  static double get lg => _shape.radii.lg * _scale;
+  static double get sheetTop => _shape.radii.sheetTop * _scale;
+  static double get pill => _shape.radii.pill;
 }
 
 AnimationStyle get sheetMotion => AnimationStyle(
-      duration: const Duration(milliseconds: 320),
-      reverseDuration: const Duration(milliseconds: 220),
+      duration: Motion._scaled(320),
+      reverseDuration: Motion._scaled(220),
       curve: Curves.easeOutCubic,
       reverseCurve: Curves.easeOutCubic.flipped,
     );
 
 /// The only spacing values the app uses.
 class S {
-  static const s2 = 2.0;
-  static const s4 = 4.0;
-  static const s6 = 6.0;
-  static const s8 = 8.0;
-  static const s12 = 12.0;
-  static const s16 = 16.0;
-  static const s20 = 20.0;
-  static const s24 = 24.0;
-  static const s32 = 32.0;
-  static const s40 = 40.0;
+  static ThemeSpaceTokens get _space => ThemeManager.instance.resolved.space;
+  static double get _density => math.max(0.0, _space.density);
+
+  static double get s2 => _space.scale.s2 * _density;
+  static double get s4 => _space.scale.s4 * _density;
+  static double get s6 => _space.scale.s6 * _density;
+  static double get s8 => _space.scale.s8 * _density;
+  static double get s12 => _space.scale.s12 * _density;
+  static double get s16 => _space.scale.s16 * _density;
+  static double get s20 => _space.scale.s20 * _density;
+  static double get s24 => _space.scale.s24 * _density;
+  static double get s32 => _space.scale.s32 * _density;
+  static double get s40 => _space.scale.s40 * _density;
 }
 
 /// Overlays lift with a surface step plus this shadow; nothing else casts one.
@@ -1875,37 +1918,50 @@ List<BoxShadow> get overlayShadow => const [
 // ---------------------------------------------------------------------------
 
 class Motion {
+  static ThemeMotionTokens get _motion => ThemeManager.instance.resolved.motion;
+  static double get _speed => _motion.speed.clamp(0.1, 10.0);
+
+  static Duration _scaled(int ms) => ms <= 0
+      ? Duration.zero
+      : Duration(milliseconds: (ms / _speed).round().clamp(1, 60000));
+
   /// Pointer-down acknowledgement — the fastest thing in the app.
-  static const press = Duration(milliseconds: 100);
+  static Duration get press => _scaled(_motion.durations.press);
 
   /// Hover, colour and icon swaps.
-  static const quick = Duration(milliseconds: 150);
+  static Duration get quick => _scaled(_motion.durations.quick);
 
   /// A small surface appearing or changing: pills, chips, inline rows.
-  static const fast = Duration(milliseconds: 180);
+  static Duration get fast => _scaled(_motion.durations.fast);
 
   /// Panels, drawers, switches.
-  static const base = Duration(milliseconds: 220);
+  static Duration get base => _scaled(_motion.durations.base);
 
   /// Sheets, menus and dialogs arriving.
-  static const open = Duration(milliseconds: 240);
+  static Duration get open => _scaled(_motion.durations.open);
 
   /// Anything leaving — always shorter than it took to arrive.
-  static const close = Duration(milliseconds: 180);
+  static Duration get close => _scaled(_motion.durations.close);
 
   /// Route push and pop.
-  static const page = Duration(milliseconds: 260);
+  static Duration get page => _scaled(_motion.durations.page);
 
   /// A deliberate, infrequent change. Never for a repeated interaction.
-  static const slow = Duration(milliseconds: 300);
+  static Duration get slow => _scaled(_motion.durations.slow);
 
   /// One direction of the looping "working" breath on a live status glyph.
-  static const pulse = Duration(milliseconds: 1150);
+  static Duration get pulse => _scaled(_motion.durations.pulse);
 
   /// Fast start, long soft settle — the iOS sheet curve.
-  static const enter = Cubic(0.32, 0.72, 0, 1);
+  static Cubic get enter {
+    final c = _motion.curves.enter;
+    return Cubic(c[0], c[1], c[2], c[3]);
+  }
 
-  static const exit = Cubic(0.23, 1, 0.32, 1);
+  static Cubic get exit {
+    final c = _motion.curves.exit;
+    return Cubic(c[0], c[1], c[2], c[3]);
+  }
 
   static const move = Curves.easeInOut;
 }
@@ -1931,37 +1987,41 @@ bool reduceMotion(BuildContext context) =>
 // ---------------------------------------------------------------------------
 
 class M {
+  static ThemeSpaceMetrics get _metrics =>
+      ThemeManager.instance.resolved.space.metrics;
+  static double get _typeScale => ThemeManager.instance.resolved.type.scale;
+
   /// Phone content follows the desktop pane/composer inset: 16px. Touch targets
   /// grow on mobile; the visual gutter does not become a second design system.
-  static const gutter = 16.0;
+  static double get gutter => _metrics.gutter.current;
 
   /// Touch geometry. These are hit areas, not typography scales.
-  static const navRow = 52.0;
-  static const minTarget = 44.0;
-  static const appBarHeight = 56.0;
+  static double get navRow => _metrics.navRow.current;
+  static double get minTarget => _metrics.minTarget.current;
+  static double get appBarHeight => _metrics.appBarHeight.current;
 
   /// Editorial hierarchy: page titles create a clear entry point, while section
   /// titles and row labels step down without collapsing into the same visual size.
-  static const pageTitle = 24.0;
-  static const sectionTitle = 18.0;
+  static double get pageTitle => 24.0 * _typeScale;
+  static double get sectionTitle => 18.0 * _typeScale;
 
   /// Reading text is intentionally larger than compact metadata. The 15px row
   /// title keeps navigation scannable without competing with conversation prose.
-  static const rowTitle = 15.0;
-  static const body = 17.0;
-  static const meta = 12.0;
-  static const monoMeta = 10.0;
+  static double get rowTitle => 15.0 * _typeScale;
+  static double get body => 17.0 * _typeScale;
+  static double get meta => 12.0 * _typeScale;
+  static double get monoMeta => 10.0 * _typeScale;
 
   /// Phone row geometry: a 52px visual rhythm with a >=44px target, rather than
   /// turning every row into a card.
-  static const rowHeight = 52.0;
-  static const rowPadH = 12.0;
+  static double get rowHeight => _metrics.rowHeight.current;
+  static double get rowPadH => _metrics.rowPadH.current;
 
   /// Legacy shell-strip metrics remain for narrow desktop only; phone navigation
   /// no longer renders that strip.
-  static const tabStripHeight = 56.0;
-  static const tabIconSize = 28.0;
-  static const tabActionSize = 52.0;
+  static double get tabStripHeight => _metrics.tabStripHeight.current;
+  static double get tabIconSize => _metrics.tabIconSize.current;
+  static double get tabActionSize => _metrics.tabActionSize.current;
 }
 
 /// Inset between a pane's edge and the composer card.
@@ -1978,17 +2038,28 @@ const double kComposerGutter = 16;
 // renders heavier than 500.
 // ---------------------------------------------------------------------------
 
+FontWeight _fontWeightFor(int value) {
+  final idx =
+      ((value / 100).round() - 1).clamp(0, FontWeight.values.length - 1);
+  return FontWeight.values[idx];
+}
+
 /// Role weights — prefer these over raw `FontWeight.wNNN` so the ramp stays
 /// consistent across the app.
 class W {
-  static const body = FontWeight.w400;
-  static const label = FontWeight.w500;
-  static const title = FontWeight.w500;
-  static const strong = FontWeight.w500;
+  static ThemeTypeWeights get _weights =>
+      ThemeManager.instance.resolved.type.weights;
+
+  static FontWeight get body => _fontWeightFor(_weights.body);
+  static FontWeight get label => _fontWeightFor(_weights.label);
+  static FontWeight get title => _fontWeightFor(_weights.title);
+  static FontWeight get strong => _fontWeightFor(_weights.strong);
 }
 
-FontWeight weightFor(FontWeight w) =>
-    w.value > FontWeight.w500.value ? FontWeight.w500 : w;
+FontWeight weightFor(FontWeight w) {
+  final cap = math.max(FontWeight.w500.value, W.strong.value);
+  return w.value > cap ? _fontWeightFor(cap) : w;
+}
 
 /// Text keeps the face's own spacing; only titles from 20px tighten, to -2%
 /// at 28px.
@@ -1996,7 +2067,7 @@ double _tracking(double size) =>
     size < 20 ? 0 : size * -0.02 * ((size - 18) / 10).clamp(0.0, 1.0);
 
 TextStyle sans(double size,
-        {FontWeight weight = W.body,
+        {FontWeight? weight,
         double? height,
         double? spacing,
         Color? color,
@@ -2004,7 +2075,7 @@ TextStyle sans(double size,
     TextStyle(
       fontFamily: kSansFamily,
       fontSize: size,
-      fontWeight: weightFor(weight),
+      fontWeight: weightFor(weight ?? W.body),
       height: height ?? 1.33,
       letterSpacing: spacing ?? _tracking(size),
       color: color ?? AppColors.fg2,
@@ -2015,11 +2086,11 @@ TextStyle sans(double size,
     );
 
 TextStyle display(double size,
-        {FontWeight weight = W.title, Color? color, double? height}) =>
+        {FontWeight? weight, Color? color, double? height}) =>
     TextStyle(
       fontFamily: kSansFamily,
       fontSize: size,
-      fontWeight: weightFor(weight),
+      fontWeight: weightFor(weight ?? W.title),
       height: height ?? 1.15,
       letterSpacing: _tracking(size),
       color: color ?? AppColors.fg1,
@@ -2027,13 +2098,13 @@ TextStyle display(double size,
 
 /// Numbers, ids and labels: the UI face with tabular figures, not a code face.
 TextStyle mono(double size,
-        {FontWeight weight = W.body,
+        {FontWeight? weight,
         double? height,
         double? spacing,
         Color? color,
         bool tabular = true}) =>
     sans(size,
-        weight: weight,
+        weight: weight ?? W.body,
         height: height ?? 1.45,
         spacing: spacing,
         color: color ?? AppColors.fg1,
@@ -2041,7 +2112,7 @@ TextStyle mono(double size,
 
 /// Real code: the user's chosen monospace face.
 TextStyle codeMono(double size,
-        {FontWeight weight = W.body,
+        {FontWeight? weight,
         double? height,
         double? spacing,
         Color? color,
@@ -2052,7 +2123,7 @@ TextStyle codeMono(double size,
       fontFamily: monoFamily,
       fontFamilyFallback: const ['GeistMono', 'monospace'],
       fontSize: size,
-      fontWeight: weightFor(weight),
+      fontWeight: weightFor(weight ?? W.body),
       height: height ?? 1.45,
       letterSpacing: spacing,
       color: color ?? AppColors.fg1,
@@ -2067,8 +2138,11 @@ TextStyle codeMono(double size,
 /// Five call sites had drifted into three different treatments (no spacing,
 /// `0.4`, `0.5`) with three different inks; this is the single replacement.
 TextStyle caps(double size,
-        {Color? color, double? spacing, FontWeight weight = W.label}) =>
-    sans(size, weight: weight, color: color, spacing: spacing ?? size * 0.06);
+        {Color? color, double? spacing, FontWeight? weight}) =>
+    sans(size,
+        weight: weight ?? W.label,
+        color: color,
+        spacing: spacing ?? size * 0.06);
 
 String get kSansFamily => ThemeManager.instance.currentFont.family;
 const kSerifFamily = 'Literata';
@@ -2076,11 +2150,11 @@ const kSerifFamily = 'Literata';
 /// The agent's own writing on a phone: a screen serif at a reading size, so a
 /// long answer reads like a page rather than a wall of UI text.
 TextStyle serif(double size,
-        {FontWeight weight = W.body, double? height, Color? color}) =>
+        {FontWeight? weight, double? height, Color? color}) =>
     TextStyle(
       fontFamily: kSerifFamily,
       fontSize: size,
-      fontWeight: weightFor(weight),
+      fontWeight: weightFor(weight ?? W.body),
       height: height ?? 1.6,
       color: color ?? AppColors.fg1,
     );
@@ -2090,41 +2164,70 @@ String get monoFamily => ThemeManager.instance.currentMonoFont.family;
 
 /// Type roles. Screens use these, not raw sizes.
 class TS {
-  static TextStyle pageTitle([Color? c]) => kMobile
-      ? sans(28, weight: W.strong, height: 34 / 28, color: c ?? AppColors.fg1)
-      : sans(20, weight: W.strong, height: 26 / 20, color: c ?? AppColors.fg1);
-  static TextStyle sectionTitle([Color? c]) => kMobile
-      ? sans(20, weight: W.strong, height: 26 / 20, color: c ?? AppColors.fg1)
-      : sans(16, weight: W.strong, height: 22 / 16, color: c ?? AppColors.fg1);
-  static TextStyle rowTitle([Color? c]) => kMobile
-      ? sans(16, weight: W.title, height: 22 / 16, color: c ?? AppColors.fg1)
-      : sans(13, weight: W.title, height: 18 / 13, color: c ?? AppColors.fg1);
-  static TextStyle body([Color? c]) => sans(kMobile ? 16 : 14,
-      height: kMobile ? 24 / 16 : 22 / 14, color: c ?? AppColors.fg2);
-  static TextStyle ui([Color? c]) => kMobile
-      ? sans(14, height: 20 / 14, color: c ?? AppColors.fg2)
-      : sans(13, height: 18 / 13, color: c ?? AppColors.fg2);
-  static TextStyle label([Color? c]) => kMobile
-      ? sans(13, weight: W.label, height: 18 / 13, color: c ?? AppColors.fg2)
-      : sans(12, weight: W.label, height: 16 / 12, color: c ?? AppColors.fg2);
-  static TextStyle meta([Color? c]) => kMobile
-      ? sans(13, height: 18 / 13, color: c ?? AppColors.fg3, tabular: true)
-      : sans(12, height: 16 / 12, color: c ?? AppColors.fg3, tabular: true);
-  static TextStyle caption([Color? c]) => kMobile
-      ? sans(12, height: 16 / 12, color: c ?? AppColors.fg3)
-      : sans(11, height: 14 / 11, color: c ?? AppColors.fg3);
-  static TextStyle overline([Color? c]) => kMobile
-      ? caps(12, color: c ?? AppColors.fg3).copyWith(height: 16 / 12)
-      : caps(11, color: c ?? AppColors.fg3).copyWith(height: 14 / 11);
+  static ThemeTypeTokens get _type => ThemeManager.instance.resolved.type;
+  static ThemeTypeStyle _style(String key) =>
+      _type.styles[key] ?? ThemeTypeTokens.defaultStyles[key]!;
+
+  static TextStyle _sansStyle(
+    String key,
+    Color defaultColor, {
+    Color? color,
+    bool tabular = false,
+  }) {
+    final s = _style(key);
+    final scale = _type.scale;
+    return TextStyle(
+      fontFamily: kSansFamily,
+      fontSize: s.size.current * scale,
+      fontWeight: _fontWeightFor(s.weight),
+      height: s.height.current,
+      letterSpacing: s.tracking.current * scale,
+      color: color ?? defaultColor,
+      fontFeatures: tabular ? const [FontFeature.tabularFigures()] : null,
+    );
+  }
+
+  static TextStyle _codeStyle(String key, Color defaultColor, {Color? color}) {
+    final s = _style(key);
+    final scale = _type.scale;
+    final tracking = s.tracking.current * scale;
+    return TextStyle(
+      fontFamily: monoFamily,
+      fontFamilyFallback: const ['GeistMono', 'monospace'],
+      fontSize: s.size.current * scale,
+      fontWeight: _fontWeightFor(s.weight),
+      height: s.height.current,
+      letterSpacing: tracking == 0.0 ? null : tracking,
+      color: color ?? defaultColor,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+  }
+
+  static TextStyle pageTitle([Color? c]) =>
+      _sansStyle('pageTitle', AppColors.fg1, color: c);
+  static TextStyle sectionTitle([Color? c]) =>
+      _sansStyle('sectionTitle', AppColors.fg1, color: c);
+  static TextStyle rowTitle([Color? c]) =>
+      _sansStyle('rowTitle', AppColors.fg1, color: c);
+  static TextStyle body([Color? c]) =>
+      _sansStyle('body', AppColors.fg2, color: c);
+  static TextStyle ui([Color? c]) => _sansStyle('ui', AppColors.fg2, color: c);
+  static TextStyle label([Color? c]) =>
+      _sansStyle('label', AppColors.fg2, color: c);
+  static TextStyle meta([Color? c]) =>
+      _sansStyle('meta', AppColors.fg3, color: c, tabular: true);
+  static TextStyle caption([Color? c]) =>
+      _sansStyle('caption', AppColors.fg3, color: c);
+  static TextStyle overline([Color? c]) =>
+      _sansStyle('overline', AppColors.fg3, color: c);
 
   /// The agent's prose: the body sans a step up, with reading line height.
-  static TextStyle reading([Color? c]) => kMobile
-      ? sans(16, height: 26 / 16, color: c ?? AppColors.fg1)
-      : sans(14, height: 22 / 14, color: c ?? AppColors.fg1);
-  static TextStyle code([Color? c]) => codeMono(kMobile ? 13 : 12,
-      height: kMobile ? 20 / 13 : 18 / 12, color: c ?? AppColors.fg2);
+  static TextStyle reading([Color? c]) =>
+      _sansStyle('reading', AppColors.fg1, color: c);
+  static TextStyle code([Color? c]) =>
+      _codeStyle('code', AppColors.fg2, color: c);
   static TextStyle codeSmall([Color? c]) =>
-      codeMono(12, height: 16 / 12, color: c ?? AppColors.fg3);
+      _codeStyle('codeSmall', AppColors.fg3, color: c);
 }
 
 // ---------------------------------------------------------------------------

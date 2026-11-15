@@ -77,7 +77,7 @@ class _LanesScreenState extends State<LanesScreen> {
                     body: 'Parallel agent work will appear here when started.')
                 : ListView(
                     padding:
-                        const EdgeInsets.fromLTRB(S.s16, S.s16, S.s16, S.s32),
+                        EdgeInsets.fromLTRB(S.s16, S.s16, S.s16, S.s32),
                     children: laneSections(lanes,
                         liveLanes: widget.liveLanes, client: widget.client),
                   ),
@@ -106,10 +106,10 @@ List<Widget> laneSections(List<LaneInfo> lanes,
   final out = <Widget>[];
   void section(String label, List<LaneInfo> items, Tone tone) {
     if (items.isEmpty) return;
-    if (out.isNotEmpty) out.add(const SizedBox(height: S.s20));
+    if (out.isNotEmpty) out.add(SizedBox(height: S.s20));
     out.add(PaneLabel(label));
     for (var i = 0; i < items.length; i++) {
-      if (i > 0) out.add(const SizedBox(height: S.s8));
+      if (i > 0) out.add(SizedBox(height: S.s8));
       out.add(LaneDetailCard(
           key: ValueKey(items[i].id),
           lane: items[i],
@@ -312,7 +312,7 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
       if (value == null || value.trim().isEmpty) return;
       final text = sans(kMobile ? 14 : 12, height: 1.45, color: AppColors.fg2);
       sections.add(Padding(
-        padding: const EdgeInsets.only(bottom: S.s12),
+        padding: EdgeInsets.only(bottom: S.s12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -429,7 +429,7 @@ class _LaneDetailScreenState extends State<LaneDetailScreen> {
                         icon: 'layers',
                         title: 'Lane unavailable',
                         body: 'This delegated lane is no longer available.')
-                    : ListView(padding: const EdgeInsets.all(S.s16), children: [
+                    : ListView(padding: EdgeInsets.all(S.s16), children: [
                         LaneDetailCard(lane: lane, detail: true),
                       ])),
           ])),
@@ -449,7 +449,7 @@ class _ActivityHistory extends StatelessWidget {
       children: [
         Text('Activity · ${entries.length}',
             style: mono(10, color: AppColors.fg3)),
-        const SizedBox(height: S.s8),
+        SizedBox(height: S.s8),
         Column(children: [
           for (var i = 0; i < items.length; i++)
             _TimelineEntryRow(
@@ -481,7 +481,7 @@ class _TimelineEntryRow extends StatelessWidget {
             width: 12,
             child: Column(children: [
               Container(
-                margin: const EdgeInsets.only(top: S.s6),
+                margin: EdgeInsets.only(top: S.s6),
                 width: 6,
                 height: 6,
                 decoration: BoxDecoration(
@@ -493,7 +493,7 @@ class _TimelineEntryRow extends StatelessWidget {
                 Expanded(child: Container(width: 1, color: AppColors.line)),
             ]),
           ),
-          const SizedBox(width: S.s8),
+          SizedBox(width: S.s8),
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(bottom: last ? 0 : S.s12),

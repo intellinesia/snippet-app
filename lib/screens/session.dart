@@ -1588,7 +1588,7 @@ class _SessionScreenState extends State<SessionScreen>
                                               Padding(
                                                 key: const ValueKey(
                                                     'load-earlier'),
-                                                padding: const EdgeInsets.only(
+                                                padding: EdgeInsets.only(
                                                     bottom: S.s12),
                                                 child: Center(
                                                   child: _loadingOlderTranscript

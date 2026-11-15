@@ -242,7 +242,7 @@ class _DesktopPanel extends StatelessWidget {
     final h = MediaQuery.sizeOf(context).height;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(S.s24),
+        padding: EdgeInsets.all(S.s24),
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: 640, maxHeight: h * 0.7),
           // Same frame as the Settings dialog.
@@ -433,7 +433,7 @@ class _PreviewContentState extends State<_PreviewContent> {
     final title = pasted ? 'Pasted text' : (a.isAudio ? 'Voice note' : a.name);
     Widget header = desktop
         ? Padding(
-            padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s8, S.s8),
+            padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s8, S.s8),
             child: Row(children: [
               Expanded(
                 child: Row(children: [
@@ -443,7 +443,7 @@ class _PreviewContentState extends State<_PreviewContent> {
                         overflow: TextOverflow.ellipsis,
                         style: sans(13, weight: W.label, color: AppColors.fg1)),
                   ),
-                  const SizedBox(width: S.s8),
+                  SizedBox(width: S.s8),
                   Text(_metaLine(), maxLines: 1, style: TS.meta()),
                 ]),
               ),
@@ -484,7 +484,7 @@ class _PreviewContentState extends State<_PreviewContent> {
                   size: iconSize,
                   iconSize: 16,
                   onTap: _remove),
-          if (desktop) const SizedBox(width: S.s4),
+          if (desktop) SizedBox(width: S.s4),
         ],
         if (!(pasted && _sheet))
           round
@@ -548,7 +548,7 @@ class _PreviewContentState extends State<_PreviewContent> {
 
   Widget _textBody(PreviewAttachment a, TextEditingController c) => Container(
         margin: EdgeInsets.fromLTRB(S.s16, _sheet ? S.s4 : S.s12, S.s16, S.s8),
-        padding: const EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s12),
+        padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s12),
         decoration: BoxDecoration(
             color: AppColors.tint1,
             borderRadius: BorderRadius.circular(R.card)),
@@ -584,13 +584,13 @@ class _PreviewContentState extends State<_PreviewContent> {
           ? Column(mainAxisSize: MainAxisSize.min, children: [
               Row(children: [
                 Expanded(child: insert),
-                const SizedBox(width: S.s8),
+                SizedBox(width: S.s8),
                 Expanded(child: done),
               ]),
             ])
           : Row(mainAxisAlignment: MainAxisAlignment.end, children: [
               insert,
-              const SizedBox(width: S.s8),
+              SizedBox(width: S.s8),
               done,
             ]),
     );
@@ -631,7 +631,7 @@ class _PreviewContentState extends State<_PreviewContent> {
         Align(
           alignment: at,
           child: Padding(
-            padding: const EdgeInsets.all(S.s8),
+            padding: EdgeInsets.all(S.s8),
             child: on
                 ? DecoratedBox(
                     decoration: BoxDecoration(
@@ -833,7 +833,7 @@ class _FileText extends StatelessWidget {
         builder: (_, snap) {
           if (!snap.hasData) return Center(child: DelayedSpinner(size: 20));
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(S.s16),
+            padding: EdgeInsets.all(S.s16),
             child: SelectableText(snap.data!, style: TS.code(AppColors.fg1)),
           );
         },
@@ -853,7 +853,7 @@ class _FileCard extends StatelessWidget {
         : fileIconFor(a.name);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(S.s24),
+        padding: EdgeInsets.all(S.s24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(
             width: 64,
@@ -863,7 +863,7 @@ class _FileCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(R.lg)),
             child: Icon(icon, size: 28, color: tint),
           ),
-          const SizedBox(height: S.s12),
+          SizedBox(height: S.s12),
           Text(
               note ??
                   (a.kind == MediaKind.pdf
@@ -872,7 +872,7 @@ class _FileCard extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TS.meta()),
           if (a.hasFile) ...[
-            const SizedBox(height: S.s16),
+            SizedBox(height: S.s16),
             Btn('Open',
                 variant: BtnVariant.surface,
                 small: !kMobile,

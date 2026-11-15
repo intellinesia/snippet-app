@@ -549,7 +549,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             final children = <Widget>[];
             Widget hairline() => Container(
                 height: 1,
-                margin: const EdgeInsets.symmetric(horizontal: M.gutter),
+                margin: EdgeInsets.symmetric(horizontal: M.gutter),
                 color: AppColors.border);
             if (q.isEmpty) {
               final pinnedRows = <Widget>[];
@@ -595,7 +595,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
               if (pinnedRows.isNotEmpty) {
                 children.add(Padding(
                   padding:
-                      const EdgeInsets.fromLTRB(M.gutter, 14, M.gutter, 4),
+                      EdgeInsets.fromLTRB(M.gutter, 14, M.gutter, 4),
                   child: Text('Pinned',
                       style: sans(13, weight: W.label, color: AppColors.fg3)),
                 ));
@@ -612,7 +612,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 if (rows.isEmpty) continue;
                 if (grp != AgentGroup.recent || pinnedRows.isNotEmpty) {
                   children.add(Padding(
-                    padding: const EdgeInsets.fromLTRB(
+                    padding: EdgeInsets.fromLTRB(
                         M.gutter, 14, M.gutter, 4),
                     child: Text(label,
                         style: sans(13, weight: W.label, color: color)),
@@ -631,7 +631,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 children.insert(
                     0,
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: M.gutter),
+                      padding: EdgeInsets.symmetric(horizontal: M.gutter),
                       child: hero(
                           agents.length,
                           buckets[AgentGroup.needsYou]!.length,
@@ -648,7 +648,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             }
             if (emptyState != null) {
               children.add(Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: M.gutter),
+                  padding: EdgeInsets.symmetric(horizontal: M.gutter),
                   child: emptyState));
             }
             return ListView(

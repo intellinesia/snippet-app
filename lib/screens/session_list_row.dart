@@ -429,7 +429,7 @@ class SessionListRow extends StatelessWidget {
                   onLongPress: onLongPress == null ? null : longPress,
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: M.minTarget),
+                      constraints: BoxConstraints(minHeight: M.minTarget),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Align(

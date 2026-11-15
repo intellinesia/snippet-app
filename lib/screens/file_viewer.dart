@@ -393,7 +393,7 @@ class _FileViewerState extends State<FileViewer> {
                 maxScale: 6,
                 child: Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(S.s16),
+                    padding: EdgeInsets.all(S.s16),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(R.md),
                       child: Image.network(

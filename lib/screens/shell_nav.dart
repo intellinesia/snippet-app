@@ -309,14 +309,14 @@ class NavBackRow extends StatelessWidget {
         child: SizedBox(
           height: 56,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s12, 0),
+            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s12, 0),
             child: Row(children: [
               IconBtn('chevron-left',
                   size: 32,
                   iconSize: 18,
                   tooltip: 'Back',
                   onTap: onBack),
-              const SizedBox(width: S.s2),
+              SizedBox(width: S.s2),
               Expanded(
                 child: Text(title,
                     maxLines: 1,

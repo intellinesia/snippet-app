@@ -68,24 +68,6 @@ Map<String, dynamic> _chatGroup() => {
       'longReplies': 'bubble',
     };
 
-Map<String, dynamic> _styleEntry(
-  int phoneSize,
-  int desktopSize,
-  FontWeight weight,
-  double height,
-  double tracking,
-) =>
-    {
-      'size': phoneSize == desktopSize
-          ? phoneSize
-          : {'phone': phoneSize, 'desktop': desktopSize},
-      'weight': weight.value,
-      'height': height,
-      'tracking': tracking,
-    };
-
-double _round3(double v) => (v * 1000).round() / 1000;
-
 Map<String, dynamic> _typeGroup() => {
       'uiFont': ThemeManager.defaultFont,
       'codeFont': ThemeManager.defaultMonoFont,
@@ -97,18 +79,8 @@ Map<String, dynamic> _typeGroup() => {
         'strong': W.strong.value,
       },
       'styles': {
-        'pageTitle': _styleEntry(28, 20, W.strong, _round3(26 / 20), -0.08),
-        'sectionTitle': _styleEntry(20, 16, W.strong, _round3(22 / 16), 0.0),
-        'rowTitle': _styleEntry(16, 13, W.title, _round3(18 / 13), 0.0),
-        'body': _styleEntry(16, 14, W.body, _round3(22 / 14), 0.0),
-        'ui': _styleEntry(14, 13, W.body, _round3(18 / 13), 0.0),
-        'label': _styleEntry(13, 12, W.label, _round3(16 / 12), 0.0),
-        'meta': _styleEntry(13, 12, W.body, _round3(16 / 12), 0.0),
-        'caption': _styleEntry(12, 11, W.body, _round3(14 / 11), 0.0),
-        'overline': _styleEntry(12, 11, W.label, _round3(14 / 11), 0.66),
-        'reading': _styleEntry(16, 14, W.body, _round3(22 / 14), 0.0),
-        'code': _styleEntry(13, 12, W.body, _round3(18 / 12), 0.0),
-        'codeSmall': _styleEntry(12, 12, W.body, _round3(16 / 12), 0.0),
+        for (final e in ThemeTypeTokens.defaultStyles.entries)
+          e.key: e.value.toJson(),
       },
     };
 

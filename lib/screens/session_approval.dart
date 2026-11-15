@@ -196,7 +196,7 @@ class ApprovalBarState extends State<ApprovalBar> {
                 : toolTitle(tool);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, S.s4, 0, S.s6),
+      padding: EdgeInsets.fromLTRB(0, S.s4, 0, S.s6),
       child: ChatCard(children: [
         Flexible(
           child: SingleChildScrollView(
@@ -746,7 +746,7 @@ class QuestionBarState extends State<QuestionBar> {
       focusNode: _keys,
       onKeyEvent: _onKey,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(0, S.s4, 0, S.s6),
+        padding: EdgeInsets.fromLTRB(0, S.s4, 0, S.s6),
         child: ChatCard(children: [
           Flexible(
             child: SingleChildScrollView(

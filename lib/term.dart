@@ -8,6 +8,39 @@ import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
+/// Terminal colour palette derived from the active theme's `terminal.ansi`
+/// slots, falling back to the default palette for missing entries.
+TerminalTheme resolvedTerminalTheme() {
+  final ansi = ThemeManager.instance.resolved.terminal.ansi;
+  Color slot(int i) =>
+      i < ansi.length ? ansi[i] : ThemeTerminalTokens.defaultAnsi[i];
+  return TerminalTheme(
+    cursor: const Color(0xff9DB0FF),
+    selection: const Color(0x559DB0FF),
+    foreground: const Color(0xffEDE7DD),
+    background: const Color(0xff0b0b0b),
+    black: slot(0),
+    red: slot(1),
+    green: slot(2),
+    yellow: slot(3),
+    blue: slot(4),
+    magenta: slot(5),
+    cyan: slot(6),
+    white: slot(7),
+    brightBlack: slot(8),
+    brightRed: slot(9),
+    brightGreen: slot(10),
+    brightYellow: slot(11),
+    brightBlue: slot(12),
+    brightMagenta: slot(13),
+    brightCyan: slot(14),
+    brightWhite: slot(15),
+    searchHitBackground: const Color(0xffD4923C),
+    searchHitBackgroundCurrent: const Color(0xffE3A85A),
+    searchHitForeground: const Color(0xff000000),
+  );
+}
+
 /// Session-shell view backed by xterm.dart so cursor, wrap, and CSI
 /// come from a real emulator instead of the homemade VT parser.
 class SessionTermView extends StatefulWidget {
@@ -60,33 +93,7 @@ class _SessionTermViewState extends State<SessionTermView> {
     ('F10', TerminalKey.f10),
   ];
 
-  static final _emberTheme = TerminalTheme(
-    cursor: const Color(0xff9DB0FF),
-    selection: const Color(0x559DB0FF),
-    foreground: const Color(0xffEDE7DD),
-    background: const Color(0xff0b0b0b),
-    black: const Color(0xff1B1917),
-    red: const Color(0xffE5745F),
-    green: const Color(0xff7FB88F),
-    yellow: const Color(0xffD4923C),
-    blue: const Color(0xff9DB0FF),
-    magenta: const Color(0xffC79BD8),
-    cyan: const Color(0xff7FC4C0),
-    white: const Color(0xffCFC8BC),
-    brightBlack: const Color(0xff7A7368),
-    brightRed: const Color(0xffEE9583),
-    brightGreen: const Color(0xff9DCCA9),
-    brightYellow: const Color(0xffE3A85A),
-    brightBlue: const Color(0xffB4C3FF),
-    brightMagenta: const Color(0xffD8B4E6),
-    brightCyan: const Color(0xff9FD6D2),
-    brightWhite: const Color(0xffEDE7DD),
-    searchHitBackground: const Color(0xffD4923C),
-    searchHitBackgroundCurrent: const Color(0xffE3A85A),
-    searchHitForeground: const Color(0xff000000),
-  );
-
-  static TerminalTheme get _theme => _emberTheme;
+  static TerminalTheme get _theme => resolvedTerminalTheme();
 
   @override
   void initState() {

@@ -380,7 +380,7 @@ class _GitScreenState extends State<GitScreen> {
                     files: staged,
                     staged: true,
                   ),
-                  const SizedBox(height: S.s16),
+                  SizedBox(height: S.s16),
                 ],
                 if (changed.isNotEmpty) ...[
                   _sectionCard(
@@ -392,7 +392,7 @@ class _GitScreenState extends State<GitScreen> {
                     files: changed,
                     staged: false,
                   ),
-                  const SizedBox(height: S.s16),
+                  SizedBox(height: S.s16),
                 ],
                 if (untracked.isNotEmpty) ...[
                   _sectionCard(
@@ -418,7 +418,7 @@ class _GitScreenState extends State<GitScreen> {
     return Padding(
       padding: kMobile
           ? const EdgeInsets.fromLTRB(16, 6, 16, 4)
-          : const EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.s4),
+          : EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.s4),
       child: Row(children: [
         Expanded(
           child: Align(
@@ -440,7 +440,7 @@ class _GitScreenState extends State<GitScreen> {
                     padding: EdgeInsets.symmetric(horizontal: kMobile ? 14 : S.s8),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       AppIcon('git-branch', size: 16, color: AppColors.accent),
-                      const SizedBox(width: S.s6),
+                      SizedBox(width: S.s6),
                       Flexible(
                         child: Text(
                           st.branch.isEmpty ? '(no branch)' : st.branch,
@@ -449,7 +449,7 @@ class _GitScreenState extends State<GitScreen> {
                           style: TS.label(AppColors.fg1),
                         ),
                       ),
-                      const SizedBox(width: S.s4),
+                      SizedBox(width: S.s4),
                       AppIcon('chevron-down', size: 14, color: AppColors.fg3),
                     ]),
                   ),
@@ -458,7 +458,7 @@ class _GitScreenState extends State<GitScreen> {
             ),
           ),
         ),
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         if (hasUp) ...[
           Btn(
             st.behind > 0 ? 'Pull ${st.behind}' : 'Pull',
@@ -469,7 +469,7 @@ class _GitScreenState extends State<GitScreen> {
             onTap: () =>
                 _op(() => widget.client.gitPull(_repo), okMsg: 'Pulled'),
           ),
-          const SizedBox(width: S.s6),
+          SizedBox(width: S.s6),
           Btn(
             st.ahead > 0 ? 'Push ${st.ahead}' : 'Push',
             small: true,
@@ -506,7 +506,7 @@ class _GitScreenState extends State<GitScreen> {
       margin: EdgeInsets.only(bottom: kMobile ? 10 : S.s16),
       padding: kMobile
           ? const EdgeInsets.fromLTRB(18, 12, 10, 10)
-          : const EdgeInsets.fromLTRB(S.s12, S.s8, S.s8, S.s8),
+          : EdgeInsets.fromLTRB(S.s12, S.s8, S.s8, S.s8),
       decoration: BoxDecoration(
         color: kMobile ? AppColors.surface1 : AppColors.tint1,
         borderRadius: BorderRadius.circular(kMobile ? 24 : R.md),
@@ -537,12 +537,12 @@ class _GitScreenState extends State<GitScreen> {
                     : 'Commit message (${kMacOS ? 'Cmd' : 'Ctrl'}+Enter to commit)',
                 hintStyle:
                     kMobile ? sans(16, color: AppColors.fg4) : TS.ui(AppColors.fg4),
-                contentPadding: const EdgeInsets.symmetric(vertical: S.s4),
+                contentPadding: EdgeInsets.symmetric(vertical: S.s4),
                 border: InputBorder.none,
               ),
             ),
           ),
-          const SizedBox(height: S.s8),
+          SizedBox(height: S.s8),
           Row(children: [
             Text(
               hasStaged
@@ -592,7 +592,7 @@ class _GitScreenState extends State<GitScreen> {
           count: count,
           action: actionLabel,
           onAction: _busy ? null : onAction,
-          padding: const EdgeInsets.fromLTRB(S.s4, 0, 0, S.s4),
+          padding: EdgeInsets.fromLTRB(S.s4, 0, 0, S.s4),
         ),
         ListGroup(children: [
           for (final f in expanded ? files : files.take(_collapsedLimit))
@@ -666,7 +666,7 @@ class _GitScreenState extends State<GitScreen> {
           child: InkWell(
             onTap: () => _openDiff(f),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(S.s12, S.s4, S.s4, S.s4),
+              padding: EdgeInsets.fromLTRB(S.s12, S.s4, S.s4, S.s4),
               child: Row(children: [
                 Container(
                   width: 20,
@@ -791,7 +791,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
         ),
         const SizedBox(height: 10),
         if (local.isNotEmpty) ...[
-          const SectionHeader('Local',
+          SectionHeader('Local',
               padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6)),
           ListGroup(children: [
             for (final b in local)
@@ -803,10 +803,10 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                     : () => widget.onSelect(b, create: false),
               ),
           ]),
-          const SizedBox(height: S.s16),
+          SizedBox(height: S.s16),
         ],
         if (remotes.isNotEmpty) ...[
-          const SectionHeader('Remote',
+          SectionHeader('Remote',
               padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6)),
           ListGroup(children: [
             for (final b in remotes)
@@ -816,7 +816,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
                 onTap: () => widget.onSelect(b, create: false),
               ),
           ]),
-          const SizedBox(height: S.s16),
+          SizedBox(height: S.s16),
         ],
         if (local.isEmpty && remotes.isEmpty)
           Padding(
@@ -1188,11 +1188,11 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
       actions: [
         if (_additions > 0 || _deletions > 0)
           Padding(
-            padding: const EdgeInsets.only(right: S.s8),
+            padding: EdgeInsets.only(right: S.s8),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               if (_additions > 0)
                 Tag('+$_additions', tone: Tone.ok, mono: true),
-              if (_additions > 0 && _deletions > 0) const SizedBox(width: S.s4),
+              if (_additions > 0 && _deletions > 0) SizedBox(width: S.s4),
               if (_deletions > 0)
                 Tag('-$_deletions', tone: Tone.danger, mono: true),
             ]),
@@ -1297,8 +1297,8 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
     if (line.type == _DiffLineType.hunk) {
       return Container(
         width: double.infinity,
-        margin: const EdgeInsets.symmetric(vertical: S.s8),
-        padding: const EdgeInsets.symmetric(horizontal: S.s12, vertical: 2),
+        margin: EdgeInsets.symmetric(vertical: S.s8),
+        padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: 2),
         child: Text(line.text.isEmpty ? '⋯' : line.text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

@@ -118,7 +118,7 @@ class _CardMarkdownBodyState extends State<CardMarkdownBody> {
             behavior: HitTestBehavior.opaque,
             onTap: () => setState(() => _open = !_open),
             child: Padding(
-              padding: const EdgeInsets.only(top: S.s2),
+              padding: EdgeInsets.only(top: S.s2),
               child: Text(_open ? 'Show less' : 'Show more',
                   style: sans(TranscriptCard.metaSize,
                       weight: W.label, color: AppColors.fg3)),
@@ -317,7 +317,7 @@ class _PlanChecklistState extends State<PlanChecklist> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 mark(state),
-                const SizedBox(width: S.s6),
+                SizedBox(width: S.s6),
                 Expanded(
                   child: Text(text,
                       maxLines: _open ? null : 1,
@@ -337,7 +337,7 @@ class _PlanChecklistState extends State<PlanChecklist> {
             behavior: HitTestBehavior.opaque,
             onTap: () => setState(() => _open = !_open),
             child: Padding(
-              padding: const EdgeInsets.only(top: S.s4, left: 20),
+              padding: EdgeInsets.only(top: S.s4, left: 20),
               child: Text(
                   _open ? 'Show less' : 'Show all ${steps.length} steps',
                   style: sans(TranscriptCard.metaSize,
@@ -482,19 +482,19 @@ class _AutonomousRoundCardState extends State<AutonomousRoundCard> {
             AppIcon('activity',
                 size: 12,
                 color: r.due.isNotEmpty ? AppColors.run : AppColors.fg3),
-            const SizedBox(width: S.s6),
+            SizedBox(width: S.s6),
             Expanded(
               child: Text('Automated wake · $summary',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: sans(meta, color: AppColors.fg3)),
             ),
-            const SizedBox(width: S.s8),
+            SizedBox(width: S.s8),
             Text(_roundTime(r.time), style: sans(meta, color: AppColors.fg4)),
           ]),
           if (items.isNotEmpty && !_open)
             Padding(
-              padding: const EdgeInsets.only(left: 18, top: S.s2),
+              padding: EdgeInsets.only(left: 18, top: S.s2),
               child: Text.rich(
                 TextSpan(children: [
                   TextSpan(text: items.first),
@@ -511,13 +511,13 @@ class _AutonomousRoundCardState extends State<AutonomousRoundCard> {
           if (_open)
             for (final (label, list) in sections) ...[
               Padding(
-                padding: const EdgeInsets.only(left: 18, top: S.s4),
+                padding: EdgeInsets.only(left: 18, top: S.s4),
                 child: Text(label,
                     style: sans(meta, weight: W.label, color: AppColors.fg4)),
               ),
               for (final item in list)
                 Padding(
-                  padding: const EdgeInsets.only(left: 18, top: S.s2),
+                  padding: EdgeInsets.only(left: 18, top: S.s2),
                   child: SelectableText(_plain(item), style: body),
                 ),
             ],
@@ -584,7 +584,7 @@ class _QuietWakesRowState extends State<QuietWakesRow> {
                 children: [
                   Row(children: [
                     AppIcon('activity', size: 12, color: AppColors.fg3),
-                    const SizedBox(width: S.s6),
+                    SizedBox(width: S.s6),
                     Expanded(
                       child: Text(
                           wakes.length == 1
@@ -594,22 +594,22 @@ class _QuietWakesRowState extends State<QuietWakesRow> {
                           overflow: TextOverflow.ellipsis,
                           style: sans(meta, color: AppColors.fg3)),
                     ),
-                    const SizedBox(width: S.s8),
+                    SizedBox(width: S.s8),
                     Text(_span, style: sans(meta, color: AppColors.fg4)),
-                    const SizedBox(width: S.s4),
+                    SizedBox(width: S.s4),
                     AppIcon(_open ? 'chevron-down' : 'chevron-right',
                         size: 12, color: AppColors.fg4),
                   ]),
                   if (_open)
                     for (final wake in wakes)
                       Padding(
-                        padding: const EdgeInsets.only(left: 18, top: S.s8),
+                        padding: EdgeInsets.only(left: 18, top: S.s8),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(_roundTime(wake.time),
                                 style: sans(meta, color: AppColors.fg4)),
-                            const SizedBox(height: S.s2),
+                            SizedBox(height: S.s2),
                             SelectableText(_plain(wake.reply),
                                 style: TranscriptCard.bodyStyle),
                           ],
@@ -811,13 +811,13 @@ class _AmbientTurnCardState extends State<AmbientTurnCard> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(top: S.s4, right: 2),
+              padding: EdgeInsets.only(top: S.s4, right: 2),
               child: Text(meta,
                   textAlign: TextAlign.end,
                   style: sans(kMobile ? 13 : 12, color: AppColors.fg4)),
             ),
             if (_open) ...[
-              const SizedBox(height: S.s6),
+              SizedBox(height: S.s6),
               if (turn.judged.isNotEmpty ||
                   turn.addressed != null ||
                   turn.userVoice != null)
@@ -834,12 +834,12 @@ class _AmbientTurnCardState extends State<AmbientTurnCard> {
                     textAlign: TextAlign.end,
                     style: detail),
               if (turn.interruptedReply.isNotEmpty) ...[
-                const SizedBox(height: S.s4),
+                SizedBox(height: S.s4),
                 Text('Heard of its last reply: ${turn.interruptedReply}',
                     textAlign: TextAlign.end, style: detail),
               ],
               for (final line in turn.context) ...[
-                const SizedBox(height: S.s4),
+                SizedBox(height: S.s4),
                 Text('Earlier, not sent: $line',
                     textAlign: TextAlign.end, style: detail),
               ],
