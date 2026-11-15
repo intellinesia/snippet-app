@@ -552,7 +552,8 @@ class _DotGridPainter extends CustomPainter {
   static Float32List _grid(Size size) {
     if (size == _size && _points != null) return _points!;
     const step = 12.0;
-    final cols = (size.width / step).ceil(), rows = (size.height / step).ceil();
+    int count(double extent) => ((extent - step / 2) / step).ceil().clamp(0, 1 << 16);
+    final cols = count(size.width), rows = count(size.height);
     final out = Float32List(cols * rows * 2);
     var i = 0;
     for (var r = 0; r < rows; r++) {
