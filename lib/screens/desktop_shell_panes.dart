@@ -160,6 +160,18 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           !kMobile ? (host, open) => _setTerminalHost(t.key, host, open) : null,
       onOpenScheduled:
           !kMobile ? () => _toggleRightPanel(_RightPanel.recurring) : null,
+      onOpenRightPanel: !kMobile
+          ? (panel) {
+              switch (panel) {
+                case 'changes':
+                  _dispatchSessionAction('file_changes');
+                case 'lanes':
+                  _toggleRightPanel(_RightPanel.lanes);
+                case 'checkpoints':
+                  _toggleRightPanel(_RightPanel.checkpoints);
+              }
+            }
+          : null,
     );
   }
 
