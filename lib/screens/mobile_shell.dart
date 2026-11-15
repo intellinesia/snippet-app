@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../gesture_physics.dart';
+import '../glass.dart' show StatusInset;
 import '../theme.dart';
 import 'shell_models.dart';
 import '../chat_scene.dart' show SceneBackdrop;
@@ -202,9 +203,12 @@ class _MobileShellState extends State<MobileShell>
                       child: TickerMode(
                         enabled: _v.value > 0,
                         child: SceneBackdrop(
-                          child: SafeArea(
-                            bottom: false,
-                            child: activeTabBody,
+                          child: StatusInset(
+                            top: MediaQuery.paddingOf(context).top,
+                            child: SafeArea(
+                              bottom: false,
+                              child: activeTabBody,
+                            ),
                           ),
                         ),
                       ),

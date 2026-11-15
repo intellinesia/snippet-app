@@ -1549,7 +1549,8 @@ class _SessionScreenState extends State<SessionScreen>
                                 (!kMobile || widget.mobileTopBar != null))
                               _disconnectedBanner(),
                             Expanded(
-                              child: Stack(children: [
+                              // The glass header's frost reaches up behind the status bar.
+                              child: Stack(clipBehavior: Clip.none, children: [
                                 s == null
                                     ? Center(child: DelayedSpinner(size: 22))
                                     : NotificationListener<ScrollNotification>(
