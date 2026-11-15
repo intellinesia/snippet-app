@@ -10,6 +10,7 @@ import 'package:snippet/models.dart';
 import 'package:snippet/screens/session.dart';
 import 'package:snippet/screens/session_rail.dart';
 import 'package:snippet/theme.dart';
+import 'package:snippet/wake_models.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -44,6 +45,48 @@ class _Sink implements WebSocketSink {
   @override
   Future get done => _s.done;
 }
+
+class _Counting extends DaemonClient {
+  _Counting() : super('http://127.0.0.1:9090', 'tok');
+  final calls = <String>[];
+  Never _no(String name) {
+    calls.add(name);
+    throw Exception('offline');
+  }
+
+  @override
+  Future<GitStatus> gitStatus(String session) async => _no('git');
+  @override
+  Future<List<SessionInfo>> sessions({String? folder, int? limit}) async =>
+      _no('sessions');
+  @override
+  Future<List<Map<String, dynamic>>> bgList(String session) async => _no('bg');
+  @override
+  Future<WakeSchedule?> wake(String owner, {String? name}) async => _no('wake');
+  @override
+  Future<KeepWarmEntry?> keepWarmFor(String owner) async => _no('warm');
+  @override
+  Future<List<TaskItem>> tasks({String? status, String? agentId, int? limit}) async =>
+      _no('tasks');
+}
+
+Widget _rail(DaemonClient client, String status, {bool mc = false}) => MaterialApp(
+      theme: buildAppTheme(),
+      home: Scaffold(
+        body: SessionRail(
+          client: client,
+          sessionId: mc ? 'mission-control' : 'sess-1',
+          state: HarnessState.fromJson({'status': status, 'workspace': '/tmp/ws'}),
+          isMissionControl: mc,
+          profileLabel: 'Default',
+          resumeMode: 'ask',
+          onModel: () {},
+          onWakes: () {},
+          onGoal: () {},
+          onCycleResume: () {},
+        ),
+      ),
+    );
 
 Future<_Socket> _pump(
   WidgetTester tester, {
@@ -100,6 +143,37 @@ void main() {
     await _pump(tester, sessionId: 'sess-1', size: const Size(800, 700));
     expect(find.byType(SessionRail), findsNothing);
     await _dispose(tester);
+  });
+
+  testWidgets('a turn refreshes only the worktree and processes', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    SharedPreferences.setMockInitialValues({});
+    final client = _Counting();
+    await tester.pumpWidget(_rail(client, 'idle'));
+    await tester.pump();
+    expect(client.calls.toSet(), {'git', 'sessions', 'bg', 'wake', 'warm', 'tasks'});
+    client.calls.clear();
+    await tester.pumpWidget(_rail(client, 'running'));
+    await tester.pump();
+    expect(client.calls, unorderedEquals(['git', 'bg']));
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('Mission Control shows only Autonomy and Model', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    SharedPreferences.setMockInitialValues({});
+    final client = _Counting();
+    await tester.pumpWidget(_rail(client, 'idle', mc: true));
+    await tester.pump();
+    expect(find.text('Autonomy'), findsOneWidget);
+    expect(find.text('Model'), findsOneWidget);
+    for (final g in ['Workspace', 'Running', 'Task', 'History']) {
+      expect(find.text(g), findsNothing, reason: g);
+    }
+    expect(client.calls.toSet(), {'wake', 'warm'});
+    debugDefaultTargetPlatformOverride = null;
   });
 
   testWidgets('collapse toggle persists', (tester) async {

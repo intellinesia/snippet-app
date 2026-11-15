@@ -98,6 +98,7 @@ class _SessionRailState extends State<SessionRail> {
   bool? _warm;
   TaskItem? _task;
   int _gen = 0;
+  int _liveGen = 0;
 
   @override
   void initState() {
@@ -109,9 +110,11 @@ class _SessionRailState extends State<SessionRail> {
   @override
   void didUpdateWidget(SessionRail old) {
     super.didUpdateWidget(old);
-    if (old.state?.status != widget.state?.status ||
-        old.sessionId != widget.sessionId) {
+    if (old.sessionId != widget.sessionId) {
       _load();
+    } else if (old.state?.status != widget.state?.status) {
+      // A turn changes only the worktree and processes; the rest is per session.
+      _loadLive();
     }
   }
 
@@ -123,8 +126,26 @@ class _SessionRailState extends State<SessionRail> {
     }
   }
 
+  Future<void> _loadLive() async {
+    if (widget.isMissionControl) return;
+    final gen = ++_liveGen;
+    final c = widget.client;
+    final id = widget.sessionId;
+    final r = await Future.wait<Object?>([
+      _try(c.gitStatus(id)),
+      _try(c.bgList(id)),
+    ]);
+    if (!mounted || gen != _liveGen) return;
+    final procs = r[1] as List<Map<String, dynamic>>?;
+    setState(() {
+      _git = r[0] as GitStatus? ?? _git;
+      _procs = procs?.where((p) => p['running'] == true).length ?? _procs;
+    });
+  }
+
   Future<void> _load() async {
     final gen = ++_gen;
+    ++_liveGen;
     final c = widget.client;
     final id = widget.sessionId;
     final ws = widget.state?.workspace ?? '';
