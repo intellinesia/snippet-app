@@ -1209,7 +1209,13 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           label: 'Settled, ${rows.length}',
           child: ExcludeSemantics(
             child: InkWell(
-              onTap: () => setState(() => _settledOpen = !_settledOpen),
+              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+              splashFactory: NoSplash.splashFactory,
+              highlightColor: Colors.transparent,
+              onTap: () {
+                pickHaptic();
+                setState(() => _settledOpen = !_settledOpen);
+              },
               child: SizedBox(
                 height: M.minTarget + 4,
                 child: Row(children: [

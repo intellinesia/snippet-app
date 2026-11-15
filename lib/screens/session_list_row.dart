@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../ambient_loop.dart';
 import '../models.dart';
@@ -166,7 +165,10 @@ class _SessionGroupHeaderState extends State<SessionGroupHeader> {
               : kMobile
               ? GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: widget.onToggle,
+                  onTap: () {
+                    pickHaptic();
+                    widget.onToggle!();
+                  },
                   child: row,
                 )
               : HoverSurface(
@@ -387,7 +389,7 @@ class SessionListRow extends StatelessWidget {
     );
 
     void longPress() {
-      HapticFeedback.selectionClick();
+      holdHaptic();
       onLongPress?.call();
     }
 
@@ -413,9 +415,17 @@ class SessionListRow extends StatelessWidget {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: onTap,
+                  onTap: onTap == null
+                      ? null
+                      : () {
+                          tapHaptic();
+                          onTap!();
+                        },
                   splashFactory: NoSplash.splashFactory,
                   highlightColor: Colors.transparent,
+                  hoverColor: Colors.transparent,
+                  focusColor: Colors.transparent,
+                  overlayColor: const WidgetStatePropertyAll(Colors.transparent),
                   onLongPress: onLongPress == null ? null : longPress,
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     ConstrainedBox(
@@ -481,25 +491,10 @@ class _ProjectChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final trimmed = label.trim();
-    final letter =
-        trimmed.isEmpty ? '?' : trimmed.characters.first.toUpperCase();
     return Flexible(
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-          width: 13,
-          height: 13,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColors.surface3,
-            borderRadius: BorderRadius.circular(3),
-          ),
-          child: Text(
-            letter,
-            style: codeMono(9, color: AppColors.fg3, height: 1.0),
-          ),
-        ),
-        const SizedBox(width: 5),
+        AppIcon('folder', size: 11, color: AppColors.fg4),
+        const SizedBox(width: 4),
         Flexible(
           child: Text(
             label,

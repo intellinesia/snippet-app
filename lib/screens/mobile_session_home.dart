@@ -45,7 +45,6 @@ class _MobileHomeTopBarState extends State<MobileHomeTopBar> {
   late bool _searching = widget.controller.text.isNotEmpty;
 
   void _open() {
-    HapticFeedback.selectionClick();
     setState(() => _searching = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) widget.focusNode.requestFocus();
@@ -183,7 +182,10 @@ class MissionControlDock extends StatelessWidget {
         label: 'Ask Mission Control',
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: onOpen,
+          onTap: () {
+            tapHaptic();
+            onOpen();
+          },
           child: Glass(
             radius: BorderRadius.circular(28),
             child: SizedBox(
@@ -332,11 +334,21 @@ class LiveSessionCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: onTap,
+            overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+            splashFactory: NoSplash.splashFactory,
+            highlightColor: Colors.transparent,
+            hoverColor: Colors.transparent,
+            focusColor: Colors.transparent,
+            onTap: onTap == null
+                ? null
+                : () {
+                    tapHaptic();
+                    onTap!();
+                  },
             onLongPress: onLongPress == null
                 ? null
                 : () {
-                    HapticFeedback.selectionClick();
+                    holdHaptic();
                     onLongPress!();
                   },
             child: Container(
@@ -386,7 +398,14 @@ class LiveSessionCard extends StatelessWidget {
                   ],
                   const SizedBox(height: 10),
                   Row(children: [
-                    _Tag(projectLabel(s)),
+                    AppIcon('folder', size: 11, color: AppColors.fg4),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(projectLabel(s),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TS.meta()),
+                    ),
                     if (branch.isNotEmpty) ...[
                       const SizedBox(width: 8),
                       AppIcon('git-branch', size: 11, color: AppColors.fg4),
@@ -431,24 +450,6 @@ class LiveSessionCard extends StatelessWidget {
     }
     return null;
   }
-}
-
-class _Tag extends StatelessWidget {
-  const _Tag(this.label);
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-        decoration: BoxDecoration(
-          color: AppColors.tint2,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: sans(11, color: AppColors.fg3)),
-      );
 }
 
 /// A breathing ring that marks a control as live, such as Mission Control
@@ -551,7 +552,8 @@ class _DotGridPainter extends CustomPainter {
   static Float32List _grid(Size size) {
     if (size == _size && _points != null) return _points!;
     const step = 12.0;
-    final cols = (size.width / step).ceil(), rows = (size.height / step).ceil();
+    int count(double extent) => ((extent - step / 2) / step).ceil().clamp(0, 1 << 16);
+    final cols = count(size.width), rows = count(size.height);
     final out = Float32List(cols * rows * 2);
     var i = 0;
     for (var r = 0; r < rows; r++) {

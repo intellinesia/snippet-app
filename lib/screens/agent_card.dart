@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../ambient_loop.dart';
 import '../api.dart';
@@ -366,9 +365,12 @@ class _AgentCardState extends State<AgentCard> {
           child: InkWell(
             splashFactory: NoSplash.splashFactory,
             highlightColor: Colors.transparent,
-            onTap: widget.onOpen,
+            onTap: () {
+              tapHaptic();
+              widget.onOpen();
+            },
             onLongPress: () {
-              HapticFeedback.selectionClick();
+              holdHaptic();
               _actions(null);
             },
             child: Opacity(
@@ -449,7 +451,7 @@ class _AgentCardState extends State<AgentCard> {
         child: InkWell(
           onTap: widget.onOpen,
           onLongPress: () {
-            HapticFeedback.selectionClick();
+            holdHaptic();
             _actions(null);
           },
           borderRadius: BorderRadius.circular(8),

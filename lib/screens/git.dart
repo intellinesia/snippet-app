@@ -127,7 +127,6 @@ class _GitScreenState extends State<GitScreen> {
   }
 
   Future<void> _toggleStage(GitFile f, {required bool staged}) async {
-    HapticFeedback.selectionClick();
     setState(() => (staged ? _optUnstaged : _optStaged).add(f.path));
     try {
       final r = staged

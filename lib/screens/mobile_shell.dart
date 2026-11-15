@@ -110,6 +110,13 @@ class _MobileShellState extends State<MobileShell>
     _v.value = v;
   }
 
+  // On Android gesture navigation an edge swipe is also a system back; let
+  // whichever lands first win so one swipe never navigates twice.
+  DateTime? _swipeNavAt;
+  DateTime? _systemBackAt;
+  static bool _recent(DateTime? t) =>
+      t != null && DateTime.now().difference(t) < const Duration(milliseconds: 600);
+
   /// [onCommit] runs when the drag carries far or fast enough to switch.
   void _dragEnd(double velocityPx, double width, VoidCallback onCommit,
       {double? distanceThreshold, double? velocityThreshold}) {
@@ -126,6 +133,11 @@ class _MobileShellState extends State<MobileShell>
             velocity: vAlong,
             distanceThreshold: distanceThreshold ?? 80,
             velocityThreshold: vThresh)) {
+      if (_recent(_systemBackAt)) {
+        springTo(_v, _chatsVisible ? 0.0 : 1.0, vel, epsilon: 0.001);
+        return;
+      }
+      _swipeNavAt = DateTime.now();
       HapticFeedback.selectionClick();
       _commitVelocity = vel;
       onCommit();
@@ -354,7 +366,8 @@ class _MobileShellState extends State<MobileShell>
       return PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, _) {
-          if (didPop) return;
+          if (didPop || _recent(_swipeNavAt)) return;
+          _systemBackAt = DateTime.now();
           handleBack();
         },
         child: body,
@@ -364,7 +377,8 @@ class _MobileShellState extends State<MobileShell>
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
-        if (didPop) return;
+        if (didPop || _recent(_swipeNavAt)) return;
+        _systemBackAt = DateTime.now();
         if (ModalRoute.of(context)?.willHandlePopInternally ?? false) {
           Navigator.of(context).pop();
           return;
