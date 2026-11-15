@@ -52,7 +52,7 @@ class MasterPane extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
-        padding: const EdgeInsets.fromLTRB(S.s16, S.s16, S.s12, S.s8),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s16, S.s12, S.s8),
         child: Row(children: [
           Expanded(
             child: Text(title,
@@ -63,14 +63,14 @@ class MasterPane extends StatelessWidget {
       ),
       if (search != null)
         Padding(
-          padding: const EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s8),
+          padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s8),
           child: search,
         ),
       Expanded(
         child: children.isEmpty && empty != null
-            ? Padding(padding: const EdgeInsets.all(S.s16), child: empty)
+            ? Padding(padding: EdgeInsets.all(S.s16), child: empty)
             : ListView(
-                padding: const EdgeInsets.fromLTRB(S.s8, 0, S.s8, S.s16),
+                padding: EdgeInsets.fromLTRB(S.s8, 0, S.s8, S.s16),
                 children: children,
               ),
       ),
@@ -169,11 +169,11 @@ class SettingsHeader extends StatelessWidget {
       );
     }
     return Padding(
-      padding: const EdgeInsets.only(bottom: S.s8),
+      padding: EdgeInsets.only(bottom: S.s8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (back != null) ...[back!, const SizedBox(height: S.s8)],
+          if (back != null) ...[back!, SizedBox(height: S.s8)],
           Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
             Expanded(
               child: Text(title,
@@ -181,10 +181,10 @@ class SettingsHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TS.pageTitle()),
             ),
-            for (final a in actions) ...[const SizedBox(width: S.s8), a],
+            for (final a in actions) ...[SizedBox(width: S.s8), a],
           ]),
           if (subtitle != null && subtitle!.isNotEmpty) ...[
-            const SizedBox(height: S.s4),
+            SizedBox(height: S.s4),
             Text(subtitle!, style: TS.ui(AppColors.fg3)),
           ],
         ],
@@ -200,7 +200,7 @@ class SettingsColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, S.s32),
+      padding: EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, S.s32),
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(

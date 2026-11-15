@@ -213,7 +213,7 @@ class _SessionRailState extends State<SessionRail> {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 720),
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(vertical: S.s6),
+                    padding: EdgeInsets.symmetric(vertical: S.s6),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -489,7 +489,7 @@ class _RailGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10),
-      padding: const EdgeInsets.symmetric(vertical: S.s8),
+      padding: EdgeInsets.symmetric(vertical: S.s8),
       decoration: BoxDecoration(
         border: first
             ? null

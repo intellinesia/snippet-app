@@ -201,7 +201,7 @@ class VaultScreenState extends State<VaultScreen> {
               if (_adding) ..._form() else _addRow(names.isEmpty),
             ]),
             Padding(
-              padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+              padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
               child: Text(
                 'Use these as \$NAME in shell commands. Values stay on '
                 'the machine and are never shown again.',
@@ -301,7 +301,7 @@ class VaultScreenState extends State<VaultScreen> {
           if (!_adding) Btn('Add secret', small: true, icon: 'plus', onTap: _add),
         ],
       ),
-      const SizedBox(height: S.s8),
+      SizedBox(height: S.s8),
       content,
     ]);
   }

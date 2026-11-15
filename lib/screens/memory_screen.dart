@@ -277,7 +277,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 0),
+            padding: EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 0),
             child: Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
@@ -310,7 +310,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
           subtitle:
               'What your agents remember, kept as files in git and consolidated in the background.',
         ),
-        const SizedBox(height: S.s8),
+        SizedBox(height: S.s8),
         SettingsGroup(children: [
           _error == null
               ? const SettingsRow(label: 'Loading memory…')
@@ -356,7 +356,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
         subtitle:
             'What your agents remember, kept as files in git and consolidated in the background.',
       ),
-      const SizedBox(height: S.s8),
+      SizedBox(height: S.s8),
       if (scopes.isEmpty)
         const SettingsGroup(children: [
           SettingsRow(

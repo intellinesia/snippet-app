@@ -528,7 +528,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
         title: 'Accounts',
         subtitle: 'Signed-in providers and their usage limits.',
       ),
-      const SizedBox(height: S.s8),
+      SizedBox(height: S.s8),
       for (final provider in _displayProviders)
         SettingsGroup(
           header: _title(provider),
@@ -567,7 +567,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         if (account.limitedUntil != null) ...[
           const Tag('Limit reached', tone: Tone.danger),
-          const SizedBox(width: S.s8),
+          SizedBox(width: S.s8),
         ],
         if (account.active) const Tag('In use', tone: Tone.accent),
       ]),
@@ -598,7 +598,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
               onTap: _submitAdd),
         ],
       ),
-      const SizedBox(height: S.s8),
+      SizedBox(height: S.s8),
       SettingsGroup(
         footer: _addError,
         children: [
@@ -667,7 +667,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 onTap: () => _submitComplete(pending)),
         ],
       ),
-      const SizedBox(height: S.s8),
+      SizedBox(height: S.s8),
       SettingsGroup(
         footer: needsCode
             ? _addError
@@ -732,19 +732,19 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 onTap: _busy ? null : () => _move(provider, accounts, index, 1)),
         ],
       ),
-      const SizedBox(height: S.s8),
+      SizedBox(height: S.s8),
       SettingsGroup(children: [
         SettingsRow(
           label: 'Name',
           trailing: _renaming
               ? Row(mainAxisSize: MainAxisSize.min, children: [
                   SettingsField(controller: _nameField, width: 200),
-                  const SizedBox(width: S.s8),
+                  SizedBox(width: S.s8),
                   Btn('Save',
                       small: true,
                       disabled: _busy,
                       onTap: () => _saveName(provider, account)),
-                  const SizedBox(width: S.s8),
+                  SizedBox(width: S.s8),
                   Btn('Cancel',
                       variant: BtnVariant.surface,
                       small: true,
@@ -752,7 +752,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 ])
               : Row(mainAxisSize: MainAxisSize.min, children: [
                   Text(name, style: sans(13, color: AppColors.fg2)),
-                  const SizedBox(width: S.s12),
+                  SizedBox(width: S.s12),
                   Btn('Rename',
                       variant: BtnVariant.surface,
                       small: true,
@@ -916,7 +916,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final Widget body;
     if (!kMobile) {
       if (_loading && _accounts.isEmpty) {
-        body = const SettingsColumn(children: [
+        body = SettingsColumn(children: [
           SettingsHeader(
             title: 'Accounts',
             subtitle: 'Signed-in providers and their usage limits.',
@@ -930,7 +930,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
             title: 'Accounts',
             subtitle: 'Signed-in providers and their usage limits.',
           ),
-          const SizedBox(height: S.s8),
+          SizedBox(height: S.s8),
           SettingsGroup(children: [
             SettingsRow(
               label: "Couldn't load accounts",

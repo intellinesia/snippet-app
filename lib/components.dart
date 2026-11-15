@@ -44,7 +44,7 @@ class Tag extends StatelessWidget {
         ? TS.meta(fg).copyWith(fontSize: 11, height: 16 / 11)
         : TS.meta(fg).copyWith(fontWeight: weightFor(W.label));
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s2),
+      padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s2),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(R.pill),
@@ -52,17 +52,17 @@ class Tag extends StatelessWidget {
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         if (live) ...[
           StatusDot(status: 'running', size: 6, color: fg),
-          const SizedBox(width: S.s6),
+          SizedBox(width: S.s6),
         ] else if (dot) ...[
           Container(
             width: 6,
             height: 6,
             decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
           ),
-          const SizedBox(width: S.s6),
+          SizedBox(width: S.s6),
         ] else if (icon != null) ...[
           AppIcon(icon!, size: 12, color: fg),
-          const SizedBox(width: S.s4),
+          SizedBox(width: S.s4),
         ],
         Text(label, style: style, maxLines: 1, overflow: TextOverflow.ellipsis),
       ]),
@@ -81,7 +81,7 @@ class CountBadge extends StatelessWidget {
     final (fg, bg) = toneColors(tone);
     return Container(
       constraints: const BoxConstraints(minWidth: 20),
-      padding: const EdgeInsets.symmetric(horizontal: S.s6),
+      padding: EdgeInsets.symmetric(horizontal: S.s6),
       height: 20,
       alignment: Alignment.center,
       decoration: BoxDecoration(
@@ -103,7 +103,7 @@ class SectionHeader extends StatelessWidget {
     this.tone = Tone.neutral,
     this.action,
     this.onAction,
-    this.padding = const EdgeInsets.fromLTRB(S.s4, S.s8, S.s4, S.s8),
+    this.padding,
   });
 
   final String title;
@@ -111,12 +111,12 @@ class SectionHeader extends StatelessWidget {
   final Tone tone;
   final String? action;
   final VoidCallback? onAction;
-  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry? padding;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: padding,
+      padding: padding ?? EdgeInsets.fromLTRB(S.s4, S.s8, S.s4, S.s8),
       child: Row(children: [
         Text(
             kMobile
@@ -126,7 +126,7 @@ class SectionHeader extends StatelessWidget {
                 ? sans(12, weight: W.label, spacing: 0.7, color: AppColors.fg4)
                 : TS.label(AppColors.fg2)),
         if (count != null && !kMobile) ...[
-          const SizedBox(width: S.s8),
+          SizedBox(width: S.s8),
           CountBadge(count!, tone: tone),
         ],
         const Spacer(),
@@ -180,7 +180,7 @@ class _TextActionState extends State<TextAction> {
                       : null,
                   decorationColor: color)),
           if (widget.icon != null) ...[
-            const SizedBox(width: S.s4),
+            SizedBox(width: S.s4),
             AppIcon(widget.icon!, size: 14, color: color),
           ],
         ]),
@@ -249,10 +249,10 @@ class SheetActions extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       for (var i = 0; i < tiles.length; i += cols)
         Padding(
-          padding: const EdgeInsets.only(top: S.s8),
+          padding: EdgeInsets.only(top: S.s8),
           child: Row(children: [
             for (var j = i; j < i + cols; j++) ...[
-              if (j > i) const SizedBox(width: S.s8),
+              if (j > i) SizedBox(width: S.s8),
               Expanded(
                   child: j < tiles.length
                       ? _ActionTile(tiles[j])
@@ -287,7 +287,7 @@ class SheetActions extends StatelessWidget {
             child: SizedBox(
               height: 44,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: S.s12),
+                padding: EdgeInsets.symmetric(horizontal: S.s12),
                 child: Row(children: [
                   SizedBox(
                     width: 20,
@@ -299,7 +299,7 @@ class SheetActions extends StatelessWidget {
                                 ? AppColors.danger
                                 : AppColors.fg3),
                   ),
-                  const SizedBox(width: S.s12),
+                  SizedBox(width: S.s12),
                   Expanded(
                     child: Text(a.label,
                         maxLines: 1,
@@ -347,9 +347,9 @@ class _ActionTile extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   AppIcon(a.icon, size: 22, color: color),
-                  const SizedBox(height: S.s8),
+                  SizedBox(height: S.s8),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: S.s4),
+                    padding: EdgeInsets.symmetric(horizontal: S.s4),
                     child: Text(a.label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -373,7 +373,7 @@ class PaneLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
+        padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
         child: Text(kMobile ? text : text.toUpperCase(),
             style: kMobile
                 ? sans(12, color: color ?? AppColors.fg4)
@@ -494,9 +494,9 @@ class ListRow extends StatelessWidget {
                 ? EdgeInsets.symmetric(
                     horizontal: FlatGroupScope.of(context) ? 4 : 16,
                     vertical: 11)
-                : const EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
+                : EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
             child: Row(children: [
-              if (leading != null) ...[leading!, const SizedBox(width: S.s12)],
+              if (leading != null) ...[leading!, SizedBox(width: S.s12)],
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -509,7 +509,7 @@ class ListRow extends StatelessWidget {
                             style: TS.rowTitle()),
                     if (subtitle != null && subtitle!.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(top: S.s2),
+                        padding: EdgeInsets.only(top: S.s2),
                         child: Text(subtitle!,
                             maxLines: kMobile ? 2 : 1,
                             overflow: TextOverflow.ellipsis,
@@ -519,7 +519,7 @@ class ListRow extends StatelessWidget {
                 ),
               ),
               if (trailing != null) ...[
-                const SizedBox(width: S.s8),
+                SizedBox(width: S.s8),
                 trailing!,
               ],
             ]),
@@ -679,7 +679,7 @@ class PageLoader extends StatelessWidget {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const DelayedSpinner(),
             if (label != null) ...[
-              const SizedBox(height: S.s12),
+              SizedBox(height: S.s12),
               Text(label!, style: TS.meta()),
             ],
           ]),
@@ -692,12 +692,12 @@ class Skeleton extends StatelessWidget {
       {super.key,
       this.width,
       this.height = 12,
-      this.radius = R.xs,
+      this.radius,
       this.color});
 
   final double? width;
   final double height;
-  final double radius;
+  final double? radius;
   final Color? color;
 
   @override
@@ -706,7 +706,7 @@ class Skeleton extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           color: color ?? AppColors.raised,
-          borderRadius: BorderRadius.circular(radius),
+          borderRadius: BorderRadius.circular(radius ?? R.xs),
         ),
       );
 }
@@ -733,7 +733,7 @@ class ListSkeleton extends StatelessWidget {
                   constraints:
                       BoxConstraints(minHeight: kMobile ? M.rowHeight : 44),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                         horizontal: S.s12, vertical: S.s12),
                     child: Row(children: [
                       Skeleton(
@@ -741,7 +741,7 @@ class ListSkeleton extends StatelessWidget {
                           height: 20,
                           radius: R.sm,
                           color: AppColors.hover),
-                      const SizedBox(width: S.s12),
+                      SizedBox(width: S.s12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -753,7 +753,7 @@ class ListSkeleton extends StatelessWidget {
                                   Skeleton(height: 12, color: AppColors.hover),
                             ),
                             if (subtitle) ...[
-                              const SizedBox(height: S.s6),
+                              SizedBox(height: S.s6),
                               FractionallySizedBox(
                                 widthFactor: i.isEven ? 0.35 : 0.5,
                                 child: Skeleton(
@@ -778,12 +778,12 @@ class PageBody extends StatelessWidget {
     super.key,
     required this.children,
     this.maxWidth = 720,
-    this.topPadding = S.s8,
+    this.topPadding,
   });
 
   final List<Widget> children;
   final double maxWidth;
-  final double topPadding;
+  final double? topPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -793,7 +793,7 @@ class PageBody extends StatelessWidget {
         final extra = (constraints.maxWidth - (maxWidth + side * 2)) / 2;
         final hPad = extra > 0 ? side + extra : side;
         return ListView(
-          padding: EdgeInsets.fromLTRB(hPad, topPadding, hPad, S.s40),
+          padding: EdgeInsets.fromLTRB(hPad, topPadding ?? S.s8, hPad, S.s40),
           children: children,
         );
       },
@@ -808,7 +808,7 @@ class SettingsNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(S.s4, S.s8, S.s4, 0),
+        padding: EdgeInsets.fromLTRB(S.s4, S.s8, S.s4, 0),
         child: Text(text, style: TS.meta()),
       );
 }

@@ -55,18 +55,18 @@ ShellPanelRequest agentPanelRequest(
             client: client,
             agentId: agentId,
             builder: (a) => SingleChildScrollView(
-                padding: const EdgeInsets.all(S.s12),
+                padding: EdgeInsets.all(S.s12),
                 child: AgentWakePanel(
                     client: client, owner: agentId, name: agentName)),
           ),
         'reach' => SingleChildScrollView(
-            padding: const EdgeInsets.all(S.s12),
+            padding: EdgeInsets.all(S.s12),
             child: AgentReachPanel(client: client, agentId: agentId)),
         'model' => _WithAgent(
             client: client,
             agentId: agentId,
             builder: (a) => SingleChildScrollView(
-                padding: const EdgeInsets.all(S.s12),
+                padding: EdgeInsets.all(S.s12),
                 child: AgentProfilePanel(
                     client: client, agent: a, name: agentName)),
           ),
@@ -77,7 +77,7 @@ ShellPanelRequest agentPanelRequest(
                 _NicknamePage(client: client, agent: a, onDone: close),
           ),
         _ => SingleChildScrollView(
-            padding: const EdgeInsets.all(S.s8),
+            padding: EdgeInsets.all(S.s8),
             child: Align(
               alignment: Alignment.topLeft,
               child: AgentAppearancePicker(
@@ -171,7 +171,7 @@ class _NicknamePageState extends State<_NicknamePage> {
         ? widget.agent.id
         : widget.agent.fullName.trim();
     return Padding(
-      padding: const EdgeInsets.all(S.s16),
+      padding: EdgeInsets.all(S.s16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -179,7 +179,7 @@ class _NicknamePageState extends State<_NicknamePage> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TS.ui(AppColors.fg2)),
-          const SizedBox(height: S.s8),
+          SizedBox(height: S.s8),
           TextField(
             controller: _text,
             autofocus: true,
@@ -199,7 +199,7 @@ class _NicknamePageState extends State<_NicknamePage> {
                   borderSide: BorderSide(color: AppColors.border)),
             ),
           ),
-          const SizedBox(height: S.s12),
+          SizedBox(height: S.s12),
           Align(
             alignment: Alignment.centerRight,
             child: Btn('Save', small: true, disabled: _saving, onTap: _save),

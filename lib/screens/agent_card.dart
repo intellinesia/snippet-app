@@ -376,7 +376,7 @@ class _AgentCardState extends State<AgentCard> {
             child: Opacity(
               opacity: agent.available ? 1 : 0.55,
               child: Padding(
-                padding: const EdgeInsets.symmetric(
+                padding: EdgeInsets.symmetric(
                     horizontal: M.gutter, vertical: 8),
                 child: Row(children: [
                   SizedBox.square(

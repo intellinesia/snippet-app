@@ -38,7 +38,7 @@ Future<void> showAgentWakeSettings(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: 700),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(S.s12),
+          padding: EdgeInsets.all(S.s12),
           child: panel,
         ),
       ));
@@ -100,7 +100,7 @@ Widget _statusDot(String? status) => Container(
     );
 
 Widget _panelDivider() => Padding(
-      padding: const EdgeInsets.symmetric(vertical: S.s12),
+      padding: EdgeInsets.symmetric(vertical: S.s12),
       child: Divider(height: 1, thickness: 1, color: AppColors.border),
     );
 
@@ -108,7 +108,7 @@ Widget _panelLine(String label, String value,
         {Color? color, Key? key, int maxLines = 3}) =>
     Padding(
       key: key,
-      padding: const EdgeInsets.symmetric(horizontal: S.s4, vertical: 3.5),
+      padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: 3.5),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(
             width: 82,
@@ -635,7 +635,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(vertical: S.s24),
         child: Center(
             child: SizedBox(
@@ -651,7 +651,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
       children: [
         if (_error != null)
           Padding(
-            padding: const EdgeInsets.only(bottom: S.s8),
+            padding: EdgeInsets.only(bottom: S.s8),
             child: Text(_error!, style: sans(12, color: AppColors.danger)),
           ),
         _wakeSection(),
@@ -666,11 +666,11 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
   }
 
   Widget _head(String text, {String? icon, Widget? trailing}) => Padding(
-        padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
+        padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
         child: Row(children: [
           if (icon != null) ...[
             AppIcon(icon, size: 14, color: AppColors.fg3),
-            const SizedBox(width: S.s8),
+            SizedBox(width: S.s8),
           ],
           Expanded(
               child: Text(text,
@@ -685,7 +685,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2, horizontal: S.s4),
+          padding: EdgeInsets.symmetric(vertical: 2, horizontal: S.s4),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (icon != null) ...[
               AppIcon(icon, size: 12, color: AppColors.accent),
@@ -715,7 +715,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
                 )),
       if (_wakes.isNotEmpty && !_editing)
         Padding(
-          padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
+          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
           child: Pills<String>(
             key: const ValueKey('wake-switcher'),
             items: [
@@ -729,13 +729,13 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         ),
       if (_editing && _name != null && w == null)
         Padding(
-          padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
+          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
           child:
               Text('New wake: $_name', style: sans(13, color: AppColors.fg3)),
         ),
       if (w == null && !_editing)
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: S.s4),
+          padding: EdgeInsets.symmetric(horizontal: S.s4),
           child: Text(
               'No wake schedule. A wake gives ${widget.name} a brief on a timetable and reports back.',
               style: sans(13, color: AppColors.fg3, height: 1.45)),
@@ -768,9 +768,9 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         else if (w.lastResult != null)
           _line('Result', w.lastResult!),
         _line('Today', '${w.runsLastDay} of ${w.maxRunsPerDay} runs'),
-        const SizedBox(height: S.s4),
+        SizedBox(height: S.s4),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: S.s4),
+          padding: EdgeInsets.symmetric(horizontal: S.s4),
           child: AppToggle(
               flat: true,
               on: w.enabled,
@@ -781,9 +781,9 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
       ],
       Reveal(show: _editing, child: _form()),
       if (_shownRuns.isNotEmpty && !_editing) ...[
-        const SizedBox(height: S.s8),
+        SizedBox(height: S.s8),
         Padding(
-          padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s4),
+          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s4),
           child: Text('Recent runs',
               style: sans(12, weight: FontWeight.w600, color: AppColors.fg3)),
         ),
@@ -794,10 +794,10 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
 
   Widget _runRow(WakeRun r) => Padding(
         key: ValueKey('run-${r.id}'),
-        padding: const EdgeInsets.symmetric(horizontal: S.s4, vertical: 3),
+        padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: 3),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(
-            padding: const EdgeInsets.only(top: 5, right: S.s8),
+            padding: EdgeInsets.only(top: 5, right: S.s8),
             child: _statusDot(r.status),
           ),
           Expanded(
@@ -807,7 +807,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
                 overflow: TextOverflow.ellipsis,
                 style: sans(13, color: AppColors.fg2)),
           ),
-          const SizedBox(width: S.s8),
+          SizedBox(width: S.s8),
           Text(wakeWhen(r.firedAt), style: mono(11, color: AppColors.fg4)),
         ]),
       );
@@ -821,14 +821,14 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
           hint: 'every 30m, daily 09:00, weekdays 09:00, mon,thu 18:00',
           helper:
               'Shortest interval ${_wakeLimits.minAgentIntervalSecs ~/ 60} minutes. Times are in your time zone.'),
-      const SizedBox(height: S.s12),
+      SizedBox(height: S.s12),
       AppField(
           label: 'Brief',
           controller: _brief,
           minLines: 2,
           maxLines: 5,
           hint: 'What to do on each wake'),
-      const SizedBox(height: S.s12),
+      SizedBox(height: S.s12),
       Row(children: [
         Expanded(
             child: AppField(
@@ -836,7 +836,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
                 controller: _quietStart,
                 mono: true,
                 hint: '22:00')),
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         Expanded(
             child: AppField(
                 label: 'Quiet until',
@@ -844,14 +844,14 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
                 mono: true,
                 hint: '07:00')),
       ]),
-      const SizedBox(height: S.s12),
+      SizedBox(height: S.s12),
       Builder(
         builder: (ctx) => ListRow(
           title: 'Report to',
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
             Text(WakeReport.labelFor(_reportTo),
                 style: sans(13, color: AppColors.fg3)),
-            const SizedBox(width: S.s6),
+            SizedBox(width: S.s6),
             AppIcon('chevron-down', size: 15, color: AppColors.fg4),
           ]),
           onTap: () => _pickReport(ctx),
@@ -860,7 +860,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
       Reveal(
         show: _reportTo == 'task_room',
         child: Padding(
-          padding: const EdgeInsets.only(top: S.s4),
+          padding: EdgeInsets.only(top: S.s4),
           child: Builder(
             builder: (ctx) => ListRow(
               title: 'Task',
@@ -877,7 +877,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
                             : AppColors.fg2),
                   ),
                 ),
-                const SizedBox(width: S.s6),
+                SizedBox(width: S.s6),
                 AppIcon('chevron-down', size: 15, color: AppColors.fg4),
               ]),
               onTap: () => _pickTask(ctx),
@@ -888,7 +888,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
       Reveal(
         show: _reportTo == 'group',
         child: Padding(
-          padding: const EdgeInsets.only(top: S.s4),
+          padding: EdgeInsets.only(top: S.s4),
           child: Builder(
             builder: (ctx) => ListRow(
               title: 'Group',
@@ -903,7 +903,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
                         color: _group == null ? AppColors.fg4 : AppColors.fg2),
                   ),
                 ),
-                const SizedBox(width: S.s6),
+                SizedBox(width: S.s6),
                 AppIcon('chevron-down', size: 15, color: AppColors.fg4),
               ]),
               onTap: () => _pickGroup(ctx),
@@ -911,27 +911,27 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
           ),
         ),
       ),
-      const SizedBox(height: S.s8),
+      SizedBox(height: S.s8),
       AppToggle(
           flat: true,
           on: _onlyOnChange,
           onChanged: (v) => setState(() => _onlyOnChange = v),
           label: 'Report only on change',
           sub: 'Skip reports when nothing is new'),
-      const SizedBox(height: S.s4),
+      SizedBox(height: S.s4),
       AppToggle(
           flat: true,
           on: _enabled,
           onChanged: (v) => setState(() => _enabled = v),
           label: 'Enabled'),
-      const SizedBox(height: S.s12),
+      SizedBox(height: S.s12),
       AppField(
           label: 'Runs per day',
           controller: _cap,
           mono: true,
           keyboardType: TextInputType.number,
           helper: 'Up to ${_wakeLimits.maxRunsPerDayUser}'),
-      const SizedBox(height: S.s12),
+      SizedBox(height: S.s12),
       Row(children: [
         if (_wake != null)
           Btn('Remove',
@@ -941,7 +941,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
             variant: BtnVariant.ghost,
             small: true,
             onTap: () => setState(() => _editing = false)),
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         Btn(_saving ? 'Saving' : 'Save',
             small: true, disabled: _saving, onTap: _save),
       ]),
@@ -985,7 +985,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       _head('Keep warm', icon: 'activity'),
       Padding(
-        padding: const EdgeInsets.symmetric(horizontal: S.s4),
+        padding: EdgeInsets.symmetric(horizontal: S.s4),
         child: AppToggle(
             flat: true,
             on: on,
@@ -996,7 +996,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
       ),
       Padding(
         key: const ValueKey('warm-reason'),
-        padding: const EdgeInsets.fromLTRB(S.s4, S.s4, S.s4, 0),
+        padding: EdgeInsets.fromLTRB(S.s4, S.s4, S.s4, 0),
         child: Text(
           statusText,
           style: sans(12,
@@ -1007,7 +1007,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
       Reveal(
         show: w != null && on,
         child: Column(children: [
-          const SizedBox(height: S.s6),
+          SizedBox(height: S.s6),
           Builder(
             builder: (ctx) => ListRow(
               title: 'Ping every',
@@ -1221,12 +1221,12 @@ class _AgentWatchDetailState extends State<_AgentWatchDetail> {
               color: AppColors.danger, maxLines: 6),
         _panelDivider(),
         Padding(
-          padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6),
+          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6),
           child: Text('Recent events',
               style: sans(12, weight: FontWeight.w600, color: AppColors.fg3)),
         ),
         if (_loading)
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: S.s16),
             child: Center(
                 child: SizedBox(
@@ -1237,13 +1237,13 @@ class _AgentWatchDetailState extends State<_AgentWatchDetail> {
         else ...[
           if (_eventsError != null)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: S.s4),
+              padding: EdgeInsets.symmetric(horizontal: S.s4),
               child:
                   Text(_eventsError!, style: sans(12, color: AppColors.danger)),
             )
           else if (_events.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: S.s4),
+              padding: EdgeInsets.symmetric(horizontal: S.s4),
               child:
                   Text('No events yet.', style: sans(13, color: AppColors.fg4)),
             )
@@ -1251,26 +1251,26 @@ class _AgentWatchDetailState extends State<_AgentWatchDetail> {
             for (final e in _events) _eventRow(e),
           _panelDivider(),
           Padding(
-            padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6),
+            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6),
             child: Text('Script',
                 style: sans(12, weight: FontWeight.w600, color: AppColors.fg3)),
           ),
           if (w.scriptPath.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6),
+              padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6),
               child:
                   Text(w.scriptPath, style: codeMono(11, color: AppColors.fg4)),
             ),
           if (_scriptError != null)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: S.s4),
+              padding: EdgeInsets.symmetric(horizontal: S.s4),
               child:
                   Text(_scriptError!, style: sans(12, color: AppColors.danger)),
             )
           else
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(S.s12),
+              padding: EdgeInsets.all(S.s12),
               decoration: BoxDecoration(
                 color: AppColors.canvas,
                 borderRadius: BorderRadius.circular(R.md),
@@ -1282,7 +1282,7 @@ class _AgentWatchDetailState extends State<_AgentWatchDetail> {
               ),
             ),
         ],
-        const SizedBox(height: S.s16),
+        SizedBox(height: S.s16),
         Row(children: [
           Btn(
             _deleting ? 'Deleting' : 'Delete',
@@ -1297,13 +1297,13 @@ class _AgentWatchDetailState extends State<_AgentWatchDetail> {
   }
 
   Widget _eventRow(AgentWatchEvent e) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: S.s4, vertical: 4),
+        padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(children: [
               _statusDot(e.kind),
-              const SizedBox(width: S.s8),
+              SizedBox(width: S.s8),
               Expanded(
                 child: Text(e.kind,
                     style: sans(13, weight: W.label, color: AppColors.fg2)),
@@ -1312,7 +1312,7 @@ class _AgentWatchDetailState extends State<_AgentWatchDetail> {
                 Text(wakeWhen(e.at!), style: mono(11, color: AppColors.fg4)),
             ]),
             if (e.excerpt != null) ...[
-              const SizedBox(height: S.s4),
+              SizedBox(height: S.s4),
               Padding(
                 padding: const EdgeInsets.only(left: 15),
                 child: Text(

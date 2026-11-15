@@ -75,7 +75,8 @@ void main() async {
 }
 
 class SnippetApp extends StatefulWidget {
-  const SnippetApp({super.key});
+  const SnippetApp({super.key, @visibleForTesting this.home});
+  final Widget? home;
   @override
   State<SnippetApp> createState() => _SnippetAppState();
 }
@@ -96,7 +97,11 @@ class _SnippetAppState extends State<SnippetApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  void _onThemeChange() => setState(() {});
+  void _onThemeChange() {
+    if (!mounted) return;
+    setState(() {});
+    rebuildThemeElements(context);
+  }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -123,7 +128,7 @@ class _SnippetAppState extends State<SnippetApp> with WidgetsBindingObserver {
       builder: (context, child) => NotificationPopovers(
         child: AmbientEdgeGlow(child: child ?? const SizedBox.shrink()),
       ),
-      home: const AdaptiveHome(),
+      home: widget.home ?? const AdaptiveHome(),
     );
   }
 }

@@ -89,14 +89,14 @@ class Swap extends StatelessWidget {
     super.key,
     required this.stateKey,
     required this.child,
-    this.duration = Motion.fast,
+    this.duration,
     this.alignment = Alignment.topCenter,
     this.fill = false,
   });
 
   final Object stateKey;
   final Widget child;
-  final Duration duration;
+  final Duration? duration;
   final AlignmentGeometry alignment;
 
   /// Stretch each state to the area's full size, for panels and pages.
@@ -104,7 +104,7 @@ class Swap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AnimatedSwitcher(
-        duration: duration,
+        duration: duration ?? Motion.fast,
         reverseDuration: Motion.quick,
         switchInCurve: Motion.enter,
         switchOutCurve: Motion.exit,

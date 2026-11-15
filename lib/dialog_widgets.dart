@@ -237,7 +237,7 @@ class _DialogActions extends StatelessWidget {
           child: Btn('Cancel',
               full: true, variant: BtnVariant.secondary, onTap: onCancel),
         ),
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         Expanded(
           child:
               Btn(confirmLabel, full: true, variant: variant, onTap: onConfirm),
@@ -637,7 +637,7 @@ Future<T?> showAppSheet<T>(BuildContext context,
                       title.isNotEmpty &&
                       !ShellPanelRoot.inPanel(sheetContext))
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(
+                      padding: EdgeInsets.fromLTRB(
                           M.gutter, S.s4, M.gutter, S.s4),
                       child: Column(children: [
                         Text(title,
@@ -656,7 +656,7 @@ Future<T?> showAppSheet<T>(BuildContext context,
                   else if (title.isNotEmpty &&
                       !ShellPanelRoot.inPanel(sheetContext))
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(
+                      padding: EdgeInsets.fromLTRB(
                           M.gutter, S.s4, M.gutter, S.s8),
                       child: Align(
                         alignment: Alignment.centerLeft,

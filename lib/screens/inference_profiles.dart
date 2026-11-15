@@ -287,13 +287,13 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
                 ),
             ]),
             Padding(
-              padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+              padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
               child: Text(
                 'New chats use the active profile. Lanes and background work follow Routing.',
                 style: TS.meta(),
               ),
             ),
-            const SizedBox(height: S.s16),
+            SizedBox(height: S.s16),
             ListGroup(children: [
               SettingsRow(
                 label: "Keep a task's model",
@@ -409,7 +409,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
       future: _future,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
-          return const SettingsColumn(children: [
+          return SettingsColumn(children: [
             SettingsHeader(
               title: 'Profiles',
               subtitle: 'Models and credentials for chats and background work.',
@@ -424,7 +424,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
               title: 'Profiles',
               subtitle: 'Models and credentials for chats and background work.',
             ),
-            const SizedBox(height: S.s8),
+            SizedBox(height: S.s8),
             SettingsGroup(children: [
               SettingsRow(
                 label: "Couldn't load profiles",
@@ -450,7 +450,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
                   icon: 'plus', small: true, onTap: () => _edit(null)),
             ],
           ),
-          const SizedBox(height: S.s8),
+          SizedBox(height: S.s8),
           if (profiles.isEmpty)
             SettingsGroup(children: [
               SettingsRow(
@@ -477,7 +477,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
                     trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                       if (!p.usable) const WarnChip(),
                       if (p.active) ...[
-                        if (!p.usable) const SizedBox(width: S.s6),
+                        if (!p.usable) SizedBox(width: S.s6),
                         const Tag('Active', tone: Tone.ok, dot: true),
                       ],
                     ]),

@@ -135,7 +135,7 @@ class _MachineListState extends State<MachineList> {
                   style: kMobile
                       ? TS.rowTitle(AppColors.fg1)
                       : TS.ui(AppColors.fg1)),
-              const SizedBox(height: S.s2),
+              SizedBox(height: S.s2),
               Text(hostOf(i.url),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -626,7 +626,7 @@ class SettingsPanelState extends State<SettingsPanel> {
 
   /// v5 `.plb`: a quiet 13px group caption, indented past the card edge.
   Widget _settingsGroupLabel(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(S.s16, S.s16, 0, S.s4),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s16, 0, S.s4),
         child: Text(text, style: sans(13, color: AppColors.fg3)),
       );
 
@@ -636,7 +636,7 @@ class SettingsPanelState extends State<SettingsPanel> {
     final name = active?.label.trim() ?? '';
     final live = _liveCount;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
+      padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
       children: [
         ListGroup(children: [
           _V5SettingsRow(
@@ -920,13 +920,13 @@ class SettingsPanelState extends State<SettingsPanel> {
                 },
                 borderRadius: BorderRadius.circular(R.sm),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
+                  padding: EdgeInsets.symmetric(
                       horizontal: S.s12, vertical: S.s6),
                   child: Row(children: [
                     AppIcon(icon,
                         size: 14,
                         color: _page == page ? AppColors.fg1 : AppColors.fg3),
-                    const SizedBox(width: S.s6),
+                    SizedBox(width: S.s6),
                     Text(label,
                         style: sans(13,
                             weight: _page == page ? W.label : W.body,
@@ -992,12 +992,12 @@ class SettingsPanelState extends State<SettingsPanel> {
       else
         ListGroup(children: [for (final i in _instances) _instanceRow(i)]),
       if (includeNotifications) ...[
-        const SizedBox(height: S.s24),
+        SizedBox(height: S.s24),
         const SectionLabel('Approvals'),
         ListGroup(children: [ApprovalsRow(client: widget.client)]),
       ],
       if (includeNotifications && kCanNotify) ...[
-        const SizedBox(height: S.s24),
+        SizedBox(height: S.s24),
         const SectionLabel('Notifications'),
         ListGroup(children: [_notifRow()]),
       ],
@@ -1095,7 +1095,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                   color: isActive ? AppColors.ok : AppColors.fg2)
             else
               IconTile('server', tone: isActive ? Tone.ok : Tone.neutral),
-            const SizedBox(width: S.s12),
+            SizedBox(width: S.s12),
             if (isRenaming) ...[
               Expanded(
                 child: InlineEditField(
@@ -1116,7 +1116,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TS.rowTitle()),
-                    const SizedBox(height: S.s2),
+                    SizedBox(height: S.s2),
                     Text(hostOf(i.url),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1124,7 +1124,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                   ],
                 ),
               ),
-              const SizedBox(width: S.s8),
+              SizedBox(width: S.s8),
               if (compact) ...[
                 if (isActive)
                   AppIcon('check', size: 16, color: AppColors.accent),
@@ -1134,7 +1134,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                   const Tag('Active', tone: Tone.ok, dot: true)
                 else if (canConnect)
                   TextAction('Connect', onTap: () => _selectInstance(i)),
-                const SizedBox(width: S.s4),
+                SizedBox(width: S.s4),
                 IconBtn('edit',
                     size: 30,
                     iconSize: 16,
@@ -1169,11 +1169,11 @@ class SettingsPanelState extends State<SettingsPanel> {
     return Padding(
       padding: kMobile
           ? const EdgeInsets.fromLTRB(16, 14, 16, 14)
-          : const EdgeInsets.fromLTRB(S.s12, S.s12, S.s12, S.s12),
+          : EdgeInsets.fromLTRB(S.s12, S.s12, S.s12, S.s12),
       child: Row(children: [
         if (!kMobile) ...[
           const IconTile('bell'),
-          const SizedBox(width: S.s12),
+          SizedBox(width: S.s12),
         ] else ...[
           AppIcon('bell', size: 19, color: AppColors.fg3),
           const SizedBox(width: 14),
@@ -1184,7 +1184,7 @@ class SettingsPanelState extends State<SettingsPanel> {
             children: [
               Text(kMobile ? 'Notifications' : 'Session notifications',
                   style: TS.rowTitle()),
-              const SizedBox(height: S.s2),
+              SizedBox(height: S.s2),
               Text(
                   kMobile
                       ? 'When a chat needs you or finishes'
@@ -1193,7 +1193,7 @@ class SettingsPanelState extends State<SettingsPanel> {
             ],
           ),
         ),
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         if (_notifBusy)
           const DelayedSpinner(size: 18)
         else
@@ -1703,7 +1703,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         Btn('Cancel',
             variant: BtnVariant.secondary,
             onTap: _addMachineBusy ? null : _closeAddMachine),
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         Btn(_addMachineBusy ? 'Connecting…' : 'Connect',
             disabled: !canConnect,
             onTap: canConnect ? _submitAddMachine : null),
@@ -1846,7 +1846,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
           onTap: _addMachine,
         ),
       ]),
-      const SizedBox(height: S.s16),
+      SizedBox(height: S.s16),
       _v5Card([
         Builder(
           builder: (anchor) => _v5Row(
@@ -1862,7 +1862,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(_manual == null ? '' : (_manual! ? 'Ask' : 'Yolo'),
                   style: sans(13, color: AppColors.fg3)),
-              const SizedBox(width: S.s6),
+              SizedBox(width: S.s6),
               AppIcon('chevron-down', size: 12, color: AppColors.fg3),
             ]),
           ),
@@ -1888,7 +1888,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
             if (warmCount != null) ...[
               Text(warmCount == 0 ? 'Off' : '$warmCount active',
                   style: sans(13, color: AppColors.fg3)),
-              const SizedBox(width: S.s6),
+              SizedBox(width: S.s6),
             ],
             AppIcon('chevron-right', size: 14, color: AppColors.fg3),
           ]),
@@ -1925,7 +1925,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
               small: true,
               variant: BtnVariant.secondary,
               onTap: () => widget.onSelect?.call(i)),
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         _machineMenu(i),
       ]),
     );
@@ -2054,7 +2054,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         ),
       ]),
       Padding(
-        padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
         child: Text(
           'It prints a link and a QR code. If snippet is already running '
           'there, snippet serve --status shows them again.',
@@ -2083,16 +2083,16 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
       ]),
       if (_addMachineError != null)
         Padding(
-          padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+          padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
           child: Text(_addMachineError!,
               style: sans(12, height: 1.4, color: AppColors.danger)),
         ),
-      const SizedBox(height: S.s16),
+      SizedBox(height: S.s16),
       Row(mainAxisAlignment: MainAxisAlignment.end, children: [
         Btn('Cancel',
             variant: BtnVariant.secondary,
             onTap: _addMachineBusy ? null : _closeAddMachine),
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         Btn(_addMachineBusy ? 'Connecting…' : 'Connect',
             disabled: !canConnect,
             onTap: canConnect ? _submitAddMachine : null),
@@ -2114,7 +2114,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
           for (final i in _instances) _machineRow(i),
       ]),
       Padding(
-        padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
         child: Text(
           'Snippet talks to the daemon on each machine. Run snippet serve on '
           'a new one and paste the link it prints.',
@@ -2265,7 +2265,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
               : null,
           actions: [if (action != null) action],
         ),
-        const SizedBox(height: S.s16),
+        SizedBox(height: S.s16),
         ..._plainBody(page),
       ]);
     } else {
@@ -2392,7 +2392,7 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           Text(manual == null ? '' : (manual ? 'Ask' : 'Yolo'),
               style: sans(13, color: AppColors.fg3)),
-          const SizedBox(width: S.s6),
+          SizedBox(width: S.s6),
           AppIcon(kMobile ? 'chevron-right' : 'chevron-down',
               size: 14, color: AppColors.fg3),
         ]),
@@ -2468,7 +2468,7 @@ class AppearanceScreen extends StatelessWidget {
                     title: 'Appearance', compact: true, onBack: onBack!),
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
+                  padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
                   children: [
                     _AppearancePreviewCard(),
                     const SettingsGroupLabel('Home'),
@@ -2480,7 +2480,7 @@ class AppearanceScreen extends StatelessWidget {
                     const SettingsGroupLabel('Palette'),
                     ListGroup(children: paletteChildren),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+                      padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
                       child: Text(
                         'Theme and accent colour are saved locally on this device.',
                         style: TS.meta(),
@@ -2489,7 +2489,7 @@ class AppearanceScreen extends StatelessWidget {
                     const SettingsGroupLabel('Typography'),
                     ListGroup(children: typographyChildren),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+                      padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
                       child: Text(
                         'UI typeface applies to headings, chat and controls; code font applies to diffs, terminals and IDs.',
                         style: TS.meta(),
@@ -2506,7 +2506,7 @@ class AppearanceScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _AppearancePreviewCard(),
-            const SizedBox(height: S.s16),
+            SizedBox(height: S.s16),
             const SettingsGroup(
               header: 'Home',
               children: [_HomeFirstRow()],
@@ -3564,7 +3564,7 @@ class _V5SettingsRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
           child: Row(children: [
             leading,
-            const SizedBox(width: S.s12),
+            SizedBox(width: S.s12),
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -3583,7 +3583,7 @@ class _V5SettingsRow extends StatelessWidget {
               ),
             ),
             if (v != null && v.isNotEmpty) ...[
-              const SizedBox(width: S.s8),
+              SizedBox(width: S.s8),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 150),
                 child: Text(v,
@@ -3592,7 +3592,7 @@ class _V5SettingsRow extends StatelessWidget {
                     style: sans(15, color: AppColors.fg3)),
               ),
             ],
-            const SizedBox(width: S.s6),
+            SizedBox(width: S.s6),
             trailing ??
                 AppIcon('chevron-right', size: 14, color: AppColors.fg3),
           ]),

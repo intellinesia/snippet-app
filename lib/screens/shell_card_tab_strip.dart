@@ -125,7 +125,7 @@ class CardTabChip extends StatelessWidget {
                     size: 14,
                     color: isActive ? AppColors.accent : AppColors.fg4,
                   ),
-            const SizedBox(width: S.s6),
+            SizedBox(width: S.s6),
             Flexible(
               child: Text(
                 title,

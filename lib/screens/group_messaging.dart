@@ -234,7 +234,7 @@ class GroupRow extends StatelessWidget {
           onLongPress: onLongPress,
           child: Padding(
             padding:
-                const EdgeInsets.symmetric(horizontal: M.gutter, vertical: 8),
+                EdgeInsets.symmetric(horizontal: M.gutter, vertical: 8),
             child: Row(children: [
               SizedBox.square(
                 dimension: 52,

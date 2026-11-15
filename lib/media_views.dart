@@ -1274,7 +1274,7 @@ class _PastedTextCardState extends State<PastedTextCard> {
           InkWell(
             onTap: () => setState(() => _open = !_open),
             borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(R.card)),
+                BorderRadius.vertical(top: Radius.circular(R.card)),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
               child: Row(children: [

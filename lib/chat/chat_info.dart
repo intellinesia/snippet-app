@@ -176,7 +176,7 @@ class _DockedPromptState extends State<_DockedPrompt> {
             enabledBorder: border,
           ),
         ),
-        const SizedBox(height: S.s12),
+        SizedBox(height: S.s12),
         Align(
           alignment: Alignment.centerRight,
           child: Btn('Save', small: true, onTap: () => widget.onDone(_text.text)),
@@ -741,7 +741,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 48),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s4),
+          padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s4),
           child: Row(children: [
             SizedBox.square(
               dimension: 26,
@@ -751,7 +751,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
                     : AppIcon('user', size: 20, color: AppColors.fg3),
               ),
             ),
-            const SizedBox(width: S.s12),
+            SizedBox(width: S.s12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -867,7 +867,7 @@ class _InfoFrame extends StatelessWidget {
       SizedBox(
         height: 52,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: S.s16),
+          padding: EdgeInsets.symmetric(horizontal: S.s16),
           child: Row(children: [
             if (onClose != null)
               _GlassCircle(onTap: onClose!, icon: 'x', label: 'Close'),
@@ -877,34 +877,34 @@ class _InfoFrame extends StatelessWidget {
         ),
       ),
       Padding(
-        padding: const EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, 0),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, 0),
         child: Column(children: [
           avatar,
-          const SizedBox(height: S.s12),
+          SizedBox(height: S.s12),
           Text(name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: sans(kMobile ? 26 : 20,
                   weight: W.strong, color: AppColors.fg1)),
-          const SizedBox(height: S.s4),
+          SizedBox(height: S.s4),
           status,
           if (actions.isNotEmpty) ...[
-            const SizedBox(height: S.s16),
+            SizedBox(height: S.s16),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 for (final a in actions) ...[
                   Flexible(child: _ActionCircle(action: a)),
-                  if (a != actions.last) const SizedBox(width: S.s12),
+                  if (a != actions.last) SizedBox(width: S.s12),
                 ],
               ],
             ),
           ],
-          const SizedBox(height: S.s20),
+          SizedBox(height: S.s20),
           if (tabs.length > 1) ...[
             _Segmented(labels: tabs, index: tab, onSelect: onTab),
-            const SizedBox(height: S.s16),
+            SizedBox(height: S.s16),
           ],
         ]),
       ),
@@ -985,7 +985,7 @@ class _EditPill extends StatelessWidget {
           radius: BorderRadius.circular(R.pill),
           child: Padding(
             padding:
-                const EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s6),
+                EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s6),
             child: Text('Edit',
                 style: sans(13, weight: W.label, color: AppColors.fg1)),
           ),
@@ -1017,7 +1017,7 @@ class _ActionCircle extends StatelessWidget {
                       size: kMobile ? 20 : 17, color: AppColors.fg1)),
             ),
           ),
-          const SizedBox(height: S.s6),
+          SizedBox(height: S.s6),
           Text(action.label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -1048,7 +1048,7 @@ class _Segmented extends StatelessWidget {
               onTap: i == index ? null : () => onSelect(i),
               child: AnimatedContainer(
                 duration: reduced ? Duration.zero : Motion.fast,
-                padding: const EdgeInsets.symmetric(
+                padding: EdgeInsets.symmetric(
                     horizontal: S.s12, vertical: S.s6),
                 decoration: BoxDecoration(
                   color: i == index
@@ -1088,13 +1088,13 @@ class _ContextMeter extends StatelessWidget {
     final frac = known ? (used / window).clamp(0.0, 1.0) : 0.0;
     final lit = (frac * 24).round();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(S.s16, 14, S.s16, S.s16),
+      padding: EdgeInsets.fromLTRB(S.s16, 14, S.s16, S.s16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(children: [
             AppIcon('gauge', size: kMobile ? 18 : 16, color: AppColors.fg3),
-            const SizedBox(width: S.s12),
+            SizedBox(width: S.s12),
             Expanded(
                 child: Text('Context',
                     style: sans(kMobile ? 15 : 13, color: AppColors.fg1))),
@@ -1138,7 +1138,7 @@ class _InfoCard extends StatelessWidget {
   @override
   // A Material of its own so row hover ink is clipped to the rounded card.
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: S.s12),
+        padding: EdgeInsets.only(bottom: S.s12),
         child: Tactile(
         radius: BorderRadius.circular(16),
         child: Material(
@@ -1150,7 +1150,7 @@ class _InfoCard extends StatelessWidget {
           children: [
             for (var i = 0; i < children.length; i++) ...[
               if (i > 0)
-                const Divider(
+                Divider(
                     height: 1, thickness: 1, indent: S.s16, endIndent: 0),
               children[i],
             ],
@@ -1187,13 +1187,13 @@ class _InfoRow extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: kMobile ? 48 : 40),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: S.s16),
+          padding: EdgeInsets.symmetric(horizontal: S.s16),
           child: Row(children: [
             if (icon != null) ...[
               AppIcon(icon!,
                   size: kMobile ? 18 : 16,
                   color: accent ? AppColors.accent : AppColors.fg3),
-              const SizedBox(width: S.s12),
+              SizedBox(width: S.s12),
             ],
             if (hasValue)
               // Not Flexible: a loose flex share would strand the value mid-row.
@@ -1214,7 +1214,7 @@ class _InfoRow extends StatelessWidget {
             if (hasValue)
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.only(left: S.s8),
+                  padding: EdgeInsets.only(left: S.s8),
                   child: Text(value!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -1223,7 +1223,7 @@ class _InfoRow extends StatelessWidget {
                 ),
               ),
             if (trailing != null) ...[
-              const SizedBox(width: S.s4),
+              SizedBox(width: S.s4),
               trailing!,
             ],
             if (onTap != null && trailing == null)
@@ -1257,7 +1257,7 @@ class _CopyRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: mono(12, color: AppColors.fg3)),
           ),
-          const SizedBox(width: S.s4),
+          SizedBox(width: S.s4),
           AppIcon('copy', size: 13, color: AppColors.fg4),
         ]),
       );
@@ -1276,10 +1276,10 @@ class _DangerRow extends StatelessWidget {
           constraints: BoxConstraints(minHeight: kMobile ? 48 : 40),
           child: Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: S.s12),
+              padding: EdgeInsets.symmetric(vertical: S.s12),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 AppIcon('trash', size: 16, color: AppColors.danger),
-                const SizedBox(width: S.s8),
+                SizedBox(width: S.s8),
                 Text(label,
                     style:
                         sans(kMobile ? 15 : 13,
@@ -1331,7 +1331,7 @@ class _NestedPage extends StatelessWidget {
           SizedBox(
             height: 52,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: S.s16),
+              padding: EdgeInsets.symmetric(horizontal: S.s16),
               child: Stack(children: [
                 Align(
                   alignment: Alignment.centerLeft,
@@ -1356,7 +1356,7 @@ class _NestedPage extends StatelessWidget {
           Expanded(
             child: SingleChildScrollView(
               padding:
-                  const EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s24),
+                  EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s24),
               child: builder(context),
             ),
           ),
@@ -1529,7 +1529,7 @@ class _NicknameEditorState extends State<_NicknameEditor> {
                   borderSide: BorderSide(color: AppColors.border)),
             ),
           ),
-          const SizedBox(height: S.s12),
+          SizedBox(height: S.s12),
           Align(
             alignment: Alignment.centerRight,
             child: Btn('Save', small: true, disabled: _saving, onTap: _save),

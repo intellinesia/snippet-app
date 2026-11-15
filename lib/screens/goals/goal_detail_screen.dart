@@ -54,10 +54,10 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   Widget _section(String label, Widget child) => Padding(
-        padding: const EdgeInsets.only(top: S.s24),
+        padding: EdgeInsets.only(top: S.s24),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SectionLabel(label),
-          const SizedBox(height: S.s8),
+          SizedBox(height: S.s8),
           child,
         ]),
       );
@@ -118,7 +118,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(M.gutter + 4, 8, M.gutter + 4, 32),
+        padding: EdgeInsets.fromLTRB(M.gutter + 4, 8, M.gutter + 4, 32),
         children: [
           Wrap(spacing: 8, runSpacing: 6, children: [
             Tag(g.status == 'open' ? 'Open' : _cap(g.status),
@@ -126,12 +126,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             if (g.attention != null) AttentionChip(g.attention!),
           ]),
           if (g.outcome.trim().isNotEmpty) ...[
-            const SizedBox(height: S.s12),
+            SizedBox(height: S.s12),
             Text(g.outcome, style: sans(14, height: 1.5, color: AppColors.fg2)),
           ],
-          const SizedBox(height: S.s16),
+          SizedBox(height: S.s16),
           _metric('Slices', g.progress, 'slices done'),
-          const SizedBox(height: S.s12),
+          SizedBox(height: S.s12),
           _metric('Evidence', g.evidence, 'criteria evidenced',
               colour: AppColors.ok),
           if (d.blockers.isNotEmpty)

@@ -13,7 +13,7 @@ class SettingsGroupLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(S.s16, S.s16, 0, S.s4),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s16, 0, S.s4),
         child: Text(text, style: sans(13, color: AppColors.fg3)),
       );
 }
@@ -80,7 +80,7 @@ class V5SettingsRow extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         child: Row(children: [
-          if (leading != null) ...[leading!, const SizedBox(width: S.s12)],
+          if (leading != null) ...[leading!, SizedBox(width: S.s12)],
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -101,7 +101,7 @@ class V5SettingsRow extends StatelessWidget {
             ),
           ),
           if (v != null && v.isNotEmpty) ...[
-            const SizedBox(width: S.s8),
+            SizedBox(width: S.s8),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 150),
               child: Text(v,
@@ -111,10 +111,10 @@ class V5SettingsRow extends StatelessWidget {
             ),
           ],
           if (trailing != null) ...[
-            const SizedBox(width: S.s6),
+            SizedBox(width: S.s6),
             trailing!,
           ] else if (showChevron) ...[
-            const SizedBox(width: S.s6),
+            SizedBox(width: S.s6),
             AppIcon('chevron-right', size: 14, color: AppColors.fg3),
           ],
         ]),

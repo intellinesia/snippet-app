@@ -594,7 +594,7 @@ class _FileExplorerState extends State<FileExplorer> {
               onTap: () => _up(listing)),
         if (entries.isEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: S.s40),
+            padding: EdgeInsets.only(top: S.s40),
             child: Text(
                 _filter.isEmpty
                     ? 'This folder is empty.'
@@ -634,7 +634,7 @@ class _FileExplorerState extends State<FileExplorer> {
       return const SizedBox.shrink();
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(S.s8, S.s4, M.gutter, S.s4),
+      padding: EdgeInsets.fromLTRB(S.s8, S.s4, M.gutter, S.s4),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           Expanded(
@@ -649,7 +649,7 @@ class _FileExplorerState extends State<FileExplorer> {
                     borderRadius: BorderRadius.circular(R.sm),
                     onTap: () => _go(crumbs[i].$2, forward: false),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                           horizontal: S.s6, vertical: S.s8),
                       child: Text(crumbs[i].$1,
                           style: TS
@@ -664,17 +664,17 @@ class _FileExplorerState extends State<FileExplorer> {
         ]),
         if (_searching || _filter.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(S.s6, S.s4, 0, S.s4),
+            padding: EdgeInsets.fromLTRB(S.s6, S.s4, 0, S.s4),
             child: Container(
               height: M.minTarget,
-              padding: const EdgeInsets.symmetric(horizontal: S.s12),
+              padding: EdgeInsets.symmetric(horizontal: S.s12),
               decoration: BoxDecoration(
                 color: AppColors.raised,
                 borderRadius: BorderRadius.circular(R.md),
               ),
               child: Row(children: [
                 AppIcon('search', size: 16, color: AppColors.fg4),
-                const SizedBox(width: S.s8),
+                SizedBox(width: S.s8),
                 Expanded(
                   child: TextField(
                     controller: _filterCtl,
@@ -856,7 +856,7 @@ class _Row extends StatelessWidget {
                               color: muted ? AppColors.fg3 : AppColors.fg1))),
               if (git) ...[
                 const Tag('git', tone: Tone.ok, icon: 'git-branch'),
-                const SizedBox(width: S.s8),
+                SizedBox(width: S.s8),
               ],
               if (chevron)
                 AppIcon('chevron-right', size: 16, color: AppColors.fg4),

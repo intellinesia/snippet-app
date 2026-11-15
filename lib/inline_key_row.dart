@@ -61,7 +61,7 @@ class _InlineKeyRowState extends State<InlineKeyRow> {
             ? status
             : Row(mainAxisSize: MainAxisSize.min, children: [
                 status,
-                const SizedBox(width: S.s12),
+                SizedBox(width: S.s12),
                 Btn(widget.keySet ? 'Replace' : 'Add key',
                     small: true,
                     variant: BtnVariant.secondary,

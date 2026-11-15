@@ -157,20 +157,20 @@ class AgentAppearancePicker extends StatelessWidget {
 
           return Padding(
             padding: kMobile
-                ? const EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 12)
-                : const EdgeInsets.all(S.s12),
+                ? EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 12)
+                : EdgeInsets.all(S.s12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SectionLabel('Avatar'),
-                const SizedBox(height: S.s4),
+                SizedBox(height: S.s4),
                 shapeGrid,
-                const SizedBox(height: S.s16),
+                SizedBox(height: S.s16),
                 const SectionLabel('Colour'),
-                const SizedBox(height: S.s4),
+                SizedBox(height: S.s4),
                 colourGrid,
-                const SizedBox(height: S.s12),
+                SizedBox(height: S.s12),
                 Row(
                   children: [
                     if (custom)

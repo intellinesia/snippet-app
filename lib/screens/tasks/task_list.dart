@@ -79,7 +79,7 @@ class TaskList extends StatelessWidget {
     final visible = _visible;
     final pad = padding ??
         (kMobile
-            ? const EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 24)
+            ? EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 24)
             : const EdgeInsets.fromLTRB(8, 0, 8, 18));
     if (visible.isEmpty) {
       return PullToRefresh(
@@ -186,10 +186,10 @@ class TaskStatusHeader extends StatelessWidget {
             decoration: BoxDecoration(
                 color: statusColor(status), shape: BoxShape.circle),
           ),
-          const SizedBox(width: S.s8),
+          SizedBox(width: S.s8),
           Text(status.label,
               style: kMobile ? sans(13, color: AppColors.fg2) : TS.label()),
-          const SizedBox(width: S.s8),
+          SizedBox(width: S.s8),
           if (kMobile)
             Text('$count', style: sans(13, color: AppColors.fg4))
           else

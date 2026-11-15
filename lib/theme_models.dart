@@ -223,8 +223,8 @@ class ThemeTypeWeights {
 class ThemeTypeStyle {
   final ResponsiveNum size;
   final int weight;
-  final double height;
-  final double tracking;
+  final ResponsiveNum height;
+  final ResponsiveNum tracking;
 
   const ThemeTypeStyle({
     required this.size,
@@ -238,15 +238,15 @@ class ThemeTypeStyle {
       ThemeTypeStyle(
         size: ResponsiveNum.fromJson(j['size'], fallback.size),
         weight: _intOr(j['weight'], fallback.weight),
-        height: _numOr(j['height'], fallback.height),
-        tracking: _numOr(j['tracking'], fallback.tracking),
+        height: ResponsiveNum.fromJson(j['height'], fallback.height),
+        tracking: ResponsiveNum.fromJson(j['tracking'], fallback.tracking),
       );
 
   Map<String, dynamic> toJson() => {
         'size': size.toJson(),
         'weight': weight,
-        'height': height,
-        'tracking': tracking,
+        'height': height.toJson(),
+        'tracking': tracking.toJson(),
       };
 }
 
@@ -267,32 +267,65 @@ class ThemeTypeTokens {
 
   static const Map<String, ThemeTypeStyle> defaultStyles = {
     'pageTitle': ThemeTypeStyle(
-        size: ResponsiveNum(28, 20), weight: 500, height: 1.3, tracking: -0.08),
+        size: ResponsiveNum(28, 20),
+        weight: 500,
+        height: ResponsiveNum(34 / 28, 26 / 20),
+        tracking: ResponsiveNum(-0.56, -0.08)),
     'sectionTitle': ThemeTypeStyle(
-        size: ResponsiveNum(20, 16), weight: 500, height: 1.375, tracking: 0.0),
+        size: ResponsiveNum(20, 16),
+        weight: 500,
+        height: ResponsiveNum(26 / 20, 22 / 16),
+        tracking: ResponsiveNum(-0.08, 0.0)),
     'rowTitle': ThemeTypeStyle(
-        size: ResponsiveNum(16, 13), weight: 500, height: 1.385, tracking: 0.0),
+        size: ResponsiveNum(16, 13),
+        weight: 500,
+        height: ResponsiveNum(22 / 16, 18 / 13),
+        tracking: ResponsiveNum.all(0.0)),
     'body': ThemeTypeStyle(
-        size: ResponsiveNum(16, 14), weight: 400, height: 1.571, tracking: 0.0),
+        size: ResponsiveNum(16, 14),
+        weight: 400,
+        height: ResponsiveNum(24 / 16, 22 / 14),
+        tracking: ResponsiveNum.all(0.0)),
     'ui': ThemeTypeStyle(
-        size: ResponsiveNum(14, 13), weight: 400, height: 1.385, tracking: 0.0),
+        size: ResponsiveNum(14, 13),
+        weight: 400,
+        height: ResponsiveNum(20 / 14, 18 / 13),
+        tracking: ResponsiveNum.all(0.0)),
     'label': ThemeTypeStyle(
-        size: ResponsiveNum(13, 12), weight: 500, height: 1.333, tracking: 0.0),
+        size: ResponsiveNum(13, 12),
+        weight: 500,
+        height: ResponsiveNum(18 / 13, 16 / 12),
+        tracking: ResponsiveNum.all(0.0)),
     'meta': ThemeTypeStyle(
-        size: ResponsiveNum(13, 12), weight: 400, height: 1.333, tracking: 0.0),
+        size: ResponsiveNum(13, 12),
+        weight: 400,
+        height: ResponsiveNum(18 / 13, 16 / 12),
+        tracking: ResponsiveNum.all(0.0)),
     'caption': ThemeTypeStyle(
-        size: ResponsiveNum(12, 11), weight: 400, height: 1.273, tracking: 0.0),
+        size: ResponsiveNum(12, 11),
+        weight: 400,
+        height: ResponsiveNum(16 / 12, 14 / 11),
+        tracking: ResponsiveNum.all(0.0)),
     'overline': ThemeTypeStyle(
         size: ResponsiveNum(12, 11),
         weight: 500,
-        height: 1.273,
-        tracking: 0.66),
+        height: ResponsiveNum(16 / 12, 14 / 11),
+        tracking: ResponsiveNum(12 * 0.06, 11 * 0.06)),
     'reading': ThemeTypeStyle(
-        size: ResponsiveNum(16, 14), weight: 400, height: 1.571, tracking: 0.0),
+        size: ResponsiveNum(16, 14),
+        weight: 400,
+        height: ResponsiveNum(26 / 16, 22 / 14),
+        tracking: ResponsiveNum.all(0.0)),
     'code': ThemeTypeStyle(
-        size: ResponsiveNum(13, 12), weight: 400, height: 1.5, tracking: 0.0),
+        size: ResponsiveNum(13, 12),
+        weight: 400,
+        height: ResponsiveNum(20 / 13, 18 / 12),
+        tracking: ResponsiveNum.all(0.0)),
     'codeSmall': ThemeTypeStyle(
-        size: ResponsiveNum.all(12), weight: 400, height: 1.333, tracking: 0.0),
+        size: ResponsiveNum.all(12),
+        weight: 400,
+        height: ResponsiveNum.all(16 / 12),
+        tracking: ResponsiveNum.all(0.0)),
   };
 
   static const defaults = ThemeTypeTokens();
@@ -347,14 +380,14 @@ class ThemeShapeRadii {
   final double pill;
 
   const ThemeShapeRadii({
-    this.xs = R.xs,
-    this.sm = R.sm,
-    this.chip = R.chip,
-    this.md = R.md,
-    this.card = R.card,
-    this.lg = R.lg,
-    this.sheetTop = R.sheetTop,
-    this.pill = R.pill,
+    this.xs = 4.0,
+    this.sm = 6.0,
+    this.chip = 6.0,
+    this.md = 8.0,
+    this.card = 10.0,
+    this.lg = 12.0,
+    this.sheetTop = 20.0,
+    this.pill = 999.0,
   });
 
   static const defaults = ThemeShapeRadii();
@@ -510,16 +543,16 @@ class ThemeSpaceScale {
   final double s40;
 
   const ThemeSpaceScale({
-    this.s2 = S.s2,
-    this.s4 = S.s4,
-    this.s6 = S.s6,
-    this.s8 = S.s8,
-    this.s12 = S.s12,
-    this.s16 = S.s16,
-    this.s20 = S.s20,
-    this.s24 = S.s24,
-    this.s32 = S.s32,
-    this.s40 = S.s40,
+    this.s2 = 2.0,
+    this.s4 = 4.0,
+    this.s6 = 6.0,
+    this.s8 = 8.0,
+    this.s12 = 12.0,
+    this.s16 = 16.0,
+    this.s20 = 20.0,
+    this.s24 = 24.0,
+    this.s32 = 32.0,
+    this.s40 = 40.0,
   });
 
   static const defaults = ThemeSpaceScale();
@@ -565,15 +598,15 @@ class ThemeSpaceMetrics {
   final ResponsiveNum tabActionSize;
 
   const ThemeSpaceMetrics({
-    this.gutter = const ResponsiveNum.all(M.gutter),
-    this.navRow = const ResponsiveNum.all(M.navRow),
-    this.minTarget = const ResponsiveNum.all(M.minTarget),
-    this.appBarHeight = const ResponsiveNum.all(M.appBarHeight),
-    this.rowHeight = const ResponsiveNum.all(M.rowHeight),
-    this.rowPadH = const ResponsiveNum.all(M.rowPadH),
-    this.tabStripHeight = const ResponsiveNum.all(M.tabStripHeight),
-    this.tabIconSize = const ResponsiveNum.all(M.tabIconSize),
-    this.tabActionSize = const ResponsiveNum.all(M.tabActionSize),
+    this.gutter = const ResponsiveNum.all(16.0),
+    this.navRow = const ResponsiveNum.all(52.0),
+    this.minTarget = const ResponsiveNum.all(44.0),
+    this.appBarHeight = const ResponsiveNum.all(56.0),
+    this.rowHeight = const ResponsiveNum.all(52.0),
+    this.rowPadH = const ResponsiveNum.all(12.0),
+    this.tabStripHeight = const ResponsiveNum.all(56.0),
+    this.tabIconSize = const ResponsiveNum.all(28.0),
+    this.tabActionSize = const ResponsiveNum.all(52.0),
   });
 
   static const defaults = ThemeSpaceMetrics();

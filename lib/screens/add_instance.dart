@@ -576,12 +576,12 @@ class _ReticleState extends State<_Reticle>
                 : BorderSide.none,
           ),
           borderRadius: BorderRadius.only(
-            topLeft: top && left ? const Radius.circular(R.md) : Radius.zero,
-            topRight: top && !left ? const Radius.circular(R.md) : Radius.zero,
+            topLeft: top && left ? Radius.circular(R.md) : Radius.zero,
+            topRight: top && !left ? Radius.circular(R.md) : Radius.zero,
             bottomLeft:
-                !top && left ? const Radius.circular(R.md) : Radius.zero,
+                !top && left ? Radius.circular(R.md) : Radius.zero,
             bottomRight:
-                !top && !left ? const Radius.circular(R.md) : Radius.zero,
+                !top && !left ? Radius.circular(R.md) : Radius.zero,
           ),
         ),
       ),

@@ -67,7 +67,7 @@ class _TranscriptCardState extends State<TranscriptCard> {
                 behavior: HitTestBehavior.opaque,
                 onTap: () => setState(() => _open = !_open),
                 child: Padding(
-                  padding: const EdgeInsets.only(top: S.s2),
+                  padding: EdgeInsets.only(top: S.s2),
                   child: Text(_open ? 'Show less' : 'Show more',
                       style: sans(TranscriptCard.metaSize,
                           weight: W.label, color: AppColors.fg3)),
@@ -94,12 +94,12 @@ class _TranscriptCardState extends State<TranscriptCard> {
           Row(children: [
             if (widget.leading != null) ...[
               widget.leading!,
-              const SizedBox(width: S.s8),
+              SizedBox(width: S.s8),
             ] else if (widget.icon != null) ...[
               AppIcon(widget.icon!,
                   size: 12,
                   color: widget.tone == Tone.neutral ? AppColors.fg3 : fg),
-              const SizedBox(width: S.s6),
+              SizedBox(width: S.s6),
             ],
             Expanded(
               child: Text(widget.kind,
@@ -108,12 +108,12 @@ class _TranscriptCardState extends State<TranscriptCard> {
                   style: sans(TranscriptCard.metaSize, color: AppColors.fg3)),
             ),
             if (widget.status != null && widget.status!.isNotEmpty) ...[
-              const SizedBox(width: S.s8),
+              SizedBox(width: S.s8),
               CardStatus(widget.status!, tone: widget.tone),
             ],
           ]),
           if (title.isNotEmpty) ...[
-            const SizedBox(height: S.s4),
+            SizedBox(height: S.s4),
             Text(title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -125,11 +125,11 @@ class _TranscriptCardState extends State<TranscriptCard> {
             _body(body),
           ],
           if (widget.child != null) ...[
-            const SizedBox(height: S.s8),
+            SizedBox(height: S.s8),
             widget.child!,
           ],
           if (widget.footer != null) ...[
-            const SizedBox(height: S.s8),
+            SizedBox(height: S.s8),
             widget.footer!,
           ],
         ],

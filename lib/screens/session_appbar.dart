@@ -731,7 +731,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           originClient: widget.client,
           originSessionId: widget.sessionId,
           builder: (_, close) => SingleChildScrollView(
-              padding: const EdgeInsets.all(S.s12),
+              padding: EdgeInsets.all(S.s12),
               child: AgentWakePanel(
                   client: widget.client,
                   owner: widget.sessionId,

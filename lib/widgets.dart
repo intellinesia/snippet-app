@@ -338,19 +338,19 @@ MarkdownStyleSheet markdownStyle(BuildContext context) {
         decoration: TextDecoration.underline,
         decorationColor: _linkColor.withValues(alpha: 0.5)),
     h1: TS.sectionTitle(),
-    h1Padding: const EdgeInsets.only(top: S.s12, bottom: S.s4),
+    h1Padding: EdgeInsets.only(top: S.s12, bottom: S.s4),
     h2: TS.rowTitle().copyWith(fontWeight: weightFor(W.strong)),
-    h2Padding: const EdgeInsets.only(top: S.s12, bottom: S.s4),
+    h2Padding: EdgeInsets.only(top: S.s12, bottom: S.s4),
     h3: TS.rowTitle(),
-    h3Padding: const EdgeInsets.only(top: S.s8, bottom: S.s2),
+    h3Padding: EdgeInsets.only(top: S.s8, bottom: S.s2),
     listIndent: 20,
-    listBulletPadding: const EdgeInsets.only(right: S.s6),
+    listBulletPadding: EdgeInsets.only(right: S.s6),
     code: TS.code(AppColors.fg1).copyWith(
         fontSize: kMobile ? 14 : 13, backgroundColor: AppColors.hover),
     codeblockPadding: EdgeInsets.zero,
     codeblockDecoration: const BoxDecoration(),
     blockquote: TS.body(AppColors.fg3),
-    blockquotePadding: const EdgeInsets.fromLTRB(S.s12, S.s2, 0, S.s2),
+    blockquotePadding: EdgeInsets.fromLTRB(S.s12, S.s2, 0, S.s2),
     blockquoteDecoration: BoxDecoration(
       border: Border(left: BorderSide(color: AppColors.lineStrong, width: 2)),
     ),
@@ -1522,7 +1522,7 @@ void _messageActions(BuildContext context, String text) {
               title: 'Select text',
               maxHeight: 640,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: S.s4),
+                padding: EdgeInsets.symmetric(horizontal: S.s4),
                 child: SelectionArea(
                   child: MarkdownBody(
                     data: unwrapCodedLinks(text),
@@ -1993,7 +1993,7 @@ class SectionLabel extends StatelessWidget {
   const SectionLabel(this.text, {super.key});
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s2),
+        padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s2),
         child: Text(text.toUpperCase(), style: TS.overline()),
       );
 }
@@ -2197,7 +2197,7 @@ class SnAppBar extends StatelessWidget {
               iconSize: kMobile ? 22 : 20,
               tooltip: 'Back',
               onTap: onBack),
-        if (leading != null || onBack != null) const SizedBox(width: S.s2),
+        if (leading != null || onBack != null) SizedBox(width: S.s2),
         Expanded(
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

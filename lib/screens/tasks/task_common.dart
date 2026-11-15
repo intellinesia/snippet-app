@@ -152,7 +152,7 @@ Future<void> openTaskDetail(
               color: AppColors.bg,
               clipBehavior: Clip.antiAlias,
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
+                  BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
               child: Column(children: [
                 const SizedBox(height: 8),
                 Container(

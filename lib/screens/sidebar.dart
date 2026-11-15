@@ -405,7 +405,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         if (!kMobile) ...[
           if (hasClient && (_sessions?.isNotEmpty ?? false) && _selecting)
             Padding(
-              padding: const EdgeInsets.fromLTRB(S.s4, S.s4, S.s8, S.s4),
+              padding: EdgeInsets.fromLTRB(S.s4, S.s4, S.s8, S.s4),
               child: _selectionBar(mobile: false),
             ),
           // Sectioned, collapsible sidebar — the reference's left column.
@@ -818,7 +818,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     if (_selecting) {
       final n = _selected.length;
       return Padding(
-        padding: const EdgeInsets.fromLTRB(S.s4, 16, M.gutter, 6),
+        padding: EdgeInsets.fromLTRB(S.s4, 16, M.gutter, 6),
         child: SizedBox(
           height: M.minTarget,
           child: Row(children: [
@@ -827,7 +827,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                 iconSize: 20,
                 tooltip: 'Cancel',
                 onTap: _exitSelect),
-            const SizedBox(width: S.s4),
+            SizedBox(width: S.s4),
             Expanded(
               child: Text(n == 0 ? 'Select chats' : '$n selected',
                   maxLines: 1,
@@ -999,7 +999,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       // Offline ≠ empty: a failed fetch gets an explicit error + retry.
       if (widget.sessionsError != null) {
         return ListView(
-            padding: const EdgeInsets.fromLTRB(M.gutter, 2, M.gutter, 32),
+            padding: EdgeInsets.fromLTRB(M.gutter, 2, M.gutter, 32),
             children: [
               Padding(
                   padding: const EdgeInsets.all(20),
@@ -1017,7 +1017,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             ]);
       }
       return ListView(
-          padding: const EdgeInsets.fromLTRB(M.gutter, 2, M.gutter, 32),
+          padding: EdgeInsets.fromLTRB(M.gutter, 2, M.gutter, 32),
           children: [_emptySessions()]);
     }
     final split = splitSettled(_sortSessionsByRecency(all.where((s) =>
@@ -1829,12 +1829,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           iconSize: mobile ? 18 : 15,
           tooltip: 'Cancel',
           onTap: _exitSelect),
-      const SizedBox(width: S.s4),
+      SizedBox(width: S.s4),
       Text(n == 0 ? 'Select chats' : '$n selected',
           style: mobile ? TS.sectionTitle() : TS.label(AppColors.fg1)),
       const Spacer(),
       _selectAllToggle(),
-      const SizedBox(width: S.s4),
+      SizedBox(width: S.s4),
       Btn(n == 0 ? 'Delete' : 'Delete $n',
           small: true,
           icon: 'trash',
@@ -1852,7 +1852,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         color: AppColors.surface1,
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
-      padding: const EdgeInsets.fromLTRB(M.gutter, S.s12, M.gutter, S.s12),
+      padding: EdgeInsets.fromLTRB(M.gutter, S.s12, M.gutter, S.s12),
       child: Btn(n == 0 ? 'Delete' : 'Delete $n',
           full: true,
           icon: 'trash',

@@ -121,7 +121,7 @@ class _UsageScreenState extends State<UsageScreen> {
     } else if (data == null) {
       content = kMobile
           ? Padding(
-              padding: const EdgeInsets.symmetric(vertical: S.s24),
+              padding: EdgeInsets.symmetric(vertical: S.s24),
               child: Column(children: [
                 Text('Unable to load usage',
                     style: sans(13, color: AppColors.fg1)),
@@ -147,7 +147,7 @@ class _UsageScreenState extends State<UsageScreen> {
     } else if (data.providers.isEmpty) {
       content = kMobile
           ? Padding(
-              padding: const EdgeInsets.symmetric(vertical: S.s32),
+              padding: EdgeInsets.symmetric(vertical: S.s32),
               child: Text('No model calls in this period.',
                   textAlign: TextAlign.center, style: TS.meta()),
             )
@@ -196,7 +196,7 @@ class _UsageScreenState extends State<UsageScreen> {
             alignment: Alignment.centerLeft,
             child: _PeriodTabs(value: _period, onChanged: _setPeriod),
           ),
-          const SizedBox(height: S.s16),
+          SizedBox(height: S.s16),
           AnimatedSwitcher(
             duration: Motion.quick,
             child: KeyedSubtree(
@@ -218,7 +218,7 @@ class _UsageScreenState extends State<UsageScreen> {
       body = widget.embedded
           ? column
           : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s40),
+              padding: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s40),
               child: column);
     }
 

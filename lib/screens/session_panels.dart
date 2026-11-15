@@ -534,7 +534,7 @@ class _DeskLanesState extends State<_DeskLanes> {
                     ),
                   ),
                 const Spacer(),
-                const SizedBox(width: S.s8),
+                SizedBox(width: S.s8),
                 Flexible(
                   child: LaneWho(
                       client: widget.client,
@@ -545,7 +545,7 @@ class _DeskLanesState extends State<_DeskLanes> {
                       maxTextWidth: 96),
                 ),
                 if (_elapsed(l.startedAt).isNotEmpty) ...[
-                  const SizedBox(width: S.s8),
+                  SizedBox(width: S.s8),
                   Text(_elapsed(l.startedAt),
                       style: mono(11, color: AppColors.fg4)),
                 ],

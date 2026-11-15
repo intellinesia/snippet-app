@@ -664,7 +664,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 652),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
+                  padding: EdgeInsets.fromLTRB(
                       S.s16, S.s24, S.s16, S.s8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -675,7 +675,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                               spacing: -0.2,
                               color: AppColors.fg1)),
                       if (t != null) ...[
-                        const SizedBox(height: S.s6),
+                        SizedBox(height: S.s6),
                         _byline(t),
                         if (t.goalTitle != null) _goalLine(t),
                       ],
@@ -720,7 +720,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: double.infinity),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: S.s24),
+                        padding: EdgeInsets.symmetric(horizontal: S.s24),
                         child: _body(t),
                       ),
                     ),
@@ -860,19 +860,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final age = taskAge(t);
     final inReview = t.status == TaskStatus.inReview;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 0),
+      padding: EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           _v5Pill(
             '${t.status.label}${age.isEmpty ? '' : ' · $age'}',
             lit: inReview,
           ),
-          const SizedBox(width: S.s8),
+          SizedBox(width: S.s8),
           _v5Pill(t.id.length > 8 ? t.id.substring(0, 8) : t.id,
               code: true),
         ]),
         if (t.goalTitle != null) ...[
-          const SizedBox(height: S.s4),
+          SizedBox(height: S.s4),
           Text('Goal: ${t.goalTitle}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -883,7 +883,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           Row(children: [
             Expanded(child: _v5Action('Approve', primary: true,
                 onTap: busy ? null : () => _setStatus(TaskStatus.done))),
-            const SizedBox(width: S.s8),
+            SizedBox(width: S.s8),
             Expanded(child: _v5Action('Send back',
                 onTap: busy ? null : () => _setStatus(TaskStatus.inProgress))),
           ]),
@@ -894,7 +894,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   Widget _v5Pill(String text, {bool lit = false, bool code = false}) => Container(
         height: 22,
-        padding: const EdgeInsets.symmetric(horizontal: S.s8),
+        padding: EdgeInsets.symmetric(horizontal: S.s8),
         decoration: BoxDecoration(
           color: lit ? AppColors.runBg : AppColors.tint2,
           borderRadius: BorderRadius.circular(11),
@@ -929,7 +929,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       );
 
   Widget _v5Label(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(S.s16, 14, 0, S.s6),
+        padding: EdgeInsets.fromLTRB(S.s16, 14, 0, S.s6),
         child: Text(text, style: sans(13, color: AppColors.fg3)),
       );
 
@@ -947,11 +947,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget _mobileV5Groups(TaskItem t) {
     final brief = t.description.trim().isNotEmpty ? t.description : t.plan;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 0),
+      padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _v5Label('Brief'),
         _v5Card(
-          padding: const EdgeInsets.fromLTRB(14, S.s12, 14, S.s12),
+          padding: EdgeInsets.fromLTRB(14, S.s12, 14, S.s12),
           child: brief.trim().isEmpty
               ? Text('No brief yet.', style: sans(15, color: AppColors.fg4))
               : _Description(markdown: brief),
@@ -959,7 +959,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         if (t.workPlan.isNotEmpty) ...[
           _v5Label('Plan'),
           _v5Card(
-            padding: const EdgeInsets.fromLTRB(14, S.s12, 14, S.s12),
+            padding: EdgeInsets.fromLTRB(14, S.s12, 14, S.s12),
             child: _WorkPlan(steps: t.workPlan),
           ),
         ],
@@ -967,7 +967,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         _v5Card(child: Column(children: _detailRows(t))),
         _v5Label('Log'),
         _v5Card(
-          padding: const EdgeInsets.fromLTRB(14, S.s8, 14, S.s8),
+          padding: EdgeInsets.fromLTRB(14, S.s8, 14, S.s8),
           child: log.isEmpty
               ? Text('No log entries yet.', style: sans(15, color: AppColors.fg4))
               : Column(children: [
@@ -1035,7 +1035,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   /// v5 `.pgi`: bright label left, dim value right, hairline between rows.
   Widget _detailRow(String label, String value, {bool last = false}) => Container(
         constraints: const BoxConstraints(minHeight: 44),
-        padding: const EdgeInsets.symmetric(vertical: S.s8),
+        padding: EdgeInsets.symmetric(vertical: S.s8),
         decoration: BoxDecoration(
           border: last
               ? null
@@ -1048,7 +1048,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 overflow: TextOverflow.ellipsis,
                 style: sans(15, color: AppColors.fg1)),
           ),
-          const SizedBox(width: S.s12),
+          SizedBox(width: S.s12),
           Flexible(
             child: Text(value.isEmpty ? '—' : value,
                 maxLines: 1,
@@ -1078,7 +1078,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget _tabScroll({required Widget child}) => Padding(
         padding: kMobile
             ? const EdgeInsets.fromLTRB(20, 8, 20, 16)
-            : const EdgeInsets.fromLTRB(S.s16, S.s12, S.s16, S.s12),
+            : EdgeInsets.fromLTRB(S.s16, S.s12, S.s16, S.s12),
         child: child,
       );
 
@@ -1093,7 +1093,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           ],
           if (t.goalTitle != null && !kMobile && !widget.pane) ...[
             _goalLine(t),
-            const SizedBox(height: S.s8),
+            SizedBox(height: S.s8),
           ],
           _keyCard(_keyRows(t)),
           if (!kMobile)
@@ -1178,7 +1178,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                     color: statusColor(s),
                                     shape: BoxShape.circle),
                               ),
-                              const SizedBox(width: S.s6),
+                              SizedBox(width: S.s6),
                             ],
                             Text(s.label,
                                 style: sans(kMobile ? 14 : 12,
@@ -1814,7 +1814,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final room = this.room;
     if (room == null) return const [];
     if (room.events.isEmpty) {
-      return const [
+      return [
         SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.only(top: S.s16),
@@ -1831,7 +1831,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       SliverPadding(
         padding: kMobile
             ? const EdgeInsets.fromLTRB(20, 18, 20, 12)
-            : const EdgeInsets.all(S.s12),
+            : EdgeInsets.all(S.s12),
         sliver: SliverList.builder(
           itemCount: room.events.length,
           itemBuilder: (_, i) {

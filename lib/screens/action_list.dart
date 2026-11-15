@@ -42,7 +42,7 @@ class ActionGroup extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, S.s16, 4, S.s8),
+          padding: EdgeInsets.fromLTRB(4, S.s16, 4, S.s8),
           child: Text(label.toUpperCase(), style: TS.overline()),
         ),
         Container(
@@ -116,7 +116,7 @@ class ActionRow extends StatelessWidget {
               splashFactory: kMobile ? NoSplash.splashFactory : null,
               highlightColor: kMobile ? Colors.transparent : null,
               child: Container(
-                constraints: const BoxConstraints(minHeight: M.minTarget + 8),
+                constraints: BoxConstraints(minHeight: M.minTarget + 8),
                 padding: EdgeInsets.symmetric(
                     horizontal: kMobile ? 4 : 14, vertical: kMobile ? 11 : 0),
                 child: Row(children: [
