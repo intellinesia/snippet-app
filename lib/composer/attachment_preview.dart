@@ -10,7 +10,6 @@ import 'package:video_player/video_player.dart';
 
 import '../file_actions.dart';
 import '../file_icons.dart';
-import '../glass.dart';
 import '../media_views.dart';
 import '../platform.dart';
 import '../theme.dart';
