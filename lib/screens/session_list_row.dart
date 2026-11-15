@@ -480,25 +480,10 @@ class _ProjectChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final trimmed = label.trim();
-    final letter =
-        trimmed.isEmpty ? '?' : trimmed.characters.first.toUpperCase();
     return Flexible(
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-          width: 13,
-          height: 13,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColors.surface3,
-            borderRadius: BorderRadius.circular(3),
-          ),
-          child: Text(
-            letter,
-            style: codeMono(9, color: AppColors.fg3, height: 1.0),
-          ),
-        ),
-        const SizedBox(width: 5),
+        AppIcon('folder', size: 11, color: AppColors.fg4),
+        const SizedBox(width: 4),
         Flexible(
           child: Text(
             label,
