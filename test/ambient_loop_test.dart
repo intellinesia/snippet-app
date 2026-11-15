@@ -36,9 +36,9 @@ void main() {
         const MaterialApp(home: Center(child: WorkingDots())));
     await tester.pump();
     final before = _bottoms(tester);
-    // 45 ms is short of the 66 ms timer, past the 60% ride threshold.
+    // 40 ms is short of the 50 ms timer, past the 60% ride threshold.
     tester.binding.scheduleFrame();
-    await tester.pump(const Duration(milliseconds: 45));
+    await tester.pump(const Duration(milliseconds: 40));
     expect(_bottoms(tester), isNot(equals(before)));
     await tester.pumpWidget(const SizedBox());
   });
@@ -79,7 +79,7 @@ void main() {
     back.start();
     final t0 = loop.value;
     await tester.pump(const Duration(milliseconds: 330));
-    expect(ticks, 5);
+    expect(ticks, 6);
     expect((loop.value - t0) % 1.0, closeTo(0.5, 0.01));
     for (var i = 0; i < 40; i++) {
       await tester.pump(const Duration(milliseconds: 66));
