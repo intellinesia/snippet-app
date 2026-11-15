@@ -16,6 +16,20 @@ mod out {
     use std::ptr::NonNull;
     use wgpu::rwh::{AndroidNdkWindowHandle, RawWindowHandle};
 
+    #[link(name = "log")]
+    unsafe extern "C" {
+        fn __android_log_write(
+            prio: i32,
+            tag: *const std::ffi::c_char,
+            text: *const std::ffi::c_char,
+        ) -> i32;
+    }
+
+    fn log(text: &str) {
+        let text = std::ffi::CString::new(text).unwrap_or_default();
+        unsafe { __android_log_write(4, c"snippet_render".as_ptr(), text.as_ptr()) };
+    }
+
     // ANativeWindow is refcounted and its producer calls are thread-safe.
     struct Window(NativeWindow);
     unsafe impl Send for Window {}
@@ -71,7 +85,13 @@ mod out {
             let ptr = NonNull::new(win.get_native_window().cast()).ok_or("window: null")?;
             let handle = RawWindowHandle::AndroidNdk(AndroidNdkWindowHandle::new(ptr));
             let keep = Box::new(Window(win.clone()));
-            match unsafe { renderer.attach(handle, keep) } {
+            let attached = unsafe { renderer.attach(handle, keep) };
+            log(&format!(
+                "{} {w}x{h}: {:?}",
+                renderer.backend(),
+                attached.as_ref().map(|_| "direct present")
+            ));
+            match attached {
                 Ok(()) => self.cpu = None,
                 Err(_) => {
                     renderer.detach();

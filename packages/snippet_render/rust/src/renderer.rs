@@ -122,7 +122,33 @@ fn padded_row(width: u32) -> u32 {
     row.div_ceil(align) * align
 }
 
+fn open_adapter() -> Result<(wgpu::Instance, wgpu::Adapter), Error> {
+    let request = |desc: wgpu::InstanceDescriptor| {
+        let instance = wgpu::Instance::new(desc);
+        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::LowPower,
+            ..Default::default()
+        }));
+        adapter.map(|a| (instance, a))
+    };
+    // Android GLES goes through ANGLE and cannot present to a SurfaceProducer window.
+    if cfg!(target_os = "android") {
+        let mut desc = wgpu::InstanceDescriptor::new_without_display_handle_from_env();
+        desc.backends = wgpu::Backends::VULKAN;
+        if let Ok(found) = request(desc) {
+            return Ok(found);
+        }
+    }
+    request(wgpu::InstanceDescriptor::new_without_display_handle_from_env())
+        .map_err(|e| Error(format!("no GPU adapter: {e}")))
+}
+
 impl Renderer {
+    pub fn backend(&self) -> String {
+        let info = self.adapter.get_info();
+        format!("{:?} {}", info.backend, info.name)
+    }
+
     pub fn new(
         source: &str,
         lang: Lang,
@@ -131,13 +157,7 @@ impl Renderer {
         height: u32,
     ) -> Result<Self, Error> {
         let module = compile(source, lang)?;
-        let instance =
-            wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
-        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::LowPower,
-            ..Default::default()
-        }))
-        .map_err(|e| Error(format!("no GPU adapter: {e}")))?;
+        let (instance, adapter) = open_adapter()?;
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             label: Some("snippet_render"),
             required_limits:
