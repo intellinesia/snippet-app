@@ -558,7 +558,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                   children: [
                     ColoredBox(
                       color: opaqueBg ? AppColors.bg : Colors.transparent,
-                      child: body,
+                      child: RepaintBoundary(child: body),
                     ),
                     if (scrimAlpha > 0)
                       Positioned.fill(
