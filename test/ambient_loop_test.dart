@@ -30,6 +30,19 @@ void main() {
     expect(AmbientClock.instance.isRunning, isFalse);
   });
 
+  testWidgets('a frame drawn for something else carries the tick early',
+      (tester) async {
+    await tester.pumpWidget(
+        const MaterialApp(home: Center(child: WorkingDots())));
+    await tester.pump();
+    final before = _bottoms(tester);
+    // 45 ms is short of the 66 ms timer, past the 60% ride threshold.
+    tester.binding.scheduleFrame();
+    await tester.pump(const Duration(milliseconds: 45));
+    expect(_bottoms(tester), isNot(equals(before)));
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('TickerMode disabled stops updates', (tester) async {
     final enabled = ValueNotifier(true);
     addTearDown(enabled.dispose);
