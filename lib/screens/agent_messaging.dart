@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import '../chat/chat_info.dart' show showAgentInfo;
 import '../chat/choices.dart';
 import '../glass.dart';
+import '../ambient_loop.dart';
 import '../api.dart';
 import '../clock.dart';
 import '../chat/chat_style.dart';
@@ -31,6 +32,7 @@ import 'agent_records.dart';
 import 'agent_thread_cards.dart';
 import 'agent_view_switcher.dart';
 import 'mobile_session_home.dart' show DotField;
+import '../chat_scene.dart' show SceneBackdrop;
 
 /// Pick one agent from the directory, as an anchored DROPDOWN.
 ///
@@ -903,6 +905,18 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     });
   }
 
+  // Scene and dots sit outside the SafeArea so the header frost can reach
+  // up behind the status bar, as on the session screen.
+  Widget _chrome(Widget body, bool hideChrome) => kMobile
+      ? SceneBackdrop(
+          child: DotField.chat(
+            child: StatusInset(
+                top: hideChrome ? 0 : MediaQuery.paddingOf(context).top,
+                child: body),
+          ),
+        )
+      : body;
+
   @override
   Widget build(BuildContext context) {
     // Wrapped in Material because presentScreen's non-rounded frames are plain
@@ -910,18 +924,19 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     // here require one.
     final hideChrome = _noChrome;
     return Material(
-      color: kMobile ? readingBg : Colors.transparent,
-      child: SafeArea(
+      color: kMobile ? AppColors.pageCanvas : Colors.transparent,
+      child: _chrome(SafeArea(
         top: !hideChrome,
         bottom: false,
         child: Column(
           children: [
             Expanded(
               child: Stack(
+                clipBehavior: Clip.none,
                 children: [
                   Positioned.fill(
                       child: kMobile
-                          ? DotField.chat(child: _viewBody())
+                          ? _viewBody()
                           : hideChrome
                           ? _viewBody()
                           : TopFadeMask(
@@ -940,7 +955,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             if (_view == AgentView.thread) _composer(),
           ],
         ),
-      ),
+      ), hideChrome),
     );
   }
 
@@ -1637,18 +1652,17 @@ class _TypingDots extends StatefulWidget {
   State<_TypingDots> createState() => _TypingDotsState();
 }
 
-class _TypingDotsState extends State<_TypingDots>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 600));
+class _TypingDotsState extends State<_TypingDots> {
+  final _c = AmbientLoop(const Duration(milliseconds: 600));
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _c.bind(context);
     if (MediaQuery.disableAnimationsOf(context)) {
       _c.stop();
-    } else if (!_c.isAnimating) {
-      _c.repeat();
+    } else {
+      _c.start();
     }
   }
 

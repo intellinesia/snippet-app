@@ -22,7 +22,7 @@ import '../panel.dart';
 import '../platform.dart';
 import '../pull_refresh.dart';
 import '../swr.dart';
-import '../glass.dart' show TopFadeMask;
+import '../glass.dart' show StatusInset, TopFadeMask;
 import '../theme.dart';
 import '../widgets.dart';
 import '../chat/agent_cluster.dart';
@@ -32,6 +32,7 @@ import 'agent_questions_card.dart' show questionAnswerSystemLine;
 import 'agent_thread_cards.dart' show agentThreadEventCard;
 import 'tasks/tasks_panel.dart' show openTasksPage, openTaskCountFor;
 import 'mobile_session_home.dart' show DotField;
+import '../chat_scene.dart' show SceneBackdrop;
 
 /// An `@token` in a group message: the boundary keeps `mail@fable` from
 /// counting as a mention.
@@ -1272,22 +1273,35 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     return null;
   }
 
+  // Scene and dots sit outside the SafeArea so the header frost can reach
+  // up behind the status bar, as on the session screen.
+  Widget _chrome(Widget body, bool hideChrome) => kMobile
+      ? SceneBackdrop(
+          child: DotField.chat(
+            child: StatusInset(
+                top: hideChrome ? 0 : MediaQuery.paddingOf(context).top,
+                child: body),
+          ),
+        )
+      : body;
+
   @override
   Widget build(BuildContext context) {
     final hideChrome = widget.embedded;
     return Material(
-      color: kMobile ? readingBg : Colors.transparent,
-      child: SafeArea(
+      color: kMobile ? AppColors.pageCanvas : Colors.transparent,
+      child: _chrome(SafeArea(
         top: !hideChrome,
         bottom: false,
         child: Column(
           children: [
             Expanded(
               child: Stack(
+                clipBehavior: Clip.none,
                 children: [
                   Positioned.fill(
                       child: kMobile
-                          ? DotField.chat(child: _body(hideChrome: hideChrome))
+                          ? _body(hideChrome: hideChrome)
                           : hideChrome
                           ? _body(hideChrome: hideChrome)
                           : TopFadeMask(
@@ -1306,7 +1320,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             _composer(),
           ],
         ),
-      ),
+      ), hideChrome),
     );
   }
 

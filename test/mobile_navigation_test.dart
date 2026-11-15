@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/screens/mobile_session_home.dart';
@@ -112,6 +113,50 @@ void main() {
       await pump();
       expect(tester.widget<MobileShell>(find.byType(MobileShell)).chatsOpen, isTrue);
       expect(tester.widget<MobileShell>(find.byType(MobileShell)).canPopRoute, isFalse);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('an edge swipe that is also a system back navigates once',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    DaemonClient.wsConnector = (uri, {connectTimeout, pingInterval}) =>
+        _FakeWebSocketChannel();
+    addTearDown(() => DaemonClient.wsConnector = null);
+    var closed = false;
+    tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'SystemNavigator.pop') closed = true;
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, null));
+    try {
+      SharedPreferences.setMockInitialValues({
+        'instances':
+            '[{"name":"Local","url":"http://127.0.0.1:9090","token":"tok"}]',
+      });
+      await _pumpShell(tester);
+      final sidebar = tester.widget<Sidebar>(find.byType(Sidebar));
+      sidebar.onOpenSession('s1', 'A session', null);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(tester.widget<MobileShell>(find.byType(MobileShell)).chatsOpen,
+          isFalse);
+
+      await tester.timedDragFrom(const Offset(4, 400), const Offset(300, 0),
+          const Duration(milliseconds: 150));
+      await tester.binding.handlePopRoute();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final shell = tester.widget<MobileShell>(find.byType(MobileShell));
+      expect(shell.chatsOpen, isTrue);
+      expect(shell.mobileHome, MobileHome.chats);
+      expect(closed, isFalse);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
     } finally {

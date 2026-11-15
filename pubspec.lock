@@ -631,6 +631,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.2"
+  irondash_engine_context:
+    dependency: transitive
+    description:
+      name: irondash_engine_context
+      sha256: eccd423b2e6b821338fc3c0bf4d12192cff7a4a3f5c66c6abc704f25aa3886b1
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.0-dev.0"
   isolate_contactor:
     dependency: transitive
     description:
@@ -783,6 +791,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.19.2"
+  native_toolchain_rust:
+    dependency: transitive
+    description:
+      name: native_toolchain_rust
+      sha256: faa57d2258a3b0fd2a634054f54e4496c9fcbd971977e7d2b7e6916d56892857
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.4+0"
   nested:
     dependency: transitive
     description:
@@ -1179,6 +1195,13 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  snippet_render:
+    dependency: "direct main"
+    description:
+      path: "packages/snippet_render"
+      relative: true
+    source: path
+    version: "0.0.1"
   source_span:
     dependency: transitive
     description:
@@ -1307,6 +1330,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.11.1"
+  toml:
+    dependency: transitive
+    description:
+      name: toml
+      sha256: "35a35f782228656a2af31e8c73d1353cc4ef3d683fd68af1111b44631879c05e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.18.0"
   typed_data:
     dependency: transitive
     description:

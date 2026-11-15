@@ -208,7 +208,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
     final changes = LayoutBuilder(builder: (context, box) => PullToRefresh(
       onRefresh: refresh,
       child: Container(
-        color: kMobile ? AppColors.bg : Colors.transparent,
+        color: kMobile ? AppColors.pageBg : Colors.transparent,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(top: kMobile ? 8 : 0, bottom: 16),

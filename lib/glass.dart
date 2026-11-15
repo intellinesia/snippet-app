@@ -59,6 +59,19 @@ class Glass extends StatelessWidget {
   }
 }
 
+/// The status bar height a [SafeArea] took away, so frost can still reach under it.
+class StatusInset extends InheritedWidget {
+  const StatusInset({super.key, required this.top, required super.child});
+
+  final double top;
+
+  static double of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<StatusInset>()?.top ?? 0;
+
+  @override
+  bool updateShouldNotify(StatusInset oldWidget) => top != oldWidget.top;
+}
+
 /// The frosted strip a chat header floats on; the transcript scrolls under it.
 class GlassTopFrame extends StatelessWidget {
   const GlassTopFrame({super.key, required this.child, this.color});
@@ -82,8 +95,13 @@ class GlassTopFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = color ?? AppColors.bg;
     final on = Glass.enabled;
-    final frame = Stack(children: [
-      Positioned.fill(
+    final up = StatusInset.of(context);
+    final frame = Stack(clipBehavior: Clip.none, children: [
+      Positioned(
+        top: -up,
+        left: 0,
+        right: 0,
+        bottom: 0,
         child: IgnorePointer(
           child: Stack(children: [
             if (on)
