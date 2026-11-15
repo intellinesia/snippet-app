@@ -214,9 +214,21 @@ class SceneBackdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!kMobile) return child;
-    return Stack(fit: StackFit.expand, children: [
-      const Positioned.fill(child: ChatSceneLayer()),
-      child,
-    ]);
+    // An ancestor backdrop already paints the scene for this page.
+    final nested =
+        context.getInheritedWidgetOfExactType<_SceneScope>() != null;
+    return _SceneScope(
+      child: Stack(fit: StackFit.expand, children: [
+        if (!nested) const Positioned.fill(child: ChatSceneLayer()),
+        child,
+      ]),
+    );
   }
+}
+
+class _SceneScope extends InheritedWidget {
+  const _SceneScope({required super.child});
+
+  @override
+  bool updateShouldNotify(_SceneScope old) => false;
 }

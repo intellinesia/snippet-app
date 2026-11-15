@@ -324,7 +324,7 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
     return PullToRefresh(
       onRefresh: refresh,
       child: Container(
-        color: kMobile ? AppColors.bg : Colors.transparent,
+        color: kMobile ? AppColors.pageBg : Colors.transparent,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           // Horizontal insets belong to each child (the section header carries

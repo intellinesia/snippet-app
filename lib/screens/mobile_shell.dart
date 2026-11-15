@@ -201,9 +201,11 @@ class _MobileShellState extends State<MobileShell>
                       color: AppColors.bg,
                       child: TickerMode(
                         enabled: _v.value > 0,
-                        child: SafeArea(
-                          bottom: false,
-                          child: activeTabBody,
+                        child: SceneBackdrop(
+                          child: SafeArea(
+                            bottom: false,
+                            child: activeTabBody,
+                          ),
                         ),
                       ),
                     ),

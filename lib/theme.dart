@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'chat_scene.dart' show ChatScene;
 import 'platform.dart';
 
 // ---------------------------------------------------------------------------
@@ -1215,6 +1216,11 @@ class AppColors {
   static Color get canvas => kMobile
       ? currentTheme.canvas
       : currentTheme.canvas.withValues(alpha: 0.78);
+  /// Full-page background: clear while the scene paints behind the page.
+  static Color get pageBg =>
+      ChatScene.instance.ready ? const Color(0x00000000) : bg;
+  static Color get pageCanvas =>
+      ChatScene.instance.ready ? const Color(0x00000000) : canvas;
   static Color get floor => currentTheme.floor;
   static Color get surface1 => currentTheme.surface1;
   static Color get surface2 => currentTheme.surface2;

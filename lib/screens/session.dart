@@ -1415,12 +1415,8 @@ class _SessionScreenState extends State<SessionScreen>
       ? ChatBubbleScope(child: _buildScreen(context))
       : _buildScreen(context);
 
-  Widget _chatBackdrop(Widget body) => kMobile
-      ? Stack(fit: StackFit.expand, children: [
-          const Positioned.fill(child: ChatSceneLayer()),
-          DotField.chat(child: body),
-        ])
-      : body;
+  Widget _chatBackdrop(Widget body) =>
+      kMobile ? SceneBackdrop(child: DotField.chat(child: body)) : body;
 
   Widget _buildScreen(BuildContext context) {
     // Depend on Theme so this rebuilds when the user switches palettes.
@@ -1450,7 +1446,9 @@ class _SessionScreenState extends State<SessionScreen>
       // Tap-only: the default edge drag competes with transcript gestures.
       endDrawerEnableOpenDragGesture: false,
       backgroundColor:
-          widget.embedded && !kMobile ? Colors.transparent : readingBg,
+          widget.embedded && !kMobile
+              ? Colors.transparent
+              : AppColors.pageCanvas,
       resizeToAvoidBottomInset: false,
       body: _chatBackdrop(SafeArea(
         bottom: false,

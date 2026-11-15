@@ -450,7 +450,7 @@ class SettingsPanelState extends State<SettingsPanel> {
         // Same surface as the other phone destinations (chats, agents). This was
         // `surface1`, one step lighter, which made Settings read as a different
         // app the moment you tapped into it.
-        color: AppColors.bg,
+        color: AppColors.pageBg,
         child: CardGroupScope(
           child: SafeArea(
             bottom: false,

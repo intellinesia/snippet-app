@@ -198,7 +198,7 @@ class _EditorScreenState extends State<EditorScreen> {
         if (!didPop) _maybePop();
       },
       child: Scaffold(
-        backgroundColor: readingBg,
+        backgroundColor: AppColors.pageCanvas,
         body: SafeArea(
           bottom: false,
           child: Column(children: [

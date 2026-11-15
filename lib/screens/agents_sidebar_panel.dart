@@ -397,7 +397,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
 
     if (loading && agents.isEmpty && !showMcCard) {
       return Container(
-        color: kMobile ? AppColors.bg : Colors.transparent,
+        color: kMobile ? AppColors.pageBg : Colors.transparent,
         alignment: Alignment.center,
         child: kMobile
             ? const AppLoading(label: 'Loading agents')
@@ -407,7 +407,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     if (error != null && agents.isEmpty && !showMcCard) {
       if (kMobile) {
         return Material(
-          color: kMobile ? AppColors.bg : Colors.transparent,
+          color: kMobile ? AppColors.pageBg : Colors.transparent,
           child: SafeArea(
             bottom: false,
             child: ListView(
@@ -426,7 +426,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         );
       }
       return Container(
-        color: kMobile ? AppColors.bg : Colors.transparent,
+        color: kMobile ? AppColors.pageBg : Colors.transparent,
         padding: const EdgeInsets.fromLTRB(16, 28, 16, 16),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Text('Could not load agents',
@@ -667,7 +667,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     ];
 
     return Container(
-      color: kMobile ? AppColors.bg : Colors.transparent,
+      color: kMobile ? AppColors.pageBg : Colors.transparent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
