@@ -3190,23 +3190,23 @@ class _AppearancePreviewCard extends StatelessWidget {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final live = SessionInfo.fromJson({
       'id': 'preview-live',
-      'folder': '/home/you/code/snippet-mobile',
-      'title': 'Route task questions, approvals and results',
+      'folder': '/home/you/code/weather-app',
+      'title': 'Add hourly forecast view',
       'status': 'running',
       'running': true,
       'running_since': now,
-      'branch': 'native-shader-renderer',
-      'origin_folder': '/home/you/code/snippet-mobile',
+      'branch': 'hourly-forecast',
+      'origin_folder': '/home/you/code/weather-app',
       'total_changes': {'files': 64, 'added': 21900, 'removed': 20000},
     });
     final row = SessionInfo.fromJson({
       'id': 'preview-row',
-      'folder': '/home/you/code/technoxi-xdr-bridge',
-      'title': 'DefenseClaw XDR bridge',
+      'folder': '/home/you/code/notes-sync',
+      'title': 'Fix offline conflict merge',
       'status': 'idle',
       'last_active': now - 3600,
       'branch': 'main',
-      'origin_folder': '/home/you/code/technoxi-xdr-bridge',
+      'origin_folder': '/home/you/code/notes-sync',
       'total_changes': {'files': 6, 'added': 412, 'removed': 38},
     });
     // A real-scale crop of the top of home, faded out, over the page's own background.
