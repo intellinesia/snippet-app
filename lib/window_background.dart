@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'chat_scene.dart';
 import 'platform.dart';
 import 'theme.dart';
 
@@ -79,26 +80,33 @@ class WindowBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (kMobile) return child;
-    return ValueListenableBuilder<String?>(
-      valueListenable: WindowBackgroundStore.instance.path,
-      builder: (context, p, _) {
-        if (p == null) return child;
-        return Stack(fit: StackFit.expand, children: [
-          Positioned.fill(
-            child: Image.file(File(p),
-                fit: BoxFit.cover,
-                gaplessPlayback: true,
-                errorBuilder: (_, __, ___) =>
-                    ColoredBox(color: AppColors.bg)),
-          ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: ColoredBox(color: AppColors.bg.withValues(alpha: 0.35)),
-            ),
-          ),
-          child,
-        ]);
-      },
-    );
+    final store = WindowBackgroundStore.instance;
+    final scene = ChatScene.instance;
+    // Two fixed slots so toggling a background never remounts the shell.
+    return Stack(fit: StackFit.expand, children: [
+      Positioned.fill(
+        child: ListenableBuilder(
+          listenable: Listenable.merge([store.path, scene]),
+          builder: (context, _) {
+            final p = store.path.value;
+            return Stack(fit: StackFit.expand, children: [
+              if (p != null) ...[
+                Image.file(File(p),
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    errorBuilder: (_, __, ___) =>
+                        ColoredBox(color: AppColors.bg)),
+                IgnorePointer(
+                  child:
+                      ColoredBox(color: AppColors.bg.withValues(alpha: 0.35)),
+                ),
+              ],
+              if (scene.active) const ChatSceneLayer(),
+            ]);
+          },
+        ),
+      ),
+      child,
+    ]);
   }
 }

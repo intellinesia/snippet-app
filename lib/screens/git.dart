@@ -127,7 +127,6 @@ class _GitScreenState extends State<GitScreen> {
   }
 
   Future<void> _toggleStage(GitFile f, {required bool staged}) async {
-    HapticFeedback.selectionClick();
     setState(() => (staged ? _optUnstaged : _optStaged).add(f.path));
     try {
       final r = staged
@@ -1235,10 +1234,10 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
     ]);
 
     if (widget.embedded) {
-      return kMobile ? ColoredBox(color: readingBg, child: body) : body;
+      return kMobile ? ColoredBox(color: AppColors.pageCanvas, child: body) : body;
     }
     return Scaffold(
-      backgroundColor: kMobile ? readingBg : Colors.transparent,
+      backgroundColor: kMobile ? AppColors.pageCanvas : Colors.transparent,
       body: SafeArea(bottom: false, child: body),
     );
   }

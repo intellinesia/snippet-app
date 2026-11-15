@@ -49,6 +49,8 @@ dependencies:
   flutter_foreground_task: ^11.0.3
   ambient_audio:
     path: packages/ambient_audio
+  snippet_render:
+    path: packages/snippet_render
   flutter_soloud: ^4.1.7
 dev_dependencies:
   flutter_test:

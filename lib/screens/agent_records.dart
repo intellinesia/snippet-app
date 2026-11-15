@@ -152,7 +152,7 @@ Future<void> openAgentActions(
   if (kMobile) {
     return Navigator.of(context).push<void>(AppPageRoute<void>(
       builder: (page) => Material(
-        color: AppColors.bg,
+        color: AppColors.pageBg,
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -386,7 +386,7 @@ class _RecordsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: kMobile ? readingBg : Colors.transparent,
+      color: kMobile ? AppColors.pageCanvas : Colors.transparent,
       child: SafeArea(
         bottom: false,
         child: Column(

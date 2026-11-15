@@ -125,7 +125,10 @@ class ComposerAttachmentController extends ChangeNotifier {
         borderRadius: BorderRadius.circular(R.md),
         child: InkWell(
           borderRadius: BorderRadius.circular(R.md),
-          onTap: () => Navigator.pop(context, value),
+          onTap: () {
+            tapHaptic();
+            Navigator.pop(context, value);
+          },
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Column(
