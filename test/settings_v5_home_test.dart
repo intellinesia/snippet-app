@@ -155,10 +155,15 @@ void main() {
       findsNothing,
     );
     expect(find.text('Palette'), findsOneWidget);
-    expect(find.text('Typography'), findsOneWidget);
     expect(find.text('PALETTE'), findsNothing);
-    expect(find.text('TYPOGRAPHY'), findsNothing);
     expect(tester.getSize(find.byType(SettingsHeader)).height, 44);
+    // The home preview and scene picker push Typography below the fold.
+    await tester.dragUntilVisible(find.text('Typography'),
+        find.byType(Scrollable).first, const Offset(0, -200));
+    expect(find.text('Typography'), findsOneWidget);
+    expect(find.text('TYPOGRAPHY'), findsNothing);
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, 4000));
+    await tester.pumpAndSettle();
     await tester.tap(find.byWidgetPredicate(
         (w) => w is AppIcon && w.name == 'chevron-left'));
     expect(backCount, 1);

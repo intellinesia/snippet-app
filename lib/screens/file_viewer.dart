@@ -370,7 +370,9 @@ class _FileViewerState extends State<FileViewer> {
         : '${_controller.lineCount} lines · ${formatBytes(f.size)}${f.truncated ? ' · truncated' : ''}';
     return Scaffold(
       backgroundColor:
-          widget.embedded && !kMobile ? Colors.transparent : readingBg,
+          widget.embedded && !kMobile
+              ? Colors.transparent
+              : AppColors.pageCanvas,
       body: SafeArea(
         bottom: false,
         child: Column(children: [

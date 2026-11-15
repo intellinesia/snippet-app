@@ -11,6 +11,19 @@ import java.io.File
 import java.io.FileOutputStream
 
 class MainActivity : FlutterActivity() {
+    companion object {
+        // irondash's Java side calls natives in this library, and Java only binds
+        // natives from libraries it loaded itself; Dart's dlopen does not count.
+        init {
+            // Without it the scene stays off; the app must still start.
+            try {
+                System.loadLibrary("snippet_render")
+            } catch (e: UnsatisfiedLinkError) {
+                android.util.Log.w("snippet_render", "native renderer unavailable", e)
+            }
+        }
+    }
+
     private val channelName = "snippet/share"
     private var channel: MethodChannel? = null
     private var pending: HashMap<String, Any>? = null

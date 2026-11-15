@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../gesture_physics.dart';
+import '../glass.dart' show StatusInset;
 import '../theme.dart';
 import 'shell_models.dart';
+import '../chat_scene.dart' show SceneBackdrop;
 
 /// Full-screen mobile shell layout with sliding sidebar and platform back handling.
 class MobileShell extends StatefulWidget {
@@ -212,9 +214,14 @@ class _MobileShellState extends State<MobileShell>
                       color: AppColors.bg,
                       child: TickerMode(
                         enabled: _v.value > 0,
-                        child: SafeArea(
-                          bottom: false,
-                          child: activeTabBody,
+                        child: SceneBackdrop(
+                          child: StatusInset(
+                            top: MediaQuery.paddingOf(context).top,
+                            child: SafeArea(
+                              bottom: false,
+                              child: activeTabBody,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -241,14 +248,16 @@ class _MobileShellState extends State<MobileShell>
                   color: AppColors.bg,
                   child: TickerMode(
                     enabled: chatsVisible || _v.value < 1.0,
-                    child: SafeArea(
-                      child: AnimatedSlide(
-                        offset: Offset(_homePull, 0),
-                        duration: _homeDrag == true
-                            ? Duration.zero
-                            : const Duration(milliseconds: 220),
-                        curve: Curves.easeOutCubic,
-                        child: sidebar,
+                    child: SceneBackdrop(
+                      child: SafeArea(
+                        child: AnimatedSlide(
+                          offset: Offset(_homePull, 0),
+                          duration: _homeDrag == true
+                              ? Duration.zero
+                              : const Duration(milliseconds: 220),
+                          curve: Curves.easeOutCubic,
+                          child: sidebar,
+                        ),
                       ),
                     ),
                   ),

@@ -29,6 +29,15 @@ jobs:
           channel: stable
           flutter-version: 3.44.4
           cache: true
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.96.0
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - name: Install Android NDK
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.2.13676358" >/dev/null
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> "$GITHUB_ENV"
       - run: flutter pub get
       - name: Restore shared keystore
         env:
@@ -62,6 +71,11 @@ jobs:
           channel: stable
           flutter-version: 3.44.4
           cache: true
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.96.0
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
       - run: flutter pub get
       - run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
       - run: flutter test --no-pub
@@ -109,6 +123,11 @@ jobs:
           channel: stable
           flutter-version: 3.44.4
           cache: true
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.96.0
+          targets: x86_64-unknown-linux-gnu
       - name: Install system dependencies
         run: |
           sudo apt-get update

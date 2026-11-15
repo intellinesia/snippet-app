@@ -26,6 +26,7 @@ import '../pull_refresh.dart';
 import '../motion.dart';
 import '../mochi.dart';
 import '../ambient/controller.dart';
+import '../chat_scene.dart' show ChatScene;
 import 'mobile_chrome.dart';
 import 'mobile_session_home.dart';
 import 'mobile_voice_page.dart' show startMobileVoice;
@@ -258,6 +259,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     super.initState();
     Drafts.instance.addListener(_onDrafts);
     Pins.instance.addListener(_onDrafts);
+    if (kMobile) ChatScene.instance.addListener(_onDrafts);
     _loadProviders();
     _mountedHomes.add(_currentHome);
     if (kMobile) _loadTodayUsage();
@@ -340,6 +342,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     sidebarAgentsFirst.removeListener(_onAgentsList);
     Drafts.instance.removeListener(_onDrafts);
     Pins.instance.removeListener(_onDrafts);
+    ChatScene.instance.removeListener(_onDrafts);
     _homeAnimC?.dispose();
     _renameCtl.dispose();
     _renameFocus.dispose();
@@ -364,7 +367,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     Theme.of(context); // Rebuild on theme change
     final hasClient = widget.client != null;
     return Container(
-      color: !kMobile ? Colors.transparent : AppColors.bg,
+      color: !kMobile || ChatScene.instance.active
+          ? Colors.transparent
+          : AppColors.bg,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (widget.topInset && kMacOS) SizedBox(height: kMacTitlebar + 6),
         if (kMobile) ...[

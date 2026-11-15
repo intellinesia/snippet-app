@@ -285,7 +285,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     return Container(
       height: kMobile ? M.appBarHeight : 44,
       padding: const EdgeInsets.symmetric(horizontal: 6),
-      color: AppColors.bg,
+      color: kMobile ? AppColors.pageBg : AppColors.bg,
       child: Row(children: [
         if (kMobile || Navigator.of(context).canPop())
           IconBtn('chevron-left',

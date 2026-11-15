@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import 'chat_scene.dart';
 import 'platform.dart';
 import 'theme.dart';
 
@@ -128,7 +129,18 @@ class AppPageRoute<T> extends PageRoute<T> {
       Semantics(
         scopesRoute: true,
         explicitChildNodes: true,
-        child: builder(context),
+        child: ListenableBuilder(
+          listenable: ChatScene.instance,
+          builder: (context, _) {
+            final base = Theme.of(context);
+            return Theme(
+              data: ChatScene.instance.ready
+                  ? base.copyWith(scaffoldBackgroundColor: Colors.transparent)
+                  : base,
+              child: SceneBackdrop(child: builder(context)),
+            );
+          },
+        ),
       );
 
   @override

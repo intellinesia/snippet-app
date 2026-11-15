@@ -244,7 +244,7 @@ class MobileHomeHeader extends StatelessWidget {
 Future<void> openMobileTasksPage(BuildContext context, DaemonClient client) {
   return Navigator.of(context).push<void>(AppPageRoute<void>(
     builder: (_) => Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: AppColors.pageBg,
       body: SafeArea(child: TasksPanel(client: client, phoneHeader: true)),
     ),
   ));
