@@ -30,6 +30,7 @@ import 'vault.dart';
 import 'voice_screen.dart';
 import 'web_search_screen.dart';
 import 'accounts_screen.dart';
+import '../mochi.dart';
 import '../motion.dart';
 import '../desktop_look.dart';
 import '../window_background.dart';
@@ -736,6 +737,7 @@ class SettingsPanelState extends State<SettingsPanel> {
           ],
         ),
       SettingsPage.appearance => AppearanceScreen(
+          client: widget.client,
           embedded: true,
           onBack: back,
         ),
@@ -1984,7 +1986,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   List<Widget> _plainBody(SettingsPage page) => switch (page) {
         SettingsPage.general => _nativeGeneral(),
         SettingsPage.appearance => [
-            const AppearanceScreen(embedded: true),
+            AppearanceScreen(client: widget.client, embedded: true),
           ],
         SettingsPage.routing => [
             RoutingScreen(client: widget.client, embedded: true)
@@ -2142,7 +2144,8 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
 
   Widget _mobileBody(SettingsPage page) => switch (page) {
         SettingsPage.general => _mobileGeneralBody(),
-        SettingsPage.appearance => const AppearanceScreen(embedded: true),
+        SettingsPage.appearance =>
+          AppearanceScreen(client: widget.client, embedded: true),
         SettingsPage.models => InferenceProfilesScreen(
             key: _modelsKey,
             client: widget.client,
@@ -2399,7 +2402,9 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
 }
 
 class AppearanceScreen extends StatelessWidget {
-  const AppearanceScreen({super.key, this.embedded = false, this.onBack});
+  const AppearanceScreen(
+      {super.key, this.client, this.embedded = false, this.onBack});
+  final DaemonClient? client;
   final bool embedded;
   final VoidCallback? onBack;
 
@@ -2409,13 +2414,14 @@ class AppearanceScreen extends StatelessWidget {
       listenable: ThemeManager.instance,
       builder: (context, _) {
         final tm = ThemeManager.instance;
+        final effectiveClient = client ?? tm.client;
         final base = tm.baseTheme;
         final custom = tm.customAccent;
 
         final paletteChildren = <Widget>[
-          const Padding(
-            padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
-            child: _ThemeCardCarousel(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: _ThemeCardCarousel(client: effectiveClient),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
@@ -2437,19 +2443,19 @@ class AppearanceScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
-                const _AccentSwatchStrip(),
+                _AccentSwatchStrip(client: effectiveClient),
               ],
             ),
           ),
         ];
-        const typographyChildren = <Widget>[
+        final typographyChildren = <Widget>[
           Padding(
-            padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
-            child: _FontCardCarousel(mono: false),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: _FontCardCarousel(mono: false, client: effectiveClient),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
-            child: _FontCardCarousel(mono: true),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: _FontCardCarousel(mono: true, client: effectiveClient),
           ),
         ];
 
@@ -2789,8 +2795,18 @@ class _WindowBackgroundRow extends StatelessWidget {
   }
 }
 
+Future<void> _runThemeUpdate(
+    BuildContext context, Future<void> Function() action) async {
+  try {
+    await action();
+  } catch (e) {
+    if (context.mounted) toast(context, '$e', danger: true);
+  }
+}
+
 class _ThemeCardCarousel extends StatefulWidget {
-  const _ThemeCardCarousel();
+  const _ThemeCardCarousel({this.client});
+  final DaemonClient? client;
 
   @override
   State<_ThemeCardCarousel> createState() => _ThemeCardCarouselState();
@@ -2798,6 +2814,42 @@ class _ThemeCardCarousel extends StatefulWidget {
 
 class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
   final ScrollController _scroll = ScrollController();
+  Map<String, String> _agentNames = const {};
+
+  static final Map<String, int> _builtinOrder = {
+    for (var i = 0; i < allPresets.length; i++) allPresets[i].name: i,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFromDaemon();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ThemeCardCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.client, widget.client)) {
+      _loadFromDaemon();
+    }
+  }
+
+  void _loadFromDaemon() {
+    final c = widget.client;
+    if (c == null) return;
+    unawaited(ThemeManager.instance.syncFromDaemon(client: c));
+    unawaited(c.coordinationAgents().then((all) {
+      rememberAgentColors([for (final a in all) (a.id, a.color)]);
+      rememberAgentShapes([for (final a in all) (a.id, a.shape)]);
+      if (!mounted) return;
+      setState(() {
+        _agentNames = {
+          for (final a in all)
+            a.id: a.displayName.trim().isEmpty ? a.id : a.displayName,
+        };
+      });
+    }, onError: (_) {}));
+  }
 
   @override
   void dispose() {
@@ -2816,13 +2868,70 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
     );
   }
 
+  List<ThemeSummary> _orderedItems(ThemeManager tm) {
+    final source = tm.daemonThemes.isNotEmpty
+        ? tm.daemonThemes
+        : [for (final p in allPresets) ThemeSummary.fromPreset(p)];
+    final builtins = <ThemeSummary>[];
+    final yours = <ThemeSummary>[];
+    final agents = <ThemeSummary>[];
+    for (final t in source) {
+      if (t.builtin) {
+        builtins.add(t);
+      } else if (t.isAgent) {
+        agents.add(t);
+      } else {
+        yours.add(t);
+      }
+    }
+    builtins.sort((a, b) {
+      final oa = _builtinOrder[a.id] ?? 9999;
+      final ob = _builtinOrder[b.id] ?? 9999;
+      if (oa != ob) return oa.compareTo(ob);
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+    yours.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    agents.sort((a, b) {
+      final na = _agentNames[a.agentId] ?? a.agentId;
+      final nb = _agentNames[b.agentId] ?? b.agentId;
+      final byAgent = na.toLowerCase().compareTo(nb.toLowerCase());
+      return byAgent != 0
+          ? byAgent
+          : a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+    return [...builtins, ...yours, ...agents];
+  }
+
+  Future<void> _confirmDelete(ThemeSummary item, String activeId) async {
+    final c = widget.client;
+    if (c == null) return;
+    final fallbackNote = item.id == activeId
+        ? ' The active theme will fall back to Pure Black.'
+        : '';
+    final ok = await confirmAction(
+      context,
+      title: 'Delete theme?',
+      body: 'Remove "${item.name}" from this daemon?$fallbackNote',
+      confirmLabel: 'Delete',
+    );
+    if (!ok || !mounted) return;
+    await _runThemeUpdate(
+      context,
+      () => ThemeManager.instance.deleteTheme(item.id, client: c),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: ThemeManager.instance,
       builder: (context, _) {
         final tm = ThemeManager.instance;
-        final currentName = tm.baseTheme.name;
+        final items = _orderedItems(tm);
+        final currentId = tm.activeId;
+        final activeLabel =
+            tm.resolved.name.isNotEmpty ? tm.resolved.name : tm.baseTheme.label;
+        final showMetaRow = items.any((t) => !t.builtin);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -2834,11 +2943,14 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                       style: sans(kMobile ? 15 : 13,
                           weight: W.label, color: AppColors.fg1)),
                   const SizedBox(width: 8),
-                  Text(
-                    '${tm.baseTheme.label} · ${allPresets.length} palettes',
-                    style: sans(12, color: AppColors.fg3),
+                  Expanded(
+                    child: Text(
+                      '$activeLabel · ${items.length} palettes',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, color: AppColors.fg3),
+                    ),
                   ),
-                  const Spacer(),
                   if (!kMobile) ...[
                     IconBtn(
                       'chevron-left',
@@ -2860,25 +2972,44 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
               ),
             ),
             SizedBox(
-              height: 112,
+              height: showMetaRow ? 128 : 112,
               child: ListView.separated(
                 controller: _scroll,
                 scrollDirection: Axis.horizontal,
-                itemCount: allPresets.length,
+                itemCount: items.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 10),
                 itemBuilder: (context, i) {
-                  final preset = allPresets[i];
-                  final selected = preset.name == currentName;
+                  final item = items[i];
+                  final compiled = allPresets
+                      .where((p) => p.name == item.id)
+                      .firstOrNull;
+                  final bg = compiled?.bg ?? item.preview.bg;
+                  final surface1 = compiled?.surface1 ?? item.preview.surface1;
+                  final fg1 = compiled?.fg1 ?? item.preview.fg1;
+                  final fg2 =
+                      compiled?.fg2 ?? fg1.withValues(alpha: 0.82);
+                  final surface3 = compiled?.surface3 ??
+                      Color.lerp(surface1, fg1, 0.10)!;
+                  final border2 =
+                      compiled?.border2 ?? fg1.withValues(alpha: 0.16);
+                  final accent = compiled?.accent ?? item.preview.accent;
+                  final selected = item.id == currentId;
                   final dots = [
-                    preset.surface1,
-                    preset.danger,
-                    preset.ok,
-                    preset.run,
-                    preset.accent,
-                    preset.fg2,
+                    surface1,
+                    compiled?.danger ?? AppColors.danger,
+                    compiled?.ok ?? AppColors.ok,
+                    compiled?.run ?? AppColors.run,
+                    accent,
+                    fg2,
                   ];
                   return GestureDetector(
-                    onTap: () => tm.setName(preset.name),
+                    onTap: () => unawaited(_runThemeUpdate(
+                      context,
+                      () => tm.applyTheme(item.id, client: widget.client),
+                    )),
+                    onLongPress: item.builtin || widget.client == null
+                        ? null
+                        : () => unawaited(_confirmDelete(item, currentId)),
                     behavior: HitTestBehavior.opaque,
                     child: SizedBox(
                       width: 152,
@@ -2889,12 +3020,10 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                             height: 82,
                             padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                             decoration: BoxDecoration(
-                              color: preset.bg,
+                              color: bg,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: selected
-                                    ? AppColors.fg1
-                                    : preset.border2,
+                                color: selected ? AppColors.fg1 : border2,
                                 width: selected ? 1.8 : 1.0,
                               ),
                             ),
@@ -2909,7 +3038,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                                       style: sans(
                                         20,
                                         weight: W.strong,
-                                        color: preset.fg1,
+                                        color: fg1,
                                         height: 1,
                                       ),
                                     ),
@@ -2918,7 +3047,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 6, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: preset.surface3,
+                                        color: surface3,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
@@ -2926,7 +3055,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                                         style: mono(
                                           11,
                                           weight: W.label,
-                                          color: preset.fg2,
+                                          color: fg2,
                                           height: 1,
                                         ),
                                       ),
@@ -2936,7 +3065,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                                       width: 14,
                                       height: 22,
                                       decoration: BoxDecoration(
-                                        color: preset.accent,
+                                        color: accent,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                     ),
@@ -2967,7 +3096,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            preset.label,
+                            item.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: sans(
@@ -2976,6 +3105,33 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                               color: selected ? AppColors.fg1 : AppColors.fg3,
                             ),
                           ),
+                          if (item.isAgent) ...[
+                            const SizedBox(height: 2),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AgentMochi(item.agentId, size: 12),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    _agentNames[item.agentId] ?? item.agentId,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: sans(11, color: AppColors.fg3),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else if (item.isUser) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              'Yours',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(11, color: AppColors.fg4),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -2991,8 +3147,9 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
 }
 
 class _FontCardCarousel extends StatefulWidget {
-  const _FontCardCarousel({required this.mono});
+  const _FontCardCarousel({required this.mono, this.client});
   final bool mono;
+  final DaemonClient? client;
 
   @override
   State<_FontCardCarousel> createState() => _FontCardCarouselState();
@@ -3079,9 +3236,14 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                   final font = fonts[i];
                   final selected = font.family == active.family;
                   return GestureDetector(
-                    onTap: () => widget.mono
-                        ? tm.setMonoFontFamily(font.family)
-                        : tm.setFontFamily(font.family),
+                    onTap: () => unawaited(_runThemeUpdate(
+                      context,
+                      () => widget.mono
+                          ? tm.setMonoFontFamily(font.family,
+                              client: widget.client)
+                          : tm.setFontFamily(font.family,
+                              client: widget.client),
+                    )),
                     behavior: HitTestBehavior.opaque,
                     child: SizedBox(
                       width: 148,
@@ -3175,7 +3337,8 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
 }
 
 class _AccentSwatchStrip extends StatelessWidget {
-  const _AccentSwatchStrip();
+  const _AccentSwatchStrip({this.client});
+  final DaemonClient? client;
 
   @override
   Widget build(BuildContext context) {
@@ -3189,7 +3352,10 @@ class _AccentSwatchStrip extends StatelessWidget {
           runSpacing: 8,
           children: [
             GestureDetector(
-              onTap: () => tm.setAccentName(null),
+              onTap: () => unawaited(_runThemeUpdate(
+                context,
+                () => tm.setAccentName(null, client: client),
+              )),
               behavior: HitTestBehavior.opaque,
               child: Container(
                 padding:
@@ -3213,7 +3379,10 @@ class _AccentSwatchStrip extends StatelessWidget {
             ),
             for (final a in allAccents)
               GestureDetector(
-                onTap: () => tm.setAccentName(a.name),
+                onTap: () => unawaited(_runThemeUpdate(
+                  context,
+                  () => tm.setAccentName(a.name, client: client),
+                )),
                 behavior: HitTestBehavior.opaque,
                 child: Tooltip(
                   message: a.label,
