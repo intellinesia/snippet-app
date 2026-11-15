@@ -10,6 +10,12 @@ import 'ambient_loop.dart';
 import 'platform.dart';
 import 'theme.dart';
 
+// The ambient tick draws the scene too, so both share one redraw.
+void _kickScene() {
+  SharedShaderSurface.instance.kick();
+  ShaderSurface.kickAll();
+}
+
 /// An animated shader behind the chat, drawn by the native renderer.
 class ChatScene extends ChangeNotifier {
   ChatScene._();
@@ -172,7 +178,7 @@ class ChatSceneLayer extends StatelessWidget {
           return const SizedBox.shrink();
         }
         final bg = AppColors.bg;
-        AmbientClock.onTick ??= SharedShaderSurface.instance.kick;
+        AmbientClock.onTick ??= _kickScene;
         return IgnorePointer(
           child: RepaintBoundary(
             child: Stack(fit: StackFit.expand, children: [

@@ -65,6 +65,15 @@ class ShaderSurface extends StatefulWidget {
 
   @override
   State<ShaderSurface> createState() => _ShaderSurfaceState();
+
+  static final _live = <_ShaderSurfaceState>{};
+
+  /// Draws every running surface now, so it shares a redraw with the caller's.
+  static void kickAll() {
+    for (final s in _live) {
+      s._kick();
+    }
+  }
 }
 
 class _ShaderSurfaceState extends State<ShaderSurface>
@@ -82,6 +91,11 @@ class _ShaderSurfaceState extends State<ShaderSurface>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    ShaderSurface._live.add(this);
+  }
+
+  void _kick() {
+    if (_surface != nullptr && _sentPaused == false) sr_kick(_surface);
   }
 
   @override
@@ -152,6 +166,7 @@ class _ShaderSurfaceState extends State<ShaderSurface>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    ShaderSurface._live.remove(this);
     _poll?.cancel();
     if (_surface != nullptr) sr_destroy(_surface);
     _surface = nullptr;
