@@ -277,6 +277,16 @@ mod out {
                         Slot { surface, view }
                     })
                     .collect();
+                let gpu = self.slots.iter().all(|s| s.view.is_some());
+                eprintln!(
+                    "snippet_render: {} {w}x{h}: {}",
+                    renderer.backend(),
+                    if gpu {
+                        "iosurface direct"
+                    } else {
+                        "cpu upload"
+                    }
+                );
                 self.size = (w, h);
             }
             let slot = &self.slots[self.next];
