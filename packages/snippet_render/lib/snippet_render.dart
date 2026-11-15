@@ -57,7 +57,7 @@ class ShaderSurface extends StatefulWidget {
     super.key,
     required this.source,
     this.lang = ShaderLang.wgsl,
-    this.fps = 30,
+    this.fps = 20,
     this.scale = .5,
     this.paused = false,
     this.onError,

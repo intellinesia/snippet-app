@@ -18,6 +18,7 @@ abstract class SurfaceBackend {
   void resize(Object s, int w, int h);
   void setShader(Object s, String source, ShaderLang lang);
   void setFps(Object s, int fps);
+  void kick(Object s);
   void destroy(Object s);
 }
 
@@ -72,6 +73,9 @@ class _NativeBackend implements SurfaceBackend {
 
   @override
   void setFps(Object s, int fps) => sr_set_fps(_p(s), fps);
+
+  @override
+  void kick(Object s) => sr_kick(_p(s));
 
   @override
   void destroy(Object s) => sr_destroy(_p(s));
@@ -135,6 +139,12 @@ class SharedShaderSurface extends ChangeNotifier with WidgetsBindingObserver {
     _source = source;
     _lang = lang;
     _fps = fps;
+  }
+
+  /// Draws the next scene frame now, to share a redraw the app is about to make.
+  void kick() {
+    final s = _surface;
+    if (s != null && _sentPaused == false) _backend.kick(s);
   }
 
   /// A view reports its state on every frame it is built; [size] is in
@@ -252,7 +262,7 @@ class ShaderView extends StatefulWidget {
     super.key,
     required this.source,
     this.lang = ShaderLang.wgsl,
-    this.fps = 30,
+    this.fps = 20,
     this.scale = .5,
     this.onError,
     this.surface,

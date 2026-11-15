@@ -40,6 +40,9 @@ external void sr_set_paused(Pointer<Void> surface, bool paused);
 external void sr_set_fps(Pointer<Void> surface, int fps);
 
 @Native<Void Function(Pointer<Void>)>()
+external void sr_kick(Pointer<Void> surface);
+
+@Native<Void Function(Pointer<Void>)>()
 external void sr_destroy(Pointer<Void> surface);
 
 @Native<Void Function(Pointer<Char>)>()

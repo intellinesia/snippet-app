@@ -84,6 +84,13 @@ pub unsafe extern "C" fn sr_set_fps(s: *mut Surface, fps: u32) {
 }
 
 #[unsafe(no_mangle)]
+pub unsafe extern "C" fn sr_kick(s: *mut Surface) {
+    if let Some(s) = unsafe { s.as_ref() } {
+        s.kick();
+    }
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn sr_destroy(s: *mut Surface) {
     if !s.is_null() {
         let s = unsafe { Box::from_raw(s) };

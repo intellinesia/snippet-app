@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet_render/snippet_render.dart';
 
+import 'ambient_loop.dart';
 import 'platform.dart';
 import 'theme.dart';
 
@@ -171,6 +172,7 @@ class ChatSceneLayer extends StatelessWidget {
           return const SizedBox.shrink();
         }
         final bg = AppColors.bg;
+        AmbientClock.onTick ??= SharedShaderSurface.instance.kick;
         return IgnorePointer(
           child: RepaintBoundary(
             child: Stack(fit: StackFit.expand, children: [

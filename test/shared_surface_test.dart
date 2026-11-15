@@ -25,6 +25,8 @@ class _Fake implements SurfaceBackend {
   @override
   void setFps(Object s, int fps) => log.add('fps $fps');
   @override
+  void kick(Object s) {}
+  @override
   void destroy(Object s) => log.add('destroy');
 }
 

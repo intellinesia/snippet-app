@@ -428,6 +428,7 @@ struct Command {
     height: u32,
     fps: u32,
     paused: bool,
+    kicked: bool,
     dirty: bool,
     stop: bool,
 }
@@ -456,6 +457,7 @@ impl Surface {
                 height: height.max(1),
                 fps: fps.clamp(1, 60),
                 paused: false,
+                kicked: false,
                 dirty: true,
                 stop: false,
             }),
@@ -519,6 +521,11 @@ impl Surface {
         self.update(|c| c.paused = paused);
     }
 
+    /// Draws a frame now, so it lands with the app's own redraw.
+    pub fn kick(&self) {
+        self.update(|c| c.kicked = true);
+    }
+
     pub fn set_fps(&self, fps: u32) {
         self.update(|c| c.fps = fps.clamp(1, 60));
     }
@@ -549,7 +556,7 @@ fn run(shared: Arc<Shared>, mut writer: out::Writer) {
     let mut last = Instant::now();
     let mut due = Instant::now();
     loop {
-        let (fps, paused) = {
+        let (fps, paused, kicked) = {
             let mut cmd = shared.cmd.lock().unwrap();
             while !cmd.stop && cmd.paused && !cmd.dirty {
                 cmd = shared.wake.wait(cmd).unwrap();
@@ -566,7 +573,7 @@ fn run(shared: Arc<Shared>, mut writer: out::Writer) {
             }
             renderer.resize(cmd.width, cmd.height);
             cmd.dirty = false;
-            (cmd.fps, cmd.paused)
+            (cmd.fps, cmd.paused, std::mem::take(&mut cmd.kicked))
         };
         let started = Instant::now();
         if !paused {
@@ -582,7 +589,12 @@ fn run(shared: Arc<Shared>, mut writer: out::Writer) {
         // Fixed deadlines rather than "budget after this frame" keep the cadence
         // even against vsync; a late frame resets the schedule instead of bursting.
         let budget = Duration::from_secs_f32(1.0 / fps as f32);
-        due += budget;
+        // While kicks arrive the app sets the beat; own timing resumes if they stop.
+        due = if kicked {
+            started + budget * 2
+        } else {
+            due + budget
+        };
         let now = Instant::now();
         if due < now {
             due = now + budget;
