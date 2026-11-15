@@ -11,6 +11,14 @@ import java.io.File
 import java.io.FileOutputStream
 
 class MainActivity : FlutterActivity() {
+    companion object {
+        // irondash's Java side calls natives in this library, and Java only binds
+        // natives from libraries it loaded itself; Dart's dlopen does not count.
+        init {
+            System.loadLibrary("snippet_render")
+        }
+    }
+
     private val channelName = "snippet/share"
     private var channel: MethodChannel? = null
     private var pending: HashMap<String, Any>? = null
