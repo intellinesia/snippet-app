@@ -861,6 +861,7 @@ dependencies = [
  "block2 0.6.2",
  "objc2 0.6.5",
  "objc2-foundation 0.3.2",
+ "objc2-io-surface",
 ]
 
 [[package]]
@@ -1157,6 +1158,9 @@ dependencies = [
  "irondash_run_loop",
  "irondash_texture",
  "naga",
+ "objc2 0.6.5",
+ "objc2-io-surface",
+ "objc2-metal 0.3.2",
  "pollster",
  "wgpu",
 ]

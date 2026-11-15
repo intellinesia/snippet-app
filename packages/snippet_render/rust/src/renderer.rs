@@ -143,6 +143,29 @@ fn open_adapter() -> Result<(wgpu::Instance, wgpu::Adapter), Error> {
         .map_err(|e| Error(format!("no GPU adapter: {e}")))
 }
 
+#[cfg(target_os = "macos")]
+impl Renderer {
+    pub fn device(&self) -> &wgpu::Device {
+        &self.device
+    }
+
+    pub fn texture_format(&self) -> wgpu::TextureFormat {
+        self.format
+    }
+
+    /// Draws one frame into `view` and returns once the GPU has finished it.
+    pub fn draw_into(&self, view: &wgpu::TextureView, time: f32) -> Result<(), Error> {
+        let index = self.queue.submit([self.encode(view, time).finish()]);
+        self.device
+            .poll(wgpu::PollType::Wait {
+                submission_index: Some(index),
+                timeout: Some(std::time::Duration::from_millis(500)),
+            })
+            .map(|_| ())
+            .map_err(|e| Error(format!("gpu: {e}")))
+    }
+}
+
 impl Renderer {
     pub fn backend(&self) -> String {
         let info = self.adapter.get_info();

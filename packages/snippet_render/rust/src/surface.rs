@@ -131,7 +131,187 @@ mod out {
 
 // Elsewhere Flutter pulls the latest frame on its raster thread. Frames are shared
 // by reference and buffers reused, so a pull costs no copy or allocation.
-#[cfg(not(target_os = "android"))]
+// macOS: the render thread draws straight into IOSurfaces that Flutter wraps
+// as pixel buffers, rotating three so Flutter never reads one being drawn.
+#[cfg(target_os = "macos")]
+mod out {
+    use super::*;
+    use irondash_texture::io_surface::{IOSurface, init_surface};
+    use irondash_texture::{
+        BoxedIOSurface, IOSurfaceProvider, PayloadProvider, SendableTexture, Texture,
+    };
+    use objc2_metal::{MTLDevice, MTLPixelFormat, MTLTextureDescriptor, MTLTextureType};
+    use wgpu::hal::api::Metal;
+
+    pub type Payload = BoxedIOSurface;
+
+    #[derive(Clone)]
+    struct Shared(IOSurface);
+    // IOSurfaces are reference-counted kernel objects, safe to retain and read from any thread.
+    unsafe impl Send for Shared {}
+    unsafe impl Sync for Shared {}
+
+    impl IOSurfaceProvider for Shared {
+        fn get(&self) -> &IOSurface {
+            &self.0
+        }
+    }
+
+    #[derive(Default)]
+    pub struct Out {
+        front: Mutex<Option<Shared>>,
+    }
+
+    struct Provider(Arc<Out>);
+
+    impl PayloadProvider<BoxedIOSurface> for Provider {
+        fn get_payload(&self) -> BoxedIOSurface {
+            let front = self.0.front.lock().unwrap().clone();
+            Box::new(front.unwrap_or_else(|| Shared(init_surface(16, 1))))
+        }
+    }
+
+    pub type Handle = Arc<SendableTexture<Payload>>;
+
+    pub fn make(engine: i64, out: &Arc<Out>) -> irondash_texture::Result<(i64, Handle)> {
+        let t = Texture::new_with_provider(engine, Arc::new(Provider(out.clone())))?;
+        Ok((t.id(), t.into_sendable_texture()))
+    }
+
+    struct Slot {
+        surface: IOSurface,
+        view: Option<wgpu::TextureView>,
+    }
+
+    pub struct Writer {
+        out: Arc<Out>,
+        slots: Vec<Slot>,
+        next: usize,
+        size: (u32, u32),
+        fresh: bool,
+    }
+
+    // A Metal texture over the IOSurface's memory; None leaves the slot on the CPU upload path.
+    fn gpu_view(
+        renderer: &Renderer,
+        surface: &IOSurface,
+        w: u32,
+        h: u32,
+    ) -> Option<wgpu::TextureView> {
+        let format = renderer.texture_format();
+        if format != wgpu::TextureFormat::Bgra8Unorm {
+            return None;
+        }
+        let hal = {
+            let device = unsafe { renderer.device().as_hal::<Metal>() }?;
+            let desc = unsafe {
+                MTLTextureDescriptor::texture2DDescriptorWithPixelFormat_width_height_mipmapped(
+                    MTLPixelFormat::BGRA8Unorm,
+                    w as usize,
+                    h as usize,
+                    false,
+                )
+            };
+            desc.setUsage(objc2_metal::MTLTextureUsage::RenderTarget);
+            let raw = surface.obj as *const objc2_io_surface::IOSurfaceRef;
+            let tex = device
+                .raw_device()
+                .newTextureWithDescriptor_iosurface_plane(&desc, unsafe { &*raw }, 0)?;
+            unsafe {
+                wgpu::hal::metal::Device::texture_from_raw(
+                    tex,
+                    format,
+                    MTLTextureType::Type2D,
+                    1,
+                    1,
+                    wgpu::hal::CopyExtent {
+                        width: w,
+                        height: h,
+                        depth: 1,
+                    },
+                    None,
+                )
+            }
+        };
+        let texture = unsafe {
+            renderer.device().create_texture_from_hal::<Metal>(
+                hal,
+                &wgpu::TextureDescriptor {
+                    label: Some("iosurface"),
+                    size: wgpu::Extent3d {
+                        width: w,
+                        height: h,
+                        depth_or_array_layers: 1,
+                    },
+                    mip_level_count: 1,
+                    sample_count: 1,
+                    dimension: wgpu::TextureDimension::D2,
+                    format,
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                    view_formats: &[],
+                },
+                wgpu::TextureUses::UNINITIALIZED,
+            )
+        };
+        Some(texture.create_view(&Default::default()))
+    }
+
+    impl Writer {
+        pub fn new(out: Arc<Out>) -> Self {
+            Self {
+                out,
+                slots: Vec::new(),
+                next: 0,
+                size: (0, 0),
+                fresh: false,
+            }
+        }
+
+        pub fn write(&mut self, renderer: &mut Renderer, clock: f32) -> Result<(), String> {
+            let (w, h) = renderer.size();
+            if self.size != (w, h) || self.slots.is_empty() {
+                self.slots = (0..3)
+                    .map(|_| {
+                        let surface = init_surface(w as i32, h as i32);
+                        let view = gpu_view(renderer, &surface, w, h);
+                        Slot { surface, view }
+                    })
+                    .collect();
+                self.size = (w, h);
+            }
+            let slot = &self.slots[self.next];
+            if let Some(view) = &slot.view {
+                renderer.draw_into(view, clock).map_err(|e| e.0)?;
+            } else {
+                let tight = w as usize * 4;
+                let drawn = renderer
+                    .render_with(clock, |data, stride| {
+                        let mut px = Vec::with_capacity(tight * h as usize);
+                        for y in 0..h as usize {
+                            px.extend_from_slice(&data[y * stride..y * stride + tight]);
+                        }
+                        slot.surface.upload(&px);
+                    })
+                    .map_err(|e| e.0)?;
+                if drawn.is_none() {
+                    return Ok(());
+                }
+            }
+            *self.out.front.lock().unwrap() = Some(Shared(slot.surface.clone()));
+            self.next = (self.next + 1) % self.slots.len();
+            self.fresh = true;
+            Ok(())
+        }
+
+        pub fn posted(&mut self, t: &Handle) {
+            if std::mem::take(&mut self.fresh) {
+                let _ = t.mark_frame_available();
+            }
+        }
+    }
+}
+
+#[cfg(not(any(target_os = "android", target_os = "macos")))]
 mod out {
     use super::*;
     use irondash_texture::{

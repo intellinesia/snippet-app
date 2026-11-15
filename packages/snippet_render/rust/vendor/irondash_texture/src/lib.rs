@@ -177,6 +177,11 @@ pub use android::*;
 mod darwin {
     pub mod io_surface {
         pub use crate::platform::io_surface::*;
+
+        /// A BGRA IOSurface with rows of exactly `width * 4` bytes.
+        pub fn init_surface(width: i32, height: i32) -> IOSurface {
+            crate::platform::init_surface(width, height)
+        }
     }
 
     pub trait IOSurfaceProvider {

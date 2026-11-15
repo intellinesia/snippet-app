@@ -268,7 +268,7 @@ const fn as_u32_be(array: &[u8; 4]) -> u32 {
         + ((array[3] as u32) << 0)
 }
 
-fn init_surface(width: i32, height: i32) -> IOSurface {
+pub fn init_surface(width: i32, height: i32) -> IOSurface {
     use core_foundation::{dictionary::CFDictionary, number::CFNumber, string::CFString};
 
     let k_width: CFString = unsafe { TCFType::wrap_under_get_rule(kIOSurfaceWidth) };
