@@ -71,12 +71,12 @@ Widget _host(
 void main() {
   setUp(() => rememberAgentCharacters(const []));
 
-  testWidgets('hero is hidden when nothing is live', (tester) async {
+  testWidgets('with nothing live the hero shows only the cast', (tester) async {
     await tester.pumpWidget(_host([
       _session('idle', 'rook', {'status': 'idle'}),
     ]));
     expect(find.byType(PhoneHero), findsOneWidget);
-    expect(tester.getSize(find.byType(PhoneHero)).height, 0);
+    expect(find.text('Rook'), findsOneWidget);
     expect(find.text('Needs you'), findsNothing);
   });
 

@@ -97,8 +97,9 @@ class _PhoneHeroState extends State<PhoneHero> {
     // Whoever needs you first, then the working ones, then agents standing by
     // with a session open, so the stage reads as the team.
     int rank(CrewEntry e) => e.state.index;
-    final live = crew.where((e) => e.sessions.isNotEmpty).toList();
-    if (live.every((e) => e.state == CrewState.standingBy)) return const [];
+    var live = crew.where((e) => e.sessions.isNotEmpty).toList();
+    // The stage always shows the team; with nothing open, the agents themselves.
+    if (live.isEmpty) live = crew.take(5).toList();
     if (live.length <= 5) return live;
     final keep = ([...live]..sort((a, b) => rank(a).compareTo(rank(b))))
         .take(5)
