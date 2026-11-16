@@ -1877,6 +1877,9 @@ class R {
   static double get lg => _shape.radii.lg * _scale;
   static double get sheetTop => _shape.radii.sheetTop * _scale;
   static double get pill => _shape.radii.pill;
+
+  /// An off-scale radius that still follows the theme's radius scale.
+  static double of(double v) => v * _scale;
 }
 
 AnimationStyle get sheetMotion => AnimationStyle(
@@ -1901,6 +1904,9 @@ class S {
   static double get s24 => _space.scale.s24 * _density;
   static double get s32 => _space.scale.s32 * _density;
   static double get s40 => _space.scale.s40 * _density;
+
+  /// An off-scale spacing value that still follows the theme's density.
+  static double of(double v) => v * _density;
 }
 
 /// Overlays lift with a surface step plus this shadow; nothing else casts one.
