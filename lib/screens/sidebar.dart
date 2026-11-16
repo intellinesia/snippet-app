@@ -239,7 +239,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     widget.onRefreshSessions();
   }
 
-  Widget _phoneHero(List<SessionInfo> sessions) {
+  Widget _phoneHero(List<SessionInfo> sessions, {bool idleCast = true}) {
     final c = widget.client;
     return PhoneHero(
       sessions: sessions,
@@ -248,6 +248,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       onDecide: c == null ? null : _decideHero,
       onReviewPr: c == null ? null : _reviewSessionPr,
       onMergePr: c == null ? null : _mergeSessionPr,
+      idleCast: idleCast,
     );
   }
 
@@ -770,7 +771,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         groupsKey: mirror ? 'groups-mirror' : null,
         heroBuilder: kMobile
             ? (count, needs, working) =>
-                _phoneHero(widget.sessions ?? const <SessionInfo>[])
+                _phoneHero(widget.sessions ?? const <SessionInfo>[],
+                    idleCast: false)
             : null,
         onSearchChanged: (v) => setState(() {
           _agentFilterQuery = v;

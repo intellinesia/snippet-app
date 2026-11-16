@@ -55,6 +55,7 @@ class PhoneHero extends StatefulWidget {
     this.onReviewPr,
     this.onMergePr,
     this.now,
+    this.idleCast = true,
   });
 
   final List<SessionInfo> sessions;
@@ -68,6 +69,10 @@ class PhoneHero extends StatefulWidget {
 
   /// Clock override for tests.
   final DateTime? now;
+
+  /// Show the agents on stage even when nothing is live (off where a list of
+  /// the same agents follows).
+  final bool idleCast;
 
   @override
   State<PhoneHero> createState() => _PhoneHeroState();
@@ -99,7 +104,10 @@ class _PhoneHeroState extends State<PhoneHero> {
     int rank(CrewEntry e) => e.state.index;
     var live = crew.where((e) => e.sessions.isNotEmpty).toList();
     // The stage always shows the team; with nothing open, the agents themselves.
-    if (live.isEmpty) live = crew.take(5).toList();
+    if (live.isEmpty) {
+      if (!widget.idleCast) return const [];
+      live = crew.take(5).toList();
+    }
     if (live.length <= 5) return live;
     final keep = ([...live]..sort((a, b) => rank(a).compareTo(rank(b))))
         .take(5)
