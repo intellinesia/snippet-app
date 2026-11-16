@@ -385,9 +385,6 @@ NotificationDetails sessionNotificationDetails(
         groupKey: group,
         onlyAlertOnce: true,
         actions: actions,
-        largeIcon: html == null
-            ? null
-            : const DrawableResourceAndroidBitmap('notification_avatar'),
         // MessagingStyle drops markup, so only BigTextStyle can render it.
         styleInformation: html != null
             ? BigTextStyleInformation(html, htmlFormatBigText: true)
