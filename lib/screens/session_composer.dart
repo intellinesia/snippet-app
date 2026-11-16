@@ -605,8 +605,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
         padding: EdgeInsets.fromLTRB(
             S.of(10), kMobile ? S.s4 : S.s8, kMobile ? S.s4 : S.s8, kMobile ? S.s4 : S.s8),
         decoration: BoxDecoration(
-          color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(R.sm),
+          border: Border(bottom: BorderSide(color: AppColors.border)),
         ),
         child: Row(children: [
           AppIcon('goal', size: 14, color: AppColors.accent),
@@ -919,40 +918,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                   if (kMobile && _showsQuickActions)
                     ValueListenableBuilder<TextEditingValue>(
                       valueListenable: _input,
-                      builder: (_, __, ___) => Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          // Opaque enough that transcript text never shows
-                          // between the chips; fades in above the row.
-                          Positioned(
-                            left: -M.gutter,
-                            right: -M.gutter,
-                            top: 0,
-                            bottom: 0,
-                            child: ColoredBox(
-                                color: AppColors.bg.withValues(alpha: .92)),
-                          ),
-                          Positioned(
-                            left: -M.gutter,
-                            right: -M.gutter,
-                            top: -16,
-                            height: 16,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    AppColors.bg.withValues(alpha: 0),
-                                    AppColors.bg.withValues(alpha: .92),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          _quickActions(running),
-                        ],
-                      ),
+                      builder: (_, __, ___) => _quickActions(running),
                     ),
                   if (_heldQueue.isNotEmpty) _queuedCard(),
                   if (_attachments.isNotEmpty) _attachmentBar(),
