@@ -13,7 +13,9 @@ String _activityElapsed(String? startedAt, DateTime fallback) {
 class _CompactingStatus extends StatefulWidget {
   final String? startedAt;
   final String? detail;
-  const _CompactingStatus({this.startedAt, this.detail});
+  final String agentId;
+  const _CompactingStatus(
+      {this.startedAt, this.detail, this.agentId = 'snippet'});
   @override
   State<_CompactingStatus> createState() => _CompactingStatusState();
 }
@@ -51,7 +53,8 @@ class _CompactingStatusState extends State<_CompactingStatus> {
             SizedBox(
                 width: 22,
                 child: Center(
-                    child: const WorkingMochi(size: 19, squeeze: true))),
+                    child: AgentMochi(widget.agentId,
+                        size: 19, state: AgentCharacterState.working))),
             SizedBox(width: S.s8),
             Expanded(
               child: Shimmer(
@@ -81,7 +84,9 @@ class _CompactingStatusState extends State<_CompactingStatus> {
 class _ChurningStatus extends StatefulWidget {
   final String? startedAt;
   final String thinking;
-  const _ChurningStatus({this.startedAt, this.thinking = ''});
+  final String agentId;
+  const _ChurningStatus(
+      {this.startedAt, this.thinking = '', this.agentId = 'snippet'});
   @override
   State<_ChurningStatus> createState() => _ChurningStatusState();
 }
@@ -167,7 +172,8 @@ class _ChurningStatusState extends State<_ChurningStatus> {
                 SizedBox(
                     width: 22,
                     child: Center(
-                        child: const WorkingMochi(size: 19))),
+                        child: AgentMochi(widget.agentId,
+                            size: 19, state: AgentCharacterState.working))),
                 SizedBox(width: S.s8),
                 Expanded(
                   child: Shimmer(
@@ -223,6 +229,7 @@ class _LiveStreamRow extends StatelessWidget {
   final String? startedAt;
   final bool hasVisibleAction;
   final String? compactionDetail;
+  final String agentId;
 
   const _LiveStreamRow({
     super.key,
@@ -232,6 +239,7 @@ class _LiveStreamRow extends StatelessWidget {
     required this.startedAt,
     required this.hasVisibleAction,
     required this.compactionDetail,
+    this.agentId = 'snippet',
   });
 
   @override
@@ -257,6 +265,7 @@ class _LiveStreamRow extends StatelessWidget {
             _CompactingStatus(
               startedAt: startedAt,
               detail: compactionDetail,
+              agentId: agentId,
             ),
           ]);
         } else if (running) {
@@ -265,6 +274,7 @@ class _LiveStreamRow extends StatelessWidget {
             _ChurningStatus(
               startedAt: startedAt,
               thinking: hasVisibleAction ? '' : value.thinking,
+              agentId: agentId,
             ),
           ]);
         }

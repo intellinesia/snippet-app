@@ -931,9 +931,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     // here require one.
     final hideChrome = _noChrome;
     return ValueListenableBuilder<Map<String, String>>(
-      valueListenable: agentColors,
+      valueListenable: agentCharacters,
       builder: (_, __, child) => ChatAgentScope(
-        agentColor: mochiColorFor(widget.agentId),
+        agentColor: agentTintFor(widget.agentId) ?? AppColors.accent,
         child: child!,
       ),
       child: Material(

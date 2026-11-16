@@ -14,23 +14,23 @@ void main() {
 
   testWidgets('one id renders a single disc', (tester) async {
     await pump(tester, ['a']);
-    expect(find.byType(MochiDisc), findsOneWidget);
+    expect(find.byType(AgentDisc), findsOneWidget);
   });
 
   testWidgets('two ids render two overlapping discs', (tester) async {
     await pump(tester, ['a', 'b']);
-    expect(find.byType(MochiDisc), findsNWidgets(2));
+    expect(find.byType(AgentDisc), findsNWidgets(2));
   });
 
   testWidgets('three ids render three discs in a triangle', (tester) async {
     await pump(tester, ['a', 'b', 'c']);
-    expect(find.byType(MochiDisc), findsNWidgets(3));
+    expect(find.byType(AgentDisc), findsNWidgets(3));
     expect(find.textContaining('+'), findsNothing);
   });
 
   testWidgets('five ids show two discs and a +3 count', (tester) async {
     await pump(tester, ['a', 'b', 'c', 'd', 'e']);
-    expect(find.byType(MochiDisc), findsNWidgets(2));
+    expect(find.byType(AgentDisc), findsNWidgets(2));
     expect(find.text('+3'), findsOneWidget);
   });
 }

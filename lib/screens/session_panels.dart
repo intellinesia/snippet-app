@@ -8,7 +8,7 @@ import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import '../transcript.dart' show LaneControlButton, LaneRecentOutput, LaneWho;
+import '../transcript.dart' show LaneControlButton, LaneWho;
 import 'compact_btn.dart';
 import 'lanes.dart' show laneSections, openLaneView;
 
@@ -416,10 +416,6 @@ class _DeskLanesState extends State<_DeskLanes> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: sans(13, height: 1.45, color: AppColors.fg3)),
-              ],
-              if (l.running && l.recent.isNotEmpty) ...[
-                SizedBox(height: S.s4),
-                LaneRecentOutput(lines: l.recent),
               ],
               SizedBox(height: S.s8),
               Row(children: [

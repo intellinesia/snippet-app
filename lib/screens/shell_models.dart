@@ -276,7 +276,7 @@ class ShellTab {
                       : '$instanceUrl|$sessionId';
 }
 
-/// A group conversation tab's members, drawn as a mochi cluster.
+/// A group conversation tab's members, drawn as a character cluster.
 List<String>? tabGroupAgentIds(ShellTab t) {
   final ids = t.readout?.request?.iconAgentIds;
   return ids == null || ids.isEmpty ? null : ids;

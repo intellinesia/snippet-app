@@ -134,7 +134,7 @@ void main() {
     }
   });
 
-  testWidgets('LaneNotice shows recent, Stop, Retry, and retryOf label',
+  testWidgets('LaneNotice keeps one activity line, Stop, Retry, and retryOf label',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     try {
@@ -172,8 +172,8 @@ void main() {
       await t.pump(const Duration(milliseconds: 50));
 
       expect(find.text('Retry of lane-0'), findsOneWidget);
-      expect(find.text('grep lane'), findsOneWidget);
-      expect(find.text('edit file'), findsOneWidget);
+      expect(find.text('grep lane'), findsNothing);
+      expect(find.text('edit file'), findsNothing);
       expect(find.widgetWithText(LaneControlButton, 'Stop'), findsOneWidget);
       expect(find.widgetWithText(LaneControlButton, 'Retry'), findsOneWidget);
 
@@ -185,7 +185,7 @@ void main() {
     }
   });
 
-  testWidgets('desktop SessionLanesPanel shows recent and Stop/Retry controls',
+  testWidgets('desktop SessionLanesPanel keeps one activity line, Stop/Retry controls',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     try {
@@ -204,7 +204,7 @@ void main() {
       ));
       await t.pump();
 
-      expect(find.text('tail log'), findsOneWidget);
+      expect(find.text('tail log'), findsNothing);
       expect(find.widgetWithText(LaneControlButton, 'Stop'), findsOneWidget);
       expect(find.widgetWithText(LaneControlButton, 'Retry'), findsOneWidget);
     } finally {

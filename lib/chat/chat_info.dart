@@ -498,7 +498,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
                     name: widget.name,
                     onChanged: widget.onChanged,
                   )),
-          avatar: MochiDisc(id: widget.agentId, size: kMobile ? 88 : 64),
+          avatar: AgentDisc(id: widget.agentId, size: kMobile ? 88 : 64),
           name: widget.name,
           status: _statusLine(),
           actions: actions,

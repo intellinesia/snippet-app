@@ -33,7 +33,7 @@ void main() {
     ));
     await tester.pump();
 
-    expect(find.byType(MochiIcon), findsOneWidget);
+    expect(find.byType(AgentMochi), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
     expect(find.byType(ListeningPill), findsOneWidget);
     expect(find.byTooltip('More'), findsOneWidget);
@@ -101,7 +101,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('Mission Control'), findsOneWidget);
-      expect(find.byType(MochiIcon), findsOneWidget);
+      expect(find.byType(AgentMochi), findsOneWidget);
       expect(find.byTooltip('Back'), findsNothing);
       expect(find.byTooltip('Tasks'), findsNothing);
       await tester.tap(find.text('Mission Control'));

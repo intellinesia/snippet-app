@@ -135,7 +135,7 @@ class TopWorkspaceTabChip extends StatelessWidget {
     final working = status == 'running' || needsInput;
     final closable = canClose && onClose != null;
     final showClose = closable && isActive;
-    // Mission Control is the pinned icon-only tab: Mochi plus the attention
+    // Mission Control is the pinned icon-only tab: its character plus the attention
     // count, no title or status dot (v5 `.tab[data-go=mc]`).
     if (tab.isMissionControl) {
       return Tooltip(

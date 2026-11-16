@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:convert';
 import 'dart:ui' show lerpDouble;
 
@@ -8,7 +9,7 @@ import 'package:flutter/services.dart';
 import 'ambient_loop.dart';
 import 'theme.dart';
 
-enum AgentCharacterState { idle, working, waiting, done, needs }
+enum AgentCharacterState { idle, working, waiting, done, needs, sleeping }
 
 @immutable
 class CharacterEyeAnchor {
@@ -266,6 +267,7 @@ class AgentCharacter extends StatefulWidget {
     final baseEye = switch (state) {
       AgentCharacterState.done => 'happy',
       AgentCharacterState.needs => 'wide',
+      AgentCharacterState.sleeping => 'closed',
       _ => 'open',
     };
     if (reducedMotion ||
@@ -336,6 +338,15 @@ class AgentCharacter extends StatefulWidget {
               Curves.easeInOut.transform((p - 0.84) / 0.06))!;
         }
         return CharacterPose(bodyDy: dy, eyeState: 'wide');
+      case AgentCharacterState.sleeping:
+        // Slow breath: a gentle squash on a 4 s cycle.
+        final k = (1 - math.cos((timeSec % 4.0) / 4.0 * 2 * math.pi)) / 2;
+        return CharacterPose(
+          bodyScaleX: 1 + 0.025 * k,
+          bodyScaleY: 1 - 0.035 * k,
+          shadowScale: 1 + 0.04 * k,
+          eyeState: 'closed',
+        );
       case AgentCharacterState.idle:
       case AgentCharacterState.done:
         return CharacterPose(eyeState: baseEye);
@@ -412,7 +423,8 @@ class _AgentCharacterState extends State<AgentCharacter> {
   bool get _animatedState =>
       widget.state == AgentCharacterState.working ||
       widget.state == AgentCharacterState.waiting ||
-      widget.state == AgentCharacterState.needs;
+      widget.state == AgentCharacterState.needs ||
+      widget.state == AgentCharacterState.sleeping;
 
   void _syncTicking() {
     final want = mounted &&
@@ -453,6 +465,27 @@ class _AgentCharacterState extends State<AgentCharacter> {
         gaplessPlayback: true,
         filterQuality: FilterQuality.medium,
       );
+
+  /// A small "z" that rises from the head and fades, 3 s a cycle.
+  Widget _sleepLayer(double size, double bodyTop, double timeSec) {
+    final p = (timeSec % 3.0) / 3.0;
+    final fade = p < 0.2 ? p / 0.2 : (1 - p) / 0.8;
+    final font = (size * 0.22).clamp(9.0, 16.0);
+    return Positioned(
+      right: -size * 0.02 - p * size * 0.08,
+      top: bodyTop * size - font * 0.4 - p * size * 0.18,
+      child: IgnorePointer(
+        child: Opacity(
+          opacity: fade.clamp(0.0, 1.0) * 0.8,
+          child: Text('z',
+              textScaler: TextScaler.noScaling,
+              style: sans(font * (0.85 + 0.3 * p),
+                      weight: FontWeight.w600, color: AppColors.fg3)
+                  .copyWith(height: 1)),
+        ),
+      ),
+    );
+  }
 
   Widget _badgeLayer(Color fill, double size, double bodyTop) {
     // Matches the mockup: 11px at sidebar size up to 20px on the stage.
@@ -620,6 +653,8 @@ class _AgentCharacterState extends State<AgentCharacter> {
           Positioned.fill(child: bodyGroup),
           if (widget.badge != null && widget.badge!.isNotEmpty)
             _badgeLayer(spec.color, size, spec.bodyTop),
+          if (widget.state == AgentCharacterState.sleeping && size >= 24)
+            _sleepLayer(size, spec.bodyTop, reduced ? 0.35 : timeSec),
         ],
       ),
     );

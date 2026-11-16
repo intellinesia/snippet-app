@@ -1369,8 +1369,6 @@ class CoordinationAgent {
   /// finished work from the last 7 days. Null when the daemon predates it.
   final Map<String, int>? taskCounts;
 
-  final String? color;
-  final String? shape;
   final String? character;
 
   /// The inference profile this agent works on in every session; null when it
@@ -1405,8 +1403,6 @@ class CoordinationAgent {
   CoordinationAgent.fromJson(Map<String, dynamic> j)
       : _raw = j,
         id = j['id'] as String? ?? '',
-        color = j['color'] as String?,
-        shape = j['shape'] as String?,
         character = (j['character'] as String?)?.trim().isEmpty ?? true
             ? null
             : (j['character'] as String).trim(),

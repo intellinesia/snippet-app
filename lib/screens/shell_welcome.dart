@@ -471,7 +471,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
           right: 0,
           child: IgnorePointer(
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              MochiIcon(color: const Color(0xFFB9C6FF), size: 16),
+              const AgentMochi('snippet', size: 16),
               SizedBox(width: S.s8),
               Text('Snippet needs a service',
                   style: sans(13, color: AppColors.fg3)),

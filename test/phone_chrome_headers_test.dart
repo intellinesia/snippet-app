@@ -271,7 +271,7 @@ void main() {
     expect(find.byType(MobileBackBar), findsOneWidget);
     expect(
         find.descendant(
-            of: find.byType(MobileBackBar), matching: find.byType(MochiIcon)),
+            of: find.byType(MobileBackBar), matching: find.byType(AgentMochi)),
         findsNothing);
     expect(find.text('snippet-mobile'), findsOneWidget);
     expect(find.textContaining('claude'), findsNothing);
@@ -301,7 +301,7 @@ void main() {
     expect(
         find.descendant(
             of: find.byType(MobileBackBar),
-            matching: find.byType(WorkingMochi)),
+            matching: find.byType(AgentMochi)),
         findsNothing);
 
     await socket.sink.close();

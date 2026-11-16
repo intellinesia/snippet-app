@@ -213,6 +213,8 @@ class _PhoneHeroState extends State<PhoneHero> {
 
   Widget _stageAgent(CrewEntry e, double size) {
     final needs = e.state == CrewState.needsYou;
+    // Anyone on stage who is neither working nor waiting on you is asleep.
+    final asleep = e.state == CrewState.standingBy;
     final name = e.agent.displayName;
     return Semantics(
       button: true,
@@ -220,7 +222,9 @@ class _PhoneHeroState extends State<PhoneHero> {
           ? '$name needs you'
           : e.state == CrewState.working
               ? '$name is working'
-              : name,
+              : asleep
+                  ? '$name is asleep'
+                  : name,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: e.lead == null ? null : () => widget.onOpenSession(e.lead!),
@@ -238,7 +242,9 @@ class _PhoneHeroState extends State<PhoneHero> {
                       ? AgentCharacterState.needs
                       : e.state == CrewState.working
                           ? AgentCharacterState.working
-                          : AgentCharacterState.idle,
+                          : asleep
+                              ? AgentCharacterState.sleeping
+                              : AgentCharacterState.idle,
                   badge: needs ? '?' : null,
                 ),
               ),

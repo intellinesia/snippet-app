@@ -71,13 +71,20 @@ Widget _host(
 void main() {
   setUp(() => rememberAgentCharacters(const []));
 
-  testWidgets('with nothing live the hero shows only the cast', (tester) async {
+  testWidgets('with nothing live the hero shows the cast asleep',
+      (tester) async {
     await tester.pumpWidget(_host([
       _session('idle', 'rook', {'status': 'idle'}),
     ]));
     expect(find.byType(PhoneHero), findsOneWidget);
     expect(find.text('Rook'), findsOneWidget);
     expect(find.text('Needs you'), findsNothing);
+    expect(find.bySemanticsLabel(RegExp('Rook is asleep')), findsOneWidget);
+  });
+
+  testWidgets('nobody sleeps while an agent is working', (tester) async {
+    await tester.pumpWidget(_host([_running()]));
+    expect(find.bySemanticsLabel(RegExp('asleep')), findsNothing);
   });
 
   testWidgets('stage lists live agents, badge only on the needs-you one',

@@ -12,14 +12,10 @@ import 'package:snippet/theme.dart';
 void main() {
   setUp(() {
     rememberAgentCharacters(const []);
-    rememberAgentShapes(const []);
-    rememberAgentColors(const []);
   });
 
   tearDown(() {
     rememberAgentCharacters(const []);
-    rememberAgentShapes(const []);
-    rememberAgentColors(const []);
   });
 
   test('roster loads all 36 characters and eye styles as WebP assets',
@@ -104,12 +100,14 @@ void main() {
       final expectedEye = switch (state) {
         AgentCharacterState.done => 'assets/avatars/eyes/glossy-black-happy.webp',
         AgentCharacterState.needs => 'assets/avatars/eyes/glossy-black-wide.webp',
+        AgentCharacterState.sleeping => 'assets/avatars/eyes/glossy-black-closed.webp',
         _ => 'assets/avatars/eyes/glossy-black-open.webp',
       };
       expect(images, contains(expectedEye));
       final expectsClock = state == AgentCharacterState.working ||
           state == AgentCharacterState.waiting ||
-          state == AgentCharacterState.needs;
+          state == AgentCharacterState.needs ||
+          state == AgentCharacterState.sleeping;
       expect(AmbientClock.instance.isRunning, expectsClock,
           reason: 'state=$state');
     }
@@ -187,7 +185,7 @@ void main() {
   });
 
   testWidgets(
-      'AgentMochi renders AgentCharacter when character is set and falls back to MochiIcon',
+      'AgentMochi renders the stored character, else the daemon default',
       (tester) async {
     await CharacterRoster.load();
 
@@ -196,18 +194,15 @@ void main() {
       'display_name': 'Rook',
       'handle': 'rook',
       'character': '01',
-      'shape': 'cat',
     });
     final legacy = CoordinationAgent.fromJson({
       'id': 'ada',
       'display_name': 'Ada',
       'handle': 'ada',
-      'shape': 'cat',
     });
     expect(withChar.character, '01');
     expect(legacy.character, isNull);
 
-    rememberAgentShapes([(withChar.id, withChar.shape), (legacy.id, legacy.shape)]);
     rememberAgentCharacters([(withChar.id, withChar.character), (legacy.id, legacy.character)]);
 
     await tester.pumpWidget(MaterialApp(
@@ -221,8 +216,22 @@ void main() {
     ));
     await tester.pump();
 
-    expect(find.byType(AgentCharacter), findsOneWidget);
-    expect(find.byType(MochiIcon), findsOneWidget);
+    final shown = tester
+        .widgetList<AgentCharacter>(find.byType(AgentCharacter))
+        .map((c) => c.characterId)
+        .toList();
+    expect(shown, ['01', '34']);
+  });
+
+  test('default characters match the daemon hash and skip 01 and 14', () {
+    expect(defaultAgentCharacter('snippet'), '01');
+    expect(defaultAgentCharacter('mission-control'), '14');
+    expect(defaultAgentCharacter('deep-researcher'), '17');
+    expect(defaultAgentCharacter('rook'), '29');
+    for (var i = 0; i < 200; i++) {
+      final c = defaultAgentCharacter('agent-$i');
+      expect(c == '01' || c == '14', isFalse, reason: 'agent-$i got $c');
+    }
   });
 
   testWidgets('render AgentCharacter states showcase to scratchpad',

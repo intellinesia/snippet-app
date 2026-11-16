@@ -169,7 +169,7 @@ void main() {
     await tester.pump();
 
     expect(tab.isMissionControl, isTrue);
-    expect(find.byType(MochiIcon), findsOneWidget);
+    expect(find.byType(AgentMochi), findsOneWidget);
     expect(find.text('Mission Control'), findsNothing);
     expect(find.text('3'), findsOneWidget);
     await tester.tap(find.byType(TopWorkspaceTabChip));
@@ -201,7 +201,7 @@ void main() {
     ));
     await tester.pump();
 
-    expect(find.byType(MochiIcon), findsOneWidget);
+    expect(find.byType(AgentMochi), findsOneWidget);
     expect(find.text('0'), findsNothing);
     debugDefaultTargetPlatformOverride = null;
   });

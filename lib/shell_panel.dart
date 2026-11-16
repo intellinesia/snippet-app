@@ -54,7 +54,7 @@ class ShellPanelRequest {
   /// callback that closes the conversation tab.
   final Widget Function(BuildContext context, VoidCallback closeTab)? sidePanel;
 
-  /// Agents whose mochi stand in for the tab icon (a group's members).
+  /// Agents whose characters stand in for the tab icon (a group's members).
   final List<String>? iconAgentIds;
 
   /// Set by the shell: reveal or toggle [sidePanel].

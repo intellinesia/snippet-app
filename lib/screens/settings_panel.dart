@@ -2786,8 +2786,6 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
     if (c == null) return;
     unawaited(ThemeManager.instance.syncFromDaemon(client: c));
     unawaited(c.coordinationAgents().then((all) {
-      rememberAgentColors([for (final a in all) (a.id, a.color)]);
-      rememberAgentShapes([for (final a in all) (a.id, a.shape)]);
       rememberAgentCharacters([for (final a in all) (a.id, a.character)]);
       if (!mounted) return;
       setState(() {

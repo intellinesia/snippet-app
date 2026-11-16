@@ -507,29 +507,6 @@ class LaneWho extends StatelessWidget {
   }
 }
 
-/// Last lines of a running lane's activity log, shown under the activity line.
-class LaneRecentOutput extends StatelessWidget {
-  final List<String> lines;
-  const LaneRecentOutput({super.key, required this.lines});
-
-  @override
-  Widget build(BuildContext context) {
-    if (lines.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final line in lines)
-          Text(
-            line,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: mono(11, height: 1.35, color: AppColors.fg4),
-          ),
-      ],
-    );
-  }
-}
-
 /// Stop (for running lanes) or Retry (for failed/cancelled lanes).
 class LaneControlButton extends StatefulWidget {
   final DaemonClient client;
@@ -788,7 +765,6 @@ class _LaneNoticeState extends State<LaneNotice> {
     ]);
     Widget? body;
     if (running) {
-      final recent = lane?.recent ?? const <String>[];
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -798,10 +774,6 @@ class _LaneNoticeState extends State<LaneNotice> {
             SizedBox(width: S.s6),
             Expanded(child: _LaneActivityLine(lane: lane, size: small - 1)),
           ]),
-          if (recent.isNotEmpty) ...[
-            SizedBox(height: S.s2),
-            LaneRecentOutput(lines: recent),
-          ],
         ],
       );
     } else if (failed && (lane?.error?.trim().isNotEmpty ?? false)) {

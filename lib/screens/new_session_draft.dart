@@ -354,7 +354,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const DottedMochi(width: 300),
+                  const AgentMochi('snippet', size: 120),
                   SizedBox(height: S.of(10)),
                   Text('What are we making?',
                       style: sans(26, spacing: -0.5, color: AppColors.fg1)),

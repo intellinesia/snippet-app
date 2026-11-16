@@ -1660,9 +1660,11 @@ class _SessionScreenState extends State<SessionScreen>
                                                     top: S
                                                                         .of(48), bottom: S.s24),
                                                 child: Column(children: [
-                                                  DottedMochi(
-                                                      width:
-                                                          kMobile ? 220 : 300),
+                                                  AgentMochi(
+                                                      _me?.displayAgentId ??
+                                                          'snippet',
+                                                      size:
+                                                          kMobile ? 96 : 120),
                                                   SizedBox(height: S
                                                                           .of(14)),
                                                   Text('What are we making?',
@@ -1718,6 +1720,8 @@ class _SessionScreenState extends State<SessionScreen>
                                               key: const ValueKey(
                                                   'live-stream-row'),
                                               frame: _liveFrame,
+                                              agentId: _me?.displayAgentId ??
+                                                  'snippet',
                                               running: running,
                                               compacting: s.compacting,
                                               startedAt: s.turnStartedAt,

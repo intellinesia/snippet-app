@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 import '../mochi.dart';
 import '../theme.dart';
 
-const _mochiColor = Color(0xFFB9C6FF);
-const _mochiSize = 105.0;
+const _rookSize = 105.0;
 const _feetFromTop = 0.881;
 
 /// Scene units are 400x300, fitted and centred in the available box.
@@ -18,16 +17,15 @@ class _Fit {
   }
   late final double u, ox, oy;
 
-  Widget mochi(double feetX, double feetY,
+  Widget rook(double feetX, double feetY,
       {required bool happy, double scale = 1}) {
-    final size = _mochiSize * scale * u;
+    final size = _rookSize * scale * u;
     return Positioned(
       left: ox + feetX * u - size / 2,
       top: oy + feetY * u - _feetFromTop * size,
-      child: MochiIcon(
-          color: _mochiColor,
+      child: AgentCharacter('01',
           size: size,
-          eyes: happy ? MochiEyes.happy : MochiEyes.dot),
+          state: happy ? AgentCharacterState.done : AgentCharacterState.idle),
     );
   }
 }
@@ -44,7 +42,7 @@ void _shadow(Canvas c, double rx) => c.drawOval(
     Rect.fromCenter(center: const Offset(200, 262), width: rx * 2, height: 18),
     _fill(Colors.black.withValues(alpha: 0.35)));
 
-/// Left: the delivery box. Mochi peeks out and pops up when hovered.
+/// Left: the delivery box. Rook peeks out and pops up when hovered.
 class UnboxArt extends StatelessWidget {
   const UnboxArt({super.key, required this.time, required this.hover});
   final Animation<double> time;
@@ -59,7 +57,7 @@ class UnboxArt extends StatelessWidget {
           animation: time,
           builder: (_, __) => Stack(children: [
             Positioned.fill(child: CustomPaint(painter: _BoxBack(f))),
-            f.mochi(200, feet, happy: hover > 0.35),
+            f.rook(200, feet, happy: hover > 0.35),
             Positioned.fill(
                 child: CustomPaint(painter: _BoxFront(f, hover, time.value))),
           ]),
@@ -175,7 +173,7 @@ class _BoxFront extends CustomPainter {
   bool shouldRepaint(_BoxFront old) => old.h != h || old.t != t;
 }
 
-/// Right: Mochi holds a cable that straightens and plugs into the other machine.
+/// Right: Rook holds a cable that straightens and plugs into the other machine.
 class PlugArt extends StatelessWidget {
   const PlugArt({super.key, required this.time, required this.hover});
   final Animation<double> time;
@@ -193,7 +191,7 @@ class PlugArt extends StatelessWidget {
               Positioned.fill(
                   child:
                       CustomPaint(painter: _PlugScene(f, hover, time.value))),
-              f.mochi(96, 248 + hop, happy: hover > 0.35, scale: 0.96),
+              f.rook(96, 248 + hop, happy: hover > 0.35, scale: 0.96),
             ]);
           },
         );

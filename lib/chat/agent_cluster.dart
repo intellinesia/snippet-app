@@ -16,18 +16,18 @@ class AgentCluster extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (ids.length < 2) {
-      return MochiDisc(id: ids.isEmpty ? '' : ids.first, size: size);
+      return AgentDisc(id: ids.isEmpty ? '' : ids.first, size: size);
     }
     if (ids.length == 2) {
       final d = size * 0.62;
       return SizedBox.square(
         dimension: size,
         child: Stack(children: [
-          Positioned(left: 0, top: 0, child: MochiDisc(id: ids[0], size: d)),
+          Positioned(left: 0, top: 0, child: AgentDisc(id: ids[0], size: d)),
           Positioned(
               right: 0,
               bottom: 0,
-              child: MochiDisc(id: ids[1], size: d, ring: true)),
+              child: AgentDisc(id: ids[1], size: d, ring: true)),
         ]),
       );
     }
@@ -35,7 +35,7 @@ class AgentCluster extends StatelessWidget {
     final overflow = ids.length > 3;
     Widget slot(int i) {
       if (overflow && i == 2) return _MoreDisc(count: ids.length - 2, size: d);
-      return MochiDisc(id: ids[i], size: d, ring: i > 0);
+      return AgentDisc(id: ids[i], size: d, ring: i > 0);
     }
 
     return SizedBox.square(

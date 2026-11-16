@@ -304,7 +304,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                   Padding(
                     padding: EdgeInsets.fromLTRB(S.s24, 120, S.s24, 0),
                     child: Column(children: [
-                      const DottedMochi(width: 120),
+                      const AgentMochi('mission-control', size: 72),
                       SizedBox(height: S.of(18)),
                       Text('All quiet',
                           style: sans(15, color: AppColors.fg1)),

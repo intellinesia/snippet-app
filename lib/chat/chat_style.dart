@@ -470,7 +470,7 @@ class ChatHeader extends StatelessWidget {
   Widget _avatar() {
     const big = 36.0;
     if (agentIds.length < 2) {
-      return MochiDisc(id: agentIds.isEmpty ? '' : agentIds.first, size: big);
+      return AgentDisc(id: agentIds.isEmpty ? '' : agentIds.first, size: big);
     }
     return AgentCluster(ids: agentIds, size: big);
   }
@@ -579,8 +579,8 @@ class ChatHeader extends StatelessWidget {
   }
 }
 
-class MochiDisc extends StatelessWidget {
-  const MochiDisc(
+class AgentDisc extends StatelessWidget {
+  const AgentDisc(
       {super.key, required this.id, required this.size, this.ring = false});
 
   final String id;

@@ -403,7 +403,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const DottedMochi(width: 170),
+                        const AgentMochi('snippet', size: 96),
                         SizedBox(height: S.of(10)),
                         Text(
                           'What are we making?',

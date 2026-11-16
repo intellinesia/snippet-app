@@ -1446,26 +1446,8 @@ class DaemonClient {
     final agents = list
         .map((e) => CoordinationAgent.fromJson(e as Map<String, dynamic>))
         .toList();
-    rememberAgentColors(agents.map((a) => (a.id, a.color)));
-    rememberAgentShapes(agents.map((a) => (a.id, a.shape)));
     rememberAgentCharacters(agents.map((a) => (a.id, a.character)));
     return agents;
-  }
-
-  /// POST /agents/{id}/color — the agent's Mochi colour, or null for the default.
-  Future<void> setAgentColor(String agentId, String? color) async {
-    final r = await _post(_uri('/agents/${Uri.encodeComponent(agentId)}/color'),
-        headers: _json, body: jsonEncode({'color': color}));
-    if (r.statusCode != 200) throw _err('set agent colour', r);
-    setRememberedAgentColor(agentId, color);
-  }
-
-  /// POST /agents/{id}/shape: the agent's mascot shape, or null for the default.
-  Future<void> setAgentShape(String agentId, String? shape) async {
-    final r = await _post(_uri('/agents/${Uri.encodeComponent(agentId)}/shape'),
-        headers: _json, body: jsonEncode({'shape': shape}));
-    if (r.statusCode != 200) throw _err('set agent shape', r);
-    setRememberedAgentShape(agentId, shape);
   }
 
   /// POST /agents/{id}/character: the agent's character ("01".."36"), or null for the default.
