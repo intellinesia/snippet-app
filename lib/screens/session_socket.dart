@@ -319,6 +319,8 @@ extension _SessionScreenSocketExt on _SessionScreenState {
       if (eventsChanged || questionFlipped || chromeChanged) {
         _transcriptDirty = true;
       }
+      // The header's step x of y follows the plan, which only the list carries.
+      if (cur != null && next.status != cur.status) _loadSettled();
       if (wire == 'snapshot') {
         final offset = (j['event_offset'] as num?)?.toInt();
         _transcriptStart = offset ?? 0;

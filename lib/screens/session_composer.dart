@@ -397,7 +397,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
             child: SizedBox.square(
-              dimension: kMobile ? 32 : 24,
+              dimension: kMobile ? 36 : 24,
               child: Center(
                   child:
                       AppIcon(icon, size: 13, color: color ?? AppColors.fg4)),
@@ -418,16 +418,18 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       },
       child: AnimatedContainer(
         duration: Motion.quick,
-        height: kMobile ? 38 : 26,
+        height: kMobile ? 46 : 26,
         padding: EdgeInsets.only(
             left: images.isNotEmpty ? S.s6 : S.s12, right: S.s4),
         decoration: BoxDecoration(
           color: isHovered ? AppColors.raised : AppColors.surface1,
-          borderRadius: BorderRadius.circular(R.pill),
+          borderRadius: BorderRadius.circular(kMobile ? R.card : R.pill),
           border: Border.all(color: AppColors.line),
         ),
         child: Row(children: [
-          if (images.isEmpty)
+          if (images.isEmpty && kMobile)
+            Text('Queued', style: sans(12, color: AppColors.fg3))
+          else if (images.isEmpty)
             AppIcon('clock', size: 12, color: AppColors.fg4)
           else ...[
             for (final path in images.take(3)) thumb(path),
@@ -460,7 +462,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               ]),
             ),
           ),
-          if (_state?.status == 'running')
+          if (_state?.status == 'running' && !kMobile)
             iconAction('stop', 'Interrupt and send',
                 () => _interruptAndSendQueuedAt(qi)),
           iconAction('arrow-up', 'Send now', () => _steerQueuedAt(qi),
@@ -826,11 +828,14 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   }
 
   Widget _composerCard(bool running) {
+    final agent = (_meAgentName ?? '').trim();
     final hint = _isMissionControl
         ? 'Ask Mission Control…'
         : running
-            ? 'Steer or queue a message'
-            : 'Reply to Snippet';
+            ? (agent.isEmpty
+                ? 'Steer or queue a message'
+                : 'Steer $agent, or queue for later')
+            : (agent.isEmpty ? 'Reply to Snippet' : 'Message $agent');
     return KeyedSubtree(
       key: _composerCardKey,
       child: ComposerCard(
@@ -911,6 +916,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (kMobile && running && _showsQuickActions) _quickActions(),
                   if (_heldQueue.isNotEmpty) _queuedCard(),
                   if (_attachments.isNotEmpty) _attachmentBar(),
                   if (_mentionQuery != null && !_isMissionControl)
@@ -934,6 +940,51 @@ extension _SessionScreenComposerExt on _SessionScreenState {
           ),
         ),
       ),
+    );
+  }
+
+  bool get _showsQuickActions =>
+      !_isMissionControl &&
+      !widget.readOnly &&
+      _inboxAgentId(widget.sessionId) == null;
+
+  /// Interrupt, Hand off and Fork from here, above the composer while running.
+  Widget _quickActions() {
+    Widget chip(String icon, String label, VoidCallback onTap) => Semantics(
+          button: true,
+          label: label,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: Container(
+              height: 44,
+              alignment: Alignment.center,
+              child: Container(
+                height: 30,
+                padding: EdgeInsets.symmetric(horizontal: S.s12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface1,
+                  borderRadius: BorderRadius.circular(R.pill),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  AppIcon(icon, size: 12, color: AppColors.fg3),
+                  SizedBox(width: S.s6),
+                  Text(label, style: sans(12, color: AppColors.fg2)),
+                ]),
+              ),
+            ),
+          ),
+        );
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(children: [
+        chip('stop', 'Interrupt', () => _send({'kind': 'interrupt'})),
+        SizedBox(width: S.s8),
+        chip('arrow-right', 'Hand off', _showHandOff),
+        SizedBox(width: S.s8),
+        chip('git-branch', 'Fork from here', () => _confirmFork(null)),
+      ]),
     );
   }
 

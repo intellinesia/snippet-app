@@ -21,6 +21,8 @@ import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../chat/chat_card.dart';
+import '../chat/stage_header.dart';
+import 'session_list_row.dart' show sessionStepLabel;
 import '../desktop_look.dart';
 import '../ambient_loop.dart';
 import '../approval_code.dart';
@@ -314,6 +316,10 @@ class _SessionScreenState extends State<SessionScreen>
   bool _confirmingRecording = false;
   SharedInbound? _consumedShare;
   HarnessState? _state;
+  // The list row for this session: plan and the agent standing on the header.
+  SessionInfo? _me;
+  String? _meAgentName;
+  String? _meAgentFetched;
   GithubStatus? _github;
   int _githubGen = 0;
   bool _githubKnown = false;
@@ -873,12 +879,26 @@ class _SessionScreenState extends State<SessionScreen>
       _keepAwake = me?.keepAwake ?? false;
       final now = me?.settled ?? false;
       final mode = me?.resumeMode;
+      _loadHeaderAgent(me);
       if (now != _settled || (mode != null && mode != _resumeMode)) {
         setState(() {
           _settled = now;
           if (mode != null) _resumeMode = mode;
         });
       }
+    }).catchError((_) {});
+  }
+
+  void _loadHeaderAgent(SessionInfo? me) {
+    if (me == null) return;
+    if (mounted) setState(() => _me = me);
+    final id = me.displayAgentId ?? '';
+    if (id == _meAgentFetched) return;
+    _meAgentFetched = id;
+    widget.client.coordinationAgents().then((agents) {
+      if (!mounted) return;
+      final a = agents.where((x) => x.id == id).firstOrNull;
+      if (a != null) setState(() => _meAgentName = a.displayName);
     }).catchError((_) {});
   }
 
@@ -1542,6 +1562,12 @@ class _SessionScreenState extends State<SessionScreen>
                                   child: ApprovalBar(
                                       events: events,
                                       onSend: _sendDecision,
+                                      agentId: _me?.displayAgentId,
+                                      agentName: _meAgentName,
+                                      stepLabel: _me?.plan != null &&
+                                              _me!.plan!.total > 0
+                                          ? sessionStepLabel(_me!.plan!)
+                                          : null,
                                       showApproveAll:
                                           _pendingApprovalTotal(events) > 1),
                                 ),

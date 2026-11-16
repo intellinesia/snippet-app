@@ -117,11 +117,20 @@ class ApprovalBar extends StatefulWidget {
   final List<Map<String, dynamic>> events;
   final void Function(Map<String, dynamic>) onSend;
   final bool showApproveAll;
+
+  /// The asking agent, for the phone's "{Agent} asks" row; the row is left out
+  /// when the session's agent is not known yet.
+  final String? agentId;
+  final String? agentName;
+  final String? stepLabel;
   const ApprovalBar(
       {super.key,
       required this.events,
       required this.onSend,
-      this.showApproveAll = false});
+      this.showApproveAll = false,
+      this.agentId,
+      this.agentName,
+      this.stepLabel});
   @override
   State<ApprovalBar> createState() => ApprovalBarState();
 }
@@ -141,6 +150,35 @@ class ApprovalBarState extends State<ApprovalBar> {
       if (e['kind'] == 'approval_request') return e;
     }
     return null;
+  }
+
+  Widget _askRow(Map<String, dynamic>? req) {
+    final raw = req?['at'] ?? req?['created_at'];
+    final at = raw is num ? raw.toInt() : 0;
+    final mins = at <= 0
+        ? 0
+        : DateTime.now()
+            .difference(DateTime.fromMillisecondsSinceEpoch(
+                (at > 100000000000 ? at : at * 1000)))
+            .inMinutes;
+    final name = (widget.agentName ?? '').trim().isEmpty
+        ? widget.agentId!
+        : widget.agentName!;
+    final step = widget.stepLabel;
+    return Row(children: [
+      AgentMochi(widget.agentId!, size: 18),
+      SizedBox(width: S.s8),
+      Expanded(
+        child: Text(step == null ? '$name asks' : '$name asks · $step',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: sans(12, color: AppColors.fg3)),
+      ),
+      if (mins >= 1) ...[
+        SizedBox(width: S.s8),
+        Text('waiting $mins min', style: sans(12, color: AppColors.fg3)),
+      ],
+    ]);
   }
 
   @override
@@ -206,6 +244,9 @@ class ApprovalBarState extends State<ApprovalBar> {
                 ChatCardHeader(
                   title: headline,
                   subtitle: subtitle,
+                  eyebrow: kMobile && widget.agentId != null
+                      ? _askRow(req)
+                      : null,
                   trailing: total > 1 ? ChatCardPill('$index of $total') : null,
                 ),
                 if (detail.isNotEmpty)
@@ -236,13 +277,14 @@ class ApprovalBarState extends State<ApprovalBar> {
           ),
         ),
         ChatCardActions(
-          stack: tool != 'change_files',
           buttons: [
             ChatCardButton('Deny',
                 kind: ChatCardButtonKind.secondary,
                 onTap: _sent ? null : () => _decide({'kind': 'deny'})),
             ChatCardButton('Approve',
-                busy: _sent, onTap: () => _decide({'kind': 'approve'})),
+                icon: Icons.check,
+                busy: _sent,
+                onTap: () => _decide({'kind': 'approve'})),
           ],
           link: canAlways ? 'Always allow' : null,
           onLink: _sent ? null : () => _decide({'kind': 'approve_all'}),
