@@ -192,7 +192,7 @@ void main() {
     ));
     await tester.pump();
 
-    final summary = find.text('Ran 1 command · edited 1 file',
+    final summary = find.text('Edited a.dart · ran echo',
         findRichText: true);
     expect(summary, findsOneWidget);
     expect(find.text('Show'), findsNothing);
@@ -356,14 +356,16 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(
-          find.text('Ran 2 commands · edited 3 files', findRichText: true),
+          find.text('Edited a.dart, b.dart and c.dart · ran echo',
+              findRichText: true),
           findsOneWidget);
       expect(find.text('Running flutter analyze', findRichText: true),
           findsOneWidget);
       expect(find.byType(DenseToolRow), findsOneWidget);
       expect(find.text('Show'), findsNothing);
 
-      await tester.tap(find.text('Ran 2 commands · edited 3 files',
+      await tester.tap(find.text(
+          'Edited a.dart, b.dart and c.dart · ran echo',
           findRichText: true));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));

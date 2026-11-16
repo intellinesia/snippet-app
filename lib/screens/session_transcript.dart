@@ -1132,7 +1132,7 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
       for (final r in widget.rows.whereType<DenseToolRow>())
         ToolStep(tool: r.tool, args: r.args, result: r.result),
     ];
-    final text = activitySummary(steps);
+    final text = workSummary(steps);
     final summary = text.isEmpty ? 'Activity' : text;
     final failures = steps.where((s) => !s.running && s.failed).length;
     final isRunning =
