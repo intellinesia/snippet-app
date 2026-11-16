@@ -50,7 +50,9 @@ class ActionGroup extends StatelessWidget {
       children: [
         Padding(
           padding: EdgeInsets.fromLTRB(S.s4, S.s16, S.s4, S.s8),
-          child: Text(label.toUpperCase(), style: TS.overline()),
+          child: card
+              ? Text(label, style: sans(13, color: AppColors.fg3))
+              : Text(label.toUpperCase(), style: TS.overline()),
         ),
         Container(
           decoration: BoxDecoration(
