@@ -60,8 +60,9 @@ List<ShellChange> shellChanges(
   return byPath.values.toList();
 }
 
-class FileChangesScreen extends StatelessWidget {
-  const FileChangesScreen(
+/// The grouped list of changed files, shared by the page and the Checkpoints drawer.
+class FileChangesList extends StatelessWidget {
+  const FileChangesList(
       {super.key, required this.steps, this.shell = const [], this.onOpenFile});
 
   final List<ToolStep> steps;
@@ -142,7 +143,66 @@ class FileChangesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final changes = fileChanges(steps);
-    final total = changes.length + shell.length;
+    return CardGroupScope(
+      child: ListGroup(children: [
+        for (final c in changes)
+          _row(context,
+              path: c.path,
+              edits: _edits(c.path),
+              trailing: c.kind == FileChangeKind.deleted
+                  ? Text('deleted', style: sans(13, color: AppColors.danger))
+                  : _delta(c.added, c.removed),
+              onTap: () => Navigator.of(context).push(
+                    AppPageRoute<void>(
+                      builder: (_) =>
+                          FileChangeDetail(path: c.path, steps: steps),
+                    ),
+                  )),
+        for (final c in shell)
+          _row(context,
+              path: c.path,
+              trailing: _delta(c.add, c.del),
+              onTap: onOpenFile == null ? null : () => onOpenFile!(c.path)),
+      ]),
+    );
+  }
+}
+
+/// "File changes · N" and its list, for hosts that show it beside other content.
+class FileChangesSection extends StatelessWidget {
+  const FileChangesSection(
+      {super.key, required this.steps, this.shell = const [], this.onOpenFile});
+
+  final List<ToolStep> steps;
+  final List<ShellChange> shell;
+  final void Function(String path)? onOpenFile;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = fileChanges(steps).length + shell.length;
+    if (total == 0) return const SizedBox.shrink();
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Padding(
+        padding: EdgeInsets.fromLTRB(S.s4, S.s16, S.s4, S.s8),
+        child: Text('File changes \u00b7 $total',
+            style: sans(13, color: AppColors.fg3)),
+      ),
+      FileChangesList(steps: steps, shell: shell, onOpenFile: onOpenFile),
+    ]);
+  }
+}
+
+class FileChangesScreen extends StatelessWidget {
+  const FileChangesScreen(
+      {super.key, required this.steps, this.shell = const [], this.onOpenFile});
+
+  final List<ToolStep> steps;
+  final List<ShellChange> shell;
+  final void Function(String path)? onOpenFile;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = fileChanges(steps).length + shell.length;
     return Scaffold(
       backgroundColor: AppColors.paneBg,
       body: SafeArea(
@@ -167,31 +227,8 @@ class FileChangesScreen extends StatelessWidget {
                 : ListView(
                     padding: EdgeInsets.fromLTRB(S.s16, S.s6, S.s16, S.s32),
                     children: [
-                      CardGroupScope(
-                        child: ListGroup(children: [
-                          for (final c in changes)
-                            _row(context,
-                                path: c.path,
-                                edits: _edits(c.path),
-                                trailing: c.kind == FileChangeKind.deleted
-                                    ? Text('deleted',
-                                        style: sans(13, color: AppColors.danger))
-                                    : _delta(c.added, c.removed),
-                                onTap: () => Navigator.of(context).push(
-                                      AppPageRoute<void>(
-                                        builder: (_) => FileChangeDetail(
-                                            path: c.path, steps: steps),
-                                      ),
-                                    )),
-                          for (final c in shell)
-                            _row(context,
-                                path: c.path,
-                                trailing: _delta(c.add, c.del),
-                                onTap: onOpenFile == null
-                                    ? null
-                                    : () => onOpenFile!(c.path)),
-                        ]),
-                      ),
+                      FileChangesList(
+                          steps: steps, shell: shell, onOpenFile: onOpenFile),
                     ],
                   ),
           ),

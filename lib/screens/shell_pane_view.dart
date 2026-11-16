@@ -12,6 +12,8 @@ import '../tool_sheet.dart';
 import '../widgets.dart';
 import 'mission_control/coordination_agent_detail.dart';
 import 'recurring.dart';
+import '../tool_activity.dart';
+import 'file_changes.dart';
 import 'session_panels.dart';
 import 'shell_models.dart';
 import 'shell_nav.dart';
@@ -580,6 +582,12 @@ class RightTabBody extends StatelessWidget {
           checkpoints: state?.checkpoints.reversed.toList() ?? const [],
           onRewind: (c) => controls?.performAction('rewind', c.id),
           onFork: (c) => controls?.performAction('fork', c.id),
+          below: Builder(builder: (_) {
+            final ev = state?.events ?? const <Map<String, dynamic>>[];
+            final steps = sessionChangeSteps(ev);
+            return FileChangesSection(
+                steps: steps, shell: shellChanges(ev, fileChanges(steps)));
+          }),
         ),
       RightPanel.none || RightPanel.files => const SizedBox.shrink(),
     };

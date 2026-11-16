@@ -9,6 +9,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../transcript.dart' show LaneControlButton, LaneRecentOutput, LaneWho;
+import 'compact_btn.dart';
 import 'lanes.dart' show laneSections, openLaneView;
 
 /// Human-readable checkpoint timestamp ('Today · 3:04 PM').
@@ -72,6 +73,8 @@ class SessionCheckpointsPanel extends StatefulWidget {
     required this.onFork,
     this.client,
     this.sessionId,
+    this.below,
+    this.embedded = false,
   });
 
   final DaemonClient? client;
@@ -80,6 +83,12 @@ class SessionCheckpointsPanel extends StatefulWidget {
   final List<Checkpoint> checkpoints;
   final void Function(Checkpoint) onRewind;
   final void Function(Checkpoint) onFork;
+
+  /// Shown under the list, e.g. the session's file changes on desktop.
+  final Widget? below;
+
+  /// Sized to its content and without its own side padding, for a host that scrolls.
+  final bool embedded;
 
   @override
   State<SessionCheckpointsPanel> createState() =>
@@ -161,16 +170,10 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
         // The newest checkpoint is the present state, so only Fork applies.
         if (!latest) ...[
           SizedBox(width: S.s8),
-          Btn('Restore',
-              small: true,
-              variant: BtnVariant.surface,
-              onTap: () => widget.onRewind(c)),
+          CompactBtn('Restore', onTap: () => widget.onRewind(c)),
         ],
-        SizedBox(width: S.s6),
-        Btn('Fork',
-            small: true,
-            variant: BtnVariant.surface,
-            onTap: () => widget.onFork(c)),
+        SizedBox(width: S.s4),
+        CompactBtn('Fork', onTap: () => widget.onFork(c)),
       ]),
     );
   }
@@ -184,8 +187,10 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
         child: Text('No checkpoints yet.', style: TS.meta()),
       );
     }
-    final side = kMobile ? M.gutter : S.s12;
+    final side = widget.embedded ? 0.0 : (kMobile ? M.gutter : S.s12);
     return ListView(
+      shrinkWrap: widget.embedded,
+      physics: widget.embedded ? const NeverScrollableScrollPhysics() : null,
       padding: EdgeInsets.fromLTRB(side, S.s12, side, S.s24),
       children: [
         Padding(
@@ -204,6 +209,7 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
             for (var i = 0; i < cps.length; i++) _row(cps[i], i == 0),
           ]),
         ),
+        if (widget.below != null) widget.below!,
       ],
     );
   }

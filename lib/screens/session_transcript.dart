@@ -896,44 +896,34 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
   void _showCheckpoints() {
     final s = _state;
     if (s == null) return;
-    final cps = s.checkpoints.reversed.toList();
-    final content = Column(children: [
-      if (cps.isEmpty)
-        Padding(
-            padding: EdgeInsets.all(S.s20),
-            child: Text('No checkpoints yet.', style: TS.meta())),
-      ...cps.map((c) => Padding(
-            padding: EdgeInsets.only(bottom: S.s8),
-            child: AppCard(
-              padding: EdgeInsets.all(S.of(13)),
-              onTap: () => _confirmRewind(c),
-              child: Row(children: [
-                const IconTile('history', size: 36),
-                SizedBox(width: S.s12),
-                Expanded(
+    final events = s.events;
+    final steps = sessionChangeSteps(events);
+    final shell = shellChanges(events, fileChanges(steps));
+    Widget panel({required bool embedded}) => SessionCheckpointsPanel(
+          client: widget.client,
+          sessionId: widget.sessionId,
+          checkpoints: s.checkpoints.reversed.toList(),
+          embedded: embedded,
+          onRewind: _confirmRewind,
+          onFork: (c) => _confirmFork(c, sheet: true),
+          below: embedded
+              ? FileChangesSection(
+                  steps: steps, shell: shell, onOpenFile: _openChangedFile)
+              : null,
+        );
+    if (kMobile) {
+      Navigator.of(context).push(AppPageRoute<void>(
+          builder: (_) => Scaffold(
+                backgroundColor: AppColors.paneBg,
+                body: SafeArea(
                   child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(c.label.isEmpty ? c.id : c.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TS.rowTitle()),
-                        SizedBox(height: S.of(3)),
-                        Text(formatCheckpointDate(c.createdAt),
-                            style: TS.meta()),
+                        const MobileBackBar(title: 'Checkpoints'),
+                        Expanded(child: panel(embedded: false)),
                       ]),
                 ),
-                IconBtn('git-branch',
-                    size: 32,
-                    iconSize: 16,
-                    tooltip: 'Fork from here',
-                    onTap: () => _confirmFork(c, sheet: true)),
-              ]),
-            ),
-          )),
-    ]);
-    if (kMobile) {
-      showAppSheet(context, title: 'Checkpoints', child: content);
+              )));
     } else {
       presentScreen(context,
           style: PanelStyle.drawer,
@@ -941,7 +931,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           originClient: widget.client,
           originSessionId: widget.sessionId,
           builder: (_, close) => _SessionActionPanel(
-              title: 'Checkpoints', onClose: close, child: content));
+              title: 'Checkpoints',
+              onClose: close,
+              child: panel(embedded: true)));
     }
   }
 
