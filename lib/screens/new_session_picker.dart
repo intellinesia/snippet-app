@@ -5,6 +5,7 @@ import '../api.dart';
 import '../desktop_pick.dart';
 import '../mochi.dart';
 import '../models.dart';
+import '../settings_form.dart';
 import '../platform.dart';
 import '../pull_refresh.dart';
 import '../theme.dart';
@@ -370,6 +371,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
     final current = _profiles.where((p) => p.name == _profile).firstOrNull;
     final canSend = !_starting &&
         (_input.text.trim().isNotEmpty || _attachments.isNotEmpty);
+    if (kMobile) return _phoneBody(current, canSend);
     return Scaffold(
       backgroundColor: AppColors.bg,
       resizeToAvoidBottomInset: true,
@@ -450,6 +452,84 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
     );
   }
 
+  Widget _phoneBody(InferenceProfile? current, bool canSend) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      resizeToAvoidBottomInset: true,
+      body: SceneBackdrop(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(M.gutter, S.of(10), M.gutter, 0),
+                child: Row(children: [
+                  RoundBtn(
+                    icon: 'chevron-left',
+                    size: 40,
+                    iconSize: 20,
+                    tooltip: 'Back',
+                    onTap: widget.onClose ?? () => Navigator.maybePop(context),
+                  ),
+                ]),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                      M.gutter, S.s24, M.gutter, S.s24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(S.s4, S.of(40), S.s4, S.s16),
+                        child: Text('What are we making?',
+                            style: sans(24,
+                                weight: W.strong,
+                                spacing: -0.3,
+                                color: AppColors.fg2)),
+                      ),
+                      _composerCard(current, canSend),
+                      SizedBox(height: S.s8),
+                      _recentGroup(),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _shortPath(String path) {
+    final home = _homePath;
+    if (home != null && home.isNotEmpty && path.startsWith('$home/')) {
+      return '~${path.substring(home.length)}';
+    }
+    return path;
+  }
+
+  Widget _recentGroup() {
+    Widget row(String icon, String label, String? sub, VoidCallback onTap) =>
+        SettingsRow(
+          label: label,
+          sub: sub,
+          leading: V5IconTile(icon),
+          chevron: true,
+          onTap: onTap,
+        );
+    return SettingsGroup(
+      header: _recentFolders.isEmpty ? null : 'Recent',
+      children: [
+        for (final folder in _recentFolders)
+          row('folder', _labelForFolder(folder), _shortPath(folder),
+              () => _selectFolder(folder)),
+        row('folder-open', 'Choose folder', null, _openFolderSheet),
+      ],
+    );
+  }
+
   Widget _recentFolderChip(String folder) {
     final selected = folder == _folder && _existing == null;
     final radius = BorderRadius.circular(R.of(14));
@@ -488,36 +568,38 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
   Widget _composerCard(InferenceProfile? current, bool canSend) {
     final showBranch = _repo != null && _displayBranch.isNotEmpty;
     final hasWorktrees = (_repo?.worktrees.length ?? 0) > 0;
+    final chips = Padding(
+      padding: EdgeInsets.fromLTRB(
+          S.s12, kMobile ? S.s4 : S.of(10), S.s12, kMobile ? S.s8 : 0),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          _folderChip(),
+          if (showBranch)
+            Builder(
+              builder: (anchor) => _chip(
+                'git-branch',
+                _displayBranch,
+                onTap: hasWorktrees ? () => _pickExisting(anchor) : null,
+              ),
+            ),
+          if (_repo != null) _worktreeToggle(),
+        ],
+      ),
+    );
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(R.of(22)),
+        borderRadius: BorderRadius.circular(R.of(kMobile ? 20 : 22)),
         border: Border.all(color: AppColors.line),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, 0),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                _folderChip(),
-                if (showBranch)
-                  Builder(
-                    builder: (anchor) => _chip(
-                      'git-branch',
-                      _displayBranch,
-                      onTap: hasWorktrees ? () => _pickExisting(anchor) : null,
-                    ),
-                  ),
-                if (_repo != null) _worktreeToggle(),
-              ],
-            ),
-          ),
+          if (!kMobile) chips,
           TextField(
             controller: _input,
             focusNode: _focus,
@@ -533,6 +615,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
               hintStyle: sans(16, color: AppColors.fg4),
             ),
           ),
+          if (kMobile) chips,
           if (_attachments.isNotEmpty)
             Padding(
               padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s6),
@@ -548,26 +631,46 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
           Padding(
             padding: EdgeInsets.fromLTRB(S.of(10), S.s4, S.of(10), S.of(10)),
             child: Row(children: [
-              Material(
+              if (kMobile) ...[
+                if (current != null) _modelChip(current),
+                const Spacer(),
+                _plusBtn(),
+                SizedBox(width: S.s6),
+                _startPill(canSend),
+              ] else ...[
+                _plusBtn(),
+                const Spacer(),
+                if (current != null) _modelChip(current),
+                SizedBox(width: S.s6),
+                _startCircle(canSend),
+              ],
+            ]),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _plusBtn() => Material(
                 color: Colors.transparent,
                 shape: const CircleBorder(),
                 child: InkWell(
                   customBorder: const CircleBorder(),
                   onTap: _onAttachTap,
                   child: SizedBox(
-                    width: 34,
-                    height: 34,
+                    width: kMobile ? M.minTarget : 34,
+                    height: kMobile ? M.minTarget : 34,
                     child: Center(
                       child: AppIcon('plus', size: 17, color: AppColors.fg3),
                     ),
                   ),
                 ),
-              ),
-              const Spacer(),
-              if (current != null)
-                Builder(
+              );
+
+  Widget _modelChip(InferenceProfile current) => Builder(
                   builder: (anchor) => Material(
-                    color: Colors.transparent,
+                    color: kMobile ? AppColors.surface3 : Colors.transparent,
                     borderRadius: BorderRadius.circular(R.of(15)),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(R.of(15)),
@@ -587,9 +690,9 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
                       ),
                     ),
                   ),
-                ),
-              SizedBox(width: S.s6),
-              Tooltip(
+                );
+
+  Widget _startCircle(bool canSend) => Tooltip(
                 message: 'Start',
                 child: Material(
                   color: canSend ? AppColors.accentFill : AppColors.surface2,
@@ -614,16 +717,39 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
                     ),
                   ),
                 ),
+              );
+
+  Widget _startPill(bool canSend) => Tooltip(
+        message: 'Start',
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: canSend ? _start : null,
+          child: SizedBox(
+            height: M.minTarget,
+            child: Center(
+              child: Container(
+                height: 30,
+                padding: EdgeInsets.symmetric(horizontal: S.of(14)),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: canSend ? AppColors.accentFill : AppColors.surface2,
+                  borderRadius: BorderRadius.circular(R.of(15)),
+                ),
+                child: _starting
+                    ? Spinner(size: 14, color: AppColors.accentFg)
+                    : Text('Start',
+                        style: sans(13,
+                            weight: W.label,
+                            color:
+                                canSend ? AppColors.accentFg : AppColors.fg4)),
               ),
-            ]),
+            ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      );
 
   Widget _folderChip() => Material(
-        color: AppColors.surface2,
+        color: kMobile ? AppColors.surface3 : AppColors.surface2,
         borderRadius: BorderRadius.circular(R.of(15)),
         child: InkWell(
           borderRadius: BorderRadius.circular(R.of(15)),
@@ -651,7 +777,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
       );
 
   Widget _chip(String icon, String label, {VoidCallback? onTap}) => Material(
-        color: Colors.transparent,
+        color: kMobile ? AppColors.surface3 : Colors.transparent,
         borderRadius: BorderRadius.circular(R.of(15)),
         child: InkWell(
           borderRadius: BorderRadius.circular(R.of(15)),
@@ -679,7 +805,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
   Widget _worktreeToggle() {
     final on = _mode == WorkspaceMode.worktree;
     return Material(
-      color: Colors.transparent,
+      color: kMobile ? AppColors.surface3 : Colors.transparent,
       borderRadius: BorderRadius.circular(R.of(15)),
       child: InkWell(
         borderRadius: BorderRadius.circular(R.of(15)),

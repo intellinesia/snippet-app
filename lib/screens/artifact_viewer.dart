@@ -18,6 +18,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'artifact_grid.dart';
 import 'file_viewer.dart';
+import 'mobile_chrome.dart';
 import 'presented_file_card.dart';
 
 const _textExts = {
@@ -1095,11 +1096,6 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
       anchor: anchor,
       minWidth: 220,
       items: [
-        if (_hasSource)
-          appMenuRow<String>(
-              value: 'source',
-              icon: _source ? 'eye' : 'code',
-              label: _source ? 'Preview' : 'Source'),
         appMenuRow<String>(
             value: 'browser', icon: 'globe', label: 'Open in browser'),
         appMenuRow<String>(
@@ -1108,8 +1104,6 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
     );
     if (!mounted) return;
     switch (picked) {
-      case 'source':
-        setState(() => _source = !_source);
       case 'browser':
         _openInBrowser();
       case 'latest':
@@ -1117,13 +1111,81 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
     }
   }
 
+  Widget _versionLabel() {
+    final v = _version;
+    if (v == null) return const SizedBox.shrink();
+    final when = _when(v.createdAt);
+    final multi = (_artifact?.versions.length ?? 0) > 1;
+    final style = sans(13, color: AppColors.fg3);
+    return Builder(
+      builder: (anchor) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: multi ? () => _pickVersion(anchor) : null,
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: S.s8),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Flexible(
+              child: Text('Version ${v.n}${when.isEmpty ? '' : ' · $when'}',
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+            ),
+            if (multi) ...[
+              SizedBox(width: S.s4),
+              AppIcon('chevron-down', size: 12, color: AppColors.fg3),
+            ],
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _sourceSeg() => Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(R.md),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          for (final (src, label) in [(false, 'Preview'), (true, 'Source')])
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => setState(() => _source = src),
+              child: Container(
+                height: kMobile ? 34 : 28,
+                padding: EdgeInsets.symmetric(horizontal: S.s16),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: _source == src ? AppColors.surface3 : null,
+                  borderRadius: BorderRadius.circular(R.sm),
+                ),
+                child: Text(label,
+                    style: sans(13,
+                        weight: _source == src ? W.label : W.body,
+                        color: _source == src ? AppColors.fg1 : AppColors.fg3)),
+              ),
+            ),
+        ]),
+      );
+
+  Widget _subBar() {
+    if (_version == null) return const SizedBox.shrink();
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          kMobile ? M.gutter : S.s16, S.s4, kMobile ? M.gutter : S.s16, S.s4),
+      child: Row(children: [
+        if (_hasSource) ...[_sourceSeg(), SizedBox(width: S.s12)],
+        Expanded(
+          child: Align(
+              alignment: Alignment.centerRight, child: _versionLabel()),
+        ),
+      ]),
+    );
+  }
+
   Widget _mobileHeader() {
     final a = _artifact;
-    final v = _version;
-    final versions = a?.versions.length ?? 0;
     return Container(
       color: AppColors.surface1,
-      padding: EdgeInsets.fromLTRB(S.s6, S.s6, S.s6, S.s8),
+      padding: EdgeInsets.fromLTRB(S.s12, S.s6, S.s6, S.s4),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
           width: 36,
@@ -1135,41 +1197,19 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
           ),
         ),
         Row(children: [
-          IconBtn('x',
+          RoundBtn(
+              icon: 'chevron-left',
               size: M.minTarget,
               iconSize: 20,
               tooltip: 'Close',
               onTap: widget.onClose),
-          SizedBox(width: S.s2),
+          SizedBox(width: S.s12),
           Expanded(
             child: Text(a?.title ?? 'Artifact',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: sans(17, weight: W.strong, color: AppColors.fg1)),
           ),
-          if (v != null)
-            Builder(
-              builder: (anchor) => GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: versions > 1 ? () => _pickVersion(anchor) : null,
-                child: Container(
-                  height: 30,
-                  padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-                  margin: EdgeInsets.only(left: S.s6, right: S.s2),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface2,
-                    borderRadius: BorderRadius.circular(R.pill),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text('v${v.n}', style: TS.meta(AppColors.fg2)),
-                    if (versions > 1) ...[
-                      SizedBox(width: S.of(3)),
-                      AppIcon('chevron-down', size: 12, color: AppColors.fg3),
-                    ],
-                  ]),
-                ),
-              ),
-            ),
           IconBtn('download',
               size: M.minTarget,
               iconSize: 19,
@@ -1190,59 +1230,24 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
   Widget _header() {
     if (kMobile) return _mobileHeader();
     final a = _artifact;
-    final v = _version;
     return Container(
-      padding: EdgeInsets.fromLTRB(S.s16, kMobile ? S.s8 : S.s12, S.s8, S.of(10)),
+      padding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s8, S.of(10)),
       child: Row(children: [
-        if (a != null)
-          Padding(
-            padding: EdgeInsets.only(right: S.of(10)),
-            child: AppIcon(artifactIcon(a.kind), size: 16, color: AppColors.accent),
-          ),
         Expanded(
           child: Text(a?.title ?? 'Artifact',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: sans(15, weight: W.label, color: AppColors.fg1)),
         ),
-        if (v != null)
-          Builder(
-            builder: (anchor) => TextButton(
-              onPressed: (a?.versions.length ?? 0) > 1
-                  ? () => _pickVersion(anchor)
-                  : null,
-              style: TextButton.styleFrom(
-                minimumSize: const Size(0, 30),
-                padding: EdgeInsets.symmetric(horizontal: S.s8),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text('v${v.n}', style: TS.meta(AppColors.fg2)),
-                if ((a?.versions.length ?? 0) > 1) ...[
-                  SizedBox(width: S.s2),
-                  AppIcon('chevron-down', size: 12, color: AppColors.fg3),
-                ],
-              ]),
-            ),
-          ),
-        if (_hasSource)
-          IconBtn(_source ? 'eye' : 'code',
-              size: 32,
-              iconSize: 15,
-              tooltip: _source ? 'Preview' : 'Source',
-              onTap: () => setState(() => _source = !_source)),
-        IconBtn('globe',
-            size: 32,
-            iconSize: 15,
-            tooltip: 'Open in browser',
-            onTap: _openInBrowser),
         IconBtn('download',
             size: 32, iconSize: 15, tooltip: 'Download', onTap: _download),
-        IconBtn('refresh',
-            size: 32,
-            iconSize: 15,
-            tooltip: 'Latest version',
-            onTap: () => _load(latest: true)),
+        Builder(
+          builder: (anchor) => IconBtn('more-horizontal',
+              size: 32,
+              iconSize: 15,
+              tooltip: 'More',
+              onTap: () => _more(anchor)),
+        ),
         if (widget.onClose != null)
           IconBtn('x',
               size: 32, iconSize: 15, tooltip: 'Close', onTap: widget.onClose),
@@ -1381,6 +1386,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
         bottom: false,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _header(),
+          _subBar(),
           Expanded(
             child: _error != null
                 ? _centered(_error!)
