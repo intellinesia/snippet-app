@@ -26,7 +26,7 @@ Future<void> showAgentReachSettings(
         subtitle: 'How it reaches you',
         maxHeight: 680,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s12),
+          padding: EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s12),
           child: panel,
         ));
   }
@@ -37,7 +37,7 @@ Future<void> showAgentReachSettings(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: 700),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(S.s12),
+          padding: EdgeInsets.all(S.s12),
           child: panel,
         ),
       ));
@@ -144,7 +144,7 @@ class _AgentReachPanelState extends State<AgentReachPanel> {
     final reach = _reach;
     if (reach == null) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: S.s24),
+        padding: EdgeInsets.symmetric(vertical: S.s24),
         child: Center(
           child: _error != null
               ? Text(_error!, style: sans(12, color: AppColors.danger))
@@ -163,7 +163,7 @@ class _AgentReachPanelState extends State<AgentReachPanel> {
         children: [
           if (_error != null)
             Padding(
-              padding: const EdgeInsets.only(bottom: S.s8),
+              padding: EdgeInsets.only(bottom: S.s8),
               child: Text(_error!, style: sans(12, color: AppColors.danger)),
             ),
           AppToggle(
@@ -179,7 +179,7 @@ class _AgentReachPanelState extends State<AgentReachPanel> {
           ),
           if (reach.inQuietHours || reach.onCall)
             Padding(
-              padding: const EdgeInsets.only(bottom: S.s4),
+              padding: EdgeInsets.only(bottom: S.s4),
               child: Text(
                   reach.onCall
                       ? 'You are on a call, so held channels wait.'
@@ -218,13 +218,13 @@ class _AgentReachPanelState extends State<AgentReachPanel> {
                     ch: {'quiet_hours': !state.quietHours}
                   }),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: S.s8),
+            padding: EdgeInsets.symmetric(vertical: S.s8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(reachChannelLabel(ch),
                     style: sans(14, color: AppColors.fg1)),
-                const SizedBox(height: 2),
+                SizedBox(height: S.s2),
                 Text(
                   state.quietHours
                       ? 'Held in quiet hours'
@@ -255,11 +255,11 @@ class _AgentReachPanelState extends State<AgentReachPanel> {
       borderRadius: BorderRadius.circular(R.md),
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: EdgeInsets.symmetric(vertical: S.of(10)),
         child: Row(children: [
           Expanded(child: Text(label, style: sans(14, color: AppColors.fg1))),
           Text(value, style: sans(13, color: AppColors.fg2)),
-          const SizedBox(width: S.s4),
+          SizedBox(width: S.s4),
           AppIcon('chevron-down', size: 14, color: AppColors.fg3),
         ]),
       ),
@@ -267,12 +267,12 @@ class _AgentReachPanelState extends State<AgentReachPanel> {
   }
 
   Widget _divider() => Padding(
-        padding: const EdgeInsets.symmetric(vertical: S.s12),
+        padding: EdgeInsets.symmetric(vertical: S.s12),
         child: Divider(height: 1, thickness: 1, color: AppColors.border),
       );
 
   Widget _head(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: S.s4),
+        padding: EdgeInsets.only(bottom: S.s4),
         child:
             Text(text, style: sans(12, weight: W.label, color: AppColors.fg3)),
       );

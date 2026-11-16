@@ -509,7 +509,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
           onLink: interactive ? _skip : null,
         )
       else
-        const SizedBox(height: 2),
+        SizedBox(height: S.s2),
     ]);
   }
 
@@ -527,7 +527,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
       mainAxisSize: MainAxisSize.min,
       children: [
         for (var i = 0; i < qs.length; i++) ...[
-          if (i > 0) const SizedBox(height: S.s6),
+          if (i > 0) SizedBox(height: S.s6),
           Builder(builder: (_) {
             final label = _answeredLabel(qs[i], i, answers);
             return ChatCardResolved(
@@ -578,7 +578,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
         final multi = kind == 'multi_choice';
         final choices = _choicesFor(q);
         return Padding(
-          padding: const EdgeInsets.only(bottom: S.s12),
+          padding: EdgeInsets.only(bottom: S.s12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,

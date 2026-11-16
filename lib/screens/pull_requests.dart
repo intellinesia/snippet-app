@@ -251,14 +251,14 @@ class _PullRequestsScreenState extends State<PullRequestsScreen> {
     return InkWell(
       onTap: () => _open(pr),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(16, kMobile ? 12 : 9, 14, kMobile ? 12 : 9),
+        padding: EdgeInsets.fromLTRB(S.s16, kMobile ? S.s12 : S.of(9), S.of(14), kMobile ? S.s12 : S.of(9)),
         child: IntrinsicHeight(
           child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: EdgeInsets.only(top: S.s2),
             child: AppIcon(icon, size: 15, color: ink),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: S.s12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,7 +268,7 @@ class _PullRequestsScreenState extends State<PullRequestsScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: sans(kMobile ? 15 : 14,
                         weight: W.strong, height: 1.35, color: AppColors.fg1)),
-                const SizedBox(height: 3),
+                SizedBox(height: S.of(3)),
                 Row(children: [
                   Flexible(
                     child: Text(
@@ -277,14 +277,14 @@ class _PullRequestsScreenState extends State<PullRequestsScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: TS.meta(AppColors.fg3)),
                   ),
-                  for (final w in indicators) ...[const SizedBox(width: 8), w],
-                  const SizedBox(width: 8),
+                  for (final w in indicators) ...[SizedBox(width: S.s8), w],
+                  SizedBox(width: S.s8),
                   _size(pr.additions, pr.deletions),
                 ]),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: S.s12),
           Center(child: _avatar(pr.author)),
         ]),
         ),
@@ -293,10 +293,10 @@ class _PullRequestsScreenState extends State<PullRequestsScreen> {
   }
 
   Widget _sectionHeader(String label, int count) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 6),
+        padding: EdgeInsets.fromLTRB(S.s16, S.of(18), S.s16, S.s6),
         child: Row(children: [
           Text(label, style: sans(13, weight: W.label, color: AppColors.fg2)),
-          const SizedBox(width: 6),
+          SizedBox(width: S.s6),
           Text('$count', style: TS.meta(AppColors.fg4)),
         ]),
       );
@@ -323,10 +323,10 @@ class _PullRequestsScreenState extends State<PullRequestsScreen> {
 
   Widget _empty() => Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: EdgeInsets.all(S.s32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             AppIcon('git-branch', size: 22, color: AppColors.fg4),
-            const SizedBox(height: 10),
+            SizedBox(height: S.of(10)),
             Text(
                 switch (_filter) {
                   'review' => 'Nothing waiting on your review.',
@@ -391,7 +391,7 @@ class _PullRequestsScreenState extends State<PullRequestsScreen> {
                       onNotification: (n) => prNearEnd(n, _loadMore),
                       child: ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.only(bottom: 24),
+                        padding: EdgeInsets.only(bottom: S.s24),
                         children: [
                           ..._body(prs),
                           if (_next != null) prLoadMore(_loadingMore, _loadMore),
@@ -408,7 +408,7 @@ class _PullRequestsScreenState extends State<PullRequestsScreen> {
 
 Widget _message(String text) => Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(S.s24),
         child: Text(text,
             textAlign: TextAlign.center,
             style: sans(13, height: 1.5, color: AppColors.fg3)),

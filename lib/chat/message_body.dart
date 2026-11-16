@@ -154,11 +154,11 @@ class _DraftCard extends StatelessWidget {
   Widget build(BuildContext context) {
     Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: S.s4),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(R.lg),
           border: Border.all(color: AppColors.border),
         ),
         child: Column(
@@ -166,7 +166,7 @@ class _DraftCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+              padding: EdgeInsets.fromLTRB(S.s12, S.s6, S.s8, S.s6),
               child: Row(
                 children: [
                   Text('Draft',
@@ -182,13 +182,13 @@ class _DraftCard extends StatelessWidget {
                           toast(btnCtx, 'Copied');
                         },
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 3),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: S.s6, vertical: S.of(3)),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               AppIcon('copy', size: 12, color: AppColors.fg3),
-                              const SizedBox(width: 4),
+                              SizedBox(width: S.s4),
                               Text('Copy',
                                   style: sans(11,
                                       weight: W.label, color: AppColors.fg2)),
@@ -203,7 +203,7 @@ class _DraftCard extends StatelessWidget {
             ),
             Container(height: 1, color: AppColors.border),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+              padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.of(10)),
               child: Text(
                 text,
                 style: chatText(mine: mine).copyWith(color: AppColors.fg1),
@@ -226,7 +226,7 @@ class _LinkCard extends StatelessWidget {
   Widget build(BuildContext context) {
     Theme.of(context);
     final info = describeLinkUrl(uri);
-    final radius = BorderRadius.circular(12);
+    final radius = BorderRadius.circular(R.lg);
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface1,
@@ -239,12 +239,12 @@ class _LinkCard extends StatelessWidget {
           borderRadius: radius,
           onTap: () => openMarkdownLink(url, context),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.of(10)),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 AppIcon('globe', size: 15, color: AppColors.fg3),
-                const SizedBox(width: 10),
+                SizedBox(width: S.of(10)),
                 Flexible(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,7 +256,7 @@ class _LinkCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: sans(13, weight: W.label, color: AppColors.fg1),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: S.s2),
                       Text(
                         info.host,
                         maxLines: 1,
@@ -340,7 +340,7 @@ class ChatMessageBody extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             for (var i = 0; i < segments.length; i++) ...[
-              if (i > 0) const SizedBox(height: 6),
+              if (i > 0) SizedBox(height: S.s6),
               switch (segments[i]) {
                 _MarkdownSegment(:final text) => MarkdownBody(
                     data: unwrapCodedLinks(markdown?.call(text) ?? text),
@@ -378,33 +378,34 @@ class ChatMessageBody extends StatelessWidget {
                 files.isNotEmpty ||
                 audio.isNotEmpty ||
                 pasted.isNotEmpty)
-              const SizedBox(height: 6),
+              SizedBox(height: S.s6),
           ],
           if (files.isNotEmpty) ...[
             for (var i = 0; i < files.length; i++) ...[
-              if (i > 0) const SizedBox(height: 6),
+              if (i > 0) SizedBox(height: S.s6),
               FileChip(client: client, path: files[i]),
             ],
             if (styledText != null || audio.isNotEmpty || pasted.isNotEmpty)
-              const SizedBox(height: 6),
+              SizedBox(height: S.s6),
           ],
           for (var i = 0; i < audio.length; i++) ...[
             VoiceNote(
               client: client,
               path: audio[i],
-              ink: mine ? ChatColors.sentText : ChatColors.receivedText,
+              ink: mine ? ChatColors.sentTextIn(context) : ChatColors.receivedText,
               transcript: i < transcripts.length
                   ? AudioTranscriptCard(items: [transcripts[i]])
                   : (transcripts.isEmpty
-                      ? Text('Transcribing…', style: chatText(mine: mine))
+                      ? Text('Transcribing…',
+                          style: chatText(mine: mine, context: context))
                       : null),
             ),
             if (styledText != null || pasted.isNotEmpty || i < audio.length - 1)
-              const SizedBox(height: 6),
+              SizedBox(height: S.s6),
           ],
           if (styledText != null) styledText,
           for (final block in pasted) ...[
-            const SizedBox(height: 6),
+            SizedBox(height: S.s6),
             PastedTextCard(text: block),
           ],
         ],

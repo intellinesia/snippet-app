@@ -165,7 +165,7 @@ Future<void> openAgentActions(
               ),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 28),
+                  padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, S.of(28)),
                   child: AgentActions(
                     client: client,
                     agentId: agentId,
@@ -397,12 +397,12 @@ class _RecordsPage extends StatelessWidget {
             else
               Container(
                 height: 44,
-                padding: const EdgeInsets.only(left: 12, right: 6),
+                padding: EdgeInsets.only(left: S.s12, right: S.s6),
                 color: AppColors.paneBg,
                 child: Row(children: [
                   Text(title,
                       style: sans(14, weight: W.label, color: AppColors.fg1)),
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                   Expanded(
                     child: Text(subtitle,
                         maxLines: 1,
@@ -613,7 +613,7 @@ class _RecordListState<T> extends State<_RecordList<T>> {
     final content =
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
-        padding: EdgeInsets.fromLTRB(_gutter, kMobile ? 12 : 10, _gutter, 8),
+        padding: EdgeInsets.fromLTRB(_gutter, kMobile ? S.s12 : S.of(10), _gutter, S.s8),
         child: ListSearchField(
           controller: _search,
           hint: widget.hint,
@@ -623,7 +623,7 @@ class _RecordListState<T> extends State<_RecordList<T>> {
       if (widget.filterChips)
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: EdgeInsets.fromLTRB(_gutter, 0, _gutter, 6),
+          padding: EdgeInsets.fromLTRB(_gutter, 0, _gutter, S.s6),
           child: Row(children: [
             for (final (label, value) in widget.filters)
               _FilterChip(
@@ -674,12 +674,12 @@ class _RecordListState<T> extends State<_RecordList<T>> {
       child: ListView.builder(
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 32),
+        padding: EdgeInsets.only(bottom: S.s32),
         itemCount: rows.length + (_more ? 1 : 0),
         itemBuilder: (context, i) {
           if (i == rows.length) {
             return Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(S.s16),
               child: Center(
                 child: SizedBox(
                   width: 16,
@@ -710,7 +710,7 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(right: 4),
+      padding: EdgeInsets.only(right: S.s4),
       child: Material(
         color: selected
             ? (kMobile ? AppColors.surface3 : AppColors.tint2)
@@ -721,7 +721,7 @@ class _FilterChip extends StatelessWidget {
           onTap: onTap,
           child: Container(
             height: kMobile ? 34 : 26,
-            padding: EdgeInsets.symmetric(horizontal: kMobile ? 12 : 8),
+            padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s12 : S.s8),
             alignment: Alignment.center,
             child: Text(label,
                 style: sans(kMobile ? 13 : 12,
@@ -742,7 +742,7 @@ class _DayHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(_gutter, first ? 8 : 20, _gutter, 4),
+        padding: EdgeInsets.fromLTRB(_gutter, first ? S.s8 : S.s20, _gutter, S.s4),
         child: Text(label,
             style: sans(_meta, weight: W.label, color: AppColors.fg3)),
       );
@@ -758,7 +758,7 @@ class _Notice extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
         child: Padding(
-          padding: const EdgeInsets.all(28),
+          padding: EdgeInsets.all(S.of(28)),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Text(text,
                 textAlign: TextAlign.center,
@@ -782,7 +782,7 @@ class _StateTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        padding: EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.13),
           borderRadius: BorderRadius.circular(R.xs),
@@ -814,7 +814,7 @@ class _RecordRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = _time(time);
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: kMobile ? 0 : 6),
+      padding: EdgeInsets.symmetric(horizontal: kMobile ? 0 : S.s6),
       child: Material(
         color: selected ? AppColors.tint2 : Colors.transparent,
         borderRadius: BorderRadius.circular(kMobile ? 0 : R.md),
@@ -824,15 +824,15 @@ class _RecordRow extends StatelessWidget {
           hoverColor: kMobile ? AppColors.surface1 : AppColors.tint3,
           child: Stack(children: [
             Padding(
-              padding: EdgeInsets.fromLTRB(_gutter + (kMobile ? 12 : 12),
-                  kMobile ? 10 : 8, _gutter, kMobile ? 10 : 8),
+              padding: EdgeInsets.fromLTRB(_gutter + (kMobile ? S.s12 : S.s12),
+                  kMobile ? S.of(10) : S.s8, _gutter, kMobile ? S.of(10) : S.s8),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Row(children: [
                       Flexible(child: leading),
                       if (t != null) ...[
-                        const SizedBox(width: 8),
+                        SizedBox(width: S.s8),
                         Text(_clock(t),
                             style: TS.meta(AppColors.fg3).copyWith(
                                 fontFeatures: const [
@@ -840,7 +840,7 @@ class _RecordRow extends StatelessWidget {
                                 ])),
                       ],
                     ]),
-                    const SizedBox(height: 2),
+                    SizedBox(height: S.s2),
                     child,
                   ]),
             ),
@@ -901,7 +901,7 @@ Future<void> _showRecord(
             sessionId: host.sessionId,
             title: title,
             builder: (_, close) => SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(14, 10, 14, 16),
+                padding: EdgeInsets.fromLTRB(S.of(14), S.of(10), S.of(14), S.s16),
                 child: body(close)),
           ))
           .then((_) {});
@@ -927,19 +927,19 @@ Widget _recordBody({
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(meta, style: sans(_meta, color: AppColors.fg3)),
-        const SizedBox(height: 10),
+        SizedBox(height: S.of(10)),
         if (heading != null && heading.isNotEmpty) ...[
           Text(heading,
               style: sans(_title,
                   weight: W.label, color: AppColors.fg1, height: 1.35)),
-          const SizedBox(height: 8),
+          SizedBox(height: S.s8),
         ],
         if (text.trim().isNotEmpty)
           CardMarkdownBody(body: text, collapsible: false),
         ...extra,
         if (actions.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: EdgeInsets.only(top: S.s8),
             child: Wrap(alignment: WrapAlignment.end, spacing: 8, children: [
               for (final (label, run) in actions)
                 TextButton(
@@ -967,14 +967,14 @@ class _RecordDetailPage extends StatelessWidget {
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Container(
             height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
+            padding: EdgeInsets.symmetric(horizontal: S.s6),
             child: Row(children: [
               IconBtn('arrow-left',
                   size: 28,
                   iconSize: 15,
                   tooltip: 'Back',
                   onTap: () => Navigator.of(context).maybePop()),
-              const SizedBox(width: 4),
+              SizedBox(width: S.s4),
               Expanded(
                 child: Text(title,
                     maxLines: 1,
@@ -985,7 +985,7 @@ class _RecordDetailPage extends StatelessWidget {
           ),
           Expanded(
             child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(14, 4, 14, 16),
+                padding: EdgeInsets.fromLTRB(S.of(14), S.s4, S.of(14), S.s16),
                 child: child),
           ),
         ]),
@@ -1136,7 +1136,7 @@ class _AgentInboxViewState extends State<AgentInboxView> {
                   : TS.rowTitle(AppColors.fg2).copyWith(fontWeight: W.body)),
         ),
         if (tag != null) ...[
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           _StateTag(tag.$1, tag.$2),
         ],
       ]),
@@ -1283,14 +1283,14 @@ class _AgentBoardViewState extends State<AgentBoardView> {
       text: _summary(e),
       extra: [
         if (report != null) ...[
-          const SizedBox(height: 16),
+          SizedBox(height: S.s16),
           Text('Reported back, ${_fullTime(report.createdAt)}',
               style: sans(_meta, weight: W.label, color: AppColors.ok)),
-          const SizedBox(height: 4),
+          SizedBox(height: S.s4),
           CardMarkdownBody(body: report.summary, collapsible: false),
         ],
         if (_waiting(e)) ...[
-          const SizedBox(height: 12),
+          SizedBox(height: S.s12),
           Text('No report has come back yet.',
               style: sans(_body, color: AppColors.run)),
         ],
@@ -1361,14 +1361,14 @@ class _AgentBoardViewState extends State<AgentBoardView> {
       leading: Row(mainAxisSize: MainAxisSize.min, children: [
         AppIcon(byFolder ? 'folder' : 'file-text',
             size: kMobile ? 15 : 13, color: AppColors.fg2),
-        const SizedBox(width: 6),
+        SizedBox(width: S.s6),
         Flexible(
           child: Text(title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: sans(_body, weight: W.label, color: AppColors.fg1)),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: S.s8),
         Text(
             [
               '$count',
@@ -1395,12 +1395,12 @@ class _AgentBoardViewState extends State<AgentBoardView> {
       onTap: () => _open(e),
       leading: Row(mainAxisSize: MainAxisSize.min, children: [
         AppIcon(look.$1, size: kMobile ? 15 : 13, color: look.$3),
-        const SizedBox(width: 6),
+        SizedBox(width: S.s6),
         Text(look.$2,
             maxLines: 1,
             style: sans(_body, weight: W.label, color: AppColors.fg1)),
         if (folder != null) ...[
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Flexible(
             child: Text(_folder(folder),
                 maxLines: 1,
@@ -1415,8 +1415,8 @@ class _AgentBoardViewState extends State<AgentBoardView> {
             overflow: TextOverflow.ellipsis,
             style: sans(_body, color: AppColors.fg2, height: 1.4)),
         if (_waiting(e))
-          const Padding(
-            padding: EdgeInsets.only(top: 5),
+          Padding(
+            padding: EdgeInsets.only(top: S.of(5)),
             child: _WaitingTag(),
           ),
       ]),
@@ -1476,7 +1476,7 @@ class BoardLog extends StatelessWidget {
       children: [
         for (final e in rows)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding: EdgeInsets.symmetric(vertical: S.s6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1487,7 +1487,7 @@ class BoardLog extends StatelessWidget {
                       if (e.kind != 'progress') e.kind,
                     ].join(' · '),
                     style: sans(_meta, color: AppColors.fg3)),
-                const SizedBox(height: 2),
+                SizedBox(height: S.s2),
                 CardMarkdownBody(body: _text(e), collapsible: false),
               ],
             ),

@@ -56,27 +56,27 @@ class AmbientDesktopPanel extends StatelessWidget {
       width: width,
       height: height,
       child: Glass(
-        radius: BorderRadius.circular(16),
+        radius: BorderRadius.circular(R.of(16)),
         tint: GlassStyle.fill,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 8, 0),
+              padding: EdgeInsets.fromLTRB(S.s16, S.of(10), S.s8, 0),
               child: Row(children: [
                 _LiveBars(active: live, color: color),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Expanded(
                   child: Text('Snippet voice',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(12, weight: W.label, color: AppColors.fg3)),
                 ),
-                if (footer != null) ...[footer!, const SizedBox(width: 4)],
+                if (footer != null) ...[footer!, SizedBox(width: S.s4)],
                 IconBtn('x', size: 32, iconSize: 16, tooltip: 'Close', onTap: onClose),
               ]),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: S.s12),
             Center(
               child: SizedBox.square(
                 dimension: 112,
@@ -88,7 +88,7 @@ class AmbientDesktopPanel extends StatelessWidget {
                     ),
               ),
             ),
-            const SizedBox(height: 14),
+            SizedBox(height: S.of(14)),
             Text(stateWord,
                 key: const ValueKey('ambient-state-word'),
                 textAlign: TextAlign.center,
@@ -96,7 +96,7 @@ class AmbientDesktopPanel extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: sans(18, weight: W.title, color: AppColors.fg1)),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
+              padding: EdgeInsets.fromLTRB(S.s24, S.s6, S.s24, 0),
               child: ConstrainedBox(
                 key: const ValueKey('ambient-caption'),
                 constraints: const BoxConstraints(minHeight: 40),
@@ -105,10 +105,10 @@ class AmbientDesktopPanel extends StatelessWidget {
             ),
             if (error != null)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                padding: EdgeInsets.fromLTRB(S.s16, S.s6, S.s16, 0),
                 child: NoteLine(error!, error: true),
               ),
-            const SizedBox(height: 12),
+            SizedBox(height: S.s12),
             Divider(height: 1, thickness: 1, color: AppColors.line),
             Expanded(
               child: recent.isEmpty
@@ -117,13 +117,13 @@ class AmbientDesktopPanel extends StatelessWidget {
                           style: sans(12, color: AppColors.fg4)),
                     )
                   : ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s8),
                       children: [for (final e in recent) _Row(e)],
                     ),
             ),
             Divider(height: 1, thickness: 1, color: AppColors.line),
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: EdgeInsets.symmetric(vertical: S.of(14)),
               child: Center(
                 child: _CallButton(
                   icon: end ? 'phone-off' : 'mic',
@@ -172,7 +172,7 @@ class _CallButton extends StatelessWidget {
                   color: label == 'End' ? Colors.white : AppColors.accentFg),
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: S.s6),
           Text(label, style: sans(12, weight: W.label, color: AppColors.fg2)),
         ]),
       ),
@@ -188,7 +188,7 @@ class _Row extends StatelessWidget {
   Widget build(BuildContext context) {
     final routed = e.verdict;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: EdgeInsets.symmetric(vertical: S.of(5)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -207,7 +207,7 @@ class _Row extends StatelessWidget {
                     style: sans(12, height: 1.35, color: AppColors.fg2)),
                 if (routed != null && routed.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(top: 2),
+                    padding: EdgeInsets.only(top: S.s2),
                     child: Text(routed,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -278,7 +278,7 @@ class _LiveBarsState extends State<_LiveBars>
                     : 4,
                 decoration: BoxDecoration(
                   color: widget.active ? widget.color : AppColors.fg4,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(R.of(2)),
                 ),
               ),
           ],

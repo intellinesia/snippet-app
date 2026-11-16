@@ -47,7 +47,7 @@ Future<void> showAgentProfileSettings(
       maxHeight: 640,
       child: Builder(
         builder: (ctx) => Padding(
-          padding: const EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s12),
+          padding: EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s12),
           child: buildPanel(ctx, closeOnPick: true),
         ),
       ),
@@ -62,7 +62,7 @@ Future<void> showAgentProfileSettings(
       builder: (ctx) => ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: 700),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(S.s12),
+          padding: EdgeInsets.all(S.s12),
           child: buildPanel(ctx, closeOnPick: true),
         ),
       ),
@@ -180,11 +180,11 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
   }
 
   Widget _head(String text, {String? icon}) => Padding(
-        padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
+        padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
         child: Row(children: [
           if (icon != null) ...[
             AppIcon(icon, size: 14, color: AppColors.fg3),
-            const SizedBox(width: S.s8),
+            SizedBox(width: S.s8),
           ],
           Expanded(
               child: Text(text,
@@ -194,7 +194,7 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
       );
 
   Widget _divider() => Padding(
-        padding: const EdgeInsets.symmetric(vertical: S.s12),
+        padding: EdgeInsets.symmetric(vertical: S.s12),
         child: Divider(height: 1, thickness: 1, color: AppColors.border),
       );
 
@@ -218,13 +218,13 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
     final cfg = _cfg;
     if (_failed) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: S.s24),
+        padding: EdgeInsets.symmetric(vertical: S.s24),
         child: Center(
             child: Text("Couldn't load models", style: TS.ui(AppColors.fg3))),
       );
     }
     if (cfg == null) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(vertical: S.s24),
         child: Center(
             child: SizedBox(
@@ -251,12 +251,12 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
           _head('Inference profile', icon: 'cpu'),
           if (_separate)
             Padding(
-              padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s4),
+              padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s4),
               child: Text('Tasks run on', style: TS.meta(AppColors.fg3)),
             ),
           if (statusLine != null && !_separate)
             Padding(
-              padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
+              padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
               child: Text(statusLine, style: TS.meta(AppColors.fg3)),
             ),
           _row('sparkles', 'Routing default',
@@ -267,7 +267,7 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
                 p.name == _work, () => _pickWork(p.name)),
           _divider(),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: S.s4),
+            padding: EdgeInsets.symmetric(horizontal: S.s4),
             child: AppToggle(
               flat: true,
               on: _separate,
@@ -277,9 +277,9 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
             ),
           ),
           if (_separate) ...[
-            const SizedBox(height: S.s8),
+            SizedBox(height: S.s8),
             Padding(
-              padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s4),
+              padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -308,7 +308,7 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
               Text(_context == null ? 'Model window' : tokensLabel(_context!),
                   key: const ValueKey('context-value'),
                   style: mono(13, color: AppColors.fg2)),
-              const SizedBox(width: 4),
+              SizedBox(width: S.s4),
               AppIcon('chevron-right', size: 14, color: AppColors.fg4),
             ]),
           ),
@@ -499,15 +499,15 @@ class _AgentModelRowsState extends State<AgentModelRows> {
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: kMobile ? 48 : 40),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: S.s16),
+            padding: EdgeInsets.symmetric(horizontal: S.s16),
             child: Row(children: [
               AppIcon(desk ? 'terminal' : 'cpu',
                   size: kMobile ? 18 : 16, color: AppColors.fg3),
-              const SizedBox(width: S.s12),
+              SizedBox(width: S.s12),
               Text(label,
                   maxLines: 1,
                   style: sans(kMobile ? 15 : 13, color: AppColors.fg1)),
-              const SizedBox(width: S.s8),
+              SizedBox(width: S.s8),
               Expanded(
                 child: Text(value,
                     maxLines: 1,
@@ -515,7 +515,7 @@ class _AgentModelRowsState extends State<AgentModelRows> {
                     textAlign: TextAlign.end,
                     style: sans(13, color: AppColors.fg3)),
               ),
-              const SizedBox(width: S.s4),
+              SizedBox(width: S.s4),
               AppIcon('chevron-right', size: 14, color: AppColors.fg4),
             ]),
           ),

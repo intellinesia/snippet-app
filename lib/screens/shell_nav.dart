@@ -215,7 +215,7 @@ class ShellSectionHeader extends StatelessWidget {
     if (!kMobile) {
       return Container(
         height: leading != null ? 46 : 38,
-        padding: EdgeInsets.fromLTRB(leading != null ? 10 : 18, 2, 8, 2),
+        padding: EdgeInsets.fromLTRB(leading != null ? S.of(10 ) : S.of(18), S.s2, S.s8, S.s2),
         child: Row(children: [
           if (leading != null)
             Expanded(child: leading!)
@@ -229,7 +229,7 @@ class ShellSectionHeader extends StatelessWidget {
                   style: sans(13, height: 18 / 13, color: AppColors.fg3)),
             ),
           ),
-          for (final a in actions) ...[a, const SizedBox(width: 2)],
+          for (final a in actions) ...[a, SizedBox(width: S.s2)],
         ]),
       );
     }
@@ -246,8 +246,8 @@ class ShellSectionHeader extends StatelessWidget {
                 onTap: onToggle,
                 borderRadius: BorderRadius.circular(R.md),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: kNavPadH, vertical: 8),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: kNavPadH, vertical: S.s8),
                   child: Text(
                     label.toUpperCase(),
                     maxLines: 1,
@@ -292,7 +292,7 @@ class NavBackRow extends StatelessWidget {
     }
     if (kMobile) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 16, 12),
+        padding: EdgeInsets.fromLTRB(S.s20, S.of(14), S.s16, S.s12),
         child: Row(children: [
           Expanded(
             child: Text(title,
@@ -309,14 +309,14 @@ class NavBackRow extends StatelessWidget {
         child: SizedBox(
           height: 56,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(S.s4, 0, S.s12, 0),
+            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s12, 0),
             child: Row(children: [
               IconBtn('chevron-left',
                   size: 32,
                   iconSize: 18,
                   tooltip: 'Back',
                   onTap: onBack),
-              const SizedBox(width: S.s2),
+              SizedBox(width: S.s2),
               Expanded(
                 child: Text(title,
                     maxLines: 1,
@@ -359,7 +359,7 @@ class ShellSectionAction extends StatelessWidget {
         waitDuration: const Duration(milliseconds: 400),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(kMobile ? R.md : 9),
+          borderRadius: BorderRadius.circular(kMobile ? R.md : R.of(9)),
           child: SizedBox(
             // 24px target around a 16px glyph.
             width: kMobile ? 24 : (small ? 24 : 28),
@@ -448,7 +448,7 @@ class ShellNavRow extends StatelessWidget {
                     size: kNavIcon,
                     color: selected ? AppColors.fg1 : toneColor(tone),
                   ),
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               Expanded(
                 child: Text(
                   label,

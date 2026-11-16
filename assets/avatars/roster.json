@@ -1,0 +1,1921 @@
+{
+ "palette": {
+  "cobalt": "#3573FF",
+  "violet": "#8B5CF6",
+  "mint": "#5FE0B0",
+  "sunflower": "#F5C02A",
+  "hotpink": "#FF3D9A",
+  "tomato": "#FF5A3C",
+  "orange": "#FF8A1F",
+  "lime": "#A3E635",
+  "navy": "#2E4A9E",
+  "cocoa": "#8A5A3C",
+  "cream": "#F3E7C9",
+  "teal": "#1FB6B6"
+ },
+ "characters": [
+  {
+   "id": "01",
+   "shape": "orb",
+   "colour": "cobalt",
+   "color": "#3573FF",
+   "mat": "plush",
+   "acc": "headphones",
+   "acc_color": "#1C1A1E",
+   "acc_color2": "#9B7BE0",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3807,
+      "y": 0.6297,
+      "rx": 0.0645,
+      "ry": 0.132
+     },
+     {
+      "x": 0.6193,
+      "y": 0.6297,
+      "rx": 0.0645,
+      "ry": 0.132
+     }
+    ],
+    "eye_radius": 0.0645,
+    "sit_y": 1.0,
+    "body_top": 0.1211,
+    "left_eye": {
+     "x": 0.3807,
+     "y": 0.6297,
+     "rx": 0.0645,
+     "ry": 0.132
+    },
+    "right_eye": {
+     "x": 0.6193,
+     "y": 0.6297,
+     "rx": 0.0645,
+     "ry": 0.132
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.0538,
+     "y": 0.7581,
+     "w": 0.8925,
+     "h": 0.3495
+    }
+   }
+  },
+  {
+   "id": "02",
+   "shape": "cloud",
+   "colour": "mint",
+   "color": "#5FE0B0",
+   "mat": "vinyl",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#F7F3EA",
+    "eye_style": "white-pill",
+    "eyes": [
+     {
+      "x": 0.3592,
+      "y": 0.6484,
+      "rx": 0.0296,
+      "ry": 0.0713
+     },
+     {
+      "x": 0.6413,
+      "y": 0.65,
+      "rx": 0.0297,
+      "ry": 0.0716
+     }
+    ],
+    "eye_radius": 0.0296,
+    "sit_y": 1.0,
+    "body_top": 0.3418,
+    "left_eye": {
+     "x": 0.3592,
+     "y": 0.6484,
+     "rx": 0.0296,
+     "ry": 0.0713
+    },
+    "right_eye": {
+     "x": 0.6413,
+     "y": 0.65,
+     "rx": 0.0297,
+     "ry": 0.0716
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": -0.0572,
+     "y": 0.8682,
+     "w": 1.1144,
+     "h": 0.2388
+    }
+   }
+  },
+  {
+   "id": "03",
+   "shape": "gumdrop",
+   "colour": "sunflower",
+   "color": "#F5C02A",
+   "mat": "plush",
+   "acc": "beret",
+   "acc_color": "#1E2A5A",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3833,
+      "y": 0.6911,
+      "rx": 0.0477,
+      "ry": 0.097
+     },
+     {
+      "x": 0.6167,
+      "y": 0.6911,
+      "rx": 0.0477,
+      "ry": 0.097
+     }
+    ],
+    "eye_radius": 0.0477,
+    "sit_y": 1.0,
+    "body_top": 0.002,
+    "left_eye": {
+     "x": 0.3833,
+     "y": 0.6911,
+     "rx": 0.0477,
+     "ry": 0.097
+    },
+    "right_eye": {
+     "x": 0.6167,
+     "y": 0.6911,
+     "rx": 0.0477,
+     "ry": 0.097
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.0143,
+     "y": 0.7548,
+     "w": 0.9714,
+     "h": 0.3071
+    }
+   }
+  },
+  {
+   "id": "04",
+   "shape": "square",
+   "colour": "lime",
+   "color": "#A3E635",
+   "mat": "plush",
+   "acc": "glasses",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3647,
+      "y": 0.5176,
+      "rx": 0.0475,
+      "ry": 0.0975
+     },
+     {
+      "x": 0.6353,
+      "y": 0.5176,
+      "rx": 0.0475,
+      "ry": 0.0975
+     }
+    ],
+    "eye_radius": 0.0475,
+    "sit_y": 1.0,
+    "body_top": 0.0137,
+    "left_eye": {
+     "x": 0.3647,
+     "y": 0.5176,
+     "rx": 0.0475,
+     "ry": 0.0975
+    },
+    "right_eye": {
+     "x": 0.6353,
+     "y": 0.5176,
+     "rx": 0.0475,
+     "ry": 0.0975
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.0049,
+     "y": 0.784,
+     "w": 0.9903,
+     "h": 0.2864
+    },
+    "over": "over-512.png",
+    "over_256": "over-256.png"
+   }
+  },
+  {
+   "id": "05",
+   "shape": "teardrop",
+   "colour": "tomato",
+   "color": "#FF5A3C",
+   "mat": "vinyl",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#F7F3EA",
+    "eye_style": "white-pill",
+    "eyes": [
+     {
+      "x": 0.3651,
+      "y": 0.7957,
+      "rx": 0.0368,
+      "ry": 0.0875
+     },
+     {
+      "x": 0.6349,
+      "y": 0.7958,
+      "rx": 0.0368,
+      "ry": 0.0875
+     }
+    ],
+    "eye_radius": 0.0368,
+    "sit_y": 1.0,
+    "body_top": 0.0,
+    "left_eye": {
+     "x": 0.3651,
+     "y": 0.7957,
+     "rx": 0.0368,
+     "ry": 0.0875
+    },
+    "right_eye": {
+     "x": 0.6349,
+     "y": 0.7958,
+     "rx": 0.0368,
+     "ry": 0.0875
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.0714,
+     "y": 0.8005,
+     "w": 0.8571,
+     "h": 0.3596
+    }
+   }
+  },
+  {
+   "id": "06",
+   "shape": "heart",
+   "colour": "hotpink",
+   "color": "#FF3D9A",
+   "mat": "plush",
+   "acc": "shades",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.376,
+      "y": 0.4595,
+      "rx": 0.0373,
+      "ry": 0.0769
+     },
+     {
+      "x": 0.624,
+      "y": 0.4595,
+      "rx": 0.0373,
+      "ry": 0.0769
+     }
+    ],
+    "eye_radius": 0.0373,
+    "sit_y": 1.0,
+    "body_top": 0.1641,
+    "left_eye": {
+     "x": 0.376,
+     "y": 0.4595,
+     "rx": 0.0373,
+     "ry": 0.0769
+    },
+    "right_eye": {
+     "x": 0.624,
+     "y": 0.4595,
+     "rx": 0.0373,
+     "ry": 0.0769
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.0188,
+     "y": 0.8099,
+     "w": 0.9624,
+     "h": 0.223
+    },
+    "over": "over-512.png",
+    "over_256": "over-256.png"
+   }
+  },
+  {
+   "id": "07",
+   "shape": "bunny",
+   "colour": "cream",
+   "color": "#F3E7C9",
+   "mat": "plush",
+   "acc": "scarf",
+   "acc_color": "#FF5A3C",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.4305,
+      "y": 0.7126,
+      "rx": 0.0383,
+      "ry": 0.0778
+     },
+     {
+      "x": 0.5671,
+      "y": 0.7126,
+      "rx": 0.0383,
+      "ry": 0.0778
+     }
+    ],
+    "eye_radius": 0.0383,
+    "sit_y": 1.0,
+    "body_top": 0.0,
+    "left_eye": {
+     "x": 0.4305,
+     "y": 0.7126,
+     "rx": 0.0383,
+     "ry": 0.0778
+    },
+    "right_eye": {
+     "x": 0.5671,
+     "y": 0.7126,
+     "rx": 0.0383,
+     "ry": 0.0778
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.2203,
+     "y": 0.7893,
+     "w": 0.5569,
+     "h": 0.2446
+    }
+   }
+  },
+  {
+   "id": "08",
+   "shape": "capsule",
+   "colour": "orange",
+   "color": "#FF8A1F",
+   "mat": "vinyl",
+   "acc": "antenna",
+   "acc_color2": "#5FE0B0",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#F7F3EA",
+    "eye_style": "white-pill",
+    "eyes": [
+     {
+      "x": 0.3917,
+      "y": 0.6335,
+      "rx": 0.0271,
+      "ry": 0.0648
+     },
+     {
+      "x": 0.6108,
+      "y": 0.6335,
+      "rx": 0.0271,
+      "ry": 0.0648
+     }
+    ],
+    "eye_radius": 0.0271,
+    "sit_y": 1.0,
+    "body_top": 0.0,
+    "left_eye": {
+     "x": 0.3917,
+     "y": 0.6335,
+     "rx": 0.0271,
+     "ry": 0.0648
+    },
+    "right_eye": {
+     "x": 0.6108,
+     "y": 0.6335,
+     "rx": 0.0271,
+     "ry": 0.0648
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.2705,
+     "y": 0.8337,
+     "w": 0.4615,
+     "h": 0.2953
+    }
+   }
+  },
+  {
+   "id": "09",
+   "shape": "star",
+   "colour": "violet",
+   "color": "#8B5CF6",
+   "mat": "plush",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3869,
+      "y": 0.578,
+      "rx": 0.0424,
+      "ry": 0.0867
+     },
+     {
+      "x": 0.6154,
+      "y": 0.578,
+      "rx": 0.0424,
+      "ry": 0.0867
+     }
+    ],
+    "eye_radius": 0.0424,
+    "sit_y": 1.0,
+    "body_top": 0.043,
+    "left_eye": {
+     "x": 0.3869,
+     "y": 0.578,
+     "rx": 0.0424,
+     "ry": 0.0867
+    },
+    "right_eye": {
+     "x": 0.6154,
+     "y": 0.578,
+     "rx": 0.0424,
+     "ry": 0.0867
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.0187,
+     "y": 0.7658,
+     "w": 0.9649,
+     "h": 0.2881
+    }
+   }
+  },
+  {
+   "id": "10",
+   "shape": "diamond",
+   "colour": "hotpink",
+   "color": "#FF3D9A",
+   "mat": "vinyl",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#F7F3EA",
+    "eye_style": "white-pill",
+    "eyes": [
+     {
+      "x": 0.367,
+      "y": 0.5389,
+      "rx": 0.0324,
+      "ry": 0.0779
+     },
+     {
+      "x": 0.633,
+      "y": 0.5389,
+      "rx": 0.0324,
+      "ry": 0.0779
+     }
+    ],
+    "eye_radius": 0.0324,
+    "sit_y": 1.0,
+    "body_top": 0.0,
+    "left_eye": {
+     "x": 0.367,
+     "y": 0.5389,
+     "rx": 0.0324,
+     "ry": 0.0779
+    },
+    "right_eye": {
+     "x": 0.633,
+     "y": 0.5389,
+     "rx": 0.0324,
+     "ry": 0.0779
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": -0.0122,
+     "y": 0.8,
+     "w": 1.0244,
+     "h": 0.3439
+    }
+   }
+  },
+  {
+   "id": "11",
+   "shape": "pear",
+   "colour": "mint",
+   "color": "#5FE0B0",
+   "mat": "plush",
+   "acc": "sprout",
+   "acc_color": "#3FAE5A",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3949,
+      "y": 0.7643,
+      "rx": 0.0399,
+      "ry": 0.0808
+     },
+     {
+      "x": 0.6051,
+      "y": 0.7643,
+      "rx": 0.0399,
+      "ry": 0.0808
+     }
+    ],
+    "eye_radius": 0.0399,
+    "sit_y": 1.0,
+    "body_top": 0.002,
+    "left_eye": {
+     "x": 0.3949,
+     "y": 0.7643,
+     "rx": 0.0399,
+     "ry": 0.0808
+    },
+    "right_eye": {
+     "x": 0.6051,
+     "y": 0.7643,
+     "rx": 0.0399,
+     "ry": 0.0808
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.2189,
+     "y": 0.8159,
+     "w": 0.5597,
+     "h": 0.2587
+    }
+   }
+  },
+  {
+   "id": "12",
+   "shape": "onigiri",
+   "colour": "cream",
+   "color": "#F3E7C9",
+   "mat": "plush",
+   "acc": "bowtie",
+   "acc_color": "#FF5A3C",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3721,
+      "y": 0.5429,
+      "rx": 0.0617,
+      "ry": 0.1268
+     },
+     {
+      "x": 0.6305,
+      "y": 0.5427,
+      "rx": 0.0617,
+      "ry": 0.1268
+     }
+    ],
+    "eye_radius": 0.0617,
+    "sit_y": 1.0,
+    "body_top": 0.0371,
+    "left_eye": {
+     "x": 0.3721,
+     "y": 0.5429,
+     "rx": 0.0617,
+     "ry": 0.1268
+    },
+    "right_eye": {
+     "x": 0.6305,
+     "y": 0.5427,
+     "rx": 0.0617,
+     "ry": 0.1268
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": -0.0074,
+     "y": 0.7469,
+     "w": 1.0174,
+     "h": 0.3697
+    }
+   }
+  },
+  {
+   "id": "13",
+   "shape": "frog",
+   "colour": "lime",
+   "color": "#A3E635",
+   "mat": "plush",
+   "acc": "bowtie",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.2571,
+      "y": 0.2545,
+      "rx": 0.0407,
+      "ry": 0.0845
+     },
+     {
+      "x": 0.7429,
+      "y": 0.2545,
+      "rx": 0.0407,
+      "ry": 0.0845
+     }
+    ],
+    "eye_radius": 0.0407,
+    "sit_y": 1.0,
+    "body_top": 0.002,
+    "left_eye": {
+     "x": 0.2571,
+     "y": 0.2545,
+     "rx": 0.0407,
+     "ry": 0.0845
+    },
+    "right_eye": {
+     "x": 0.7429,
+     "y": 0.2545,
+     "rx": 0.0407,
+     "ry": 0.0845
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.0098,
+     "y": 0.7623,
+     "w": 0.9804,
+     "h": 0.3382
+    }
+   }
+  },
+  {
+   "id": "14",
+   "shape": "ghost",
+   "colour": "cream",
+   "color": "#F3E7C9",
+   "mat": "plush",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3868,
+      "y": 0.4124,
+      "rx": 0.0424,
+      "ry": 0.0874
+     },
+     {
+      "x": 0.6177,
+      "y": 0.4124,
+      "rx": 0.0424,
+      "ry": 0.0874
+     }
+    ],
+    "eye_radius": 0.0424,
+    "sit_y": 1.0,
+    "body_top": 0.0039,
+    "left_eye": {
+     "x": 0.3868,
+     "y": 0.4124,
+     "rx": 0.0424,
+     "ry": 0.0874
+    },
+    "right_eye": {
+     "x": 0.6177,
+     "y": 0.4124,
+     "rx": 0.0424,
+     "ry": 0.0874
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.0616,
+     "y": 0.758,
+     "w": 0.8813,
+     "h": 0.2603
+    }
+   }
+  },
+  {
+   "id": "15",
+   "shape": "blob",
+   "colour": "violet",
+   "color": "#8B5CF6",
+   "mat": "plush",
+   "acc": "headphones",
+   "acc_color2": "#F5C02A",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3678,
+      "y": 0.6149,
+      "rx": 0.0533,
+      "ry": 0.109
+     },
+     {
+      "x": 0.6367,
+      "y": 0.6148,
+      "rx": 0.0534,
+      "ry": 0.1092
+     }
+    ],
+    "eye_radius": 0.0533,
+    "sit_y": 1.0,
+    "body_top": 0.1074,
+    "left_eye": {
+     "x": 0.3678,
+     "y": 0.6149,
+     "rx": 0.0533,
+     "ry": 0.109
+    },
+    "right_eye": {
+     "x": 0.6367,
+     "y": 0.6148,
+     "rx": 0.0534,
+     "ry": 0.1092
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": -0.0185,
+     "y": 0.7884,
+     "w": 1.0423,
+     "h": 0.3095
+    }
+   }
+  },
+  {
+   "id": "16",
+   "shape": "flowercloud",
+   "colour": "teal",
+   "color": "#1FB6B6",
+   "mat": "plush",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3661,
+      "y": 0.5638,
+      "rx": 0.0409,
+      "ry": 0.0838
+     },
+     {
+      "x": 0.6339,
+      "y": 0.5638,
+      "rx": 0.0409,
+      "ry": 0.0838
+     }
+    ],
+    "eye_radius": 0.0409,
+    "sit_y": 1.0,
+    "body_top": 0.0547,
+    "left_eye": {
+     "x": 0.3661,
+     "y": 0.5638,
+     "rx": 0.0409,
+     "ry": 0.0838
+    },
+    "right_eye": {
+     "x": 0.6339,
+     "y": 0.5638,
+     "rx": 0.0409,
+     "ry": 0.0838
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": -0.0175,
+     "y": 0.825,
+     "w": 1.035,
+     "h": 0.255
+    }
+   }
+  },
+  {
+   "id": "17",
+   "shape": "cylinder",
+   "colour": "tomato",
+   "color": "#FF5A3C",
+   "mat": "vinyl",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#F7F3EA",
+    "eye_style": "white-pill",
+    "eyes": [
+     {
+      "x": 0.3458,
+      "y": 0.4785,
+      "rx": 0.0343,
+      "ry": 0.0827
+     },
+     {
+      "x": 0.6542,
+      "y": 0.4785,
+      "rx": 0.0343,
+      "ry": 0.0827
+     }
+    ],
+    "eye_radius": 0.0343,
+    "sit_y": 1.0,
+    "body_top": 0.0,
+    "left_eye": {
+     "x": 0.3458,
+     "y": 0.4785,
+     "rx": 0.0343,
+     "ry": 0.0827
+    },
+    "right_eye": {
+     "x": 0.6542,
+     "y": 0.4785,
+     "rx": 0.0343,
+     "ry": 0.0827
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.0172,
+     "y": 0.7371,
+     "w": 0.9655,
+     "h": 0.2974
+    }
+   }
+  },
+  {
+   "id": "18",
+   "shape": "cube",
+   "colour": "lime",
+   "color": "#A3E635",
+   "mat": "vinyl",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#F7F3EA",
+    "eye_style": "white-pill",
+    "eyes": [
+     {
+      "x": 0.3494,
+      "y": 0.5197,
+      "rx": 0.0323,
+      "ry": 0.0778
+     },
+     {
+      "x": 0.6506,
+      "y": 0.5197,
+      "rx": 0.0323,
+      "ry": 0.0778
+     }
+    ],
+    "eye_radius": 0.0323,
+    "sit_y": 1.0,
+    "body_top": 0.0195,
+    "left_eye": {
+     "x": 0.3494,
+     "y": 0.5197,
+     "rx": 0.0323,
+     "ry": 0.0778
+    },
+    "right_eye": {
+     "x": 0.6506,
+     "y": 0.5197,
+     "rx": 0.0323,
+     "ry": 0.0778
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.0215,
+     "y": 0.7575,
+     "w": 0.9571,
+     "h": 0.2811
+    }
+   }
+  },
+  {
+   "id": "19",
+   "shape": "dome",
+   "colour": "navy",
+   "color": "#2E4A9E",
+   "mat": "vinyl",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#F7F3EA",
+    "eye_style": "white-pill",
+    "eyes": [
+     {
+      "x": 0.3447,
+      "y": 0.801,
+      "rx": 0.026,
+      "ry": 0.0624
+     },
+     {
+      "x": 0.6553,
+      "y": 0.801,
+      "rx": 0.026,
+      "ry": 0.0624
+     }
+    ],
+    "eye_radius": 0.026,
+    "sit_y": 1.0,
+    "body_top": 0.4863,
+    "left_eye": {
+     "x": 0.3447,
+     "y": 0.801,
+     "rx": 0.026,
+     "ry": 0.0624
+    },
+    "right_eye": {
+     "x": 0.6553,
+     "y": 0.801,
+     "rx": 0.026,
+     "ry": 0.0624
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.0022,
+     "y": 0.8444,
+     "w": 0.9956,
+     "h": 0.1711
+    }
+   }
+  },
+  {
+   "id": "20",
+   "shape": "arch",
+   "colour": "cream",
+   "color": "#F3E7C9",
+   "mat": "vinyl",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#F7F3EA",
+    "eye_style": "white-pill",
+    "eyes": [
+     {
+      "x": 0.376,
+      "y": 0.4696,
+      "rx": 0.0327,
+      "ry": 0.0788
+     },
+     {
+      "x": 0.624,
+      "y": 0.4696,
+      "rx": 0.0327,
+      "ry": 0.0788
+     }
+    ],
+    "eye_radius": 0.0327,
+    "sit_y": 1.0,
+    "body_top": 0.002,
+    "left_eye": {
+     "x": 0.376,
+     "y": 0.4696,
+     "rx": 0.0327,
+     "ry": 0.0788
+    },
+    "right_eye": {
+     "x": 0.624,
+     "y": 0.4696,
+     "rx": 0.0327,
+     "ry": 0.0788
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.0307,
+     "y": 0.7478,
+     "w": 0.9386,
+     "h": 0.3026
+    }
+   }
+  },
+  {
+   "id": "21",
+   "shape": "hexagon",
+   "colour": "teal",
+   "color": "#1FB6B6",
+   "mat": "plush",
+   "acc": "glasses",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3698,
+      "y": 0.5182,
+      "rx": 0.0448,
+      "ry": 0.0919
+     },
+     {
+      "x": 0.6278,
+      "y": 0.5182,
+      "rx": 0.0448,
+      "ry": 0.0919
+     }
+    ],
+    "eye_radius": 0.0448,
+    "sit_y": 1.0,
+    "body_top": 0.002,
+    "left_eye": {
+     "x": 0.3698,
+     "y": 0.5182,
+     "rx": 0.0448,
+     "ry": 0.0919
+    },
+    "right_eye": {
+     "x": 0.6278,
+     "y": 0.5182,
+     "rx": 0.0448,
+     "ry": 0.0919
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.0391,
+     "y": 0.7848,
+     "w": 0.9193,
+     "h": 0.2763
+    },
+    "over": "over-512.png",
+    "over_256": "over-256.png"
+   }
+  },
+  {
+   "id": "22",
+   "shape": "rect",
+   "colour": "orange",
+   "color": "#FF8A1F",
+   "mat": "plush",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3489,
+      "y": 0.7104,
+      "rx": 0.0349,
+      "ry": 0.0716
+     },
+     {
+      "x": 0.6511,
+      "y": 0.7104,
+      "rx": 0.0349,
+      "ry": 0.0716
+     }
+    ],
+    "eye_radius": 0.0349,
+    "sit_y": 1.0,
+    "body_top": 0.4238,
+    "left_eye": {
+     "x": 0.3489,
+     "y": 0.7104,
+     "rx": 0.0349,
+     "ry": 0.0716
+    },
+    "right_eye": {
+     "x": 0.6511,
+     "y": 0.7104,
+     "rx": 0.0349,
+     "ry": 0.0716
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": -0.0148,
+     "y": 0.8719,
+     "w": 1.0296,
+     "h": 0.1675
+    }
+   }
+  },
+  {
+   "id": "23",
+   "shape": "cat",
+   "colour": "violet",
+   "color": "#8B5CF6",
+   "mat": "plush",
+   "acc": "bowtie",
+   "acc_color": "#F5C02A",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.4193,
+      "y": 0.725,
+      "rx": 0.043,
+      "ry": 0.0875
+     },
+     {
+      "x": 0.5782,
+      "y": 0.725,
+      "rx": 0.043,
+      "ry": 0.0875
+     }
+    ],
+    "eye_radius": 0.043,
+    "sit_y": 1.0,
+    "body_top": 0.125,
+    "left_eye": {
+     "x": 0.4193,
+     "y": 0.725,
+     "rx": 0.043,
+     "ry": 0.0875
+    },
+    "right_eye": {
+     "x": 0.5782,
+     "y": 0.725,
+     "rx": 0.043,
+     "ry": 0.0875
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.1895,
+     "y": 0.8204,
+     "w": 0.6185,
+     "h": 0.2544
+    }
+   }
+  },
+  {
+   "id": "24",
+   "shape": "bear",
+   "colour": "cocoa",
+   "color": "#8A5A3C",
+   "mat": "plush",
+   "acc": "scarf",
+   "acc_color": "#F5C02A",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3608,
+      "y": 0.6695,
+      "rx": 0.0456,
+      "ry": 0.0932
+     },
+     {
+      "x": 0.6392,
+      "y": 0.6695,
+      "rx": 0.0456,
+      "ry": 0.0932
+     }
+    ],
+    "eye_radius": 0.0456,
+    "sit_y": 1.0,
+    "body_top": 0.1582,
+    "left_eye": {
+     "x": 0.3608,
+     "y": 0.6695,
+     "rx": 0.0456,
+     "ry": 0.0932
+    },
+    "right_eye": {
+     "x": 0.6392,
+     "y": 0.6695,
+     "rx": 0.0456,
+     "ry": 0.0932
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": -0.0149,
+     "y": 0.7811,
+     "w": 1.0299,
+     "h": 0.2512
+    }
+   }
+  },
+  {
+   "id": "25",
+   "shape": "orb",
+   "colour": "violet",
+   "color": "#8B5CF6",
+   "mat": "vinyl",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#F7F3EA",
+    "eye_style": "white-pill",
+    "eyes": [
+     {
+      "x": 0.3348,
+      "y": 0.5842,
+      "rx": 0.0595,
+      "ry": 0.1436
+     },
+     {
+      "x": 0.6652,
+      "y": 0.5842,
+      "rx": 0.0595,
+      "ry": 0.1436
+     }
+    ],
+    "eye_radius": 0.0595,
+    "sit_y": 1.0,
+    "body_top": 0.041,
+    "left_eye": {
+     "x": 0.3348,
+     "y": 0.5842,
+     "rx": 0.0595,
+     "ry": 0.1436
+    },
+    "right_eye": {
+     "x": 0.6652,
+     "y": 0.5842,
+     "rx": 0.0595,
+     "ry": 0.1436
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": -0.0784,
+     "y": 0.7451,
+     "w": 1.1569,
+     "h": 0.4363
+    }
+   }
+  },
+  {
+   "id": "26",
+   "shape": "cloud",
+   "colour": "cobalt",
+   "color": "#3573FF",
+   "mat": "plush",
+   "acc": "beret",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3694,
+      "y": 0.6446,
+      "rx": 0.0411,
+      "ry": 0.0842
+     },
+     {
+      "x": 0.6311,
+      "y": 0.6463,
+      "rx": 0.0413,
+      "ry": 0.0845
+     }
+    ],
+    "eye_radius": 0.0412,
+    "sit_y": 1.0,
+    "body_top": 0.2051,
+    "left_eye": {
+     "x": 0.3694,
+     "y": 0.6446,
+     "rx": 0.0411,
+     "ry": 0.0842
+    },
+    "right_eye": {
+     "x": 0.6311,
+     "y": 0.6463,
+     "rx": 0.0413,
+     "ry": 0.0845
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": -0.02,
+     "y": 0.835,
+     "w": 1.04,
+     "h": 0.2375
+    }
+   }
+  },
+  {
+   "id": "27",
+   "shape": "gumdrop",
+   "colour": "sunflower",
+   "color": "#F5C02A",
+   "mat": "vinyl",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#F7F3EA",
+    "eye_style": "white-pill",
+    "eyes": [
+     {
+      "x": 0.3687,
+      "y": 0.6995,
+      "rx": 0.0357,
+      "ry": 0.0855
+     },
+     {
+      "x": 0.6313,
+      "y": 0.6995,
+      "rx": 0.0357,
+      "ry": 0.0855
+     }
+    ],
+    "eye_radius": 0.0357,
+    "sit_y": 1.0,
+    "body_top": 0.125,
+    "left_eye": {
+     "x": 0.3687,
+     "y": 0.6995,
+     "rx": 0.0357,
+     "ry": 0.0855
+    },
+    "right_eye": {
+     "x": 0.6313,
+     "y": 0.6995,
+     "rx": 0.0357,
+     "ry": 0.0855
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": -0.0355,
+     "y": 0.7867,
+     "w": 1.0711,
+     "h": 0.327
+    }
+   }
+  },
+  {
+   "id": "28",
+   "shape": "square",
+   "colour": "teal",
+   "color": "#1FB6B6",
+   "mat": "vinyl",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#F7F3EA",
+    "eye_style": "white-pill",
+    "eyes": [
+     {
+      "x": 0.3516,
+      "y": 0.5198,
+      "rx": 0.0347,
+      "ry": 0.0837
+     },
+     {
+      "x": 0.6484,
+      "y": 0.5198,
+      "rx": 0.0347,
+      "ry": 0.0837
+     }
+    ],
+    "eye_radius": 0.0347,
+    "sit_y": 1.0,
+    "body_top": 0.0137,
+    "left_eye": {
+     "x": 0.3516,
+     "y": 0.5198,
+     "rx": 0.0347,
+     "ry": 0.0837
+    },
+    "right_eye": {
+     "x": 0.6484,
+     "y": 0.5198,
+     "rx": 0.0347,
+     "ry": 0.0837
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": -0.0333,
+     "y": 0.8,
+     "w": 1.0667,
+     "h": 0.3286
+    }
+   }
+  },
+  {
+   "id": "29",
+   "shape": "capsule",
+   "colour": "mint",
+   "color": "#5FE0B0",
+   "mat": "plush",
+   "acc": "cap",
+   "acc_color": "#2E4A9E",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3782,
+      "y": 0.5537,
+      "rx": 0.0447,
+      "ry": 0.0914
+     },
+     {
+      "x": 0.6192,
+      "y": 0.5537,
+      "rx": 0.0447,
+      "ry": 0.0914
+     }
+    ],
+    "eye_radius": 0.0447,
+    "sit_y": 1.0,
+    "body_top": 0.002,
+    "left_eye": {
+     "x": 0.3782,
+     "y": 0.5537,
+     "rx": 0.0447,
+     "ry": 0.0914
+    },
+    "right_eye": {
+     "x": 0.6192,
+     "y": 0.5537,
+     "rx": 0.0447,
+     "ry": 0.0914
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.2467,
+     "y": 0.7931,
+     "w": 0.504,
+     "h": 0.2997
+    }
+   }
+  },
+  {
+   "id": "30",
+   "shape": "heart",
+   "colour": "tomato",
+   "color": "#FF5A3C",
+   "mat": "vinyl",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#F7F3EA",
+    "eye_style": "white-pill",
+    "eyes": [
+     {
+      "x": 0.3674,
+      "y": 0.4458,
+      "rx": 0.0265,
+      "ry": 0.0644
+     },
+     {
+      "x": 0.6326,
+      "y": 0.4458,
+      "rx": 0.0265,
+      "ry": 0.0644
+     }
+    ],
+    "eye_radius": 0.0265,
+    "sit_y": 1.0,
+    "body_top": 0.166,
+    "left_eye": {
+     "x": 0.3674,
+     "y": 0.4458,
+     "rx": 0.0265,
+     "ry": 0.0644
+    },
+    "right_eye": {
+     "x": 0.6326,
+     "y": 0.4458,
+     "rx": 0.0265,
+     "ry": 0.0644
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": -0.0091,
+     "y": 0.8151,
+     "w": 1.0183,
+     "h": 0.2489
+    }
+   }
+  },
+  {
+   "id": "31",
+   "shape": "star",
+   "colour": "sunflower",
+   "color": "#F5C02A",
+   "mat": "plush",
+   "acc": "sprout",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3996,
+      "y": 0.635,
+      "rx": 0.0368,
+      "ry": 0.0749
+     },
+     {
+      "x": 0.5979,
+      "y": 0.635,
+      "rx": 0.0368,
+      "ry": 0.0749
+     }
+    ],
+    "eye_radius": 0.0368,
+    "sit_y": 1.0,
+    "body_top": 0.0039,
+    "left_eye": {
+     "x": 0.3996,
+     "y": 0.635,
+     "rx": 0.0368,
+     "ry": 0.0749
+    },
+    "right_eye": {
+     "x": 0.5979,
+     "y": 0.635,
+     "rx": 0.0368,
+     "ry": 0.0749
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.0702,
+     "y": 0.7845,
+     "w": 0.8571,
+     "h": 0.2639
+    }
+   }
+  },
+  {
+   "id": "32",
+   "shape": "pear",
+   "colour": "tomato",
+   "color": "#FF5A3C",
+   "mat": "plush",
+   "acc": "cap",
+   "acc_color": "#F3E7C9",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3803,
+      "y": 0.7345,
+      "rx": 0.0449,
+      "ry": 0.0911
+     },
+     {
+      "x": 0.6171,
+      "y": 0.7345,
+      "rx": 0.0449,
+      "ry": 0.0911
+     }
+    ],
+    "eye_radius": 0.0449,
+    "sit_y": 1.0,
+    "body_top": 0.0,
+    "left_eye": {
+     "x": 0.3803,
+     "y": 0.7345,
+     "rx": 0.0449,
+     "ry": 0.0911
+    },
+    "right_eye": {
+     "x": 0.6171,
+     "y": 0.7345,
+     "rx": 0.0449,
+     "ry": 0.0911
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.187,
+     "y": 0.7974,
+     "w": 0.6234,
+     "h": 0.2857
+    }
+   }
+  },
+  {
+   "id": "33",
+   "shape": "teardrop",
+   "colour": "teal",
+   "color": "#1FB6B6",
+   "mat": "plush",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3783,
+      "y": 0.7687,
+      "rx": 0.0503,
+      "ry": 0.1019
+     },
+     {
+      "x": 0.6241,
+      "y": 0.7687,
+      "rx": 0.0503,
+      "ry": 0.1019
+     }
+    ],
+    "eye_radius": 0.0503,
+    "sit_y": 1.0,
+    "body_top": 0.0039,
+    "left_eye": {
+     "x": 0.3783,
+     "y": 0.7687,
+     "rx": 0.0503,
+     "ry": 0.1019
+    },
+    "right_eye": {
+     "x": 0.6241,
+     "y": 0.7687,
+     "rx": 0.0503,
+     "ry": 0.1019
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.1042,
+     "y": 0.7816,
+     "w": 0.794,
+     "h": 0.3127
+    }
+   }
+  },
+  {
+   "id": "34",
+   "shape": "blob",
+   "colour": "sunflower",
+   "color": "#F5C02A",
+   "mat": "plush",
+   "acc": "shades",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3701,
+      "y": 0.6051,
+      "rx": 0.0539,
+      "ry": 0.1105
+     },
+     {
+      "x": 0.6421,
+      "y": 0.605,
+      "rx": 0.054,
+      "ry": 0.1107
+     }
+    ],
+    "eye_radius": 0.0539,
+    "sit_y": 1.0,
+    "body_top": 0.125,
+    "left_eye": {
+     "x": 0.3701,
+     "y": 0.6051,
+     "rx": 0.0539,
+     "ry": 0.1105
+    },
+    "right_eye": {
+     "x": 0.6421,
+     "y": 0.605,
+     "rx": 0.054,
+     "ry": 0.1107
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": -0.0177,
+     "y": 0.7904,
+     "w": 1.048,
+     "h": 0.303
+    },
+    "over": "over-512.png",
+    "over_256": "over-256.png"
+   }
+  },
+  {
+   "id": "35",
+   "shape": "rect",
+   "colour": "navy",
+   "color": "#2E4A9E",
+   "mat": "plush",
+   "acc": "headphones",
+   "acc_color2": "#F5C02A",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.36,
+      "y": 0.7293,
+      "rx": 0.0324,
+      "ry": 0.0663
+     },
+     {
+      "x": 0.64,
+      "y": 0.7293,
+      "rx": 0.0324,
+      "ry": 0.0663
+     }
+    ],
+    "eye_radius": 0.0324,
+    "sit_y": 1.0,
+    "body_top": 0.4375,
+    "left_eye": {
+     "x": 0.36,
+     "y": 0.7293,
+     "rx": 0.0324,
+     "ry": 0.0663
+    },
+    "right_eye": {
+     "x": 0.64,
+     "y": 0.7293,
+     "rx": 0.0324,
+     "ry": 0.0663
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.0155,
+     "y": 0.8782,
+     "w": 0.9689,
+     "h": 0.1554
+    }
+   }
+  },
+  {
+   "id": "36",
+   "shape": "diamond",
+   "colour": "mint",
+   "color": "#5FE0B0",
+   "mat": "plush",
+   "plate": {
+    "body": "body-512.png",
+    "body_256": "body-256.png",
+    "eye_color": "#0B0B10",
+    "eye_style": "glossy-black",
+    "eyes": [
+     {
+      "x": 0.3789,
+      "y": 0.5357,
+      "rx": 0.0443,
+      "ry": 0.0908
+     },
+     {
+      "x": 0.6211,
+      "y": 0.5357,
+      "rx": 0.0443,
+      "ry": 0.0908
+     }
+    ],
+    "eye_radius": 0.0443,
+    "sit_y": 1.0,
+    "body_top": 0.002,
+    "left_eye": {
+     "x": 0.3789,
+     "y": 0.5357,
+     "rx": 0.0443,
+     "ry": 0.0908
+    },
+    "right_eye": {
+     "x": 0.6211,
+     "y": 0.5357,
+     "rx": 0.0443,
+     "ry": 0.0908
+    },
+    "shadow": {
+     "file": "shadow-512.png",
+     "file_256": "shadow-256.png",
+     "x": 0.027,
+     "y": 0.7819,
+     "w": 0.9461,
+     "h": 0.3015
+    }
+   }
+  }
+ ],
+ "eye_styles": {
+  "glossy-black": {
+   "style": "glossy-black",
+   "px": 256,
+   "color": "#0B0B10",
+   "open_h_frac": 0.72,
+   "open_w_frac": 0.3503,
+   "wide_scale": [
+    1.35,
+    1.2
+   ],
+   "states": [
+    "open",
+    "half",
+    "closed",
+    "happy",
+    "flat",
+    "wide"
+   ],
+   "files": {
+    "open": "eyes/glossy-black-open.png",
+    "half": "eyes/glossy-black-half.png",
+    "closed": "eyes/glossy-black-closed.png",
+    "happy": "eyes/glossy-black-happy.png",
+    "flat": "eyes/glossy-black-flat.png",
+    "wide": "eyes/glossy-black-wide.png"
+   }
+  },
+  "white-pill": {
+   "style": "white-pill",
+   "px": 256,
+   "color": "#F7F3EA",
+   "open_h_frac": 0.72,
+   "open_w_frac": 0.2979,
+   "wide_scale": [
+    1.35,
+    1.2
+   ],
+   "states": [
+    "open",
+    "half",
+    "closed",
+    "happy",
+    "flat",
+    "wide"
+   ],
+   "files": {
+    "open": "eyes/white-pill-open.png",
+    "half": "eyes/white-pill-half.png",
+    "closed": "eyes/white-pill-closed.png",
+    "happy": "eyes/white-pill-happy.png",
+    "flat": "eyes/white-pill-flat.png",
+    "wide": "eyes/white-pill-wide.png"
+   }
+  }
+ },
+ "plate_format": {
+  "body": "out/<id>/body-512.png and body-256.png, square, transparent, eyeless; the character sits on the bottom edge (sit_y = 1.0)",
+  "eyes": "plate.eyes[i] = centre (x, y) and half-extents (rx, ry) of the open eye in normalised plate units (0..1, y down); left first",
+  "shadow": "plate.shadow = rect (x, y, w, h) in the same units where the shadow image goes, relative to the plate top-left; may extend past the plate",
+  "over": "plate.over (glasses or shades) is drawn above the eyes with the same rect as the body plate",
+  "sprites": "eye_styles[<style>].files[<state>]: one eye, square sprite; the open eye spans open_h_frac of the sprite height, so sprite_height = 2 * ry / open_h_frac in plate units, centred on the anchor; shift a few px for the sideways look"
+ }
+}

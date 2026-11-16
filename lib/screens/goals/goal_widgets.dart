@@ -56,7 +56,7 @@ class GoalRow extends StatelessWidget {
       radius: 10,
       child: Padding(
         padding: EdgeInsets.symmetric(
-            horizontal: kMobile ? 12 : 8, vertical: kMobile ? 12 : 9),
+            horizontal: kMobile ? S.s12 : S.s8, vertical: kMobile ? S.s12 : S.of(9)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Expanded(
@@ -67,22 +67,22 @@ class GoalRow extends StatelessWidget {
                       weight: W.label, color: AppColors.fg1)),
             ),
             if (goal.attention != null) ...[
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               AttentionChip(goal.attention!),
             ],
           ]),
-          const SizedBox(height: 8),
+          SizedBox(height: S.s8),
           GoalProgressBar(p,
               colour: goal.attention == GoalAttention.readyToClose
                   ? AppColors.ok
                   : null),
-          const SizedBox(height: 6),
+          SizedBox(height: S.s6),
           Row(children: [
             Text('${p.done} of ${p.total} slices',
                 style: sans(12, color: AppColors.fg3, tabular: true)),
             const Spacer(),
             AppIcon('check', size: 11, color: AppColors.fg4),
-            const SizedBox(width: 4),
+            SizedBox(width: S.s4),
             Text('${goal.evidence.done} of ${goal.evidence.total} evidenced',
                 style: sans(12, color: AppColors.fg3, tabular: true)),
           ]),
@@ -113,9 +113,9 @@ Future<void> openGoalDetail(
               color: AppColors.bg,
               clipBehavior: Clip.antiAlias,
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
+                  BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
               child: Column(children: [
-                const SizedBox(height: 8),
+                SizedBox(height: S.s8),
                 Container(
                   width: 30,
                   height: 3,
@@ -124,7 +124,7 @@ Future<void> openGoalDetail(
                     borderRadius: BorderRadius.circular(R.pill),
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: S.s4),
                 Expanded(
                   child: GoalDetailScreen(
                     client: client,

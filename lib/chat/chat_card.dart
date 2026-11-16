@@ -35,12 +35,12 @@ class ChatCard extends StatelessWidget {
           constraints: BoxConstraints(
               maxWidth: maxWidth ?? (kMobile ? 460 : double.infinity)),
           child: Tactile(
-            radius: BorderRadius.circular(16),
+            radius: BorderRadius.circular(R.of(16)),
             child: Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: AppColors.surface1,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(R.of(16)),
               border: Border.all(color: AppColors.lineStrong),
             ),
             // Own Material so row hovers paint inside the rounded clip.
@@ -94,7 +94,7 @@ class ChatCardHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (eyebrow != null) ...[eyebrow!, const SizedBox(height: 8)],
+          if (eyebrow != null) ...[eyebrow!, SizedBox(height: S.s8)],
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(
               child: Column(
@@ -106,18 +106,18 @@ class ChatCardHeader extends StatelessWidget {
                           weight: W.strong, height: 1.3, color: AppColors.fg1)),
                   if (subtitleView != null)
                     Padding(
-                        padding: const EdgeInsets.only(top: 2),
+                        padding: EdgeInsets.only(top: S.s2),
                         child: subtitleView)
                   else if (subtitle != null && subtitle!.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(top: 2),
+                      padding: EdgeInsets.only(top: S.s2),
                       child: Text(subtitle!,
                           style: sans(13, height: 1.4, color: AppColors.fg3)),
                     ),
                 ],
               ),
             ),
-            if (trailing != null) ...[const SizedBox(width: 10), trailing!],
+            if (trailing != null) ...[SizedBox(width: S.of(10)), trailing!],
           ]),
         ],
       ),
@@ -187,20 +187,20 @@ class ChatCardActions extends StatelessWidget {
     final ordered = vertical ? buttons.reversed.toList() : buttons;
     final pills = [for (final b in ordered) _ChatCardPill(b)];
     return Padding(
-      padding: EdgeInsets.fromLTRB(p, 2, p, link == null ? p : 4),
+      padding: EdgeInsets.fromLTRB(p, S.s2, p, link == null ? p : S.s4),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (vertical)
             for (var i = 0; i < pills.length; i++) ...[
-              if (i > 0) const SizedBox(height: 8),
+              if (i > 0) SizedBox(height: S.s8),
               pills[i],
             ]
           else
             Row(children: [
               for (var i = 0; i < pills.length; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
+                if (i > 0) SizedBox(width: S.s8),
                 Expanded(child: pills[i]),
               ],
             ]),
@@ -211,7 +211,7 @@ class ChatCardActions extends StatelessWidget {
                 behavior: HitTestBehavior.opaque,
                 onTap: onLink,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  padding: EdgeInsets.symmetric(vertical: S.of(10)),
                   child: Text(link!,
                       textAlign: TextAlign.center,
                       style: sans(13,
@@ -311,14 +311,14 @@ class ChatCardPill extends StatelessWidget {
     };
     final neutral = tone == ChatCardTone.neutral;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s2),
       decoration: BoxDecoration(
         color: filled
             ? AppColors.surface3
             : neutral
                 ? Colors.transparent
                 : c.withValues(alpha: 0.13),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(R.card),
         border: filled
             ? null
             : Border.all(
@@ -366,7 +366,7 @@ class ChatCardOption extends StatelessWidget {
             height: 20,
             decoration: BoxDecoration(
               color: selected ? AppColors.accent : Colors.transparent,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(R.sm),
               border: Border.all(
                   color: selected ? AppColors.accent : AppColors.lineStrong,
                   width: 1.5),
@@ -396,10 +396,10 @@ class ChatCardOption extends StatelessWidget {
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: kMobile ? 48 : 38),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: p, vertical: 9),
+            padding: EdgeInsets.symmetric(horizontal: p, vertical: S.of(9)),
             child: Row(children: [
               mark,
-              const SizedBox(width: 12),
+              SizedBox(width: S.s12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -415,10 +415,10 @@ class ChatCardOption extends StatelessWidget {
                 ),
               ),
               if (recommended) ...[
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 const ChatCardPill('Recommended', filled: true),
               ],
-              if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+              if (trailing != null) ...[SizedBox(width: S.s8), trailing!],
             ]),
           ),
         ),
@@ -444,10 +444,10 @@ class ChatCardSteps extends StatelessWidget {
           Container(
             width: 16,
             height: 3,
-            margin: const EdgeInsets.only(left: 4),
+            margin: EdgeInsets.only(left: S.s4),
             decoration: BoxDecoration(
               color: i <= index ? AppColors.fg1 : AppColors.lineStrong,
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(R.of(2)),
             ),
           ),
       ]);
@@ -473,11 +473,11 @@ class ChatCardResolved extends StatelessWidget {
     final p = ChatCard.pad;
     return ChatCard(dimmed: true, children: [
       Padding(
-        padding: EdgeInsets.symmetric(horizontal: p, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: p, vertical: S.s12),
         child: Row(children: [
           AppIcon(icon ?? (approved ? 'check' : 'x'),
               size: 16, color: approved ? AppColors.ok : AppColors.fg4),
-          const SizedBox(width: 12),
+          SizedBox(width: S.s12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -530,9 +530,9 @@ class ChatCardFooter extends StatelessWidget {
         decoration: divider
             ? BoxDecoration(border: Border(top: BorderSide(color: AppColors.line)))
             : null,
-        padding: EdgeInsets.symmetric(horizontal: p, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: p, vertical: S.s12),
         child: Row(children: [
-          if (leading != null) ...[leading!, const SizedBox(width: 12)],
+          if (leading != null) ...[leading!, SizedBox(width: S.s12)],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

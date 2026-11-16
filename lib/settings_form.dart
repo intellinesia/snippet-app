@@ -13,7 +13,7 @@ class SettingsGroupLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(S.s16, S.s16, 0, S.s4),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s16, 0, S.s4),
         child: Text(text, style: sans(13, color: AppColors.fg3)),
       );
 }
@@ -78,9 +78,9 @@ class V5SettingsRow extends StatelessWidget {
     final body = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 46),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.s8),
         child: Row(children: [
-          if (leading != null) ...[leading!, const SizedBox(width: S.s12)],
+          if (leading != null) ...[leading!, SizedBox(width: S.s12)],
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -101,7 +101,7 @@ class V5SettingsRow extends StatelessWidget {
             ),
           ),
           if (v != null && v.isNotEmpty) ...[
-            const SizedBox(width: S.s8),
+            SizedBox(width: S.s8),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 150),
               child: Text(v,
@@ -111,10 +111,10 @@ class V5SettingsRow extends StatelessWidget {
             ),
           ],
           if (trailing != null) ...[
-            const SizedBox(width: S.s6),
+            SizedBox(width: S.s6),
             trailing!,
           ] else if (showChevron) ...[
-            const SizedBox(width: S.s6),
+            SizedBox(width: S.s6),
             AppIcon('chevron-right', size: 14, color: AppColors.fg3),
           ],
         ]),
@@ -142,17 +142,17 @@ class SettingsGroup extends StatelessWidget {
       rows.add(children[i]);
       if (i < children.length - 1) {
         rows.add(Padding(
-          padding: EdgeInsets.only(left: kMobile ? 16 : 14),
+          padding: EdgeInsets.only(left: kMobile ? S.s16 : S.of(14)),
           child: Container(height: 1, color: AppColors.line),
         ));
       }
     }
     return Padding(
-      padding: EdgeInsets.only(bottom: kMobile ? 26 : 24),
+      padding: EdgeInsets.only(bottom: kMobile ? S.of(26) : S.s24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (header != null)
           Padding(
-            padding: EdgeInsets.fromLTRB(kMobile ? 16 : 4, 0, 4, 6),
+            padding: EdgeInsets.fromLTRB(kMobile ? S.s16 : S.s4, 0, S.s4, S.s6),
             child: Text(header!.toUpperCase(), style: TS.overline()),
           ),
         Tactile(
@@ -177,7 +177,7 @@ class SettingsGroup extends StatelessWidget {
         ),
         if (footer != null)
           Padding(
-            padding: EdgeInsets.fromLTRB(kMobile ? 16 : 4, 7, 4, 0),
+            padding: EdgeInsets.fromLTRB(kMobile ? S.s16 : S.s4, S.of(7), S.s4, 0),
             child: Text(footer!, style: TS.meta()),
           ),
       ]),
@@ -212,10 +212,10 @@ class SettingsRow extends StatelessWidget {
       constraints: BoxConstraints(minHeight: kMobile ? 52 : 40),
       child: Padding(
         padding: kMobile
-            ? const EdgeInsets.symmetric(horizontal: 16, vertical: 12)
-            : const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            ? EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s12)
+            : EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.of(9)),
         child: Row(children: [
-          if (leading != null) ...[leading!, const SizedBox(width: 12)],
+          if (leading != null) ...[leading!, SizedBox(width: S.s12)],
           Expanded(
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,14 +226,14 @@ class SettingsRow extends StatelessWidget {
                           style: TS.rowTitle(
                               danger ? AppColors.danger : AppColors.fg1)),
                   if (sub != null && sub!.isNotEmpty) ...[
-                    const SizedBox(height: 2),
+                    SizedBox(height: S.s2),
                     Text(sub!, style: TS.meta()),
                   ],
                 ]),
           ),
-          if (trailing != null) ...[const SizedBox(width: 12), trailing!],
+          if (trailing != null) ...[SizedBox(width: S.s12), trailing!],
           if (chevron) ...[
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             AppIcon('chevron-right', size: 14, color: AppColors.fg3),
           ],
         ]),
@@ -267,11 +267,11 @@ class SettingsSwitch extends StatelessWidget {
             curve: Curves.easeOutCubic,
             width: kMobile ? 44 : 34,
             height: kMobile ? 26 : 20,
-            padding: const EdgeInsets.all(2),
+            padding: EdgeInsets.all(S.s2),
             alignment: value ? Alignment.centerRight : Alignment.centerLeft,
             decoration: BoxDecoration(
               color: value ? AppColors.accent : AppColors.surface3,
-              borderRadius: BorderRadius.circular(13),
+              borderRadius: BorderRadius.circular(R.of(13)),
             ),
             child: Container(
               width: kMobile ? 22 : 16,
@@ -310,9 +310,9 @@ class SettingsPopup<T> extends StatelessWidget {
     return Builder(
       builder: (anchor) => Material(
         color: kMobile ? Colors.transparent : AppColors.surface2,
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(R.of(7)),
         child: InkWell(
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(R.of(7)),
           onTap: () async {
             final picked = await showAppMenu<T>(context,
                 anchor: anchor,
@@ -326,13 +326,13 @@ class SettingsPopup<T> extends StatelessWidget {
           child: Container(
             height: kMobile ? 32 : 26,
             padding:
-                EdgeInsets.fromLTRB(kMobile ? 4 : 10, 0, kMobile ? 0 : 8, 0),
+                EdgeInsets.fromLTRB(kMobile ? S.s4 : S.of(10), 0, kMobile ? 0 : S.s8, 0),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              if (leading != null) ...[leading!, const SizedBox(width: 7)],
+              if (leading != null) ...[leading!, SizedBox(width: S.of(7))],
               Text(label,
                   style: sans(kMobile ? 15 : 13,
                       color: kMobile ? AppColors.fg3 : AppColors.fg1)),
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               AppIcon(kMobile ? 'chevron-right' : 'chevrons-up-down',
                   size: 14, color: AppColors.fg3),
             ]),
@@ -379,12 +379,12 @@ class SettingsField extends StatelessWidget {
         height: kMobile ? 34 : 28,
         padding: kMobile
             ? EdgeInsets.zero
-            : const EdgeInsets.symmetric(horizontal: 9),
+            : EdgeInsets.symmetric(horizontal: S.of(9)),
         decoration: kMobile
             ? null
             : BoxDecoration(
                 color: AppColors.bg,
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(R.of(7)),
                 border: Border.all(color: AppColors.border),
               ),
         child: Row(children: [
@@ -408,7 +408,7 @@ class SettingsField extends StatelessWidget {
               ),
             ),
           ),
-          if (suffix != null) ...[const SizedBox(width: 6), suffix!],
+          if (suffix != null) ...[SizedBox(width: S.s6), suffix!],
         ]),
       ),
     );
@@ -436,7 +436,7 @@ class SettingsPill extends StatelessWidget {
           onTap: onTap,
           child: Container(
             height: 28,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: EdgeInsets.symmetric(horizontal: S.s12),
             alignment: Alignment.center,
             child: Text(label,
                 style: sans(13,

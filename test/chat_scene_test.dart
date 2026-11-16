@@ -12,6 +12,17 @@ void main() {
     }
   });
 
+  test('scenes compile with backdrop params', () {
+    const params = {'speed': 2.5, 'intensity': 9, 'tint': '#FF8800'};
+    for (final scene in ChatScene.presets.keys) {
+      final src = sceneSource(scene, params);
+      expect(checkShader(src, ShaderLang.wgsl), isNull, reason: scene);
+      expect(src, contains('SPEED = 2.500'));
+      expect(src, contains('INTENSITY = 3.000'));
+      expect(src, contains('ACCENT = vec3<f32>(1.000, 0.533, 0.000)'));
+    }
+  });
+
   test('a broken shader reports the compiler error', () {
     final err = checkShader(
         'fn main_image(p: vec2<f32>) -> vec4<f32> { return nope; }',
