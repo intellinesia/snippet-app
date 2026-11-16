@@ -1749,13 +1749,15 @@ class DaemonClient {
   }
 
   /// POST /agents/build — ask the runtime to research and build an agent from one prompt.
-  Future<void> buildCoordinationAgent(String prompt, {String? nickname}) async {
+  Future<void> buildCoordinationAgent(String prompt,
+      {String? nickname, String? character}) async {
     final r = await _post(
       _uri('/agents/build'),
       headers: _json,
       body: jsonEncode({
         'prompt': prompt,
         if (nickname != null && nickname.isNotEmpty) 'nickname': nickname,
+        if (character != null) 'character': character,
       }),
     );
     if (r.statusCode != 202) throw _err('build coordination agent', r);
