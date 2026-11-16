@@ -12,12 +12,12 @@ void main() {
     await t.pumpWidget(host(StageHeader(
       members: const [StageMember('rook', state: AgentCharacterState.needs, badge: '?')],
       title: 'Sidebar density',
-      subtitle: 'Rook · waiting on you · step 3 of 5',
+      subtitle: 'Rook · waiting on you · plan 3/5',
       onTap: () => taps++,
       below: const StagePill(label: '2 lanes', icon: Icons.layers_outlined),
     )));
     expect(find.text('Sidebar density'), findsOneWidget);
-    expect(find.text('Rook · waiting on you · step 3 of 5'), findsOneWidget);
+    expect(find.text('Rook · waiting on you · plan 3/5'), findsOneWidget);
     expect(find.text('2 lanes'), findsOneWidget);
     expect(find.byType(AgentMochi), findsOneWidget);
     await t.tap(find.text('Sidebar density'));

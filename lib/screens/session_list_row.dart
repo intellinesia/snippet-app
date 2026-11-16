@@ -63,12 +63,12 @@ bool sessionCameBack(SessionInfo s) => s.cameBack && !sessionNeedsYou(s);
 
 String sessionStepLabel(SessionPlan plan) {
   if (plan.current == null && plan.total > 0 && plan.done >= plan.total) {
-    return 'all ${plan.total} steps done';
+    return 'plan done';
   }
   final stepNum = plan.current != null
       ? (plan.done + 1).clamp(1, plan.total)
       : plan.done.clamp(0, plan.total);
-  return 'step $stepNum of ${plan.total}';
+  return 'plan $stepNum/${plan.total}';
 }
 
 String sessionDuration(int? unixSec) {

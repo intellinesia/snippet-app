@@ -113,7 +113,7 @@ void main() {
       ],
     });
     expect(find.byType(StageHeader), findsOneWidget);
-    expect(find.text('Rook · Run the goldens · step 4 of 5'), findsOneWidget);
+    expect(find.text('Rook · Run the goldens · plan 4/5'), findsOneWidget);
     expect(find.text('2 lanes'), findsOneWidget);
     // Empty composer: the send button is Stop, so no separate Interrupt.
     expect(find.text('Interrupt'), findsNothing);
@@ -161,7 +161,7 @@ void main() {
       ],
     });
     expect(find.text('Rook · waiting on you'), findsOneWidget);
-    expect(find.text('Rook asks · step 4 of 5'), findsOneWidget);
+    expect(find.text('Rook asks · plan 4/5'), findsOneWidget);
     expect(find.text('waiting 2 min'), findsOneWidget);
     expect(find.text('Approve'), findsOneWidget);
     expect(find.text('Deny'), findsOneWidget);

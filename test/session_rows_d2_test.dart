@@ -138,7 +138,7 @@ void main() {
       ),
     ));
 
-    expect(find.text('Step 3 of 5 · Snippet'), findsOneWidget);
+    expect(find.text('Plan 3/5 · Snippet'), findsOneWidget);
     expect(find.text('14m'), findsOneWidget);
     expect(find.byKey(const Key('card-progress')), findsOneWidget);
     expect(find.text('Working'), findsNothing);
@@ -220,7 +220,7 @@ void main() {
       ),
     ));
 
-    expect(find.text('step 3 of 5 · 14m'), findsOneWidget);
+    expect(find.text('plan 3/5 · 14m'), findsOneWidget);
     expect(find.text('PR #280 · checks passing'), findsOneWidget);
     expect(find.text('wakes Mon 08:00'), findsOneWidget);
     } finally {
@@ -252,7 +252,7 @@ void main() {
       ),
     ));
 
-    expect(find.text('step 3 of 5'), findsNWidgets(2));
+    expect(find.text('plan 3/5'), findsNWidgets(2));
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

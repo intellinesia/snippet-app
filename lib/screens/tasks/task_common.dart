@@ -158,7 +158,7 @@ class TaskPlanProgress extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Text(
-          'step $step of $total',
+          'plan $step/$total',
           style: sans(compact ? 11 : 12, color: AppColors.fg3, tabular: true),
         ),
       ],
