@@ -10,7 +10,6 @@ import 'package:snippet/screens/sidebar.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/transcript.dart';
-import 'package:snippet/widgets.dart';
 
 SessionInfo s(String id,
         {String? owner,

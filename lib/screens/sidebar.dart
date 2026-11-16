@@ -1165,11 +1165,11 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                 s,
           ];
     var top = pinned.isEmpty ? 2.0 : 18.0;
-    if (needs.isNotEmpty) {
-      out.add(MobileSectionLabel('Needs you',
-          count: needs.length, tone: AppColors.run, top: top));
+    final live = [...needs, ...running];
+    if (live.isNotEmpty) {
+      out.add(MobileSectionLabel('Now', count: live.length, top: top));
       top = 18;
-      for (final s in needs) {
+      for (final s in live) {
         out.add(liveCard(s));
       }
     }
@@ -1190,13 +1190,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                 showProject: true),
         ]),
       ));
-    }
-    if (running.isNotEmpty) {
-      out.add(MobileSectionLabel('Now',
-          count: running.length, top: top));
-      for (final s in running) {
-        out.add(liveCard(s));
-      }
     }
     final liveIds = {
       for (final s in [...needs, ...cameBack, ...running]) s.id
