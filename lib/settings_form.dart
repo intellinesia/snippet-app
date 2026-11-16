@@ -155,8 +155,11 @@ class SettingsGroup extends StatelessWidget {
           Padding(
             padding: EdgeInsets.fromLTRB(
                 kMobile ? S.s20 : S.s16, 0, S.s4, S.s6),
-            child: Text(header!,
-                style: sans(kMobile ? 13 : 12, color: AppColors.fg3)),
+            child: Semantics(
+              header: true,
+              child: Text(header!,
+                  style: sans(kMobile ? 13 : 12, color: AppColors.fg3)),
+            ),
           ),
         Tactile(
           radius: radius,
