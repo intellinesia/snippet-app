@@ -320,6 +320,7 @@ class _SessionScreenState extends State<SessionScreen>
   // The list row for this session: plan and the agent standing on the header.
   SessionInfo? _me;
   String? _meAgentName;
+  static final Map<String, String> _knownAgentNames = {};
   String? _meAgentFetched;
   int? _mcInFlight;
   GithubStatus? _github;
@@ -909,7 +910,10 @@ class _SessionScreenState extends State<SessionScreen>
     widget.client.coordinationAgents().then((agents) {
       if (!mounted) return;
       final a = agents.where((x) => x.id == id).firstOrNull;
-      if (a != null) setState(() => _meAgentName = a.displayName);
+      if (a != null) {
+        _knownAgentNames[id] = a.displayName;
+        setState(() => _meAgentName = a.displayName);
+      }
     }).catchError((_) {});
   }
 
@@ -978,6 +982,8 @@ class _SessionScreenState extends State<SessionScreen>
         if (mounted) _publishTerminals();
       });
     }
+    _me = knownSessions[widget.sessionId];
+    _meAgentName = _knownAgentNames[_me?.displayAgentId ?? ''];
     final cached = _sessionStateCache[_cacheKey];
     if (cached != null) {
       _state = cached.$1;

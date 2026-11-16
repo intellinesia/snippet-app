@@ -51,6 +51,9 @@ class TaskVerdictConflict implements Exception {
 /// Talks to one snippet `serve` daemon. The token is passed as a `?token=` query
 /// param on every request (matching the daemon's auth) and the session id (a
 /// path with a `/`) is URL-encoded automatically by [Uri].
+/// Last-seen session rows, so a session opens with its real header at once.
+final Map<String, SessionInfo> knownSessions = {};
+
 class DaemonClient {
   @visibleForTesting
   static WebSocketChannel Function(Uri uri,
@@ -140,9 +143,13 @@ class DaemonClient {
         await _get(_uri('/sessions', q.isEmpty ? null : q), timeout: _long);
     if (r.statusCode != 200) throw _err('list sessions', r);
     final list = jsonDecode(r.body) as List;
-    return list
+    final out = list
         .map((e) => SessionInfo.fromJson(e as Map<String, dynamic>))
         .toList();
+    for (final s in out) {
+      knownSessions[s.id] = s;
+    }
+    return out;
   }
 
   Future<FsListing> fs(String? path) async {

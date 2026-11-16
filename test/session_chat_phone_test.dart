@@ -73,6 +73,35 @@ Future<_Socket> _pumpSession(WidgetTester tester, Map<String, dynamic> snap,
 }
 
 void main() {
+  testWidgets('a known session opens on its stage header, not the back bar',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    SharedPreferences.setMockInitialValues({});
+    DaemonClient.wsConnector =
+        (uri, {connectTimeout, pingInterval}) => _Socket(uri);
+    addTearDown(() => DaemonClient.wsConnector = null);
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.reset);
+    knownSessions['sess-known'] = SessionInfo.fromJson(
+        {'id': 'sess-known', 'title': 'Known', 'agent_id': 'rook'});
+    addTearDown(() => knownSessions.remove('sess-known'));
+    await tester.pumpWidget(MaterialApp(
+      theme: buildAppTheme(),
+      home: SessionScreen(
+        client: FakeClient(),
+        sessionId: 'sess-known',
+        title: 'Known',
+        onMenu: () {},
+      ),
+    ));
+    expect(find.byType(StageHeader), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(minutes: 1));
+    debugDefaultTargetPlatformOverride = null;
+  });
+
   testWidgets('running: stage header subtitle, step, lanes pill, quick actions',
       (tester) async {
     await _pumpSession(tester, {

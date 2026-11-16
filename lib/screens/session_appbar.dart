@@ -398,7 +398,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       return _mcStageHeader(s, stuck);
     }
     final keyboardUp = MediaQuery.viewInsetsOf(context).bottom > 0;
-    if (!offline && !keyboardUp && s != null && _me != null) {
+    if (!offline && !keyboardUp && _me != null) {
       return _stageHeader(s, back);
     }
     final ws = s?.workspace.trim() ?? '';
@@ -493,19 +493,20 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   }
 
   /// The phone header: the session's agent on stage, title chip over its feet.
-  Widget _stageHeader(HarnessState s, VoidCallback back) {
+  Widget _stageHeader(HarnessState? s, VoidCallback back) {
     final me = _me!;
     final agentId = me.displayAgentId ?? 'snippet';
     final agent = (_meAgentName ?? '').trim().isEmpty ? agentId : _meAgentName!;
-    final needsYou = s.pendingQuestion != null || s.status == 'waiting_for_input';
-    final working = s.status == 'running';
+    final needsYou =
+        s?.pendingQuestion != null || s?.status == 'waiting_for_input';
+    final working = s?.status == 'running';
     final plan = me.plan != null && me.plan!.total > 0 ? me.plan : null;
     final step = plan?.current?.trim() ?? '';
     final state = needsYou
         ? 'waiting on you'
         : working
             ? (step.isNotEmpty ? step : 'working')
-            : s.status == 'in_review'
+            : s?.status == 'in_review'
                 ? 'in review'
                 : '';
     final subtitle = [
@@ -513,7 +514,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       if (state.isNotEmpty) state,
       if (plan != null && !needsYou) sessionStepLabel(plan),
     ].join(' · ');
-    final lanes = s.lanes.where((l) => l.running).length;
+    final lanes = s?.lanes.where((l) => l.running).length ?? 0;
     return SizedBox(
       child: Stack(alignment: Alignment.topCenter, children: [
         Padding(

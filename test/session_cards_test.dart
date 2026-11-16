@@ -289,7 +289,8 @@ void main() {
       expect(find.descendant(of: card, matching: find.text('Needs input · Scout')),
           findsOneWidget);
 
-      final mochi = tester.widget<AgentMochi>(find.byType(AgentMochi));
+      final mochi = tester.widget<AgentMochi>(
+          find.descendant(of: card, matching: find.byType(AgentMochi)));
       expect(mochi.size, 36);
       expect(mochi.badge, '?');
     } finally {
