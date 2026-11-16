@@ -609,6 +609,9 @@ class _FileExplorerState extends State<FileExplorer> {
                   : _entryIcon(e.name, e.isDir),
               name: e.name,
               git: e.git,
+              size: e.size,
+              modified: e.modified,
+              gitStatus: e.gitStatus,
               chevron: e.isDir && kMobile && !_selecting,
               selecting: _selecting,
               selected: _selected.contains(e.path),
@@ -793,12 +796,17 @@ class _Row extends StatelessWidget {
   final String icon, name;
   final bool git, muted, chevron, selecting, selected;
   final bool? isDir;
+  final int? size, modified;
+  final String? gitStatus;
   final VoidCallback? onTap, onLongPress;
   const _Row({
     required this.icon,
     this.isDir,
     required this.name,
     this.git = false,
+    this.size,
+    this.modified,
+    this.gitStatus,
     this.muted = false,
     this.chevron = false,
     this.selecting = false,
@@ -806,6 +814,14 @@ class _Row extends StatelessWidget {
     this.onTap,
     this.onLongPress,
   });
+
+  String _metaLine() {
+    final parts = <String>[
+      if (size != null) formatBytes(size),
+      if (modified != null && modified! > 0) relativeTime(modified!),
+    ];
+    return parts.join(' · ');
+  }
   @override
   Widget build(BuildContext context) {
     Theme.of(context); // Rebuild on theme change
@@ -847,23 +863,47 @@ class _Row extends StatelessWidget {
               SizedBox(width: kMobile ? S.s12 : 10),
               Expanded(
                   child: kMobile && !isFolder && !muted
-                      ? _fileName()
+                      ? _mobileFileDetails()
                       : Text(name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: sans(kMobile ? M.rowTitle : 13,
                               weight: isFolder && kMobile ? W.label : W.body,
                               color: muted ? AppColors.fg3 : AppColors.fg1))),
-              if (git) ...[
-                const Tag('git', tone: Tone.ok, icon: 'git-branch'),
+              if (gitStatus != null) ...[
                 const SizedBox(width: S.s8),
+                FsGitStatusLabel(gitStatus),
               ],
-              if (chevron)
+              if (git) ...[
+                const SizedBox(width: S.s8),
+                const Tag('git', tone: Tone.ok, icon: 'git-branch'),
+              ],
+              if (chevron) ...[
+                const SizedBox(width: S.s8),
                 AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+              ],
             ]),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _mobileFileDetails() {
+    final meta = _metaLine();
+    if (meta.isEmpty) return _fileName();
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _fileName(),
+        Text(
+          meta,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: sans(M.meta, color: AppColors.fg4, tabular: true),
+        ),
+      ],
     );
   }
 

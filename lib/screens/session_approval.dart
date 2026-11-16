@@ -959,35 +959,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
         child: child,
       );
 
-  Widget _shortcut(String icon, String label, VoidCallback onTap) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: SizedBox(
-          width: 72,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Column(children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColors.surface1,
-                  shape: BoxShape.circle,
-                  border:
-                      Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
-                ),
-                alignment: Alignment.center,
-                child: AppIcon(icon, size: 21, color: AppColors.fg1),
-              ),
-              const SizedBox(height: 8),
-              Text(label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(13, color: AppColors.fg2)),
-            ]),
-          ),
-        ),
-      );
+
 
   Widget _mobileGoalRow(HarnessState? s, bool goalOn) {
     final goal = s?.goal;
@@ -1104,23 +1076,19 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
       if (_autoSettleRow() case final row?) row,
       if (_resumeModeRow() case final row?) row,
     ];
-    final shortcuts = <Widget>[
-      _shortcut('git-branch', 'Git', widget.onGit),
-      _shortcut('folder', 'Files', widget.onFiles),
-      _shortcut('layers', 'Shared', widget.onDeliverables),
-      if (widget.onPullRequests != null)
-        _shortcut('git-commit', 'PRs', widget.onPullRequests!),
-      if (!widget.hideShell) _shortcut('terminal', 'Shell', widget.onTerm),
-      _shortcut('processes', 'Processes', widget.onProcesses),
-    ];
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (!widget.hideWorkspace)
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: shortcuts),
+          SessionShortcutStrip(
+            counts: s?.counts ?? const SessionCounts(),
+            onGit: widget.onGit,
+            onFiles: widget.onFiles,
+            onDeliverables: widget.onDeliverables,
+            onPullRequests: widget.onPullRequests,
+            onTerm: widget.hideShell ? null : widget.onTerm,
+            onProcesses: widget.onProcesses,
           ),
         _group('Session', sessionRows),
         _group('Work', workRows),
@@ -1312,4 +1280,131 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
       ],
     );
   }
+}
+
+class SessionShortcutStrip extends StatelessWidget {
+  final SessionCounts counts;
+  final VoidCallback onGit;
+  final VoidCallback onFiles;
+  final VoidCallback onDeliverables;
+  final VoidCallback? onPullRequests;
+  final VoidCallback? onTerm;
+  final VoidCallback onProcesses;
+
+  const SessionShortcutStrip({
+    super.key,
+    required this.counts,
+    required this.onGit,
+    required this.onFiles,
+    required this.onDeliverables,
+    this.onPullRequests,
+    this.onTerm,
+    required this.onProcesses,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final shortcuts = <Widget>[
+      SessionShortcutTile(
+        icon: 'git-branch',
+        label: 'Git',
+        onTap: onGit,
+        count: counts.changedFiles,
+      ),
+      SessionShortcutTile(icon: 'folder', label: 'Files', onTap: onFiles),
+      SessionShortcutTile(
+          icon: 'layers', label: 'Shared', onTap: onDeliverables),
+      if (onPullRequests != null)
+        SessionShortcutTile(
+          icon: 'git-commit',
+          label: 'PRs',
+          onTap: onPullRequests!,
+          count: counts.openPrs,
+        ),
+      if (onTerm != null)
+        SessionShortcutTile(icon: 'terminal', label: 'Shell', onTap: onTerm!),
+      SessionShortcutTile(
+        icon: 'processes',
+        label: 'Processes',
+        onTap: onProcesses,
+        count: counts.processes,
+      ),
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(children: shortcuts),
+    );
+  }
+}
+
+class SessionShortcutTile extends StatelessWidget {
+  final String icon;
+  final String label;
+  final VoidCallback onTap;
+  final int count;
+
+  const SessionShortcutTile({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.count = 0,
+  });
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: SizedBox(
+          width: 72,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Column(children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface1,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: AppColors.fg1.withValues(alpha: 0.08)),
+                    ),
+                    alignment: Alignment.center,
+                    child: AppIcon(icon, size: 21, color: AppColors.fg1),
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 18),
+                        height: 18,
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                        decoration: BoxDecoration(
+                          color: AppColors.accentFill,
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(color: AppColors.bg, width: 1.5),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          count > 99 ? '99+' : '$count',
+                          style: mono(10,
+                              weight: W.label, color: AppColors.accentFg),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13, color: AppColors.fg2)),
+            ]),
+          ),
+        ),
+      );
 }
