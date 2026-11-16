@@ -555,6 +555,10 @@ class _FileTreeRow extends StatelessWidget {
                             ? AppColors.fg2
                             : AppColors.fg3)),
               ),
+              if (entry.gitStatus != null) ...[
+                const SizedBox(width: 6),
+                FsGitStatusLabel(entry.gitStatus),
+              ],
             ]),
           ),
         ),
@@ -601,6 +605,10 @@ extension on _FileTreeRow {
                     style: sans(13,
                         color: entry.isDir ? AppColors.fg2 : AppColors.fg3)),
               ),
+              if (entry.gitStatus != null) ...[
+                const SizedBox(width: 6),
+                FsGitStatusLabel(entry.gitStatus),
+              ],
             ]),
           ),
         ),

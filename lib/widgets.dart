@@ -2585,3 +2585,29 @@ class ProviderLogo extends StatelessWidget {
     );
   }
 }
+
+/// Short git status letter and token colour for a file-browser / tree entry.
+({String letter, Color color})? fsGitStatusMeta(String? status) =>
+    switch (status) {
+      'modified' => (letter: 'M', color: AppColors.run),
+      'added' => (letter: 'A', color: AppColors.ok),
+      'untracked' => (letter: 'U', color: AppColors.fg4),
+      'deleted' => (letter: 'D', color: AppColors.danger),
+      'renamed' => (letter: 'R', color: AppColors.accent),
+      _ => null,
+    };
+
+class FsGitStatusLabel extends StatelessWidget {
+  final String? status;
+  const FsGitStatusLabel(this.status, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final meta = fsGitStatusMeta(status);
+    if (meta == null) return const SizedBox.shrink();
+    return Text(
+      meta.letter,
+      style: mono(11, weight: W.label, color: meta.color),
+    );
+  }
+}

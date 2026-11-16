@@ -362,12 +362,18 @@ class FsEntry {
   final String path;
   final bool isDir;
   final bool git;
+  final int? size;
+  final int? modified;
+  final String? gitStatus;
 
   FsEntry.fromJson(Map<String, dynamic> j)
       : name = j['name'] as String? ?? '',
         path = j['path'] as String? ?? '',
         isDir = j['is_dir'] == true,
-        git = j['git'] == true;
+        git = j['git'] == true,
+        size = (j['size'] as num?)?.toInt(),
+        modified = (j['modified'] as num?)?.toInt(),
+        gitStatus = j['git_status'] as String?;
 }
 
 class FsListing {
@@ -585,6 +591,24 @@ class QueuedInput {
   Map<String, dynamic> toJson() => {'id': id, 'text': text};
 }
 
+class SessionCounts {
+  final int changedFiles;
+  final int openPrs;
+  final int processes;
+
+  const SessionCounts({
+    this.changedFiles = 0,
+    this.openPrs = 0,
+    this.processes = 0,
+  });
+
+  factory SessionCounts.fromJson(Map<String, dynamic> j) => SessionCounts(
+        changedFiles: (j['changed_files'] as num?)?.toInt() ?? 0,
+        openPrs: (j['open_prs'] as num?)?.toInt() ?? 0,
+        processes: (j['processes'] as num?)?.toInt() ?? 0,
+      );
+}
+
 class HarnessState {
   final String status;
   final String workspace;
@@ -612,6 +636,7 @@ class HarnessState {
   /// Messages typed while a run is in progress — held on the daemon until the
   /// turn ends, then submitted. Shared across TUI and app clients.
   final List<QueuedInput> queuedInputs;
+  final SessionCounts counts;
 
   HarnessState({
     required this.status,
@@ -637,6 +662,7 @@ class HarnessState {
     this.watchCount = 0,
     this.lanes = const [],
     this.queuedInputs = const [],
+    this.counts = const SessionCounts(),
   });
 
   factory HarnessState.fromJson(Map<String, dynamic> j) {
@@ -706,6 +732,9 @@ class HarnessState {
               .where((item) => item.id.isNotEmpty && item.text.isNotEmpty)
               .toList()
           : const [],
+      counts: j['counts'] is Map
+          ? SessionCounts.fromJson((j['counts'] as Map).cast<String, dynamic>())
+          : const SessionCounts(),
     );
   }
 
@@ -750,6 +779,7 @@ class HarnessState {
       lanes: d.containsKey('lanes') ? base.lanes : lanes,
       queuedInputs:
           d.containsKey('queued_inputs') ? base.queuedInputs : queuedInputs,
+      counts: d.containsKey('counts') ? base.counts : counts,
     );
   }
 
@@ -783,6 +813,7 @@ class HarnessState {
         watchCount: watchCount,
         lanes: lanes,
         queuedInputs: queuedInputs,
+        counts: counts,
       );
 
   HarnessState withApprovalMode(String mode) => HarnessState(
@@ -809,6 +840,7 @@ class HarnessState {
         watchCount: watchCount,
         lanes: lanes,
         queuedInputs: queuedInputs,
+        counts: counts,
       );
 }
 
