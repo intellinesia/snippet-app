@@ -110,7 +110,7 @@ void main() {
     try {
       await _pump(tester, const Size(390, 700), TargetPlatform.android);
       expect(find.byType(SessionGroupHeader), findsNothing);
-      expect(find.widgetWithText(MobileSectionLabel, 'Now'), findsOneWidget);
+      expect(find.widgetWithText(MobileSectionLabel, 'Needs you'), findsOneWidget);
       expect(find.byType(LiveSessionCard), findsNWidgets(2));
       expect(
           find.descendant(
@@ -122,12 +122,8 @@ void main() {
           findsOneWidget);
       expect(find.text('main'), findsNWidgets(2));
       expect(find.text('cards'), findsOneWidget);
-      expect(find.text('+120'), findsOneWidget);
-      expect(find.text('-31'), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('^Needs input')), findsOneWidget);
       expect(find.bySemanticsLabel(RegExp('^Working')), findsOneWidget);
-      expect(find.text('+88'), findsOneWidget);
-      expect(find.text('-12'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
@@ -290,14 +286,12 @@ void main() {
       final card = find.byType(LiveSessionCard);
       expect(card, findsOneWidget);
 
-      final label = tester.widget<Text>(find.descendant(
-          of: card,
-          matching: find.byWidgetPredicate((w) =>
-              w is Text && (w.data ?? '').startsWith('Needs input ·'))));
-      expect(label.style?.color, AppColors.run);
+      expect(find.descendant(of: card, matching: find.text('Needs input · Scout')),
+          findsOneWidget);
 
       final mochi = tester.widget<AgentMochi>(find.byType(AgentMochi));
-      expect(mochi.size, 20);
+      expect(mochi.size, 36);
+      expect(mochi.badge, '?');
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

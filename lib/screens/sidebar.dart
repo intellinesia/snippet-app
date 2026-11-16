@@ -1072,6 +1072,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             session: s,
             pinned: pinned,
             leading: _agentBadge(s),
+            onDecide: widget.client == null ? null : _decideHero,
             onReviewPr: s.pr?.state == 'open' && widget.client != null
                 ? () => _reviewSessionPr(s)
                 : null,
@@ -1089,7 +1090,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       out.add(MobileSectionLabel('Pinned',
           icon: 'pin', count: pinned.length, top: 2));
       bool isLive(SessionInfo s) =>
-          !filtering && (sessionNeedsYou(s) || sessionIsActive(s.status));
+          !filtering && (sessionNeedsYou(s) || sessionCameBack(s) || sessionIsActive(s.status));
       for (final s in pinned) {
         if (isLive(s)) out.add(liveCard(s, pinned: true));
       }
@@ -1130,32 +1131,18 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                 s,
           ];
     var top = pinned.isEmpty ? 2.0 : 18.0;
-    final live = [...needs, ...running];
-    if (live.isNotEmpty) {
-      out.add(MobileSectionLabel('Now', count: live.length, top: top));
+    void liveSection(String label, List<SessionInfo> rows) {
+      if (rows.isEmpty) return;
+      out.add(MobileSectionLabel(label, top: top));
       top = 18;
-      for (final s in live) {
+      for (final s in rows) {
         out.add(liveCard(s));
       }
     }
-    if (cameBack.isNotEmpty) {
-      out.add(MobileSectionLabel('Came back',
-          icon: 'bell', count: cameBack.length, top: top));
-      top = 18;
-      out.add(Appear(
-        key: const ValueKey('came-back'),
-        index: n++,
-        since: _chatsShownAt,
-        child: MobileGroupCard(children: [
-          for (var i = 0; i < cameBack.length; i++)
-            _listRow(cameBack[i],
-                above: i > 0 ? cameBack[i - 1] : null,
-                below: i + 1 < cameBack.length ? cameBack[i + 1] : null,
-                divider: i + 1 < cameBack.length,
-                showProject: true),
-        ]),
-      ));
-    }
+
+    liveSection('Needs you', needs);
+    liveSection('Running', running);
+    liveSection('Came back', cameBack);
     final liveIds = {
       for (final s in [...needs, ...cameBack, ...running]) s.id
     };

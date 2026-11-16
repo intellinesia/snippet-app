@@ -138,7 +138,9 @@ void main() {
       ),
     ));
 
-    expect(find.text('step 3 of 5 · 14m'), findsOneWidget);
+    expect(find.text('Step 3 of 5 · Snippet'), findsOneWidget);
+    expect(find.text('14m'), findsOneWidget);
+    expect(find.byKey(const Key('card-progress')), findsOneWidget);
     expect(find.text('Working'), findsNothing);
     expect(find.text('Wire PR cache'), findsOneWidget);
     expect(find.text('2 lanes · Reading diffs'), findsOneWidget);
