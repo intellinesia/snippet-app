@@ -929,8 +929,12 @@ class _SessionActionsPanel extends StatefulWidget {
 
   /// Pass the session to another agent; null hides the row.
   final VoidCallback? onHandOff;
+  final VoidCallback? onFork;
+  final Widget? header;
   const _SessionActionsPanel({
     required this.session,
+    this.onFork,
+    this.header,
     required this.onSetGoal,
     required this.onCancelGoal,
     required this.onResumeGoal,
@@ -1225,13 +1229,23 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
             label: 'Wakes and keep warm',
             detail: 'Scheduled wakes and prompt cache',
             onTap: widget.onWakes!),
+      if (widget.onFork != null)
+        SessionFaceTile(
+            icon: 'git-branch',
+            label: 'Fork from here',
+            detail: 'A new session from this point',
+            onTap: widget.onFork!),
     ];
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (!widget.hideGoal && goalOn) _goalCard(s),
+        if (widget.header != null) widget.header!,
+        if (!widget.hideGoal && goalOn) ...[
+          SizedBox(height: S.s8),
+          _goalCard(s),
+        ],
         if (tiles.isNotEmpty) ...[
           SizedBox(height: S.s8),
           IntrinsicHeight(
@@ -1263,6 +1277,56 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
         _group('Session', sessionRows),
       ],
     );
+  }
+}
+
+/// Agent character, session title and `Agent · branch` over the actions.
+class SessionActionsHeader extends StatelessWidget {
+  const SessionActionsHeader({
+    super.key,
+    required this.agentId,
+    required this.title,
+    required this.agentName,
+    this.branch,
+  });
+
+  final String agentId;
+  final String title;
+  final String agentName;
+  final String? branch;
+
+  @override
+  Widget build(BuildContext context) {
+    final b = (branch ?? '').trim();
+    return Row(children: [
+      AgentMochi(agentId, size: 40),
+      SizedBox(width: S.s12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(17, weight: W.title, color: AppColors.fg1)),
+            Row(children: [
+              Text(agentName, style: sans(12, color: AppColors.fg3)),
+              if (b.isNotEmpty) ...[
+                SizedBox(width: S.s6),
+                AppIcon('git-branch', size: 12, color: AppColors.fg3),
+                SizedBox(width: S.s4),
+                Flexible(
+                  child: Text(b,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mono(12, color: AppColors.fg3)),
+                ),
+              ],
+            ]),
+          ],
+        ),
+      ),
+    ]);
   }
 }
 

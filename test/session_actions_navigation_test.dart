@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
+import 'package:snippet/chat/stage_header.dart';
 import 'package:snippet/screens/desktop_shell.dart';
 import 'package:snippet/screens/mobile_chrome.dart';
 import 'package:snippet/screens/mobile_session_home.dart';
@@ -80,7 +81,7 @@ void main() {
         if (desktop) {
           expect(find.byTooltip('Tasks'), findsNothing);
         } else {
-          expect(find.byType(MobileMissionBar), findsOneWidget);
+          expect(find.byType(StageHeader), findsOneWidget);
           expect(find.byTooltip('Tasks'), findsNothing);
           await tester.tap(find.text('Mission Control').first);
           await _pump(tester);

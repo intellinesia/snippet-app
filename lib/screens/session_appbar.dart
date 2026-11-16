@@ -395,10 +395,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     final stuck = _connError == _SessionScreenState._unreachable;
     final back = widget.onMenu ?? () => Navigator.maybePop(context);
     if (_isMissionControl) {
-      return MobileMissionBar(
-        onActions: stuck ? _retryNow : () => _openActionsDrawer(s),
-        client: widget.client,
-      );
+      return _mcStageHeader(s, stuck);
     }
     final keyboardUp = MediaQuery.viewInsetsOf(context).bottom > 0;
     if (!offline && !keyboardUp && s != null && _me != null) {
@@ -458,6 +455,41 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         ),
       ],
     );
+  }
+
+  /// Mission Control on stage; the count is the board's in-progress tasks.
+  Widget _mcStageHeader(HarnessState? s, bool stuck) {
+    final n = _mcInFlight ?? 0;
+    final working = s?.status == 'running';
+    return Stack(alignment: Alignment.topCenter, children: [
+      Padding(
+        padding: EdgeInsets.only(top: S.s8),
+        child: StageHeader(
+          members: [
+            StageMember('mission-control',
+                state: working
+                    ? AgentCharacterState.working
+                    : AgentCharacterState.idle),
+          ],
+          title: 'Mission Control',
+          subtitle: n > 0
+              ? 'Coordinator · $n ${n == 1 ? 'task' : 'tasks'} in flight'
+              : 'Coordinator',
+          onTap: stuck ? _retryNow : () => _openActionsDrawer(s),
+        ),
+      ),
+      Positioned(
+        right: M.gutter,
+        top: S.s8,
+        child: RoundBtn(
+          icon: 'phone',
+          tooltip: 'Start voice',
+          size: 40,
+          iconSize: 18,
+          onTap: () => startMobileVoice(context, widget.client),
+        ),
+      ),
+    ]);
   }
 
   /// The phone header: the session's agent on stage, title chip over its feet.
@@ -1084,8 +1116,24 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     final changeSteps = sessionChangeSteps(s?.events ?? const []);
     final shell = shellChanges(
         s?.events ?? const <Map<String, dynamic>>[], fileChanges(changeSteps));
+    final me = _me;
+    final agentId = me?.displayAgentId ?? 'snippet';
+    final agentName = (_meAgentName ?? '').trim().isEmpty
+        ? agentId
+        : _meAgentName!.trim();
     return _SessionActionsPanel(
       session: s,
+      header: me == null || _isMissionControl
+          ? null
+          : SessionActionsHeader(
+              agentId: agentId,
+              title: _title.isEmpty ? 'Session' : _title,
+              agentName: agentName,
+              branch: me.branch,
+            ),
+      onFork: widget.readOnly || _isMissionControl
+          ? null
+          : () => run(() => _confirmFork(null)),
       fileChangeCount: fileChanges(changeSteps).length + shell.length,
       onFileChanges: () => navigate!(() => Navigator.of(context).push(
           AppPageRoute<void>(
@@ -1318,8 +1366,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             MobileBackBar(
-              title: title,
-              subtitle: 'Actions',
+              title: _me == null || _isMissionControl ? title : 'Actions',
+              subtitle: _me == null || _isMissionControl ? 'Actions' : '',
               onTitleTap: () {},
             ),
             SizedBox(height: S.s8),

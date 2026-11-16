@@ -79,6 +79,7 @@ import 'file_changes.dart';
 import 'action_list.dart';
 import '../glass.dart' show GlassTopFrame, TopFadeMask;
 import 'mobile_chrome.dart';
+import 'mobile_voice_page.dart' show startMobileVoice;
 import 'mobile_session_home.dart' show DotField;
 import 'session_panels.dart';
 import 'session_coordination_cards.dart';
@@ -320,6 +321,7 @@ class _SessionScreenState extends State<SessionScreen>
   SessionInfo? _me;
   String? _meAgentName;
   String? _meAgentFetched;
+  int? _mcInFlight;
   GithubStatus? _github;
   int _githubGen = 0;
   bool _githubKnown = false;
@@ -872,7 +874,10 @@ class _SessionScreenState extends State<SessionScreen>
   }
 
   void _loadSettled() {
-    if (_isMissionControl) return;
+    if (_isMissionControl) {
+      _loadMcInFlight();
+      return;
+    }
     widget.client.sessions().then((list) {
       if (!mounted) return;
       final me = list.where((x) => x.id == widget.sessionId).firstOrNull;
@@ -886,6 +891,12 @@ class _SessionScreenState extends State<SessionScreen>
           if (mode != null) _resumeMode = mode;
         });
       }
+    }).catchError((_) {});
+  }
+
+  void _loadMcInFlight() {
+    widget.client.tasks(status: 'in_progress').then((t) {
+      if (mounted) setState(() => _mcInFlight = t.length);
     }).catchError((_) {});
   }
 
