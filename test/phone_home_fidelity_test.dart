@@ -159,6 +159,10 @@ void main() {
 
   testWidgets('cross-project Needs you group renders state labels, project chip, and removes from project groups',
       (tester) async {
+    // The hero pushes the list down; keep every row inside the viewport.
+    tester.view.physicalSize = const Size(800, 1800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
       await tester.pumpWidget(_phoneHarness(sessions: [
