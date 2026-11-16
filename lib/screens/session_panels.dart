@@ -475,13 +475,14 @@ class _DeskLanesState extends State<_DeskLanes> {
     final color = switch (l.status) {
       'running' => AppColors.accent,
       'failed' => AppColors.danger,
-      'cancelled' => AppColors.fg4,
+      'cancelled' || 'paused' => AppColors.fg4,
       _ => AppColors.ok,
     };
     final status = switch (l.status) {
       'running' => 'working',
       'failed' => 'failed',
       'cancelled' => 'cancelled',
+      'paused' => 'paused',
       _ => 'done',
     };
     final task = (l.activity ?? '').trim().isNotEmpty
