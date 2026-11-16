@@ -566,8 +566,7 @@ void main() {
         client: _Client(const []), agentId: 'builder');
     expect(card, isA<DeskApprovalCard>());
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: card!)));
-    expect(find.text('Run a command'), findsOneWidget);
-    expect(find.text('Auth cleanup · Fix login'), findsOneWidget);
+    expect(find.text('t1 · Auth cleanup · Fix login'), findsOneWidget);
     expect(find.text('Needs the full suite before the PR.'), findsOneWidget);
     expect(find.text('Approve'), findsOneWidget);
     expect(find.text('Deny'), findsOneWidget);
@@ -739,7 +738,7 @@ void main() {
     for (final c in [
       (state: 'approved', label: 'Approved'),
       (state: 'denied', label: 'Denied'),
-      (state: 'outdated', label: 'Outdated: no longer waiting on this'),
+      (state: 'outdated', label: 'No longer waiting on this'),
     ]) {
       testWidgets('renders stored outcome ${c.state} with no network call',
           (t) async {
@@ -886,7 +885,7 @@ void main() {
 
     expect(find.text('Approved'), findsOneWidget);
     expect(find.text('Denied'), findsOneWidget);
-    expect(find.text('Outdated: no longer waiting on this'), findsOneWidget);
+    expect(find.text('No longer waiting on this'), findsOneWidget);
     expect(find.text('Approval · Denied'), findsOneWidget);
     expect(find.text('Approval · Rejected'), findsNothing);
     expect(find.text('Approve'), findsNothing);

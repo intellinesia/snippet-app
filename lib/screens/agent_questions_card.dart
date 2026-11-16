@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../chat/chat_card.dart';
+import '../chat/decided_card.dart';
 import '../models.dart';
 import '../session_quick_send.dart';
 import '../theme.dart';
@@ -441,11 +442,10 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     final outcomeState =
         outcome is Map ? '${outcome['state'] ?? ''}'.trim() : '';
     if (dOutcome == 'outdated' || outcomeState == 'outdated') {
-      return ChatCardResolved(
+      return DecidedCard(
+        kind: DecidedKind.outdated,
         title: _questionText(qs.first),
-        subtitle: 'Outdated: no longer waiting on this',
-        approved: false,
-        icon: 'clock',
+        subtitle: 'No longer waiting on this',
       );
     }
     if (dOutcome == 'skipped') {
@@ -453,10 +453,10 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     }
     if (dOutcome == 'answered' && !st.answered) {
       final ans = '${decision?['answer'] ?? ''}'.trim();
-      return ChatCardResolved(
+      return DecidedCard(
+        kind: DecidedKind.answered,
         title: qs.length > 1 ? '${qs.length} questions' : _questionText(qs.first),
-        subtitle: ans.isEmpty ? 'Answered' : 'Answered: $ans',
-        approved: true,
+        subtitle: ans.isEmpty ? null : ans,
       );
     }
     final answered =
@@ -516,10 +516,9 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
   Widget _resolved(List<Map<String, dynamic>> qs, Map<String, dynamic>? answers,
       bool skipped) {
     if (skipped) {
-      return ChatCardResolved(
+      return DecidedCard(
+        kind: DecidedKind.skipped,
         title: qs.length > 1 ? '${qs.length} questions' : _questionText(qs[0]),
-        subtitle: 'Skipped',
-        approved: false,
       );
     }
     return Column(
@@ -530,10 +529,10 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
           if (i > 0) SizedBox(height: S.s6),
           Builder(builder: (_) {
             final label = _answeredLabel(qs[i], i, answers);
-            return ChatCardResolved(
+            return DecidedCard(
+              kind: DecidedKind.answered,
               title: _questionText(qs[i]),
-              subtitle: label.isEmpty ? 'Answered' : 'Answered: $label',
-              approved: true,
+              subtitle: label.isEmpty ? null : label,
             );
           }),
         ],

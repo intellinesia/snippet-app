@@ -176,8 +176,8 @@ void main() {
       ),
     );
 
-    expect(find.text('Answered: Production'), findsOneWidget);
-    expect(find.text('Answered: looks good'), findsOneWidget);
+    expect(find.text('Production'), findsOneWidget);
+    expect(find.text('looks good'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
     expect(find.text('Send'), findsNothing);
     expect(client.calls, isEmpty);
@@ -320,8 +320,8 @@ void main() {
       'Which target?\n→ Production (prod)\n\nPlatforms?\n→ iOS, Android',
     );
     expect(frame['nonce'], isNotEmpty);
-    expect(find.text('Answered: Production'), findsOneWidget);
-    expect(find.text('Answered: iOS, Android'), findsOneWidget);
+    expect(find.text('Production'), findsOneWidget);
+    expect(find.text('iOS, Android'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 
@@ -466,8 +466,8 @@ void main() {
       );
 
       expect(client.sessionsCalls, 0);
-      expect(find.text('Answered: Production'), findsOneWidget);
-      expect(find.text('Answered: looks good'), findsOneWidget);
+      expect(find.text('Production'), findsOneWidget);
+      expect(find.text('looks good'), findsOneWidget);
       expect(find.text('Send'), findsNothing);
       debugDefaultTargetPlatformOverride = null;
     });
@@ -490,7 +490,7 @@ void main() {
       );
 
       expect(client.sessionsCalls, 0);
-      expect(find.text('Outdated: no longer waiting on this'), findsOneWidget);
+      expect(find.text('No longer waiting on this'), findsOneWidget);
       expect(find.text('Next'), findsNothing);
       expect(find.text('Send'), findsNothing);
       debugDefaultTargetPlatformOverride = null;
@@ -595,9 +595,9 @@ void main() {
       ),
     ));
 
-    expect(find.text('Answered: Staging'), findsOneWidget);
+    expect(find.text('Staging'), findsOneWidget);
     expect(find.text('Skipped'), findsOneWidget);
-    expect(find.text('Outdated: no longer waiting on this'), findsOneWidget);
+    expect(find.text('No longer waiting on this'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
   });
 }

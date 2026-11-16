@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
 import 'package:snippet/chat/chat_style.dart';
+import 'package:snippet/chat/stage_bar.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/presence.dart';
 import 'package:snippet/screens/agent_messaging.dart';
@@ -380,9 +381,8 @@ void main() {
         },
       });
       await _open(t, DirectThreadPage(events: const []), agents: [agent]);
-      expect(find.byType(ChatHeader), findsOneWidget);
-      expect(ChatHeader.overlap, 92);
-      expect(t.widget<MochiDisc>(find.byType(MochiDisc)).size, 36);
+      expect(find.byType(StageBar), findsOneWidget);
+      expect(StageBar.height, StageBar.phoneHeight);
       final tasksBtn = find.byWidgetPredicate(
         (w) => w is ChatGlassButton && w.icon == 'task',
       );
@@ -406,7 +406,7 @@ void main() {
         size: const Size(1280, 800),
         onClose: () => closed = true,
       );
-      expect(find.byType(ChatHeader), findsOneWidget);
+      expect(find.byType(StageBar), findsOneWidget);
       expect(
         find.byWidgetPredicate(
           (w) => w is ChatGlassButton && w.icon == 'layers',
@@ -426,9 +426,9 @@ void main() {
     }
   });
 
-  testWidgets('embedded mode hides ChatHeader', (t) async {
+  testWidgets('embedded mode hides the header', (t) async {
     await _open(t, DirectThreadPage(events: const []), embedded: true);
-    expect(find.byType(ChatHeader), findsNothing);
+    expect(find.byType(StageBar), findsNothing);
     await t.pumpWidget(const SizedBox());
   });
 }

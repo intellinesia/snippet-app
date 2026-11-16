@@ -27,6 +27,9 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../chat/agent_cluster.dart';
 import '../chat/chat_style.dart';
+import '../chat/group_notice.dart';
+import '../chat/stage_bar.dart';
+import '../chat/stage_header.dart';
 import 'agent_card.dart' show agentRowTime;
 import 'agent_questions_card.dart' show questionAnswerSystemLine;
 import 'agent_thread_cards.dart' show agentThreadEventCard;
@@ -1250,45 +1253,6 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   String get _title =>
       _group.title.trim().isEmpty ? 'Group' : _group.title.trim();
 
-  /// Names while they fit the header line, else the member count.
-  String _memberLine(double width) {
-    final n = _group.members.length;
-    final fallback = '$n ${n == 1 ? 'member' : 'members'}';
-    final names = [for (final id in _group.agentIds) _agentName(id)];
-    if (names.isEmpty) return fallback;
-    bool fits(String s) {
-      final painter = TextPainter(
-        text: TextSpan(
-            text: s,
-            style: sans(kMobile ? 12 : 11, color: ChatColors.meta)),
-        maxLines: 1,
-        textDirection: TextDirection.ltr,
-      )..layout(maxWidth: width);
-      return painter.width <= width;
-    }
-
-    if (names.length <= 2) {
-      final s = names.length == 1
-          ? names.first
-          : '${names[0]} and ${names[1]}';
-      return fits(s) ? s : fallback;
-    }
-    final pair = '${names[0]}, ${names[1]} and ${names.length - 2} more';
-    if (fits(pair)) return pair;
-    final single = '${names.first} and ${names.length - 1} more';
-    return fits(single) ? single : fallback;
-  }
-
-  Widget _statusLine() {
-    final status = groupActivityStatus(_group, _agentName);
-    if (status != null) return ChatHeader.statusText(status);
-    final typing = _typingStatus();
-    if (typing != null) return ChatHeader.statusText(typing);
-    return LayoutBuilder(
-        builder: (_, box) =>
-            ChatHeader.statusText(_memberLine(box.maxWidth)));
-  }
-
   String _agentName(String id) => groupMemberName(
       GroupMember.fromJson({'kind': 'agent', 'id': id}), _agents);
 
@@ -1335,7 +1299,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                           : hideChrome
                           ? _body(hideChrome: hideChrome)
                           : TopFadeMask(
-                              clear: ChatHeader.overlap - 24,
+                              clear: StageBar.height - 24,
                               child: _body(hideChrome: hideChrome))),
                   if (!hideChrome)
                     Positioned(
@@ -1389,11 +1353,11 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         : tasksBtn;
     return ListenableBuilder(
       listenable: widget.client.presence,
-      builder: (_, __) => ChatHeader(
-        agentIds: _group.agentIds,
+      builder: (_, __) => StageBar(
+        members: _stageMembers(),
         title: _title,
-        status: _statusLine(),
-        onTitleTap: () {
+        subtitle: _stageSubtitle(),
+        onTap: () {
           if (toggleSide != null) {
             toggleSide();
             return;
@@ -1407,11 +1371,55 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             onChanged: () => unawaited(_reloadGroup()),
           ));
         },
-        titleHint: 'Members',
-        onBack: canGoBack && !kMobile ? _closePage : null,
+        onBack: canGoBack ? _closePage : null,
         trailing: trailing,
       ),
     );
+  }
+
+  /// Who is typing, replying or holding the turn stands first on the stage.
+  List<String> _activeIds() {
+    final store = widget.client.presence;
+    final out = <String>[];
+    final turn = _group.turnAgent;
+    if (turn != null && turn.isNotEmpty) out.add(turn);
+    for (final id in _group.agentIds) {
+      final p = store.presenceForAgentId(id);
+      if (p != null && (p.state == 'typing' || p.state == 'thinking')) {
+        out.add(id);
+      }
+    }
+    out.addAll(_group.replying);
+    return out;
+  }
+
+  List<StageMember> _stageMembers() {
+    final active = _activeIds();
+    final ids = [
+      ...{...active.where(_group.agentIds.contains)},
+    ];
+    final ordered = [
+      ...ids,
+      for (final id in _group.agentIds)
+        if (!ids.contains(id)) id,
+    ];
+    return [
+      for (final id in ordered)
+        StageMember(id,
+            state: active.contains(id)
+                ? AgentCharacterState.working
+                : AgentCharacterState.idle),
+    ];
+  }
+
+  /// Who is typing or holds the turn, else the member count.
+  String _stageSubtitle() {
+    final status = groupActivityStatus(_group, _agentName);
+    if (status != null) return status;
+    final typing = _typingStatus();
+    if (typing != null) return typing;
+    final n = _group.members.length;
+    return '$n ${n == 1 ? 'member' : 'members'}';
   }
 
   static const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -1541,7 +1549,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   }
 
   Widget _body({required bool hideChrome}) {
-    final topPad = hideChrome ? 12.0 : ChatHeader.overlap;
+    final topPad = hideChrome ? 12.0 : StageBar.height;
     if (_loading) {
       return const Center(child: Spinner(size: 24));
     }
@@ -1623,14 +1631,28 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         break;
       }
     }
+    final typing = _typingStatus() != null || _group.replying.isNotEmpty;
     // Reversed so the thread opens at its newest post with no jump.
     return ListView.builder(
       controller: _scroll,
       reverse: true,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(S.s16, topPad, S.s16, S.s16),
-      itemCount: visible.length,
-      itemBuilder: (_, index) {
+      itemCount: visible.length + (typing ? 1 : 0),
+      itemBuilder: (_, raw) {
+        if (typing && raw == 0) {
+          return _wideCap(Padding(
+            padding: EdgeInsets.only(
+                top: ChatColors.groupGap,
+                left: ChatBubbleRow.avatarSize + S.s6),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: GroupTypingBubble(
+                  dots: WorkingDots(color: ChatColors.meta, size: 6)),
+            ),
+          ));
+        }
+        final index = typing ? raw - 1 : raw;
         final i = visible.length - 1 - index;
         final e = visible[i];
         final run = runs[i];
@@ -1788,13 +1810,34 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     final topGap =
         index == 0 ? 0.0 : (run.first ? ChatColors.groupGap : ChatColors.runGap);
     if (sys != null) {
+      final at = _eventTime(e);
+      final time = at == null ? null : _dayTimeStamp(at).$2;
+      final isVerdict = e.eventType == 'task.verdict';
+      final verdict = e.payload['verdict']?.toString() ?? '';
+      final turn = e.eventType == 'task.lease_transferred';
+      final toId = e.payload['to_agent_id']?.toString() ?? '';
+      final kind = isVerdict && verdict == 'approved'
+          ? GroupNoticeKind.approved
+          : isVerdict && verdict == 'sent_back'
+              ? GroupNoticeKind.sentBack
+              : turn && toId.isNotEmpty
+                  ? GroupNoticeKind.turn
+                  : GroupNoticeKind.plain;
       return Padding(
         padding: EdgeInsets.only(top: topGap),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (stamp != null) ChatSystemLine(stamp.$2, bold: stamp.$1),
-            ChatSystemLine(sys),
+            GroupNotice(
+              text: sys,
+              kind: kind,
+              time: kind == GroupNoticeKind.plain ? null : time,
+              fromAgent: kind == GroupNoticeKind.turn
+                  ? (e.payload['from_agent_id']?.toString() ?? e.actorId)
+                  : null,
+              toAgent: kind == GroupNoticeKind.turn ? toId : null,
+            ),
           ],
         ),
       );
