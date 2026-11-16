@@ -192,7 +192,7 @@ class _SessionRailState extends State<SessionRail> {
       builder: (_, collapsed, __) {
         if (collapsed) {
           return Padding(
-            padding: const EdgeInsets.fromLTRB(0, 52, 10, 0),
+            padding: EdgeInsets.fromLTRB(0, 52, S.of(10), 0),
             child: Align(
               alignment: Alignment.topCenter,
               child: _RailToggle(
@@ -204,11 +204,11 @@ class _SessionRailState extends State<SessionRail> {
         return SizedBox(
           width: kSessionRailWidth + 10,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(0, 52, 10, 12),
+            padding: EdgeInsets.fromLTRB(0, 52, S.of(10), S.s12),
             child: Align(
               alignment: Alignment.topCenter,
               child: Glass(
-                radius: BorderRadius.circular(14),
+                radius: BorderRadius.circular(R.of(14)),
                 tint: AppColors.surface2.withValues(alpha: 0.6),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 720),
@@ -285,7 +285,7 @@ class _SessionRailState extends State<SessionRail> {
               : Row(mainAxisSize: MainAxisSize.min, children: [
                   Text('+${c.added}',
                       style: sans(13, color: AppColors.ok, tabular: true)),
-                  const SizedBox(width: 5),
+                  SizedBox(width: S.of(5)),
                   Text('-${c.removed}',
                       style:
                           sans(13, color: AppColors.danger, tabular: true)),
@@ -488,7 +488,7 @@ class _RailGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10),
+      margin: EdgeInsets.symmetric(horizontal: S.of(10)),
       padding: EdgeInsets.symmetric(vertical: S.s8),
       decoration: BoxDecoration(
         border: first
@@ -500,7 +500,7 @@ class _RailGroup extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(2, 0, 0, 4),
+            padding: EdgeInsets.fromLTRB(S.s2, 0, 0, S.s4),
             child: SizedBox(
               height: 18,
               child: Row(children: [
@@ -549,15 +549,15 @@ class _RailRow extends StatelessWidget {
                 style: sans(13, color: AppColors.fg4, tabular: true)));
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(R.md),
       hoverColor: AppColors.surface2,
       child: SizedBox(
         height: height,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2),
+          padding: EdgeInsets.symmetric(horizontal: S.s2),
           child: Row(children: [
             AppIcon(icon, size: 16, color: AppColors.fg2),
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             Expanded(
               child: Text(label,
                   maxLines: 1,
@@ -565,15 +565,15 @@ class _RailRow extends StatelessWidget {
                   style: sans(14, color: AppColors.fg1)),
             ),
             if (v != null) ...[
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               Flexible(flex: 0, child: v),
             ],
             if (trailing != null) ...[
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               trailing!,
             ],
             if (chevron) ...[
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               AppIcon('chevron-right', size: 12, color: AppColors.fg4),
             ],
           ]),
@@ -597,14 +597,14 @@ class _RailToggle extends StatelessWidget {
       message: tooltip,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(R.md),
         child: small
-            ? Padding(padding: const EdgeInsets.all(2), child: icon)
+            ? Padding(padding: EdgeInsets.all(S.s2), child: icon)
             : Container(
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(R.md),
                   border: Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
                 ),
                 alignment: Alignment.center,

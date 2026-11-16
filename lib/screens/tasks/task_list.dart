@@ -79,8 +79,8 @@ class TaskList extends StatelessWidget {
     final visible = _visible;
     final pad = padding ??
         (kMobile
-            ? EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 24)
-            : const EdgeInsets.fromLTRB(8, 0, 8, 18));
+            ? EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s24)
+            : EdgeInsets.fromLTRB(S.s8, 0, S.s8, S.of(18)));
     if (visible.isEmpty) {
       return PullToRefresh(
         onRefresh: onRefresh,
@@ -173,12 +173,12 @@ class TaskStatusHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => kMobile
       ? Padding(
-          padding: const EdgeInsets.fromLTRB(0, 16, 0, 4),
+          padding: EdgeInsets.fromLTRB(0, S.s16, 0, S.s4),
           child: Text(status.label,
               style: sans(13, weight: W.label, color: AppColors.fg3)),
         )
       : Padding(
-        padding: const EdgeInsets.fromLTRB(12, 14, 12, 6),
+        padding: EdgeInsets.fromLTRB(S.s12, S.of(14), S.s12, S.s6),
         child: Row(children: [
           Container(
             width: 6,
@@ -252,13 +252,13 @@ class TaskRow extends StatelessWidget {
       final meta = [agent, folderName].where((s) => s.isNotEmpty).join(' · ');
       return InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(R.of(14)),
         child: Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          margin: EdgeInsets.only(bottom: S.of(10)),
+          padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.s12),
           decoration: BoxDecoration(
             color: kMobile ? AppColors.surface2 : AppColors.tint1,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(R.of(14)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,22 +269,22 @@ class TaskRow extends StatelessWidget {
                       height: 1.3,
                       color: finished ? AppColors.fg3 : AppColors.fg1)),
               if (detail.isNotEmpty) ...[
-                const SizedBox(height: 5),
+                SizedBox(height: S.of(5)),
                 Text(detail,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: sans(14, height: 1.4, color: AppColors.fg3)),
               ],
               if (meta.isNotEmpty || age.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                SizedBox(height: S.s8),
                 Row(children: [
                   if (task.priority > 0) ...[
                     PriorityMark(task.priority),
-                    const SizedBox(width: 8),
+                    SizedBox(width: S.s8),
                   ],
                   if (agent.isNotEmpty) ...[
                     AgentMochi(agent, size: 16),
-                    const SizedBox(width: 6),
+                    SizedBox(width: S.s6),
                   ],
                   Expanded(
                     child: Text(meta,
@@ -309,19 +309,19 @@ class TaskRow extends StatelessWidget {
           task.status == TaskStatus.cancelled;
       return Material(
         color: selected ? AppColors.accentBg : Colors.transparent,
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(R.of(7)),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(R.of(7)),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 7, 8, 7),
+            padding: EdgeInsets.fromLTRB(S.s8, S.of(7), S.s8, S.of(7)),
             child: Row(
               crossAxisAlignment: detail.isNotEmpty
                   ? CrossAxisAlignment.start
                   : CrossAxisAlignment.center,
               children: [
                 Padding(
-                  padding: EdgeInsets.only(top: detail.isNotEmpty ? 6 : 0),
+                  padding: EdgeInsets.only(top: detail.isNotEmpty ? S.s6 : 0),
                   child: Container(
                     width: 6,
                     height: 6,
@@ -331,10 +331,10 @@ class TaskRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 if (task.priority > 0) ...[
                   PriorityMark(task.priority),
-                  const SizedBox(width: 6),
+                  SizedBox(width: S.s6),
                 ],
                 Expanded(
                   child: Column(
@@ -347,7 +347,7 @@ class TaskRow extends StatelessWidget {
                               height: 18 / 13,
                               color: done ? AppColors.fg3 : AppColors.fg1)),
                       if (detail.isNotEmpty) ...[
-                        const SizedBox(height: 1),
+                        SizedBox(height: S.of(1)),
                         Text(detail,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -358,7 +358,7 @@ class TaskRow extends StatelessWidget {
                   ),
                 ),
                 if (age.isNotEmpty) ...[
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                   Text(age,
                       style: mono(11, color: AppColors.fg4)),
                 ],
@@ -369,7 +369,7 @@ class TaskRow extends StatelessWidget {
       );
     }
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: EdgeInsets.only(bottom: S.s2),
       child: Material(
         color: AppColors.tint1,
         borderRadius: BorderRadius.circular(kMobile ? R.md : R.sm),
@@ -382,11 +382,11 @@ class TaskRow extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.symmetric(
                   horizontal: kMobile ? M.rowPadH : kNavPadH,
-                  vertical: kMobile ? 8 : 0),
+                  vertical: kMobile ? S.s8 : 0),
               child: Row(children: [
                 if (task.priority > 0) ...[
                   PriorityMark(task.priority),
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                 ],
                 Expanded(
                   child: Column(
@@ -400,7 +400,7 @@ class TaskRow extends StatelessWidget {
                               ? TS.rowTitle(AppColors.fg2)
                               : TS.label()),
                       if (kMobile && detail.isNotEmpty) ...[
-                        const SizedBox(height: 2),
+                        SizedBox(height: S.s2),
                         Text(detail,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -410,7 +410,7 @@ class TaskRow extends StatelessWidget {
                   ),
                 ),
                 if (age.isNotEmpty) ...[
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                   Text(age, style: TS.meta(AppColors.fg4)),
                 ],
               ]),
@@ -429,7 +429,7 @@ class PriorityMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+        padding: EdgeInsets.symmetric(horizontal: S.of(5), vertical: S.of(1)),
         decoration: BoxDecoration(
             color: AppColors.accentBg,
             borderRadius: BorderRadius.circular(R.xs)),
@@ -463,7 +463,7 @@ class _TaskLoadMoreState extends State<TaskLoadMore> {
   @override
   Widget build(BuildContext context) => Padding(
         padding: EdgeInsets.symmetric(
-            horizontal: kMobile ? M.gutter : kNavPadH, vertical: 4),
+            horizontal: kMobile ? M.gutter : kNavPadH, vertical: S.s4),
         child: Align(
           alignment: Alignment.centerLeft,
           child: _busy

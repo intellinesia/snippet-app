@@ -312,15 +312,15 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
   Widget _attachOption(String icon, String label, String value) => Expanded(
         child: Material(
           color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(R.of(14)),
           child: InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(R.of(14)),
             onTap: () => Navigator.of(context).pop(value),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: EdgeInsets.symmetric(vertical: S.s16),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 AppIcon(icon, size: 22, color: AppColors.fg1),
-                const SizedBox(height: 6),
+                SizedBox(height: S.s6),
                 Text(label, style: TS.label(AppColors.fg2)),
               ]),
             ),
@@ -368,7 +368,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: EdgeInsets.fromLTRB(M.gutter, 10, M.gutter, 0),
+              padding: EdgeInsets.fromLTRB(M.gutter, S.of(10), M.gutter, 0),
               child: Row(children: [
                 RoundBtn(
                   icon: 'chevron-left',
@@ -392,7 +392,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const DottedMochi(width: 170),
-                        const SizedBox(height: 10),
+                        SizedBox(height: S.of(10)),
                         Text(
                           'What are we making?',
                           textAlign: TextAlign.center,
@@ -402,7 +402,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
                               color: AppColors.fg1),
                         ),
                         if (_recentFolders.isNotEmpty) ...[
-                          const SizedBox(height: 14),
+                          SizedBox(height: S.of(14)),
                           Wrap(
                             alignment: WrapAlignment.center,
                             spacing: 6,
@@ -410,7 +410,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Padding(
-                                padding: const EdgeInsets.only(right: 2),
+                                padding: EdgeInsets.only(right: S.s2),
                                 child: Text('Recent',
                                     style: sans(12, color: AppColors.fg4)),
                               ),
@@ -426,7 +426,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
               ),
             ),
             Padding(
-              padding: EdgeInsets.fromLTRB(M.gutter, 8, M.gutter, 16),
+              padding: EdgeInsets.fromLTRB(M.gutter, S.s8, M.gutter, S.s16),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 660),
@@ -442,7 +442,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
 
   Widget _recentFolderChip(String folder) {
     final selected = folder == _folder && _existing == null;
-    final radius = BorderRadius.circular(14);
+    final radius = BorderRadius.circular(R.of(14));
     return Material(
       color: selected ? AppColors.surface2 : Colors.transparent,
       shape: RoundedRectangleBorder(
@@ -454,7 +454,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
         onTap: () => _selectFolder(folder),
         child: Container(
           height: 28,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: EdgeInsets.symmetric(horizontal: S.of(10)),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -481,7 +481,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(R.of(22)),
         border: Border.all(color: AppColors.line),
       ),
       child: Column(
@@ -489,7 +489,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+            padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, 0),
             child: Wrap(
               spacing: 6,
               runSpacing: 4,
@@ -518,14 +518,14 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
             decoration: InputDecoration(
               isCollapsed: true,
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+              contentPadding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s16, S.of(10)),
               hintText: 'Ask, build, or type / for commands',
               hintStyle: sans(16, color: AppColors.fg4),
             ),
           ),
           if (_attachments.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+              padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s6),
               child: Wrap(
                 spacing: 6,
                 runSpacing: 6,
@@ -536,7 +536,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
               ),
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
+            padding: EdgeInsets.fromLTRB(S.of(10), S.s4, S.of(10), S.of(10)),
             child: Row(children: [
               Material(
                 color: Colors.transparent,
@@ -558,19 +558,19 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
                 Builder(
                   builder: (anchor) => Material(
                     color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(R.of(15)),
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(R.of(15)),
                       onTap: () => _pickProfile(anchor),
                       child: Container(
                         height: 30,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        padding: EdgeInsets.symmetric(horizontal: S.of(10)),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
                           ProviderLogo(current.provider, size: 13),
-                          const SizedBox(width: 6),
+                          SizedBox(width: S.s6),
                           Text(current.name,
                               style: sans(13, color: AppColors.fg2)),
-                          const SizedBox(width: 4),
+                          SizedBox(width: S.s4),
                           AppIcon('chevron-down',
                               size: 11, color: AppColors.fg3),
                         ]),
@@ -578,7 +578,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
                     ),
                   ),
                 ),
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               Tooltip(
                 message: 'Start',
                 child: Material(
@@ -614,16 +614,16 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
 
   Widget _folderChip() => Material(
         color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(R.of(15)),
         child: InkWell(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(R.of(15)),
           onTap: _openFolderSheet,
           child: Container(
             height: 30,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: EdgeInsets.symmetric(horizontal: S.of(10)),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               AppIcon('folder', size: 13, color: AppColors.fg2),
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 180),
                 child: Text(
@@ -633,7 +633,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
                   style: sans(14, color: AppColors.fg2),
                 ),
               ),
-              const SizedBox(width: 4),
+              SizedBox(width: S.s4),
               AppIcon('chevron-down', size: 11, color: AppColors.fg3),
             ]),
           ),
@@ -642,16 +642,16 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
 
   Widget _chip(String icon, String label, {VoidCallback? onTap}) => Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(R.of(15)),
         child: InkWell(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(R.of(15)),
           onTap: onTap,
           child: Container(
             height: 30,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: EdgeInsets.symmetric(horizontal: S.s8),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               AppIcon(icon, size: 13, color: AppColors.fg3),
-              const SizedBox(width: 5),
+              SizedBox(width: S.of(5)),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 150),
                 child: Text(
@@ -670,28 +670,28 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
     final on = _mode == WorkspaceMode.worktree;
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(15),
+      borderRadius: BorderRadius.circular(R.of(15)),
       child: InkWell(
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(R.of(15)),
         onTap: () => setState(() {
           _mode = on ? WorkspaceMode.folder : WorkspaceMode.worktree;
           if (_mode == WorkspaceMode.worktree) _existing = null;
         }),
         child: Container(
           height: 30,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: EdgeInsets.symmetric(horizontal: S.s8),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 160),
               width: 22,
               height: 13,
-              padding: const EdgeInsets.all(2),
+              padding: EdgeInsets.all(S.s2),
               alignment: on ? Alignment.centerRight : Alignment.centerLeft,
               decoration: BoxDecoration(
                 color: on
                     ? AppColors.accent.withValues(alpha: 0.35)
                     : AppColors.surface3,
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(R.of(7)),
               ),
               child: Container(
                 width: 9,
@@ -702,7 +702,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
                 ),
               ),
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             Text(
               'Worktree',
               style: sans(14, color: on ? AppColors.fg2 : AppColors.fg4),
@@ -715,10 +715,10 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
 
   Widget _attachmentChip(int index, PickedLocalFile file) => Container(
         height: 26,
-        padding: const EdgeInsets.fromLTRB(9, 0, 4, 0),
+        padding: EdgeInsets.fromLTRB(S.of(9), 0, S.s4, 0),
         decoration: BoxDecoration(
           color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(R.of(13)),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           ConstrainedBox(
@@ -730,7 +730,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
               style: sans(12, color: AppColors.fg2),
             ),
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: S.s4),
           GestureDetector(
             onTap: () => setState(() => _attachments.removeAt(index)),
             child: SizedBox(
@@ -1022,7 +1022,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: EdgeInsets.fromLTRB(M.gutter, 4, 8, 6),
+                  padding: EdgeInsets.fromLTRB(M.gutter, S.s4, S.s8, S.s6),
                   child: Row(children: [
                     Expanded(
                       child: Text('Choose folder', style: TS.sectionTitle()),
@@ -1060,27 +1060,27 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
   Widget _breadcrumbs() {
     final crumbs = _crumbs;
     return Container(
-      margin: EdgeInsets.fromLTRB(M.gutter, 2, M.gutter, 8),
-      padding: const EdgeInsets.only(left: 14, right: 4),
+      margin: EdgeInsets.fromLTRB(M.gutter, S.s2, M.gutter, S.s8),
+      padding: EdgeInsets.only(left: S.of(14), right: S.s4),
       decoration: BoxDecoration(
         color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(R.of(24)),
         border: Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
       ),
       child: Row(children: [
         AppIcon(_atHome ? 'home' : 'folder', size: 16, color: AppColors.fg3),
-        const SizedBox(width: 6),
+        SizedBox(width: S.s6),
         Expanded(
           child: SizedBox(
             height: M.minTarget,
             child: ListView.separated(
               controller: _crumbScroll,
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: EdgeInsets.symmetric(vertical: S.s4),
               itemCount: crumbs.length,
               separatorBuilder: (_, __) => Center(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  padding: EdgeInsets.symmetric(horizontal: S.s2),
                   child:
                       AppIcon('chevron-right', size: 12, color: AppColors.fg4),
                 ),
@@ -1091,13 +1091,13 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
                 return Center(
                   child: Material(
                     color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(R.of(18)),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(R.sm),
                       onTap: last ? null : () => _go(c.path),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 6),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: S.s6, vertical: S.s6),
                         child: Text(
                           c.label,
                           maxLines: 1,
@@ -1117,7 +1117,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
           ),
         ),
         if (!_atHome) ...[
-          const SizedBox(width: 4),
+          SizedBox(width: S.s4),
           IconBtn('home',
               size: M.minTarget,
               iconSize: 17,
@@ -1133,7 +1133,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
     final files = _files;
     if (dirs.isEmpty && files.isEmpty) {
       return ListView(
-        padding: const EdgeInsets.symmetric(vertical: 44),
+        padding: EdgeInsets.symmetric(vertical: S.of(44)),
         children: [
           Text('This folder is empty.',
               textAlign: TextAlign.center, style: TS.meta()),
@@ -1142,11 +1142,11 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
     }
     final rows = <Widget>[
       for (final d in dirs) _folderRow(d),
-      if (dirs.isNotEmpty && files.isNotEmpty) const SizedBox(height: 6),
+      if (dirs.isNotEmpty && files.isNotEmpty) SizedBox(height: S.s6),
       for (final f in files) _fileRow(f),
     ];
     return ListView.builder(
-      padding: EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 10),
+      padding: EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.of(10)),
       itemCount: rows.length,
       itemBuilder: (_, i) => rows[i],
     );
@@ -1154,7 +1154,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
 
   Widget _fileRow(FsEntry e) => Container(
         height: 40,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        padding: EdgeInsets.symmetric(horizontal: S.s4),
         child: Row(children: [
           SizedBox(
               width: 22,
@@ -1179,7 +1179,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
           onTap: _busy == null ? () => _go(e.path) : null,
           child: Container(
             height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            padding: EdgeInsets.symmetric(horizontal: S.s4),
             child: Row(children: [
               SizedBox(
                   width: 22,
@@ -1219,7 +1219,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
 
   Widget _actionBar(double bottomPad) => Container(
         padding: EdgeInsets.fromLTRB(
-            M.gutter, 8, M.gutter, 10 + bottomPad),
+            M.gutter, S.s8, M.gutter, S.of(10 ) + bottomPad),
         decoration: BoxDecoration(
           color: AppColors.bg,
           border: Border(top: BorderSide(color: AppColors.line)),
@@ -1230,13 +1230,13 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
               size: 48,
               tooltip: 'Add here',
               onTap: (_listing == null || _busy != null) ? null : _addMenu),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Expanded(
             child: Material(
               color: AppColors.accentFill,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(R.of(24)),
               child: InkWell(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(R.of(24)),
                 onTap: (_here.isEmpty || _busy != null) ? null : _confirm,
                 child: Container(
                   height: 48,
@@ -1248,7 +1248,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
                         Spinner(size: 14, color: AppColors.accentFg)
                       else
                         AppIcon('folder', size: 15, color: AppColors.accentFg),
-                      const SizedBox(width: 8),
+                      SizedBox(width: S.s8),
                       Flexible(
                         child: Text(
                           _busy ?? _confirmLabel,
@@ -1283,7 +1283,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
         Expanded(
           child: Material(
             color: selected ? AppColors.surface3 : Colors.transparent,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(R.of(18)),
             child: InkWell(
               borderRadius: BorderRadius.circular(R.sm),
               onTap: _busy != null ? null : onTap,
@@ -1297,7 +1297,7 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
                         color: onTap == null
                             ? AppColors.fg4
                             : (selected ? AppColors.fg1 : AppColors.fg3)),
-                    const SizedBox(width: 6),
+                    SizedBox(width: S.s6),
                     Flexible(
                       child: Text(label,
                           maxLines: 1,
@@ -1314,17 +1314,17 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
         );
     return Container(
       color: AppColors.bg,
-      padding: EdgeInsets.fromLTRB(M.gutter, 10, M.gutter, 0),
+      padding: EdgeInsets.fromLTRB(M.gutter, S.of(10), M.gutter, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Works in', style: TS.caption()),
-          const SizedBox(height: 6),
+          SizedBox(height: S.s6),
           Container(
-            padding: const EdgeInsets.all(4),
+            padding: EdgeInsets.all(S.s4),
             decoration: BoxDecoration(
               color: AppColors.surface1,
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(R.of(22)),
               border: Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
             ),
             child: Row(children: [
@@ -1367,14 +1367,14 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
 
   Widget _errorState() => Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(S.s24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             AppIcon('wifi-off', size: 22, color: AppColors.fg4),
-            const SizedBox(height: 12),
+            SizedBox(height: S.s12),
             Text(_error!,
                 textAlign: TextAlign.center,
                 style: sans(12, color: AppColors.fg3, height: 1.45)),
-            const SizedBox(height: 14),
+            SizedBox(height: S.of(14)),
             Btn('Retry', small: true, onTap: () => _go(widget.startPath)),
           ]),
         ),

@@ -43,7 +43,7 @@ class _CompactingStatusState extends State<_CompactingStatus> {
     Theme.of(context);
     final detail = widget.detail?.trim() ?? '';
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: EdgeInsets.only(bottom: S.s4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -52,7 +52,7 @@ class _CompactingStatusState extends State<_CompactingStatus> {
                 width: 22,
                 child: Center(
                     child: const WorkingMochi(size: 19, squeeze: true))),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             Expanded(
               child: Shimmer(
                 color: AppColors.accent,
@@ -62,13 +62,13 @@ class _CompactingStatusState extends State<_CompactingStatus> {
                     style: sans(13, color: Colors.white)),
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             Text(_elapsed,
                 style: sans(12, color: AppColors.fg4, tabular: true)),
           ]),
           if (detail.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 6),
+              padding: EdgeInsets.only(top: S.s6),
               child: Text(detail,
                   style: sans(13, height: 1.4, color: AppColors.fg3)),
             ),
@@ -154,7 +154,7 @@ class _ChurningStatusState extends State<_ChurningStatus> {
     Theme.of(context);
     final thought = widget.thinking.trim();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: EdgeInsets.only(bottom: S.s4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -168,7 +168,7 @@ class _ChurningStatusState extends State<_ChurningStatus> {
                     width: 22,
                     child: Center(
                         child: const WorkingMochi(size: 19))),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Expanded(
                   child: Shimmer(
                     color: AppColors.accent,
@@ -178,11 +178,11 @@ class _ChurningStatusState extends State<_ChurningStatus> {
                         style: sans(13, color: Colors.white)),
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Text(_elapsed,
                     style: sans(12, color: AppColors.fg4, tabular: true)),
                 if (thought.isNotEmpty) ...[
-                  const SizedBox(width: 6),
+                  SizedBox(width: S.s6),
                   AppIcon(_open ? 'chevron-down' : 'chevron-right',
                       size: 13, color: AppColors.accent.withValues(alpha: 0.7)),
                 ],
@@ -191,7 +191,7 @@ class _ChurningStatusState extends State<_ChurningStatus> {
           ),
           if (_open && thought.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 6),
+              padding: EdgeInsets.only(top: S.s6),
               child: ThinkingMarkdown(data: thought),
             ),
         ],
@@ -243,7 +243,7 @@ class _LiveStreamRow extends StatelessWidget {
         if (value.visible && value.text.trim().isNotEmpty) {
           children.add(Padding(
             key: const ValueKey('live-text'),
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: S.s8),
             child: Bubble(
               mine: false,
               text: value.text.trim(),
@@ -253,7 +253,7 @@ class _LiveStreamRow extends StatelessWidget {
         }
         if (compacting) {
           children.addAll([
-            const SizedBox(height: 10),
+            SizedBox(height: S.of(10)),
             _CompactingStatus(
               startedAt: startedAt,
               detail: compactionDetail,
@@ -261,7 +261,7 @@ class _LiveStreamRow extends StatelessWidget {
           ]);
         } else if (running) {
           children.addAll([
-            const SizedBox(height: 10),
+            SizedBox(height: S.of(10)),
             _ChurningStatus(
               startedAt: startedAt,
               thinking: hasVisibleAction ? '' : value.thinking,

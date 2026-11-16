@@ -24,14 +24,14 @@ class TabDragFeedback extends StatelessWidget {
       color: Colors.transparent,
       child: Container(
         height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: EdgeInsets.symmetric(horizontal: S.of(10)),
         decoration: BoxDecoration(
           color: AppColors.surface3,
           borderRadius: BorderRadius.circular(R.md),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           AppIcon(tabIconKind(tab), size: 13, color: AppColors.accent),
-          const SizedBox(width: 7),
+          SizedBox(width: S.of(7)),
           Text(
             tab.title.isEmpty ? '(untitled)' : tab.title,
             style: sans(13, color: AppColors.fg1),
@@ -47,14 +47,14 @@ class _TabChipBox extends StatefulWidget {
   final bool isActive;
   final VoidCallback onTap;
   final Key? chipKey;
-  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry ? padding;
   final Widget child;
 
   const _TabChipBox({
     required this.isActive,
     required this.onTap,
     this.chipKey,
-    this.padding = const EdgeInsets.symmetric(horizontal: 10),
+    this.padding ,
     required this.child,
   });
 
@@ -80,7 +80,7 @@ class _TabChipBoxState extends State<_TabChipBox> {
           duration: Motion.quick,
           key: widget.chipKey,
           height: 28,
-          padding: widget.padding,
+          padding: widget.padding?? EdgeInsets.symmetric(horizontal: S.of(10)),
           decoration: BoxDecoration(
             color: widget.isActive
                 ? AppColors.tint2
@@ -148,7 +148,7 @@ class TopWorkspaceTabChip extends StatelessWidget {
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             MochiIcon(color: AppColors.fg1, size: 18),
             if (attentionCount > 0) ...[
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               Text('$attentionCount', style: mono(11, color: AppColors.fg4)),
             ],
           ]),
@@ -165,7 +165,7 @@ class TopWorkspaceTabChip extends StatelessWidget {
       isActive: isActive,
       onTap: onTap,
       chipKey: chipKey,
-      padding: EdgeInsets.fromLTRB(10, 0, showClose ? 6 : 10, 0),
+      padding: EdgeInsets.fromLTRB(S.of(10), 0, showClose ? S.s6 : S.of(10), 0),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -186,7 +186,7 @@ class TopWorkspaceTabChip extends StatelessWidget {
               icon: tabIconKind(tab),
               size: 13,
             ),
-          const SizedBox(width: 7),
+          SizedBox(width: S.of(7)),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 180),
             child: Text(
@@ -198,7 +198,7 @@ class TopWorkspaceTabChip extends StatelessWidget {
             ),
           ),
           if (working) ...[
-            const SizedBox(width: 7),
+            SizedBox(width: S.of(7)),
             Container(
               width: needsInput ? 7 : 6,
               height: needsInput ? 7 : 6,
@@ -214,12 +214,12 @@ class TopWorkspaceTabChip extends StatelessWidget {
             ),
           ],
           if (showClose) ...[
-            const SizedBox(width: 4),
+            SizedBox(width: S.s4),
             GestureDetector(
               onTap: onClose,
               behavior: HitTestBehavior.opaque,
               child: Padding(
-                padding: const EdgeInsets.all(5),
+                padding: EdgeInsets.all(S.of(5)),
                 child: AppIcon('x', size: 11, color: AppColors.fg4),
               ),
             ),
@@ -274,13 +274,13 @@ class TopMachineSwitcher extends StatelessWidget {
         child: Material(
           key: anchorKey,
           color: AppColors.tint1,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(R.of(15)),
           child: InkWell(
             onTap: hasInstances ? onOpenList : onAdd,
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(R.of(15)),
             child: Container(
               height: 30,
-              padding: const EdgeInsets.fromLTRB(5, 0, 12, 0),
+              padding: EdgeInsets.fromLTRB(S.of(5), 0, S.s12, 0),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Container(
                   width: 20,
@@ -292,7 +292,7 @@ class TopMachineSwitcher extends StatelessWidget {
                   ),
                   child: Text(initial, style: sans(11, color: AppColors.fg1)),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 140),
                   child: Text(a.label,
@@ -300,7 +300,7 @@ class TopMachineSwitcher extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: sans(13, color: AppColors.fg2)),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Container(
                   width: 6,
                   height: 6,
@@ -411,7 +411,7 @@ class MainTabsStrip extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.only(right: 4),
+          padding: EdgeInsets.only(right: S.s4),
           sliver: SliverToBoxAdapter(
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -433,7 +433,7 @@ class MainTabsStrip extends StatelessWidget {
                           tabs[i].isMissionControl ? mcAttentionCount : 0,
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  SizedBox(width: S.s4),
                 ],
                 if (onOpenTasks != null) ...[
                   Center(
@@ -444,7 +444,7 @@ class MainTabsStrip extends StatelessWidget {
                         AppIcon('list',
                             size: 14,
                             color: tasksActive ? AppColors.fg1 : AppColors.fg3),
-                        const SizedBox(width: 7),
+                        SizedBox(width: S.of(7)),
                         Text('Tasks',
                             style: sans(kMobile ? 14 : 12,
                                 color: tasksActive
@@ -453,7 +453,7 @@ class MainTabsStrip extends StatelessWidget {
                       ]),
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  SizedBox(width: S.s4),
                 ],
                 Center(
                   child: IconBtn(
@@ -515,7 +515,7 @@ class MacWindowBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 44,
-      padding: const EdgeInsets.fromLTRB(8, 0, 10, 0),
+      padding: EdgeInsets.fromLTRB(S.s8, 0, S.of(10), 0),
       decoration: BoxDecoration(
         color: AppColors.windowBg,
         border: Border(
@@ -547,18 +547,18 @@ class MacWindowBar extends StatelessWidget {
                   iconSize: 15,
                   tooltip: 'Forward',
                   onTap: canNavigateForward ? onNavigateForward : null),
-              const SizedBox(width: 4),
+              SizedBox(width: S.s4),
             ]),
           ),
           Expanded(child: Align(alignment: Alignment.centerLeft, child: tabsRow)),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Center(
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 for (final tool in tools) ...[
                   tool,
-                  const SizedBox(width: 2),
+                  SizedBox(width: S.s2),
                 ],
               ],
             ),

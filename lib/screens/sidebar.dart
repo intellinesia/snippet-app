@@ -818,7 +818,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     if (_selecting) {
       final n = _selected.length;
       return Padding(
-        padding: EdgeInsets.fromLTRB(S.s4, 16, M.gutter, 6),
+        padding: EdgeInsets.fromLTRB(S.s4, S.s16, M.gutter, S.s6),
         child: SizedBox(
           height: M.minTarget,
           child: Row(children: [
@@ -857,7 +857,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     final agents = widget.mobileHome == MobileHome.agents;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          M.gutter, 12, M.gutter, 12 + MediaQuery.viewPaddingOf(context).bottom),
+          M.gutter, S.s12, M.gutter, S.s12 + MediaQuery.viewPaddingOf(context).bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -873,7 +873,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                       : widget.onNewSession,
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           ListenableBuilder(
             listenable: AmbientController.instance,
             builder: (context, _) => MissionControlDock(
@@ -896,7 +896,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       );
 
   Widget _emptySessions({bool searching = false}) => Padding(
-        padding: EdgeInsets.only(top: kMobile ? 72 : 32),
+        padding: EdgeInsets.only(top: kMobile ? 72 : S.s32),
         child: EmptyState(
           icon: searching ? 'search' : 'chat',
           title: searching ? 'No matching sessions' : 'No sessions yet',
@@ -927,7 +927,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
   Widget _settledHeader(List<SessionInfo> rows, {required bool open}) {
     return Padding(
-      padding: EdgeInsets.only(top: kMobile ? 8 : 4),
+      padding: EdgeInsets.only(top: kMobile ? S.s8 : S.s4),
       child: Semantics(
         button: true,
         expanded: open,
@@ -938,11 +938,11 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             child: Container(
               height: kMobile ? M.minTarget : 32,
               padding:
-                  EdgeInsets.fromLTRB(kMobile ? 0 : 10, 0, kMobile ? 0 : 10, 0),
+                  EdgeInsets.fromLTRB(kMobile ? 0 : S.of(10), 0, kMobile ? 0 : S.of(10), 0),
               child: Row(children: [
                 Text('Settled',
                     style: TS.label(kMobile ? AppColors.fg3 : AppColors.fg4)),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Text('${rows.length}',
                     style: kMobile
                         ? TS.meta()
@@ -999,16 +999,16 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       // Offline ≠ empty: a failed fetch gets an explicit error + retry.
       if (widget.sessionsError != null) {
         return ListView(
-            padding: EdgeInsets.fromLTRB(M.gutter, 2, M.gutter, 32),
+            padding: EdgeInsets.fromLTRB(M.gutter, S.s2, M.gutter, S.s32),
             children: [
               Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(S.s20),
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     AppIcon('wifi-off', size: 20, color: AppColors.fg4),
-                    const SizedBox(height: 10),
+                    SizedBox(height: S.of(10)),
                     Text(widget.sessionsError!,
                         textAlign: TextAlign.center, style: TS.meta()),
-                    const SizedBox(height: 12),
+                    SizedBox(height: S.s12),
                     TextButton(
                         onPressed: widget.onRefreshSessions,
                         child: Text('Retry',
@@ -1017,7 +1017,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             ]);
       }
       return ListView(
-          padding: EdgeInsets.fromLTRB(M.gutter, 2, M.gutter, 32),
+          padding: EdgeInsets.fromLTRB(M.gutter, S.s2, M.gutter, S.s32),
           children: [_emptySessions()]);
     }
     final split = splitSettled(_sortSessionsByRecency(all.where((s) =>
@@ -1063,7 +1063,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(
-            M.gutter, 4, M.gutter, _scrollBottomPad),
+            M.gutter, S.s4, M.gutter, _scrollBottomPad),
         children: children,
       ),
     );
@@ -1201,7 +1201,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   Widget _mobileSettledCard(List<SessionInfo> rows) {
     final open = _settledOpen || _filterQuery.trim().isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.only(top: 18),
+      padding: EdgeInsets.only(top: S.of(18)),
       child: MobileGroupCard(children: [
         Semantics(
           button: true,
@@ -1220,11 +1220,11 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                 height: M.minTarget + 4,
                 child: Row(children: [
                   AppIcon('archive', size: 16, color: AppColors.fg3),
-                  const SizedBox(width: 12),
+                  SizedBox(width: S.s12),
                   Expanded(
                       child: Text('Settled', style: TS.rowTitle(AppColors.fg2))),
                   Text('${rows.length}', style: TS.meta()),
-                  const SizedBox(width: 6),
+                  SizedBox(width: S.s6),
                   AnimatedRotation(
                     turns: open ? 0.25 : 0,
                     duration: Motion.base,
@@ -1449,9 +1449,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     return AnimatedContainer(
       duration: Motion.base,
       margin: EdgeInsets.only(
-          left: kMobile ? M.gutter : 8,
-          right: kMobile ? M.gutter : 8,
-          bottom: kMobile ? 0 : 6),
+          left: kMobile ? M.gutter : S.s8,
+          right: kMobile ? M.gutter : S.s8,
+          bottom: kMobile ? 0 : S.s6),
       decoration: BoxDecoration(
           border: Border(
               top: BorderSide(
@@ -1464,7 +1464,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             constraints: BoxConstraints(maxHeight: maxHeight),
             child: ListView(
               shrinkWrap: true,
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: EdgeInsets.only(bottom: S.s8),
               children: [
                 for (var i = 0; i < rows.length; i++)
                   _listRow(rows[i],
@@ -1487,21 +1487,21 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     final agentsAvailable =
         widget.client != null && _desktopAgentsAvailable(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 2, 10, 6),
+      padding: EdgeInsets.fromLTRB(S.of(10), S.s2, S.of(10), S.s6),
       child: Column(children: [
         Container(
           height: 28,
-          padding: const EdgeInsets.all(2),
+          padding: EdgeInsets.all(S.s2),
           decoration: BoxDecoration(
             color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(R.of(9)),
             border: Border.all(color: AppColors.line),
           ),
           child: Row(children: [
             _segCell('Sessions', !agentsFirst,
                 const ValueKey('sidebar-mode-sessions'),
                 () => setSidebarAgentsFirst(false)),
-            const SizedBox(width: 2),
+            SizedBox(width: S.s2),
             _segCell(
                 'Agents',
                 agentsFirst,
@@ -1509,7 +1509,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                 agentsAvailable ? () => setSidebarAgentsFirst(true) : null),
           ]),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         _sidebarSearch(agentsFirst: agentsFirst),
       ]),
     );
@@ -1530,7 +1530,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
               height: 24,
               decoration: BoxDecoration(
                 color: on ? AppColors.surface2 : Colors.transparent,
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(R.of(7)),
               ),
               alignment: Alignment.center,
               child: Text(label,
@@ -1550,7 +1550,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         onTap: palette,
         child: Row(children: [
           AppIcon('search', size: 14, color: AppColors.fg4),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Expanded(
             child: Text('Search', style: sans(12, color: AppColors.fg4)),
           ),
@@ -1564,7 +1564,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     return _searchBox(
       child: Row(children: [
         AppIcon('search', size: 14, color: AppColors.fg4),
-        const SizedBox(width: 8),
+        SizedBox(width: S.s8),
         Expanded(
           child: TextField(
             controller: ctl,
@@ -1592,14 +1592,14 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
   Widget _searchBox({VoidCallback? onTap, required Widget child}) {
     final box = Tactile(
-      radius: BorderRadius.circular(8),
+      radius: BorderRadius.circular(R.md),
       kind: TactileKind.inset,
       child: Container(
         height: 28,
-        padding: const EdgeInsets.symmetric(horizontal: 9),
+        padding: EdgeInsets.symmetric(horizontal: S.of(9)),
         decoration: BoxDecoration(
           color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(R.md),
           border: Border.all(color: AppColors.line),
         ),
         child: child,
@@ -1642,7 +1642,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           onRefresh: () async => widget.onRefreshSessions(),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+            padding: EdgeInsets.fromLTRB(S.s8, 0, S.s8, S.s8),
             children: [
               if (!hasClient)
                 const SidebarEmpty('Add a machine to begin.')

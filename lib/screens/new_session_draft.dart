@@ -193,16 +193,16 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
           {VoidCallback? onTap, bool filled = false}) =>
       Material(
         color: filled ? AppColors.surface2 : Colors.transparent,
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(R.of(13)),
         child: InkWell(
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(R.of(13)),
           onTap: onTap,
           child: Container(
             height: 26,
-            padding: const EdgeInsets.symmetric(horizontal: 9),
+            padding: EdgeInsets.symmetric(horizontal: S.of(9)),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               AppIcon(icon, size: 13, color: AppColors.fg3),
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 220),
                 child: Text(label,
@@ -236,7 +236,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
   }
 
   Widget _recentChip(SessionInfo s) {
-    final radius = BorderRadius.circular(10);
+    final radius = BorderRadius.circular(R.card);
     return Material(
       color: AppColors.surface1,
       shape: RoundedRectangleBorder(
@@ -248,10 +248,10 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
         onTap: () => widget.onOpenSession?.call(s.id),
         child: Container(
           height: 30,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: EdgeInsets.symmetric(horizontal: S.of(10)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             _recentMark(s),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 200),
               child: Text(s.title.isEmpty ? '(untitled)' : s.title,
@@ -269,26 +269,26 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
     final on = _mode == WorkspaceMode.worktree;
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(13),
+      borderRadius: BorderRadius.circular(R.of(13)),
       child: InkWell(
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(R.of(13)),
         onTap: () => setState(() => _mode =
             on ? WorkspaceMode.folder : WorkspaceMode.worktree),
         child: Container(
           height: 26,
-          padding: const EdgeInsets.symmetric(horizontal: 9),
+          padding: EdgeInsets.symmetric(horizontal: S.of(9)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 160),
               width: 22,
               height: 13,
-              padding: const EdgeInsets.all(2),
+              padding: EdgeInsets.all(S.s2),
               alignment: on ? Alignment.centerRight : Alignment.centerLeft,
               decoration: BoxDecoration(
                 color: on
                     ? AppColors.accent.withValues(alpha: 0.35)
                     : AppColors.surface3,
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(R.of(7)),
               ),
               child: Container(
                 width: 9,
@@ -299,7 +299,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                 ),
               ),
             ),
-            const SizedBox(width: 7),
+            SizedBox(width: S.of(7)),
             Text('Worktree',
                 style: sans(13, color: on ? AppColors.fg2 : AppColors.fg4)),
           ]),
@@ -323,28 +323,28 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
             constraints: BoxConstraints(
                 minHeight: box.maxHeight, minWidth: box.maxWidth),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(32, 24, 32, 70),
+              padding: EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 70),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const DottedMochi(width: 300),
-                  const SizedBox(height: 10),
+                  SizedBox(height: S.of(10)),
                   Text('What are we making?',
                       style: sans(26, spacing: -0.5, color: AppColors.fg1)),
-                  const SizedBox(height: 24),
+                  SizedBox(height: S.s24),
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 660),
                     child: Container(
                       decoration: BoxDecoration(
                         color: AppColors.surface1,
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(R.of(18)),
                         border: Border.all(color: AppColors.line),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+                            padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, 0),
                             child: Wrap(spacing: 6, children: [
                               KeyedSubtree(
                                 key: _folderChipKey,
@@ -372,7 +372,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                                 isCollapsed: true,
                                 border: InputBorder.none,
                                 contentPadding:
-                                    const EdgeInsets.fromLTRB(18, 12, 18, 6),
+                                    EdgeInsets.fromLTRB(S.of(18), S.s12, S.of(18), S.s6),
                                 hintText: 'Ask, build, or type / for commands',
                                 hintStyle:
                                     sans(14, color: AppColors.fg4),
@@ -380,25 +380,25 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                             ),
                           ),
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+                            padding: EdgeInsets.fromLTRB(S.of(10), S.s6, S.of(10), S.of(10)),
                             child: Row(children: [
                               const Spacer(),
                               if (current != null)
                                 Builder(
                                   builder: (anchor) => Material(
                                     color: Colors.transparent,
-                                    borderRadius: BorderRadius.circular(15),
+                                    borderRadius: BorderRadius.circular(R.of(15)),
                                     child: InkWell(
-                                      borderRadius: BorderRadius.circular(15),
+                                      borderRadius: BorderRadius.circular(R.of(15)),
                                       onTap: () => _pickProfile(anchor),
                                       child: Container(
                                         height: 30,
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 10),
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: S.of(10)),
                                         child: Row(children: [
                                           ProviderLogo(current.provider,
                                               size: 13),
-                                          const SizedBox(width: 7),
+                                          SizedBox(width: S.of(7)),
                                           Text(current.name,
                                               style: sans(13,
                                                   color: AppColors.fg2)),
@@ -407,7 +407,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                                     ),
                                   ),
                                 ),
-                              const SizedBox(width: 6),
+                              SizedBox(width: S.s6),
                               Material(
                                 color: canSend
                                     ? AppColors.fg1
@@ -438,7 +438,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                     ),
                   ),
                   if (widget.onOpenSession != null && _recents.isNotEmpty) ...[
-                    const SizedBox(height: 14),
+                    SizedBox(height: S.of(14)),
                     Wrap(
                       alignment: WrapAlignment.center,
                       spacing: 6,
@@ -446,7 +446,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.only(right: 2),
+                          padding: EdgeInsets.only(right: S.s2),
                           child: Text('Recent',
                               style: TS.caption(AppColors.fg4)),
                         ),
@@ -677,7 +677,7 @@ class _FolderPopoverState extends State<_FolderPopover> {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.glassSurface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(R.lg),
         border: Border.all(color: AppColors.glassBorder),
         boxShadow: [
           BoxShadow(
@@ -689,7 +689,7 @@ class _FolderPopoverState extends State<_FolderPopover> {
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(R.lg),
         clipBehavior: Clip.antiAlias,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -697,7 +697,7 @@ class _FolderPopoverState extends State<_FolderPopover> {
           children: [
             Container(
               height: 38,
-              padding: const EdgeInsets.fromLTRB(10, 0, 6, 0),
+              padding: EdgeInsets.fromLTRB(S.of(10), 0, S.s6, 0),
               decoration: BoxDecoration(
                 border: Border(bottom: BorderSide(color: AppColors.line)),
               ),
@@ -716,18 +716,18 @@ class _FolderPopoverState extends State<_FolderPopover> {
                       for (var i = 0; i < crumbs.length; i++) ...[
                         if (i > 0)
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            padding: EdgeInsets.symmetric(horizontal: S.s2),
                             child: Text('/',
                                 style: mono(12, color: AppColors.fg4)),
                           ),
                         InkWell(
-                          borderRadius: BorderRadius.circular(5),
+                          borderRadius: BorderRadius.circular(R.of(5)),
                           onTap: i == crumbs.length - 1
                               ? null
                               : () => _go(crumbs[i].path),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 5, vertical: 3),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: S.of(5), vertical: S.of(3)),
                             child: Text(
                               crumbs[i].label,
                               style: sans(
@@ -762,14 +762,14 @@ class _FolderPopoverState extends State<_FolderPopover> {
             ),
             if (_creating)
               Container(
-                padding: const EdgeInsets.fromLTRB(10, 6, 8, 6),
+                padding: EdgeInsets.fromLTRB(S.of(10), S.s6, S.s8, S.s6),
                 decoration: BoxDecoration(
                   color: AppColors.surface1,
                   border: Border(bottom: BorderSide(color: AppColors.line)),
                 ),
                 child: Row(children: [
                   AppIcon('folder-plus', size: 14, color: AppColors.fg3),
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                   Expanded(
                     child: TextField(
                       controller: _newFolderCtrl,
@@ -784,16 +784,16 @@ class _FolderPopoverState extends State<_FolderPopover> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  SizedBox(width: S.s6),
                   InkWell(
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(R.sm),
                     onTap: _busy ? null : _submitNewFolder,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: S.s8, vertical: S.s4),
                       decoration: BoxDecoration(
                         color: AppColors.surface3,
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(R.sm),
                       ),
                       child: Text(_busy ? '…' : 'Create',
                           style: sans(12,
@@ -810,14 +810,14 @@ class _FolderPopoverState extends State<_FolderPopover> {
                     )
                   : _error != null
                       ? Padding(
-                          padding: const EdgeInsets.all(20),
+                          padding: EdgeInsets.all(S.s20),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(_error!,
                                   textAlign: TextAlign.center,
                                   style: sans(12, color: AppColors.fg3)),
-                              const SizedBox(height: 10),
+                              SizedBox(height: S.of(10)),
                               Btn('Retry',
                                   small: true,
                                   onTap: () => _go(widget.startPath)),
@@ -837,22 +837,22 @@ class _FolderPopoverState extends State<_FolderPopover> {
                                       32.0) +
                                   12,
                               child: ListView.builder(
-                              padding: const EdgeInsets.all(6),
+                              padding: EdgeInsets.all(S.s6),
                               itemExtent: 32,
                               itemCount: dirs.length,
                               itemBuilder: (ctx, i) {
                                 final e = dirs[i];
                                 return InkWell(
-                                  borderRadius: BorderRadius.circular(7),
+                                  borderRadius: BorderRadius.circular(R.of(7)),
                                   onTap: () => _go(e.path),
                                   child: Container(
                                     height: 32,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8),
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: S.s8),
                                     child: Row(children: [
                                       AppIcon('folder',
                                           size: 15, color: AppColors.fg3),
-                                      const SizedBox(width: 9),
+                                      SizedBox(width: S.of(9)),
                                       Expanded(
                                         child: Text(
                                           e.name,
@@ -873,7 +873,7 @@ class _FolderPopoverState extends State<_FolderPopover> {
             ),
             Container(
               height: 40,
-              padding: const EdgeInsets.fromLTRB(12, 0, 8, 0),
+              padding: EdgeInsets.fromLTRB(S.s12, 0, S.s8, 0),
               decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: AppColors.line)),
               ),
@@ -886,18 +886,18 @@ class _FolderPopoverState extends State<_FolderPopover> {
                     style: mono(12, color: AppColors.fg3),
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Material(
                   color: _here.isEmpty ? AppColors.surface2 : AppColors.fg1,
-                  borderRadius: BorderRadius.circular(13),
+                  borderRadius: BorderRadius.circular(R.of(13)),
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(13),
+                    borderRadius: BorderRadius.circular(R.of(13)),
                     onTap: _here.isEmpty
                         ? null
                         : () => Navigator.of(context).pop(_here),
                     child: Container(
                       height: 26,
-                      padding: const EdgeInsets.symmetric(horizontal: 11),
+                      padding: EdgeInsets.symmetric(horizontal: S.of(11)),
                       alignment: Alignment.center,
                       child: Text(
                         'Use $_hereName',

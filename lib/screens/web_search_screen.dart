@@ -98,7 +98,7 @@ class _WebSearchScreenState extends State<WebSearchScreen> {
         onChanged: (_) => setState(() {}),
         onSubmitted: (_) => _saveKeyInline(),
       ),
-      const SizedBox(width: 8),
+      SizedBox(width: S.s8),
       Btn('Save',
           small: true,
           disabled: empty || _busy,
@@ -204,7 +204,7 @@ class _WebSearchScreenState extends State<WebSearchScreen> {
     } else {
       body = ListView(
         padding: kMobile
-            ? const EdgeInsets.fromLTRB(16, 8, 16, 40)
+            ? EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40)
             : EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s40),
         children: _groups(keySet),
       );
