@@ -8,7 +8,6 @@ import '../../platform.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../../desktop_layout.dart';
-import '../list_search_field.dart';
 import '../mobile_chrome.dart' show MobileBackBar;
 import '../shell_nav.dart';
 import 'create_task_form.dart';
@@ -19,6 +18,7 @@ import 'task_list.dart';
 /// A pushed Tasks page, optionally limited to the tasks [agentIds] are on.
 Future<void> openTasksPage(BuildContext context, DaemonClient client,
     {Set<String>? agentIds}) {
+  final panel = GlobalKey<TasksPanelState>();
   return Navigator.of(context).push<void>(AppPageRoute<void>(
     builder: (page) => Material(
       color: AppColors.paneBg,
@@ -29,9 +29,36 @@ Future<void> openTasksPage(BuildContext context, DaemonClient client,
             MobileBackBar(
               title: 'Tasks',
               onBack: () => Navigator.of(page).pop(),
+              trailing: [
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => panel.currentState?.create(),
+                  child: SizedBox(
+                    height: 44,
+                    child: Center(
+                      child: Container(
+                        height: 32,
+                        padding: EdgeInsets.symmetric(horizontal: S.s12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface2,
+                          borderRadius: BorderRadius.circular(R.of(16)),
+                        ),
+                        child:
+                            Row(mainAxisSize: MainAxisSize.min, children: [
+                          AppIcon('plus', size: 14, color: AppColors.fg1),
+                          SizedBox(width: S.s6),
+                          Text('New task',
+                              style: sans(13, color: AppColors.fg1)),
+                        ]),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
             Expanded(
               child: TasksPanel(
+                key: panel,
                 client: client,
                 phoneHeader: false,
                 agentIds: agentIds,
@@ -89,13 +116,14 @@ class TasksPanelState extends State<TasksPanel> {
   late TaskFeed _feed = TaskFeed(widget.client, onChange: _sync);
 
   final _search = TextEditingController();
-  bool _searchOpen = kMobile;
+  bool _searchOpen = true;
   DateTime? _shownAt;
   String _query = '';
   Set<TaskStatus> _filter = {};
   String? _selectedTaskId;
   bool _creatingTask = false;
   Map<String, String> _sessionFolders = const {};
+  Map<String, String> _agentNames = const {};
   Set<String>? _agentTaskIds;
 
   List<TaskItem> get _tasks {
@@ -109,6 +137,7 @@ class TasksPanelState extends State<TasksPanel> {
   void initState() {
     super.initState();
     _loadFolders();
+    _loadAgentNames();
     _loadAgentTasks();
   }
 
@@ -156,6 +185,17 @@ class TasksPanelState extends State<TasksPanel> {
     } catch (_) {}
   }
 
+  Future<void> _loadAgentNames() async {
+    try {
+      final agents = await widget.client.coordinationAgents();
+      if (!mounted) return;
+      setState(() => _agentNames = {
+            for (final a in agents)
+              if (a.displayName.trim().isNotEmpty) a.id: a.displayName.trim(),
+          });
+    } catch (_) {}
+  }
+
   @override
   void dispose() {
     _feed.dispose();
@@ -190,87 +230,41 @@ class TasksPanelState extends State<TasksPanel> {
     if (mounted) await _feed.refresh();
   }
 
-  static const _active = {TaskStatus.todo, TaskStatus.inProgress};
-  static const _stuck = {TaskStatus.blocked, TaskStatus.failed};
-
   Widget _statusStrip() {
     final tasks = _tasks;
     int count(Set<TaskStatus> s) =>
         tasks.where((t) => s.contains(t.status)).length;
-    final tabs = <(String, Set<TaskStatus>)>[
-      ('All', const {}),
-      ('Active', _active),
-      ('Blocked', _stuck),
+    bool same(Set<TaskStatus> a, Set<TaskStatus> b) =>
+        a.length == b.length && a.containsAll(b);
+    // Tapping the lit chip again clears back to all.
+    const needsYou = {
+      TaskStatus.inReview,
+      TaskStatus.blocked,
+      TaskStatus.failed,
+    };
+    final chips = <(String, Set<TaskStatus>)>[
+      ('Needs you', needsYou),
+      ('Working', const {TaskStatus.inProgress}),
+      ('Queued', const {TaskStatus.todo}),
       ('Done', const {TaskStatus.done}),
       if (count(const {TaskStatus.cancelled}) > 0)
         ('Cancelled', const {TaskStatus.cancelled}),
     ];
-    bool same(Set<TaskStatus> a, Set<TaskStatus> b) =>
-        a.length == b.length && a.containsAll(b);
-    if (kMobile) {
-      // v5 `.pseg`:Needs you / Working / Queued / Done. Tapping the lit chip
-      // again clears back to all.
-      const needsYou = {
-        TaskStatus.inReview,
-        TaskStatus.blocked,
-        TaskStatus.failed,
-      };
-      final chips = <(String, Set<TaskStatus>)>[
-        ('Needs you', needsYou),
-        ('Working', const {TaskStatus.inProgress}),
-        ('Queued', const {TaskStatus.todo}),
-        ('Done', const {TaskStatus.done}),
-      ];
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.fromLTRB(0, S.s4, 0, S.s8),
-        child: Row(children: [
-          for (final (label, set) in chips) ...[
-            _FilterChip(
-              label: label,
-              count: count(set),
-              on: same(_filter, set),
-              onTap: () => setState(() {
-                _filter = same(_filter, set) ? const {} : {...set};
-                _shownAt = null;
-              }),
-            ),
-            SizedBox(width: S.s6),
-          ],
-        ]),
-      );
-    }
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      padding: EdgeInsets.fromLTRB(0, S.s4, 0, S.s8),
       child: Row(children: [
-        for (final (label, set) in tabs) ...[
-          Material(
-            color: same(_filter, set) ? AppColors.tint2 : Colors.transparent,
-            borderRadius: BorderRadius.circular(R.chip),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(R.chip),
-              onTap: () => setState(() {
-                _filter = {...set};
-                _shownAt = null;
-              }),
-              child: Container(
-                height: 26,
-                padding: EdgeInsets.symmetric(horizontal: S.s8),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Text(label,
-                      style: sans(12,
-                          weight: same(_filter, set) ? W.label : W.body,
-                          color: same(_filter, set)
-                              ? AppColors.fg1
-                              : AppColors.fg3)),
-                  SizedBox(width: S.of(5)),
-                  Text('${set.isEmpty ? tasks.length : count(set)}',
-                      style: mono(11, color: AppColors.fg4)),
-                ]),
-              ),
-            ),
+        for (final (label, set) in chips) ...[
+          _FilterChip(
+            label: label,
+            count: count(set),
+            on: same(_filter, set),
+            onTap: () => setState(() {
+              _filter = same(_filter, set) ? const {} : {...set};
+              _shownAt = null;
+            }),
           ),
-          SizedBox(width: S.s2),
+          SizedBox(width: S.s6),
         ],
       ]),
     );
@@ -315,6 +309,50 @@ class TasksPanelState extends State<TasksPanel> {
       builder: (context, c) => c.maxWidth >= _wideMin ? _wide() : _stacked(),
     );
   }
+
+  /// 36px field inside a 44px hit area.
+  Widget _phoneSearch() => SizedBox(
+        height: 44,
+        child: Center(
+          child: Container(
+            height: 36,
+            padding: EdgeInsets.symmetric(horizontal: S.s12),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(R.md),
+              border: Border.all(color: AppColors.line),
+            ),
+            child: Row(children: [
+              AppIcon('search', size: 14, color: AppColors.fg4),
+              SizedBox(width: S.s8),
+              Expanded(
+                child: TextField(
+                  controller: _search,
+                  onChanged: (v) => setState(() => _query = v),
+                  textInputAction: TextInputAction.search,
+                  cursorColor: AppColors.accent,
+                  style: sans(13, color: AppColors.fg1),
+                  decoration: InputDecoration(
+                    isCollapsed: true,
+                    border: InputBorder.none,
+                    hintText: 'Search tasks',
+                    hintStyle: sans(13, color: AppColors.fg4),
+                  ),
+                ),
+              ),
+              if (_query.isNotEmpty)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    _search.clear();
+                    setState(() => _query = '');
+                  },
+                  child: AppIcon('x', size: 14, color: AppColors.fg3),
+                ),
+            ]),
+          ),
+        ),
+      );
 
   Widget _desktopSearch() => Container(
         height: 32,
@@ -519,11 +557,7 @@ class TasksPanelState extends State<TasksPanel> {
                 ? Padding(
                     padding: EdgeInsets.fromLTRB(
                         M.gutter, S.s2, M.gutter, S.s4),
-                    child: ListSearchField(
-                      controller: _search,
-                      hint: 'Search tasks',
-                      onChanged: (v) => setState(() => _query = v),
-                    ),
+                    child: _phoneSearch(),
                   )
                 : Padding(
                     padding: EdgeInsets.fromLTRB(S.of(10), S.s4, S.of(10), S.s6),
@@ -639,6 +673,7 @@ class TasksPanelState extends State<TasksPanel> {
       hasMore: _feed.hasMore,
       onLoadMore: _feed.loadMore,
       sessionFolders: _sessionFolders,
+      agentNames: _agentNames,
       padding: kMobile
           ? EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s16)
           : EdgeInsets.fromLTRB(S.of(10), S.s2, S.of(10), S.s16),
@@ -646,7 +681,7 @@ class TasksPanelState extends State<TasksPanel> {
   }
 }
 
-/// One v5 `.pseg` filter chip: 32px pill, surface fill, lit when [on].
+/// One filter chip: pill on a surface, lit when [on], the count muted.
 class _FilterChip extends StatelessWidget {
   const _FilterChip({
     required this.label,
@@ -661,23 +696,35 @@ class _FilterChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: Motion.fast,
-          height: 32,
-          padding: EdgeInsets.symmetric(horizontal: S.s12),
-          decoration: BoxDecoration(
-            color: on
-                ? (kMobile ? AppColors.surface3 : AppColors.tint2)
-                : (kMobile ? AppColors.surface2 : AppColors.tint1),
-            borderRadius: BorderRadius.circular(R.of(16)),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text('$label $count',
-                style: sans(14, color: on ? AppColors.fg1 : AppColors.fg3)),
-          ]),
+  Widget build(BuildContext context) {
+    final h = kMobile ? 32.0 : 26.0;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: SizedBox(
+        height: kMobile ? 44 : h,
+        child: Center(child: AnimatedContainer(
+        duration: Motion.fast,
+        height: h,
+        padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s12 : S.s8),
+        decoration: BoxDecoration(
+          color: on
+              ? (kMobile ? AppColors.surface3 : AppColors.tint2)
+              : (kMobile ? AppColors.surface2 : AppColors.tint1),
+          borderRadius: BorderRadius.circular(h / 2),
+          border: Border.all(color: on ? AppColors.accent : AppColors.line),
         ),
-      );
+        alignment: Alignment.center,
+        child: Text.rich(TextSpan(children: [
+          TextSpan(
+              text: '$label ',
+              style: sans(kMobile ? 13 : 12,
+                  color: on ? AppColors.fg1 : AppColors.fg2)),
+          TextSpan(
+              text: '$count',
+              style: sans(kMobile ? 13 : 12, color: AppColors.fg3)),
+        ])),
+      ))),
+    );
+  }
 }

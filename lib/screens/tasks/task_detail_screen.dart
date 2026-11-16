@@ -808,8 +808,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   // ---- phone v5 layout ----
 
-  Widget _mobileTopBar(TaskItem? t) => MobileHomeHeader(
-        title: t?.title ?? 'Task',
+  Widget _mobileTopBar(TaskItem? t) => MobileBackBar(
+        title: 'Task',
         onBack: widget.onClose ?? () => Navigator.of(context).maybePop(),
         trailing: [
           RoundBtn(
@@ -876,30 +876,38 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     return Padding(
       padding: EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(t.title,
+            style: sans(17,
+                weight: W.strong, height: 22 / 17, color: AppColors.fg1)),
+        SizedBox(height: S.s6),
         Row(children: [
           _v5Pill(
             '${t.status.label}${age.isEmpty ? '' : ' · $age'}',
             lit: inReview,
           ),
           SizedBox(width: S.s8),
-          _v5Pill(t.id.length > 8 ? t.id.substring(0, 8) : t.id,
-              code: true),
+          Flexible(
+            child: Text(t.id.length > 8 ? t.id.substring(0, 8) : t.id,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: mono(12, color: AppColors.fg3)),
+          ),
         ]),
         if (t.goalTitle != null) ...[
           SizedBox(height: S.s4),
           Text('Goal: ${t.goalTitle}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: sans(14, color: AppColors.fg3)),
+              style: sans(13, color: AppColors.fg3)),
         ],
         if (inReview) ...[
           SizedBox(height: S.of(14)),
           Row(children: [
-            Expanded(child: _v5Action('Approve', primary: true,
-                onTap: busy ? null : () => _setStatus(TaskStatus.done))),
-            SizedBox(width: S.s8),
             Expanded(child: _v5Action('Send back',
                 onTap: busy ? null : () => _setStatus(TaskStatus.inProgress))),
+            SizedBox(width: S.s8),
+            Expanded(child: _v5Action('Approve', primary: true,
+                onTap: busy ? null : () => _setStatus(TaskStatus.done))),
           ]),
         ],
       ]),
@@ -926,19 +934,23 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget _v5Action(String label,
           {bool primary = false, VoidCallback? onTap}) =>
       GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Container(
-          height: 40,
+        child: SizedBox(
+          height: 44,
+          child: Container(
+          height: 32,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: primary ? AppColors.accentFill : AppColors.tint2,
-            borderRadius: BorderRadius.circular(R.lg),
+            borderRadius: BorderRadius.circular(R.of(8)),
             border: primary ? null : Border.all(color: AppColors.line),
           ),
           child: Text(label,
-              style: sans(15,
+              style: sans(14,
                   weight: W.label,
                   color: primary ? AppColors.accentFg : AppColors.fg1)),
+        ),
         ),
       );
 
@@ -974,11 +986,22 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           _v5Label('Plan'),
           _v5Card(
             padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.s12),
-            child: _WorkPlan(steps: t.workPlan),
+            child: _WorkPlan(steps: t.workPlan, header: false),
           ),
         ],
         _v5Label('Details'),
         _v5Card(child: Column(children: _detailRows(t))),
+        _v5AgentsLabel(),
+        if (roster.isEmpty)
+          _v5Card(
+            padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.s12),
+            child: Text('Nobody assigned yet.',
+                style: sans(14, color: AppColors.fg4)),
+          )
+        else
+          _v5Card(child: Column(children: [
+            for (final a in roster) _v5AgentRow(a),
+          ])),
         _v5Label('Log'),
         _v5Card(
           padding: EdgeInsets.fromLTRB(S.of(14), S.s8, S.of(14), S.s8),
@@ -1003,6 +1026,51 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       ]),
     );
   }
+
+  Widget _v5AgentsLabel() => Padding(
+        padding: EdgeInsets.fromLTRB(S.s16, S.of(14), 0, S.s6),
+        child: Row(children: [
+          Expanded(
+              child: Text('Agents', style: sans(13, color: AppColors.fg3))),
+          IconBtn('plus',
+              size: 32,
+              iconSize: 16,
+              tooltip: 'Add agent',
+              onTap: _addAgent),
+        ]),
+      );
+
+  Widget _v5AgentRow(TaskAgent a) => InkWell(
+        onTap: (!_closed && a.active && !a.hasSessionLease)
+            ? () => _transferLeaseTo(a)
+            : null,
+        child: SizedBox(
+          height: 44,
+          child: Row(children: [
+            _holdsTurn(a)
+                ? WorkingMochi(size: 22, color: mochiColorFor(a.agentId))
+                : AgentMochi(a.agentId, size: 22),
+            SizedBox(width: S.s12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(a.agentId,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(14,
+                          weight: W.label,
+                          color: a.active ? AppColors.fg1 : AppColors.fg3)),
+                  if (_memberLabel(a).isNotEmpty)
+                    Text(_memberLabel(a),
+                        style: sans(12, color: AppColors.fg3)),
+                ],
+              ),
+            ),
+          ]),
+        ),
+      );
 
   List<Widget> _detailRows(TaskItem t) {
     final holder = roster
@@ -1042,32 +1110,37 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     ];
     return [
       for (var i = 0; i < rows.length; i++)
-        _detailRow(rows[i].$1, rows[i].$2, last: i == rows.length - 1),
+        _detailRow(rows[i].$1, rows[i].$2,
+            last: i == rows.length - 1,
+            code: rows[i].$1 == 'Branch' || rows[i].$1 == 'Owned paths'),
     ];
   }
 
-  /// v5 `.pgi`: bright label left, dim value right, hairline between rows.
-  Widget _detailRow(String label, String value, {bool last = false}) => Container(
-        constraints: const BoxConstraints(minHeight: 44),
-        padding: EdgeInsets.symmetric(vertical: S.s8),
+  /// Dim label left, bright value right (mono for paths), hairline between rows.
+  Widget _detailRow(String label, String value,
+          {bool last = false, bool code = false}) =>
+      Container(
+        constraints: const BoxConstraints(minHeight: 36),
+        padding: EdgeInsets.symmetric(vertical: S.s6),
         decoration: BoxDecoration(
           border: last
               ? null
               : Border(bottom: BorderSide(color: AppColors.line)),
         ),
         child: Row(children: [
-          Expanded(
-            child: Text(label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(15, color: AppColors.fg1)),
-          ),
+          Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(13, color: AppColors.fg3)),
           SizedBox(width: S.s12),
-          Flexible(
+          Expanded(
             child: Text(value.isEmpty ? '—' : value,
+                textAlign: TextAlign.right,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(15, color: AppColors.fg3)),
+                style: code && value.isNotEmpty
+                    ? mono(12, color: AppColors.fg1)
+                    : sans(13, color: value.isEmpty ? AppColors.fg4 : AppColors.fg1)),
           ),
         ]),
       );
@@ -2063,8 +2136,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
 /// The worker's plan for the task, as it ticks steps off.
 class _WorkPlan extends StatelessWidget {
-  const _WorkPlan({required this.steps});
+  const _WorkPlan({required this.steps, this.header = true});
   final List<WorkStep> steps;
+
+  /// The phone puts "Plan" above the card, so it drops the count line.
+  final bool header;
 
   @override
   Widget build(BuildContext context) {
@@ -2072,9 +2148,11 @@ class _WorkPlan extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Plan · $done/${steps.length}',
-            style: sans(13, weight: FontWeight.w500, color: AppColors.fg3)),
-        SizedBox(height: S.s8),
+        if (header) ...[
+          Text('Plan · $done/${steps.length}',
+              style: sans(13, weight: FontWeight.w500, color: AppColors.fg3)),
+          SizedBox(height: S.s8),
+        ],
         for (final s in steps)
           Padding(
             padding: EdgeInsets.only(bottom: S.s6),
@@ -2088,7 +2166,7 @@ class _WorkPlan extends StatelessWidget {
                         height: 14,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: s.current ? AppColors.accent : null,
+                          color: s.current ? AppColors.accentBg : null,
                           border: Border.all(
                               color: s.current ? AppColors.accent : AppColors.fg4,
                               width: 1.5),
@@ -2098,10 +2176,10 @@ class _WorkPlan extends StatelessWidget {
               SizedBox(width: S.of(10)),
               Expanded(
                 child: Text(s.step,
-                    style: sans(14,
-                        height: 19 / 14,
+                    style: sans(13,
+                        height: 19 / 13,
                         color: s.done
-                            ? AppColors.fg4
+                            ? AppColors.fg3
                             : s.current
                                 ? AppColors.fg1
                                 : AppColors.fg2)),

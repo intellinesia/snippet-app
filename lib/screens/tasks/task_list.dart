@@ -5,7 +5,7 @@ import '../../models.dart';
 import '../../platform.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
-import '../shell_nav.dart' show kNavPadH, kNavRowHeight;
+import '../shell_nav.dart' show kNavPadH;
 import 'task_common.dart';
 import '../../pull_refresh.dart';
 import '../../motion.dart';
@@ -28,6 +28,7 @@ class TaskList extends StatelessWidget {
     this.hasMore,
     this.onLoadMore,
     this.sessionFolders,
+    this.agentNames,
   });
 
   final bool Function(TaskStatus status)? hasMore;
@@ -50,25 +51,52 @@ class TaskList extends StatelessWidget {
   /// session id → folder name, for the phone card's "agent · folder" line.
   final Map<String, String>? sessionFolders;
 
+  /// agent id → display name, for the row's meta line.
+  final Map<String, String>? agentNames;
+
   List<TaskItem> get _visible => tasks
       .where((t) => filter.isEmpty || filter.contains(t.status))
       .where((t) => taskMatches(t, query))
       .toList();
 
+  /// One grouped surface in board order (no per-status headers: the meta line
+  /// carries the status), with each status's "Load more" under it.
   List<Widget> rows() {
     final visible = _visible;
-    final rows = [
+    if (visible.isEmpty) return const [];
+    final ordered = [
       for (final status in TaskStatus.values)
-        ..._group(status, visible.where((t) => t.status == status)),
+        ...visible.where((t) => t.status == status),
     ];
     return [
-      for (var i = 0; i < rows.length; i++)
-        Appear(
-          key: rows[i].key,
-          index: i,
-          since: appearSince,
-          child: rows[i],
+      Appear(
+        key: const ValueKey('task-card'),
+        since: appearSince,
+        child: Container(
+          decoration: BoxDecoration(
+            color: kMobile ? AppColors.surface2 : AppColors.tint1,
+            borderRadius: BorderRadius.circular(R.of(14)),
+            border: Border.all(color: AppColors.line),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(children: [
+            for (var i = 0; i < ordered.length; i++)
+              TaskRow(
+                  key: ValueKey('t-${ordered[i].id}'),
+                  task: ordered[i],
+                  note: noteForTask(ordered[i], tasks),
+                  folder: sessionFolders?[ordered[i].sessionId],
+                  agentName: agentNames?[ordered[i].createdById],
+                  selected: ordered[i].id == selectedId,
+                  onTap: () => onOpen(ordered[i]),
+                  divider: i < ordered.length - 1),
+          ]),
         ),
+      ),
+      for (final status in TaskStatus.values)
+        if (visible.any((t) => t.status == status) &&
+            (hasMore?.call(status) ?? false))
+          _loadMore(status),
     ];
   }
 
@@ -101,42 +129,6 @@ class TaskList extends StatelessWidget {
       key: ValueKey('more-${status.name}'),
       onTap: () => onLoadMore?.call(status) ?? Future.value());
 
-  List<Widget> _group(TaskStatus status, Iterable<TaskItem> items) {
-    if (items.isEmpty) return const [];
-    if (kMobile) {
-      final list = items.toList();
-      return [
-        TaskStatusHeader(
-            key: ValueKey('h-${status.name}'),
-            status: status,
-            count: list.length),
-        for (var i = 0; i < list.length; i++)
-          TaskRow(
-              key: ValueKey('t-${list[i].id}'),
-              task: list[i],
-              note: noteForTask(list[i], tasks),
-              folder: sessionFolders?[list[i].sessionId],
-              onTap: () => onOpen(list[i]),
-              divider: i < list.length - 1),
-        if (hasMore?.call(status) ?? false) _loadMore(status),
-      ];
-    }
-    return [
-      TaskStatusHeader(
-          key: ValueKey('h-${status.name}'),
-          status: status,
-          count: items.length),
-      for (final task in items)
-        TaskRow(
-            key: ValueKey('t-${task.id}'),
-            task: task,
-            note: noteForTask(task, tasks),
-            selected: task.id == selectedId,
-            onTap: () => onOpen(task)),
-      if (hasMore?.call(status) ?? false) _loadMore(status),
-    ];
-  }
-
   // Three different empties: nothing filed, nothing matching the search, and
   // nothing in the chosen columns.
   Widget _empty() {
@@ -164,43 +156,9 @@ class TaskList extends StatelessWidget {
   }
 }
 
-class TaskStatusHeader extends StatelessWidget {
-  const TaskStatusHeader(
-      {super.key, required this.status, required this.count});
-  final TaskStatus status;
-  final int count;
-
-  @override
-  Widget build(BuildContext context) => kMobile
-      ? Padding(
-          padding: EdgeInsets.fromLTRB(0, S.s16, 0, S.s4),
-          child: Text(status.label,
-              style: sans(13, weight: W.label, color: AppColors.fg3)),
-        )
-      : Padding(
-        padding: EdgeInsets.fromLTRB(S.s12, S.of(14), S.s12, S.s6),
-        child: Row(children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-                color: statusColor(status), shape: BoxShape.circle),
-          ),
-          SizedBox(width: S.s8),
-          Text(status.label,
-              style: kMobile ? sans(13, color: AppColors.fg2) : TS.label()),
-          SizedBox(width: S.s8),
-          if (kMobile)
-            Text('$count', style: sans(13, color: AppColors.fg4))
-          else
-            CountBadge(count),
-        ]),
-      );
-}
-
 /// One task. Desktop gets a single dense line; a phone adds the first line of
 /// the description, so a row says what the work is without opening it.
-/// "Plan 3/5 · now: <step>" for an open task whose worker has laid out a plan.
+/// "Plan 3/5 · now: `step`" for an open task whose worker has laid out a plan.
 String? workPlanLine(TaskItem task) {
   if (task.workPlan.isEmpty ||
       const {TaskStatus.done, TaskStatus.failed, TaskStatus.cancelled}
@@ -220,7 +178,8 @@ class TaskRow extends StatelessWidget {
       this.note,
       this.selected = false,
       this.divider = false,
-      this.folder});
+      this.folder,
+      this.agentName});
   final TaskItem task;
   final TaskNote? note;
   final bool selected;
@@ -232,202 +191,107 @@ class TaskRow extends StatelessWidget {
   /// Project folder name for the phone card's meta line.
   final String? folder;
 
+  /// Display name of the creating agent; the id when unknown.
+  final String? agentName;
+
   @override
   Widget build(BuildContext context) {
-    final detail = note?.line ??
-        workPlanLine(task) ??
-        task.description.trim().split('\n').first;
+    final line = note?.line ?? '';
+    final finished =
+        const {TaskStatus.done, TaskStatus.cancelled}.contains(task.status);
+    final needsYou = const {
+      TaskStatus.inReview,
+      TaskStatus.blocked,
+      TaskStatus.failed,
+    }.contains(task.status);
+    final agent = task.createdByKind == 'agent' ? task.createdById : '';
     final age = taskAge(task);
-    if (kMobile) {
-      // v5 `.pcard`: title, step line, then "agent · folder" with the age.
-      final finished = const {TaskStatus.done, TaskStatus.cancelled}
-          .contains(task.status);
-      final needsYou = const {
-        TaskStatus.inReview,
-        TaskStatus.blocked,
-        TaskStatus.failed,
-      }.contains(task.status);
-      final agent = task.createdByKind == 'agent' ? task.createdById : '';
-      final folderName = (folder ?? '').trim();
-      final meta = [agent, folderName].where((s) => s.isNotEmpty).join(' · ');
-      return InkWell(
+    final num = RegExp(r'^t-?(\d+)$', caseSensitive: false).firstMatch(task.id);
+    final id = num != null
+        ? 'T-${num.group(1)}'
+        : (task.id.length > 8 ? task.id.substring(0, 8) : task.id)
+            .toUpperCase();
+    final who = (agentName ?? '').trim().isEmpty ? agent : agentName!.trim();
+    final meta =
+        [id, who, task.status.label].where((p) => p.isNotEmpty).join(' · ');
+    final avatar = kMobile ? 24.0 : 22.0;
+    return Material(
+      color: selected ? AppColors.accentBg : Colors.transparent,
+      child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(R.of(14)),
         child: Container(
-          margin: EdgeInsets.only(bottom: S.of(10)),
-          padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.s12),
+          constraints: BoxConstraints(minHeight: kMobile ? 52 : 40),
+          padding: EdgeInsets.symmetric(
+              horizontal: S.s12, vertical: kMobile ? S.s8 : S.s6),
           decoration: BoxDecoration(
-            color: kMobile ? AppColors.surface2 : AppColors.tint1,
-            borderRadius: BorderRadius.circular(R.of(14)),
+            border: divider
+                ? Border(bottom: BorderSide(color: AppColors.line))
+                : null,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(task.title,
-                  style: sans(15,
-                      weight: W.label,
-                      height: 1.3,
-                      color: finished ? AppColors.fg3 : AppColors.fg1)),
-              if (task.planTotal > 0) ...[
-                const SizedBox(height: 6),
-                TaskPlanProgress(done: task.planDone, total: task.planTotal),
-              ],
-              if (detail.isNotEmpty) ...[
-                SizedBox(height: S.of(5)),
-                Text(detail,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(14, height: 1.4, color: AppColors.fg3)),
-              ],
-              if (meta.isNotEmpty || age.isNotEmpty) ...[
-                SizedBox(height: S.s8),
-                Row(children: [
-                  if (task.priority > 0) ...[
-                    PriorityMark(task.priority),
-                    SizedBox(width: S.s8),
-                  ],
-                  if (agent.isNotEmpty) ...[
-                    AgentMochi(agent, size: 16),
-                    SizedBox(width: S.s6),
-                  ],
-                  Expanded(
-                    child: Text(meta,
+          child: Row(children: [
+            SizedBox(
+              width: avatar,
+              height: avatar,
+              child: agent.isNotEmpty
+                  ? AgentMochi(agent, size: avatar)
+                  : Center(
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                            color: statusColor(task.status),
+                            shape: BoxShape.circle),
+                      ),
+                    ),
+            ),
+            SizedBox(width: S.of(10)),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    if (task.priority > 0) ...[
+                      PriorityMark(task.priority),
+                      SizedBox(width: S.s6),
+                    ],
+                    Expanded(
+                      child: Text(task.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(kMobile ? 15 : 13,
+                              weight: W.label,
+                              height: 1.3,
+                              color:
+                                  finished ? AppColors.fg3 : AppColors.fg1)),
+                    ),
+                  ]),
+                  Text(meta,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mono(11, color: AppColors.fg3)),
+                  if (line.isNotEmpty)
+                    Text(line,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(13, color: AppColors.fg3)),
-                  ),
-                  if (age.isNotEmpty)
-                    Text(age,
-                        style: sans(13,
-                            color: needsYou ? AppColors.run : AppColors.fg3,
-                            tabular: true)),
-                ]),
-              ],
+                        style: sans(12, color: AppColors.fg4)),
+                  if (!kMobile && task.planTotal > 0) ...[
+                    SizedBox(height: S.s4),
+                    TaskPlanProgress(
+                        done: task.planDone,
+                        total: task.planTotal,
+                        compact: true),
+                  ],
+                ],
+              ),
+            ),
+            if (!kMobile && age.isNotEmpty) ...[
+              SizedBox(width: S.s8),
+              Text(age,
+                  style: mono(11,
+                      color: needsYou ? AppColors.run : AppColors.fg4)),
             ],
-          ),
-        ),
-      );
-    }
-    if (!kMobile) {
-      final done = task.status == TaskStatus.done ||
-          task.status == TaskStatus.cancelled;
-      return Material(
-        color: selected ? AppColors.accentBg : Colors.transparent,
-        borderRadius: BorderRadius.circular(R.of(7)),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(R.of(7)),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(S.s8, S.of(7), S.s8, S.of(7)),
-            child: Row(
-              crossAxisAlignment: detail.isNotEmpty
-                  ? CrossAxisAlignment.start
-                  : CrossAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(top: detail.isNotEmpty ? S.s6 : 0),
-                  child: Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: statusColor(task.status),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-                SizedBox(width: S.s8),
-                if (task.priority > 0) ...[
-                  PriorityMark(task.priority),
-                  SizedBox(width: S.s6),
-                ],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(task.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(13,
-                              height: 18 / 13,
-                              color: done ? AppColors.fg3 : AppColors.fg1)),
-                      if (task.planTotal > 0) ...[
-                        const SizedBox(height: 3),
-                        TaskPlanProgress(
-                          done: task.planDone,
-                          total: task.planTotal,
-                          compact: true,
-                        ),
-                      ],
-                      if (detail.isNotEmpty) ...[
-                        SizedBox(height: S.of(1)),
-                        Text(detail,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(12,
-                                height: 15 / 11.5, color: AppColors.fg4)),
-                      ],
-                    ],
-                  ),
-                ),
-                if (age.isNotEmpty) ...[
-                  SizedBox(width: S.s8),
-                  Text(age,
-                      style: mono(11, color: AppColors.fg4)),
-                ],
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-    return Padding(
-      padding: EdgeInsets.only(bottom: S.s2),
-      child: Material(
-        color: AppColors.tint1,
-        borderRadius: BorderRadius.circular(kMobile ? R.md : R.sm),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(kMobile ? R.md : R.sm),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-                minHeight: kMobile ? M.rowHeight : kNavRowHeight),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                  horizontal: kMobile ? M.rowPadH : kNavPadH,
-                  vertical: kMobile ? S.s8 : 0),
-              child: Row(children: [
-                if (task.priority > 0) ...[
-                  PriorityMark(task.priority),
-                  SizedBox(width: S.s8),
-                ],
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(task.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: kMobile
-                              ? TS.rowTitle(AppColors.fg2)
-                              : TS.label()),
-                      if (kMobile && detail.isNotEmpty) ...[
-                        SizedBox(height: S.s2),
-                        Text(detail,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TS.meta()),
-                      ],
-                    ],
-                  ),
-                ),
-                if (age.isNotEmpty) ...[
-                  SizedBox(width: S.s8),
-                  Text(age, style: TS.meta(AppColors.fg4)),
-                ],
-              ]),
-            ),
-          ),
+          ]),
         ),
       ),
     );
