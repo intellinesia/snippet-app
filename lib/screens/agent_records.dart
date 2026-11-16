@@ -16,7 +16,8 @@ import '../shell_panel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import 'action_list.dart';
+import '../mochi.dart' show AgentMochi;
+import '../settings_form.dart';
 import 'list_search_field.dart';
 import 'memory_screen.dart';
 import 'mobile_chrome.dart';
@@ -159,7 +160,6 @@ Future<void> openAgentActions(
             children: [
               MobileBackBar(
                 title: agentName,
-                subtitle: 'Actions',
                 onBack: () => Navigator.of(page).pop(),
                 onTitleTap: () {},
               ),
@@ -247,13 +247,24 @@ class AgentActionsState extends State<AgentActions> {
   void _openRecords(String name, String title, Widget Function() view) => _run(
       (host) => _presentRecords(host, title, widget.agentName, view), name);
 
-  ActionRow _setting(String action, String icon, String label, String detail,
+  Widget _row(String icon, String label, String detail,
+          {bool danger = false, VoidCallback? onTap}) =>
+      SettingsRow(
+        leading: V5IconTile(icon, color: danger ? AppColors.danger : null),
+        label: label,
+        sub: detail,
+        danger: danger,
+        chevron: !danger && onTap != null,
+        onTap: onTap,
+      );
+
+  Widget _setting(String action, String icon, String label, String detail,
       {bool danger = false}) {
     final agent = _agent;
-    return ActionRow(
-      icon: icon,
-      label: label,
-      detail: detail,
+    return _row(
+      icon,
+      label,
+      detail,
       danger: danger,
       onTap: agent == null && widget.onAction == null
           ? null
@@ -266,10 +277,10 @@ class AgentActionsState extends State<AgentActions> {
     );
   }
 
-  ActionRow _memory() => ActionRow(
-        icon: kMobile ? 'book-marked' : 'brain',
-        label: 'Memory',
-        detail: 'What this agent remembers',
+  Widget _memory() => _row(
+        'book-marked',
+        'Memory',
+        'What this agent remembers',
         onTap: () => _run(
             (host) => presentScreen(host,
                 builder: (_, close) => MemoryScreen(
@@ -280,6 +291,33 @@ class AgentActionsState extends State<AgentActions> {
             'memory'),
       );
 
+  Widget _header() {
+    final model = _agent?.deskProfile ?? _agent?.profile;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(S.s4, S.s4, S.s4, S.s8),
+      child: Row(children: [
+        AgentMochi(widget.agentId, size: 64),
+        SizedBox(width: S.s16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(widget.agentName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(22, weight: W.label, color: AppColors.fg1)),
+              if (model != null && model.isNotEmpty)
+                Text(model,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, color: AppColors.fg3)),
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final client = widget.client;
@@ -288,28 +326,29 @@ class AgentActionsState extends State<AgentActions> {
     // In the desktop shell the header switcher covers Inbox and Board, and
     // naming and looks belong to the agent list, not the agent's own screen.
     final inShell = widget.onAction != null;
+    final wakes = _setting('wakes', 'repeat', 'Wakes and reporting',
+        'When it wakes and who it tells');
+    final reach = _setting('reach', 'bell', 'How it reaches you',
+        'Notifications and where each kind goes');
+    final model = _setting(
+        'model', 'cpu', 'Inference profile', 'The model it runs on');
+    final nickname =
+        _setting('nickname', 'edit', 'Nickname', 'What it is called here');
+    final appearance = _setting('appearance', 'sparkles', 'Appearance',
+        'Avatar and colour across the app');
+    final delete = _setting(
+        'delete', 'trash', 'Delete agent', 'Removes its identity and notes',
+        danger: true);
     if (!widget.views) {
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ActionGroup(label: 'Agent', rows: [
-            _memory(),
-            _setting('wakes', 'calendar-clock', 'Wakes and reporting',
-                'When it wakes and who it tells'),
-            _setting('reach', 'bell', 'How it reaches you',
-                'Notifications and where each kind goes'),
-            _setting(
-                'model', 'cpu', 'Inference profile', 'The model it runs on'),
-          ]),
-          ActionGroup(label: 'Appearance', rows: [
-            _setting('nickname', 'edit', 'Nickname', 'What it is called here'),
-            _setting('appearance', 'sparkles', 'Appearance',
-                'Avatar and colour across the app'),
-            _setting('delete', 'trash', 'Delete agent',
-                'Removes its identity and notes',
-                danger: true),
-          ]),
+          SettingsGroup(
+              header: 'Agent',
+              children: [_memory(), wakes, reach, model]),
+          SettingsGroup(
+              header: 'Appearance', children: [nickname, appearance, delete]),
         ],
       );
     }
@@ -317,53 +356,35 @@ class AgentActionsState extends State<AgentActions> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ActionGroup(label: 'Work', rows: [
-          if (!inShell)
-            ActionRow(
-              icon: 'inbox',
-              label: 'Inbox',
-              detail: 'Everything sent to this agent',
-              onTap: () => _openRecords(
-                  'inbox',
-                  'Inbox',
-                  () => AgentInboxView(
-                      client: client, agentId: id, agentName: name)),
-            ),
-          if (!inShell)
-            ActionRow(
-              icon: 'clipboard',
-              label: 'Board',
-              detail: 'What it dispatched, reported and noted',
-              onTap: () => _openRecords(
-                  'board',
-                  'Board',
-                  () => AgentBoardView(
-                      client: client, agentId: id, agentName: name)),
-            ),
-          ActionRow(
-            icon: 'terminal',
-            label: 'Desk session',
-            detail: 'The conversation where its mail arrives',
-            onTap: () => _run(
-                (host) => _openSession(host, client, 'inbox-$id', '$name desk'),
-                'desk'),
-          ),
+        if (!inShell) _header(),
+        SettingsGroup(header: 'Agent', children: [
+          wakes,
+          reach,
+          model,
+          if (!inShell) ...[nickname, appearance],
+          delete,
         ]),
-        ActionGroup(label: 'Agent', rows: [
+        SettingsGroup(header: 'Work', children: [
+          if (!inShell)
+            _row('inbox', 'Inbox', 'Everything sent to this agent',
+                onTap: () => _openRecords(
+                    'inbox',
+                    'Inbox',
+                    () => AgentInboxView(
+                        client: client, agentId: id, agentName: name))),
+          if (!inShell)
+            _row('kanban', 'Board', 'What it dispatched, reported and noted',
+                onTap: () => _openRecords(
+                    'board',
+                    'Board',
+                    () => AgentBoardView(
+                        client: client, agentId: id, agentName: name))),
+          _row('chat', 'Desk session', 'The conversation where its mail arrives',
+              onTap: () => _run(
+                  (host) =>
+                      _openSession(host, client, 'inbox-$id', '$name desk'),
+                  'desk')),
           _memory(),
-          _setting('wakes', 'calendar-clock', 'Wakes and reporting',
-              'When it wakes and who it tells'),
-          _setting('reach', 'bell', 'How it reaches you',
-              'Notifications and where each kind goes'),
-          _setting('model', 'cpu', 'Inference profile', 'The model it runs on'),
-          if (!inShell) ...[
-            _setting('nickname', 'edit', 'Nickname', 'What it is called here'),
-            _setting('appearance', 'sparkles', 'Appearance',
-                'Avatar and colour across the app'),
-          ],
-          _setting('delete', 'trash', 'Delete agent',
-              'Removes its identity and notes',
-              danger: true),
         ]),
       ],
     );
@@ -441,10 +462,15 @@ class _RecordList<T> extends StatefulWidget {
     this.groupedFilters = const {},
     this.filter,
     this.filterChips = true,
+    this.card = false,
   });
 
   final String? filter;
   final bool filterChips;
+
+  /// Rows in one grouped card, with the first three filters as a segmented
+  /// control and the rest as outlined pills.
+  final bool card;
   final DaemonClient client;
   final SwrTrigger liveOn;
 
@@ -620,7 +646,8 @@ class _RecordListState<T> extends State<_RecordList<T>> {
           onChanged: _searchChanged,
         ),
       ),
-      if (widget.filterChips)
+      if (widget.filterChips && widget.card) _cardFilters(),
+      if (widget.filterChips && !widget.card)
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: EdgeInsets.fromLTRB(_gutter, 0, _gutter, S.s6),
@@ -640,6 +667,57 @@ class _RecordListState<T> extends State<_RecordList<T>> {
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720), child: content),
+    );
+  }
+
+  Widget _cardFilters() {
+    final segs = widget.filters.take(3).toList();
+    final pills = widget.filters.skip(3).toList();
+    return Padding(
+      padding: EdgeInsets.fromLTRB(_gutter, 0, _gutter, S.s8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: _SegBar(
+            labels: [for (final (l, _) in segs) l],
+            selected: segs.indexWhere((f) => f.$2 == _filter),
+            onTap: (i) => _pickFilter(segs[i].$2),
+          ),
+        ),
+        SizedBox(height: S.of(10)),
+        Wrap(spacing: S.s6, runSpacing: S.s6, children: [
+          for (final (label, value) in pills)
+            _PillChip(
+              label: label,
+              selected: value == _filter,
+              onTap: () => _pickFilter(value == _filter ? null : value),
+            ),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _cardRows(List<Object> rows) {
+    final entries = [for (final r in rows) if (r is! String) r as T];
+    return Padding(
+      padding: EdgeInsets.fromLTRB(_gutter, 0, _gutter, 0),
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(kMobile ? R.lg : R.card),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(children: [
+            for (var i = 0; i < entries.length; i++) ...[
+              if (i > 0) Container(height: 1, color: AppColors.line),
+              widget.row(entries[i]),
+            ],
+          ]),
+        ),
+      ),
     );
   }
 
@@ -675,9 +753,10 @@ class _RecordListState<T> extends State<_RecordList<T>> {
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(bottom: S.s32),
-        itemCount: rows.length + (_more ? 1 : 0),
+        itemCount: (widget.card ? 1 : rows.length) + (_more ? 1 : 0),
         itemBuilder: (context, i) {
-          if (i == rows.length) {
+          if (widget.card && i == 0) return _cardRows(rows);
+          if (i == (widget.card ? 1 : rows.length)) {
             return Padding(
               padding: EdgeInsets.all(S.s16),
               child: Center(
@@ -732,6 +811,85 @@ class _FilterChip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The segmented control of the mockup: a rounded track with the chosen
+/// segment raised.
+class _SegBar extends StatelessWidget {
+  const _SegBar(
+      {required this.labels, required this.selected, required this.onTap});
+
+  final List<String> labels;
+  final int selected;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final h = kMobile ? 32.0 : 24.0;
+    final radius = BorderRadius.circular(kMobile ? R.md : R.sm);
+    return Container(
+      padding: EdgeInsets.all(S.of(3)),
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(kMobile ? R.lg : R.md),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(children: [
+        for (var i = 0; i < labels.length; i++)
+          Expanded(
+            child: Material(
+              color: i == selected ? AppColors.surface3 : Colors.transparent,
+              borderRadius: radius,
+              child: InkWell(
+                borderRadius: radius,
+                onTap: () => onTap(i),
+                child: SizedBox(
+                  height: h,
+                  child: Center(
+                    child: Text(labels[i],
+                        maxLines: 1,
+                        style: sans(kMobile ? 13 : 12,
+                            weight: i == selected ? W.label : W.body,
+                            color: i == selected
+                                ? AppColors.fg1
+                                : AppColors.fg3)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ]),
+    );
+  }
+}
+
+class _PillChip extends StatelessWidget {
+  const _PillChip(
+      {required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: selected ? AppColors.surface3 : AppColors.surface1,
+        shape: StadiumBorder(
+            side: BorderSide(
+                color: selected ? AppColors.accent : AppColors.line)),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: Container(
+            height: kMobile ? 30 : 26,
+            padding: EdgeInsets.symmetric(horizontal: S.of(10)),
+            alignment: Alignment.center,
+            child: Text(label,
+                style: sans(12,
+                    color: selected ? AppColors.fg1 : AppColors.fg2)),
+          ),
+        ),
+      );
 }
 
 class _DayHeading extends StatelessWidget {
@@ -860,6 +1018,62 @@ class _RecordRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// One board row: a lead (kind pill or group title), the text, and its time.
+class _BoardRow extends StatelessWidget {
+  const _BoardRow(
+      {required this.lead,
+      required this.child,
+      required this.time,
+      required this.onTap,
+      });
+
+  final Widget lead;
+  final Widget child;
+  final String time;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = _time(time);
+    final grouped = lead is Row;
+    return InkWell(
+      onTap: onTap,
+      hoverColor: AppColors.tint3,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+            horizontal: S.of(12), vertical: kMobile ? S.of(10) : S.s8),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (!grouped) ...[lead, SizedBox(width: S.of(10))],
+          Expanded(
+            child: grouped
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [lead, SizedBox(height: S.s2), child])
+                : child,
+          ),
+          if (t != null) ...[
+            SizedBox(width: S.of(10)),
+            Text(_short(t),
+                style: TS.meta(AppColors.fg3).copyWith(
+                    fontFeatures: const [FontFeature.tabularFigures()])),
+          ],
+        ]),
+      ),
+    );
+  }
+}
+
+/// The clock for today, else the weekday within a week, else the date.
+String _short(DateTime t) {
+  final now = DateTime.now();
+  final days = DateTime(now.year, now.month, now.day)
+      .difference(DateTime(t.year, t.month, t.day))
+      .inDays;
+  if (days == 0) return _clock(t);
+  if (days < 7) return _weekdays[t.weekday - 1];
+  return '${t.day} ${_months[t.month - 1]}';
 }
 
 Future<void> _showRecord(
@@ -1236,18 +1450,19 @@ class _AgentBoardViewState extends State<AgentBoardView> {
     return page.entries;
   }
 
-  (String, String, Color) _look(BoardEntry e) => switch (e.kind) {
-        'dispatched' => ('send', 'Dispatched', AppColors.accent),
-        'reported' => ('check-circle', 'Reported', AppColors.ok),
+  (String, String, Color, Color) _look(BoardEntry e) => switch (e.kind) {
+        'dispatched' => ('send', 'Dispatched', AppColors.accent, AppColors.accent),
+        'reported' => ('check-circle', 'Reported', AppColors.ok, AppColors.ok),
         'progress' => (
             'activity',
             e.summary.startsWith(_automatic)
                 ? 'Progress, automatic'
                 : 'Progress',
-            AppColors.fg2
+            AppColors.fg2,
+            AppColors.accent
           ),
-        'noted' => ('file-text', 'Note', AppColors.fg2),
-        _ => ('file-text', e.kind, AppColors.fg2),
+        'noted' => ('file-text', 'Note', AppColors.fg2, AppColors.fg2),
+        _ => ('file-text', e.kind, AppColors.fg2, AppColors.fg2),
       };
 
   /// The summary without what the row already says: the automatic prefix, and
@@ -1355,10 +1570,10 @@ class _AgentBoardViewState extends State<AgentBoardView> {
             (e.correlationId == null ? 'Not on a task' : 'Earlier work'));
     final status = e.taskStatus?.replaceAll('_', ' ');
     final count = e.groupCount ?? 1;
-    return _RecordRow(
+    return _BoardRow(
       time: e.createdAt,
       onTap: () => _openGroup(e, byFolder: byFolder),
-      leading: Row(mainAxisSize: MainAxisSize.min, children: [
+      lead: Row(mainAxisSize: MainAxisSize.min, children: [
         AppIcon(byFolder ? 'folder' : 'file-text',
             size: kMobile ? 15 : 13, color: AppColors.fg2),
         SizedBox(width: S.s6),
@@ -1390,30 +1605,23 @@ class _AgentBoardViewState extends State<AgentBoardView> {
     }
     final look = _look(e);
     final folder = e.workspace;
-    return _RecordRow(
+    return _BoardRow(
       time: e.createdAt,
       onTap: () => _open(e),
-      leading: Row(mainAxisSize: MainAxisSize.min, children: [
-        AppIcon(look.$1, size: kMobile ? 15 : 13, color: look.$3),
-        SizedBox(width: S.s6),
-        Text(look.$2,
-            maxLines: 1,
-            style: sans(_body, weight: W.label, color: AppColors.fg1)),
-        if (folder != null) ...[
-          SizedBox(width: S.s8),
-          Flexible(
+      lead: _StateTag(look.$2, look.$4),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(_plain(_summary(e)),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: sans(_body, color: AppColors.fg1, height: 1.4)),
+        if (folder != null)
+          Padding(
+            padding: EdgeInsets.only(top: S.s2),
             child: Text(_folder(folder),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: sans(_meta, color: AppColors.fg3)),
           ),
-        ],
-      ]),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(_plain(_summary(e)),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: sans(_body, color: AppColors.fg2, height: 1.4)),
         if (_waiting(e))
           Padding(
             padding: EdgeInsets.only(top: S.of(5)),
@@ -1431,6 +1639,7 @@ class _AgentBoardViewState extends State<AgentBoardView> {
       hint: "Search ${widget.agentName}'s work",
       groupedFilters: const {'by-task', 'by-folder'},
       filters: agentBoardFilters,
+      card: true,
       filter: widget.filter,
       filterChips: widget.filterChips,
       load: _load,
