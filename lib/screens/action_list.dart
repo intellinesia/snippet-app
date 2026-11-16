@@ -7,16 +7,23 @@ import '../widgets.dart';
 /// A titled block of action rows, as in a session's or an agent's Actions.
 class ActionGroup extends StatelessWidget {
   const ActionGroup(
-      {super.key, required this.label, required this.rows, this.top});
+      {super.key,
+      required this.label,
+      required this.rows,
+      this.top,
+      this.card = false});
 
   final String label;
   final List<Widget> rows;
   final double? top;
 
+  /// Rows sit on one rounded surface, as in the session sheet.
+  final bool card;
+
   @override
   Widget build(BuildContext context) {
     if (rows.isEmpty) return const SizedBox.shrink();
-    if (kMobile) {
+    if (kMobile && !card) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
