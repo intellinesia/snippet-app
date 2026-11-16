@@ -289,7 +289,6 @@ class _GitScreenState extends State<GitScreen> {
       else
         SnAppBar(
           title: 'Git',
-          subtitle: st != null && st.ok ? st.branch : null,
           onBack: widget.onClose ?? () => Navigator.pop(context),
         ),
       if (_busy || _refreshing)
@@ -360,7 +359,6 @@ class _GitScreenState extends State<GitScreen> {
                 ? EdgeInsets.fromLTRB(S.s16, S.of(10), S.s16, S.s24)
                 : EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s16),
             children: [
-              _commitComposer(st),
               if (empty)
                 Padding(
                   padding: EdgeInsets.only(top: S.s24),
@@ -406,6 +404,7 @@ class _GitScreenState extends State<GitScreen> {
                   ),
                 ],
               ],
+              _commitComposer(st),
             ],
           ),
         ),
@@ -424,35 +423,26 @@ class _GitScreenState extends State<GitScreen> {
           child: Align(
             alignment: Alignment.centerLeft,
             child: Builder(
-              builder: (anchor) => Material(
-                color: kMobile ? AppColors.surface1 : AppColors.overlay,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(kMobile ? 20 : R.sm),
-                  side: kMobile
-                      ? BorderSide(color: AppColors.fg1.withValues(alpha: 0.08))
-                      : BorderSide.none,
-                ),
-                child: InkWell(
-                  onTap: _busy ? null : () => _branchSheet(anchor),
-                  borderRadius: BorderRadius.circular(kMobile ? 20 : R.sm),
-                  child: Container(
-                    height: kMobile ? 40 : 28,
-                    padding: EdgeInsets.symmetric(horizontal: kMobile ? S.of(14) : S.s8),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      AppIcon('git-branch', size: 16, color: AppColors.accent),
-                      SizedBox(width: S.s6),
-                      Flexible(
-                        child: Text(
-                          st.branch.isEmpty ? '(no branch)' : st.branch,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TS.label(AppColors.fg1),
-                        ),
+              builder: (anchor) => InkWell(
+                onTap: _busy ? null : () => _branchSheet(anchor),
+                borderRadius: BorderRadius.circular(R.sm),
+                child: Container(
+                  height: kMobile ? 40 : 28,
+                  padding: EdgeInsets.symmetric(horizontal: S.s4),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    AppIcon('git-branch', size: 15, color: AppColors.fg3),
+                    SizedBox(width: S.s6),
+                    Flexible(
+                      child: Text(
+                        st.branch.isEmpty ? '(no branch)' : st.branch,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: mono(kMobile ? 13 : 12, color: AppColors.fg1),
                       ),
-                      SizedBox(width: S.s4),
-                      AppIcon('chevron-down', size: 14, color: AppColors.fg3),
-                    ]),
-                  ),
+                    ),
+                    SizedBox(width: S.s4),
+                    AppIcon('chevron-down', size: 14, color: AppColors.fg4),
+                  ]),
                 ),
               ),
             ),
@@ -463,8 +453,7 @@ class _GitScreenState extends State<GitScreen> {
           Btn(
             st.behind > 0 ? 'Pull ${st.behind}' : 'Pull',
             small: true,
-            icon: 'download',
-            variant: BtnVariant.secondary,
+            variant: BtnVariant.surface,
             disabled: _busy,
             onTap: () =>
                 _op(() => widget.client.gitPull(_repo), okMsg: 'Pulled'),
@@ -473,8 +462,7 @@ class _GitScreenState extends State<GitScreen> {
           Btn(
             st.ahead > 0 ? 'Push ${st.ahead}' : 'Push',
             small: true,
-            icon: 'upload',
-            variant: st.ahead > 0 ? BtnVariant.primary : BtnVariant.secondary,
+            variant: BtnVariant.surface,
             disabled: _busy,
             onTap: () =>
                 _op(() => widget.client.gitPush(_repo), okMsg: 'Pushed'),
@@ -483,8 +471,7 @@ class _GitScreenState extends State<GitScreen> {
           Btn(
             'Publish',
             small: true,
-            icon: 'upload',
-            variant: BtnVariant.secondary,
+            variant: BtnVariant.surface,
             disabled: _busy,
             onTap: () =>
                 _op(() => widget.client.gitPush(_repo), okMsg: 'Published'),
@@ -502,43 +489,45 @@ class _GitScreenState extends State<GitScreen> {
       if (canCommit) hasStaged ? _commit() : _stageAllAndCommit();
     }
 
-    return Container(
-      margin: EdgeInsets.only(bottom: kMobile ? S.of(10) : S.s16),
-      padding: kMobile
-          ? EdgeInsets.fromLTRB(S.of(18), S.s12, S.of(10), S.of(10))
-          : EdgeInsets.fromLTRB(S.s12, S.s8, S.s8, S.s8),
-      decoration: BoxDecoration(
-        color: kMobile ? AppColors.surface1 : AppColors.tint1,
-        borderRadius: BorderRadius.circular(kMobile ? 24 : R.md),
-        border: kMobile
-            ? Border.all(color: AppColors.fg1.withValues(alpha: 0.08))
-            : null,
-      ),
+    return Padding(
+      padding: EdgeInsets.only(top: S.s12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          CallbackShortcuts(
-            bindings: {
-              const SingleActivator(LogicalKeyboardKey.enter, meta: true):
-                  submit,
-              const SingleActivator(LogicalKeyboardKey.enter, control: true):
-                  submit,
-            },
-            child: TextField(
-              controller: _commitController,
-              focusNode: _commitFocus,
-              minLines: 2,
-              maxLines: 4,
-              style: kMobile ? sans(16, color: AppColors.fg1) : TS.ui(AppColors.fg1),
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: kMobile
-                    ? 'Commit message'
-                    : 'Commit message (${kMacOS ? 'Cmd' : 'Ctrl'}+Enter to commit)',
-                hintStyle:
-                    kMobile ? sans(16, color: AppColors.fg4) : TS.ui(AppColors.fg4),
-                contentPadding: EdgeInsets.symmetric(vertical: S.s4),
-                border: InputBorder.none,
+          Container(
+            constraints: BoxConstraints(minHeight: kMobile ? 44 : 56),
+            padding: EdgeInsets.symmetric(horizontal: S.of(12), vertical: S.s6),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(kMobile ? R.md : R.sm),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: CallbackShortcuts(
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+                    submit,
+                const SingleActivator(LogicalKeyboardKey.enter, control: true):
+                    submit,
+              },
+              child: TextField(
+                controller: _commitController,
+                focusNode: _commitFocus,
+                minLines: kMobile ? 1 : 2,
+                maxLines: 4,
+                style: kMobile
+                    ? sans(16, color: AppColors.fg1)
+                    : TS.ui(AppColors.fg1),
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: kMobile
+                      ? 'Commit message'
+                      : 'Commit message (${kMacOS ? 'Cmd' : 'Ctrl'}+Enter to commit)',
+                  hintStyle: kMobile
+                      ? sans(16, color: AppColors.fg4)
+                      : TS.ui(AppColors.fg4),
+                  contentPadding: EdgeInsets.symmetric(vertical: S.s4),
+                  border: InputBorder.none,
+                ),
               ),
             ),
           ),
@@ -555,19 +544,17 @@ class _GitScreenState extends State<GitScreen> {
             const Spacer(),
             if (hasStaged)
               Btn('Commit ${st.staged.length}',
-                  icon: 'check',
                   small: true,
                   disabled: !canCommit,
                   onTap: _commit)
             else if (hasAny)
               Btn('Commit all',
-                  icon: 'check',
                   small: true,
                   variant: BtnVariant.secondary,
                   disabled: !canCommit,
                   onTap: _stageAllAndCommit)
             else
-              const Btn('Commit', icon: 'check', small: true, disabled: true),
+              const Btn('Commit', small: true, disabled: true),
           ]),
         ],
       ),
@@ -587,14 +574,28 @@ class _GitScreenState extends State<GitScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader(
-          title,
-          count: count,
-          action: actionLabel,
-          onAction: _busy ? null : onAction,
-          padding: EdgeInsets.fromLTRB(S.s4, 0, 0, S.s4),
+        Padding(
+          padding: EdgeInsets.fromLTRB(S.s4, S.s4, S.s4, S.s4),
+          child: Row(children: [
+            Expanded(
+              child: Text(title,
+                  style: sans(13, weight: W.label, color: AppColors.fg2)),
+            ),
+            InkWell(
+              onTap: _busy ? null : onAction,
+              borderRadius: BorderRadius.circular(R.sm),
+              child: Container(
+                constraints: BoxConstraints(minHeight: kMobile ? 32 : 24),
+                alignment: Alignment.center,
+                padding: EdgeInsets.symmetric(horizontal: S.s4),
+                child: Text(actionLabel,
+                    style: sans(kMobile ? 13 : 12, color: AppColors.fg3)),
+              ),
+            ),
+          ]),
         ),
-        ListGroup(children: [
+        CardGroupScope(
+          child: ListGroup(children: [
           for (final f in expanded ? files : files.take(_collapsedLimit))
             _fileItem(f, staged: staged),
           if (!expanded)
@@ -604,7 +605,7 @@ class _GitScreenState extends State<GitScreen> {
                   style: TS.label(AppColors.accent)),
               onTap: () => setState(() => _expandedSections.add(title)),
             ),
-        ]),
+        ])),
       ],
     );
   }
@@ -615,49 +616,6 @@ class _GitScreenState extends State<GitScreen> {
         : (f.untracked ? '?' : (f.y.trim().isNotEmpty ? f.y : f.x));
     final tone = _statusTone(code);
     final (fg, bg) = toneColors(tone);
-    final slash = f.path.lastIndexOf('/');
-    final dir = slash != -1 ? f.path.substring(0, slash + 1) : '';
-    final fileName = slash != -1 ? f.path.substring(slash + 1) : f.path;
-
-    if (kMobile) {
-      return InkWell(
-        onTap: () => _openDiff(f),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(S.s4, S.of(10), 0, S.of(10)),
-          child: Row(children: [
-            SizedBox(
-              width: 22,
-              child: Text(code == '?' ? 'U' : code,
-                  style: mono(13, weight: FontWeight.w600, color: fg)),
-            ),
-            SizedBox(width: S.s8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(fileName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(15, color: AppColors.fg1)),
-                  if (dir.isNotEmpty)
-                    Text(dir.substring(0, dir.length - 1),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(13, color: AppColors.fg4)),
-                ],
-              ),
-            ),
-            IconBtn(
-              staged ? 'minus' : 'plus',
-              size: 40,
-              iconSize: 16,
-              tooltip: staged ? 'Unstage' : 'Stage',
-              onTap: _busy ? null : () => _toggleStage(f, staged: staged),
-            ),
-          ]),
-        ),
-      );
-    }
     return Tooltip(
         message: f.path,
         waitDuration: const Duration(milliseconds: 600),
@@ -669,46 +627,27 @@ class _GitScreenState extends State<GitScreen> {
               padding: EdgeInsets.fromLTRB(S.s12, S.s4, S.s4, S.s4),
               child: Row(children: [
                 Container(
-                  width: 20,
-                  height: 20,
+                  width: kMobile ? 22 : 20,
+                  height: kMobile ? 22 : 20,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: bg,
                     borderRadius: BorderRadius.circular(R.sm),
                   ),
                   child: Text(code == '?' ? 'U' : code,
-                      style: mono(11, color: fg)),
+                      style: mono(11, weight: FontWeight.w600, color: fg)),
                 ),
                 SizedBox(width: S.of(10)),
                 Expanded(
-                  child: Text.rich(
-                    kMobile
-                        ? TextSpan(children: [
-                            if (dir.isNotEmpty)
-                              TextSpan(
-                                  text: dir,
-                                  style: TS.codeSmall(AppColors.fg3)),
-                            TextSpan(
-                                text: fileName,
-                                style: TS.codeSmall(AppColors.fg1)),
-                          ])
-                        : TextSpan(children: [
-                            TextSpan(
-                                text: fileName,
-                                style: sans(13, color: AppColors.fg1)),
-                            if (dir.isNotEmpty)
-                              TextSpan(
-                                  text: '  ${dir.substring(0, dir.length - 1)}',
-                                  style: sans(12, color: AppColors.fg4)),
-                          ]),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  child: Text(f.path,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mono(kMobile ? 13 : 12, color: AppColors.fg1)),
                 ),
                 IconBtn(
                   staged ? 'minus' : 'plus',
-                  size: 30,
-                  iconSize: 14,
+                  size: kMobile ? 40 : 30,
+                  iconSize: kMobile ? 16 : 14,
                   tooltip: staged ? 'Unstage' : 'Stage',
                   onTap: _busy ? null : () => _toggleStage(f, staged: staged),
                 ),
