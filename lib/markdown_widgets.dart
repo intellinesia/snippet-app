@@ -243,7 +243,7 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: S.s8),
       child: Container(
         width: double.infinity,
         clipBehavior: Clip.antiAlias,
@@ -263,11 +263,11 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
           children: [
             Padding(
               padding: kMobile
-                  ? const EdgeInsets.fromLTRB(12, 6, 6, 6)
-                  : const EdgeInsets.fromLTRB(12, 7, 6, 7),
+                  ? EdgeInsets.fromLTRB(S.s12, S.s6, S.s6, S.s6)
+                  : EdgeInsets.fromLTRB(S.s12, S.of(7), S.s6, S.of(7)),
               child: Row(children: [
                 AppIcon('file-code', size: 13, color: AppColors.fg3),
-                const SizedBox(width: 6),
+                SizedBox(width: S.s6),
                 Expanded(
                   child: Text(
                     label,
@@ -277,18 +277,18 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
                   ),
                 ),
                 if (parsed.adds > 0) ...[
-                  const SizedBox(width: 6),
+                  SizedBox(width: S.s6),
                   Text('+${parsed.adds}',
                       style: codeMono(11,
                           weight: FontWeight.w600, color: AppColors.diffAddFg)),
                 ],
                 if (parsed.dels > 0) ...[
-                  const SizedBox(width: 6),
+                  SizedBox(width: S.s6),
                   Text('-${parsed.dels}',
                       style: codeMono(11,
                           weight: FontWeight.w600, color: AppColors.diffDelFg)),
                 ],
-                const SizedBox(width: 6),
+                SizedBox(width: S.s6),
                 IconBtn(
                   'wrap',
                   size: 28,
@@ -297,7 +297,7 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
                   tooltip: _wrap ? 'Unwrap lines' : 'Wrap lines',
                   onTap: () => setState(() => _wrap = !_wrap),
                 ),
-                const SizedBox(width: 2),
+                SizedBox(width: S.s2),
                 IconBtn(
                   'clipboard',
                   size: 28,
@@ -314,7 +314,7 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
                 height: 1, color: kMobile ? AppColors.line : AppColors.border),
             if (_wrap)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: EdgeInsets.symmetric(vertical: S.s4),
                 child: buildRows(wrapped: true),
               )
             else
@@ -322,7 +322,7 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
                 onNotification: (_) => true,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  padding: EdgeInsets.symmetric(vertical: S.s4),
                   child: IntrinsicWidth(child: buildRows(wrapped: false)),
                 ),
               ),
@@ -334,13 +334,13 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
                 onTap: () => setState(() => _expanded = !_expanded),
                 child: Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       AppIcon(_expanded ? 'chevron-up' : 'chevron-down',
                           size: 13, color: AppColors.accent),
-                      const SizedBox(width: 6),
+                      SizedBox(width: S.s6),
                       Text(
                         _expanded
                             ? 'Show less'
@@ -363,7 +363,7 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
     if (l.kind == _MdDiffKind.hunk || l.kind == _MdDiffKind.meta) {
       return Container(
         color: AppColors.surface1.withValues(alpha: 0.6),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(3)),
         child: Text(
           l.text,
           maxLines: 1,
@@ -395,7 +395,7 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
     );
     return Container(
       color: bg,
-      padding: const EdgeInsets.fromLTRB(6, 1.5, 10, 1.5),
+      padding: EdgeInsets.fromLTRB(S.s6, S.of(1.5), S.of(10), S.of(1.5)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -444,7 +444,7 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
         widget.language.trim().isEmpty ? 'code' : widget.language.trim();
     final gutterW = (lines.length.toString().length.clamp(2, 5) * 7.5) + 4.0;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: S.s8),
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
@@ -461,8 +461,8 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
           children: [
             Padding(
               padding: kMobile
-                  ? const EdgeInsets.fromLTRB(14, 6, 6, 6)
-                  : const EdgeInsets.fromLTRB(12, 8, 6, 8),
+                  ? EdgeInsets.fromLTRB(S.of(14), S.s6, S.s6, S.s6)
+                  : EdgeInsets.fromLTRB(S.s12, S.s8, S.s6, S.s8),
               child: Row(children: [
                 Text(lang, style: codeMono(11, color: AppColors.fg3)),
                 const Spacer(),
@@ -474,7 +474,7 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
                   tooltip: _wrap ? 'Unwrap lines' : 'Wrap lines',
                   onTap: () => setState(() => _wrap = !_wrap),
                 ),
-                const SizedBox(width: 2),
+                SizedBox(width: S.s2),
                 IconBtn(
                   'clipboard',
                   size: 28,
@@ -491,7 +491,7 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
                 height: 1, color: kMobile ? AppColors.line : AppColors.border),
             if (_wrap)
               Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 12, 10),
+                padding: EdgeInsets.fromLTRB(S.s8, S.s8, S.s12, S.of(10)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -507,7 +507,7 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
                               style: codeMono(11, height: 1.55, color: AppColors.fg4),
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          SizedBox(width: S.of(10)),
                           Expanded(
                             child: Text.rich(
                               highlightedCodeSpan(
@@ -525,7 +525,7 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
                 onNotification: (_) => true,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(8, 8, 12, 10),
+                  padding: EdgeInsets.fromLTRB(S.s8, S.s8, S.s12, S.of(10)),
                   child: SelectableText.rich(
                     TextSpan(children: [
                       for (var i = 0; i < lines.length; i++) ...[

@@ -540,7 +540,7 @@ Widget _numberedCode(String text, {int start = 1}) {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text(numbers, style: _code(AppColors.fg4)),
-      const SizedBox(width: 14),
+      SizedBox(width: S.of(14)),
       Text(text, style: _code()),
     ],
   ));
@@ -559,7 +559,7 @@ List<Widget> _readFileView(Map? a, Map? d) {
         () {
           final parts = e.toString().split('\t');
           return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
+            padding: EdgeInsets.symmetric(vertical: S.s2),
             child: Row(children: [
               Expanded(
                 child: Text(parts.first,
@@ -640,7 +640,7 @@ List<Widget> _searchContentView(Map? a, Map? d) {
   return [
     for (final m in matches)
       Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
+        padding: EdgeInsets.symmetric(vertical: S.of(3)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           if (m.path.isNotEmpty)
             Text(m.line.isEmpty ? m.path : '${m.path}:${m.line}',
@@ -702,7 +702,7 @@ class _WebResult extends StatelessWidget {
       ),
       if (meta.isNotEmpty)
         Padding(
-          padding: const EdgeInsets.only(top: 1),
+          padding: EdgeInsets.only(top: S.of(1)),
           child: Text(meta.join(' · '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -710,7 +710,7 @@ class _WebResult extends StatelessWidget {
         ),
       if (snippet.isNotEmpty)
         Padding(
-          padding: const EdgeInsets.only(top: 3),
+          padding: EdgeInsets.only(top: S.of(3)),
           child: Text(snippet,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
@@ -860,7 +860,7 @@ List<Widget> _skillView(String tool, Map? a, Map? d) {
     out.add(Text(name, style: TS.label(AppColors.fg1)));
   }
   if (text.trim().isNotEmpty) {
-    if (out.isNotEmpty) out.add(const SizedBox(height: 6));
+    if (out.isNotEmpty) out.add(SizedBox(height: S.s6));
     out.add(_ToolMarkdown(_displayText(text).trimRight()));
   }
   if (out.isEmpty) {
@@ -877,11 +877,11 @@ List<Widget> _monitorView(Map? a, Map? d) {
     Text(action, style: TS.label(AppColors.fg1)),
   ];
   if (path.isNotEmpty) {
-    out.add(const SizedBox(height: 4));
+    out.add(SizedBox(height: S.s4));
     out.add(Text(path, style: codeMono(12, color: AppColors.fg2)));
   }
   if (filter.isNotEmpty) {
-    out.add(const SizedBox(height: 4));
+    out.add(SizedBox(height: S.s4));
     out.add(Text(filter, style: codeMono(11, color: AppColors.fg3)));
   }
   return out;
@@ -897,7 +897,7 @@ List<Widget> _presentView(BuildContext context, Map? a, Map? d) {
           ? Text(path, style: TS.label(AppColors.fg1))
           : FileChip(client: client, path: path),
     if (caption.isNotEmpty) ...[
-      const SizedBox(height: 4),
+      SizedBox(height: S.s4),
       Text(caption, style: sans(13, color: AppColors.fg3)),
     ],
   ];

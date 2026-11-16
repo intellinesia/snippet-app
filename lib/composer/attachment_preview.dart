@@ -642,7 +642,7 @@ class _PreviewContentState extends State<_PreviewContent> {
                         size: 32,
                         iconSize: 16,
                         onTap: () => _step(by)))
-                : const SizedBox(width: 32, height: 32),
+                : SizedBox(width: S.s32, height: S.s32),
           ),
         );
     return ColoredBox(

@@ -59,13 +59,13 @@ class _TasksPopoverState extends State<_TasksPopover> {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 2, 4, 4),
+        padding: EdgeInsets.fromLTRB(S.s4, S.s2, S.s4, S.s4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 2, 0, 6),
+              padding: EdgeInsets.fromLTRB(S.s4, S.s2, 0, S.s6),
               child: Row(children: [
                 Expanded(
                   child: Text('Tasks',
@@ -81,10 +81,10 @@ class _TasksPopoverState extends State<_TasksPopover> {
                     },
                     child: Padding(
                       padding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                          EdgeInsets.symmetric(horizontal: S.s8, vertical: S.of(5)),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
                         AppIcon('expand', size: 12, color: AppColors.fg3),
-                        const SizedBox(width: 6),
+                        SizedBox(width: S.s6),
                         Text('Expand',
                             style: sans(13, color: AppColors.fg2)),
                       ]),
@@ -97,8 +97,8 @@ class _TasksPopoverState extends State<_TasksPopover> {
               future: _tasks,
               builder: (context, snap) {
                 if (snap.connectionState != ConnectionState.done) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 22),
+                  return Padding(
+                    padding: EdgeInsets.symmetric(vertical: S.of(22)),
                     child: Center(child: Spinner(size: 14)),
                   );
                 }
@@ -111,7 +111,7 @@ class _TasksPopoverState extends State<_TasksPopover> {
                   for (final t in open.take(12)) _row(t),
                   if (open.length > 12)
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 6, 8, 2),
+                      padding: EdgeInsets.fromLTRB(S.s8, S.s6, S.s8, S.s2),
                       child: Text('+${open.length - 12} more',
                           style: sans(12, color: AppColors.fg4)),
                     ),
@@ -129,7 +129,7 @@ class _TasksPopoverState extends State<_TasksPopover> {
       };
 
   Widget _note(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 10, 4, 12),
+        padding: EdgeInsets.fromLTRB(S.s4, S.of(10), S.s4, S.s12),
         child: Text(text, style: sans(13, color: AppColors.fg4)),
       );
 
@@ -143,7 +143,7 @@ class _TasksPopoverState extends State<_TasksPopover> {
             widget.onOpenTask(t);
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s8),
             child: Row(children: [
               Container(
                 width: 6,
@@ -151,14 +151,14 @@ class _TasksPopoverState extends State<_TasksPopover> {
                 decoration:
                     BoxDecoration(shape: BoxShape.circle, color: _dot(t.status)),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Expanded(
                 child: Text(t.title.trim().isEmpty ? '(untitled)' : t.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: sans(13, color: AppColors.fg2)),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               Text(t.status.label, style: sans(12, color: AppColors.fg4)),
             ]),
           ),

@@ -79,14 +79,14 @@ class _CallPromptCardState extends State<CallPromptCard> {
             ]),
             if (!tracking)
               Padding(
-                padding: EdgeInsets.only(top: S.s4, left: 16),
+                padding: EdgeInsets.only(top: S.s4, left: S.s16),
                 child: Text(widget.status.body,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: sans(kMobile ? 13 : 13, color: AppColors.fg2)),
               ),
             Padding(
-              padding: EdgeInsets.only(top: S.s8, left: 16),
+              padding: EdgeInsets.only(top: S.s8, left: S.s16),
               child: Wrap(spacing: S.s8, runSpacing: S.s8, children: [
                 if (tracking)
                   Btn('Stop',
@@ -109,7 +109,7 @@ class _CallPromptCardState extends State<CallPromptCard> {
             ),
             if (_failed)
               Padding(
-                padding: EdgeInsets.only(top: S.s6, left: 16),
+                padding: EdgeInsets.only(top: S.s6, left: S.s16),
                 child: Text("Couldn't reach Snippet. Try again.",
                     style: sans(12, color: AppColors.danger)),
               ),

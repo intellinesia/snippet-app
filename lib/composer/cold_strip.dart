@@ -51,16 +51,16 @@ class ColdTab extends StatelessWidget {
     };
     return Container(
       height: kMobile ? 32 : 28,
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: EdgeInsets.symmetric(horizontal: S.s20),
       transform: Matrix4.translationValues(0, 1, 0),
-      padding: const EdgeInsets.only(left: 12, right: 2),
+      padding: EdgeInsets.only(left: S.s12, right: S.s2),
       decoration: BoxDecoration(
         color: AppColors.surface1,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(R.lg)),
       ),
       child: Row(children: [
         AppIcon('clock', size: 13, color: AppColors.fg3),
-        const SizedBox(width: 8),
+        SizedBox(width: S.s8),
         Expanded(
           child: Text(label,
               maxLines: 1,
@@ -87,9 +87,9 @@ class _Choice extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(R.md),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: EdgeInsets.symmetric(horizontal: S.of(10)),
           child: Center(
             child: Text(label,
                 style: sans(12,

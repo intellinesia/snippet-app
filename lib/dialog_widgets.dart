@@ -71,7 +71,7 @@ class _AppFieldState extends State<AppField> {
       ],
       AnimatedContainer(
         duration: Motion.quick,
-        padding: EdgeInsets.symmetric(horizontal: kMobile ? 14 : 11),
+        padding: EdgeInsets.symmetric(horizontal: kMobile ? S.of(14) : S.of(11)),
         constraints: BoxConstraints(minHeight: kMobile ? 48 : 34),
         decoration: BoxDecoration(
           color: AppColors.surface1,
@@ -86,7 +86,7 @@ class _AppFieldState extends State<AppField> {
         child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
           if (widget.icon != null) ...[
             AppIcon(widget.icon!, size: 16, color: AppColors.fg3),
-            const SizedBox(width: 8)
+            SizedBox(width: S.s8)
           ],
           Expanded(
             child: TextField(
@@ -107,7 +107,7 @@ class _AppFieldState extends State<AppField> {
                       : sans(13, color: AppColors.fg1),
               decoration: InputDecoration(
                 isCollapsed: true,
-                contentPadding: EdgeInsets.symmetric(vertical: kMobile ? 8 : 8),
+                contentPadding: EdgeInsets.symmetric(vertical: kMobile ? S.s8 : S.s8),
                 border: InputBorder.none,
                 hintText: widget.hint,
                 hintStyle: kMobile
@@ -122,7 +122,7 @@ class _AppFieldState extends State<AppField> {
         ]),
       ),
       if (widget.helper != null) ...[
-        const SizedBox(height: 7),
+        SizedBox(height: S.of(7)),
         Text(widget.helper!,
             style: kMobile
                 ? sans(12, height: 17 / 12, color: AppColors.fg4)
@@ -158,7 +158,7 @@ class _DialogFrame extends StatelessWidget {
   Widget build(BuildContext context) => Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+        insetPadding: EdgeInsets.symmetric(horizontal: S.s40, vertical: S.s24),
         child: Container(
           constraints: BoxConstraints(
               maxWidth: maxWidth, maxHeight: maxHeight ?? double.infinity),
@@ -173,7 +173,7 @@ class _DialogFrame extends StatelessWidget {
             type: MaterialType.transparency,
             child: Padding(
               padding:
-                  EdgeInsets.fromLTRB(20, 16, onClose == null ? 20 : 12, 16),
+                  EdgeInsets.fromLTRB(S.s20, S.s16, onClose == null ? S.s20 : S.s12, S.s16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -182,7 +182,7 @@ class _DialogFrame extends StatelessWidget {
                     if (icon != null) ...[
                       AppIcon(icon!,
                           size: 16, color: iconColor ?? AppColors.fg2),
-                      const SizedBox(width: 8),
+                      SizedBox(width: S.s8),
                     ],
                     Expanded(
                       child: Text(title,
@@ -198,10 +198,10 @@ class _DialogFrame extends StatelessWidget {
                           tooltip: 'Close',
                           onTap: onClose),
                   ]),
-                  const SizedBox(height: 10),
+                  SizedBox(height: S.of(10)),
                   Flexible(
                     child: Padding(
-                      padding: EdgeInsets.only(right: onClose == null ? 0 : 8),
+                      padding: EdgeInsets.only(right: onClose == null ? 0 : S.s8),
                       child: child,
                     ),
                   ),
@@ -247,7 +247,7 @@ class _DialogActions extends StatelessWidget {
     return Row(children: [
       const Spacer(),
       Btn('Cancel', variant: BtnVariant.ghost, small: true, onTap: onCancel),
-      const SizedBox(width: 8),
+      SizedBox(width: S.s8),
       Btn(confirmLabel, variant: variant, small: true, onTap: onConfirm),
     ]);
   }
@@ -413,7 +413,7 @@ Future<T?> showPointPopover<T>(BuildContext context,
           elevation: 10,
           shadowColor: Colors.black.withValues(alpha: 0.5),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(R.lg),
             side: BorderSide(color: AppColors.border2),
           ),
           clipBehavior: Clip.antiAlias,
@@ -451,7 +451,7 @@ Future<String?> _showInlinePrompt(BuildContext context,
       width: maxLines > 1 ? 340 : 300,
       maxHeight: maxLines > 1 ? 260 : 120,
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(S.s12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -460,7 +460,7 @@ Future<String?> _showInlinePrompt(BuildContext context,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: sans(13, color: AppColors.fg3)),
-            const SizedBox(height: 8),
+            SizedBox(height: S.s8),
             _InlinePromptField(
                 initial: initial,
                 hint: hint,
@@ -517,13 +517,13 @@ class _InlinePromptFieldState extends State<_InlinePromptField> {
     if (multi) {
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         field,
-        const SizedBox(height: 10),
+        SizedBox(height: S.of(10)),
         Align(alignment: Alignment.centerRight, child: save),
       ]);
     }
     return Row(children: [
       Expanded(child: field),
-      const SizedBox(width: 8),
+      SizedBox(width: S.s8),
       save,
     ]);
   }
@@ -600,7 +600,7 @@ Future<T?> showAppSheet<T>(BuildContext context,
         maxHeight: maxHeight,
         onClose: () => Navigator.pop(ctx),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 4),
+          padding: EdgeInsets.only(bottom: S.s4),
           child: child,
         ),
       )),
@@ -737,7 +737,7 @@ Future<T?> showAnchoredPanel<T>(
         width: w,
         child: kMobile
             ? Glass(
-                radius: BorderRadius.circular(16),
+                radius: BorderRadius.circular(R.of(16)),
                 tint: AppColors.surface2.withValues(alpha: 0.7),
                 blur: 28,
                 child: Material(
@@ -745,7 +745,7 @@ Future<T?> showAnchoredPanel<T>(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(maxHeight: room),
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(6),
+                      padding: EdgeInsets.all(S.s6),
                       child: child,
                     ),
                   ),
@@ -756,14 +756,14 @@ Future<T?> showAnchoredPanel<T>(
                 elevation: 10,
                 shadowColor: Colors.black.withValues(alpha: 0.5),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(R.of(14)),
                   side: BorderSide(color: AppColors.border2),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxHeight: room),
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(8),
+                    padding: EdgeInsets.all(S.s8),
                     child: child,
                   ),
                 ),
@@ -808,7 +808,7 @@ Future<T?> showSidePopover<T>(
     barrierColor: Colors.transparent,
     transitionDuration: Motion.quick,
     pageBuilder: (ctx, _, __) => SafeArea(
-      minimum: const EdgeInsets.all(12),
+      minimum: EdgeInsets.all(S.s12),
       child: Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
         child: LayoutBuilder(builder: (context, constraints) {
@@ -827,14 +827,14 @@ Future<T?> showSidePopover<T>(
               elevation: 4,
               shadowColor: Colors.black.withValues(alpha: 0.4),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(S.s16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(title,
                         style: sans(13, weight: W.label, color: AppColors.fg1)),
-                    const SizedBox(height: 12),
+                    SizedBox(height: S.s12),
                     child,
                   ],
                 ),
@@ -914,7 +914,7 @@ class _FieldWellState extends State<FieldWell> {
           padding: widget.padding,
           decoration: BoxDecoration(
             color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(R.of(14)),
             border: Border.all(
                 color: _focused ? AppColors.fg4 : AppColors.lineStrong),
           ),

@@ -166,7 +166,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
         height: 8,
         decoration: BoxDecoration(color: mood, shape: BoxShape.circle),
       ),
-      const SizedBox(width: 10),
+      SizedBox(width: S.of(10)),
       Expanded(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -210,7 +210,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
           borderRadius: BorderRadius.circular(R.xs),
           child: Padding(
             padding:
-                EdgeInsets.symmetric(horizontal: 4, vertical: kMobile ? 6 : 3),
+                EdgeInsets.symmetric(horizontal: S.s4, vertical: kMobile ? S.s6 : S.of(3)),
             child: Text(label, style: link),
           ),
         );
@@ -253,7 +253,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
     };
 
     final expanded = Padding(
-      padding: EdgeInsets.only(left: 18, right: S.s12, top: S.s6),
+      padding: EdgeInsets.only(left: S.of(18), right: S.s12, top: S.s6),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -305,7 +305,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
                   style: sans(12, color: AppColors.fg3)),
             ),
           if (actions != null && _moreQuestions == 0)
-            Padding(padding: const EdgeInsets.only(top: 8), child: actions),
+            Padding(padding: EdgeInsets.only(top: S.s8), child: actions),
           if (_state == _Send.failed)
             Padding(
               padding: EdgeInsets.only(top: S.s6),
@@ -363,7 +363,7 @@ class _NotificationMessageCardState extends State<NotificationMessageCard> {
               onTap: _toggle,
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
-                    kMobile ? 18 : 14, kMobile ? 6 : 8, 4, kMobile ? 6 : 8),
+                    kMobile ? S.of(18) : S.of(14), kMobile ? S.s6 : S.s8, S.s4, kMobile ? S.s6 : S.s8),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -456,8 +456,8 @@ class _ReplyField extends StatelessWidget {
         SizedBox.square(
           dimension: h,
           child: busy
-              ? const Padding(
-                  padding: EdgeInsets.all(11),
+              ? Padding(
+                  padding: EdgeInsets.all(S.of(11)),
                   child: CircularProgressIndicator(strokeWidth: 1.6))
               : IconButton(
                   tooltip: 'Send',

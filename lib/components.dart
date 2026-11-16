@@ -432,7 +432,7 @@ class ListGroup extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(R.of(14)),
           border: Border.all(color: AppColors.line),
         ),
         child: Material(color: Colors.transparent, child: column),
@@ -492,8 +492,8 @@ class ListRow extends StatelessWidget {
           child: Padding(
             padding: kMobile
                 ? EdgeInsets.symmetric(
-                    horizontal: FlatGroupScope.of(context) ? 4 : 16,
-                    vertical: 11)
+                    horizontal: FlatGroupScope.of(context) ? S.s4 : S.s16,
+                    vertical: S.of(11))
                 : EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
             child: Row(children: [
               if (leading != null) ...[leading!, SizedBox(width: S.s12)],
