@@ -57,6 +57,153 @@ bool sessionNeedsYou(SessionInfo s) =>
   return (label: 'Needs input', icon: 'message');
 }
 
+String sessionStepLabel(SessionPlan plan) {
+  final stepNum = plan.current != null
+      ? (plan.done + 1).clamp(1, plan.total)
+      : plan.done.clamp(0, plan.total);
+  return 'step $stepNum of ${plan.total}';
+}
+
+String sessionDuration(int? unixSec) {
+  if (unixSec == null || unixSec <= 0) return '';
+  final secs = unixSec > 100000000000 ? unixSec ~/ 1000 : unixSec;
+  final d = DateTime.now()
+      .difference(DateTime.fromMillisecondsSinceEpoch(secs * 1000));
+  if (d.inMinutes < 1) return 'just now';
+  if (d.inMinutes < 60) return '${d.inMinutes}m';
+  return '${d.inHours}h ${d.inMinutes % 60}m';
+}
+
+String? sessionLanesLabel(SessionLanes? lanes) {
+  if (lanes == null || lanes.running <= 0) return null;
+  final n = lanes.running;
+  final count = n == 1 ? '1 lane' : '$n lanes';
+  final first = lanes.items
+      .map((l) => (l.activity ?? l.title).trim())
+      .firstWhere((t) => t.isNotEmpty, orElse: () => '');
+  return first.isEmpty ? count : '$count · $first';
+}
+
+String sessionPrLabel(SessionPr pr) {
+  final suffix = switch (pr.state) {
+    'merged' => 'merged',
+    'closed' => 'closed',
+    'draft' => pr.checks == 'none' ? 'draft' : 'draft · checks ${pr.checks}',
+    _ => pr.checks == 'none' ? 'open' : 'checks ${pr.checks}',
+  };
+  return 'PR #${pr.number} · $suffix';
+}
+
+Color sessionPrColor(SessionPr pr) => switch (pr.checks) {
+      'failing' => AppColors.danger,
+      'passing' => AppColors.ok,
+      'pending' => AppColors.run,
+      _ => AppColors.fg3,
+    };
+
+String? sessionWakeLabel(int? nextWakeAt) {
+  if (nextWakeAt == null || nextWakeAt <= 0) return null;
+  final dt = DateTime.fromMillisecondsSinceEpoch(nextWakeAt * 1000).toLocal();
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  final day = days[dt.weekday - 1];
+  final hh = dt.hour.toString().padLeft(2, '0');
+  final mm = dt.minute.toString().padLeft(2, '0');
+  return 'wakes $day $hh:$mm';
+}
+
+class SessionPrActionRow extends StatelessWidget {
+  const SessionPrActionRow({
+    super.key,
+    required this.pr,
+    this.onReview,
+    this.onMerge,
+    required this.mobile,
+  });
+
+  final SessionPr pr;
+  final VoidCallback? onReview;
+  final VoidCallback? onMerge;
+  final bool mobile;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = sessionPrColor(pr);
+    final showActions = pr.state == 'open' && (onReview != null || onMerge != null);
+    final btnHeight = mobile ? M.minTarget : 28.0;
+    return Row(
+      children: [
+        AppIcon('git-pull-request', size: mobile ? 12 : 11, color: color),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            sessionPrLabel(pr),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: (mobile ? sans(12, color: color) : TS.meta(color)),
+          ),
+        ),
+        if (showActions) ...[
+          if (onReview != null) ...[
+            const SizedBox(width: 6),
+            _PrMiniButton(
+              label: 'Review',
+              height: btnHeight,
+              onTap: onReview!,
+              primary: false,
+            ),
+          ],
+          if (onMerge != null) ...[
+            const SizedBox(width: 6),
+            _PrMiniButton(
+              label: 'Merge',
+              height: btnHeight,
+              onTap: onMerge!,
+              primary: true,
+            ),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+class _PrMiniButton extends StatelessWidget {
+  const _PrMiniButton({
+    required this.label,
+    required this.height,
+    required this.onTap,
+    required this.primary,
+  });
+
+  final String label;
+  final double height;
+  final VoidCallback onTap;
+  final bool primary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: primary ? AppColors.accentBg : AppColors.tint2,
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: onTap,
+        child: Container(
+          height: height,
+          padding: EdgeInsets.symmetric(horizontal: height >= 40 ? 12 : 8),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: sans(height >= 40 ? 13 : 11,
+                weight: W.label,
+                color: primary ? AppColors.accent : AppColors.fg2),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Project name as a collapsible list section header.
 class SessionGroupHeader extends StatefulWidget {
   const SessionGroupHeader(
@@ -203,6 +350,8 @@ class SessionListRow extends StatelessWidget {
     this.pinned = false,
     this.renameField,
     this.leading,
+    this.onReviewPr,
+    this.onMergePr,
   });
 
   final SessionInfo session;
@@ -227,6 +376,9 @@ class SessionListRow extends StatelessWidget {
 
   /// Leading agent, provider or neutral mark aligned with the title line.
   final Widget? leading;
+
+  final VoidCallback? onReviewPr;
+  final VoidCallback? onMergePr;
 
   @override
   Widget build(BuildContext context) {
@@ -255,11 +407,24 @@ class SessionListRow extends StatelessWidget {
     final branch = s.branch?.trim() ?? '';
     final attn = needsYou ? sessionAttentionState(s) : null;
     final noRepo = !showProject && branch.isEmpty && !s.isGit;
+    final plan = !settled && !needsYou && s.plan != null && s.plan!.total > 0
+        ? s.plan
+        : null;
+    final stepSince = plan != null
+        ? sessionDuration(plan.stepStartedAt ?? (working ? s.runningSince : null))
+        : '';
+    final lanesText = !settled ? sessionLanesLabel(s.lanes) : null;
+    final pr = !settled ? s.pr : null;
+    final wakeText = !settled && !working && !needsYou
+        ? sessionWakeLabel(s.nextWakeAt)
+        : null;
+    final hasExtraLine =
+        pr != null || lanesText != null || plan?.current != null || wakeText != null;
     final hasMeta = showProject || needsYou || branch.isNotEmpty || diff != null || noRepo;
 
     final stateLabel = attn?.label ??
         (working
-            ? 'Working'
+            ? (plan != null ? sessionStepLabel(plan) : 'Working')
             : settled
                 ? 'Settled'
                 : null);
@@ -302,7 +467,12 @@ class SessionListRow extends StatelessWidget {
                     const SizedBox(width: 8),
                     const WorkingDots(),
                     const SizedBox(width: 5),
-                    Text('Working',
+                    Text(
+                        plan != null
+                            ? (stepSince.isEmpty
+                                ? sessionStepLabel(plan)
+                                : '${sessionStepLabel(plan)} · $stepSince')
+                            : 'Working',
                         maxLines: 1,
                         style: (kMobile ? TS.meta : TS.caption)(AppColors.accent)),
                   ] else if (renameField == null && timeText.isNotEmpty) ...[
@@ -382,6 +552,32 @@ class SessionListRow extends StatelessWidget {
                     ],
                   ]),
                 ),
+              if (hasExtraLine) ...[
+                const SizedBox(height: 2),
+                // Keep desktop rows compact: at most one extra line below metadata.
+                if (pr != null)
+                  SessionPrActionRow(
+                    pr: pr,
+                    onReview: onReviewPr,
+                    onMerge: onMergePr,
+                    mobile: kMobile,
+                  )
+                else if (lanesText != null)
+                  Text(lanesText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TS.meta(AppColors.fg3))
+                else if (plan?.current != null)
+                  Text(plan!.current!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TS.meta(AppColors.fg3))
+                else if (wakeText != null)
+                  Text(wakeText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TS.meta(AppColors.fg4)),
+              ],
             ],
           ),
         ),
@@ -451,11 +647,13 @@ class SessionListRow extends StatelessWidget {
             onTap: onTap,
             onLongPress: onLongPress == null ? null : longPress,
             onSecondaryTapDown: onSecondaryTapDown,
-            child: Container(
-              height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              alignment: Alignment.centerLeft,
-              child: content,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                    horizontal: 10, vertical: hasExtraLine ? 5 : 4),
+                child: Align(alignment: Alignment.centerLeft, child: content),
+              ),
             ),
           );
 

@@ -153,6 +153,90 @@ class CatalogModel {
         reasoning = j['reasoning'] as bool?;
 }
 
+class SessionPlan {
+  final int done;
+  final int total;
+  final String? current;
+  final int? stepStartedAt;
+
+  const SessionPlan({
+    required this.done,
+    required this.total,
+    this.current,
+    this.stepStartedAt,
+  });
+
+  factory SessionPlan.fromJson(Map<String, dynamic> j) => SessionPlan(
+        done: (j['done'] as num?)?.toInt() ?? 0,
+        total: (j['total'] as num?)?.toInt() ?? 0,
+        current: _optText(j['current']),
+        stepStartedAt: (j['step_started_at'] as num?)?.toInt(),
+      );
+}
+
+class SessionLaneItem {
+  final String id;
+  final String title;
+  final String? agent;
+  final String? activity;
+
+  const SessionLaneItem({
+    required this.id,
+    required this.title,
+    this.agent,
+    this.activity,
+  });
+
+  factory SessionLaneItem.fromJson(Map<String, dynamic> j) => SessionLaneItem(
+        id: j['id'] as String? ?? '',
+        title: j['title'] as String? ?? '',
+        agent: _optText(j['agent']),
+        activity: _optText(j['activity']),
+      );
+}
+
+class SessionLanes {
+  final int running;
+  final List<SessionLaneItem> items;
+
+  const SessionLanes({required this.running, required this.items});
+
+  factory SessionLanes.fromJson(Map<String, dynamic> j) => SessionLanes(
+        running: (j['running'] as num?)?.toInt() ?? 0,
+        items: ((j['items'] as List?) ?? const [])
+            .whereType<Map>()
+            .map((e) => SessionLaneItem.fromJson(e.cast<String, dynamic>()))
+            .toList(),
+      );
+}
+
+class SessionPr {
+  final int number;
+  final String title;
+  final String state;
+  final String checks;
+  final bool? mergeable;
+  final String url;
+
+  const SessionPr({
+    required this.number,
+    required this.title,
+    required this.state,
+    required this.checks,
+    this.mergeable,
+    required this.url,
+  });
+
+  factory SessionPr.fromJson(Map<String, dynamic> j) => SessionPr(
+        number: (j['number'] as num?)?.toInt() ?? 0,
+        title: j['title'] as String? ?? '',
+        state: (j['state'] as String? ?? '').toLowerCase(),
+        checks: (j['checks'] as String? ?? 'none').toLowerCase(),
+        mergeable: j['mergeable'] is bool ? j['mergeable'] as bool : null,
+        url: j['url'] as String? ?? '',
+      );
+}
+
 class SessionInfo {
   final String id;
   final String folder;
@@ -211,6 +295,10 @@ class SessionInfo {
   /// made from, and the worktree's branch.
   final String? originFolder;
   final String? branch;
+  final SessionPlan? plan;
+  final SessionLanes? lanes;
+  final int? nextWakeAt;
+  final SessionPr? pr;
 
   /// The folder a person knows this session by: the project, not the
   /// generated worktree directory.
@@ -268,7 +356,17 @@ class SessionInfo {
             ? (j['attention'] as Map).cast<String, dynamic>()
             : null,
         originFolder = j['origin_folder'] as String?,
-        branch = j['branch'] as String?;
+        branch = j['branch'] as String?,
+        plan = j['plan'] is Map
+            ? SessionPlan.fromJson((j['plan'] as Map).cast<String, dynamic>())
+            : null,
+        lanes = j['lanes'] is Map
+            ? SessionLanes.fromJson((j['lanes'] as Map).cast<String, dynamic>())
+            : null,
+        nextWakeAt = (j['next_wake_at'] as num?)?.toInt(),
+        pr = j['pr'] is Map
+            ? SessionPr.fromJson((j['pr'] as Map).cast<String, dynamic>())
+            : null;
 
   SessionInfo _copy({String? title, String? status}) => SessionInfo._(
         id: id,
@@ -293,6 +391,10 @@ class SessionInfo {
         attention: attention,
         originFolder: originFolder,
         branch: branch,
+        plan: plan,
+        lanes: lanes,
+        nextWakeAt: nextWakeAt,
+        pr: pr,
       );
 
   SessionInfo withTitle(String title) => _copy(title: title);
@@ -322,6 +424,10 @@ class SessionInfo {
     this.attention,
     this.originFolder,
     this.branch,
+    this.plan,
+    this.lanes,
+    this.nextWakeAt,
+    this.pr,
   });
 }
 
@@ -1540,6 +1646,8 @@ class MissionControlTask {
   final List<String> waitingOn;
   final String? currentStep;
   final String? supersededBy;
+  final int planDone;
+  final int planTotal;
 
   MissionControlTask.preview(MissionControlTask o)
       : id = o.id,
@@ -1555,6 +1663,8 @@ class MissionControlTask {
         waitingOn = o.waitingOn,
         currentStep = o.currentStep,
         supersededBy = o.supersededBy,
+        planDone = o.planDone,
+        planTotal = o.planTotal,
         summary = false;
 
   MissionControlTask.fromJson(Map<String, dynamic> j)
@@ -1574,7 +1684,9 @@ class MissionControlTask {
         statusReason = _optText(j['status_reason']),
         waitingOn = _textList(j['waiting_on']),
         currentStep = _optText(j['current_step']),
-        supersededBy = _optText(j['superseded_by']);
+        supersededBy = _optText(j['superseded_by']),
+        planDone = (j['plan_done'] as num?)?.toInt() ?? 0,
+        planTotal = (j['plan_total'] as num?)?.toInt() ?? 0;
 
   bool get isActive =>
       !archived && (status == 'pending' || status == 'in_progress');
@@ -1845,6 +1957,8 @@ class TaskItem {
   final String? supersededBy;
   final String? goalId;
   final String? goalTitle;
+  final int planDone;
+  final int planTotal;
 
   TaskItem.fromJson(Map<String, dynamic> j)
       : id = j['id'] as String? ?? '',
@@ -1871,7 +1985,17 @@ class TaskItem {
         currentStep = _optText(j['current_step']),
         supersededBy = _optText(j['superseded_by']),
         goalId = _optText(j['goal_id']),
-        goalTitle = _optText(j['goal_title']);
+        goalTitle = _optText(j['goal_title']),
+        planDone = (j['plan_done'] as num?)?.toInt() ??
+            ((j['work_plan'] as List?) ?? const [])
+                .whereType<Map>()
+                .where((e) => e['status'] == 'done')
+                .length,
+        planTotal = (j['plan_total'] as num?)?.toInt() ??
+            ((j['work_plan'] as List?) ?? const [])
+                .whereType<Map>()
+                .where((e) => (e['step'] ?? '').toString().trim().isNotEmpty)
+                .length;
 
   /// This task in another column, for showing a move before the daemon
   /// confirms it.
@@ -1897,7 +2021,9 @@ class TaskItem {
         currentStep = t.currentStep,
         supersededBy = t.supersededBy,
         goalId = t.goalId,
-        goalTitle = t.goalTitle;
+        goalTitle = t.goalTitle,
+        planDone = t.planDone,
+        planTotal = t.planTotal;
 }
 
 String? _optText(dynamic v) {
