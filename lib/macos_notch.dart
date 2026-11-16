@@ -147,12 +147,13 @@ class MacosNotch {
     }
     final attn = data['attention'];
     final QuickAction? send = switch (action) {
-      'approve' => const QuickApprove(),
-      'deny' => const QuickDeny(),
+      'approve' => const QuickApprove(via: 'notification'),
+      'deny' => const QuickDeny(via: 'notification'),
       final a when a.startsWith('choice:') => () {
           final value = a.substring(7);
           final q = attn is Map ? '${attn['text'] ?? ''}'.trim() : '';
-          return QuickAnswer(q.isEmpty ? value : '$q\n→ $value');
+          return QuickAnswer(q.isEmpty ? value : '$q\n→ $value',
+              via: 'notification');
         }(),
       _ => null,
     };
@@ -713,11 +714,12 @@ class MacosNotch {
       return;
     }
     final QuickAction quickAction = switch (action) {
-      'answer' =>
-        QuickAnswer(notchAnswerText(_activeState?.pendingQuestion, text)),
-      'approve' => const QuickApprove(),
-      'deny' => const QuickDeny(),
-      _ => QuickReply(text),
+      'answer' => QuickAnswer(
+          notchAnswerText(_activeState?.pendingQuestion, text),
+          via: 'notification'),
+      'approve' => const QuickApprove(via: 'notification'),
+      'deny' => const QuickDeny(via: 'notification'),
+      _ => QuickReply(text, via: 'notification'),
     };
     final client = _activeClient ?? _defaultClient;
     final session = _activeSessionId ?? 'mission-control';

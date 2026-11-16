@@ -358,6 +358,110 @@ void main() {
     expect(find.text('Send'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
+
+  testWidgets('session question card renders daemon decision across restarts',
+      (t) async {
+    final client = DaemonClient('https://daemon.invalid', 'tok');
+    final answeredEv = _ev('q1', 'agent', {
+      'question': {
+        'session': 'sess-1',
+        'question_id': '2:2026-11-16',
+        'questions': [
+          {
+            'id': 'target',
+            'text': 'Which target?',
+            'answer_kind': {'kind': 'free_text'},
+          },
+        ],
+      },
+      'decision': {
+        'kind': 'decision',
+        'request': 'question',
+        'request_id': '2:2026-11-16',
+        'outcome': 'answered',
+        'answer': 'Staging',
+        'by': 'human',
+        'via': 'desk',
+        'at': 1763250000,
+      },
+    });
+    final skippedEv = _ev('q2', 'agent', {
+      'question': {
+        'session': 'sess-1',
+        'question_id': '4:2026-11-16',
+        'questions': [
+          {
+            'id': 'env',
+            'text': 'Which env?',
+            'answer_kind': {'kind': 'free_text'},
+          },
+        ],
+      },
+      'decision': {
+        'kind': 'decision',
+        'request': 'question',
+        'request_id': '4:2026-11-16',
+        'outcome': 'skipped',
+        'answer': null,
+        'by': 'human',
+        'via': 'app',
+        'at': 1763250010,
+      },
+    });
+    final outdatedEv = _ev('q3', 'agent', {
+      'question': {
+        'session': 'sess-1',
+        'question_id': '6:2026-11-16',
+        'questions': [
+          {
+            'id': 'other',
+            'text': 'Still needed?',
+            'answer_kind': {'kind': 'free_text'},
+          },
+        ],
+      },
+      'decision': {
+        'kind': 'decision',
+        'request': 'question',
+        'request_id': '6:2026-11-16',
+        'outcome': 'outdated',
+        'answer': null,
+        'by': 'human',
+        'via': 'app',
+        'at': 1763250020,
+      },
+    });
+
+    await t.pumpWidget(MaterialApp(
+      theme: buildAppTheme(),
+      home: Scaffold(
+        body: ListView(
+          children: [
+            AgentQuestionsCard(
+              event: answeredEv,
+              question: answeredEv.payload['question'] as Map,
+              client: client,
+            ),
+            AgentQuestionsCard(
+              event: skippedEv,
+              question: skippedEv.payload['question'] as Map,
+              client: client,
+            ),
+            AgentQuestionsCard(
+              event: outdatedEv,
+              question: outdatedEv.payload['question'] as Map,
+              client: client,
+            ),
+          ],
+        ),
+      ),
+    ));
+
+    expect(find.text('Answered: Staging'), findsOneWidget);
+    expect(find.text('Skipped'), findsOneWidget);
+    expect(find.text('Outdated: no longer waiting on this'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
 }
 
 class _WsChannel extends StreamChannelMixin implements WebSocketChannel {

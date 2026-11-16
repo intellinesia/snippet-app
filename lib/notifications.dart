@@ -442,13 +442,16 @@ Future<bool> routeNotificationAction(
     final i = int.tryParse(actionId.substring(_actionAnswerPrefix.length));
     if (i == null || i >= choices.length) return false;
     return quickSendForPayload(
-        data, QuickAnswer(answerText(attn, choiceAnswer(choices[i]))));
+        data,
+        QuickAnswer(answerText(attn, choiceAnswer(choices[i])),
+            via: 'notification'));
   }
   final QuickAction? action = switch (actionId) {
-    _actionApprove => const QuickApprove(),
-    _actionDeny => const QuickDeny(),
-    _actionReply when text.isNotEmpty =>
-      question ? QuickAnswer(answerText(attn, text)) : QuickReply(text),
+    _actionApprove => const QuickApprove(via: 'notification'),
+    _actionDeny => const QuickDeny(via: 'notification'),
+    _actionReply when text.isNotEmpty => question
+        ? QuickAnswer(answerText(attn, text), via: 'notification')
+        : QuickReply(text, via: 'notification'),
     _ => null,
   };
   return action == null ? false : quickSendForPayload(data, action);

@@ -512,7 +512,7 @@ Widget _approvalCard(CoordinationEvent e, Map<dynamic, dynamic> approval) {
         'check-circle',
       ),
     'denied' || 'rejected' || 'deny' || 'reject' => (
-        'Rejected',
+        'Denied',
         'x-circle',
       ),
     'pending' || 'waiting' || '' => (
@@ -1034,34 +1034,42 @@ class DeskApprovalCard extends StatefulWidget {
 }
 
 class _DeskApprovalCardState extends State<DeskApprovalCard> {
-  static final _decided = <String, bool>{};
   bool _busy = false;
   bool _outdated = false;
+  String? _localOutcome;
+
+  Map<String, dynamic>? get _daemonDecision {
+    final raw = widget.event.payload['decision'] ?? widget.approval['decision'];
+    return raw is Map ? Map<String, dynamic>.from(raw) : null;
+  }
 
   @override
   void initState() {
     super.initState();
-    SessionAttentionProbe.isOutdated(widget.client,
-            session: _s('session'), type: 'approval', id: _s('approval_id'))
-        .then((v) {
-      if (mounted && v) setState(() => _outdated = true);
-    });
+    if (_daemonDecision == null) {
+      SessionAttentionProbe.isOutdated(widget.client,
+              session: _s('session'), type: 'approval', id: _s('approval_id'))
+          .then((v) {
+        if (mounted && v) setState(() => _outdated = true);
+      });
+    }
   }
 
   String _s(String k) => '${widget.approval[k] ?? ''}'.trim();
-  String get _key => '${_s('session')}:${_s('approval_id')}';
 
   Future<void> _decide(bool approve) async {
     setState(() => _busy = true);
     final ok = await quickSend(
       client: widget.client,
       session: _s('session'),
-      action: approve ? const QuickApprove() : const QuickDeny(),
+      action: approve
+          ? const QuickApprove(via: 'desk')
+          : const QuickDeny(via: 'desk'),
     );
     if (!mounted) return;
     setState(() {
       _busy = false;
-      if (ok) _decided[_key] = approve;
+      if (ok) _localOutcome = approve ? 'approved' : 'denied';
     });
     if (!ok) toast(context, 'Could not reach the session', danger: true);
   }
@@ -1080,13 +1088,29 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
     final index = (widget.approval['index'] as num?)?.toInt();
     final total = (widget.approval['total'] as num?)?.toInt();
     final context_ = '${widget.event.payload['context'] ?? ''}'.trim();
-    final decided = _decided[_key];
+    final decision = _daemonDecision;
+    final outcome =
+        '${decision?['outcome'] ?? _localOutcome ?? ''}'.trim().toLowerCase();
     final title = parsed.headline(tool);
-    if (decided != null) {
+    if (outcome.isNotEmpty) {
+      if (outcome == 'outdated') {
+        return ChatCardResolved(
+          title: title,
+          subtitle: 'Outdated: no longer waiting on this',
+          approved: false,
+          icon: 'clock',
+        );
+      }
+      final approved = outcome == 'approved' || outcome == 'approved_all';
+      final subtitle = switch (outcome) {
+        'approved_all' => 'Approved all',
+        'approved' => 'Approved',
+        _ => 'Denied',
+      };
       return ChatCardResolved(
         title: title,
-        subtitle: decided ? 'Approved' : 'Denied',
-        approved: decided,
+        subtitle: subtitle,
+        approved: approved,
       );
     }
     if (_outdated) {

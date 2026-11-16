@@ -49,7 +49,6 @@ class _QChoice {
 }
 
 class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
-  static final Map<String, Map<String, dynamic>> _sessionAnswers = {};
   final Map<String, TextEditingController> _texts = {};
   final Map<String, String> _single = {};
   final Map<String, Set<String>> _multi = {};
@@ -62,7 +61,11 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
   String get _session => '${widget.question['session'] ?? ''}'.trim();
   String get _questionId => '${widget.question['question_id'] ?? ''}'.trim();
   bool get _isSessionQuestion => _session.isNotEmpty && _questionId.isNotEmpty;
-  String get _sessionKey => '$_session:$_questionId';
+
+  Map<String, dynamic>? get _daemonDecision {
+    final raw = widget.event.payload['decision'] ?? widget.question['decision'];
+    return raw is Map ? Map<String, dynamic>.from(raw) : null;
+  }
 
   List<Map<String, dynamic>> get _questions {
     final raw = widget.question['questions'];
@@ -147,7 +150,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
   @override
   void initState() {
     super.initState();
-    if (_session.isNotEmpty) {
+    if (_session.isNotEmpty && _daemonDecision == null) {
       SessionAttentionProbe.isOutdated(widget.client,
               session: _session, type: 'question', id: _questionId)
           .then((v) {
@@ -226,13 +229,9 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
         closed = true;
       }
     }
-    if (!answered) {
-      final cached = _sentAnswers ??
-          (_isSessionQuestion ? _sessionAnswers[_sessionKey] : null);
-      if (cached != null) {
-        answered = true;
-        answers = cached;
-      }
+    if (!answered && _sentAnswers != null) {
+      answered = true;
+      answers = _sentAnswers;
     }
     return (
       answers: answers,
@@ -362,13 +361,12 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
       final ok = await quickSend(
         client: widget.client,
         session: session,
-        action: QuickAnswer(text),
+        action: QuickAnswer(text, via: 'desk'),
       );
       if (!mounted) return;
       setState(() {
         _sending = false;
         if (ok) {
-          _sessionAnswers[_sessionKey] = answers;
           _sentAnswers = answers;
         } else {
           _error = 'Could not reach the session.';
@@ -455,6 +453,28 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     final qs = _questions;
     if (qs.isEmpty) return const SizedBox.shrink();
     final st = _resolve();
+    final decision = _daemonDecision;
+    final dOutcome = '${decision?['outcome'] ?? ''}'.trim().toLowerCase();
+    if (dOutcome == 'outdated') {
+      return ChatCardResolved(
+        title: _questionText(qs.first),
+        subtitle: 'Outdated: no longer waiting on this',
+        approved: false,
+        icon: 'clock',
+      );
+    }
+    if (dOutcome == 'skipped') {
+      return _resolved(qs, st.answers, true);
+    }
+    if (dOutcome == 'answered') {
+      if (st.answered) return _resolved(qs, st.answers, false);
+      final ans = '${decision?['answer'] ?? ''}'.trim();
+      return ChatCardResolved(
+        title: qs.length > 1 ? '${qs.length} questions' : _questionText(qs.first),
+        subtitle: ans.isEmpty ? 'Answered' : 'Answered: $ans',
+        approved: true,
+      );
+    }
     final closed = st.closed || (_locked && !st.answered);
     final interactive = !st.answered && !closed && !_sending;
     final skipped = st.answered && _wasSkipped(st.answers, st.body);
