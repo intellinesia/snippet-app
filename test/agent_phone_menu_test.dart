@@ -115,7 +115,7 @@ void main() {
     expect(client.inboxKinds.last, 'room');
 
     await _pick(t, 'More actions');
-    expect(find.text('Actions'), findsOneWidget);
+    expect(find.text('Wakes and reporting'), findsOneWidget);
     for (final row in [
       'Memory',
       'Inference profile',
