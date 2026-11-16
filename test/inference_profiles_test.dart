@@ -189,11 +189,13 @@ void main() {
           .widgetList<SettingsGroup>(find.byType(SettingsGroup))
           .map((g) => g.header)
           .toList();
-      expect(
-        headers,
-        ['ChatGPT', 'xAI / SuperGrok', 'Claude Code', 'Devin', 'mystery-cli'],
-      );
-      expect(find.text('Add account'), findsNWidgets(4));
+      expect(headers, ['mystery-cli']);
+      await tester.tap(find.text('Add account'));
+      await tester.pumpAndSettle();
+      for (final t in ['ChatGPT', 'xAI / SuperGrok', 'Claude Code', 'Devin']) {
+        expect(find.text(t), findsOneWidget, reason: t);
+      }
+      expect(find.text('mystery-cli'), findsOneWidget);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.linux),
   );
@@ -251,7 +253,9 @@ void main() {
 
       await tester.tap(find.text('Accounts'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Add account').last);
+      await tester.tap(find.text('Add account'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Devin').last);
       await tester.pumpAndSettle();
 
       expect(find.text('Add Devin account'), findsOneWidget);
@@ -337,9 +341,9 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(find.text('Devin'), 200);
+      await tester.tap(find.text('Add account'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Add account').last);
+      await tester.tap(find.text('Devin').last);
       await tester.pumpAndSettle();
 
       expect(find.text('Name this account'), findsOneWidget);

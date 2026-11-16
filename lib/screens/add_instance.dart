@@ -377,10 +377,47 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
         child: Column(children: [
           SnAppBar(title: 'Add machine', onBack: () => Navigator.pop(context)),
           // Phone-only screen now (desktop uses the compact dialog above).
-          Expanded(child: _scanArea()),
-          _bottomBar(),
+          Expanded(child: _body()),
         ]),
       ),
+    );
+  }
+
+  Widget _body() {
+    final empty = _paste.text.trim().isEmpty;
+    return ListView(
+      padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16,
+          S.s24 + MediaQuery.of(context).padding.bottom),
+      children: [
+        SizedBox(height: 280, child: _scanArea()),
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: S.s12),
+          child: Text.rich(
+            TextSpan(style: sans(13, color: AppColors.fg3), children: [
+              const TextSpan(text: 'Scan the QR from '),
+              TextSpan(
+                  text: 'snippet serve --enable',
+                  style: mono(13, color: AppColors.fg2)),
+            ]),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        AppField(
+            label: 'Paste the link from snippet serve',
+            controller: _paste,
+            mono: true,
+            hint: 'https://…?token=…',
+            onSubmitted: _connect),
+        if (_error != null) ...[
+          SizedBox(height: S.s8),
+          Text(_error!, style: sans(12, color: AppColors.danger)),
+        ],
+        SizedBox(height: S.s16),
+        Btn(_busy ? 'Connecting…' : 'Connect',
+            full: true,
+            disabled: empty || _busy,
+            onTap: () => _connect(_paste.text)),
+      ],
     );
   }
 
@@ -435,10 +472,14 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
       );
     }
     // Rounded viewport, Claude-card style, with the scan reticle + caption inside.
-    return Padding(
-      padding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s16, S.s12),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(R.lg),
+        border: Border.all(color: AppColors.line),
+      ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(R.card),
+        borderRadius: BorderRadius.circular(R.lg),
         child:
             Stack(alignment: Alignment.center, fit: StackFit.expand, children: [
           ReaderWidget(
@@ -456,72 +497,8 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
             },
           ),
           const IgnorePointer(child: Center(child: _Reticle())),
-          Positioned(
-            bottom: 18,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                padding:
-                    EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.s8),
-                decoration: BoxDecoration(
-                    color: AppColors.scrim,
-                    border: Border.all(color: AppColors.border),
-                    borderRadius: BorderRadius.circular(R.pill)),
-                child: Text.rich(
-                  TextSpan(style: sans(12, color: AppColors.fg1), children: [
-                    const TextSpan(text: 'Scan the QR from '),
-                    TextSpan(
-                        text: 'snippet serve --enable',
-                        style: mono(12, color: AppColors.fg1)),
-                  ]),
-                ),
-              ),
-            ),
-          ),
         ]),
       ),
-    );
-  }
-
-  Widget _bottomBar() {
-    final empty = _paste.text.trim().isEmpty;
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-          S.s16, S.of(14), S.s16, S.of(14) + MediaQuery.of(context).padding.bottom),
-      decoration: BoxDecoration(
-          color: AppColors.bg,
-          border: Border(top: BorderSide(color: AppColors.border))),
-      child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(children: [
-              Expanded(
-                  child: AppField(
-                      controller: _paste,
-                      mono: true,
-                      hint: 'Paste the link from snippet serve',
-                      onSubmitted: _connect)),
-              SizedBox(width: S.of(10)),
-              if (_busy)
-                Container(
-                  width: kMobile ? 48 : 36,
-                  height: kMobile ? 48 : 36,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                      color: AppColors.accentFill, shape: BoxShape.circle),
-                  child: Spinner(size: 16, color: AppColors.accentFg),
-                )
-              else
-                PillBtn('Connect',
-                    onTap: empty ? null : () => _connect(_paste.text)),
-            ]),
-            if (_error != null) ...[
-              SizedBox(height: S.of(10)),
-              Text(_error!, style: sans(11, color: AppColors.danger))
-            ],
-          ]),
     );
   }
 }

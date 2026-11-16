@@ -93,6 +93,17 @@ class VaultScreenState extends State<VaultScreen> {
 
   Future<void> _add() async {
     if (_adding) return;
+    if (kMobile) {
+      final n = await showAppSheet<String>(context,
+          title: 'Add secret', child: _AddSecretSheet(client: widget.client));
+      if (n == null || !mounted) return;
+      setState(() {
+        _names ??= [];
+        if (!_names!.contains(n)) _names!.add(n);
+        _names!.sort();
+      });
+      return;
+    }
     _name.clear();
     _value.clear();
     setState(() {
@@ -198,16 +209,12 @@ class VaultScreenState extends State<VaultScreen> {
           child: PageBody(children: [
             ListGroup(children: [
               for (final n in names) _secretRow(n),
-              if (_adding)
-                ..._form()
-              else if (!widget.embedded)
-                _addRow(names.isEmpty),
+              if (!widget.embedded) _addRow(names.isEmpty),
             ]),
             Padding(
               padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
               child: Text(
-                'Use these as \$NAME in shell commands. Values stay on '
-                'the machine and are never shown again.',
+                'Values stay on this machine and are never shown again.',
                 style: TS.meta(),
               ),
             ),
@@ -217,11 +224,10 @@ class VaultScreenState extends State<VaultScreen> {
         body = PageBody(children: [
           SizedBox(height: S.s4),
           SettingsGroup(
-            footer: 'Use these as \$NAME in shell commands. Values stay on '
-                'the machine and are never shown again.',
+            footer: 'Values stay on this machine and are never shown again.',
             children: [
               for (final n in names) _secretRow(n),
-              if (_adding) ..._form() else _addRow(names.isEmpty),
+              if (_adding) ..._desktopForm() else _addRow(names.isEmpty),
             ],
           ),
         ]);
@@ -369,41 +375,13 @@ class VaultScreenState extends State<VaultScreen> {
         onTap: _add,
       );
 
-  List<Widget> _form() => [
-        V5SettingsRow(
-          label: 'Name',
-          leading: const V5IconTile('key'),
-          trailing: SettingsField(
-              controller: _name,
-              hint: 'STRIPE_KEY',
-              mono: true,
-              width: kMobile ? 200 : 260),
-        ),
-        V5SettingsRow(
-          label: 'Value',
-          leading: const V5IconTile('lock'),
-          trailing: SettingsField(
-              controller: _value,
-              hint: 'sk_live_…',
-              mono: true,
-              obscure: true,
-              width: kMobile ? 200 : 260),
-        ),
-        V5SettingsRow(
-          label: _formError ?? '',
-          labelWidget: Text(_formError ?? '',
-              style: sans(kMobile ? 13 : 12, color: AppColors.danger)),
-          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-            SettingsPill('Cancel', onTap: _busy ? null : _cancel),
-            SizedBox(width: S.s8),
-            SettingsPill(_busy ? 'Saving…' : 'Save', onTap: _save),
-          ]),
-        ),
-      ];
-
   Widget _secretRow(String name) => kMobile
       ? V5SettingsRow(
           label: name,
+          labelWidget: Text(name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: mono(15, color: AppColors.fg1)),
           trailing: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => _remove(name),
@@ -421,10 +399,107 @@ class VaultScreenState extends State<VaultScreen> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: mono(kMobile ? 14 : 13, color: AppColors.fg1)),
-        trailing: IconBtn('trash',
-            size: kMobile ? 36 : 26,
-            iconSize: kMobile ? 15 : 13,
-            tooltip: 'Remove $name',
-            onTap: () => _remove(name)),
+        trailing: Semantics(
+          button: true,
+          label: 'Remove $name',
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _remove(name),
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: S.s4),
+              child: Text('Remove', style: sans(12, color: AppColors.danger)),
+            ),
+          ),
+        ),
+      );
+}
+
+/// Phone sheet for a new secret; pops with the saved name.
+class _AddSecretSheet extends StatefulWidget {
+  const _AddSecretSheet({required this.client});
+  final DaemonClient client;
+
+  @override
+  State<_AddSecretSheet> createState() => _AddSecretSheetState();
+}
+
+class _AddSecretSheetState extends State<_AddSecretSheet> {
+  final _name = TextEditingController();
+  final _value = TextEditingController();
+  String? _error;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _value.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_busy) return;
+    final n = _name.text.trim().toUpperCase();
+    final v = _value.text;
+    if (n.isEmpty || v.trim().isEmpty) {
+      setState(() => _error =
+          n.isEmpty ? 'Give the secret a name.' : 'Give the secret a value.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await widget.client.vaultSet(n, v);
+      if (mounted) Navigator.pop(context, n);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = '$e';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s16),
+        child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppField(
+                  label: 'Name',
+                  controller: _name,
+                  hint: 'STRIPE_KEY',
+                  mono: true,
+                  helper: 'Use it as \$NAME in shell commands.'),
+              SizedBox(height: S.s12),
+              AppField(
+                  label: 'Value',
+                  controller: _value,
+                  obscure: true,
+                  mono: true,
+                  helper:
+                      'Sent to the daemon on save and redacted from output.',
+                  onSubmitted: (_) => _save()),
+              if (_error != null) ...[
+                SizedBox(height: S.s8),
+                Text(_error!, style: sans(13, color: AppColors.danger)),
+              ],
+              SizedBox(height: S.s16),
+              Row(children: [
+                Expanded(
+                    child: Btn('Cancel',
+                        variant: BtnVariant.surface,
+                        disabled: _busy,
+                        onTap: () => Navigator.pop(context))),
+                SizedBox(width: S.s12),
+                Expanded(
+                    child: Btn(_busy ? 'Saving…' : 'Save secret',
+                        disabled: _busy, onTap: _save)),
+              ]),
+            ]),
       );
 }

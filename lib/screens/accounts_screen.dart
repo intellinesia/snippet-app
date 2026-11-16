@@ -340,8 +340,6 @@ class _AccountsScreenState extends State<AccountsScreen> {
 
   String _title(String provider) => accountProviderTitle(provider);
 
-  String? _footer(String provider) => _kinds[provider]?.footer;
-
   bool _canRemove(String provider, Account account) =>
       (_kinds[provider]?.mainRemovable ?? true) || account.id != 'main';
 
@@ -349,28 +347,65 @@ class _AccountsScreenState extends State<AccountsScreen> {
       kind.signIn == _SignIn.pasteToken ||
       (kind.allowPasteFallback && _pasteKey);
 
+  Widget _addAccountButton() => Builder(
+        builder: (anchor) => Padding(
+          padding: EdgeInsets.only(right: kMobile ? S.s12 : 0),
+          child: Btn('Add account',
+              icon: 'plus',
+              small: true,
+              variant: BtnVariant.secondary,
+              disabled: _busy,
+              onTap: () async {
+                final picked = await showAppMenu<String>(
+                  context,
+                  anchor: anchor,
+                  below: true,
+                  alignEnd: true,
+                  minWidth: 240,
+                  maxWidth: 320,
+                  items: [
+                    for (final e in _kinds.entries)
+                      appMenuRow<String>(
+                        value: e.key,
+                        icon: 'provider:${e.key}',
+                        label: e.value.title,
+                        description: e.value.footer,
+                      ),
+                  ],
+                );
+                if (picked == null || !mounted) return;
+                if (kMobile) {
+                  await _add(picked);
+                } else {
+                  _startAdd(picked);
+                }
+              }),
+        ),
+      );
+
+  Iterable<String> get _signedIn => [
+        for (final p in _displayProviders)
+          if ((_accounts[p] ?? const <Account>[]).isNotEmpty) p
+      ];
+
   List<Widget> _groups() => [
-        if (!kMobile) ...[
-          const SettingsNote(
-              'When an account reaches its 5-hour or weekly limit, Snippet '
-              'moves to the next one in this order.'),
-          SizedBox(height: S.of(18)),
-        ],
-        for (final provider in _displayProviders)
+        // Hosts without their own header (onBack null) still need the action.
+        if (widget.onBack == null)
+          Align(alignment: Alignment.centerRight, child: _addAccountButton()),
+        for (final provider in _signedIn)
           SettingsGroup(
             header: _title(provider),
-            footer: _footer(provider),
             children: [
-              for (var i = 0; i < (_accounts[provider] ?? const <Account>[]).length; i++)
+              for (var i = 0; i < _accounts[provider]!.length; i++)
                 _row(provider, _accounts[provider]!, i),
-              if (_kinds.containsKey(provider))
-                SettingsRow(
-                  label: 'Add account',
-                  leading: AppIcon('plus', size: 16, color: AppColors.fg3),
-                  onTap: _busy ? null : () => _add(provider),
-                ),
             ],
           ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: S.s4),
+          child: Text(
+              'When an account reaches its 5-hour or weekly limit, Snippet moves to the next one in this order.',
+              style: TS.meta()),
+        ),
       ];
 
   void _selectKey(String? key) {
@@ -524,23 +559,18 @@ class _AccountsScreenState extends State<AccountsScreen> {
       }
     }
     return SettingsColumn(children: [
-      const SettingsHeader(
+      SettingsHeader(
         title: 'Accounts',
-        subtitle: 'Signed-in providers and their usage limits.',
+        subtitle: 'Signed-in subscriptions, in failover order',
+        actions: [_addAccountButton()],
       ),
       SizedBox(height: S.s8),
-      for (final provider in _displayProviders)
+      for (final provider in _signedIn)
         SettingsGroup(
           header: _title(provider),
           children: [
-            for (final account in _accounts[provider] ?? const <Account>[])
+            for (final account in _accounts[provider]!)
               _listRow(provider, account),
-            if (_kinds.containsKey(provider))
-              SettingsRow(
-                label: 'Add account',
-                leading: AppIcon('plus', size: 14, color: AppColors.fg3),
-                onTap: _busy ? null : () => _startAdd(provider),
-              ),
           ],
         ),
       Padding(
@@ -805,30 +835,23 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final limitedLabel = limited == null ? null : rateResetLabel(limited);
     final usage = account.usage;
     final canRemove = _canRemove(provider, account);
-    return SettingsRow(
+    final parts = <String>[
+      if (usage?.primary != null)
+        '${limitWindowLabel(usage!.primary!)} ${usage.primary!.usedPercent.clamp(0, 100).round()}%',
+      if (usage?.secondary != null)
+        '${limitWindowLabel(usage!.secondary!)} ${usage.secondary!.usedPercent.clamp(0, 100).round()}%',
+      if (limitedLabel != null) limitedLabel,
+    ];
+    return V5SettingsRow(
       label: name,
-      labelWidget: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(children: [
-              Flexible(
-                  child: Text(name,
-                      overflow: TextOverflow.ellipsis,
-                      style: TS.rowTitle())),
-              if (account.active) ...[
-                SizedBox(width: S.s8),
-                Text('In use', style: sans(12, color: AppColors.accent)),
-              ],
-            ]),
-            if (limitedLabel != null)
-              Padding(
-                  padding: EdgeInsets.only(top: S.s2),
-                  child: Text('Limit reached, $limitedLabel',
-                      style: sans(13, color: AppColors.danger))),
-            if (usage?.primary != null) _meter(limitWindowLabel(usage!.primary!), usage.primary!),
-            if (usage?.secondary != null) _meter(limitWindowLabel(usage!.secondary!), usage.secondary!),
-          ]),
+      subtitle: parts.isEmpty ? null : parts.join(' · '),
+      value: limited != null
+          ? 'Limit reached'
+          : account.active
+              ? 'In use'
+              : null,
+      valueColor: limited != null ? AppColors.danger : null,
+      chevron: false,
       trailing: Builder(
           builder: (anchor) => IconBtn('more-horizontal',
               size: kMobile ? 40 : 30,
@@ -966,7 +989,10 @@ class _AccountsScreenState extends State<AccountsScreen> {
         children: [
           if (kMobile)
             SettingsHeader(
-                title: 'Accounts', compact: true, onBack: widget.onBack!)
+                title: 'Accounts',
+                compact: true,
+                onBack: widget.onBack!,
+                actions: [_addAccountButton()])
           else
             NavBackRow(title: 'Accounts', onBack: widget.onBack!),
           Expanded(child: child),

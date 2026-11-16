@@ -107,22 +107,27 @@ class _WebSearchScreenState extends State<WebSearchScreen> {
   }
 
   List<Widget> _groups(bool keySet) {
-    final sub = keySet ? 'On for new sessions' : 'Off until a key is saved';
     if (kMobile) {
       return [
         ListGroup(children: [
           V5SettingsRow(
-            label: 'Exa key',
-            subtitle: sub,
+            label: 'Exa search',
+            subtitle: 'Web search and page reading for agents',
             leading: const V5IconTile('globe'),
-            value: keySet ? 'Set' : 'Not set',
-            valueColor: keySet ? AppColors.fg3 : AppColors.danger,
+            value: keySet ? 'Active' : 'Not set',
+          ),
+        ]),
+        SizedBox(height: S.s12),
+        ListGroup(children: [
+          V5SettingsRow(
+            label: keySet ? 'Replace key' : 'API key',
+            subtitle: 'From dashboard.exa.ai',
             onTap: () => _editKey(keySet),
           ),
           if (keySet)
             V5SettingsRow(
               label: 'Remove key',
-              leading: V5IconTile('trash', color: AppColors.danger),
+              subtitle: 'Turns web search off for new sessions',
               danger: true,
               chevron: false,
               onTap: _busy ? null : () => _save('', 'Key removed'),
