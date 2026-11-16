@@ -30,6 +30,7 @@ import '../chat_scene.dart' show ChatScene;
 import 'mobile_chrome.dart';
 import 'mobile_session_home.dart';
 import 'mobile_voice_page.dart' show startMobileVoice;
+import 'pull_requests.dart' show openPullRequest;
 export 'sidebar_mobile.dart';
 
 class Sidebar extends StatefulWidget {
@@ -1113,6 +1114,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             session: s,
             pinned: pinned,
             leading: _agentBadge(s),
+            onReviewPr: s.pr?.state == 'open' && widget.client != null
+                ? () => _reviewSessionPr(s)
+                : null,
+            onMergePr: s.pr?.state == 'open' && widget.client != null
+                ? () => _mergeSessionPr(s)
+                : null,
             onTap: () => _selecting
                 ? _toggleSelected(s.id)
                 : widget.onOpenSession(s.id, s.title, s.profile),
@@ -1428,6 +1435,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       showProject: showProject,
       renameField: renaming ? _inlineRenameField(s, compact: !kMobile) : null,
       leading: _agentBadge(s),
+      onReviewPr: s.pr?.state == 'open' && widget.client != null
+          ? () => _reviewSessionPr(s)
+          : null,
+      onMergePr: s.pr?.state == 'open' && widget.client != null
+          ? () => _mergeSessionPr(s)
+          : null,
       onTap: renaming
           ? null
           : () => _selecting
@@ -1950,7 +1963,51 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     widget.onRefreshSessions();
   }
 
+  Future<void> _reviewSessionPr(SessionInfo s) async {
+    final c = widget.client;
+    final pr = s.pr;
+    if (c == null || pr == null) return;
+    final status = await c.githubStatus(s.id);
+    if (!mounted) return;
+    if (status == null || !status.available) {
+      toast(
+        context,
+        status?.reason.isNotEmpty == true
+            ? status!.reason
+            : 'GitHub PRs are unavailable',
+        danger: true,
+      );
+      return;
+    }
+    await openPullRequest(
+      context,
+      client: c,
+      session: s.id,
+      status: status,
+      number: pr.number,
+    );
+  }
 
+  Future<void> _mergeSessionPr(SessionInfo s) async {
+    final c = widget.client;
+    final pr = s.pr;
+    if (c == null || pr == null) return;
+    final ok = await confirmAction(
+      context,
+      title: 'Merge PR #${pr.number}?',
+      body: pr.title,
+      confirmLabel: 'Merge',
+    );
+    if (!ok || !mounted) return;
+    try {
+      await c.mergePr(s.id, pr.number);
+      if (!mounted) return;
+      toast(context, 'Merged #${pr.number}');
+      widget.onRefreshSessions();
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+    }
+  }
 }
 
 class _DockPlus extends StatelessWidget {

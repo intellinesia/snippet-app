@@ -116,6 +116,56 @@ bool taskMatches(TaskItem task, String query) {
       task.plan.toLowerCase().contains(q);
 }
 
+/// Thin progress bar and "step x of y" from `plan_done`/`plan_total`.
+class TaskPlanProgress extends StatelessWidget {
+  const TaskPlanProgress({
+    super.key,
+    required this.done,
+    required this.total,
+    this.compact = false,
+  });
+
+  final int done;
+  final int total;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    if (total <= 0) return const SizedBox.shrink();
+    final step = done >= total ? total : done + 1;
+    final fraction = (done / total).clamp(0.0, 1.0);
+    final fill = done >= total ? AppColors.ok : AppColors.accent;
+    return Row(
+      children: [
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: SizedBox(
+              height: 3,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ColoredBox(color: AppColors.tint3),
+                  FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: fraction,
+                    child: ColoredBox(color: fill),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          'step $step of $total',
+          style: sans(compact ? 11 : 12, color: AppColors.fg3, tabular: true),
+        ),
+      ],
+    );
+  }
+}
+
 /// How long since the task last changed, compactly ("5m", "2d").
 String taskAge(TaskItem task) {
   final at = DateTime.tryParse(task.updatedAt);
