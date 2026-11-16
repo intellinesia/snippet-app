@@ -77,7 +77,7 @@ class ComposerCard extends StatelessWidget {
             valueListenable: text ?? ValueNotifier(TextEditingValue.empty),
             builder: (context, v, _) {
               final compact = _compact(box.maxWidth, v.text);
-              final slot = kMobile ? 36.0 : 32.0;
+              final slot = kMobile ? 36.0 : 28.0;
               Widget inSlot(Widget w) =>
                   SizedBox(height: slot, child: Center(child: w));
               return Column(
@@ -143,7 +143,7 @@ class ComposerIconButton extends StatelessWidget {
         },
         borderRadius: BorderRadius.circular(R.sm),
         child: SizedBox.square(
-          dimension: kMobile ? 34 : 30,
+          dimension: kMobile ? 34 : 28,
           child: Center(
               child: AppIcon(icon,
                   size: kMobile ? 18 : 17, color: color ?? AppColors.fg3)),
@@ -192,7 +192,7 @@ class ComposerSendButton extends StatelessWidget {
               }
             : onTap,
         child: SizedBox.square(
-          dimension: kMobile ? 36 : 32,
+          dimension: kMobile ? 36 : 28,
           child: Center(
             child: sending
                 ? Spinner(size: 14, color: ink)

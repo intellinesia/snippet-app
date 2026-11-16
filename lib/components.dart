@@ -285,7 +285,7 @@ class SheetActions extends StatelessWidget {
           InkWell(
             onTap: a.onTap,
             child: SizedBox(
-              height: 44,
+              height: 32,
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: S.s12),
                 child: Row(children: [
@@ -488,17 +488,33 @@ class ListRow extends StatelessWidget {
         onTap: onTap,
         onLongPress: onLongPress,
         child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: kMobile ? M.rowHeight : 36),
+          constraints: BoxConstraints(minHeight: kMobile ? M.rowHeight : 32),
           child: Padding(
             padding: kMobile
                 ? EdgeInsets.symmetric(
                     horizontal: FlatGroupScope.of(context) ? S.s4 : S.s16,
                     vertical: S.of(11))
-                : EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
+                : EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s6),
             child: Row(children: [
               if (leading != null) ...[leading!, SizedBox(width: S.s12)],
               Expanded(
-                child: Column(
+                child: !kMobile && subtitle != null && subtitle!.isNotEmpty
+                    // Desktop rows are one line: the subtitle sits after the title.
+                    ? Row(children: [
+                        Flexible(
+                            child: titleWidget ??
+                                Text(title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TS.rowTitle())),
+                        SizedBox(width: S.s8),
+                        Expanded(
+                            child: Text(subtitle!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TS.meta())),
+                      ])
+                    : Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

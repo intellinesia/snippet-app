@@ -741,7 +741,7 @@ class Btn extends StatelessWidget {
     // Material's 48dp floors — and it is the primary action of the agent thread
     // composer and every dialog footer. Desktop keeps the compact 28/34 so a
     // mouse-sized toolbar does not grow.
-    final h = small ? (kMobile ? 36.0 : 28.0) : (kMobile ? 46.0 : 34.0);
+    final h = small ? (kMobile ? 36.0 : 28.0) : (kMobile ? 46.0 : 28.0);
     final radius = kMobile ? R.pill : (small ? R.sm : R.md);
     final child = Row(
       mainAxisSize: full ? MainAxisSize.max : MainAxisSize.min,
@@ -826,8 +826,8 @@ class PillBtn extends StatelessWidget {
                   },
             borderRadius: BorderRadius.circular(kMobile ? R.pill : R.md),
             child: Container(
-              height: kMobile ? 48 : 36,
-              padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s20 : S.s16),
+              height: kMobile ? 48 : 28,
+              padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s20 : S.s12),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 if (icon != null) ...[
                   AppIcon(icon!,
@@ -1176,8 +1176,9 @@ class IconBtn extends StatelessWidget {
     // is small: on a phone the layout box grows to [M.minTarget] while the glyph
     // keeps its size, so a 22px clear button is still comfortably tappable. On
     // desktop the pointer is precise, so `size` is taken at its word.
-    final box =
-        kMobile && onTap != null && size < M.minTarget ? M.minTarget : size;
+    final box = kMobile
+        ? (onTap != null && size < M.minTarget ? M.minTarget : size)
+        : (size > 28 ? 28.0 : size);
     if (!kMobile) {
       final btn = _DesktopIconBtn(
         name: name,
