@@ -56,10 +56,10 @@ void main() {
       }));
       await tester.pumpAndSettle();
       expect(find.text('Delegated lanes'), mode == 'hosted desktop' ? findsNothing : findsOneWidget);
-      expect(find.textContaining(RegExp('^in progress\$', caseSensitive: false)), findsOneWidget);
+      expect(find.text('Working'), findsOneWidget);
       expect(find.text('In progress · 1'), findsNothing);
       expect(find.text('Handoff'), findsNothing);
-      await tester.tap(find.text('View details'));
+      await tester.tap(find.text('Worker'));
       await tester.pumpAndSettle();
       expect(find.byType(LaneDetailScreen), findsOneWidget);
       expect(find.text('Delegated lanes'), findsNothing);
@@ -93,8 +93,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Delegated lanes'), mode == 'hosted desktop' ? findsNothing : findsOneWidget);
       expect(find.byType(LaneDetailScreen), findsNothing);
-      expect(find.textContaining(RegExp('^completed\$', caseSensitive: false)), findsOneWidget);
-      expect(find.text('done'), findsOneWidget);
+      expect(find.text('1 finished ›'), findsOneWidget);
+      expect(find.text('1 of 1 done'), findsOneWidget);
       expect(closed, isFalse);
       if (mode != 'mobile') expect(nested.currentState!.canPop(), isFalse);
       if (mode == 'hosted desktop') {

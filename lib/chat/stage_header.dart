@@ -165,10 +165,14 @@ class StageHeader extends StatelessWidget {
 
 /// The small pill under the chip, e.g. "2 lanes".
 class StagePill extends StatelessWidget {
-  const StagePill({super.key, required this.label, this.icon, this.onTap});
+  const StagePill(
+      {super.key, required this.label, this.icon, this.leading, this.onTap});
 
   final String label;
   final IconData? icon;
+
+  /// Shown instead of [icon], e.g. a live progress ring.
+  final Widget? leading;
   final VoidCallback? onTap;
 
   @override
@@ -182,7 +186,10 @@ class StagePill extends StatelessWidget {
         border: Border.all(color: AppColors.border),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (icon != null) ...[
+        if (leading != null) ...[
+          SizedBox.square(dimension: 13, child: leading),
+          SizedBox(width: S.s6),
+        ] else if (icon != null) ...[
           Icon(icon, size: 13, color: AppColors.fg3),
           SizedBox(width: S.s6),
         ],

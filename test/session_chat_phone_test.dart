@@ -130,16 +130,17 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('lanes pill counts running lanes only', (tester) async {
+  testWidgets('lanes pill counts the batch and what finished', (tester) async {
     await _pumpSession(tester, {
       'status': 'running',
       'events': [],
       'lanes': [
         {'id': 'l1', 'title': 'Goldens', 'status': 'running', 'started_at': ''},
         {'id': 'l2', 'title': 'Note', 'status': 'completed', 'started_at': ''},
+        {'id': 'l3', 'title': 'Old', 'status': 'cancelled', 'started_at': ''},
       ],
     });
-    expect(find.text('1 lane'), findsOneWidget);
+    expect(find.text('2 lanes · 1 done'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
     debugDefaultTargetPlatformOverride = null;

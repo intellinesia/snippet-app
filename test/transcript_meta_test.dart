@@ -240,21 +240,13 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     });
 
-    testWidgets('lanes started together share one card', (t) async {
-      LaneInfo l(String id, String status) => LaneInfo(
-          id: id, title: 'Lane $id', status: status, startedAt: '');
-      final a = l('a', 'completed');
-      final b = l('b', 'running');
-      await t.pumpWidget(wrap(LaneNotice(
-        title: a.title,
-        live: () => a,
-        onOpen: () {},
-        more: [LaneEntry(title: b.title, live: () => b, onOpen: () {})],
-      )));
-      await t.pump(const Duration(milliseconds: 50));
-      expect(find.text('Split two lanes'), findsOneWidget);
-      expect(find.text('Open'), findsNWidgets(2));
-      await t.pumpWidget(const SizedBox());
+    test('watch output reads as a verdict', () {
+      expect(readWatchPreview('APK rc=0 built\n__DONE__').ok, isTrue);
+      expect(readWatchPreview('__DONE__ exit=2').ok, isFalse);
+      expect(readWatchPreview('TEST rc=1 native assets').ok, isFalse);
+      expect(readWatchPreview('12 passed, 0 errors').ok, isTrue);
+      expect(readWatchPreview('compiling foo').ok, isNull);
+      expect(readWatchPreview('built ok __DONE__').lines, ['built ok']);
     });
   });
 }

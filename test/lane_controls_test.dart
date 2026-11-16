@@ -134,55 +134,6 @@ void main() {
     }
   });
 
-  testWidgets('LaneNotice offers Open only, with the retryOf label',
-      (t) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
-    try {
-      final client = _FakeDaemon();
-      final running = _lane(
-        id: 'lane-r',
-        status: 'running',
-        recent: const ['grep lane', 'edit file'],
-      );
-      final cancelled = _lane(id: 'lane-x', status: 'cancelled');
-
-      await t.pumpWidget(MaterialApp(
-        home: Scaffold(
-          body: Column(
-            children: [
-              LaneNotice(
-                title: running.title,
-                live: () => running,
-                onOpen: () {},
-                client: client,
-                sessionId: 'sess-3',
-                retryOf: 'lane-0',
-              ),
-              LaneNotice(
-                title: cancelled.title,
-                live: () => cancelled,
-                onOpen: () {},
-                client: client,
-                sessionId: 'sess-3',
-              ),
-            ],
-          ),
-        ),
-      ));
-      await t.pump(const Duration(milliseconds: 50));
-
-      expect(find.text('Retry of lane-0'), findsOneWidget);
-      expect(find.text('grep lane'), findsNothing);
-      expect(find.text('edit file'), findsNothing);
-      // Stop and Retry live in the lane detail, not the transcript card.
-      expect(find.byType(LaneControlButton), findsNothing);
-      expect(find.text('Open'), findsNWidgets(2));
-      expect(find.text('Cancelled'), findsOneWidget);
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
-
   testWidgets('desktop SessionLanesPanel keeps one activity line, Stop/Retry controls',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;

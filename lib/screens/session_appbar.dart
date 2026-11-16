@@ -510,7 +510,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       agent,
       if (state.isNotEmpty) state,
     ].join(' · ');
-    final lanes = s?.lanes.where((l) => l.running).length ?? 0;
+    final lanesPill = lanePillLabel(s?.lanes ?? const <LaneInfo>[]);
     return SizedBox(
       child: Stack(alignment: Alignment.topCenter, children: [
         Padding(
@@ -530,10 +530,10 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
             title: _title.isEmpty ? 'Session' : _title,
             subtitle: subtitle,
             onTap: () => _openActionsDrawer(s),
-            below: lanes > 0
+            below: lanesPill != null
                 ? StagePill(
-                    label: lanes == 1 ? '1 lane' : '$lanes lanes',
-                    icon: Icons.layers_outlined,
+                    label: lanesPill,
+                    leading: const RunSpinner(),
                     onTap: _showLanes,
                   )
                 : null,
@@ -1538,4 +1538,18 @@ class _DockTabState extends State<_DockTab> {
       ),
     );
   }
+}
+
+/// Header pill text while lanes run: the batch since the oldest running lane.
+String? lanePillLabel(List<LaneInfo> lanes) {
+  final running = lanes.where((l) => l.running).toList();
+  if (running.isEmpty) return null;
+  final since = running.map((l) => l.startedAt).reduce((a, b) => a.compareTo(b) <= 0 ? a : b);
+  final batch = lanes
+      .where((l) => l.status != 'cancelled' && l.startedAt.compareTo(since) >= 0)
+      .toList();
+  final done = batch.where((l) => l.status == 'completed').length;
+  final n = batch.length;
+  final head = n == 1 ? '1 lane' : '$n lanes';
+  return done == 0 ? head : '$head · $done done';
 }

@@ -188,14 +188,15 @@ List<InlineSpan> workSpans(WorkSummary w, TextStyle base) {
   return spans;
 }
 
-class _RunSpinner extends StatefulWidget {
-  const _RunSpinner();
+/// The small amber ring for work in progress.
+class RunSpinner extends StatefulWidget {
+  const RunSpinner({super.key});
 
   @override
-  State<_RunSpinner> createState() => _RunSpinnerState();
+  State<RunSpinner> createState() => RunSpinnerState();
 }
 
-class _RunSpinnerState extends State<_RunSpinner> {
+class RunSpinnerState extends State<RunSpinner> {
   final _c = AmbientLoop(const Duration(milliseconds: 900));
 
   @override
@@ -292,7 +293,7 @@ class WorkLine extends StatelessWidget {
           SizedBox(
             width: 16,
             child: isRunning
-                ? const _RunSpinner()
+                ? const RunSpinner()
                 : Center(
                     child: AnimatedRotation(
                       turns: open ? 0.25 : 0,
@@ -809,65 +810,6 @@ class _LaneControlButtonState extends State<LaneControlButton> {
   }
 }
 
-/// One lane inside a [LaneNotice] card.
-class LaneEntry {
-  const LaneEntry({
-    required this.title,
-    required this.live,
-    required this.onOpen,
-    this.summary,
-    this.retryOf,
-    this.status,
-    this.time,
-  });
-
-  final String title;
-  final LaneInfo? Function() live;
-  final VoidCallback onOpen;
-  final String? summary;
-  final String? retryOf;
-
-  /// How the lane ended, from its completed or cancelled event, for when the
-  /// live lane is gone from the snapshot.
-  final String? status;
-  final String? time;
-}
-
-/// Lanes started in one turn: one card, one row per lane, one quiet Open.
-class LaneNotice extends StatefulWidget {
-  final String title;
-  final LaneInfo? Function() live;
-  final VoidCallback onOpen;
-  final String? summary;
-  final DaemonClient? client;
-  final String? sessionId;
-  final String? sessionProfile;
-  final String? retryOf;
-
-  /// Further lanes started alongside this one.
-  final List<LaneEntry> more;
-  final String? status;
-  final String? time;
-
-  const LaneNotice({
-    super.key,
-    required this.title,
-    required this.live,
-    required this.onOpen,
-    this.summary,
-    this.client,
-    this.sessionId,
-    this.sessionProfile,
-    this.retryOf,
-    this.more = const [],
-    this.status,
-    this.time,
-  });
-
-  @override
-  State<LaneNotice> createState() => _LaneNoticeState();
-}
-
 /// "3 min", "42 s", "1 h 5 min".
 String laneElapsed(LaneInfo? lane, {DateTime? now}) {
   final started = DateTime.tryParse(lane?.startedAt ?? '');
@@ -888,226 +830,6 @@ String laneFirstSentence(String summary, [int max = 90]) {
   final m = RegExp(r'^(.+?[.!?])(\s|$)').firstMatch(plain);
   final one = m?.group(1) ?? plain;
   return one.length <= max ? one : '${one.substring(0, max - 1)}\u2026';
-}
-
-class _LaneNoticeState extends State<LaneNotice> {
-  Timer? _tick;
-
-  @override
-  void dispose() {
-    _tick?.cancel();
-    super.dispose();
-  }
-
-  String _live(LaneInfo? lane) {
-    var now = lane?.activity?.trim() ?? '';
-    if (lane?.activityKind == 'model' || now.isEmpty) {
-      now = '';
-      for (final a in (lane?.activityLog ?? const <LaneActivity>[]).reversed) {
-        if (a.kind == 'tool_call' && a.text.trim().isNotEmpty) {
-          now = a.text.trim();
-          break;
-        }
-      }
-    }
-    return now.replaceAll(RegExp(r'\s+'), ' ');
-  }
-
-  Widget _row(LaneEntry e) {
-    final lane = e.live();
-    final state = lane?.status ?? e.status ?? '';
-    final running = lane?.running ?? false;
-    final failed = state == 'failed';
-    final completed = state == 'completed' || state == 'done';
-    final cancelled = state == 'cancelled';
-    final title =
-        e.title.trim().isNotEmpty ? e.title.trim() : (lane?.title.trim() ?? '');
-    final summary = (e.summary?.trim().isNotEmpty == true
-        ? e.summary!.trim()
-        : lane?.summary?.trim() ?? '');
-    final agent = lane?.agent?.trim() ?? '';
-    final small = sans(kMobile ? 13 : 12, height: 1.35, color: AppColors.fg3);
-    final List<InlineSpan> status;
-    if (running) {
-      final now = _live(lane);
-      final took = laneElapsed(lane);
-      status = [
-        TextSpan(
-            text: [now.isEmpty ? 'Working' : now, if (took.isNotEmpty) took]
-                .join(' \u00b7 ')),
-      ];
-    } else if (failed) {
-      final why = lane?.error?.trim() ?? '';
-      status = [
-        TextSpan(
-            text: 'Failed', style: small.copyWith(color: AppColors.danger)),
-        if (why.isNotEmpty) TextSpan(text: ' \u00b7 ${laneFirstSentence(why)}'),
-      ];
-    } else if (completed) {
-      final line = laneFirstSentence(summary);
-      status = [
-        TextSpan(text: line.isEmpty ? 'Finished' : 'Finished \u00b7 $line')
-      ];
-    } else if (cancelled) {
-      status = const [TextSpan(text: 'Cancelled')];
-    } else if (state == 'paused') {
-      status = const [TextSpan(text: 'Paused')];
-    } else {
-      status = [TextSpan(text: lane == null ? '' : 'Queued')];
-    }
-    final retryOf = e.retryOf?.trim() ?? '';
-    final tile = kMobile ? 32.0 : 28.0;
-    return Semantics(
-      button: true,
-      label:
-          '$title, ${status.map((s) => s.toPlainText()).join()}. Open the lane.',
-      onTap: e.onOpen,
-      child: InkWell(
-        onTap: e.onOpen,
-        borderRadius: BorderRadius.circular(R.md),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: kMobile ? 52 : 40),
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: S.s4),
-            child: Row(children: [
-              Container(
-                width: tile,
-                height: tile,
-                decoration: BoxDecoration(
-                    color: AppColors.surface2,
-                    borderRadius: BorderRadius.circular(8)),
-                alignment: Alignment.center,
-                child: agent.isNotEmpty
-                    ? AgentMochi(agent,
-                        size: kMobile ? 24 : 20,
-                        state: running
-                            ? AgentCharacterState.working
-                            : failed
-                                ? AgentCharacterState.needs
-                                : AgentCharacterState.done)
-                    : AppIcon('layers', size: 16, color: AppColors.fg3),
-              ),
-              SizedBox(width: S.s12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(title.isEmpty ? 'Lane' : title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(kMobile ? 15 : 14,
-                            weight: W.label,
-                            height: 1.3,
-                            color: AppColors.fg1)),
-                    if (retryOf.isNotEmpty)
-                      Text('Retry of $retryOf',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(12, color: AppColors.fg4)),
-                    Row(children: [
-                      if (running) ...[
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                              color: AppColors.run, shape: BoxShape.circle),
-                        ),
-                        SizedBox(width: S.s6),
-                      ],
-                      Expanded(
-                        child: Text.rich(TextSpan(children: status),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: small),
-                      ),
-                    ]),
-                  ],
-                ),
-              ),
-              SizedBox(width: S.s8),
-              Container(
-                height: kMobile ? 32 : 28,
-                padding: EdgeInsets.symmetric(horizontal: S.s12),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                    color: AppColors.surface2,
-                    borderRadius: BorderRadius.circular(10)),
-                child: Text('Open',
-                    style: sans(13, weight: W.label, color: AppColors.fg1)),
-              ),
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    Theme.of(context);
-    final entries = [
-      LaneEntry(
-          title: widget.title,
-          live: widget.live,
-          onOpen: widget.onOpen,
-          summary: widget.summary,
-          retryOf: widget.retryOf,
-          status: widget.status,
-          time: widget.time),
-      ...widget.more,
-    ];
-    final anyRunning = entries.any((e) => e.live()?.running ?? false);
-    if (anyRunning && _tick == null) {
-      _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (mounted) setState(() {});
-      });
-    } else if (!anyRunning && _tick != null) {
-      _tick!.cancel();
-      _tick = null;
-    }
-    final n = entries.length;
-    final header = n == 1
-        ? ((widget.retryOf?.trim().isNotEmpty ?? false)
-            ? 'Retried a lane'
-            : 'Started a lane')
-        : 'Split ${const {
-              2: 'two',
-              3: 'three',
-              4: 'four',
-              5: 'five'
-            }[n] ?? '$n'} lanes';
-    final time =
-        entries.first.time ?? formatEventTime(entries.first.live()?.startedAt);
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: S.of(3)),
-      child: Material(
-        color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(R.card),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: EdgeInsets.all(kMobile ? S.s12 : S.s8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: EdgeInsets.fromLTRB(S.s4, S.s2, S.s4, S.s4),
-                child: Row(children: [
-                  Expanded(
-                    child: Text(header, style: sans(13, color: AppColors.fg3)),
-                  ),
-                  if (time != null)
-                    Text(time, style: mono(12, color: AppColors.fg4)),
-                ]),
-              ),
-              for (final e in entries) _row(e),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 String laneAgentName(String id) => id
@@ -1265,23 +987,50 @@ class SystemRow extends StatelessWidget {
   }
 }
 
-/// What a watched file's new lines say: the readable lines, and the exit code
-/// when the command appended a `__DONE__ exit=N` style sentinel.
-({List<String> lines, int? exit}) _readWatchPreview(String preview) {
+/// What a watched file's new lines say: the readable lines, and a verdict
+/// (true finished, false failed, null unknown) from sentinels, exit codes and
+/// pass or fail words.
+({List<String> lines, bool? ok, int? exit}) readWatchPreview(String preview) {
   final sentinel = RegExp(r'^__[A-Z_]+__(?:\s+exit=(-?\d+))?');
   int? exit;
+  var sentinelSeen = false;
   final lines = <String>[];
   for (final raw in preview.split('\n')) {
     final line = raw.trimRight();
     if (line.trim().isEmpty) continue;
-    final m = sentinel.firstMatch(line.trim());
-    if (m != null) {
-      if (m.group(1) != null) exit = int.tryParse(m.group(1)!);
-      continue;
+    // A sentinel can trail other output on the same line.
+    final t = line.trim();
+    final at = t.indexOf(RegExp(r'__[A-Z_]+__'));
+    if (at >= 0) {
+      final m = sentinel.firstMatch(t.substring(at));
+      if (m != null) {
+        sentinelSeen = true;
+        if (m.group(1) != null) exit = int.tryParse(m.group(1)!);
+        final before = t.substring(0, at).trim();
+        if (before.isNotEmpty) lines.add(before);
+        continue;
+      }
     }
     lines.add(line);
   }
-  return (lines: lines, exit: exit);
+  final text = lines.join('\n');
+  bool? ok;
+  if (exit != null) {
+    ok = exit == 0;
+  } else if (RegExp(r'\b(?:rc|exit|code)[=:]\s*[1-9]\d*\b').hasMatch(text) ||
+      RegExp(r'(?<!\b(?:0|no) )\b(?:failed|failure|fails|error|errors)\b',
+              caseSensitive: false)
+          .hasMatch(text) ||
+      text.contains('✗')) {
+    ok = false;
+  } else if (sentinelSeen ||
+      RegExp(r'\b(?:rc|exit|code)[=:]\s*0\b').hasMatch(text) ||
+      RegExp(r'\b(?:passed|done|finished|succeeded)\b', caseSensitive: false)
+          .hasMatch(text) ||
+      text.contains('✓')) {
+    ok = true;
+  }
+  return (lines: lines, ok: ok, exit: exit);
 }
 
 class _WatchFired extends StatefulWidget {
@@ -1305,19 +1054,13 @@ class _WatchFiredState extends State<_WatchFired> {
 
   @override
   Widget build(BuildContext context) {
-    final read = _readWatchPreview(widget.preview);
-    final exit = read.exit;
-    final (text, tone, icon) = switch (exit) {
-      null => ('**${widget.subject}** updated', SignalTone.accent, 'eye'),
-      0 => ('**${widget.subject}** finished', SignalTone.ok, 'check'),
-      _ => (
-          '**${widget.subject}** failed \u00b7 exit $exit',
-          SignalTone.danger,
-          'alert-triangle'
-        ),
+    final read = readWatchPreview(widget.preview);
+    final (text, tone, icon) = switch (read.ok) {
+      true => ('**${widget.subject}** finished', SignalTone.ok, 'check'),
+      false => ('**${widget.subject}** failed', SignalTone.danger, 'alert-triangle'),
+      null => ('**${widget.subject}** has new output', SignalTone.neutral, 'activity'),
     };
     final canExpand = read.lines.isNotEmpty;
-    final tail = canExpand ? read.lines.last.trim() : '';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1325,7 +1068,6 @@ class _WatchFiredState extends State<_WatchFired> {
           icon: icon,
           tone: tone,
           text: text,
-          sub: tail.length > 100 ? '${tail.substring(0, 99)}\u2026' : tail,
           time: widget.time,
           onTap: canExpand ? () => setState(() => _open = !_open) : null,
         ),

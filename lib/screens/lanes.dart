@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../ambient_loop.dart';
 import '../api.dart';
 import '../media_views.dart';
 import '../models.dart';
@@ -88,19 +89,397 @@ class _LanesScreenState extends State<LanesScreen> {
                     icon: 'layers',
                     title: 'No delegated lanes',
                     body: 'Parallel agent work will appear here when started.')
-                : ListView(
-                    padding:
-                        EdgeInsets.fromLTRB(S.s16, S.s16, S.s16, S.s32),
-                    children: laneSections(lanes,
-                        liveLanes: widget.liveLanes,
-                        client: widget.client,
-                        sessionId: widget.sessionId),
-                  ),
+                : LaneBoard(
+                    lanes: lanes,
+                    liveLanes: widget.liveLanes,
+                    client: widget.client,
+                    sessionId: widget.sessionId),
           ),
         ]),
       ),
     );
   }
+}
+
+/// The lanes panel as a board: a summary and status strip, then what needs
+/// the user, then live work, then finished lanes folded into one row.
+class LaneBoard extends StatefulWidget {
+  final List<LaneInfo> lanes;
+  final List<LaneInfo> Function()? liveLanes;
+  final DaemonClient? client;
+  final String? sessionId;
+
+  const LaneBoard({
+    super.key,
+    required this.lanes,
+    this.liveLanes,
+    this.client,
+    this.sessionId,
+  });
+
+  @override
+  State<LaneBoard> createState() => _LaneBoardState();
+}
+
+enum _Mark { ok, run, danger, faint }
+
+class _LaneBoardState extends State<LaneBoard> {
+  bool _showFinished = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final lanes = widget.lanes;
+    final running = lanes.where((l) => l.running).toList();
+    final failed = lanes.where((l) => l.status == 'failed').toList();
+    final paused = lanes.where((l) => l.status == 'paused').toList();
+    final cancelled = lanes.where((l) => l.status == 'cancelled').toList();
+    final completed = lanes
+        .where((l) =>
+            !l.running &&
+            !const ['failed', 'paused', 'cancelled'].contains(l.status))
+        .toList();
+    final side = kMobile ? M.gutter : S.s16;
+    final children = <Widget>[
+      _summary(lanes.length, completed.length, running),
+      SizedBox(height: S.s8),
+      _strip([
+        for (final _ in completed) _Mark.ok,
+        for (final _ in running) _Mark.run,
+        for (final _ in failed) _Mark.danger,
+        for (final _ in [...paused, ...cancelled]) _Mark.faint,
+      ]),
+    ];
+    void section(String label, List<Widget> rows) {
+      if (rows.isEmpty) return;
+      children.add(Padding(
+        padding: EdgeInsets.only(top: S.s20, bottom: S.s4),
+        child: Text(label, style: sans(12, color: AppColors.fg4)),
+      ));
+      children.addAll(rows);
+    }
+
+    section('Needs you', [
+      for (final l in failed)
+        _row(l, _Mark.danger, _firstSentence(l.error ?? l.summary),
+            action: _control(l)),
+      for (final l in paused)
+        _row(l, _Mark.faint, 'Paused at its time limit'),
+    ]);
+    section('Working', [
+      for (final l in running)
+        _row(
+            l,
+            _Mark.run,
+            [
+              if ((l.activity ?? '').trim().isNotEmpty) l.activity!.trim(),
+              _elapsed(l.startedAt),
+            ].where((s) => s.isNotEmpty).join(' · '),
+            monoSub: true,
+            action: _control(l)),
+    ]);
+    if (completed.isNotEmpty || cancelled.isNotEmpty) {
+      children.add(SizedBox(height: S.s12));
+      children.add(_foldRow(completed.length, cancelled.length));
+      if (_showFinished) {
+        for (final l in completed) {
+          children.add(_row(l, _Mark.ok, _firstSentence(l.summary)));
+        }
+        for (final l in cancelled) {
+          children.add(_row(l, _Mark.faint, _firstSentence(l.summary)));
+        }
+      }
+    }
+    return ListView(
+      padding: EdgeInsets.fromLTRB(side, S.s16, side, S.s32),
+      children: children,
+    );
+  }
+
+  Widget _summary(int total, int done, List<LaneInfo> running) {
+    String oldest = '';
+    if (running.isNotEmpty) {
+      final starts = running
+          .map((l) => DateTime.tryParse(l.startedAt))
+          .whereType<DateTime>()
+          .toList()
+        ..sort();
+      if (starts.isNotEmpty) oldest = _elapsed(starts.first.toIso8601String());
+    }
+    final right = running.isEmpty
+        ? ''
+        : [
+            '${running.length} running',
+            if (oldest.isNotEmpty) oldest,
+          ].join(' · ');
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        Expanded(
+          child: Text('$done of $total done',
+              style: sans(20, weight: W.title, color: AppColors.fg1)),
+        ),
+        if (right.isNotEmpty)
+          Text(right, style: mono(12, color: AppColors.fg3)),
+      ],
+    );
+  }
+
+  /// One segment per lane; past 12 lanes each status keeps its share.
+  Widget _strip(List<_Mark> marks) {
+    const cap = 12;
+    var segs = marks;
+    if (marks.length > cap) {
+      final counts = {
+        for (final m in _Mark.values) m: marks.where((x) => x == m).length,
+      };
+      final share = {
+        for (final m in _Mark.values)
+          m: counts[m]! == 0
+              ? 0
+              : (counts[m]! * cap / marks.length).floor().clamp(1, cap),
+      };
+      var left = cap - share.values.fold(0, (a, b) => a + b);
+      final present = _Mark.values.where((m) => counts[m]! > 0).toList()
+        ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+      for (var i = 0; left > 0; i = (i + 1) % present.length, left--) {
+        share[present[i]] = share[present[i]]! + 1;
+      }
+      for (; left < 0; left++) {
+        share[present.first] = share[present.first]! - 1;
+      }
+      segs = [
+        for (final m in _Mark.values)
+          for (var i = 0; i < share[m]!; i++) m,
+      ];
+    }
+    return Row(children: [
+      for (var i = 0; i < segs.length; i++) ...[
+        if (i > 0) SizedBox(width: S.of(3)),
+        Expanded(
+          child: Container(
+            height: 4,
+            decoration: BoxDecoration(
+              color: _markColor(segs[i]),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+      ],
+    ]);
+  }
+
+  Color _markColor(_Mark m) => switch (m) {
+        _Mark.ok => AppColors.ok,
+        _Mark.run => AppColors.run,
+        _Mark.danger => AppColors.danger,
+        _Mark.faint => AppColors.fg4.withValues(alpha: 0.45),
+      };
+
+  Widget _row(LaneInfo lane, _Mark mark, String sub,
+      {bool monoSub = false, Widget? action}) {
+    return DecoratedBox(
+      key: ValueKey('lane-row-${lane.id}'),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: InkWell(
+        onTap: () => openLaneView(context, lane,
+            client: widget.client,
+            sessionId: widget.sessionId,
+            liveLanes: widget.liveLanes),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: kMobile ? 44 : 36),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: kMobile ? S.of(10) : S.s6),
+            child: Row(children: [
+              _LaneMark(mark: mark, color: _markColor(mark)),
+              SizedBox(width: S.of(10)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(lane.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(kMobile ? 15 : 13,
+                            weight: W.label, color: AppColors.fg1)),
+                    if (sub.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.only(top: S.s2),
+                        child: Text(sub,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: monoSub
+                                ? mono(12, color: AppColors.fg3)
+                                : sans(kMobile ? 13 : 12,
+                                    color: AppColors.fg3)),
+                      ),
+                  ],
+                ),
+              ),
+              if (action != null) ...[SizedBox(width: S.s8), action],
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _foldRow(int finished, int cancelled) {
+    final label = [
+      if (finished > 0) '$finished finished',
+      if (cancelled > 0) '$cancelled cancelled',
+    ].join(', ');
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: InkWell(
+        onTap: () => setState(() => _showFinished = !_showFinished),
+        child: Container(
+          constraints: BoxConstraints(minHeight: kMobile ? 44 : 36),
+          alignment: Alignment.centerLeft,
+          child: Text('$label ${_showFinished ? '‹' : '›'}',
+              style: sans(13, color: AppColors.fg3)),
+        ),
+      ),
+    );
+  }
+
+  Widget? _control(LaneInfo lane) {
+    final client = widget.client ?? DaemonScope.maybeOf(context);
+    final sessionId = widget.sessionId ?? lane.trimmedIn;
+    if (client == null || sessionId == null) return null;
+    if (!lane.running && !lane.retryable) return null;
+    return LaneControlButton(
+        client: client, sessionId: sessionId, lane: lane, quiet: true);
+  }
+}
+
+String _firstSentence(String? raw) {
+  final text = (raw ?? '')
+      .replaceAll(RegExp(r'[*`#>]'), '')
+      .split('\n')
+      .firstWhere((l) => l.trim().isNotEmpty, orElse: () => '')
+      .trim();
+  final end = RegExp(r'[.!?](\s|$)').firstMatch(text);
+  return end == null ? text : text.substring(0, end.start + 1);
+}
+
+String _elapsed(String startedAt) {
+  final time = DateTime.tryParse(startedAt);
+  if (time == null) return '';
+  final delta = DateTime.now().toUtc().difference(time.toUtc());
+  if (delta.inSeconds < 60) return '${delta.inSeconds.clamp(0, 59)}s';
+  if (delta.inMinutes < 60) return '${delta.inMinutes}m';
+  return '${delta.inHours}h ${delta.inMinutes % 60}m';
+}
+
+/// The 14px status mark leading a board row; the run ring turns unless
+/// motion is reduced.
+class _LaneMark extends StatefulWidget {
+  final _Mark mark;
+  final Color color;
+  const _LaneMark({required this.mark, required this.color});
+
+  @override
+  State<_LaneMark> createState() => _LaneMarkState();
+}
+
+class _LaneMarkState extends State<_LaneMark> {
+  final _spin = AmbientLoop(const Duration(milliseconds: 1000));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _spin.bind(context);
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LaneMark oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _sync();
+  }
+
+  void _sync() {
+    if (widget.mark == _Mark.run && !reduceMotion(context)) {
+      _spin.start();
+    } else {
+      _spin.stop(at: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final paint = CustomPaint(
+      size: const Size.square(14),
+      painter: _MarkPainter(widget.mark, widget.color),
+    );
+    return SizedBox.square(
+      dimension: 14,
+      child: widget.mark == _Mark.run
+          ? RepaintBoundary(
+              child: RotationTransition(turns: _spin, child: paint))
+          : paint,
+    );
+  }
+}
+
+class _MarkPainter extends CustomPainter {
+  const _MarkPainter(this.mark, this.color);
+  final _Mark mark;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    switch (mark) {
+      case _Mark.run:
+        final rect = (Offset.zero & size).deflate(1.5);
+        canvas.drawArc(rect, 0, 6.2832, false,
+            stroke
+              ..strokeWidth = 2
+              ..color = color.withValues(alpha: 0.2));
+        canvas.drawArc(rect, -1.5708, 4.712, false, stroke..color = color);
+      case _Mark.ok:
+        canvas.drawCircle(c, size.width / 2, Paint()..color = color);
+        final tick = Path()
+          ..moveTo(size.width * 0.29, size.height * 0.52)
+          ..lineTo(size.width * 0.44, size.height * 0.67)
+          ..lineTo(size.width * 0.72, size.height * 0.37);
+        canvas.drawPath(
+            tick,
+            stroke
+              ..strokeWidth = 1.6
+              ..strokeJoin = StrokeJoin.round
+              ..color = AppColors.bg);
+      case _Mark.danger:
+        canvas.drawCircle(c, size.width / 2 - 1, Paint()..color = color);
+      case _Mark.faint:
+        canvas.drawCircle(
+            c,
+            size.width / 2 - 1,
+            stroke
+              ..strokeWidth = 1.5
+              ..color = AppColors.fg4);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_MarkPainter old) =>
+      old.mark != mark || old.color != color;
 }
 
 List<Widget> laneSections(List<LaneInfo> lanes,

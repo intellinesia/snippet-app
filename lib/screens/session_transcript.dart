@@ -8,23 +8,6 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     String? runStartKey;
     String? pendingKey;
     final eventOccurrences = <String, int>{};
-    final laneRowsShown = <String>{}; // spawn cards already emitted (by id)
-    final laneGrouped = <int>{}; // spawn events folded into an earlier card
-    final laneEnds = <String, Map<String, dynamic>>{};
-    for (final e in events) {
-      final kind = e['kind'];
-      if (kind == 'lane_completed' || kind == 'lane_cancelled') {
-        laneEnds[_s(e['id'])] = e;
-      }
-    }
-    String? laneEndStatus(String id) {
-      final end = laneEnds[id];
-      if (end == null) return null;
-      final st = _s(end['status']);
-      if (st.isNotEmpty) return st;
-      return end['kind'] == 'lane_cancelled' ? 'cancelled' : 'completed';
-    }
-
     String eventKey(Map<String, dynamic> event) {
       // Use the stable fields that identify a transcript event instead of
       // JSON-serializing the entire historical event on every delta. The old
@@ -147,13 +130,6 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       final id = agentId.substring(5).trim();
       for (final l in _state?.lanes ?? const <LaneInfo>[]) {
         if (l.id == id) return l.title;
-      }
-      return null;
-    }
-
-    LaneInfo? liveLane(String id) {
-      for (final l in _state?.lanes ?? const <LaneInfo>[]) {
-        if (l.id == id) return l;
       }
       return null;
     }
@@ -646,84 +622,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                       ),
               ));
         case 'lane_spawned':
-          endTools(key);
-          if (laneGrouped.contains(idx)) break;
-          final id = _s(e['id']);
-          final title = _s(e['title']);
-          final retryOf = _s(e['retry_of']).trim();
-          // Dedup by ID AND title — the same lane can be spawned with
-          // different IDs on reconnect (resume), producing visual duplicates.
-          // Explicit retries keep the same title and must still render.
-          if (!laneRowsShown.contains(id) &&
-              (retryOf.isNotEmpty || !laneRowsShown.contains('t:$title'))) {
-            laneRowsShown.add(id);
-            if (retryOf.isEmpty) laneRowsShown.add('t:$title');
-            // Lanes started in the same turn share one card.
-            final more = <LaneEntry>[];
-            for (var j = idx + 1; j < events.length; j++) {
-              final nk = events[j]['kind'] as String? ?? '';
-              if (nk == 'user_input' ||
-                  nk == 'steer' ||
-                  nk == 'assistant_text') {
-                break;
-              }
-              if (nk != 'lane_spawned') continue;
-              final nid = _s(events[j]['id']);
-              final nt = _s(events[j]['title']);
-              final nr = _s(events[j]['retry_of']).trim();
-              if (laneRowsShown.contains(nid) ||
-                  (nr.isEmpty && laneRowsShown.contains('t:$nt'))) {
-                continue;
-              }
-              laneRowsShown.add(nid);
-              if (nr.isEmpty) laneRowsShown.add('t:$nt');
-              laneGrouped.add(j);
-              more.add(LaneEntry(
-                  title: nt,
-                  live: () => liveLane(nid),
-                  onOpen: () => _openLane(nid),
-                  retryOf: nr.isEmpty ? null : nr,
-                  summary: _s(laneEnds[nid]?['summary']),
-                  status: laneEndStatus(nid),
-                  time: formatEventTime(
-                      events[j]['at'] ?? events[j]['created_at'])));
-            }
-            addEvent(
-                key,
-                LaneNotice(
-                  title: title,
-                  live: () => liveLane(id),
-                  onOpen: () => _openLane(id),
-                  client: widget.client,
-                  sessionId: widget.sessionId,
-                  sessionProfile: _currentProfile ?? widget.profile,
-                  retryOf: retryOf.isEmpty ? null : retryOf,
-                  summary: _s(laneEnds[id]?['summary']),
-                  status: laneEndStatus(id),
-                  time: formatEventTime(e['at'] ?? e['created_at']),
-                  more: more,
-                ));
-          }
         case 'lane_cancelled':
         case 'lane_completed':
-          endTools(key);
-          final id = _s(e['id']);
-          // The spawn card already tracks this lane live — only render a card
-          // here if the spawn row is gone (e.g. compacted away).
-          if (!laneRowsShown.contains(id)) {
-            addEvent(
-                key,
-                LaneNotice(
-                  title: _s(e['title']),
-                  live: () => liveLane(id),
-                  onOpen: () => _openLane(id),
-                  summary: _s(e['summary']),
-                  status: laneEndStatus(id),
-                  client: widget.client,
-                  sessionId: widget.sessionId,
-                  sessionProfile: _currentProfile ?? widget.profile,
-                ));
-          }
+          break; // lanes live in the header pill and the Lanes board
         case 'user_question':
           endTools(key);
           String? answer;
@@ -833,9 +734,6 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
         case 'artifact_presented':
         case 'user_question':
         case 'approval_request':
-        case 'lane_spawned':
-        case 'lane_cancelled':
-        case 'lane_completed':
         case 'assistant_text':
           return true;
       }
@@ -915,42 +813,6 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       if (mounted) _setState(() => _currentProfile = before);
       _toast('$e');
     }
-  }
-
-  /// Watch one lane at work: its own transcript, live and read-only, under a
-  /// banner saying what it was asked to do.
-  void _openLane(String id) {
-    final lane = (_state?.lanes ?? const <LaneInfo>[])
-        .where((l) => l.id == id)
-        .firstOrNull;
-    final transcript = lane?.transcript;
-    if (lane == null || transcript == null || transcript.isEmpty) {
-      _showLanes();
-      return;
-    }
-    if (!kMobile) {
-      presentScreen(
-        context,
-        style: PanelStyle.drawer,
-        purpose: ShellPanelPurpose.lanes,
-        panelId: id,
-        originClient: widget.client,
-        originSessionId: widget.sessionId,
-        builder: (_, close) => LaneTranscriptScreen(
-          client: widget.client,
-          laneId: id,
-          liveLanes: () => _state?.lanes ?? const <LaneInfo>[],
-        ),
-      );
-      return;
-    }
-    Navigator.of(context).push(AppPageRoute<void>(
-      builder: (_) => LaneTranscriptScreen(
-        client: widget.client,
-        laneId: id,
-        liveLanes: () => _state?.lanes ?? const <LaneInfo>[],
-      ),
-    ));
   }
 
   void _showLanes() {
