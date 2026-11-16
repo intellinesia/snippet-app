@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../desktop_look.dart';
 import '../api.dart';
 import '../approval_code.dart';
 import '../chat/chat_card.dart';
+import '../chat/decided_card.dart';
 import '../chat/session_attention.dart';
 import '../chat/chat_style.dart';
 import '../media_views.dart';
@@ -99,7 +99,7 @@ Widget? agentThreadEventCard(
     if ('${approval['session'] ?? ''}'.isNotEmpty &&
         '${approval['approval_id'] ?? ''}'.isNotEmpty) {
       return DeskApprovalCard(
-          event: e, approval: approval, client: client);
+          event: e, approval: approval, client: client, agentId: agentId);
     }
     return _approvalCard(e, approval);
   }
@@ -1023,11 +1023,13 @@ class DeskApprovalCard extends StatefulWidget {
     required this.event,
     required this.approval,
     required this.client,
+    this.agentId = '',
   });
 
   final CoordinationEvent event;
   final Map<dynamic, dynamic> approval;
   final DaemonClient client;
+  final String agentId;
 
   @override
   State<DeskApprovalCard> createState() => _DeskApprovalCardState();
@@ -1092,78 +1094,137 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
     final outcome =
         '${decision?['outcome'] ?? _localOutcome ?? ''}'.trim().toLowerCase();
     final title = parsed.headline(tool);
-    if (outcome.isNotEmpty) {
-      if (outcome == 'outdated') {
-        return ChatCardResolved(
-          title: title,
-          subtitle: 'Outdated: no longer waiting on this',
-          approved: false,
-          icon: 'clock',
-        );
-      }
-      final approved = outcome == 'approved' || outcome == 'approved_all';
-      final subtitle = switch (outcome) {
-        'approved_all' => 'Approved all',
-        'approved' => 'Approved',
-        _ => 'Denied',
+    // Commands read as themselves; other requests keep their headline.
+    final isCommand = parsed.shownCommand.isNotEmpty && tool == 'bash';
+    final line = isCommand ? parsed.shownCommand.split('\n').first : title;
+    if (outcome.isNotEmpty || _outdated) {
+      final kind = switch (outcome) {
+        'outdated' => DecidedKind.outdated,
+        'approved' || 'approved_all' => DecidedKind.approved,
+        'denied' => DecidedKind.denied,
+        _ => _outdated ? DecidedKind.outdated : DecidedKind.denied,
       };
-      return ChatCardResolved(
-        title: title,
-        subtitle: subtitle,
-        approved: approved,
+      return DecidedCard(
+        kind: kind,
+        title: line,
+        code: isCommand,
+        subtitle: kind == DecidedKind.outdated
+            ? 'No longer waiting on this'
+            : (from.isNotEmpty ? from : null),
       );
     }
-    if (_outdated) {
-      return ChatCardResolved(
-        title: title,
-        subtitle: 'Outdated: no longer waiting on this',
-        approved: false,
-        icon: 'clock',
-      );
-    }
-    return ChatCard(children: [
-      ChatCardHeader(
-        title: title,
-        subtitle: from.isNotEmpty ? from : null,
-        trailing: total != null && total > 1 && index != null
-            ? ChatCardPill('$index of $total')
-            : null,
+    final taskId = _s('task_id');
+    final head = [
+      if (taskId.isNotEmpty) taskId,
+      if (_s('task_title').isNotEmpty) _s('task_title'),
+    ].join(' \u00b7 ');
+    final counter = total != null && total > 1 && index != null
+        ? '$index of $total'
+        : null;
+    return Container(
+      width: double.infinity,
+      margin: EdgeInsets.symmetric(vertical: S.s2),
+      padding: EdgeInsets.all(S.s12),
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(R.card),
+        border: Border.all(color: AppColors.border),
       ),
-      if (parsed.shownCommand.isNotEmpty)
-        ChatCardBody(
-          child: Tactile(
-            radius: BorderRadius.circular(R.card),
-            kind: TactileKind.inset,
-            child: Container(
-              padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s6),
-              decoration: BoxDecoration(
-                color: AppColors.bg,
-                borderRadius: BorderRadius.circular(R.card),
-                border: Border.all(color: AppColors.line),
-              ),
-              child:
-                  ApprovalCode(code: parsed.shownCommand, collapsedLines: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(children: [
+            Expanded(
+              child: DeskRequestHead(
+                  agentId: widget.agentId,
+                  line: head.isNotEmpty ? head : from),
             ),
-          ),
-        ),
-      if (parsed.secrets.isNotEmpty)
-        ChatCardBody(
-          child: Wrap(spacing: S.s6, runSpacing: S.s4, children: [
-            for (final name in parsed.secrets)
-              Tag(name, tone: Tone.run, icon: 'key', mono: true),
+            if (counter != null) ChatCardPill(counter),
           ]),
+          SizedBox(height: S.s6),
+          if (parsed.shownCommand.isNotEmpty)
+            ApprovalCode(code: parsed.shownCommand, collapsedLines: 4)
+          else
+            Text(title, style: sans(kMobile ? 14 : 13, color: AppColors.fg1)),
+          if (parsed.secrets.isNotEmpty) ...[
+            SizedBox(height: S.s6),
+            Wrap(spacing: S.s6, runSpacing: S.s4, children: [
+              for (final name in parsed.secrets)
+                Tag(name, tone: Tone.run, icon: 'key', mono: true),
+            ]),
+          ],
+          if (context_.isNotEmpty) ...[
+            SizedBox(height: S.s6),
+            Text(context_,
+                style: sans(kMobile ? 14 : 13, color: AppColors.fg2)),
+          ],
+          SizedBox(height: S.s12),
+          _DeskDecideButtons(
+            busy: _busy,
+            onDeny: () => _decide(false),
+            onApprove: () => _decide(true),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Deny and Approve side by side, full width on the phone and compact on
+/// desktop.
+class _DeskDecideButtons extends StatelessWidget {
+  const _DeskDecideButtons(
+      {required this.busy, required this.onDeny, required this.onApprove});
+
+  final bool busy;
+  final VoidCallback onDeny;
+  final VoidCallback onApprove;
+
+  Widget _btn(String label, VoidCallback onTap, {required bool primary}) {
+    final h = kMobile ? 44.0 : 30.0;
+    final btn = Pressable(
+      kind: PressKind.button,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: busy ? null : onTap,
+        child: Container(
+          height: h,
+          alignment: Alignment.center,
+          padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s8 : S.s16),
+          decoration: BoxDecoration(
+            color: primary ? AppColors.accent : AppColors.surface3,
+            borderRadius: BorderRadius.circular(R.card),
+          ),
+          child: Text(label,
+              style: sans(kMobile ? 15 : 13,
+                  weight: W.label,
+                  color: primary ? AppColors.accentFg : AppColors.fg1)),
         ),
-      if (context_.isNotEmpty)
-        ChatCardBody(
-          child: Text(context_,
-              style: sans(kMobile ? 14 : 13, color: AppColors.fg2)),
-        ),
-      ChatCardActions(stack: true, buttons: [
-        ChatCardButton('Deny',
-            kind: ChatCardButtonKind.secondary,
-            onTap: _busy ? null : () => _decide(false)),
-        ChatCardButton('Approve', onTap: _busy ? null : () => _decide(true)),
-      ]),
+      ),
+    );
+    return Semantics(
+        button: true,
+        enabled: !busy,
+        label: label,
+        child: Opacity(opacity: busy ? 0.5 : 1, child: btn));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final deny = _btn('Deny', onDeny, primary: false);
+    final approve = _btn('Approve', onApprove, primary: true);
+    if (kMobile) {
+      return Row(children: [
+        Expanded(child: deny),
+        SizedBox(width: S.s8),
+        Expanded(child: approve),
+      ]);
+    }
+    return Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+      deny,
+      SizedBox(width: S.s8),
+      approve,
     ]);
   }
 }
