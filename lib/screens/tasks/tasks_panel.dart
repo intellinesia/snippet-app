@@ -223,7 +223,7 @@ class TasksPanelState extends State<TasksPanel> {
       ];
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(0, 4, 0, 8),
+        padding: EdgeInsets.fromLTRB(0, S.s4, 0, S.s8),
         child: Row(children: [
           for (final (label, set) in chips) ...[
             _FilterChip(
@@ -235,7 +235,7 @@ class TasksPanelState extends State<TasksPanel> {
                 _shownAt = null;
               }),
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
           ],
         ]),
       );
@@ -246,16 +246,16 @@ class TasksPanelState extends State<TasksPanel> {
         for (final (label, set) in tabs) ...[
           Material(
             color: same(_filter, set) ? AppColors.tint2 : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(R.chip),
             child: InkWell(
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(R.chip),
               onTap: () => setState(() {
                 _filter = {...set};
                 _shownAt = null;
               }),
               child: Container(
                 height: 26,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: EdgeInsets.symmetric(horizontal: S.s8),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Text(label,
                       style: sans(12,
@@ -263,14 +263,14 @@ class TasksPanelState extends State<TasksPanel> {
                           color: same(_filter, set)
                               ? AppColors.fg1
                               : AppColors.fg3)),
-                  const SizedBox(width: 5),
+                  SizedBox(width: S.of(5)),
                   Text('${set.isEmpty ? tasks.length : count(set)}',
                       style: mono(11, color: AppColors.fg4)),
                 ]),
               ),
             ),
           ),
-          const SizedBox(width: 2),
+          SizedBox(width: S.s2),
         ],
       ]),
     );
@@ -287,7 +287,7 @@ class TasksPanelState extends State<TasksPanel> {
   }
 
   Widget _desktopBackHeader(String title, VoidCallback onBack) => Padding(
-        padding: const EdgeInsets.fromLTRB(6, 8, 10, 4),
+        padding: EdgeInsets.fromLTRB(S.s6, S.s8, S.of(10), S.s4),
         child: Row(children: [
           IconBtn(
             'chevron-left',
@@ -296,7 +296,7 @@ class TasksPanelState extends State<TasksPanel> {
             tooltip: 'Back',
             onTap: onBack,
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: S.s4),
           Expanded(
             child: Text(title,
                 maxLines: 1,
@@ -318,15 +318,15 @@ class TasksPanelState extends State<TasksPanel> {
 
   Widget _desktopSearch() => Container(
         height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: EdgeInsets.symmetric(horizontal: S.s8),
         decoration: BoxDecoration(
           color: AppColors.tint1,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(R.md),
           border: Border.all(color: AppColors.line),
         ),
         child: Row(children: [
           AppIcon('search', size: 14, color: AppColors.fg4),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Expanded(
             child: TextField(
               controller: _search,
@@ -373,7 +373,7 @@ class TasksPanelState extends State<TasksPanel> {
     } else if (error != null) {
       empty = Column(mainAxisSize: MainAxisSize.min, children: [
         Text('Could not load tasks', style: sans(13, color: AppColors.fg2)),
-        const SizedBox(height: 10),
+        SizedBox(height: S.of(10)),
         Btn('Retry', small: true, onTap: _feed.refresh),
       ]);
     } else {
@@ -401,7 +401,7 @@ class TasksPanelState extends State<TasksPanel> {
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  padding: EdgeInsets.symmetric(horizontal: S.of(28)),
                   child: CreateTaskForm(
                     client: widget.client,
                     onCreated: () {
@@ -518,7 +518,7 @@ class TasksPanelState extends State<TasksPanel> {
             kMobile
                 ? Padding(
                     padding: EdgeInsets.fromLTRB(
-                        M.gutter, 2, M.gutter, 4),
+                        M.gutter, S.s2, M.gutter, S.s4),
                     child: ListSearchField(
                       controller: _search,
                       hint: 'Search tasks',
@@ -526,18 +526,18 @@ class TasksPanelState extends State<TasksPanel> {
                     ),
                   )
                 : Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
+                    padding: EdgeInsets.fromLTRB(S.of(10), S.s4, S.of(10), S.s6),
                     child: Container(
                       height: 32,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      padding: EdgeInsets.symmetric(horizontal: S.s8),
                       decoration: BoxDecoration(
                         color: AppColors.tint1,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(R.md),
                         border: Border.all(color: AppColors.line),
                       ),
                       child: Row(children: [
                         AppIcon('search', size: 14, color: AppColors.fg4),
-                        const SizedBox(width: 8),
+                        SizedBox(width: S.s8),
                         Expanded(
                           child: TextField(
                             controller: _search,
@@ -568,7 +568,7 @@ class TasksPanelState extends State<TasksPanel> {
             Padding(
               padding: kMobile
                   ? EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 0)
-                  : const EdgeInsets.fromLTRB(10, 2, 10, 4),
+                  : EdgeInsets.fromLTRB(S.of(10), S.s2, S.of(10), S.s4),
               child: _statusStrip(),
             ),
           Expanded(
@@ -585,7 +585,7 @@ class TasksPanelState extends State<TasksPanel> {
   }
 
   Widget _phoneHeader() => Padding(
-        padding: EdgeInsets.fromLTRB(M.gutter, 16, M.gutter, 6),
+        padding: EdgeInsets.fromLTRB(M.gutter, S.s16, M.gutter, S.s6),
         child: Row(children: [
           Text('Tasks', style: TS.pageTitle()),
           const Spacer(),
@@ -617,12 +617,12 @@ class TasksPanelState extends State<TasksPanel> {
     if (error != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(S.s24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Text('Could not load tasks',
                 textAlign: TextAlign.center,
                 style: sans(13, color: AppColors.fg2)),
-            const SizedBox(height: 10),
+            SizedBox(height: S.of(10)),
             Btn('Retry', small: true, onTap: _feed.refresh),
           ]),
         ),
@@ -640,8 +640,8 @@ class TasksPanelState extends State<TasksPanel> {
       onLoadMore: _feed.loadMore,
       sessionFolders: _sessionFolders,
       padding: kMobile
-          ? EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 16)
-          : const EdgeInsets.fromLTRB(10, 2, 10, 16),
+          ? EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s16)
+          : EdgeInsets.fromLTRB(S.of(10), S.s2, S.of(10), S.s16),
     );
   }
 }
@@ -667,12 +667,12 @@ class _FilterChip extends StatelessWidget {
         child: AnimatedContainer(
           duration: Motion.fast,
           height: 32,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(horizontal: S.s12),
           decoration: BoxDecoration(
             color: on
                 ? (kMobile ? AppColors.surface3 : AppColors.tint2)
                 : (kMobile ? AppColors.surface2 : AppColors.tint1),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(R.of(16)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Text('$label $count',

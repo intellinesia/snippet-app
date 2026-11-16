@@ -14,7 +14,7 @@ class SidebarEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s24),
         child: Text(message, style: TS.meta(), textAlign: TextAlign.center),
       );
 }
@@ -67,7 +67,7 @@ Future<void> showSidebarMachinesPicker(
             elevation: 4,
             shadowColor: Colors.black.withValues(alpha: 0.4),
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 6),
+              padding: EdgeInsets.symmetric(vertical: S.s6),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(R.md),
               ),

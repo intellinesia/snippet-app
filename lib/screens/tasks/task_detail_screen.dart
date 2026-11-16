@@ -223,10 +223,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 onTap: () => Navigator.of(context).pop(a.id),
                 child: Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+                      EdgeInsets.symmetric(horizontal: S.s4, vertical: S.s12),
                   child: Row(children: [
                     AppIcon('agent', size: 16, color: AppColors.fg3),
-                    const SizedBox(width: 10),
+                    SizedBox(width: S.of(10)),
                     Expanded(
                       child: Text(
                           a.displayName.trim().isEmpty ? a.id : a.displayName,
@@ -272,7 +272,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       context,
       title: 'Pass the turn',
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: S.s8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -281,7 +281,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               'Pass the turn to ${target.agentId}?\nThey carry on in the same workspace. ${currentActive.agentId} stays in the room and can still talk.',
               style: sans(13, color: AppColors.fg2, height: 1.4),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: S.s16),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -289,7 +289,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   onPressed: () => Navigator.of(context).pop(false),
                   child: Text('Cancel', style: sans(13, color: AppColors.fg3)),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(true),
                   child: Text('Pass the turn', style: sans(13)),
@@ -352,7 +352,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               child: Row(children: [
                 if (value.isNotEmpty) ...[
                   AgentMochi(value, size: 18),
-                  const SizedBox(width: 10),
+                  SizedBox(width: S.of(10)),
                 ],
                 Expanded(
                   child: Text(label,
@@ -386,7 +386,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: kMobile ? 40 : 28),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: EdgeInsets.symmetric(horizontal: S.s20),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Flexible(
                 child: Text('To ${addressee ?? _defaultAddressee}',
@@ -394,7 +394,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: sans(kMobile ? 13 : 12, color: AppColors.fg3)),
               ),
-              const SizedBox(width: 4),
+              SizedBox(width: S.s4),
               AppIcon('chevron-down', size: 12, color: AppColors.fg4),
             ]),
           ),
@@ -406,12 +406,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget _turnsSection() {
     if (turns.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(top: 14),
+      padding: EdgeInsets.only(top: S.of(14)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: S.s8),
             child: Text('TURNS',
                 style: kMobile
                     ? sans(12,
@@ -430,7 +430,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final shown =
         logExpanded || log.length <= collapsed ? log : log.sublist(0, collapsed);
     return Padding(
-      padding: const EdgeInsets.only(top: 14),
+      padding: EdgeInsets.only(top: S.of(14)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -438,7 +438,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               style: kMobile
                   ? sans(12, weight: W.label, spacing: 0.7, color: AppColors.fg4)
                   : caps(11, color: AppColors.fg3)),
-          const SizedBox(height: 4),
+          SizedBox(height: S.s4),
           BoardLog(entries: shown, showAgent: true),
           if (log.length > collapsed)
             TextButton(
@@ -466,20 +466,20 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: kMobile ? 44 : 32),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: EdgeInsets.symmetric(vertical: S.s6),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(children: [
                 AgentMochi(t.agentId, size: kMobile ? 20 : 16),
-                const SizedBox(width: 10),
+                SizedBox(width: S.of(10)),
                 Expanded(
                   child: Text(t.agentId,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(kMobile ? 14 : 13, color: AppColors.fg1)),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Text(_turnSummary(t),
                     style: sans(kMobile ? 13 : 12,
                         color: t.open ? AppColors.accent : AppColors.fg4)),
@@ -503,7 +503,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   style: sans(13, color: AppColors.fg3, height: 1.4)),
             for (final line in [...t.commits, ...t.files])
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: EdgeInsets.only(bottom: S.s6),
                 child: Text(line, style: codeMono(12, color: AppColors.fg2)),
               ),
             if (t.sessionId.isNotEmpty)
@@ -574,7 +574,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       children: [
         Text('To ${e.addressedTo.join(', ')}',
             style: sans(12, color: AppColors.fg3)),
-        const SizedBox(height: 4),
+        SizedBox(height: S.s4),
         message,
       ],
     );
@@ -604,7 +604,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 onTap: () => Navigator.of(context).pop(t.id),
                 child: Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+                      EdgeInsets.symmetric(horizontal: S.s4, vertical: S.s12),
                   child: Text(t.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -687,7 +687,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           else if (kMobile) _mobileTopBar(t)
           else if (widget.embedded)
             Padding(
-              padding: const EdgeInsets.fromLTRB(6, 8, 10, 4),
+              padding: EdgeInsets.fromLTRB(S.s6, S.s8, S.of(10), S.s4),
               child: Row(children: [
                 IconBtn(
                   'chevron-left',
@@ -697,7 +697,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   onTap:
                       widget.onClose ?? () => Navigator.of(context).pop(),
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: S.s4),
                 Expanded(
                   child: Text(t?.title ?? 'Task',
                       maxLines: 1,
@@ -735,7 +735,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Map<String, String> titles = const {};
 
   Widget _goalLine(TaskItem t) => Padding(
-        padding: const EdgeInsets.only(top: 2),
+        padding: EdgeInsets.only(top: S.s2),
         child: Text('Goal: ${t.goalTitle}',
             key: const ValueKey('task-goal'),
             maxLines: 1,
@@ -758,7 +758,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         : error != null
             ? Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(S.s24),
                   child: Text(error!,
                       textAlign: TextAlign.center,
                       style: sans(12, color: AppColors.danger)),
@@ -849,7 +849,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             SliverToBoxAdapter(child: _mobileV5Head(t)),
             SliverToBoxAdapter(child: _mobileV5Groups(t)),
             ..._roomSlivers(),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            SliverToBoxAdapter(child: SizedBox(height: S.s24)),
           ]),
         ),
         _addresseeBar(),
@@ -860,7 +860,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final age = taskAge(t);
     final inReview = t.status == TaskStatus.inReview;
     return Padding(
-      padding: EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 0),
+      padding: EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           _v5Pill(
@@ -879,7 +879,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               style: sans(14, color: AppColors.fg3)),
         ],
         if (inReview) ...[
-          const SizedBox(height: 14),
+          SizedBox(height: S.of(14)),
           Row(children: [
             Expanded(child: _v5Action('Approve', primary: true,
                 onTap: busy ? null : () => _setStatus(TaskStatus.done))),
@@ -897,7 +897,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         padding: EdgeInsets.symmetric(horizontal: S.s8),
         decoration: BoxDecoration(
           color: lit ? AppColors.runBg : AppColors.tint2,
-          borderRadius: BorderRadius.circular(11),
+          borderRadius: BorderRadius.circular(R.of(11)),
         ),
         alignment: Alignment.center,
         child: Text(text,
@@ -918,7 +918,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: primary ? AppColors.accentFill : AppColors.tint2,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(R.lg),
             border: primary ? null : Border.all(color: AppColors.line),
           ),
           child: Text(label,
@@ -929,7 +929,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       );
 
   Widget _v5Label(String text) => Padding(
-        padding: EdgeInsets.fromLTRB(S.s16, 14, 0, S.s6),
+        padding: EdgeInsets.fromLTRB(S.s16, S.of(14), 0, S.s6),
         child: Text(text, style: sans(13, color: AppColors.fg3)),
       );
 
@@ -937,10 +937,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         width: double.infinity,
         decoration: BoxDecoration(
           color: AppColors.tint1,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(R.of(14)),
           border: Border.all(color: AppColors.line),
         ),
-        padding: padding ?? const EdgeInsets.symmetric(horizontal: 14),
+        padding: padding ?? EdgeInsets.symmetric(horizontal: S.of(14)),
         child: child,
       );
 
@@ -951,7 +951,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _v5Label('Brief'),
         _v5Card(
-          padding: EdgeInsets.fromLTRB(14, S.s12, 14, S.s12),
+          padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.s12),
           child: brief.trim().isEmpty
               ? Text('No brief yet.', style: sans(15, color: AppColors.fg4))
               : _Description(markdown: brief),
@@ -959,7 +959,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         if (t.workPlan.isNotEmpty) ...[
           _v5Label('Plan'),
           _v5Card(
-            padding: EdgeInsets.fromLTRB(14, S.s12, 14, S.s12),
+            padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.s12),
             child: _WorkPlan(steps: t.workPlan),
           ),
         ],
@@ -967,7 +967,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         _v5Card(child: Column(children: _detailRows(t))),
         _v5Label('Log'),
         _v5Card(
-          padding: EdgeInsets.fromLTRB(14, S.s8, 14, S.s8),
+          padding: EdgeInsets.fromLTRB(S.of(14), S.s8, S.of(14), S.s8),
           child: log.isEmpty
               ? Text('No log entries yet.', style: sans(15, color: AppColors.fg4))
               : Column(children: [
@@ -1077,7 +1077,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   Widget _tabScroll({required Widget child}) => Padding(
         padding: kMobile
-            ? const EdgeInsets.fromLTRB(20, 8, 20, 16)
+            ? EdgeInsets.fromLTRB(S.s20, S.s8, S.s20, S.s16)
             : EdgeInsets.fromLTRB(S.s16, S.s12, S.s16, S.s12),
         child: child,
       );
@@ -1087,9 +1087,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         children: [
           if (kMobile || !widget.pane) ...[
             Text(t.title, style: TS.sectionTitle()),
-            const SizedBox(height: 6),
+            SizedBox(height: S.s6),
             _byline(t),
-            const SizedBox(height: 16),
+            SizedBox(height: S.s16),
           ],
           if (t.goalTitle != null && !kMobile && !widget.pane) ...[
             _goalLine(t),
@@ -1098,31 +1098,31 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           _keyCard(_keyRows(t)),
           if (!kMobile)
             if (_standsCard(t) case final stands?) ...[
-              const SizedBox(height: 10),
+              SizedBox(height: S.of(10)),
               stands,
             ],
           if (!kMobile && t.status == TaskStatus.inReview) ...[
-            const SizedBox(height: 10),
+            SizedBox(height: S.of(10)),
             _verdictCard(),
           ],
           if (_latestReport() case final report?) ...[
-            const SizedBox(height: 10),
+            SizedBox(height: S.of(10)),
             _reportCard(report),
           ],
-          if (!kMobile) const SizedBox(height: 10),
+          if (!kMobile) SizedBox(height: S.of(10)),
           _briefCard(t),
-          const SizedBox(height: 14),
+          SizedBox(height: S.of(14)),
           if (kMobile) ...[
           // Column picker. The current state is always shown, so the row
           // reads as the task's position; In progress is never offered, as
           // only a dispatch starts work.
           Container(
             height: kMobile ? 44 : 32,
-            padding: kMobile ? const EdgeInsets.all(4) : EdgeInsets.zero,
+            padding: kMobile ? EdgeInsets.all(S.s4) : EdgeInsets.zero,
             decoration: kMobile
                 ? BoxDecoration(
                     color: AppColors.surface1,
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(R.of(22)),
                     boxShadow: [
                       BoxShadow(
                           color: AppColors.fg1.withValues(alpha: 0.08),
@@ -1143,7 +1143,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                 TaskStatus.cancelled
                               }.contains(t.status))))
                   Padding(
-                    padding: const EdgeInsets.only(right: 6),
+                    padding: EdgeInsets.only(right: S.s6),
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -1151,10 +1151,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             ? null
                             : () => _setStatus(s),
                         borderRadius:
-                            BorderRadius.circular(kMobile ? 18 : R.chip),
+                            BorderRadius.circular(kMobile ? R.of(18 ) : R.chip),
                         child: Container(
                           padding: EdgeInsets.symmetric(
-                              horizontal: kMobile ? 13 : 10),
+                              horizontal: kMobile ? S.of(13 ) : S.of(10)),
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             // Same chip rule as the board's filter bar: the
@@ -1167,7 +1167,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                     ? Colors.transparent
                                     : AppColors.tint1),
                             borderRadius:
-                                BorderRadius.circular(kMobile ? 18 : R.chip),
+                                BorderRadius.circular(kMobile ? R.of(18 ) : R.chip),
                           ),
                           child: Row(mainAxisSize: MainAxisSize.min, children: [
                             if (s == t.status) ...[
@@ -1194,7 +1194,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: S.of(14)),
           ],
           _section('Agents', onAdd: _addAgent),
           if (roster.isEmpty)
@@ -1212,7 +1212,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       _holdsTurn(a)
                           ? WorkingMochi(size: 22, color: mochiColorFor(a.agentId))
                           : AgentMochi(a.agentId, size: 22),
-                      const SizedBox(width: 12),
+                      SizedBox(width: S.s12),
                       Expanded(
                         child: Text(a.agentId,
                             maxLines: 1,
@@ -1236,7 +1236,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             Container(
               decoration: BoxDecoration(
                 color: AppColors.tint1,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(R.card),
                 border: Border.all(color: AppColors.line),
               ),
               child: Column(children: [
@@ -1245,24 +1245,24 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     Divider(height: 1, thickness: 1, color: AppColors.line),
                   InkWell(
                     borderRadius: BorderRadius.vertical(
-                      top: i == 0 ? const Radius.circular(10) : Radius.zero,
+                      top: i == 0 ? Radius.circular(R.card) : Radius.zero,
                       bottom: i == roster.length - 1
-                          ? const Radius.circular(10)
+                          ? Radius.circular(R.card)
                           : Radius.zero,
                     ),
                     onTap: (!_closed && roster[i].active && !roster[i].hasSessionLease)
                         ? () => _transferLeaseTo(roster[i])
                         : null,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 8),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: S.of(10), vertical: S.s8),
                       child: Row(children: [
                         _holdsTurn(roster[i])
                             ? WorkingMochi(
                                 size: 18,
                                 color: mochiColorFor(roster[i].agentId))
                             : AgentMochi(roster[i].agentId, size: 18),
-                        const SizedBox(width: 8),
+                        SizedBox(width: S.s8),
                         Expanded(
                           child: Text(roster[i].agentId,
                               maxLines: 1,
@@ -1285,7 +1285,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 ],
               ]),
             ),
-          const SizedBox(height: 14),
+          SizedBox(height: S.of(14)),
           _section('Related', onAdd: _linkTask),
           if (links.links.isEmpty && links.blockedBy.isEmpty)
             Text('No linked tasks.', style: TS.meta())
@@ -1339,14 +1339,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         if (agentId.isNotEmpty)
           Row(mainAxisSize: MainAxisSize.min, children: [
             AgentMochi(agentId, size: 14),
-            const SizedBox(width: 5),
+            SizedBox(width: S.of(5)),
             Text(agentId, style: TS.meta()),
           ]),
         if (kMobile) Text(t.status.label, style: TS.meta()),
         if (!kMobile && workspace.isNotEmpty)
           Row(mainAxisSize: MainAxisSize.min, children: [
             AppIcon('folder', size: 12, color: AppColors.fg4),
-            const SizedBox(width: 4),
+            SizedBox(width: S.s4),
             Text(workspace, style: TS.meta()),
           ]),
         if (!kMobile)
@@ -1362,13 +1362,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   BoxDecoration get _sheetCardDecoration => BoxDecoration(
         color: AppColors.tint1,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(R.lg),
         border: Border.all(color: AppColors.line),
       );
 
   Widget _keyRow(String key, Widget value, {bool last = false}) => Container(
         constraints: const BoxConstraints(minHeight: 40),
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: EdgeInsets.symmetric(vertical: S.s6),
         decoration: BoxDecoration(
           border: last
               ? null
@@ -1385,7 +1385,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 style: TS.label(AppColors.fg3),
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: S.s12),
             Expanded(child: value),
           ],
         ),
@@ -1402,7 +1402,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   AgentMochi(a.agentId, size: 16),
-                  const SizedBox(width: 5),
+                  SizedBox(width: S.of(5)),
                   Text(
                     a.agentId,
                     maxLines: 1,
@@ -1428,10 +1428,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         Align(
           alignment: Alignment.centerLeft,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.of(3)),
             decoration: BoxDecoration(
               color: c.withValues(alpha: 0.13),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(R.sm),
             ),
             child: Text(
                 age.isEmpty || age == 'now'
@@ -1448,7 +1448,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           Row(children: [
             _agentNames([holder]),
             if (branch.isNotEmpty) ...[
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Flexible(
                 child: Text(branch,
                     maxLines: 1,
@@ -1477,12 +1477,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     if (lines.isEmpty) return null;
     return Container(
       decoration: _sheetCardDecoration,
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      padding: EdgeInsets.fromLTRB(S.of(14), S.of(10), S.of(14), S.s12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Where it stands', style: TS.label(AppColors.fg1)),
-          const SizedBox(height: 4),
+          SizedBox(height: S.s4),
           for (final l in lines) Text(l, style: TS.ui(AppColors.fg2)),
         ],
       ),
@@ -1491,26 +1491,26 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   Widget _verdictCard() => Container(
         decoration: _sheetCardDecoration,
-        padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+        padding: EdgeInsets.fromLTRB(S.of(14), S.of(10), S.of(10), S.of(10)),
         child: Row(children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Your verdict', style: TS.label(AppColors.fg1)),
-                const SizedBox(height: 2),
+                SizedBox(height: S.s2),
                 Text(
                     'Approving closes the task; sending back requeues it with your notes.',
                     style: TS.meta()),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: S.s12),
           Btn('Send back',
               small: true,
               variant: BtnVariant.secondary,
               onTap: busy ? null : () => _setStatus(TaskStatus.todo)),
-          const SizedBox(width: 6),
+          SizedBox(width: S.s6),
           Btn('Approve',
               small: true,
               onTap: busy ? null : () => _setStatus(TaskStatus.done)),
@@ -1583,18 +1583,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   Widget _keyCard(List<Widget> rows) => Container(
         decoration: _sheetCardDecoration,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        padding: EdgeInsets.symmetric(horizontal: S.of(14)),
         child: Column(children: rows),
       );
 
   Widget _reportCard(BoardEntry e) => Container(
         decoration: _sheetCardDecoration,
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        padding: EdgeInsets.fromLTRB(S.of(14), 0, S.of(14), S.s12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 10, bottom: 4),
+              padding: EdgeInsets.only(top: S.of(10), bottom: S.s4),
               child: Text('Report', style: TS.label(AppColors.fg1)),
             ),
             BoardLog(entries: [e], showAgent: true),
@@ -1606,17 +1606,17 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final brief = t.description.trim().isNotEmpty ? t.description : t.plan;
     return Container(
       decoration: _sheetCardDecoration,
-      padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+      padding: EdgeInsets.fromLTRB(S.of(14), 0, S.of(14), S.s12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 10, bottom: 4),
+            padding: EdgeInsets.only(top: S.of(10), bottom: S.s4),
             child: Text('Brief', style: TS.label(AppColors.fg1)),
           ),
           if (brief.trim().isEmpty)
             Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: EdgeInsets.only(bottom: S.of(10)),
               child: Text('No brief yet.', style: TS.ui(AppColors.fg4)),
             )
           else
@@ -1639,7 +1639,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       children: [
         if (t.workPlan.isNotEmpty) ...[
           _WorkPlan(steps: t.workPlan),
-          if (turns.isNotEmpty) const SizedBox(height: 14),
+          if (turns.isNotEmpty) SizedBox(height: S.of(14)),
         ],
         _turnsSection(),
       ],
@@ -1672,14 +1672,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           '${commits.isEmpty ? '' : ' · ${commits.length} ${commits.length == 1 ? 'commit' : 'commits'}'}',
           style: TS.meta(),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         for (final f in files)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: EdgeInsets.symmetric(vertical: S.s4),
             child: Row(
               children: [
                 AppIcon('file', size: 13, color: AppColors.fg4),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Expanded(
                   child: Text(
                     f,
@@ -1693,11 +1693,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           ),
         for (final c in commits)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: EdgeInsets.symmetric(vertical: S.s4),
             child: Row(
               children: [
                 AppIcon('git-branch', size: 13, color: AppColors.fg4),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Expanded(
                   child: Text(
                     c,
@@ -1714,9 +1714,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   Widget _fseg(TaskItem t) => Glass(
-        radius: BorderRadius.circular(12),
+        radius: BorderRadius.circular(R.lg),
         child: Padding(
-          padding: const EdgeInsets.all(3),
+          padding: EdgeInsets.all(S.of(3)),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1748,24 +1748,24 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       child: InkWell(
         excludeFromSemantics: true,
         onTap: () => setState(() => _tab = i),
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(R.of(9)),
         child: Container(
           height: 28,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(horizontal: S.s12),
           decoration: BoxDecoration(
             color: on
                 ? (kMobile ? AppColors.surface3 : AppColors.tint2)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(R.of(9)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               AppIcon(icon, size: 13, color: color),
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               Text(label, style: TS.label(color)),
               if (count != null) ...[
-                const SizedBox(width: 6),
+                SizedBox(width: S.s6),
                 Text('$count', style: TS.codeSmall(AppColors.fg4)),
               ],
             ],
@@ -1776,7 +1776,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   Widget _section(String label, {required VoidCallback onAdd}) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.only(bottom: S.s8),
         child: Row(children: [
           Text(label.toUpperCase(),
               style: kMobile
@@ -1788,8 +1788,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             behavior: HitTestBehavior.opaque,
             child: Padding(
               padding: kMobile
-                  ? const EdgeInsets.fromLTRB(12, 8, 0, 8)
-                  : const EdgeInsets.all(2),
+                  ? EdgeInsets.fromLTRB(S.s12, S.s8, 0, S.s8)
+                  : EdgeInsets.all(S.s2),
               child: AppIcon('plus',
                   size: kMobile ? 16 : 14, color: AppColors.fg3),
             ),
@@ -1798,7 +1798,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       );
 
   Widget _linkRow(String prefix, String id, Color color) => Padding(
-        padding: const EdgeInsets.only(bottom: 4),
+        padding: EdgeInsets.only(bottom: S.s4),
         child: Row(children: [
           Text('$prefix  ', style: sans(11, color: color)),
           Expanded(
@@ -1830,7 +1830,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     return [
       SliverPadding(
         padding: kMobile
-            ? const EdgeInsets.fromLTRB(20, 18, 20, 12)
+            ? EdgeInsets.fromLTRB(S.s20, S.of(18), S.s20, S.s12)
             : EdgeInsets.all(S.s12),
         sliver: SliverList.builder(
           itemCount: room.events.length,
@@ -1849,21 +1849,21 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               );
               if (mine) {
                 return Padding(
-                  padding: const EdgeInsets.only(left: 48, bottom: 14),
+                  padding: EdgeInsets.only(left: S.of(48), bottom: S.of(14)),
                   child: Align(
                     alignment: Alignment.centerRight,
                     child: Container(
-                      padding: const EdgeInsets.fromLTRB(15, 10, 15, 11),
+                      padding: EdgeInsets.fromLTRB(S.of(15), S.of(10), S.of(15), S.of(11)),
                       decoration: BoxDecoration(
                         color: AppColors.surface2,
                         borderRadius: kMobile
-                            ? const BorderRadius.only(
-                                topLeft: Radius.circular(20),
-                                topRight: Radius.circular(20),
-                                bottomLeft: Radius.circular(20),
-                                bottomRight: Radius.circular(6),
+                            ? BorderRadius.only(
+                                topLeft: Radius.circular(R.of(20)),
+                                topRight: Radius.circular(R.of(20)),
+                                bottomLeft: Radius.circular(R.of(20)),
+                                bottomRight: Radius.circular(R.sm),
                               )
-                            : BorderRadius.circular(20),
+                            : BorderRadius.circular(R.of(20)),
                       ),
                       child: _addressed(e, md),
                     ),
@@ -1871,16 +1871,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 );
               }
               return Padding(
-                padding: const EdgeInsets.only(bottom: 18),
+                padding: EdgeInsets.only(bottom: S.of(18)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(children: [
                       AgentMochi(_speakerId(e), size: 18),
-                      const SizedBox(width: 8),
+                      SizedBox(width: S.s8),
                       _speaker(e, 13),
                     ]),
-                    const SizedBox(height: 6),
+                    SizedBox(height: S.s6),
                     md,
                   ],
                 ),
@@ -1892,12 +1892,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 480),
                   child: Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                    margin: EdgeInsets.only(bottom: S.of(10)),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: S.s12, vertical: S.s8),
                     decoration: BoxDecoration(
                       color: AppColors.tint2,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(R.card),
                       border: Border.all(color: AppColors.line),
                     ),
                     child: _addressed(
@@ -1916,16 +1916,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               );
             }
             return Padding(
-              padding: const EdgeInsets.only(bottom: 14),
+              padding: EdgeInsets.only(bottom: S.of(14)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [
                     AgentMochi(_speakerId(e), size: 16),
-                    const SizedBox(width: 6),
+                    SizedBox(width: S.s6),
                     _speaker(e, 12),
                   ]),
-                  const SizedBox(height: 5),
+                  SizedBox(height: S.of(5)),
                   MarkdownBody(
                     data: body,
                     selectable: true,
@@ -1946,12 +1946,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget _composerBar() => kMobile
       ? SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+            padding: EdgeInsets.fromLTRB(S.s12, S.s4, S.s12, S.of(10)),
             child: Container(
-              padding: const EdgeInsets.fromLTRB(18, 4, 6, 4),
+              padding: EdgeInsets.fromLTRB(S.of(18), S.s4, S.s6, S.s4),
               decoration: BoxDecoration(
                 color: AppColors.surface1,
-                borderRadius: BorderRadius.circular(26),
+                borderRadius: BorderRadius.circular(R.of(26)),
                 boxShadow: [
                   BoxShadow(
                       color: AppColors.fg1.withValues(alpha: 0.08),
@@ -1992,13 +1992,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         )
       : SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+            padding: EdgeInsets.fromLTRB(S.of(10), S.s6, S.of(10), S.of(10)),
             child: Container(
               constraints: const BoxConstraints(minHeight: 36),
-              padding: const EdgeInsets.fromLTRB(12, 4, 6, 4),
+              padding: EdgeInsets.fromLTRB(S.s12, S.s4, S.s6, S.s4),
               decoration: BoxDecoration(
                 color: AppColors.tint1,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(R.card),
                 border: Border.all(color: AppColors.line),
               ),
               child: Row(children: [
@@ -2018,7 +2018,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: S.s6),
                 GestureDetector(
                   onTap: (room?.sending ?? false) ? null : _send,
                   child: Container(
@@ -2050,13 +2050,13 @@ class _WorkPlan extends StatelessWidget {
       children: [
         Text('Plan · $done/${steps.length}',
             style: sans(13, weight: FontWeight.w500, color: AppColors.fg3)),
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         for (final s in steps)
           Padding(
-            padding: const EdgeInsets.only(bottom: 6),
+            padding: EdgeInsets.only(bottom: S.s6),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Padding(
-                padding: const EdgeInsets.only(top: 2),
+                padding: EdgeInsets.only(top: S.s2),
                 child: s.done
                     ? AppIcon('check', size: 14, color: AppColors.ok)
                     : Container(
@@ -2071,7 +2071,7 @@ class _WorkPlan extends StatelessWidget {
                         ),
                       ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Expanded(
                 child: Text(s.step,
                     style: sans(14,

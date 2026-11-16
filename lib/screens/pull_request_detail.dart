@@ -59,7 +59,7 @@ Widget prLoadMore(bool busy, VoidCallback onTap) => SizedBox(
 
 Widget prMessage(String text) => Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(S.s24),
         child: Text(text,
             textAlign: TextAlign.center,
             style: sans(13, height: 1.5, color: AppColors.fg3)),
@@ -101,7 +101,7 @@ Widget prHeader(
     );
   }
   return Container(
-    padding: EdgeInsets.fromLTRB(onBack == null ? 16 : 6, kMobile ? 8 : 10, 6, 10),
+    padding: EdgeInsets.fromLTRB(onBack == null ? S.s16 : S.s6, kMobile ? S.s8 : S.of(10), S.s6, S.of(10)),
     child: Row(children: [
       if (onBack != null)
         IconBtn('chevron-left',
@@ -220,7 +220,7 @@ class PrCommentBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (var i = 0; i < children.length; i++) ...[
-          if (i > 0) const SizedBox(height: 8),
+          if (i > 0) SizedBox(height: S.s8),
           children[i],
         ],
       ],
@@ -251,19 +251,19 @@ class PrCommentBody extends StatelessWidget {
 
   Widget _suggestion(String code) => Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(R.md),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Container(
             color: AppColors.tint2,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s6),
             child: Text('Suggested change', style: TS.meta(AppColors.fg2)),
           ),
           for (final line in code.split('\n'))
             Container(
               color: AppColors.diffAddBg,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
+              padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(1)),
               child: Text('+ $line', style: codeMono(12, height: 1.5, color: AppColors.fg1)),
             ),
         ]),
@@ -287,12 +287,12 @@ class _CollapsibleState extends State<_Collapsible> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       InkWell(
         onTap: () => setState(() => _open = !_open),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(R.sm),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 3),
+          padding: EdgeInsets.symmetric(vertical: S.of(3)),
           child: Row(children: [
             AppIcon(_open ? 'chevron-down' : 'chevron-right', size: 13, color: AppColors.fg3),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             Expanded(
               child: Text(widget.summary,
                   maxLines: 2,
@@ -304,7 +304,7 @@ class _CollapsibleState extends State<_Collapsible> {
       ),
       if (_open)
         Padding(
-          padding: const EdgeInsets.fromLTRB(19, 6, 0, 4),
+          padding: EdgeInsets.fromLTRB(S.of(19), S.s6, 0, S.s4),
           child: PrCommentBody(widget.body),
         ),
     ]);
@@ -404,12 +404,12 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
 
   Widget _tab(String label, bool selected, VoidCallback onTap) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(R.sm),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(5)),
           decoration: BoxDecoration(
             color: selected ? AppColors.tint2 : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(R.sm),
           ),
           child: Text(label,
               style: sans(13, weight: W.label, color: selected ? AppColors.fg1 : AppColors.fg3)),
@@ -421,7 +421,7 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
         message: tip,
         child: InkWell(
           onTap: _preview ? null : onTap,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(R.sm),
           child: SizedBox(
             width: 30,
             height: 28,
@@ -442,15 +442,15 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
       duration: const Duration(milliseconds: 140),
       decoration: BoxDecoration(
         color: AppColors.tint2,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(R.lg),
         border: Border.all(color: focused ? AppColors.accent : Colors.transparent, width: 1.4),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(6, 6, 4, 2),
+          padding: EdgeInsets.fromLTRB(S.s6, S.s6, S.s4, S.s2),
           child: Row(children: [
             _tab('Write', !_preview, () => setState(() => _preview = false)),
-            const SizedBox(width: 2),
+            SizedBox(width: S.s2),
             _tab('Preview', _preview, () => setState(() => _preview = true)),
             const Spacer(),
             Flexible(
@@ -473,7 +473,7 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
         if (_preview)
           Container(
             constraints: BoxConstraints(minHeight: widget.minLines * 22.0 + 20),
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
             child: text.trim().isEmpty
                 ? Text('Nothing to preview', style: TS.meta(AppColors.fg4))
                 : PrCommentBody(text),
@@ -493,15 +493,15 @@ class _PrMarkdownComposerState extends State<PrMarkdownComposer> {
               hintStyle: TS.body(AppColors.fg4),
               border: InputBorder.none,
               isDense: true,
-              contentPadding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              contentPadding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
             ),
           ),
         if (widget.footer != null) ...[
           Container(height: 1, color: AppColors.border),
-          Padding(padding: const EdgeInsets.fromLTRB(8, 6, 8, 6), child: widget.footer),
+          Padding(padding: EdgeInsets.fromLTRB(S.s8, S.s6, S.s8, S.s6), child: widget.footer),
         ] else
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s8),
             child: Text('Markdown supported', style: TS.meta(AppColors.fg4)),
           ),
       ]),
@@ -548,7 +548,7 @@ class _CommentSheetState extends State<_CommentSheet> {
               onPressed: () => Navigator.of(context).pop(),
               child: Text('Cancel', style: TS.label(AppColors.fg3)),
             ),
-            const SizedBox(width: 4),
+            SizedBox(width: S.s4),
             FilledButton(
               onPressed: ready ? () => Navigator.of(context).pop(_text.text.trim()) : null,
               style: FilledButton.styleFrom(
@@ -641,27 +641,27 @@ mixin _AfterTransition<W extends StatefulWidget> on State<W> {
 
 Widget _diffPlaceholder() => ListView(
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
+      padding: EdgeInsets.fromLTRB(S.s12, S.of(14), S.s12, 0),
       children: [
         for (var i = 0; i < 3; i++) ...[
           Container(
             height: 34,
-            decoration: BoxDecoration(color: AppColors.tint1, borderRadius: BorderRadius.circular(6)),
+            decoration: BoxDecoration(color: AppColors.tint1, borderRadius: BorderRadius.circular(R.sm)),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: S.s8),
           for (final w in const [0.7, 0.5, 0.85, 0.4, 0.6])
             Padding(
-              padding: const EdgeInsets.only(bottom: 8, left: 46),
+              padding: EdgeInsets.only(bottom: S.s8, left: S.of(46)),
               child: FractionallySizedBox(
                 alignment: Alignment.centerLeft,
                 widthFactor: w,
                 child: Container(
                   height: 10,
-                  decoration: BoxDecoration(color: AppColors.tint1, borderRadius: BorderRadius.circular(3)),
+                  decoration: BoxDecoration(color: AppColors.tint1, borderRadius: BorderRadius.circular(R.of(3))),
                 ),
               ),
             ),
-          const SizedBox(height: 14),
+          SizedBox(height: S.of(14)),
         ],
       ],
     );
@@ -843,23 +843,23 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
     if (kMobile) {
       return Container(
         height: 28,
-        padding: const EdgeInsets.fromLTRB(9, 0, 12, 0),
+        padding: EdgeInsets.fromLTRB(S.of(9), 0, S.s12, 0),
         decoration: BoxDecoration(
             color: bg.withValues(alpha: 0.14),
             borderRadius: BorderRadius.circular(R.pill)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           AppIcon(icon, size: 13, color: bg),
-          const SizedBox(width: 5),
+          SizedBox(width: S.of(5)),
           Text(label, style: sans(13, color: bg)),
         ]),
       );
     }
     return Container(
-      padding: const EdgeInsets.fromLTRB(9, 4, 11, 4),
+      padding: EdgeInsets.fromLTRB(S.of(9), S.s4, S.of(11), S.s4),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(R.pill)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         AppIcon(icon, size: 13, color: Colors.white),
-        const SizedBox(width: 5),
+        SizedBox(width: S.of(5)),
         Text(label, style: sans(13, weight: W.label, color: Colors.white)),
       ]),
     );
@@ -868,7 +868,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
   Widget _branch(String name) => kMobile
       ? Container(
           height: 28,
-          padding: const EdgeInsets.symmetric(horizontal: 11),
+          padding: EdgeInsets.symmetric(horizontal: S.of(11)),
           decoration: BoxDecoration(
             color: AppColors.surface2,
             borderRadius: BorderRadius.circular(R.pill),
@@ -878,18 +878,18 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
               child: Text(name, style: mono(12, color: AppColors.fg2))),
         )
       : Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.of(3)),
         decoration: BoxDecoration(
           color: AppColors.accentBg,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(R.sm),
         ),
         child: Text(name, style: mono(12, color: AppColors.accent)),
       );
 
   Widget _section(String label) => Container(
         width: double.infinity,
-        margin: const EdgeInsets.only(top: 22),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+        margin: EdgeInsets.only(top: S.of(22)),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s6),
         child: Text(label, style: sans(15, weight: W.strong, color: AppColors.fg1)),
       );
 
@@ -904,10 +904,10 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
       InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s12),
           child: Row(children: [
             AppIcon(icon, size: 17, color: ink),
-            const SizedBox(width: 12),
+            SizedBox(width: S.s12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(label, style: sans(14, weight: W.label, color: AppColors.fg1)),
@@ -968,7 +968,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
                 ? null
                 : () => launchUrl(Uri.parse(c.url), mode: LaunchMode.externalApplication),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(45, 6, 16, 6),
+              padding: EdgeInsets.fromLTRB(S.of(45), S.s6, S.s16, S.s6),
               child: Row(children: [
                 AppIcon(
                     switch (c.state) {
@@ -982,7 +982,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
                       ChecksState.pending => AppColors.run,
                       _ => AppColors.ok,
                     }),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Expanded(
                   child: Text(c.workflow.isEmpty ? c.name : '${c.workflow} / ${c.name}',
                       maxLines: 1, overflow: TextOverflow.ellipsis, style: TS.ui(AppColors.fg2)),
@@ -1017,12 +1017,12 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
             icon: 'git-commit',
             child: Row(children: [
               prAvatar(e.author, size: 18),
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               Expanded(
                 child: Text(e.body,
                     maxLines: 1, overflow: TextOverflow.ellipsis, style: mono(12, color: AppColors.fg2)),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               Text(e.sha.length > 7 ? e.sha.substring(0, 7) : e.sha, style: mono(11, color: AppColors.fg4)),
             ]),
           ));
@@ -1044,11 +1044,11 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
                 TextSpan(text: ' · ${prAgo(e.at)}', style: TS.meta(AppColors.fg4)),
               ])),
               if (e.body.trim().isNotEmpty) ...[
-                const SizedBox(height: 8),
+                SizedBox(height: S.s8),
                 _card(PrCommentBody(e.body)),
               ],
               if (threads.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                SizedBox(height: S.s8),
                 SizedBox(
                   width: double.infinity,
                   child: TextButton(
@@ -1072,7 +1072,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
                 TextSpan(text: e.author, style: sans(13, weight: W.label, color: AppColors.fg1)),
                 TextSpan(text: ' · ${prAgo(e.at)}', style: TS.meta(AppColors.fg4)),
               ])),
-              const SizedBox(height: 6),
+              SizedBox(height: S.s6),
               _card(PrCommentBody(e.body)),
             ]),
           ));
@@ -1080,7 +1080,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
     }
     if (items.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s8),
         child: Text('No activity yet.', style: TS.meta(AppColors.fg4)),
       );
     }
@@ -1089,7 +1089,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
 
   Widget _card(Widget child) => Container(
         width: double.infinity,
-        padding: const EdgeInsets.only(top: 2),
+        padding: EdgeInsets.only(top: S.s2),
         child: child,
       );
 
@@ -1103,7 +1103,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
               child: Center(child: Container(width: 1.5, color: AppColors.border)),
             ),
             Padding(
-              padding: const EdgeInsets.only(top: 10),
+              padding: EdgeInsets.only(top: S.of(10)),
               child: avatar != null
                   ? prAvatar(avatar, size: 24)
                   : Container(
@@ -1121,7 +1121,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
         ),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 12, 16, 10),
+            padding: EdgeInsets.fromLTRB(S.s4, S.s12, S.s16, S.of(10)),
             child: child,
           ),
         ),
@@ -1173,14 +1173,14 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
     final s = pr.summary;
     final lastCommit = pr.commits.isEmpty ? '' : prAgo(pr.commits.last.date);
     return ListView(
-      padding: EdgeInsets.only(bottom: kMobile ? 24 : 96),
+      padding: EdgeInsets.only(bottom: kMobile ? S.s24 : 96),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          padding: EdgeInsets.fromLTRB(S.s16, S.s16, S.s16, 0),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(s.title,
                 style: sans(kMobile ? 22 : 20, weight: W.strong, height: 1.25, color: AppColors.fg1)),
-            const SizedBox(height: 12),
+            SizedBox(height: S.s12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -1192,10 +1192,10 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
                 _branch(s.base),
               ],
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: S.of(18)),
             Row(children: [
               prAvatar(s.author, size: 32),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Expanded(
                 child: Text.rich(TextSpan(children: [
                   TextSpan(text: s.author, style: sans(14, weight: W.label, color: AppColors.fg1)),
@@ -1203,7 +1203,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
                 ])),
               ),
             ]),
-            const SizedBox(height: 12),
+            SizedBox(height: S.s12),
             _body(pr),
           ]),
         ),
@@ -1235,7 +1235,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
     final pending = _pending.length;
     return Container(
       color: AppColors.paneBg,
-      padding: EdgeInsets.fromLTRB(16, 8, 16, 10 + MediaQuery.of(context).padding.bottom),
+      padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.of(10 ) + MediaQuery.of(context).padding.bottom),
       child: Row(children: [
         Expanded(
           child: Btn('Comment',
@@ -1245,7 +1245,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
               disabled: _busy,
               onTap: _comment),
         ),
-        const SizedBox(width: 10),
+        SizedBox(width: S.of(10)),
         Expanded(
           child: Btn(pending == 0 ? 'Review' : 'Finish review ($pending)',
               icon: 'check-circle',
@@ -1268,7 +1268,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
           label: 'Comment',
           onTap: _busy ? null : _comment,
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: S.s8),
         _pill(
           icon: 'check-circle',
           label: pending == 0 ? 'Review' : 'Finish review ($pending)',
@@ -1291,10 +1291,10 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
           onTap: onTap,
           customBorder: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.pill)),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+            padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.of(11)),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               AppIcon(icon, size: 15, color: primary ? AppColors.accentFg : AppColors.fg1),
-              const SizedBox(width: 7),
+              SizedBox(width: S.of(7)),
               Text(label,
                   style: sans(13, weight: W.label, color: primary ? AppColors.accentFg : AppColors.fg1)),
             ]),
@@ -1371,10 +1371,10 @@ class PrMergeBox extends StatefulWidget {
     required this.pr,
     required this.status,
     required this.onDone,
-    this.padding = const EdgeInsets.fromLTRB(16, 6, 16, 10),
+    this.padding ,
   });
 
-  final EdgeInsets padding;
+  final EdgeInsets ? padding;
   final DaemonClient client;
   final String session;
   final PrDetail pr;
@@ -1525,7 +1525,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
         onSecondaryTap: _busy ? null : () => _pickMethod(anchor),
         child: Material(
           color: enabled ? AppColors.accentFill : AppColors.tint2,
-          borderRadius: BorderRadius.circular(kMobile ? R.pill : 8),
+          borderRadius: BorderRadius.circular(kMobile ? R.pill : R.md),
           child: InkWell(
             onTap: enabled ? onTap : null,
             onLongPress: _busy
@@ -1534,11 +1534,11 @@ class _PrMergeBoxState extends State<PrMergeBox> {
                     HapticFeedback.selectionClick();
                     _pickMethod(anchor);
                   },
-            borderRadius: BorderRadius.circular(kMobile ? R.pill : 8),
+            borderRadius: BorderRadius.circular(kMobile ? R.pill : R.md),
             child: Container(
               height: kMobile ? 48 : 44,
               alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: EdgeInsets.symmetric(horizontal: S.of(14)),
               child: Text(label,
                   style: sans(14, weight: W.strong, color: enabled ? AppColors.accentFg : AppColors.fg4)),
             ),
@@ -1559,17 +1559,17 @@ class _PrMergeBoxState extends State<PrMergeBox> {
           isDense: true,
           filled: true,
           fillColor: AppColors.tint2,
-          contentPadding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border2)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border2)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.accent)),
+          contentPadding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(R.md), borderSide: BorderSide(color: AppColors.border2)),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(R.md), borderSide: BorderSide(color: AppColors.border2)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(R.md), borderSide: BorderSide(color: AppColors.accent)),
         ),
       );
 
   Widget _check(bool value, String label, ValueChanged<bool> onChanged) => InkWell(
         onTap: () => onChanged(!value),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: EdgeInsets.symmetric(vertical: S.s4),
           child: Row(children: [
             SizedBox(
               width: 24,
@@ -1581,7 +1581,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
                 side: BorderSide(color: AppColors.fg4, width: 1.5),
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             Expanded(child: Text(label, style: sans(13, color: AppColors.fg2))),
           ]),
         ),
@@ -1592,21 +1592,21 @@ class _PrMergeBoxState extends State<PrMergeBox> {
         children: [
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             AppIcon(icon, size: 17, color: ink),
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(title, style: sans(14, weight: W.label, color: AppColors.fg1)),
                 if (detail.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+                  SizedBox(height: S.s2),
                   Text(detail, style: sans(13, height: 1.4, color: AppColors.fg3)),
                 ],
               ]),
             ),
           ]),
           if (actions.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: S.s12),
             for (var i = 0; i < actions.length; i++) ...[
-              if (i > 0) const SizedBox(height: 8),
+              if (i > 0) SizedBox(height: S.s8),
               actions[i],
             ],
           ],
@@ -1618,8 +1618,8 @@ class _PrMergeBoxState extends State<PrMergeBox> {
         style: TextButton.styleFrom(
           minimumSize: const Size.fromHeight(44),
           backgroundColor: AppColors.tint2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kMobile ? R.pill : 8)),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kMobile ? R.pill : R.md)),
+          padding: EdgeInsets.symmetric(horizontal: S.of(14)),
         ),
         child: Text(label, style: sans(13, weight: W.label, color: AppColors.fg1)),
       );
@@ -1660,27 +1660,27 @@ class _PrMergeBoxState extends State<PrMergeBox> {
       children.add(_notice('alert-triangle', AppColors.run, 'This branch is out of date with ${_s.base}',
           'Update it so the merge uses the latest ${_s.base}.',
           actions: [Builder(builder: (anchor) => _secondary('Update branch', () => _update(anchor)))]));
-      children.add(const SizedBox(height: 14));
+      children.add(SizedBox(height: S.of(14)));
     }
     final blocked = !_ready;
     if (_confirming) {
       children.addAll([
         Text(_label(_method), style: sans(14, weight: W.strong, color: AppColors.fg1)),
-        const SizedBox(height: 10),
+        SizedBox(height: S.of(10)),
         if (_method == 'rebase')
           Text('The ${pr.commits.length} commit${pr.commits.length == 1 ? '' : 's'} from ${_s.head} will be rebased onto ${_s.base}.',
               style: sans(13, height: 1.4, color: AppColors.fg3))
         else ...[
           _field(_subject, 'Commit message'),
-          const SizedBox(height: 8),
+          SizedBox(height: S.s8),
           _field(_body, 'Extended description', lines: 4),
         ],
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         _check(_deleteBranch, 'Delete ${_s.head} after merging', (v) => setState(() => _deleteBranch = v)),
         if (blocked && widget.status.isAdmin)
           _check(_admin, 'Merge without waiting for requirements to be met (bypass branch protections)',
               (v) => setState(() => _admin = v)),
-        const SizedBox(height: 12),
+        SizedBox(height: S.s12),
         if (blocked && widget.status.autoMerge && !_admin)
           FilledButton(
             onPressed: _busy ? null : _enableAuto,
@@ -1688,7 +1688,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
               minimumSize: const Size.fromHeight(44),
               backgroundColor: AppColors.accentFill,
               foregroundColor: AppColors.accentFg,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kMobile ? R.pill : 8)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kMobile ? R.pill : R.md)),
             ),
             child: Text('Enable auto-merge', style: sans(14, weight: W.label, color: AppColors.accentFg)),
           )
@@ -1699,11 +1699,11 @@ class _PrMergeBoxState extends State<PrMergeBox> {
               minimumSize: const Size.fromHeight(44),
               backgroundColor: AppColors.accentFill,
               foregroundColor: AppColors.accentFg,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kMobile ? R.pill : 8)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kMobile ? R.pill : R.md)),
             ),
             child: Text('Confirm ${_short(_method)}', style: sans(14, weight: W.label, color: AppColors.accentFg)),
           ),
-        const SizedBox(height: 6),
+        SizedBox(height: S.s6),
         TextButton(
           style: TextButton.styleFrom(minimumSize: const Size.fromHeight(40)),
           onPressed: _busy ? null : () => setState(() => _confirming = false),
@@ -1722,7 +1722,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
                 })
             : null,
       ));
-      children.add(const SizedBox(height: 8));
+      children.add(SizedBox(height: S.s8));
       children.add(Text(
         blocked
             ? (widget.status.isAdmin
@@ -1740,7 +1740,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: widget.padding,
+      padding: widget.padding?? EdgeInsets.fromLTRB(S.s16, S.s6, S.s16, S.of(10)),
       child: _content(),
     );
   }
@@ -1798,13 +1798,13 @@ class _ReviewSheetState extends State<_ReviewSheet> {
     final selected = _event == event;
     return InkWell(
       onTap: enabled ? () => setState(() => _event = event) : null,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(R.card),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        margin: EdgeInsets.only(bottom: S.s8),
+        padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
         decoration: BoxDecoration(
           color: selected ? AppColors.accentBg : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(R.card),
         ),
         child: Row(children: [
           Container(
@@ -1815,7 +1815,7 @@ class _ReviewSheetState extends State<_ReviewSheet> {
               border: Border.all(color: selected ? AppColors.accent : AppColors.fg4, width: selected ? 5 : 1.5),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: S.s12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(label, style: TS.rowTitle(enabled ? AppColors.fg1 : AppColors.fg4)),
@@ -1836,14 +1836,14 @@ class _ReviewSheetState extends State<_ReviewSheet> {
           if (widget.pendingCount > 0) ...[
             Text('${widget.pendingCount} line comment${widget.pendingCount == 1 ? '' : 's'} will be posted with it',
                 style: TS.meta(AppColors.accent)),
-            const SizedBox(height: 14),
+            SizedBox(height: S.of(14)),
           ],
           PrMarkdownComposer(
             controller: _body,
             hint: 'Leave a summary',
             onChanged: () => setState(() {}),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: S.of(14)),
           _option('COMMENT', 'Comment', 'Feedback without approving'),
           _option('APPROVE', 'Approve',
               widget.isAuthor ? "You can't approve your own pull request" : 'Approve these changes',
@@ -1851,7 +1851,7 @@ class _ReviewSheetState extends State<_ReviewSheet> {
           _option('REQUEST_CHANGES', 'Request changes',
               widget.isAuthor ? "You can't request changes on your own pull request" : 'Feedback that must be addressed',
               enabled: !widget.isAuthor),
-          const SizedBox(height: 6),
+          SizedBox(height: S.s6),
           FilledButton(
             onPressed: _canSubmit ? () => Navigator.of(context).pop((_event, _body.text.trim())) : null,
             style: FilledButton.styleFrom(
@@ -1999,13 +1999,13 @@ class _PrFilesScreenState extends State<PrFilesScreen> with _AfterTransition {
           borderRadius: BorderRadius.circular(R.pill),
           clipBehavior: Clip.antiAlias,
           child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 5, pending > 0 ? 5 : 16, 5),
+              padding: EdgeInsets.fromLTRB(S.s16, S.of(5), pending > 0 ? S.of(5 ) : S.s16, S.of(5)),
               child: Row(mainAxisSize: pending > 0 ? MainAxisSize.max : MainAxisSize.min, children: [
                 prSize(adds, dels, size: 13),
                 Container(
                   width: 1,
                   height: 14,
-                  margin: const EdgeInsets.symmetric(horizontal: 10),
+                  margin: EdgeInsets.symmetric(horizontal: S.of(10)),
                   color: AppColors.fg4.withValues(alpha: 0.5),
                 ),
                 if (done)
@@ -2021,7 +2021,7 @@ class _PrFilesScreenState extends State<PrFilesScreen> with _AfterTransition {
                       backgroundColor: AppColors.fg4.withValues(alpha: 0.35),
                     ),
                   ),
-                const SizedBox(width: 7),
+                SizedBox(width: S.of(7)),
                 if (pending > 0)
                   Expanded(
                     child: Text('$viewed/$total viewed',
@@ -2037,10 +2037,10 @@ class _PrFilesScreenState extends State<PrFilesScreen> with _AfterTransition {
                       onTap: _finish,
                       borderRadius: BorderRadius.circular(R.pill),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                        padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.of(9)),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
                           AppIcon('check-circle', size: 14, color: AppColors.accentFg),
-                          const SizedBox(width: 6),
+                          SizedBox(width: S.s6),
                           Text('Finish review ($pending)',
                               style: sans(13, weight: W.label, color: AppColors.accentFg)),
                         ]),
@@ -2048,7 +2048,7 @@ class _PrFilesScreenState extends State<PrFilesScreen> with _AfterTransition {
                     ),
                   )
                 else
-                  const SizedBox(height: 36),
+                  SizedBox(height: S.of(36)),
               ]),
             ),
           ),
@@ -2059,16 +2059,16 @@ class _PrFilesScreenState extends State<PrFilesScreen> with _AfterTransition {
   }
 
   Widget _fileTree() {
-    return ListView(padding: const EdgeInsets.symmetric(vertical: 6), children: [
+    return ListView(padding: EdgeInsets.symmetric(vertical: S.s6), children: [
       for (final f in widget.files)
         InkWell(
           onTap: () => _jump(f.path),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.of(7)),
             child: Row(children: [
               AppIcon(widget.viewed.contains(f.path) ? 'check-circle' : 'file-code',
                   size: 13, color: widget.viewed.contains(f.path) ? AppColors.ok : AppColors.fg3),
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(f.path.split('/').last,
@@ -2080,7 +2080,7 @@ class _PrFilesScreenState extends State<PrFilesScreen> with _AfterTransition {
               ),
               if (widget.pending.any((c) => c.path == f.path)) ...[
                 AppIcon('message', size: 11, color: AppColors.accent),
-                const SizedBox(width: 6),
+                SizedBox(width: S.s6),
               ],
               prSize(f.additions, f.deletions, size: 11),
             ]),
@@ -2099,7 +2099,7 @@ class _PrFilesScreenState extends State<PrFilesScreen> with _AfterTransition {
         if (_diffFailed)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(S.s16),
               child: Text("Couldn't load the diff for this pull request.",
                   style: sans(13, color: AppColors.fg3)),
             ),
@@ -2370,16 +2370,16 @@ class _PrFileDiffState extends State<PrFileDiff> {
       child: InkWell(
         onTap: () => setState(() => _collapsed = !_collapsed),
         child: Container(
-          margin: const EdgeInsets.only(top: 8),
-          padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+          margin: EdgeInsets.only(top: S.s8),
+          padding: EdgeInsets.fromLTRB(S.s8, S.s6, S.s8, S.s6),
           child: Row(children: [
             AppIcon(_collapsed ? 'chevron-right' : 'chevron-down', size: 14, color: AppColors.fg3),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             Expanded(child: _fileName(f.path)),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             prSize(f.additions, f.deletions, size: 11.5),
             if (widget.onViewed != null) ...[
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               Tooltip(
                 message: 'Viewed',
                 child: kMobile
@@ -2387,7 +2387,7 @@ class _PrFileDiffState extends State<PrFileDiff> {
                         behavior: HitTestBehavior.opaque,
                         onTap: () => widget.onViewed!(!widget.viewed),
                         child: Padding(
-                          padding: const EdgeInsets.all(8),
+                          padding: EdgeInsets.all(S.s8),
                           child: SelectCheck(widget.viewed, size: 20),
                         ),
                       )
@@ -2414,7 +2414,7 @@ class _PrFileDiffState extends State<PrFileDiff> {
     if (line.kind == DiffKind.hunk) {
       return Container(
         color: AppColors.accentBg,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(5)),
         child: Text(line.text, style: codeMono(12, color: AppColors.accent)),
       );
     }
@@ -2439,7 +2439,7 @@ class _PrFileDiffState extends State<PrFileDiff> {
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(
             width: kMobile ? 40 : 46,
-            padding: const EdgeInsets.only(right: 6),
+            padding: EdgeInsets.only(right: S.s6),
             color: selected ? AppColors.accent.withValues(alpha: 0.3) : null,
             child: Text('${number ?? ''}',
                 textAlign: TextAlign.right,
@@ -2451,7 +2451,7 @@ class _PrFileDiffState extends State<PrFileDiff> {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(right: 10),
+              padding: EdgeInsets.only(right: S.of(10)),
               child: Text.rich(_span(index, line.text)),
             ),
           ),
@@ -2468,7 +2468,7 @@ class _PrFileDiffState extends State<PrFileDiff> {
     final canSuggest = [for (var i = r.$1; i <= r.$2; i++) widget.lines[i]].any((l) => l.kind != DiffKind.del);
     final ready = _composer.text.trim().isNotEmpty && !_posting;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+      padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.of(10)),
       child: PrMarkdownComposer(
         controller: _composer,
         autofocus: true,
@@ -2479,18 +2479,18 @@ class _PrFileDiffState extends State<PrFileDiff> {
               message: 'Suggest a change to ${label.toLowerCase()}',
               child: InkWell(
                 onTap: _suggest,
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(R.sm),
                 child: Container(
                   height: 28,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  margin: const EdgeInsets.only(right: 4),
+                  padding: EdgeInsets.symmetric(horizontal: S.s8),
+                  margin: EdgeInsets.only(right: S.s4),
                   decoration: BoxDecoration(
                     color: AppColors.accentBg,
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(R.sm),
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     AppIcon('file-plus', size: 13, color: AppColors.accent),
-                    const SizedBox(width: 5),
+                    SizedBox(width: S.of(5)),
                     Text('Suggest', style: sans(12, weight: W.label, color: AppColors.accent)),
                   ]),
                 ),
@@ -2502,15 +2502,15 @@ class _PrFileDiffState extends State<PrFileDiff> {
           const Spacer(),
           TextButton(
             onPressed: _clear,
-            style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 10)),
+            style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: EdgeInsets.symmetric(horizontal: S.of(10))),
             child: Text('Cancel', style: sans(13, weight: W.label, color: AppColors.fg3)),
           ),
           TextButton(
             onPressed: ready ? _commentNow : null,
-            style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 10)),
+            style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: EdgeInsets.symmetric(horizontal: S.of(10))),
             child: Text('Comment now', style: sans(13, weight: W.label, color: ready ? AppColors.fg1 : AppColors.fg4)),
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: S.s4),
           FilledButton(
             onPressed: ready ? _addToReview : null,
             style: FilledButton.styleFrom(
@@ -2533,7 +2533,7 @@ class _PrFileDiffState extends State<PrFileDiff> {
     if (!_collapsed) {
       if (widget.lines.isEmpty) {
         rows.add(() => Padding(
-              padding: const EdgeInsets.all(14),
+              padding: EdgeInsets.all(S.of(14)),
               child: Text('No textual changes (binary, renamed or too large to show).',
                   style: TS.meta(AppColors.fg4)),
             ));
@@ -2584,24 +2584,24 @@ class _PendingBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final range = comment.startLine == null ? 'line ${comment.line}' : 'lines ${comment.startLine}–${comment.line}';
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 6, 12, 8),
-      padding: const EdgeInsets.fromLTRB(12, 8, 6, 10),
+      margin: EdgeInsets.fromLTRB(S.s12, S.s6, S.s12, S.s8),
+      padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s6, S.of(10)),
       decoration: BoxDecoration(
         color: AppColors.accentBg,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(R.card),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            padding: EdgeInsets.symmetric(horizontal: S.of(7), vertical: S.s2),
             decoration: BoxDecoration(color: AppColors.accentBg, borderRadius: BorderRadius.circular(R.pill)),
             child: Text('Pending', style: sans(11, weight: W.label, color: AppColors.accent)),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Expanded(child: Text('You · $range', style: TS.meta(AppColors.fg3))),
           IconBtn('trash', size: 26, iconSize: 13, tooltip: 'Remove', onTap: onRemove),
         ]),
-        const SizedBox(height: 6),
+        SizedBox(height: S.s6),
         PrCommentBody(comment.body),
       ]),
     );
@@ -2677,17 +2677,17 @@ class _PrThreadBoxState extends State<PrThreadBox>
   }
 
   Widget _comment(PrThreadComment c, {bool first = false}) => Padding(
-        padding: EdgeInsets.fromLTRB(12, first ? 10 : 12, 12, 0),
+        padding: EdgeInsets.fromLTRB(S.s12, first ? S.of(10 ) : S.s12, S.s12, 0),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           prAvatar(c.author, size: 24),
-          const SizedBox(width: 10),
+          SizedBox(width: S.of(10)),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Text.rich(TextSpan(children: [
                 TextSpan(text: c.author, style: sans(13, weight: W.label, color: AppColors.fg1)),
                 TextSpan(text: ' · ${prAgo(c.at)}', style: TS.meta(AppColors.fg4)),
               ])),
-              const SizedBox(height: 4),
+              SizedBox(height: S.s4),
               PrCommentBody(c.body),
             ]),
           ),
@@ -2700,21 +2700,21 @@ class _PrThreadBoxState extends State<PrThreadBox>
     final t = widget.thread;
     final first = t.comments.isEmpty ? null : t.comments.first;
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+      margin: EdgeInsets.fromLTRB(S.s12, S.s6, S.s12, S.of(10)),
       decoration: BoxDecoration(
         color: AppColors.tint1,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(R.card),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         InkWell(
           onTap: () => setState(() => _open = !_open),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+            padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s8, S.s8),
             child: Row(children: [
               if (t.resolved) ...[
                 AppIcon('check-circle', size: 13, color: AppColors.ok),
-                const SizedBox(width: 6),
+                SizedBox(width: S.s6),
               ],
               Expanded(
                 child: Text(
@@ -2736,11 +2736,11 @@ class _PrThreadBoxState extends State<PrThreadBox>
         if (_open) ...[
           Container(height: 1, color: AppColors.border),
           for (var i = 0; i < t.comments.length; i++) _comment(t.comments[i], first: i == 0),
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           Container(height: 1, color: AppColors.border),
           if (_replying)
             Padding(
-              padding: const EdgeInsets.all(10),
+              padding: EdgeInsets.all(S.of(10)),
               child: PrMarkdownComposer(
                 controller: _reply,
                 hint: 'Reply',
@@ -2755,7 +2755,7 @@ class _PrThreadBoxState extends State<PrThreadBox>
                     }),
                     child: Text('Cancel', style: sans(13, weight: W.label, color: AppColors.fg3)),
                   ),
-                  const SizedBox(width: 4),
+                  SizedBox(width: S.s4),
                   FilledButton(
                     onPressed: _busy || _reply.text.trim().isEmpty ? null : _sendReply,
                     style: FilledButton.styleFrom(
@@ -2775,7 +2775,7 @@ class _PrThreadBoxState extends State<PrThreadBox>
                 child: InkWell(
                   onTap: () => setState(() => _replying = true),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                    padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
                     child: Text('Reply…', style: sans(13, color: AppColors.fg4)),
                   ),
                 ),
@@ -2785,7 +2785,7 @@ class _PrThreadBoxState extends State<PrThreadBox>
                 child: Text(t.resolved ? 'Unresolve' : 'Resolve conversation',
                     style: sans(13, weight: W.label, color: AppColors.fg2)),
               ),
-              const SizedBox(width: 4),
+              SizedBox(width: S.s4),
             ]),
         ],
       ]),
@@ -2827,19 +2827,19 @@ class PrCommitsScreen extends StatelessWidget {
               title: 'Commits',
               subtitle: '${commits.length} commit${commits.length == 1 ? '' : 's'}'),
           Expanded(
-            child: ListView(padding: const EdgeInsets.only(bottom: 32), children: [
+            child: ListView(padding: EdgeInsets.only(bottom: S.s32), children: [
               for (final entry in groups.entries) ...[
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+                  padding: EdgeInsets.fromLTRB(S.s16, S.of(18), S.s16, S.s8),
                   child: Row(children: [
                     AppIcon('git-commit', size: 14, color: AppColors.fg3),
-                    const SizedBox(width: 8),
+                    SizedBox(width: S.s8),
                     Text('Commits on ${entry.key}', style: sans(13, weight: W.label, color: AppColors.fg2)),
                   ]),
                 ),
                 for (final c in entry.value)
                   Padding(
-                    padding: const EdgeInsets.only(left: 4),
+                    padding: EdgeInsets.only(left: S.s4),
                     child: _CommitRow(commit: c, client: client, session: session),
                   ),
               ],
@@ -2873,7 +2873,7 @@ class _CommitRowState extends State<_CommitRow> {
         builder: (_) => CommitDiffScreen(client: widget.client, session: widget.session, commit: c),
       )),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 11, 8, 11),
+        padding: EdgeInsets.fromLTRB(S.s12, S.of(11), S.s8, S.of(11)),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -2886,11 +2886,11 @@ class _CommitRowState extends State<_CommitRow> {
                       child: GestureDetector(
                         onTap: () => setState(() => _body = !_body),
                         child: Container(
-                          margin: const EdgeInsets.only(left: 6),
-                          padding: const EdgeInsets.symmetric(horizontal: 5),
+                          margin: EdgeInsets.only(left: S.s6),
+                          padding: EdgeInsets.symmetric(horizontal: S.of(5)),
                           decoration: BoxDecoration(
                             color: AppColors.tint2,
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(R.xs),
                           ),
                           child: Text('…', style: sans(12, weight: W.strong, color: AppColors.fg2)),
                         ),
@@ -2899,13 +2899,13 @@ class _CommitRowState extends State<_CommitRow> {
                 ]),
               ),
               if (_body) ...[
-                const SizedBox(height: 6),
+                SizedBox(height: S.s6),
                 Text(c.body.trim(), style: codeMono(12, height: 1.5, color: AppColors.fg2)),
               ],
-              const SizedBox(height: 6),
+              SizedBox(height: S.s6),
               Row(children: [
                 prAvatar(c.author, size: 18),
-                const SizedBox(width: 6),
+                SizedBox(width: S.s6),
                 Flexible(
                   child: Text.rich(
                     TextSpan(children: [
@@ -2919,12 +2919,12 @@ class _CommitRowState extends State<_CommitRow> {
               ]),
             ]),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            padding: EdgeInsets.symmetric(horizontal: S.of(7), vertical: S.of(3)),
             decoration: BoxDecoration(
               color: AppColors.tint2,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(R.sm),
             ),
             child: Text(short, style: mono(12, color: AppColors.fg2)),
           ),
@@ -3000,7 +3000,7 @@ class _CommitDiffScreenState extends State<CommitDiffScreen> with _AfterTransiti
                             onPendingChanged: () {},
                             onThreadsChanged: () async {},
                           ),
-                        const SliverToBoxAdapter(child: SizedBox(height: 32)),
+                        SliverToBoxAdapter(child: SizedBox(height: S.s32)),
                       ]),
           ),
         ]),

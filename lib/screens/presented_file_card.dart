@@ -137,7 +137,7 @@ class PresentedFileCard extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                       color: AppColors.surface3,
-                      borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(R.card)),
                   child: AppIcon(_icon, size: 20, color: AppColors.fg2),
                 ),
                 trailing: _downloadButton(context),
@@ -150,7 +150,7 @@ class PresentedFileCard extends StatelessWidget {
 
   Widget _image(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: EdgeInsets.symmetric(vertical: S.s6),
       child: SizedBox(
         width: double.infinity,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -196,7 +196,7 @@ class MediaRow extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: kMobile ? 60 : 48),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
+          padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.of(10), S.s8),
           child: Row(children: [
             Container(
               width: 28,
@@ -204,7 +204,7 @@ class MediaRow extends StatelessWidget {
               alignment: Alignment.center,
               child: AppIcon(icon, size: 20, color: AppColors.fg2),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: S.s12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,7 +216,7 @@ class MediaRow extends StatelessWidget {
                       style: sans(kMobile ? 14 : 13,
                           weight: W.label, color: AppColors.fg1)),
                   if (detail.isNotEmpty) ...[
-                    const SizedBox(height: 2),
+                    SizedBox(height: S.s2),
                     Text(detail,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -226,7 +226,7 @@ class MediaRow extends StatelessWidget {
               ),
             ),
             if (trailing != null) ...[
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               trailing!,
             ],
           ]),
@@ -239,13 +239,13 @@ class MediaRow extends StatelessWidget {
           child: Material(color: Colors.transparent, child: row));
     }
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: kMobile ? 4 : 3),
+      padding: EdgeInsets.symmetric(vertical: kMobile ? S.s4 : S.of(3)),
       child: Pressable(
         kind: PressKind.card,
         radius: 12,
         child: Material(
           color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(R.lg),
           clipBehavior: Clip.antiAlias,
           child: row,
         ),
@@ -309,7 +309,7 @@ class _PresentedFilesState extends State<PresentedFiles> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(2, S.s4, 0, S.s2),
+          padding: EdgeInsets.fromLTRB(S.s2, S.s4, 0, S.s2),
           child: Row(children: [
             Expanded(
               child: Text('Shared ${files.length} files',
@@ -319,17 +319,17 @@ class _PresentedFilesState extends State<PresentedFiles> {
               behavior: HitTestBehavior.opaque,
               onTap: _downloadAll,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s2),
                 child: Text('Download all', style: TS.meta(AppColors.accent)),
               ),
             ),
           ]),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: EdgeInsets.symmetric(vertical: S.s4),
           child: Material(
             color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(R.lg),
             clipBehavior: Clip.antiAlias,
             child: Column(children: [
               for (var i = 0; i < visible.length; i++) ...[
@@ -344,7 +344,7 @@ class _PresentedFilesState extends State<PresentedFiles> {
             behavior: HitTestBehavior.opaque,
             onTap: () => setState(() => _all = !_all),
             child: Padding(
-              padding: EdgeInsets.fromLTRB(2, S.s4, 0, S.s4),
+              padding: EdgeInsets.fromLTRB(S.s2, S.s4, 0, S.s4),
               child: Text(_all ? 'Show fewer' : 'Show $hidden more',
                   style: TS.meta(AppColors.accent)),
             ),
