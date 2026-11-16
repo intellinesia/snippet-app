@@ -264,7 +264,7 @@ class _MobileVoicePageState extends State<MobileVoicePage>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
                 child: Row(
                   children: [
                     RoundBtn(
@@ -286,22 +286,22 @@ class _MobileVoicePageState extends State<MobileVoicePage>
                         ],
                       ),
                     ),
-                    const SizedBox(width: 40),
+                    SizedBox(width: S.s40),
                   ],
                 ),
               ),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
+                  padding: EdgeInsets.fromLTRB(S.s24, S.s40, S.s24, S.s24),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _avatar(live, shouldPulse),
-                      const SizedBox(height: 20),
+                      SizedBox(height: S.s20),
                       if (live) ...[
                         Text(_elapsed(),
                             style: mono(15, color: AppColors.fg2)),
-                        const SizedBox(height: 2),
+                        SizedBox(height: S.s2),
                       ],
                       Text(
                         statusText,
@@ -311,14 +311,14 @@ class _MobileVoicePageState extends State<MobileVoicePage>
                         style:
                             sans(13, color: live ? AppColors.ok : AppColors.fg3),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: S.s16),
                       _LevelBars(
                         animation: _pulse,
                         active: shouldPulse,
                         color: live ? AppColors.ok : AppColors.border,
                       ),
                       if (heard.isNotEmpty) ...[
-                        const SizedBox(height: 20),
+                        SizedBox(height: S.s20),
                         Text(
                           '“$heard”',
                           textAlign: TextAlign.center,
@@ -328,7 +328,7 @@ class _MobileVoicePageState extends State<MobileVoicePage>
                         ),
                       ],
                       if (reply.isNotEmpty) ...[
-                        const SizedBox(height: 12),
+                        SizedBox(height: S.s12),
                         Text(
                           reply,
                           textAlign: TextAlign.center,
@@ -338,13 +338,13 @@ class _MobileVoicePageState extends State<MobileVoicePage>
                         ),
                       ],
                       if (recent.isNotEmpty) ...[
-                        const SizedBox(height: 32),
+                        SizedBox(height: S.s32),
                         Align(
                           alignment: Alignment.centerLeft,
                           child: Text('Recent',
                               style: sans(12, color: AppColors.fg4)),
                         ),
-                        const SizedBox(height: 6),
+                        SizedBox(height: S.s6),
                         for (final e in recent) _recentRow(e),
                       ],
                     ],
@@ -352,7 +352,7 @@ class _MobileVoicePageState extends State<MobileVoicePage>
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                padding: EdgeInsets.fromLTRB(S.s16, 0, S.s16, S.s32),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -370,7 +370,7 @@ class _MobileVoicePageState extends State<MobileVoicePage>
                       )
                     else
                       const SizedBox(width: 56),
-                    const SizedBox(width: 28),
+                    SizedBox(width: S.of(28)),
                     _VoiceCircleBtn(
                       icon: 'phone-off',
                       fill: AppColors.danger,
@@ -379,7 +379,7 @@ class _MobileVoicePageState extends State<MobileVoicePage>
                       size: 68,
                       onTap: _end,
                     ),
-                    const SizedBox(width: 28),
+                    SizedBox(width: S.of(28)),
                     _VoiceCircleBtn(
                       icon: 'message-square',
                       fill: AppColors.surface2,
@@ -454,7 +454,7 @@ class _MobileVoicePageState extends State<MobileVoicePage>
     final hm =
         '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: EdgeInsets.symmetric(vertical: S.of(10)),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
@@ -505,11 +505,11 @@ class _LevelBars extends StatelessWidget {
                 Container(
                   width: 3,
                   height: _height(i),
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  margin: EdgeInsets.symmetric(horizontal: S.s2),
                   decoration: BoxDecoration(
                     color: color.withValues(
                         alpha: color.a * (active ? 0.85 : 0.6)),
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(R.of(2)),
                   ),
                 ),
             ],

@@ -268,7 +268,7 @@ class _GitScreenState extends State<GitScreen> {
       if (widget.embedded)
         Container(
           height: 38,
-          padding: const EdgeInsets.fromLTRB(18, 0, 8, 0),
+          padding: EdgeInsets.fromLTRB(S.of(18), 0, S.s8, 0),
           child: Row(children: [
             Expanded(
               child: Text('Source control',
@@ -277,7 +277,7 @@ class _GitScreenState extends State<GitScreen> {
                   style: sans(13, color: AppColors.fg3)),
             ),
             if (widget.onClose != null) ...[
-              const SizedBox(width: 2),
+              SizedBox(width: S.s2),
               IconBtn('x',
                   size: 26,
                   iconSize: 13,
@@ -357,13 +357,13 @@ class _GitScreenState extends State<GitScreen> {
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: kMobile
-                ? const EdgeInsets.fromLTRB(16, 10, 16, 24)
-                : const EdgeInsets.fromLTRB(12, 10, 12, 16),
+                ? EdgeInsets.fromLTRB(S.s16, S.of(10), S.s16, S.s24)
+                : EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s16),
             children: [
               _commitComposer(st),
               if (empty)
-                const Padding(
-                  padding: EdgeInsets.only(top: 24),
+                Padding(
+                  padding: EdgeInsets.only(top: S.s24),
                   child: EmptyState(
                     icon: 'check-check',
                     title: 'Working tree clean',
@@ -417,7 +417,7 @@ class _GitScreenState extends State<GitScreen> {
     final hasUp = st.upstream != null;
     return Padding(
       padding: kMobile
-          ? const EdgeInsets.fromLTRB(16, 6, 16, 4)
+          ? EdgeInsets.fromLTRB(S.s16, S.s6, S.s16, S.s4)
           : EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.s4),
       child: Row(children: [
         Expanded(
@@ -437,7 +437,7 @@ class _GitScreenState extends State<GitScreen> {
                   borderRadius: BorderRadius.circular(kMobile ? 20 : R.sm),
                   child: Container(
                     height: kMobile ? 40 : 28,
-                    padding: EdgeInsets.symmetric(horizontal: kMobile ? 14 : S.s8),
+                    padding: EdgeInsets.symmetric(horizontal: kMobile ? S.of(14) : S.s8),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       AppIcon('git-branch', size: 16, color: AppColors.accent),
                       SizedBox(width: S.s6),
@@ -503,9 +503,9 @@ class _GitScreenState extends State<GitScreen> {
     }
 
     return Container(
-      margin: EdgeInsets.only(bottom: kMobile ? 10 : S.s16),
+      margin: EdgeInsets.only(bottom: kMobile ? S.of(10) : S.s16),
       padding: kMobile
-          ? const EdgeInsets.fromLTRB(18, 12, 10, 10)
+          ? EdgeInsets.fromLTRB(S.of(18), S.s12, S.of(10), S.of(10))
           : EdgeInsets.fromLTRB(S.s12, S.s8, S.s8, S.s8),
       decoration: BoxDecoration(
         color: kMobile ? AppColors.surface1 : AppColors.tint1,
@@ -623,14 +623,14 @@ class _GitScreenState extends State<GitScreen> {
       return InkWell(
         onTap: () => _openDiff(f),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 10, 0, 10),
+          padding: EdgeInsets.fromLTRB(S.s4, S.of(10), 0, S.of(10)),
           child: Row(children: [
             SizedBox(
               width: 22,
               child: Text(code == '?' ? 'U' : code,
                   style: mono(13, weight: FontWeight.w600, color: fg)),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -674,12 +674,12 @@ class _GitScreenState extends State<GitScreen> {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: bg,
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(R.sm),
                   ),
                   child: Text(code == '?' ? 'U' : code,
                       style: mono(11, color: fg)),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: S.of(10)),
                 Expanded(
                   child: Text.rich(
                     kMobile
@@ -789,7 +789,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
           hint: 'Search local or remote branches',
           icon: 'search',
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: S.of(10)),
         if (local.isNotEmpty) ...[
           SectionHeader('Local',
               padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6)),
@@ -820,7 +820,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
         ],
         if (local.isEmpty && remotes.isEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: EdgeInsets.symmetric(vertical: S.s16),
             child: Center(
               child: Text(
                 q.isEmpty ? 'No branches.' : 'No matches for “$q”.',
@@ -868,7 +868,7 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
   }
 
   Widget _desktopLabel(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(10, 12, 10, 4),
+        padding: EdgeInsets.fromLTRB(S.of(10), S.s12, S.of(10), S.s4),
         child: Text(text, style: sans(12, color: AppColors.fg4)),
       );
 
@@ -880,19 +880,19 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
   }) =>
       Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(R.md),
         child: InkWell(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(R.md),
           onTap: onTap,
           child: SizedBox(
             height: 32,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: EdgeInsets.symmetric(horizontal: S.of(10)),
               child: Row(children: [
                 AppIcon(icon,
                     size: 14,
                     color: current ? AppColors.accent : AppColors.fg3),
-                const SizedBox(width: 10),
+                SizedBox(width: S.of(10)),
                 Expanded(child: label),
                 if (current)
                   AppIcon('check', size: 14, color: AppColors.accent),
@@ -954,15 +954,15 @@ class _GitBranchPickerState extends State<GitBranchPicker> {
         ],
         if (local.isEmpty && remotes.isEmpty && !canCreate)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            padding: EdgeInsets.symmetric(vertical: S.of(14)),
             child: Center(
               child: Text(q.isEmpty ? 'No branches' : 'No matches',
                   style: sans(13, color: AppColors.fg3)),
             ),
           ),
-        const SizedBox(height: 6),
+        SizedBox(height: S.s6),
         Container(height: 1, color: AppColors.border),
-        const SizedBox(height: 6),
+        SizedBox(height: S.s6),
         _desktopRow(
           icon: 'plus',
           onTap:
@@ -1298,7 +1298,7 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
       return Container(
         width: double.infinity,
         margin: EdgeInsets.symmetric(vertical: S.s8),
-        padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: 2),
+        padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s2),
         child: Text(line.text.isEmpty ? '⋯' : line.text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -1309,7 +1309,7 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
     if (line.type == _DiffLineType.meta) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 1),
+        padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.of(1)),
         child: Text(line.text, style: TS.codeSmall(AppColors.fg4)),
       );
     }
@@ -1342,9 +1342,9 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
       return Container(
         width: double.infinity,
         color: bg,
-        padding: const EdgeInsets.symmetric(vertical: 1),
+        padding: EdgeInsets.symmetric(vertical: S.of(1)),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           SizedBox(
             width: _gutterWidth,
             child: Text(n,
@@ -1358,7 +1358,7 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
                 style: codeMono(12, height: 1.4, weight: W.label, color: fg)),
           ),
           Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: EdgeInsets.only(right: S.s16),
             child: Text(
               line.text.isEmpty ? ' ' : line.text,
               style: codeMono(12, height: 1.4, color: fg),
@@ -1371,7 +1371,7 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
     return Container(
       width: double.infinity,
       color: bg,
-      padding: const EdgeInsets.symmetric(vertical: 0.5),
+      padding: EdgeInsets.symmetric(vertical: S.of(0.5)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1384,7 +1384,7 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
               style: codeMono(11, color: gutterFg),
             ),
           ),
-          const SizedBox(width: 6),
+          SizedBox(width: S.s6),
           // New line number gutter
           SizedBox(
             width: 34,
@@ -1405,7 +1405,7 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
           ),
           // Code content
           Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: EdgeInsets.only(right: S.s16),
             child: Text(
               line.text.isEmpty ? ' ' : line.text,
               style: codeMono(12, height: 1.4, color: fg),

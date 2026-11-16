@@ -274,28 +274,28 @@ class _AccountsScreenState extends State<AccountsScreen> {
     await showAppSheet<void>(context,
         title: 'Finish sign-in',
         child: Padding(
-          padding: EdgeInsets.fromLTRB(kMobile ? 4 : 0, 4, kMobile ? 4 : 0, 8),
+          padding: EdgeInsets.fromLTRB(kMobile ? S.s4 : 0, S.s4, kMobile ? S.s4 : 0, S.s8),
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Enter this code on the sign-in page.', style: TS.ui()),
-                const SizedBox(height: 12),
+                SizedBox(height: S.s12),
                 Container(
                   alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: EdgeInsets.symmetric(vertical: S.of(14)),
                   decoration: BoxDecoration(
                       color: AppColors.surface2,
-                      borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(R.card)),
                   child: SelectableText('${result['user_code'] ?? ''}',
                       style: mono(20, color: AppColors.fg1)),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: S.s16),
                 if (uri != null)
                   Btn('Open sign-in page',
                       full: true,
                       onTap: () => _openExternal(uri)),
-                const SizedBox(height: 8),
+                SizedBox(height: S.s8),
                 Btn('Done',
                     full: true,
                     variant: BtnVariant.secondary,
@@ -354,7 +354,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
           const SettingsNote(
               'When an account reaches its 5-hour or weekly limit, Snippet '
               'moves to the next one in this order.'),
-          const SizedBox(height: 18),
+          SizedBox(height: S.of(18)),
         ],
         for (final provider in _displayProviders)
           SettingsGroup(
@@ -544,7 +544,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
           ],
         ),
       Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        padding: EdgeInsets.symmetric(horizontal: S.s4),
         child: Text(
             'When an account reaches its 5-hour or weekly limit, Snippet moves to the next one in this order.',
             style: TS.meta()),
@@ -817,13 +817,13 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: TS.rowTitle())),
               if (account.active) ...[
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Text('In use', style: sans(12, color: AppColors.accent)),
               ],
             ]),
             if (limitedLabel != null)
               Padding(
-                  padding: const EdgeInsets.only(top: 2),
+                  padding: EdgeInsets.only(top: S.s2),
                   child: Text('Limit reached, $limitedLabel',
                       style: sans(13, color: AppColors.danger))),
             if (usage?.primary != null) _meter(limitWindowLabel(usage!.primary!), usage.primary!),
@@ -880,13 +880,13 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final percent = rate.usedPercent.clamp(0, 100).toDouble();
     final reset = rateResetLabel(rate.resetsAt)?.split(' · ').first;
     return Padding(
-        padding: const EdgeInsets.only(top: 8),
+        padding: EdgeInsets.only(top: S.s8),
         child: Row(children: [
           SizedBox(
               width: 40, child: Text(label, style: TS.caption())),
           Expanded(
               child: ClipRRect(
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.circular(R.of(3)),
                   child: LinearProgressIndicator(
                       value: percent / 100,
                       minHeight: 4,
@@ -894,7 +894,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       color: percent >= 85
                           ? AppColors.danger
                           : AppColors.accent))),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           SizedBox(
               width: 34,
               child: Text('${percent.round()}%',
@@ -903,7 +903,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
           SizedBox(
               width: kMobile ? 104 : 120,
               child: Padding(
-                  padding: const EdgeInsets.only(left: 8),
+                  padding: EdgeInsets.only(left: S.s8),
                   child: Text(reset ?? '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -955,7 +955,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
       );
     } else {
       body = ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
         children: _groups(),
       );
     }

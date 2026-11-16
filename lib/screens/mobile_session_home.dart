@@ -60,7 +60,7 @@ class _MobileHomeTopBarState extends State<MobileHomeTopBar> {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(M.gutter, 6, M.gutter, 10),
+        padding: EdgeInsets.fromLTRB(M.gutter, S.s6, M.gutter, S.of(10)),
         child: SizedBox(
           height: 44,
           child: AnimatedSwitcher(
@@ -68,16 +68,16 @@ class _MobileHomeTopBarState extends State<MobileHomeTopBar> {
             child: _searching
                 ? Row(key: const ValueKey('search'), children: [
                     Expanded(child: _field()),
-                    const SizedBox(width: 8),
+                    SizedBox(width: S.s8),
                     RoundBtn(
                         icon: 'x', tooltip: 'Close search', onTap: _close),
                   ])
                 : Row(key: const ValueKey('tabs'), children: [
                     Expanded(child: _segment()),
-                    const SizedBox(width: 8),
+                    SizedBox(width: S.s8),
                     RoundBtn(icon: 'search', tooltip: 'Search', onTap: _open),
                     if (widget.onSettings != null) ...[
-                      const SizedBox(width: 8),
+                      SizedBox(width: S.s8),
                       RoundBtn(
                           icon: 'settings',
                           tooltip: 'Settings',
@@ -90,7 +90,7 @@ class _MobileHomeTopBarState extends State<MobileHomeTopBar> {
 
   Widget _segment() => Container(
         height: 40,
-        padding: const EdgeInsets.all(3),
+        padding: EdgeInsets.all(S.of(3)),
         decoration: BoxDecoration(
           color: AppColors.tint2,
           borderRadius: BorderRadius.circular(R.pill),
@@ -132,14 +132,14 @@ class _MobileHomeTopBarState extends State<MobileHomeTopBar> {
 
   Widget _field() => Container(
         height: 40,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: EdgeInsets.symmetric(horizontal: S.s12),
         decoration: BoxDecoration(
           color: AppColors.tint2,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(R.lg),
         ),
         child: Row(children: [
           AppIcon('search', size: 16, color: AppColors.fg4),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Expanded(
             child: TextField(
               controller: widget.controller,
@@ -187,11 +187,11 @@ class MissionControlDock extends StatelessWidget {
             onOpen();
           },
           child: Glass(
-            radius: BorderRadius.circular(28),
+            radius: BorderRadius.circular(R.of(28)),
             child: SizedBox(
               height: 56,
               child: Row(children: [
-                const SizedBox(width: 6),
+                SizedBox(width: S.s6),
                 LiveRing(
                   live: live,
                   child: RoundBtn(
@@ -204,7 +204,7 @@ class MissionControlDock extends StatelessWidget {
                         color: live ? AppColors.ok : AppColors.fg1, size: 24),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: S.s12),
                 Expanded(
                   child: Text('Ask Mission Control',
                       maxLines: 1,
@@ -220,7 +220,7 @@ class MissionControlDock extends StatelessWidget {
                     child: AppIcon('phone',
                         size: 20, color: live ? AppColors.ok : AppColors.fg2),
                   ),
-                const SizedBox(width: 6),
+                SizedBox(width: S.s6),
               ]),
             ),
           ),
@@ -243,11 +243,11 @@ class MobileSectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = tone ?? AppColors.fg3;
     return Padding(
-      padding: EdgeInsets.fromLTRB(4, top, 4, 8),
+      padding: EdgeInsets.fromLTRB(S.s4, top, S.s4, S.s8),
       child: Row(children: [
         if (icon != null) ...[
           AppIcon(icon!, size: 14, color: c),
-          const SizedBox(width: 6),
+          SizedBox(width: S.s6),
         ],
         Flexible(
           child: Text(label,
@@ -256,7 +256,7 @@ class MobileSectionLabel extends StatelessWidget {
               style: sans(13, weight: W.label, color: c)),
         ),
         if (count != null) ...[
-          const SizedBox(width: 6),
+          SizedBox(width: S.s6),
           Text('$count', style: mono(12, color: AppColors.fg4)),
         ],
       ]),
@@ -273,10 +273,10 @@ class MobileGroupCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
         color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(R.of(14)),
         clipBehavior: Clip.antiAlias,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: EdgeInsets.symmetric(horizontal: S.of(14)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -325,13 +325,13 @@ class LiveSessionCard extends StatelessWidget {
     final branch = s.branch?.trim() ?? '';
     final title = s.title.trim().isEmpty ? '(untitled)' : s.title;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: S.of(10)),
       child: Semantics(
         button: true,
         label: '$label. $title',
         child: Material(
           color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(R.of(16)),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             overlayColor: const WidgetStatePropertyAll(Colors.transparent),
@@ -353,10 +353,10 @@ class LiveSessionCard extends StatelessWidget {
                   },
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(R.of(16)),
                 border: Border.all(color: AppColors.line),
               ),
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.s12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
@@ -371,35 +371,35 @@ class LiveSessionCard extends StatelessWidget {
                       )
                     else
                       const WorkingDots(),
-                    const SizedBox(width: 8),
+                    SizedBox(width: S.s8),
                     Text(since.isEmpty ? label : '$label · $since',
                         style: sans(12, weight: W.label, color: tone)),
                     const Spacer(),
                     if (pinned) ...[
                       AppIcon('pin', size: 12, color: AppColors.fg3),
-                      const SizedBox(width: 8),
+                      SizedBox(width: S.s8),
                     ],
                     if (leading != null)
                       SizedBox.square(
                           dimension: 18, child: Center(child: leading)),
                   ]),
-                  const SizedBox(height: 6),
+                  SizedBox(height: S.s6),
                   Text(title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(16,
                           weight: W.label, height: 1.35, color: AppColors.fg1)),
                   if (note != null) ...[
-                    const SizedBox(height: 4),
+                    SizedBox(height: S.s4),
                     Text(note,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: sans(13, height: 1.4, color: AppColors.fg2)),
                   ],
-                  const SizedBox(height: 10),
+                  SizedBox(height: S.of(10)),
                   Row(children: [
                     AppIcon('folder', size: 11, color: AppColors.fg4),
-                    const SizedBox(width: 4),
+                    SizedBox(width: S.s4),
                     Flexible(
                       child: Text(projectLabel(s),
                           maxLines: 1,
@@ -407,9 +407,9 @@ class LiveSessionCard extends StatelessWidget {
                           style: TS.meta()),
                     ),
                     if (branch.isNotEmpty) ...[
-                      const SizedBox(width: 8),
+                      SizedBox(width: S.s8),
                       AppIcon('git-branch', size: 11, color: AppColors.fg4),
-                      const SizedBox(width: 4),
+                      SizedBox(width: S.s4),
                       Flexible(
                         child: Text(branch,
                             maxLines: 1,
@@ -419,12 +419,12 @@ class LiveSessionCard extends StatelessWidget {
                     ] else
                       const Spacer(),
                     if (diff != null) ...[
-                      const SizedBox(width: 8),
+                      SizedBox(width: S.s8),
                       if (diff.added > 0)
                         Text('+${compactCount(diff.added)}',
                             style: TS.meta(AppColors.ok)),
                       if (diff.added > 0 && diff.removed > 0)
-                        const SizedBox(width: 4),
+                        SizedBox(width: S.s4),
                       if (diff.removed > 0)
                         Text('-${compactCount(diff.removed)}',
                             style: TS.meta(AppColors.danger)),
@@ -659,7 +659,7 @@ class _HomeHeroState extends State<HomeHero> {
           behavior: HitTestBehavior.opaque,
           onTap: _advance,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(2, 10, 2, 14),
+            padding: EdgeInsets.fromLTRB(S.s2, S.of(10), S.s2, S.of(14)),
             child: Align(
               alignment: Alignment.centerLeft,
               child: AnimatedSwitcher(
@@ -693,10 +693,10 @@ class _HomeHeroState extends State<HomeHero> {
         children: [
           DotMatrixNumber(stat.value,
               cell: _DotMatrixPainter.columns(stat.value) > 22 ? 7 : 9),
-          const SizedBox(width: 12),
+          SizedBox(width: S.s12),
           Flexible(
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 1),
+              padding: EdgeInsets.only(bottom: S.of(1)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,

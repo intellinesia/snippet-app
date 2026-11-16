@@ -96,11 +96,11 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
           'Describe the job. Snippet picks the name, model and skills, then builds it.',
           style: sans(13, height: 1.45, color: AppColors.fg3),
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: S.of(14)),
         FieldWell(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.s12),
               child: TextField(
                 controller: _prompt,
                 focusNode: _promptFocus,
@@ -118,10 +118,10 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
             ),
             Container(height: 1, color: AppColors.lineStrong),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.of(10)),
               child: Row(children: [
                 Text('Name', style: sans(13, color: AppColors.fg3)),
-                const SizedBox(width: 12),
+                SizedBox(width: S.s12),
                 Expanded(
                   child: TextField(
                     controller: _nickname,
@@ -139,9 +139,9 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
           ]),
         ),
         if (roomy) ...[
-        const SizedBox(height: 16),
+        SizedBox(height: S.s16),
         Text('Start from', style: sans(13, color: AppColors.fg3)),
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         Wrap(spacing: 8, runSpacing: 8, children: [
           for (final (label, text) in _starters)
             Pressable(
@@ -152,9 +152,9 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
                 onTap: _busy ? null : () => _start(text),
                 child: Container(
                   constraints: BoxConstraints(minHeight: kMobile ? 34 : 28),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: EdgeInsets.symmetric(horizontal: S.s12),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(R.of(16)),
                     border: Border.all(color: AppColors.lineStrong),
                   ),
                   child: Center(
@@ -171,10 +171,10 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
         ]),
         ],
         if (_error != null) ...[
-          const SizedBox(height: 12),
+          SizedBox(height: S.s12),
           Text(_error!, style: sans(13, color: AppColors.danger)),
         ],
-        const SizedBox(height: 18),
+        SizedBox(height: S.of(18)),
         Btn(
           _busy ? 'Starting build…' : 'Build agent',
           full: true,

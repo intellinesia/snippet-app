@@ -509,7 +509,7 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
           onLink: interactive ? _skip : null,
         )
       else
-        const SizedBox(height: 2),
+        SizedBox(height: S.s2),
     ]);
   }
 

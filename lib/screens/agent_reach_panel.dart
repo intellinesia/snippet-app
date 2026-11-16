@@ -224,7 +224,7 @@ class _AgentReachPanelState extends State<AgentReachPanel> {
               children: [
                 Text(reachChannelLabel(ch),
                     style: sans(14, color: AppColors.fg1)),
-                const SizedBox(height: 2),
+                SizedBox(height: S.s2),
                 Text(
                   state.quietHours
                       ? 'Held in quiet hours'
@@ -255,7 +255,7 @@ class _AgentReachPanelState extends State<AgentReachPanel> {
       borderRadius: BorderRadius.circular(R.md),
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: EdgeInsets.symmetric(vertical: S.of(10)),
         child: Row(children: [
           Expanded(child: Text(label, style: sans(14, color: AppColors.fg1))),
           Text(value, style: sans(13, color: AppColors.fg2)),

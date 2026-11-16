@@ -222,7 +222,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
             )
           else
             Padding(
-              padding: EdgeInsets.fromLTRB(widget.embedded ? 18 : 4, 6, 24, 6),
+              padding: EdgeInsets.fromLTRB(widget.embedded ? S.of(18) : S.s4, S.s6, S.s24, S.s6),
               child: NavBackRow(
                 title: _editProfile == null ? 'Add profile' : 'Edit profile',
                 onBack: _closeEditor,

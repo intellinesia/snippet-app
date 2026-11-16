@@ -27,7 +27,7 @@ class ListSearchField extends StatelessWidget {
     final text = kMobile ? 15.5 : 12.0;
     return Container(
       height: height,
-      padding: EdgeInsets.only(left: kMobile ? 16 : 8, right: 2),
+      padding: EdgeInsets.only(left: kMobile ? S.s16 : S.s8, right: S.s2),
       decoration: BoxDecoration(
         color: kMobile ? AppColors.surface1 : AppColors.surface2,
         borderRadius: BorderRadius.circular(kMobile ? 22 : R.xs),

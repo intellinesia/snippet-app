@@ -120,12 +120,12 @@ class _MissionControlCardState extends State<MissionControlCard> {
           : (last.fromUser ? 'You: ${last.text}' : last.text);
       return Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(R.md),
         child: InkWell(
           onTap: widget.onOpen,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(R.md),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 7, 10, 7),
+            padding: EdgeInsets.fromLTRB(S.s8, S.of(7), S.of(10), S.of(7)),
             child: Row(children: [
               SizedBox.square(
                 dimension: 32,
@@ -160,7 +160,7 @@ class _MissionControlCardState extends State<MissionControlCard> {
                     ),
                 ]),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -170,7 +170,7 @@ class _MissionControlCardState extends State<MissionControlCard> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: sans(13, weight: W.body, color: AppColors.fg1)),
-                    const SizedBox(height: 2),
+                    SizedBox(height: S.s2),
                     SwapText(waiting ? 'Waiting on you' : line,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -185,7 +185,7 @@ class _MissionControlCardState extends State<MissionControlCard> {
       );
     }
     return Padding(
-      padding: EdgeInsets.only(bottom: kMobile ? 10 : 6),
+      padding: EdgeInsets.only(bottom: kMobile ? S.of(10) : S.s6),
       child: Material(
         color: kMobile ? AppColors.surface1 : AppColors.surface2,
         borderRadius: BorderRadius.circular(kMobile ? 18 : 14),
@@ -193,11 +193,11 @@ class _MissionControlCardState extends State<MissionControlCard> {
         child: InkWell(
           onTap: widget.onOpen,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(kMobile ? 18 : 14, kMobile ? 14 : 11,
-                kMobile ? 12 : 10, kMobile ? 14 : 11),
+            padding: EdgeInsets.fromLTRB(kMobile ? S.of(18) : S.of(14), kMobile ? S.of(14) : S.of(11),
+                kMobile ? S.s12 : S.of(10), kMobile ? S.of(14) : S.of(11)),
             child: Row(children: [
               const AgentMochi('mission-control', size: 30),
-              const SizedBox(width: 12),
+              SizedBox(width: S.s12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,7 +209,7 @@ class _MissionControlCardState extends State<MissionControlCard> {
                             spacing: -0.2,
                             height: kMobile ? 21 / 16 : 19 / 14,
                             color: AppColors.fg1)),
-                    const SizedBox(height: 2),
+                    SizedBox(height: S.s2),
                     Row(children: [
                       Flexible(
                         child: SwapText(_statusLine(),
@@ -222,7 +222,7 @@ class _MissionControlCardState extends State<MissionControlCard> {
                   ],
                 ),
               ),
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               AppIcon('chevron-right', size: 16, color: AppColors.fg4),
             ]),
           ),

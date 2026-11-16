@@ -377,7 +377,7 @@ class _AgentCardState extends State<AgentCard> {
               opacity: agent.available ? 1 : 0.55,
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                    horizontal: M.gutter, vertical: 8),
+                    horizontal: M.gutter, vertical: S.s8),
                 child: Row(children: [
                   SizedBox.square(
                     dimension: 52,
@@ -398,7 +398,7 @@ class _AgentCardState extends State<AgentCard> {
                             ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: S.s12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -414,15 +414,15 @@ class _AgentCardState extends State<AgentCard> {
                                     : AppColors.fg3)),
                           ),
                           if (_isPinned) ...[
-                            const SizedBox(width: 6),
+                            SizedBox(width: S.s6),
                             AppIcon('pin', size: 12, color: AppColors.fg3),
                           ],
                           if (time.isNotEmpty) ...[
-                            const SizedBox(width: 8),
+                            SizedBox(width: S.s8),
                             Text(time, style: TS.meta()),
                           ],
                         ]),
-                        const SizedBox(height: 2),
+                        SizedBox(height: S.s2),
                         Text.rich(
                             markdownPreviewSpan(
                                 status, sans(13, color: AppColors.fg3)),
@@ -447,16 +447,16 @@ class _AgentCardState extends State<AgentCard> {
       onSecondaryTapUp: (d) => _actions(d.globalPosition),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(R.md),
         child: InkWell(
           onTap: widget.onOpen,
           onLongPress: () {
             holdHaptic();
             _actions(null);
           },
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(R.md),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 7, 10, 7),
+            padding: EdgeInsets.fromLTRB(S.s8, S.of(7), S.of(10), S.of(7)),
             child: Row(children: [
               Opacity(
                 opacity: agent.available ? 1 : 0.5,
@@ -494,7 +494,7 @@ class _AgentCardState extends State<AgentCard> {
                   ]),
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -512,17 +512,17 @@ class _AgentCardState extends State<AgentCard> {
                                     : AppColors.fg3)),
                       ),
                       if (_isPinned) ...[
-                        const SizedBox(width: 6),
+                        SizedBox(width: S.s6),
                         AppIcon('pin', size: 11, color: AppColors.fg3),
                       ],
                       if (deskTime.isNotEmpty) ...[
-                        const SizedBox(width: 6),
+                        SizedBox(width: S.s6),
                         Text(deskTime,
                             style: sans(metaSize,
                                 color: AppColors.fg4, tabular: true)),
                       ],
                     ]),
-                    const SizedBox(height: 2),
+                    SizedBox(height: S.s2),
                     Row(children: [
                       Expanded(
                         child: Text.rich(
@@ -532,7 +532,7 @@ class _AgentCardState extends State<AgentCard> {
                             overflow: TextOverflow.ellipsis),
                       ),
                       if (summary != null) ...[
-                        const SizedBox(width: 8),
+                        SizedBox(width: S.s8),
                         SwapText(summaryText,
                             style: sans(metaSize,
                                 color: summaryColor, tabular: true)),

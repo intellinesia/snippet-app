@@ -234,7 +234,7 @@ class GroupRow extends StatelessWidget {
           onLongPress: onLongPress,
           child: Padding(
             padding:
-                EdgeInsets.symmetric(horizontal: M.gutter, vertical: 8),
+                EdgeInsets.symmetric(horizontal: M.gutter, vertical: S.s8),
             child: Row(children: [
               SizedBox.square(
                 dimension: 52,
@@ -263,7 +263,7 @@ class GroupRow extends StatelessWidget {
                     AgentCluster(ids: agents, size: 48),
                 ]),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: S.s12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -277,15 +277,15 @@ class GroupRow extends StatelessWidget {
                             style: TS.rowTitle(AppColors.fg1)),
                       ),
                       if (pinned) ...[
-                        const SizedBox(width: 6),
+                        SizedBox(width: S.s6),
                         AppIcon('pin', size: 12, color: AppColors.fg3),
                       ],
                       if (time.isNotEmpty) ...[
-                        const SizedBox(width: 8),
+                        SizedBox(width: S.s8),
                         Text(time, style: TS.meta()),
                       ],
                     ]),
-                    const SizedBox(height: 2),
+                    SizedBox(height: S.s2),
                     Text.rich(
                         markdownPreviewSpan(
                             sub,
@@ -305,13 +305,13 @@ class GroupRow extends StatelessWidget {
     }
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(R.md),
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(R.md),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 7, 10, 7),
+          padding: EdgeInsets.fromLTRB(S.s8, S.of(7), S.of(10), S.of(7)),
           child: Row(children: [
             SizedBox(
               width: 32,
@@ -349,7 +349,7 @@ class GroupRow extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -364,17 +364,17 @@ class GroupRow extends StatelessWidget {
                               sans(13, weight: W.body, color: AppColors.fg1)),
                     ),
                     if (pinned) ...[
-                      const SizedBox(width: 6),
+                      SizedBox(width: S.s6),
                       AppIcon('pin', size: 11, color: AppColors.fg3),
                     ],
                     if (unread > 0) ...[
-                      const SizedBox(width: 6),
+                      SizedBox(width: S.s6),
                       Text('$unread',
                           style:
                               sans(11, color: AppColors.accent, tabular: true)),
                     ],
                   ]),
-                  const SizedBox(height: 2),
+                  SizedBox(height: S.s2),
                   Text.rich(
                       markdownPreviewSpan(
                           sub, sans(11, color: AppColors.fg3)),
@@ -500,11 +500,11 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
       children: [
         Text('Several agents in one conversation. A lead answers first.',
             style: sans(13, height: 1.45, color: AppColors.fg3)),
-        const SizedBox(height: 14),
+        SizedBox(height: S.of(14)),
         FieldWell(
           minHeight: kMobile ? 48 : 38,
           alignment: Alignment.centerLeft,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.of(10)),
           child: TextField(
             controller: _title,
             autofocus: true,
@@ -517,29 +517,29 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: S.s16),
         if (_loading)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: S.s20),
             child: Center(child: Spinner(size: 20)),
           )
         else if (_error != null && _agents.isEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            padding: EdgeInsets.symmetric(vertical: S.s12),
             child: Column(children: [
               Text(_error!, style: TS.meta(AppColors.danger)),
-              const SizedBox(height: 8),
+              SizedBox(height: S.s8),
               Btn('Retry', small: true, onTap: _load),
             ]),
           )
         else if (_agents.isEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            padding: EdgeInsets.symmetric(vertical: S.s12),
             child: Text('No agents available.', style: TS.meta()),
           )
         else ...[
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
+            padding: EdgeInsets.symmetric(horizontal: S.s2),
             child: Row(children: [
               Text('Agents', style: sans(13, color: AppColors.fg3)),
               const Spacer(),
@@ -547,12 +547,12 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
                 Text('$n selected', style: sans(13, color: AppColors.fg4)),
             ]),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: S.s8),
           Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: AppColors.surface2,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(R.of(14)),
               border: Border.all(color: AppColors.line),
             ),
             child: Material(
@@ -583,10 +583,10 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
             ),
           ),
         ],
-        const SizedBox(height: 18),
+        SizedBox(height: S.of(18)),
         if (_error != null && _agents.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: S.s8),
             child: Text(_error!, style: TS.meta(AppColors.danger)),
           ),
         Btn(
@@ -635,10 +635,10 @@ class _AgentPickRow extends StatelessWidget {
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: kMobile ? 56 : 44),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
             child: Row(children: [
               AgentMochi(agent.id, size: kMobile ? 28 : 22),
-              const SizedBox(width: 12),
+              SizedBox(width: S.s12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -665,14 +665,14 @@ class _AgentPickRow extends StatelessWidget {
                     behavior: HitTestBehavior.opaque,
                     onTap: onLead,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      padding: EdgeInsets.symmetric(vertical: S.s6),
                       child: ExcludeSemantics(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: S.s8, vertical: S.of(3)),
                           decoration: BoxDecoration(
                             color: lead ? AppColors.accent : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(R.card),
                             border: Border.all(
                                 color: lead
                                     ? AppColors.accent
@@ -689,7 +689,7 @@ class _AgentPickRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: S.of(10)),
               ],
               AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
@@ -732,19 +732,19 @@ class _AgentPickChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(R.of(16)),
         child: AnimatedContainer(
           duration: Motion.fast,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s6),
           decoration: BoxDecoration(
             color: selected ? AppColors.accent : AppColors.surface2,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(R.of(16)),
             border:
                 Border.all(color: selected ? AppColors.accent : AppColors.line),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             AgentMochi(agent.id, size: 16),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             Text(name,
                 style: sans(12,
                     weight: W.label,
@@ -837,13 +837,13 @@ class _GroupMembersSheetState extends State<GroupMembersSheet> {
       children: [
         for (final m in _group.members)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: EdgeInsets.symmetric(vertical: S.s4),
             child: Row(children: [
               if (m.isAgent)
                 AgentMochi(m.id, size: 22)
               else
                 AppIcon('user', size: 18, color: AppColors.fg3),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -878,9 +878,9 @@ class _GroupMembersSheetState extends State<GroupMembersSheet> {
             ]),
           ),
         if (_addable.isNotEmpty) ...[
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           Text('Add agents', style: TS.label(AppColors.fg3)),
-          const SizedBox(height: 8),
+          SizedBox(height: S.s8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -901,7 +901,7 @@ class _GroupMembersSheetState extends State<GroupMembersSheet> {
             ],
           ),
         ],
-        const SizedBox(height: 16),
+        SizedBox(height: S.s16),
         Align(
           alignment: Alignment.centerLeft,
           child: TextAction('Delete group',
@@ -1348,7 +1348,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               tasksBtn,
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               ChatGlassButton(
                 icon: 'x',
                 tooltip: 'Close',
@@ -1505,16 +1505,16 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     if (_error != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(S.s24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               AppIcon('alert-circle', size: 24, color: AppColors.danger),
-              const SizedBox(height: 10),
+              SizedBox(height: S.of(10)),
               Text(_error!,
                   textAlign: TextAlign.center,
                   style: sans(13, color: AppColors.danger)),
-              const SizedBox(height: 14),
+              SizedBox(height: S.of(14)),
               Btn('Retry', small: true, onTap: () => _load(silent: false)),
             ],
           ),
@@ -1585,7 +1585,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       controller: _scroll,
       reverse: true,
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(16, topPad, 16, 16),
+      padding: EdgeInsets.fromLTRB(S.s16, topPad, S.s16, S.s16),
       itemCount: visible.length,
       itemBuilder: (_, index) {
         final i = visible.length - 1 - index;
@@ -1820,9 +1820,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                     : 520.0;
                 return Padding(
                   padding: EdgeInsets.only(
-                    top: 6,
-                    left: mine ? 0 : ChatBubbleRow.avatarSize + 6 + 5,
-                    right: mine ? 5 : 0,
+                    top: S.s6,
+                    left: mine ? 0 : ChatBubbleRow.avatarSize + S.s6 + S.of(5),
+                    right: mine ? S.of(5) : 0,
                   ),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(maxWidth: max),
@@ -1911,10 +1911,10 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       padding: EdgeInsets.only(bottom: keyboard),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          16,
-          8,
-          16,
-          10 + (keyboard > 0 ? 8 : mq.padding.bottom),
+          S.s16,
+          S.s8,
+          S.s16,
+          S.of(10) + (keyboard > 0 ? S.s8 : mq.padding.bottom),
         ),
         child: ListenableBuilder(
           listenable: Listenable.merge([_voice, _attachments]),
@@ -1952,10 +1952,10 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   Widget _mentionList() {
     final candidates = _mentionCandidates;
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
+      margin: EdgeInsets.only(bottom: S.s6),
       decoration: BoxDecoration(
         color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(R.lg),
         border: Border.all(color: AppColors.line),
       ),
       child: Column(
@@ -1966,13 +1966,13 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
               onTap: () => _applyMention(c.id),
               child: Padding(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
                 child: Row(children: [
                   if (c.id == 'everyone')
                     AppIcon('users', size: 16, color: AppColors.fg3)
                   else
                     AgentMochi(c.id, size: 16),
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                   Expanded(
                     child: Text(c.label,
                         maxLines: 1,
