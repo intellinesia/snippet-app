@@ -48,8 +48,9 @@ class _VoiceScreenState extends State<VoiceScreen> {
   double _rawLevel = 0;
   double _smooth = 0;
   List<double> _levels = List.filled(12, 0.0);
-  final ValueNotifier<EnrolLive> _live =
-      ValueNotifier(EnrolLive(Duration.zero, List.filled(12, 0.0)));
+  final ValueNotifier<EnrolLive> _live = ValueNotifier(
+    EnrolLive(Duration.zero, List.filled(12, 0.0)),
+  );
 
   @override
   void dispose() {
@@ -60,8 +61,20 @@ class _VoiceScreenState extends State<VoiceScreen> {
     super.dispose();
   }
 
-  void _resetLive() => _live.value =
-      const EnrolLive(Duration.zero, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  void _resetLive() => _live.value = const EnrolLive(Duration.zero, [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+  ]);
 
   Future<void> _teardownRecorder() async {
     _tick?.cancel();
@@ -86,8 +99,10 @@ class _VoiceScreenState extends State<VoiceScreen> {
       if (!await rec.hasPermission()) {
         await _teardownRecorder();
         if (mounted) {
-          setState(() => _enrolError =
-              'Microphone access is off. Allow it in system settings, then retry.');
+          setState(
+            () => _enrolError =
+                'Microphone access is off. Allow it in system settings, then retry.',
+          );
         }
         return;
       }
@@ -96,12 +111,14 @@ class _VoiceScreenState extends State<VoiceScreen> {
       _smooth = 0;
       _levels = List.filled(12, 0.0);
       _resetLive();
-      final stream = await rec.startStream(const RecordConfig(
-        encoder: AudioEncoder.pcm16bits,
-        sampleRate: 16000,
-        numChannels: 1,
-        androidConfig: AndroidRecordConfig(manageBluetooth: false),
-      ));
+      final stream = await rec.startStream(
+        const RecordConfig(
+          encoder: AudioEncoder.pcm16bits,
+          sampleRate: 16000,
+          numChannels: 1,
+          androidConfig: AndroidRecordConfig(manageBluetooth: false),
+        ),
+      );
       _sampleSub = stream.listen((data) {
         _chunks.add(data);
         _rawLevel = pcmLevel(data);
@@ -141,10 +158,12 @@ class _VoiceScreenState extends State<VoiceScreen> {
       });
       return;
     }
-    await _enroll(() => widget.client.enrollVoiceprint(
-          audioBytes: audio,
-          label: 'Sample ${(_ambient?.voiceprints.length ?? 0) + 1}',
-        ));
+    await _enroll(
+      () => widget.client.enrollVoiceprint(
+        audioBytes: audio,
+        label: 'Sample ${(_ambient?.voiceprints.length ?? 0) + 1}',
+      ),
+    );
   }
 
   Future<void> _enroll(Future<AmbientSettings> Function() call) async {
@@ -159,9 +178,11 @@ class _VoiceScreenState extends State<VoiceScreen> {
     } catch (e) {
       final msg = '$e';
       if (mounted) {
-        setState(() => _enrolError = msg.contains('Not enough')
-            ? kEnrolTooQuiet
-            : "Couldn't save that sample: ${msg.replaceFirst('Exception: ', '')}");
+        setState(
+          () => _enrolError = msg.contains('Not enough')
+              ? kEnrolTooQuiet
+              : "Couldn't save that sample: ${msg.replaceFirst('Exception: ', '')}",
+        );
       }
     } finally {
       if (mounted) setState(() => _phase = EnrolPhase.idle);
@@ -170,10 +191,12 @@ class _VoiceScreenState extends State<VoiceScreen> {
 
   Future<void> _enrollFromRecent() async {
     if (_busy || _phase != EnrolPhase.idle) return;
-    await _enroll(() => widget.client.enrollVoiceprint(
-          fromRecent: true,
-          label: 'Sample ${(_ambient?.voiceprints.length ?? 0) + 1}',
-        ));
+    await _enroll(
+      () => widget.client.enrollVoiceprint(
+        fromRecent: true,
+        label: 'Sample ${(_ambient?.voiceprints.length ?? 0) + 1}',
+      ),
+    );
   }
 
   Future<void> _deleteVoiceprint(String? id) async {
@@ -213,11 +236,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
     }
   }
 
-  Future<void> _save({
-    bool? enabled,
-    int? maxSeconds,
-    String? done,
-  }) async {
+  Future<void> _save({bool? enabled, int? maxSeconds, String? done}) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
@@ -244,8 +263,10 @@ class _VoiceScreenState extends State<VoiceScreen> {
     } catch (_) {}
   }
 
-  Future<void> _recAct(Future<RecordingPolicy?> Function() call,
-      {String? done}) async {
+  Future<void> _recAct(
+    Future<RecordingPolicy?> Function() call, {
+    String? done,
+  }) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
@@ -261,32 +282,42 @@ class _VoiceScreenState extends State<VoiceScreen> {
   }
 
   Future<void> _removeRule(String id, String label) async {
-    final ok = await confirmAction(context,
-        title: 'Remove rule?',
-        body: 'Mission Control will stop applying "$label".',
-        confirmLabel: 'Remove');
+    final ok = await confirmAction(
+      context,
+      title: 'Remove rule?',
+      body: 'Mission Control will stop applying "$label".',
+      confirmLabel: 'Remove',
+    );
     if (!ok || !mounted) return;
-    await _recAct(() => widget.client.setRecording(removeRule: id),
-        done: 'Rule removed');
+    await _recAct(
+      () => widget.client.setRecording(removeRule: id),
+      done: 'Rule removed',
+    );
   }
 
   Future<void> _removeWindow(String id, String label) async {
-    final ok = await confirmAction(context,
-        title: 'Remove window?',
-        body: 'Mission Control will stop applying "$label".',
-        confirmLabel: 'Remove');
+    final ok = await confirmAction(
+      context,
+      title: 'Remove window?',
+      body: 'Mission Control will stop applying "$label".',
+      confirmLabel: 'Remove',
+    );
     if (!ok || !mounted) return;
-    await _recAct(() => widget.client.setRecording(removeWindow: id),
-        done: 'Window removed');
+    await _recAct(
+      () => widget.client.setRecording(removeWindow: id),
+      done: 'Window removed',
+    );
   }
 
   Future<void> _deleteRecording(RecordingEntry e, bool redact) async {
-    final ok = await confirmAction(context,
-        title: redact ? 'Redact recording?' : 'Delete recording?',
-        body: redact
-            ? 'The transcript is kept but its text is removed.'
-            : 'This recording is deleted for good.',
-        confirmLabel: redact ? 'Redact' : 'Delete');
+    final ok = await confirmAction(
+      context,
+      title: redact ? 'Redact recording?' : 'Delete recording?',
+      body: redact
+          ? 'The transcript is kept but its text is removed.'
+          : 'This recording is deleted for good.',
+      confirmLabel: redact ? 'Redact' : 'Delete',
+    );
     if (!ok || !mounted) return;
     await _recAct(() async {
       await widget.client.deleteRecording(e.id, redact ? 'redact' : 'delete');
@@ -311,7 +342,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
       'Sep',
       'Oct',
       'Nov',
-      'Dec'
+      'Dec',
     ];
     return '${m[t.month - 1]} ${t.day}, ${_clock(t)}';
   }
@@ -346,28 +377,32 @@ class _VoiceScreenState extends State<VoiceScreen> {
           label: x.label,
           sub: x.mode == 'auto'
               ? (x.basis.isEmpty
-                  ? 'Always record'
-                  : 'Always record · "${x.basis}"')
+                    ? 'Always record'
+                    : 'Always record · "${x.basis}"')
               : 'Never record',
-          trailing: Btn('Remove',
-              small: true,
-              variant: BtnVariant.ghost,
-              disabled: _busy,
-              onTap: () => _removeRule(x.id, x.label)),
+          trailing: Btn(
+            'Remove',
+            small: true,
+            variant: BtnVariant.ghost,
+            disabled: _busy,
+            onTap: () => _removeRule(x.id, x.label),
+          ),
         ),
       for (final w in r.windows)
         SettingsRow(
           label: w.label,
           sub: w.mode == 'auto'
               ? (w.basis.isEmpty
-                  ? 'Record · ${_when(w.fromMs)} to ${_when(w.toMs)}'
-                  : 'Record · "${w.basis}"')
+                    ? 'Record · ${_when(w.fromMs)} to ${_when(w.toMs)}'
+                    : 'Record · "${w.basis}"')
               : 'Never record · ${_when(w.fromMs)} to ${_when(w.toMs)}',
-          trailing: Btn('Remove',
-              small: true,
-              variant: BtnVariant.ghost,
-              disabled: _busy,
-              onTap: () => _removeWindow(w.id, w.label)),
+          trailing: Btn(
+            'Remove',
+            small: true,
+            variant: BtnVariant.ghost,
+            disabled: _busy,
+            onTap: () => _removeWindow(w.id, w.label),
+          ),
         ),
     ];
     return [
@@ -386,8 +421,11 @@ class _VoiceScreenState extends State<VoiceScreen> {
                 (240, '4 hours'),
                 (-2, 'Until tomorrow'),
               ],
-              onSelected: (m) => _recAct(() => widget.client.setRecording(
-                  snoozeMinutes: m == -2 ? _untilTomorrowMinutes() : m)),
+              onSelected: (m) => _recAct(
+                () => widget.client.setRecording(
+                  snoozeMinutes: m == -2 ? _untilTomorrowMinutes() : m,
+                ),
+              ),
             ),
           ),
           SettingsRow(
@@ -414,8 +452,9 @@ class _VoiceScreenState extends State<VoiceScreen> {
         children: ruleRows.isEmpty
             ? [
                 SettingsRow(
-                    label:
-                        'Ask Mission Control, for example: always record my Monday standup.')
+                  label:
+                      'Ask Mission Control, for example: always record my Monday standup.',
+                ),
               ]
             : ruleRows,
       ),
@@ -492,8 +531,8 @@ class _VoiceScreenState extends State<VoiceScreen> {
     String lengthLabel(int m) => m == 0
         ? 'Until changed'
         : m < 60
-            ? '$m minutes'
-            : '${m ~/ 60} hour${m == 60 ? '' : 's'}';
+        ? '$m minutes'
+        : '${m ~/ 60} hour${m == 60 ? '' : 's'}';
     return SettingsGroup(
       header: 'Attention',
       footer:
@@ -545,19 +584,20 @@ class _VoiceScreenState extends State<VoiceScreen> {
     setState(() => _busy = true);
     try {
       final next = await widget.client.setAmbientSettings(
-          conversationTimeoutSecs: timeout,
-          wakePhrases: phrases,
-          assemblyaiKey: assemblyaiKey,
-          deepgramKey: deepgramKey,
-          rimeKey: rimeKey,
-          ttsProvider: ttsProvider,
-          rimeModel: rimeModel,
-          rimeVoice: rimeVoice,
-          typesafeKey: typesafeKey,
-          deepgramHost: deepgramHost,
-          ttsVoice: ttsVoice,
-          ttsSpeed: ttsSpeed,
-          stt: stt);
+        conversationTimeoutSecs: timeout,
+        wakePhrases: phrases,
+        assemblyaiKey: assemblyaiKey,
+        deepgramKey: deepgramKey,
+        rimeKey: rimeKey,
+        ttsProvider: ttsProvider,
+        rimeModel: rimeModel,
+        rimeVoice: rimeVoice,
+        typesafeKey: typesafeKey,
+        deepgramHost: deepgramHost,
+        ttsVoice: ttsVoice,
+        ttsSpeed: ttsSpeed,
+        stt: stt,
+      );
       if (!mounted) return;
       setState(() => _ambient = next);
       if (done != null) toast(context, done);
@@ -569,17 +609,21 @@ class _VoiceScreenState extends State<VoiceScreen> {
   }
 
   Future<void> _editPhrases(AmbientSettings a) async {
-    final text = await promptText(context,
-        title: 'Wake phrases',
-        hint: 'One per line, e.g. snippet',
-        initial: a.wakePhrases.join('\n'),
-        saveLabel: 'Save',
-        maxLines: 6);
+    final text = await promptText(
+      context,
+      title: 'Wake phrases',
+      hint: 'One per line, e.g. snippet',
+      initial: a.wakePhrases.join('\n'),
+      saveLabel: 'Save',
+      maxLines: 6,
+    );
     if (text == null || !mounted) return;
-    await _saveAmbient(phrases: [
-      for (final t in text.split(RegExp(r'[\n,]')))
-        if (t.trim().isNotEmpty) t.trim()
-    ]);
+    await _saveAmbient(
+      phrases: [
+        for (final t in text.split(RegExp(r'[\n,]')))
+          if (t.trim().isNotEmpty) t.trim(),
+      ],
+    );
   }
 
   String _speedLabel(int pct) =>
@@ -588,43 +632,62 @@ class _VoiceScreenState extends State<VoiceScreen> {
   List<Widget> _ambientGroups(AmbientSettings a) {
     final speeds = <int>{90, 100, 110, 115, 125, 135, 150, a.ttsSpeed}.toList()
       ..sort();
-    final timeouts =
-        <int>{30, 60, 90, 180, 300, a.conversationTimeoutSecs}.toList()..sort();
+    final timeouts = <int>{
+      30,
+      60,
+      90,
+      180,
+      300,
+      a.conversationTimeoutSecs,
+    }.toList()..sort();
     final hosts = a.deepgramHosts.isEmpty
         ? [(a.deepgramHost, a.deepgramHost)]
         : a.deepgramHosts;
     final hostLabel = hosts
-        .firstWhere((h) => h.$1 == a.deepgramHost,
-            orElse: () => (a.deepgramHost, a.deepgramHost))
+        .firstWhere(
+          (h) => h.$1 == a.deepgramHost,
+          orElse: () => (a.deepgramHost, a.deepgramHost),
+        )
         .$2;
     final voice = a.ttsVoices.where((v) => v.model == a.ttsVoice).firstOrNull;
     final flux = a.stt == 'flux';
     final rime = a.ttsProvider == 'rime';
-    final usesDeepgram = flux || !rime;
-    Widget key(String label, bool set, String hint,
-            Future<void> Function(String) save, {bool optional = false}) =>
-        InlineKeyRow(
-            label: label,
-            keySet: set,
-            hint: hint,
-            busy: _busy,
-            optional: optional,
-            onSave: save);
+    Widget key(
+      String label,
+      bool set,
+      String hint,
+      Future<void> Function(String) save, {
+      bool optional = false,
+    }) => InlineKeyRow(
+      label: label,
+      keySet: set,
+      hint: hint,
+      busy: _busy,
+      optional: optional,
+      onSave: save,
+    );
     final deepgramKey = key(
-        'API key',
-        a.deepgramKeySet,
-        'Paste the key from console.deepgram.com',
-        (k) => _saveAmbient(deepgramKey: k, done: 'Deepgram key saved'));
-    var keyFooterShown = false;
-    String? keyFooter() {
-      if (keyFooterShown) return null;
-      keyFooterShown = true;
-      return 'Keys stay on the server. Replies need a Deepgram or Rime key.';
-    }
+      'API key',
+      a.deepgramKeySet,
+      'Paste the key from console.deepgram.com',
+      (k) => _saveAmbient(deepgramKey: k, done: 'Deepgram key saved'),
+    );
+    final regionRow = SettingsRow(
+      label: 'Region',
+      trailing: SettingsPopup<String>(
+        label: hostLabel,
+        selected: a.deepgramHost,
+        items: [for (final h in hosts) (h.$1, h.$2)],
+        onSelected: (h) => _saveAmbient(deepgramHost: h, done: 'Region saved'),
+      ),
+    );
+    // The Deepgram key and region sit in the first group that uses Deepgram.
+    final deepgramRows = [deepgramKey, regionRow];
 
     return [
       SettingsGroup(
         header: 'Listening',
+        footer: 'Keys stay on the server. Replies need a Deepgram or Rime key.',
         children: [
           SettingsRow(
             label: 'Speech recognition',
@@ -633,12 +696,22 @@ class _VoiceScreenState extends State<VoiceScreen> {
               selected: a.stt,
               items: const [
                 ('assemblyai', 'AssemblyAI'),
-                ('flux', 'Deepgram Flux')
+                ('flux', 'Deepgram Flux'),
               ],
               onSelected: (v) =>
                   _saveAmbient(stt: v, done: 'Speech recognition saved'),
             ),
           ),
+          if (flux)
+            ...deepgramRows
+          else
+            key(
+              'API key',
+              a.assemblyaiKeySet,
+              'Paste the key from assemblyai.com/dashboard',
+              (k) =>
+                  _saveAmbient(assemblyaiKey: k, done: 'AssemblyAI key saved'),
+            ),
         ],
       ),
       SettingsGroup(
@@ -651,10 +724,11 @@ class _VoiceScreenState extends State<VoiceScreen> {
               selected: a.ttsProvider,
               items: const [('deepgram', 'Deepgram'), ('rime', 'Rime')],
               onSelected: (v) => _saveAmbient(
-                  ttsProvider: v,
-                  done: v == 'rime'
-                      ? 'Replies now use Rime'
-                      : 'Replies now use Deepgram'),
+                ttsProvider: v,
+                done: v == 'rime'
+                    ? 'Replies now use Rime'
+                    : 'Replies now use Deepgram',
+              ),
             ),
           ),
           if (rime) ...[
@@ -665,12 +739,13 @@ class _VoiceScreenState extends State<VoiceScreen> {
                 selected: a.rimeModel,
                 items: const [
                   ('mistv3', 'Mist v3 (fastest)'),
-                  ('coda', 'Coda')
+                  ('coda', 'Coda'),
                 ],
                 onSelected: (m) => _saveAmbient(
-                    rimeModel: m,
-                    rimeVoice: m == 'coda' ? 'lyra' : 'cove',
-                    done: 'Rime model saved'),
+                  rimeModel: m,
+                  rimeVoice: m == 'coda' ? 'lyra' : 'cove',
+                  done: 'Rime model saved',
+                ),
               ),
             ),
             SettingsRow(
@@ -685,14 +760,19 @@ class _VoiceScreenState extends State<VoiceScreen> {
                         final list = await rimeVoices(a.rimeModel);
                         if (!mounted) return;
                         if (list.isEmpty) {
-                          toast(context, "Couldn't load the Rime voice list",
-                              danger: true);
+                          toast(
+                            context,
+                            "Couldn't load the Rime voice list",
+                            danger: true,
+                          );
                           return;
                         }
-                        final v = await showVoicePicker(context,
-                            title: 'Rime voice',
-                            voices: list,
-                            selected: a.rimeVoice);
+                        final v = await showVoicePicker(
+                          context,
+                          title: 'Rime voice',
+                          voices: list,
+                          selected: a.rimeVoice,
+                        );
                         if (v != null && mounted) {
                           await _saveAmbient(rimeVoice: v, done: 'Voice saved');
                         }
@@ -707,16 +787,20 @@ class _VoiceScreenState extends State<VoiceScreen> {
                 onTap: _busy
                     ? null
                     : () async {
-                        final v = await showVoicePicker(context,
-                            title: 'Deepgram voice',
-                            voices: [
-                              for (final t in a.ttsVoices)
-                                PickVoice(t.model, t.name,
-                                    sub:
-                                        '${t.accent} · ${t.gender.toLowerCase()}',
-                                    group: t.gender)
-                            ],
-                            selected: a.ttsVoice);
+                        final v = await showVoicePicker(
+                          context,
+                          title: 'Deepgram voice',
+                          voices: [
+                            for (final t in a.ttsVoices)
+                              PickVoice(
+                                t.model,
+                                t.name,
+                                sub: '${t.accent} · ${t.gender.toLowerCase()}',
+                                group: t.gender,
+                              ),
+                          ],
+                          selected: a.ttsVoice,
+                        );
                         if (v != null && mounted) {
                           await _saveAmbient(ttsVoice: v, done: 'Voice saved');
                         }
@@ -733,51 +817,19 @@ class _VoiceScreenState extends State<VoiceScreen> {
                   _saveAmbient(ttsSpeed: s, done: 'Speech speed saved'),
             ),
           ),
+          if (rime)
+            key(
+              'API key',
+              a.rimeKeySet,
+              'Paste the key from rime.ai',
+              (k) => _saveAmbient(rimeKey: k, done: 'Rime key saved'),
+            )
+          else if (!flux)
+            ...deepgramRows,
         ],
       ),
-      if (usesDeepgram)
-        SettingsGroup(
-          header: 'Deepgram',
-          footer: keyFooter(),
-          children: [
-            deepgramKey,
-            SettingsRow(
-              label: 'Region',
-              trailing: SettingsPopup<String>(
-                label: hostLabel,
-                selected: a.deepgramHost,
-                items: [for (final h in hosts) (h.$1, h.$2)],
-                onSelected: (h) =>
-                    _saveAmbient(deepgramHost: h, done: 'Region saved'),
-              ),
-            ),
-          ],
-        ),
-      if (!flux)
-        SettingsGroup(
-          header: 'AssemblyAI',
-          footer: keyFooter(),
-          children: [
-            key(
-                'API key',
-                a.assemblyaiKeySet,
-                'Paste the key from assemblyai.com/dashboard',
-                (k) => _saveAmbient(
-                    assemblyaiKey: k, done: 'AssemblyAI key saved')),
-          ],
-        ),
-      if (rime)
-        SettingsGroup(
-          header: 'Rime',
-          footer: keyFooter(),
-          children: [
-            key('API key', a.rimeKeySet, 'Paste the key from rime.ai',
-                (k) => _saveAmbient(rimeKey: k, done: 'Rime key saved')),
-          ],
-        ),
       if (_tuning != null) _attentionGroup(_tuning!),
       SettingsGroup(
-        header: 'Conversation',
         footer: 'A wake phrase starts a conversation, even in Passive mode.',
         children: [
           SettingsRow(
@@ -816,20 +868,31 @@ class _VoiceScreenState extends State<VoiceScreen> {
       SettingsGroup(
         header: 'Classifier',
         children: [
-          key('Typesafe key', a.watcherKeySet, 'Paste your Typesafe API key',
-              (k) => _saveAmbient(typesafeKey: k, done: 'Typesafe key saved'),
-              optional: true),
+          key(
+            'Typesafe key',
+            a.watcherKeySet,
+            'Paste your Typesafe API key',
+            (k) => _saveAmbient(typesafeKey: k, done: 'Typesafe key saved'),
+            optional: true,
+          ),
         ],
       ),
     ];
   }
 
   List<Widget> _groups(VoiceSettings v) {
-    final lengths = <int>{60, 120, 180, 300, 600, v.maxSeconds}
-        .where((s) => s >= v.minSeconds && s <= v.maxSecondsLimit)
-        .toList()
-      ..sort();
+    final lengths =
+        <int>{
+            60,
+            120,
+            180,
+            300,
+            600,
+            v.maxSeconds,
+          }.where((s) => s >= v.minSeconds && s <= v.maxSecondsLimit).toList()
+          ..sort();
     return [
+      if (_ambient != null) ..._ambientGroups(_ambient!),
       SettingsGroup(
         header: 'Voice notes',
         children: [
@@ -851,7 +914,6 @@ class _VoiceScreenState extends State<VoiceScreen> {
           ),
         ],
       ),
-      if (_ambient != null) ..._ambientGroups(_ambient!),
     ];
   }
 
@@ -860,17 +922,23 @@ class _VoiceScreenState extends State<VoiceScreen> {
     final v = _voice;
     if (!kMobile && widget.embedded && widget.onBack == null) {
       if (v == null) {
-        return SettingsGroup(children: [
-          _error == null
-              ? const SettingsRow(label: 'Loading voice settings…')
-              : SettingsRow(
-                  label: "Couldn't load voice settings",
-                  sub: '$_error',
-                  danger: true,
-                  trailing: Btn('Retry',
-                      small: true, variant: BtnVariant.secondary, onTap: _load),
-                ),
-        ]);
+        return SettingsGroup(
+          children: [
+            _error == null
+                ? const SettingsRow(label: 'Loading voice settings…')
+                : SettingsRow(
+                    label: "Couldn't load voice settings",
+                    sub: '$_error',
+                    danger: true,
+                    trailing: Btn(
+                      'Retry',
+                      small: true,
+                      variant: BtnVariant.secondary,
+                      onTap: _load,
+                    ),
+                  ),
+          ],
+        );
       }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -902,7 +970,10 @@ class _VoiceScreenState extends State<VoiceScreen> {
         children: [
           if (kMobile)
             SettingsHeader(
-                title: 'Voice', compact: true, onBack: widget.onBack!)
+              title: 'Voice',
+              compact: true,
+              onBack: widget.onBack!,
+            )
           else
             NavBackRow(title: 'Voice', onBack: widget.onBack!),
           Expanded(child: child),
@@ -920,19 +991,22 @@ class _VoiceButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: kMobile ? Colors.transparent : AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.of(7)),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(R.of(7)),
-          onTap: onTap,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s6),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(label, style: sans(kMobile ? 15 : 13, color: AppColors.fg2)),
-              SizedBox(width: S.s6),
-              AppIcon('chevron-right', size: 14, color: AppColors.fg3),
-            ]),
-          ),
+    color: kMobile ? Colors.transparent : AppColors.surface2,
+    borderRadius: BorderRadius.circular(R.of(7)),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(R.of(7)),
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label, style: sans(kMobile ? 15 : 13, color: AppColors.fg2)),
+            SizedBox(width: S.s6),
+            AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }

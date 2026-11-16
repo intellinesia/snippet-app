@@ -73,22 +73,17 @@ void main() {
     testWidgets('Deepgram key and region appear once, together ($label)',
         (t) async {
       await pump(t, 'both_deepgram', mobile);
-      expect(sectionHeader('Deepgram'), findsOneWidget);
       expect(find.text('API key'), findsOneWidget);
       expect(find.text('Region'), findsOneWidget);
-      expect(sectionHeader('AssemblyAI'), findsNothing);
-      expect(sectionHeader('Rime'), findsNothing);
       debugDefaultTargetPlatformOverride = null;
     });
 
     testWidgets('only the selected providers ask for keys ($label)',
         (t) async {
       await pump(t, 'mixed', mobile);
-      expect(sectionHeader('Deepgram'), findsNothing);
-      expect(sectionHeader('AssemblyAI'), findsOneWidget);
-      expect(sectionHeader('Rime'), findsOneWidget);
+      expect(find.text('Region'), findsNothing);
       expect(find.text('API key'), findsNWidgets(2));
-      for (final h in ['Voice notes', 'Listening', 'Replies', 'Conversation']) {
+      for (final h in ['Voice notes', 'Listening', 'Replies']) {
         expect(sectionHeader(h), findsOneWidget);
       }
       debugDefaultTargetPlatformOverride = null;

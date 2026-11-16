@@ -137,7 +137,7 @@ void main() {
     await pump(t, null);
     expect(sectionHeader('Recording'), findsNothing);
     expect(sectionHeader('Rules'), findsNothing);
-    expect(sectionHeader('Conversation'), findsOneWidget);
+    expect(sectionHeader('Replies'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 }
