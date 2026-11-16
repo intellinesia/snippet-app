@@ -143,27 +143,33 @@ class SettingsHeader extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: S.s4),
           child: Row(children: [
-            IconBtn(
-              'chevron-left',
-              size: 40,
-              iconSize: 20,
-              tooltip: 'Back',
-              onTap: onBack ?? () => Navigator.maybePop(context),
-            ),
-            Expanded(
-              child: Center(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(17, weight: W.label, color: AppColors.fg1),
+            Tooltip(
+              message: 'Back',
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onBack ?? () => Navigator.maybePop(context),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                      color: AppColors.surface2, shape: BoxShape.circle),
+                  child: Center(
+                    child: AppIcon('chevron-left',
+                        size: 20, color: AppColors.fg1),
+                  ),
                 ),
               ),
             ),
-            if (actions.isNotEmpty)
-              ...actions
-            else
-              SizedBox(width: S.of(44)),
+            SizedBox(width: S.s12),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(17, weight: W.label, color: AppColors.fg1),
+              ),
+            ),
+            ...actions,
           ]),
         ),
       );
