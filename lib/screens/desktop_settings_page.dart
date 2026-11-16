@@ -191,7 +191,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
+                      padding: EdgeInsets.fromLTRB(S.of(18), S.of(18), S.of(18), S.s6),
                       child: Text('Settings',
                           style: sans(16, weight: W.title, color: AppColors.fg1)),
                     ),
@@ -203,7 +203,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                           for (final (group, entries) in _groups) ...[
                             Padding(
                               padding: EdgeInsets.fromLTRB(
-                                  10, 14, 10, S.s4),
+                                  S.of(10), S.of(14), S.of(10), S.s4),
                               child: Text(group,
                                   style: sans(12, color: AppColors.fg4)),
                             ),
@@ -283,13 +283,13 @@ class _NavRow extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 34),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s6),
             child: Row(children: [
               if (entry.iconData != null)
                 Icon(entry.iconData, size: 16, color: iconColor)
               else
                 AppIcon(entry.icon!, size: 16, color: iconColor),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Expanded(
                 child: Text(
                   entry.label,

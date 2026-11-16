@@ -63,7 +63,7 @@ class _CardMarkdownBodyState extends State<CardMarkdownBody> {
       pPadding: EdgeInsets.zero,
       blockSpacing: 4,
       listIndent: 16,
-      listBulletPadding: const EdgeInsets.only(right: 4),
+      listBulletPadding: EdgeInsets.only(right: S.s4),
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,7 +312,7 @@ class _PlanChecklistState extends State<PlanChecklist> {
       children: [
         for (final (text, state) in shown)
           Padding(
-            padding: const EdgeInsets.only(bottom: 3),
+            padding: EdgeInsets.only(bottom: S.of(3)),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -337,7 +337,7 @@ class _PlanChecklistState extends State<PlanChecklist> {
             behavior: HitTestBehavior.opaque,
             onTap: () => setState(() => _open = !_open),
             child: Padding(
-              padding: EdgeInsets.only(top: S.s4, left: 20),
+              padding: EdgeInsets.only(top: S.s4, left: S.s20),
               child: Text(
                   _open ? 'Show less' : 'Show all ${steps.length} steps',
                   style: sans(TranscriptCard.metaSize,
@@ -472,8 +472,9 @@ class _AutonomousRoundCardState extends State<AutonomousRoundCard> {
     final more = items.length > 1;
     final content = Padding(
       padding: kMobile
-          ? const EdgeInsets.fromLTRB(12, 8, 12, 9)
-          : const EdgeInsets.fromLTRB(12, 6, 12, 7),
+          ? EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.of(9)
+          )
+          : EdgeInsets.fromLTRB(S.s12, S.s6, S.s12, S.of(7)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -494,7 +495,7 @@ class _AutonomousRoundCardState extends State<AutonomousRoundCard> {
           ]),
           if (items.isNotEmpty && !_open)
             Padding(
-              padding: EdgeInsets.only(left: 18, top: S.s2),
+              padding: EdgeInsets.only(left: S.of(18), top: S.s2),
               child: Text.rich(
                 TextSpan(children: [
                   TextSpan(text: items.first),
@@ -511,13 +512,13 @@ class _AutonomousRoundCardState extends State<AutonomousRoundCard> {
           if (_open)
             for (final (label, list) in sections) ...[
               Padding(
-                padding: EdgeInsets.only(left: 18, top: S.s4),
+                padding: EdgeInsets.only(left: S.of(18), top: S.s4),
                 child: Text(label,
                     style: sans(meta, weight: W.label, color: AppColors.fg4)),
               ),
               for (final item in list)
                 Padding(
-                  padding: EdgeInsets.only(left: 18, top: S.s2),
+                  padding: EdgeInsets.only(left: S.of(18), top: S.s2),
                   child: SelectableText(_plain(item), style: body),
                 ),
             ],
@@ -525,10 +526,10 @@ class _AutonomousRoundCardState extends State<AutonomousRoundCard> {
       ),
     );
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: EdgeInsets.symmetric(vertical: S.of(3)),
       child: Material(
         color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(R.card),
         clipBehavior: Clip.antiAlias,
         child: items.isEmpty
             ? content
@@ -567,17 +568,17 @@ class _QuietWakesRowState extends State<QuietWakesRow> {
     final wakes = widget.run.wakes;
     final meta = TranscriptCard.metaSize;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: EdgeInsets.symmetric(vertical: S.of(3)),
       child: Material(
         color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(R.card),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => setState(() => _open = !_open),
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 40),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -603,7 +604,7 @@ class _QuietWakesRowState extends State<QuietWakesRow> {
                   if (_open)
                     for (final wake in wakes)
                       Padding(
-                        padding: EdgeInsets.only(left: 18, top: S.s8),
+                        padding: EdgeInsets.only(left: S.of(18), top: S.s8),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -784,18 +785,19 @@ class _AmbientTurnCardState extends State<AmbientTurnCard> {
               onTap: _hasDetail ? () => setState(() => _open = !_open) : null,
               child: Container(
                 padding: kMobile
-                    ? const EdgeInsets.fromLTRB(15, 10, 15, 11)
-                    : const EdgeInsets.fromLTRB(14, 9, 14, 10),
+                    ? EdgeInsets.fromLTRB(S.of(15), S.of(10), S.of(15), S.of(11)
+                    )
+                    : EdgeInsets.fromLTRB(S.of(14), S.of(9), S.of(14), S.of(10)),
                 decoration: BoxDecoration(
                   color: AppColors.surface2,
                   borderRadius: kMobile
-                      ? const BorderRadius.only(
-                          topLeft: Radius.circular(20),
-                          topRight: Radius.circular(20),
-                          bottomLeft: Radius.circular(20),
-                          bottomRight: Radius.circular(6),
+                      ? BorderRadius.only(
+                          topLeft: Radius.circular(R.of(20)),
+                          topRight: Radius.circular(R.of(20)),
+                          bottomLeft: Radius.circular(R.of(20)),
+                          bottomRight: Radius.circular(R.sm),
                         )
-                      : BorderRadius.circular(20),
+                      : BorderRadius.circular(R.of(20)),
                 ),
                 child: SelectionArea(
                   child: Text(
@@ -811,7 +813,7 @@ class _AmbientTurnCardState extends State<AmbientTurnCard> {
               ),
             ),
             Padding(
-              padding: EdgeInsets.only(top: S.s4, right: 2),
+              padding: EdgeInsets.only(top: S.s4, right: S.s2),
               child: Text(meta,
                   textAlign: TextAlign.end,
                   style: sans(kMobile ? 13 : 12, color: AppColors.fg4)),

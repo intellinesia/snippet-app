@@ -308,7 +308,7 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
               Text(_context == null ? 'Model window' : tokensLabel(_context!),
                   key: const ValueKey('context-value'),
                   style: mono(13, color: AppColors.fg2)),
-              const SizedBox(width: 4),
+              SizedBox(width: S.s4),
               AppIcon('chevron-right', size: 14, color: AppColors.fg4),
             ]),
           ),

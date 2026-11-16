@@ -1877,7 +1877,22 @@ class R {
   static double get lg => _shape.radii.lg * _scale;
   static double get sheetTop => _shape.radii.sheetTop * _scale;
   static double get pill => _shape.radii.pill;
+
+  /// An off-scale radius that still follows the theme's radius scale.
+  static double of(double v) => v * _scale;
 }
+
+/// Outline of an agent avatar of [size], circle or squircle per the theme.
+ShapeBorder avatarBorder(double size, {BorderSide side = BorderSide.none}) =>
+    ThemeManager.instance.resolved.shape.avatar == 'squircle'
+        ? RoundedSuperellipseBorder(
+            side: side,
+            borderRadius: BorderRadius.all(Radius.circular(size * 0.36)))
+        : CircleBorder(side: side);
+
+ShapeDecoration avatarDecoration(double size,
+        {required Color color, BorderSide side = BorderSide.none}) =>
+    ShapeDecoration(color: color, shape: avatarBorder(size, side: side));
 
 AnimationStyle get sheetMotion => AnimationStyle(
       duration: Motion._scaled(320),
@@ -1901,6 +1916,9 @@ class S {
   static double get s24 => _space.scale.s24 * _density;
   static double get s32 => _space.scale.s32 * _density;
   static double get s40 => _space.scale.s40 * _density;
+
+  /// An off-scale spacing value that still follows the theme's density.
+  static double of(double v) => v * _density;
 }
 
 /// Overlays lift with a surface step plus this shadow; nothing else casts one.

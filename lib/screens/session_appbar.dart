@@ -284,7 +284,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     final (fg, _) = toneColors(live ? Tone.run : Tone.neutral);
     return Container(
       height: kMobile ? M.appBarHeight : 44,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      padding: EdgeInsets.symmetric(horizontal: S.s6),
       color: kMobile ? AppColors.pageBg : AppColors.bg,
       child: Row(children: [
         if (kMobile || Navigator.of(context).canPop())
@@ -294,10 +294,10 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               tooltip: 'Back',
               onTap: () => Navigator.of(context).maybePop())
         else
-          const SizedBox(width: 6),
+          SizedBox(width: S.s6),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
+            padding: EdgeInsets.symmetric(horizontal: S.s6),
             child: Text(
               _title.isEmpty ? 'Lane' : _title,
               maxLines: 1,
@@ -308,14 +308,14 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(right: 10),
+          padding: EdgeInsets.only(right: S.of(10)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Container(
               width: 6,
               height: 6,
               decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             Text(label, style: mono(11, color: fg)),
           ]),
         ),
@@ -416,7 +416,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         sub = '';
         subView = Row(mainAxisSize: MainAxisSize.min, children: [
           WorkingDots(size: 3, color: AppColors.accent),
-          const SizedBox(width: 5),
+          SizedBox(width: S.of(5)),
           Flexible(
             child: Text(
               label,
@@ -513,7 +513,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                 });
                 _publishTerminals();
               }),
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
             ]),
           ),
           Expanded(
@@ -574,7 +574,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         ),
         if (_terms.length > 1)
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
+            padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.s2),
             child: _mobileTermTabs(i),
           ),
         Expanded(
@@ -612,7 +612,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _terms.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 6),
+        separatorBuilder: (_, __) => SizedBox(width: S.s6),
         itemBuilder: (_, n) {
           final on = n == focus;
           final pane = _terms[n];
@@ -631,7 +631,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               },
               onLongPress: () => _renameTerm(pane.id),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 0, 6, 0),
+                padding: EdgeInsets.fromLTRB(S.of(14), 0, S.s6, 0),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Text(pane.title,
                       style:
@@ -640,7 +640,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                     onTap: () => _closeTerm(pane.id),
                     behavior: HitTestBehavior.opaque,
                     child: Padding(
-                      padding: const EdgeInsets.all(6),
+                      padding: EdgeInsets.all(S.s6),
                       child: AppIcon('x', size: 12, color: AppColors.fg4),
                     ),
                   ),
@@ -656,9 +656,9 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   Widget _termTabStrip(int focus) {
     return ListView.separated(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.only(left: 10, right: 8),
+      padding: EdgeInsets.only(left: S.of(10), right: S.s8),
       itemCount: _terms.length,
-      separatorBuilder: (_, __) => const SizedBox(width: 2),
+      separatorBuilder: (_, __) => SizedBox(width: S.s2),
       itemBuilder: (_, n) {
         final pane = _terms[n];
         return _DockTab(
@@ -1121,7 +1121,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
 
   Widget _disconnectedBanner() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.of(10)),
       decoration: BoxDecoration(
           color: AppColors.dangerBg,
           border: Border(
@@ -1129,7 +1129,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                   BorderSide(color: AppColors.danger.withValues(alpha: 0.25)))),
       child: Row(children: [
         AppIcon('wifi-off', size: 15, color: AppColors.danger),
-        const SizedBox(width: 9),
+        SizedBox(width: S.of(9)),
         Expanded(
             child: Text(
                 _outbox.isEmpty
@@ -1173,7 +1173,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
             status: stuck ? 'offline' : 'checking',
             size: 6,
             color: stuck ? AppColors.danger : AppColors.fg2),
-        const SizedBox(width: 6),
+        SizedBox(width: S.s6),
         Flexible(
           child: Text(text,
               maxLines: 1,
@@ -1221,11 +1221,11 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               subtitle: 'Actions',
               onTitleTap: () {},
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: S.s8),
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter,
-                    28 + MediaQuery.paddingOf(context).bottom),
+                    S.of(28 ) + MediaQuery.paddingOf(context).bottom),
                 child: _actionsPanel(s, run, navigate: (action) => action()),
               ),
             ),
@@ -1251,7 +1251,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         onTitleTap: widget.onDeskInfo,
         titleHint: 'Info',
         trailing: Padding(
-          padding: const EdgeInsets.only(top: 4),
+          padding: EdgeInsets.only(top: S.s4),
           child: _mcHeaderActions(s),
         ),
       );
@@ -1356,7 +1356,7 @@ class _DockTabState extends State<_DockTab> {
           message: 'Double-click to rename',
           waitDuration: const Duration(milliseconds: 700),
           child: Container(
-            padding: const EdgeInsets.only(left: 8, right: 4),
+            padding: EdgeInsets.only(left: S.s8, right: S.s4),
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
@@ -1368,11 +1368,11 @@ class _DockTabState extends State<_DockTab> {
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               AppIcon('terminal',
                   size: 12, color: on ? AppColors.fg2 : AppColors.fg4),
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               Text(widget.title,
                   style: sans(13, weight: on ? W.label : W.body, color: fg)),
               if (!widget.alive) ...[
-                const SizedBox(width: 6),
+                SizedBox(width: S.s6),
                 Text('exited', style: sans(11, color: AppColors.fg4)),
               ],
               SizedBox(

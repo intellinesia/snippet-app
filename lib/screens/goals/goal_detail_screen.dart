@@ -78,14 +78,14 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                 onTitleTap: () {})
           else
           Padding(
-            padding: const EdgeInsets.fromLTRB(6, 8, 10, 4),
+            padding: EdgeInsets.fromLTRB(S.s6, S.s8, S.of(10), S.s4),
             child: Row(children: [
               IconBtn('chevron-left',
                   size: kMobile ? M.minTarget : 28,
                   iconSize: 15,
                   tooltip: 'Back',
                   onTap: widget.onClose ?? () => Navigator.of(context).pop()),
-              const SizedBox(width: 4),
+              SizedBox(width: S.s4),
               Expanded(
                 child: Text(title,
                     maxLines: 1,
@@ -106,7 +106,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       return _error != null
           ? Center(
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(S.s24),
                 child: Text(_error!,
                     textAlign: TextAlign.center,
                     style: sans(12, color: AppColors.danger)),
@@ -118,7 +118,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
-        padding: EdgeInsets.fromLTRB(M.gutter + 4, 8, M.gutter + 4, 32),
+        padding: EdgeInsets.fromLTRB(M.gutter + S.s4, S.s8, M.gutter + S.s4, S.s32),
         children: [
           Wrap(spacing: 8, runSpacing: 6, children: [
             Tag(g.status == 'open' ? 'Open' : _cap(g.status),
@@ -167,7 +167,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
           Text('${p.done} of ${p.total} $unit',
               style: sans(13, color: AppColors.fg2, tabular: true)),
         ]),
-        const SizedBox(height: 6),
+        SizedBox(height: S.s6),
         GoalProgressBar(p, colour: colour),
       ]);
 
@@ -184,13 +184,13 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             : null,
         child: Padding(
           padding:
-              EdgeInsets.symmetric(horizontal: 4, vertical: kMobile ? 10 : 7),
+              EdgeInsets.symmetric(horizontal: S.s4, vertical: kMobile ? S.of(10) : S.of(7)),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Container(
               key: ValueKey('criterion-tick-$i'),
               width: 18,
               height: 18,
-              margin: const EdgeInsets.only(top: 1),
+              margin: EdgeInsets.only(top: S.of(1)),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: has ? AppColors.okBg : Colors.transparent,
@@ -202,7 +202,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                       child: AppIcon('check', size: 11, color: AppColors.ok))
                   : null,
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             Expanded(
               child: Text(c.criterion,
                   style: sans(13,
@@ -216,7 +216,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                           decoration: gone ? TextDecoration.lineThrough : null)),
             ),
             if (expandable) ...[
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               AnimatedRotation(
                 turns: on ? 0.5 : 0,
                 duration: reduceMotion(context) ? Duration.zero : Motion.fast,
@@ -229,7 +229,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       Reveal(
         show: on,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(32, 0, 4, 10),
+          padding: EdgeInsets.fromLTRB(S.s32, 0, S.s4, S.of(10)),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (c.method.isNotEmpty) _kv('Check', c.method),
@@ -243,7 +243,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   Widget _kv(String k, String v) => Padding(
-        padding: const EdgeInsets.only(top: 4),
+        padding: EdgeInsets.only(top: S.s4),
         child: Text.rich(TextSpan(children: [
           TextSpan(text: '$k  ', style: sans(12, color: AppColors.fg4)),
           TextSpan(
@@ -281,7 +281,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
           id == null ? null : () => openTaskDetail(context, widget.client, id),
       child: Padding(
         padding:
-            EdgeInsets.symmetric(horizontal: 4, vertical: kMobile ? 10 : 7),
+            EdgeInsets.symmetric(horizontal: S.s4, vertical: kMobile ? S.of(10) : S.of(7)),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SizedBox(
             width: 22,
@@ -292,7 +292,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(s.title.isEmpty ? (t?.title ?? '') : s.title,
                   style: sans(13, height: 1.4, color: AppColors.fg1)),
-              const SizedBox(height: 3),
+              SizedBox(height: S.of(3)),
               Row(children: [
                 Container(
                   width: 7,
@@ -301,7 +301,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                       shape: BoxShape.circle,
                       color: t == null ? AppColors.fg4 : statusColor(status)),
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: S.s6),
                 Flexible(
                   child: Text(meta,
                       maxLines: 1,
@@ -311,7 +311,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               ]),
               if (waitingLine != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 2),
+                  padding: EdgeInsets.only(top: S.s2),
                   child: Text(waitingLine,
                       key: ValueKey('slice-note-${s.n}'),
                       style: sans(12,
@@ -340,12 +340,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
           : () => openTaskDetail(context, widget.client, b.taskId),
       child: Padding(
         padding:
-            EdgeInsets.symmetric(horizontal: 4, vertical: kMobile ? 10 : 7),
+            EdgeInsets.symmetric(horizontal: S.s4, vertical: kMobile ? S.of(10) : S.of(7)),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(
             width: 7,
             height: 7,
-            margin: const EdgeInsets.only(top: 6, right: 10, left: 4),
+            margin: EdgeInsets.only(top: S.s6, right: S.of(10), left: S.s4),
             decoration:
                 BoxDecoration(shape: BoxShape.circle, color: AppColors.danger),
           ),
@@ -356,7 +356,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   style: sans(13, height: 1.4, color: AppColors.fg1)),
               if (detail.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 2),
+                  padding: EdgeInsets.only(top: S.s2),
                   child: Text(detail, style: sans(12, color: AppColors.fg3)),
                 ),
             ]),

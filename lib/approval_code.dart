@@ -68,7 +68,7 @@ class _ApprovalCodeState extends State<ApprovalCode> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(R.xs),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: S.s4),
           child: Text(label,
               style: sans(12, weight: W.label, color: AppColors.fg3)),
         ),
@@ -110,7 +110,7 @@ class _ApprovalCodeState extends State<ApprovalCode> {
           // A tight composer must shrink the code, never push the buttons off.
           if (box.hasBoundedHeight) Flexible(child: code) else code,
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: EdgeInsets.only(top: S.s2),
             child: Transform.translate(
               offset: const Offset(-4, 0),
               child: Row(children: [
@@ -122,7 +122,7 @@ class _ApprovalCodeState extends State<ApprovalCode> {
                               ? 'Show all $lineCount lines'
                               : 'Show all',
                       () => setState(() => _open = !_open)),
-                if (overflows) const SizedBox(width: 8),
+                if (overflows) SizedBox(width: S.s8),
                 _link(_copied ? 'Copied' : 'Copy', () {
                   Clipboard.setData(ClipboardData(text: widget.code));
                   setState(() => _copied = true);

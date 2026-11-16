@@ -211,7 +211,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
         color: kMobile ? AppColors.pageBg : Colors.transparent,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(top: kMobile ? 8 : 0, bottom: 16),
+          padding: EdgeInsets.only(top: kMobile ? S.s8 : 0, bottom: S.s16),
           children: [
             if (!tabbed && widget.showHeader)
               ShellSectionHeader(
@@ -226,8 +226,8 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
             else ...[
             _branchRow(repoName, branch, files.length),
             if (_loading && _status == null)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: S.s24),
                 child: Center(
                   child: Spinner(size: 18),
                 ),
@@ -242,7 +242,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
             else ...[
               if (!kMobile && (widget.sessionId ?? '').isNotEmpty)
                 _commitBox(files.length),
-              if (!kMobile) _changedHeader() else const SizedBox(height: 6),
+              if (!kMobile) _changedHeader() else SizedBox(height: S.s6),
               for (final f in files) _fileRow(f),
             ],
             ],
@@ -254,7 +254,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Container(
         height: 38,
-        padding: const EdgeInsets.fromLTRB(10, 2, 8, 2),
+        padding: EdgeInsets.fromLTRB(S.of(10), S.s2, S.s8, S.s2),
         child: Row(children: [
           _tabChip('changes', files.isEmpty ? 'Changes' : 'Changes  ${files.length}'),
           _tabChip('prs', 'Pull requests'),
@@ -355,7 +355,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
   }
 
   Widget _changedHeader() => Padding(
-        padding: const EdgeInsets.fromLTRB(18, 18, 14, 6),
+        padding: EdgeInsets.fromLTRB(S.of(18), S.of(18), S.of(14), S.s6),
         child: Row(children: [
           Expanded(
             child: Text('CHANGED',
@@ -364,20 +364,20 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
           if ((widget.sessionId ?? '').isNotEmpty) ...[
             InkWell(
               onTap: _stash,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(R.sm),
               hoverColor: Colors.transparent,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: S.s2),
                 child: Text('Stash', style: sans(12, color: AppColors.fg3)),
               ),
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             InkWell(
               onTap: _discard,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(R.sm),
               hoverColor: Colors.transparent,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: S.s2),
                 child: Text('Discard all',
                     style: sans(12, color: AppColors.fg3)),
               ),
@@ -416,18 +416,18 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
         opacity: disabled ? 0.45 : 1,
         child: Material(
           color: light ? AppColors.fg1 : AppColors.tint2,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(R.of(16)),
           child: InkWell(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(R.of(16)),
             onTap: disabled ? null : onTap,
             child: Container(
               height: 32,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: EdgeInsets.symmetric(horizontal: S.of(14)),
               alignment: Alignment.center,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 if (icon != null) ...[
                   AppIcon(icon, size: 13, color: AppColors.fg2),
-                  const SizedBox(width: 6),
+                  SizedBox(width: S.s6),
                 ],
                 Text(label,
                     style: sans(13,
@@ -440,15 +440,15 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
       );
 
   Widget _commitBox(int count) => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+        padding: EdgeInsets.fromLTRB(S.s12, S.s6, S.s12, S.s8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Container(
             decoration: BoxDecoration(
               color: AppColors.tint1,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(R.lg),
               border: Border.all(color: AppColors.line),
             ),
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+            padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s8),
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -473,11 +473,11 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  SizedBox(height: S.s6),
                   Text('⌘↵ to commit', style: sans(12, color: AppColors.fg4)),
                 ]),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           if (!kMobile)
             LayoutBuilder(builder: (context, box) => Row(children: [
               Expanded(
@@ -489,10 +489,10 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
                     disabled: _commitCtl.text.trim().isEmpty || _committing,
                     onTap: _commit),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               _roundBtn('upload', _pushing ? 'Pushing…' : 'Push',
                   _pushing ? null : _push),
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               box.maxWidth < 300
                   ? _roundBtn('git-pull-request-arrow', 'Open PR',
                       _opening ? null : _openPr)
@@ -515,7 +515,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
                 onTap: _commit,
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             Btn(_pushing ? 'Pushing…' : 'Push',
                 variant: BtnVariant.secondary,
                 icon: 'upload',
@@ -528,18 +528,18 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
   Widget _tabChip(String key, String label) {
     final on = widget.tab == key;
     return Padding(
-      padding: const EdgeInsets.only(right: 2),
+      padding: EdgeInsets.only(right: S.s2),
       child: Material(
         color: on ? AppColors.tint2 : Colors.transparent,
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(R.of(7)),
         child: InkWell(
           onTap: () => widget.onTab?.call(key),
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(R.of(7)),
           hoverColor: kMobile
               ? AppColors.surface2.withValues(alpha: 0.5)
               : AppColors.tint3,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s4),
             child: Text(label,
                 style: sans(13, color: on ? AppColors.fg1 : AppColors.fg3)),
           ),
@@ -556,17 +556,17 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
   Widget _branchRowDesk(String repoName, String branch) {
     final st = _status;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 2, 8, 0),
+      padding: EdgeInsets.fromLTRB(S.s8, S.s2, S.s8, 0),
       child: Builder(
         builder: (anchor) => InkWell(
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(R.of(7)),
           onTap: _branchBusy ? null : () => _branchSheet(anchor),
           child: Container(
             height: 28,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
+            padding: EdgeInsets.symmetric(horizontal: S.s6),
             child: Row(children: [
               AppIcon('git-branch', size: 13, color: AppColors.fg3),
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               Expanded(
                 child: Text(branch.isEmpty ? repoName : branch,
                     maxLines: 1,
@@ -585,8 +585,8 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
 
   Widget _branchRowMobile(String repoName, String branch, int changes) => Padding(
         padding: kMobile
-            ? const EdgeInsets.fromLTRB(12, 4, 12, 6)
-            : const EdgeInsets.fromLTRB(8, 2, 8, 4),
+            ? EdgeInsets.fromLTRB(S.s12, S.s4, S.s12, S.s6)
+            : EdgeInsets.fromLTRB(S.s8, S.s2, S.s8, S.s4),
         child: Builder(
           builder: (anchor) => Material(
             color: AppColors.tint2,
@@ -599,7 +599,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
                 padding: const EdgeInsets.symmetric(horizontal: kNavPadH),
                 child: Row(children: [
                   AppIcon('git-branch', size: kMobile ? 14 : 13, color: AppColors.accent),
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                   Expanded(
                     child: Text(
                       branch.isEmpty ? repoName : branch,
@@ -609,10 +609,10 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
                     ),
                   ),
                   if (changes > 0) ...[
-                    const SizedBox(width: 6),
+                    SizedBox(width: S.s6),
                     Text('$changes changed', style: TS.meta()),
                   ],
-                  const SizedBox(width: 6),
+                  SizedBox(width: S.s6),
                   AppIcon('chevron-down', size: 13, color: AppColors.fg3),
                 ]),
               ),
@@ -626,7 +626,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
     final slash = f.path.lastIndexOf('/');
     final dir = slash > 0 ? f.path.substring(0, slash) : '';
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: EdgeInsets.symmetric(horizontal: S.s8),
       child: Tooltip(
         message: f.path,
         waitDuration: const Duration(milliseconds: 600),
@@ -634,23 +634,23 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
           label: f.path,
           child: Material(
             color: Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(R.card),
             child: InkWell(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(R.md),
               onTap: widget.onOpenDiff == null
                   ? null
                   : () => widget.onOpenDiff!(f),
               child: Padding(
                 padding: kMobile
-                    ? const EdgeInsets.fromLTRB(10, 7, 10, 7)
-                    : const EdgeInsets.fromLTRB(10, 5, 10, 5),
+                    ? EdgeInsets.fromLTRB(S.of(10), S.of(7), S.of(10), S.of(7))
+                    : EdgeInsets.fromLTRB(S.of(10), S.of(5), S.of(10), S.of(5)),
                 child: Row(children: [
                   if (kMobile) ...[
                     _statusLetter(f),
-                    const SizedBox(width: 10),
+                    SizedBox(width: S.of(10)),
                   ] else ...[
                     FileGlyph(name, size: 14),
-                    const SizedBox(width: 9),
+                    SizedBox(width: S.of(9)),
                   ],
                   Expanded(
                     child: Text.rich(
@@ -668,7 +668,7 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
                     ),
                   ),
                   if (!kMobile) ...[
-                    const SizedBox(width: 8),
+                    SizedBox(width: S.s8),
                     _statusMark(f),
                   ],
                 ]),
@@ -755,15 +755,15 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
       );
 
   Widget _errorState() => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+        padding: EdgeInsets.fromLTRB(S.s20, S.of(14), S.s20, S.s8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: EdgeInsets.only(top: S.s2),
               child:
                   AppIcon('alert-triangle', size: 14, color: AppColors.danger),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             Expanded(
               child: Text(_error!,
                   maxLines: 4,
@@ -772,13 +772,13 @@ class _GitDiffSidebarPanelState extends State<GitDiffSidebarPanel> {
             ),
           ]),
           Padding(
-            padding: const EdgeInsets.only(left: 14, top: 4),
+            padding: EdgeInsets.only(left: S.of(14), top: S.s4),
             child: TextButton(
               onPressed: refresh,
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.accent,
                 minimumSize: const Size(0, 30),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: EdgeInsets.symmetric(horizontal: S.s8),
               ),
               child:
                   Text('Try again', style: sans(13, color: AppColors.accent)),

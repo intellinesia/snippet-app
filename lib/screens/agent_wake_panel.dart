@@ -108,7 +108,7 @@ Widget _panelLine(String label, String value,
         {Color? color, Key? key, int maxLines = 3}) =>
     Padding(
       key: key,
-      padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: 3.5),
+      padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: S.of(3.5)),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(
             width: 82,
@@ -685,11 +685,11 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 2, horizontal: S.s4),
+          padding: EdgeInsets.symmetric(vertical: S.s2, horizontal: S.s4),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (icon != null) ...[
               AppIcon(icon, size: 12, color: AppColors.accent),
-              const SizedBox(width: 4),
+              SizedBox(width: S.s4),
             ],
             Text(label,
                 style:
@@ -794,10 +794,10 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
 
   Widget _runRow(WakeRun r) => Padding(
         key: ValueKey('run-${r.id}'),
-        padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: 3),
+        padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: S.of(3)),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(
-            padding: EdgeInsets.only(top: 5, right: S.s8),
+            padding: EdgeInsets.only(top: S.of(5), right: S.s8),
             child: _statusDot(r.status),
           ),
           Expanded(
@@ -1297,7 +1297,7 @@ class _AgentWatchDetailState extends State<_AgentWatchDetail> {
   }
 
   Widget _eventRow(AgentWatchEvent e) => Padding(
-        padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: 4),
+        padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: S.s4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -1314,7 +1314,7 @@ class _AgentWatchDetailState extends State<_AgentWatchDetail> {
             if (e.excerpt != null) ...[
               SizedBox(height: S.s4),
               Padding(
-                padding: const EdgeInsets.only(left: 15),
+                padding: EdgeInsets.only(left: S.of(15)),
                 child: Text(
                   e.excerpt!,
                   style: codeMono(12, height: 1.45, color: AppColors.fg3),

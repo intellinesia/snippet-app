@@ -151,7 +151,7 @@ Widget _audioCard(
       fromAttachment.isNotEmpty ? fromAttachment : e.body.trim();
   return Container(
     constraints: BoxConstraints(maxWidth: kMobile ? 272 : 340),
-    padding: const EdgeInsets.fromLTRB(8, 8, 12, 10),
+    padding: EdgeInsets.fromLTRB(S.s8, S.s8, S.s12, S.of(10)),
     decoration: BoxDecoration(
       color: ChatColors.received,
       borderRadius: BorderRadius.circular(ChatColors.radius),
@@ -308,7 +308,7 @@ Widget _chatCardShell({
   final cleanTitle = title?.trim() ?? '';
   final cleanBody = body?.trim() ?? '';
   return Container(
-    padding: const EdgeInsets.all(14),
+    padding: EdgeInsets.all(S.of(14)),
     decoration: BoxDecoration(
       color: ChatColors.card,
       borderRadius: BorderRadius.circular(ChatColors.radius),
@@ -320,7 +320,7 @@ Widget _chatCardShell({
         Row(
           children: [
             AppIcon(icon, size: 13, color: ChatColors.meta),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             Expanded(
               child: Text(
                 label,
@@ -332,7 +332,7 @@ Widget _chatCardShell({
           ],
         ),
         if (cleanTitle.isNotEmpty) ...[
-          const SizedBox(height: 6),
+          SizedBox(height: S.s6),
           Text(
             cleanTitle,
             style: sans(
@@ -350,11 +350,11 @@ Widget _chatCardShell({
           ),
         ],
         if (child != null) ...[
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           child,
         ],
         if (footer != null) ...[
-          const SizedBox(height: 12),
+          SizedBox(height: S.s12),
           footer,
         ],
       ],
@@ -375,10 +375,10 @@ Widget _chatPill({
     opacity: disabled ? 0.5 : 1,
     child: Container(
       height: kMobile ? 36 : 30,
-      padding: EdgeInsets.symmetric(horizontal: kMobile ? 16 : 12),
+      padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s16 : S.s12),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(R.pill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -388,7 +388,7 @@ Widget _chatPill({
             style: sans(kMobile ? 15 : 13, weight: W.label, color: fg),
           ),
           if (badge != null && badge.isNotEmpty) ...[
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             Text(
               badge,
               style: TS.caption(fg.withValues(alpha: 0.8)),
@@ -469,9 +469,9 @@ Widget _questionCard(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             pill,
-                            const SizedBox(height: 2),
+                            SizedBox(height: S.s2),
                             Padding(
-                              padding: const EdgeInsets.only(left: 4),
+                              padding: EdgeInsets.only(left: S.s4),
                               child: Text(
                                 c.description,
                                 style: chatText(mine: false)
@@ -484,7 +484,7 @@ Widget _questionCard(
                   ],
                 ),
               if (hasAnswer && !anyMatched) ...[
-                if (choices.isNotEmpty) const SizedBox(height: 8),
+                if (choices.isNotEmpty) SizedBox(height: S.s8),
                 Text(
                   tokens.join(', '),
                   style: chatText(mine: false).copyWith(color: ChatColors.meta),
@@ -779,7 +779,7 @@ class _TaskThreadCardState extends State<_TaskThreadCard> {
                     ],
                   ),
                 if (_error != null) ...[
-                  if (inReview) const SizedBox(height: 6),
+                  if (inReview) SizedBox(height: S.s6),
                   Text(
                     _error!,
                     style: TS.caption(AppColors.danger),
@@ -845,7 +845,7 @@ class _SendBackSheetState extends State<_SendBackSheet> {
               primary: false,
               onTap: () => Navigator.of(context).pop(),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             _chatPill(
               label: 'Send back',
               primary: true,
@@ -1108,13 +1108,13 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
       if (parsed.shownCommand.isNotEmpty)
         ChatCardBody(
           child: Tactile(
-            radius: BorderRadius.circular(10),
+            radius: BorderRadius.circular(R.card),
             kind: TactileKind.inset,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+              padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s6),
               decoration: BoxDecoration(
                 color: AppColors.bg,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(R.card),
                 border: Border.all(color: AppColors.line),
               ),
               child:
@@ -1214,7 +1214,7 @@ class TaskResultCard extends StatelessWidget {
             children: [
               if (statusLabel.isNotEmpty) ChatCardPill(statusLabel, tone: tone),
               if (sessionId.isNotEmpty) ...[
-                if (statusLabel.isNotEmpty) const SizedBox(width: 6),
+                if (statusLabel.isNotEmpty) SizedBox(width: S.s6),
                 AppIcon('chevron-right', size: 15, color: AppColors.fg4),
               ],
             ],
@@ -1230,7 +1230,7 @@ class TaskResultCard extends StatelessWidget {
           trailing: trailing,
         ),
         if (summary.isNotEmpty) ...[
-          const SizedBox(height: 6),
+          SizedBox(height: S.s6),
           ChatCardBody(
             child: CardMarkdownBody(body: summary, selectable: false),
           ),

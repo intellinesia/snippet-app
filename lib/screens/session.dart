@@ -258,7 +258,7 @@ class _SessionActionPanel extends StatelessWidget {
       body: SafeArea(
         child: Column(children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+            padding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s12, S.s12),
             child: Row(children: [
               Expanded(child: Text(title, style: TS.sectionTitle())),
               IconBtn('x',
@@ -268,7 +268,7 @@ class _SessionActionPanel extends StatelessWidget {
           Divider(height: 1, color: AppColors.border),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(S.s16),
               child: child,
             ),
           ),
@@ -885,11 +885,11 @@ class _SessionScreenState extends State<SessionScreen>
 
   Widget _settledNotice() => Container(
         margin: EdgeInsets.fromLTRB(
-            kMobile ? M.gutter : 20, 6, kMobile ? M.gutter : 20, 0),
-        padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
+            kMobile ? M.gutter : S.s20, S.s6, kMobile ? M.gutter : S.s20, 0),
+        padding: EdgeInsets.fromLTRB(S.of(10), S.s8, S.s8, S.s8),
         decoration: BoxDecoration(
           color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(R.lg),
         ),
         child: Row(children: [
           Container(
@@ -898,10 +898,10 @@ class _SessionScreenState extends State<SessionScreen>
             alignment: Alignment.center,
             decoration: BoxDecoration(
                 color: AppColors.surface3,
-                borderRadius: BorderRadius.circular(9)),
+                borderRadius: BorderRadius.circular(R.of(9))),
             child: AppIcon('archive', size: 15, color: AppColors.fg2),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: S.of(10)),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -916,7 +916,7 @@ class _SessionScreenState extends State<SessionScreen>
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Btn('Wake', small: true, variant: BtnVariant.secondary, onTap: _wake),
         ]),
       );
@@ -1488,11 +1488,11 @@ class _SessionScreenState extends State<SessionScreen>
                                   padding: EdgeInsets.fromLTRB(
                                       kMobile
                                           ? M.gutter
-                                          : (widget.embedded ? 0 : 20),
-                                      6,
+                                          : (widget.embedded ? 0 : S.s20),
+                                      S.s6,
                                       kMobile
                                           ? M.gutter
-                                          : (widget.embedded ? 0 : 20),
+                                          : (widget.embedded ? 0 : S.s20),
                                       0),
                                   child: ApprovalBar(
                                       events: events,
@@ -1510,11 +1510,11 @@ class _SessionScreenState extends State<SessionScreen>
                                   padding: EdgeInsets.fromLTRB(
                                       kMobile
                                           ? M.gutter
-                                          : (widget.embedded ? 0 : 20),
-                                      6,
+                                          : (widget.embedded ? 0 : S.s20),
+                                      S.s6,
                                       kMobile
                                           ? M.gutter
-                                          : (widget.embedded ? 0 : 20),
+                                          : (widget.embedded ? 0 : S.s20),
                                       0),
                                   // Keyed by the question set, so a new one
                                   // starts fresh (selection, step, review).
@@ -1568,13 +1568,15 @@ class _SessionScreenState extends State<SessionScreen>
                                                 !running &&
                                                 !widget.readOnly)
                                               Padding(
-                                                padding: const EdgeInsets.only(
-                                                    top: 48, bottom: 24),
+                                                padding: EdgeInsets.only(
+                                                    top: S
+                                                                        .of(48), bottom: S.s24),
                                                 child: Column(children: [
                                                   DottedMochi(
                                                       width:
                                                           kMobile ? 220 : 300),
-                                                  const SizedBox(height: 14),
+                                                  SizedBox(height: S
+                                                                          .of(14)),
                                                   Text('What are we making?',
                                                       style: sans(
                                                           kMobile ? 22 : 26,
@@ -1615,8 +1617,9 @@ class _SessionScreenState extends State<SessionScreen>
                                                   opacity: 0.5,
                                                   child: Padding(
                                                       padding:
-                                                          const EdgeInsets.only(
-                                                              bottom: 12),
+                                                          EdgeInsets.only(
+                                                              bottom: S
+                                                                          .s12),
                                                       child: Bubble(
                                                           mine: true,
                                                           text: _pending[pi],
@@ -1660,16 +1663,16 @@ class _SessionScreenState extends State<SessionScreen>
                                               scrollCacheExtent:
                                                   ScrollCacheExtent.pixels(400),
                                               padding: EdgeInsets.fromLTRB(
-                                                  kMobile ? M.gutter : 20,
+                                                  kMobile ? M.gutter : S.s20,
                                                   _glassHeader
-                                                      ? GlassTopFrame.inset + 12
+                                                      ? GlassTopFrame.inset + S.s12
                                                       : (_deskHeader
-                                                          ? _deskHeaderHeight + 8
-                                                          : 16),
-                                                  kMobile ? M.gutter : 20,
+                                                          ? _deskHeaderHeight + S.s8
+                                                          : S.s16),
+                                                  kMobile ? M.gutter : S.s20,
                                                   _glassHeader
-                                                      ? _composerH + 12
-                                                      : 24),
+                                                      ? _composerH + S.s12
+                                                      : S.s24),
                                               itemCount: timeline.length,
                                               itemBuilder: (context, index) {
                                                 final at =
@@ -1726,7 +1729,7 @@ class _SessionScreenState extends State<SessionScreen>
                                               settle: true, smooth: true);
                                         },
                                         child: Padding(
-                                          padding: const EdgeInsets.all(8),
+                                          padding: EdgeInsets.all(S.s8),
                                           child: AppIcon('chevron-down',
                                               size: 16, color: AppColors.fg3),
                                         ),

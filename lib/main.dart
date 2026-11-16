@@ -21,15 +21,15 @@ Widget _buildErrorWidget(FlutterErrorDetails details) {
     color: AppColors.bg,
     child: Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(S.s24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             AppIcon('alert-triangle', size: 28, color: AppColors.danger),
-            const SizedBox(height: 12),
+            SizedBox(height: S.s12),
             Text('This panel could not be displayed',
                 textAlign: TextAlign.center, style: TS.sectionTitle()),
-            const SizedBox(height: 6),
+            SizedBox(height: S.s6),
             Text('Close it and try again.',
                 textAlign: TextAlign.center, style: TS.meta()),
           ],

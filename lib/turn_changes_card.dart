@@ -42,11 +42,11 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
     if (total == 0) return const SizedBox.shrink();
     final hidden = total - files.length;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: S.s4),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(R.card),
         ),
         clipBehavior: Clip.antiAlias,
         child:
@@ -56,7 +56,7 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
             child: SizedBox(
               height: 46,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                padding: EdgeInsets.symmetric(horizontal: S.of(10)),
                 child: Row(children: [
                   Container(
                     width: 28,
@@ -64,10 +64,10 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                         color: AppColors.surface3,
-                        borderRadius: BorderRadius.circular(8)),
+                        borderRadius: BorderRadius.circular(R.md)),
                     child: AppIcon('file-diff', size: 15, color: AppColors.fg2),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: S.of(10)),
                   Expanded(
                     child: Text(
                         '$total ${total == 1 ? 'file' : 'files'} changed',
@@ -75,9 +75,9 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
                             sans(13, weight: W.label, color: AppColors.fg1)),
                   ),
                   _Bar(_n(e['add']), _n(e['del']), width: 44),
-                  const SizedBox(width: 10),
+                  SizedBox(width: S.of(10)),
                   _Delta(_n(e['add']), _n(e['del']), size: 12.5),
-                  const SizedBox(width: 6),
+                  SizedBox(width: S.s6),
                   AnimatedRotation(
                     turns: _open ? 0.25 : 0,
                     duration: Motion.base,
@@ -102,14 +102,14 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
                       child: SizedBox(
                         height: 32,
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
+                          padding: EdgeInsets.fromLTRB(S.of(14), 0, S.of(14), 0),
                           child: Row(children: [
                             FileGlyph(f.path.split('/').last, size: 15),
-                            const SizedBox(width: 10),
+                            SizedBox(width: S.of(10)),
                             Expanded(child: _Path(f.path)),
-                            const SizedBox(width: 10),
+                            SizedBox(width: S.of(10)),
                             _Bar(f.add, f.del, width: 28),
-                            const SizedBox(width: 10),
+                            SizedBox(width: S.of(10)),
                             SizedBox(
                                 width: 74,
                                 child: Align(
@@ -123,7 +123,7 @@ class _TurnChangesCardState extends State<TurnChangesCard> {
                     SizedBox(
                       height: 28,
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(39, 0, 14, 0),
+                        padding: EdgeInsets.fromLTRB(S.of(39), 0, S.of(14), 0),
                         child: Align(
                           alignment: Alignment.centerLeft,
                           child: Text('+$hidden more files',
@@ -172,7 +172,7 @@ class _Delta extends StatelessWidget {
     return Row(mainAxisSize: MainAxisSize.min, children: [
       if (add > 0)
         Text('+$add', style: sans(size, color: AppColors.ok, tabular: true)),
-      if (add > 0 && del > 0) const SizedBox(width: 6),
+      if (add > 0 && del > 0) SizedBox(width: S.s6),
       if (del > 0)
         Text('-$del',
             style: sans(size, color: AppColors.danger, tabular: true)),
@@ -193,7 +193,7 @@ class _Bar extends StatelessWidget {
     if (total == 0) return SizedBox(width: width);
     final share = (add / total).clamp(0.0, 1.0);
     return ClipRRect(
-      borderRadius: BorderRadius.circular(2),
+      borderRadius: BorderRadius.circular(R.of(2)),
       child: SizedBox(
         width: width,
         height: 4,

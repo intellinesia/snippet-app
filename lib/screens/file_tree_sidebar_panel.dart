@@ -329,7 +329,7 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
           physics: const AlwaysScrollableScrollPhysics(),
           // Horizontal insets belong to each child (the section header carries
           // its own), so the list itself only manages the top and tail.
-          padding: EdgeInsets.only(top: kMobile ? 8 : 0, bottom: 16),
+          padding: EdgeInsets.only(top: kMobile ? S.s8 : 0, bottom: S.s16),
           children: [
             if (widget.showHeader)
               ShellSectionHeader(
@@ -378,10 +378,10 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
                   ),
               ],
             ),
-            if (kMobile) _workspaceRow(wsName) else const SizedBox(height: 2),
+            if (kMobile) _workspaceRow(wsName) else SizedBox(height: S.s2),
             if (_loading && _listing == null)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: S.s24),
                 child: Center(
                   child: Spinner(size: 18),
                 ),
@@ -390,7 +390,7 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
               _rootError()
             else if (entries.isEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+                padding: EdgeInsets.fromLTRB(S.s20, S.of(18), S.s20, S.of(18)),
                 child: Text('Empty directory', style: TS.meta()),
               )
             else
@@ -427,10 +427,10 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
           padding: EdgeInsets.only(
               left: kSidebarContentInset +
                   kNavPadH +
-                  (depth + 1) * kTreeIndentStep,
+                  (depth + S.of(1)) * kTreeIndentStep,
               right: kSidebarContentInset,
-              top: 2,
-              bottom: 6),
+              top: S.s2,
+              bottom: S.s6),
           child: Text('Could not load folder',
               style: sans(11, color: AppColors.danger)),
         ));
@@ -448,7 +448,7 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
           padding: const EdgeInsets.symmetric(horizontal: kNavPadH),
           child: Row(children: [
             AppIcon('folder-open', size: 14, color: AppColors.fg3),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             Expanded(
               child: Text(wsName,
                   maxLines: 1,
@@ -460,10 +460,10 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
       );
 
   Widget _rootError() => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+        padding: EdgeInsets.fromLTRB(S.s20, S.of(18), S.s20, S.of(18)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(_error!, style: sans(12, color: AppColors.danger, height: 1.4)),
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           Btn('Retry', small: true, onTap: refresh),
         ]),
       );
@@ -491,7 +491,7 @@ class _FileTreeRow extends StatelessWidget {
     if (!kMobile) return _desk();
     return Padding(
       padding: EdgeInsets.only(
-        left: kSidebarContentInset + depth * (kMobile ? kTreeIndentStep : 14),
+        left: kSidebarContentInset + depth * (kMobile ? kTreeIndentStep : S.of(14)),
         right: kSidebarContentInset,
       ),
       child: Material(
@@ -508,8 +508,8 @@ class _FileTreeRow extends StatelessWidget {
               // expanded — a file must not shift left against its siblings.
               //
               // SQUARE, and the spinner is CENTERED inside it. A width-only
-              // `SizedBox(width: 16)` hands its child a TIGHT width of 16, so an
-              // inner `SizedBox(width: 11)` is enforced against minWidth=16 and
+              // `SizedBox(width: S.s16)` hands its child a TIGHT width of 16, so an
+              // inner `SizedBox(width: S.of(11))` is enforced against minWidth=16 and
               // the spinner renders 16 wide x 11 tall — a flattened oval.
               // Center gives the child loose constraints instead, so it stays
               // circular.
@@ -526,7 +526,7 @@ class _FileTreeRow extends StatelessWidget {
                           ))
                     : null,
               ),
-              const SizedBox(width: 4),
+              SizedBox(width: S.s4),
               if (kMobile)
                 hasError
                     ? AppIcon('folder', size: 14, color: AppColors.danger)
@@ -542,7 +542,7 @@ class _FileTreeRow extends StatelessWidget {
                         : entry.isDir
                             ? Colors.transparent
                             : fileTint(entry.name),
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(R.of(2)),
                   ),
                 ),
               SizedBox(width: kMobile ? 8 : 9),
@@ -566,16 +566,16 @@ class _FileTreeRow extends StatelessWidget {
 extension on _FileTreeRow {
   Widget _desk() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: EdgeInsets.symmetric(horizontal: S.s8),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(R.sm),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(R.sm),
           child: Container(
             height: 26,
-            padding: EdgeInsets.only(left: 6.0 + depth * 14, right: 8),
+            padding: EdgeInsets.only(left: S.of(6.0) + depth * S.of(14), right: S.s8),
             child: Row(children: [
               SizedBox(
                 width: 12,
@@ -588,12 +588,12 @@ extension on _FileTreeRow {
                             color: hasError ? AppColors.danger : AppColors.fg4))
                     : null,
               ),
-              const SizedBox(width: 5),
+              SizedBox(width: S.of(5)),
               hasError
                   ? AppIcon('folder', size: 14, color: AppColors.danger)
                   : FileGlyph(entry.name,
                       isDir: entry.isDir, open: expanded, size: 14),
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               Expanded(
                 child: Text(entry.name,
                     maxLines: 1,
@@ -872,10 +872,10 @@ class _FileSearchState extends State<_FileSearch> {
       // Compact header. The previous 14/12/10 padding around a 14px field made
       // the search row taller than any row in the panel it opens from.
       Padding(
-        padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
+        padding: EdgeInsets.fromLTRB(S.s12, S.of(9), S.s12, S.s8),
         child: Row(children: [
           AppIcon('search', size: 14, color: AppColors.fg4),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Expanded(
             child: TextField(
               controller: _ctrl,
@@ -900,20 +900,20 @@ class _FileSearchState extends State<_FileSearch> {
       Flexible(
         child: typed.isEmpty
             ? Padding(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(S.s12),
                 child: Center(
                     child:
                         Text('Type to search the workspace', style: TS.meta())),
               )
             : (_hits.isEmpty && !_crawling
                 ? Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(S.s12),
                     child: Center(
                         child: Text('No matching files', style: TS.meta())),
                   )
                 : ListView(
                     shrinkWrap: true,
-                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    padding: EdgeInsets.symmetric(vertical: S.s4),
                     children: [for (final h in _hits) _row(h)],
                   )),
       ),
@@ -931,10 +931,10 @@ class _FileSearchState extends State<_FileSearch> {
           },
           child: Container(
             height: kNavRowHeight,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: EdgeInsets.symmetric(horizontal: S.s12),
             child: Row(children: [
               AppIcon('file', size: 13, color: AppColors.fg3),
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               Expanded(
                   child: Text(h.name,
                       maxLines: 1,

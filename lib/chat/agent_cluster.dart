@@ -59,11 +59,9 @@ class _MoreDisc extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
-          color: AppColors.surface3,
-          shape: BoxShape.circle,
-          border: Border.all(color: readingBg, width: 2),
-        ),
+        decoration: avatarDecoration(size,
+            color: AppColors.surface3,
+            side: BorderSide(color: readingBg, width: 2)),
         alignment: Alignment.center,
         child: Text('+$count',
             maxLines: 1,

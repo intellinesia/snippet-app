@@ -1040,7 +1040,7 @@ class _Segmented extends StatelessWidget {
     return Glass(
       radius: BorderRadius.circular(R.pill),
       child: Container(
-        padding: const EdgeInsets.all(3),
+        padding: EdgeInsets.all(S.of(3)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           for (var i = 0; i < labels.length; i++)
             GestureDetector(
@@ -1088,7 +1088,7 @@ class _ContextMeter extends StatelessWidget {
     final frac = known ? (used / window).clamp(0.0, 1.0) : 0.0;
     final lit = (frac * 24).round();
     return Padding(
-      padding: EdgeInsets.fromLTRB(S.s16, 14, S.s16, S.s16),
+      padding: EdgeInsets.fromLTRB(S.s16, S.of(14), S.s16, S.s16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1101,7 +1101,7 @@ class _ContextMeter extends StatelessWidget {
             Text(known ? '${_k(used)} / ${_k(window)}' : 'Not measured yet',
                 style: mono(12, color: AppColors.fg3)),
           ]),
-          const SizedBox(height: 12),
+          SizedBox(height: S.s12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1118,7 +1118,7 @@ class _ContextMeter extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: S.of(14)),
           Btn('Compact now',
               full: true,
               small: !kMobile,
@@ -1140,10 +1140,10 @@ class _InfoCard extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: EdgeInsets.only(bottom: S.s12),
         child: Tactile(
-        radius: BorderRadius.circular(16),
+        radius: BorderRadius.circular(R.of(16)),
         child: Material(
         color: AppColors.surface2.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(R.of(16)),
         clipBehavior: Clip.antiAlias,
         child: Column(
           mainAxisSize: MainAxisSize.min,

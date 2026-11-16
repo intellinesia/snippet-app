@@ -258,7 +258,7 @@ class AgentSidePanel extends StatelessWidget {
   Widget _seg(String text, bool on, VoidCallback onTap,
       {VoidCallback? onClose}) {
     return Padding(
-      padding: const EdgeInsets.only(right: 2),
+      padding: EdgeInsets.only(right: S.s2),
       child: Material(
         color: on ? AppColors.tint2 : Colors.transparent,
         borderRadius: BorderRadius.circular(R.sm),
@@ -266,20 +266,20 @@ class AgentSidePanel extends StatelessWidget {
           borderRadius: BorderRadius.circular(R.sm),
           onTap: onTap,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(10, 0, onClose != null ? 6 : 10, 0),
+            padding: EdgeInsets.fromLTRB(S.of(10), 0, onClose != null ? S.s6 : S.of(10), 0),
             child: SizedBox(
               height: 28,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Text(text, style: TS.ui(on ? AppColors.fg1 : AppColors.fg3)),
                 if (onClose != null) ...[
-                  const SizedBox(width: 5),
+                  SizedBox(width: S.of(5)),
                   Tooltip(
                     message: 'Close tab',
                     child: GestureDetector(
                       onTap: onClose,
                       behavior: HitTestBehavior.opaque,
                       child: Padding(
-                        padding: const EdgeInsets.all(2),
+                        padding: EdgeInsets.all(S.s2),
                         child: AppIcon('x', size: 11, color: AppColors.fg3),
                       ),
                     ),
@@ -302,7 +302,7 @@ class AgentSidePanel extends StatelessWidget {
         if (readouts.isNotEmpty)
         Container(
           height: 46,
-          padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
+          padding: EdgeInsets.fromLTRB(S.of(10), 0, S.s8, 0),
           alignment: Alignment.centerLeft,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,

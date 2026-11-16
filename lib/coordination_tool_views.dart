@@ -354,13 +354,13 @@ class _ItemList extends StatelessWidget {
     final m = meta(item);
     final t = title(item);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: S.s4),
       child: Row(
         crossAxisAlignment:
             multiline ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
           Padding(
-            padding: EdgeInsets.only(top: multiline ? 6 : 0),
+            padding: EdgeInsets.only(top: multiline ? S.s6 : 0),
             child: Container(
               width: 6,
               height: 6,
@@ -368,7 +368,7 @@ class _ItemList extends StatelessWidget {
                   color: _statusColor(st), shape: BoxShape.circle),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: S.of(10)),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,7 +386,7 @@ class _ItemList extends StatelessWidget {
             ),
           ),
           if (st.isNotEmpty) ...[
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             Text(_statusLabel(st), style: _label(_statusColor(st))),
           ],
         ],
@@ -426,16 +426,16 @@ class _Header extends StatelessWidget {
                       weight: W.label, color: AppColors.fg1)),
             ),
             if (status.isNotEmpty) ...[
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Padding(
-                padding: const EdgeInsets.only(top: 3),
+                padding: EdgeInsets.only(top: S.of(3)),
                 child: Text(_statusLabel(status),
                     style: _label(_statusColor(status))),
               ),
             ],
           ]),
           if (meta.isNotEmpty) ...[
-            const SizedBox(height: 2),
+            SizedBox(height: S.s2),
             Text(meta, style: _label(AppColors.fg3)),
           ],
         ],
@@ -483,12 +483,12 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 10),
+        padding: EdgeInsets.only(top: S.of(10)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label, style: _label(AppColors.fg3)),
-            const SizedBox(height: 6),
+            SizedBox(height: S.s6),
             child,
           ],
         ),
@@ -532,7 +532,7 @@ class _Messages extends StatelessWidget {
       children: [
         for (var i = 0; i < messages.length; i++)
           Padding(
-            padding: EdgeInsets.only(top: i == 0 ? 0 : 14),
+            padding: EdgeInsets.only(top: i == 0 ? 0 : S.of(14)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -545,7 +545,7 @@ class _Messages extends StatelessWidget {
                         _s(messages[i]['at']),
                     ].join(' · '),
                     style: _label(AppColors.fg3)),
-                const SizedBox(height: 4),
+                SizedBox(height: S.s4),
                 _Markdown(_s(messages[i]['body'])),
               ],
             ),

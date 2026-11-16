@@ -411,11 +411,11 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
           child: SafeArea(
             bottom: false,
             child: ListView(
-              padding: EdgeInsets.fromLTRB(M.gutter, 24, M.gutter, 32),
+              padding: EdgeInsets.fromLTRB(M.gutter, S.s24, M.gutter, S.s32),
               children: [
                 Text('Could not load agents',
                     style: sans(13, color: AppColors.fg2)),
-                const SizedBox(height: 10),
+                SizedBox(height: S.of(10)),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Btn('Retry', small: true, onTap: refresh),
@@ -427,12 +427,12 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       }
       return Container(
         color: kMobile ? AppColors.pageBg : Colors.transparent,
-        padding: const EdgeInsets.fromLTRB(16, 28, 16, 16),
+        padding: EdgeInsets.fromLTRB(S.s16, S.of(28), S.s16, S.s16),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Text('Could not load agents',
               textAlign: TextAlign.center,
               style: sans(13, color: AppColors.fg2)),
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           Btn('Retry', small: true, onTap: refresh),
         ]),
       );
@@ -528,11 +528,11 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         ? null
         : error != null && agents.isEmpty
             ? Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
+                padding: EdgeInsets.symmetric(vertical: S.s20),
                 child: Column(children: [
                   Text('Could not load agents',
                       style: sans(13, color: AppColors.fg2)),
-                  const SizedBox(height: 10),
+                  SizedBox(height: S.of(10)),
                   Btn('Retry', small: true, onTap: refresh),
                 ]),
               )
@@ -595,7 +595,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
               if (pinnedRows.isNotEmpty) {
                 children.add(Padding(
                   padding:
-                      EdgeInsets.fromLTRB(M.gutter, 14, M.gutter, 4),
+                      EdgeInsets.fromLTRB(M.gutter, S.of(14), M.gutter, S.s4),
                   child: Text('Pinned',
                       style: sans(13, weight: W.label, color: AppColors.fg3)),
                 ));
@@ -613,7 +613,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 if (grp != AgentGroup.recent || pinnedRows.isNotEmpty) {
                   children.add(Padding(
                     padding: EdgeInsets.fromLTRB(
-                        M.gutter, 14, M.gutter, 4),
+                        M.gutter, S.of(14), M.gutter, S.s4),
                     child: Text(label,
                         style: sans(13, weight: W.label, color: color)),
                   ));
@@ -654,7 +654,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.fromLTRB(
-                  0, 8, 0, widget.bottomPadding ?? 88),
+                  0, S.s8, 0, widget.bottomPadding ?? 88),
               children: children,
             );
           },
@@ -682,7 +682,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
               onRefresh: refresh,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(8, 4, 8, 18),
+                padding: EdgeInsets.fromLTRB(S.s8, S.s4, S.s8, S.of(18)),
                 children: [
                   if (mcCard != null) mcCard,
                   ...desktopChildren,
@@ -703,7 +703,7 @@ class _EmptySearch extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: EdgeInsets.fromLTRB(
-            kMobile ? 0 : 20, kMobile ? 8 : 24, kMobile ? 0 : 20, 20),
+            kMobile ? 0 : S.s20, kMobile ? S.s8 : S.s24, kMobile ? 0 : S.s20, S.s20),
         child: Text(
           'No agents match the search.',
           style: sans(12, color: AppColors.fg3, height: 1.5),
@@ -715,7 +715,7 @@ class _EmptyTeam extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: EdgeInsets.fromLTRB(
-            kMobile ? 0 : 20, kMobile ? 8 : 24, kMobile ? 0 : 20, 20),
+            kMobile ? 0 : S.s20, kMobile ? S.s8 : S.s24, kMobile ? 0 : S.s20, S.s20),
         child: Text(
           'No agents yet.\n\nBuild one and it appears here, along with the '
           'sessions it is working in.',
@@ -745,7 +745,7 @@ class _CreateMenu extends StatelessWidget {
         borderRadius: BorderRadius.circular(R.lg),
         child: Container(
           constraints: const BoxConstraints(minHeight: 60),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s8),
           child: Row(children: [
             Container(
               width: 36,
@@ -757,7 +757,7 @@ class _CreateMenu extends StatelessWidget {
               alignment: Alignment.center,
               child: AppIcon(icon, size: 18, color: iconColor),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: S.s12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -766,7 +766,7 @@ class _CreateMenu extends StatelessWidget {
                   Text(title,
                       style: sans(15,
                           weight: W.label, color: AppColors.fg1)),
-                  const SizedBox(height: 1),
+                  SizedBox(height: S.of(1)),
                   Text(subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -790,10 +790,10 @@ class _CreateMenu extends StatelessWidget {
         borderRadius: BorderRadius.circular(R.sm),
         child: Container(
           constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.of(5)),
           child: Row(children: [
             AppIcon(icon, size: 15, color: AppColors.fg3),
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -803,7 +803,7 @@ class _CreateMenu extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TS.ui(AppColors.fg1)),
-                  const SizedBox(height: 1),
+                  SizedBox(height: S.of(1)),
                   Text(subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

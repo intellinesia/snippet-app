@@ -157,7 +157,7 @@ class AgentAppearancePicker extends StatelessWidget {
 
           return Padding(
             padding: kMobile
-                ? EdgeInsets.fromLTRB(M.gutter, 4, M.gutter, 12)
+                ? EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s12)
                 : EdgeInsets.all(S.s12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

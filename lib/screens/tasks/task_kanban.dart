@@ -214,11 +214,11 @@ class _TaskKanbanState extends State<TaskKanban> {
         ? '$active active · $needsYou needs you'
         : '$active active';
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 14),
+      padding: EdgeInsets.fromLTRB(S.s24, S.s20, S.s24, S.of(14)),
       child: Row(children: [
         Text('Tasks',
             style: sans(16, weight: W.label, color: AppColors.fg1)),
-        const SizedBox(width: 10),
+        SizedBox(width: S.of(10)),
         if (showCounts)
           Text(sub, style: sans(12, color: AppColors.fg4, tabular: true)),
         const Spacer(),
@@ -230,7 +230,7 @@ class _TaskKanbanState extends State<TaskKanban> {
             onChanged: (v) => setState(() => _query = v),
           ),
         ),
-        const SizedBox(width: 10),
+        SizedBox(width: S.of(10)),
         Btn('New task',
             small: true, variant: BtnVariant.secondary, onTap: _create),
       ]),
@@ -245,27 +245,27 @@ class _TaskKanbanState extends State<TaskKanban> {
       return Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Text('Could not load tasks', style: sans(13, color: AppColors.fg2)),
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           Btn('Retry', small: true, onTap: _feed.refresh),
         ]),
       );
     }
     final visible = _filteredTasks();
     return LayoutBuilder(builder: (context, constraints) {
-      const hPad = 24.0;
-      const gap = 12.0;
+      final hPad = S.s24;
+      final gap = S.s12;
       final available = constraints.maxWidth - hPad * 2 - gap * 3;
       final colWidth = math.max(200.0, available / 4);
       _columnWidth = colWidth;
       final needsScroll =
           colWidth * 4 + gap * 3 + hPad * 2 > constraints.maxWidth + 0.5;
       final row = Padding(
-        padding: const EdgeInsets.fromLTRB(hPad, 0, hPad, 20),
+        padding: EdgeInsets.fromLTRB(hPad, 0, hPad, S.s20),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (var i = 0; i < _KanbanColumn.values.length; i++) ...[
-              if (i > 0) const SizedBox(width: gap),
+              if (i > 0) SizedBox(width: gap),
               _column(_KanbanColumn.values[i],
                   _itemsFor(_KanbanColumn.values[i], visible)),
             ],
@@ -340,7 +340,7 @@ class _TaskKanbanState extends State<TaskKanban> {
   }
 
   Widget _columnHeader(_KanbanColumn column, int count) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+        padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
         child: Row(children: [
           Container(
             width: 7,
@@ -348,10 +348,10 @@ class _TaskKanbanState extends State<TaskKanban> {
             decoration:
                 BoxDecoration(color: column.dotColor, shape: BoxShape.circle),
           ),
-          const SizedBox(width: 6),
+          SizedBox(width: S.s6),
           Text(column.label,
               style: sans(12, weight: W.label, color: AppColors.fg3)),
-          const SizedBox(width: 6),
+          SizedBox(width: S.s6),
           Text('$count', style: mono(11, color: AppColors.fg4)),
         ]),
       );
@@ -404,7 +404,7 @@ class _TaskKanbanState extends State<TaskKanban> {
           : null,
     );
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: S.s8),
       child: Draggable<TaskItem>(
         data: task,
         onDragStarted: () => setState(() => _dragging = task),
@@ -483,7 +483,7 @@ class _TaskCardState extends State<_TaskCard> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: Motion.fast,
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
           decoration: BoxDecoration(
             color: _hover || widget.lifted
                 ? (kMobile ? AppColors.surface2 : AppColors.tint3)
@@ -514,7 +514,7 @@ class _TaskCardState extends State<_TaskCard> {
                     weight: W.label, height: 1.35, color: AppColors.fg1),
               ),
               if (widget.step.isNotEmpty) ...[
-                const SizedBox(height: 6),
+                SizedBox(height: S.s6),
                 Text(
                   widget.step,
                   maxLines: 2,
@@ -523,11 +523,11 @@ class _TaskCardState extends State<_TaskCard> {
                 ),
               ],
               if (isAgent || metaText.isNotEmpty || age.isNotEmpty) ...[
-                const SizedBox(height: 6),
+                SizedBox(height: S.s6),
                 Row(children: [
                   if (isAgent) ...[
                     AgentMochi(t.createdById, size: 14),
-                    const SizedBox(width: 6),
+                    SizedBox(width: S.s6),
                   ],
                   if (metaText.isNotEmpty)
                     Expanded(
@@ -541,7 +541,7 @@ class _TaskCardState extends State<_TaskCard> {
                   else
                     const Spacer(),
                   if (age.isNotEmpty) ...[
-                    const SizedBox(width: 8),
+                    SizedBox(width: S.s8),
                     Text(
                       age,
                       style: sans(12,
@@ -554,7 +554,7 @@ class _TaskCardState extends State<_TaskCard> {
                 ]),
               ],
               if (showReviewActions) ...[
-                const SizedBox(height: 10),
+                SizedBox(height: S.of(10)),
                 Row(children: [
                   Btn(
                     'Approve',
@@ -562,7 +562,7 @@ class _TaskCardState extends State<_TaskCard> {
                     variant: BtnVariant.secondary,
                     onTap: widget.onApprove,
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                   Btn(
                     'Send back',
                     small: true,

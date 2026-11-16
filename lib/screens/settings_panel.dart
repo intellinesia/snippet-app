@@ -125,7 +125,7 @@ class _MachineListState extends State<MachineList> {
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: S.of(10)),
           Expanded(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -163,7 +163,7 @@ class _MachineListState extends State<MachineList> {
         },
         child: Padding(
           padding: EdgeInsets.fromLTRB(
-              S.s12, kMobile ? 14 : 8, S.s12, kMobile ? 14 : 8),
+              S.s12, kMobile ? S.of(14 ) : S.s8, S.s12, kMobile ? S.of(14 ) : S.s8),
           child: Row(children: [
             SizedBox(
               width: kMobile ? 8 : 16,
@@ -174,7 +174,7 @@ class _MachineListState extends State<MachineList> {
                 child: AppIcon('plus', size: 16, color: AppColors.accent),
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             Text('Add machine', style: TS.label(AppColors.accent)),
           ]),
         ),
@@ -519,7 +519,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                       children: [
                         Container(
                           height: 56,
-                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          padding: EdgeInsets.symmetric(horizontal: S.of(18)),
                           alignment: Alignment.centerLeft,
                           child: Text('Settings',
                               style: sans(15,
@@ -527,13 +527,13 @@ class SettingsPanelState extends State<SettingsPanel> {
                         ),
                         Expanded(
                           child: ListView(
-                            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                            padding: EdgeInsets.fromLTRB(S.s8, 0, S.s8, S.s8),
                             children: [
                               for (final (page, icon, label) in _nav) ...[
                                 if (_navGroups[page] != null)
                                   Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        10, 14, 10, 4),
+                                    padding: EdgeInsets.fromLTRB(
+                                        S.of(10), S.of(14), S.of(10), S.s4),
                                     child: Text(_navGroups[page]!.toUpperCase(),
                                         style: TS.overline()),
                                   ),
@@ -543,7 +543,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(18, 10, 16, 16),
+                          padding: EdgeInsets.fromLTRB(S.of(18), S.of(10), S.s16, S.s16),
                           child: Row(children: [
                             Container(
                               width: 7,
@@ -553,7 +553,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                                 shape: BoxShape.circle,
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: S.s8),
                             Expanded(
                               child: Text(
                                 widget.active?.label.isNotEmpty == true
@@ -576,7 +576,7 @@ class SettingsPanelState extends State<SettingsPanel> {
             return Column(children: [
               Container(
                 height: 46,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                padding: EdgeInsets.symmetric(horizontal: S.of(14)),
                 decoration: BoxDecoration(
                   color: AppColors.tint1,
                   border: Border(bottom: BorderSide(color: AppColors.border)),
@@ -869,23 +869,23 @@ class SettingsPanelState extends State<SettingsPanel> {
   Widget _settingsNavRow(SettingsPage page, String icon, String label) {
     final selected = _page == page;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: EdgeInsets.only(bottom: S.s2),
       child: Material(
         color: selected ? AppColors.tint2 : Colors.transparent,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(R.of(9)),
         child: InkWell(
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(R.of(9)),
           onTap: () {
             setState(() => _page = page);
             _deskSectionKey.currentState?.resetTransient();
           },
           child: Container(
             height: 34,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: EdgeInsets.symmetric(horizontal: S.of(10)),
             child: Row(children: [
               AppIcon(icon,
                   size: 15, color: selected ? AppColors.accent : AppColors.fg3),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Expanded(
                 child: Text(label,
                     maxLines: 1,
@@ -903,11 +903,11 @@ class SettingsPanelState extends State<SettingsPanel> {
   Widget _navChips() {
     return ListView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.s4),
       children: [
         for (final (page, icon, label) in _nav)
           Padding(
-            padding: const EdgeInsets.only(right: 6),
+            padding: EdgeInsets.only(right: S.s6),
             child: Material(
               color: _page == page
                   ? (kMobile ? AppColors.surface3 : AppColors.tint2)
@@ -1017,14 +1017,14 @@ class SettingsPanelState extends State<SettingsPanel> {
         Row(children: [
           IconBtn('chevron-left',
               size: 28, iconSize: 15, tooltip: 'Back', onTap: back),
-          const SizedBox(width: 6),
+          SizedBox(width: S.s6),
           Text('Connect a machine',
               style: sans(17,
                   weight: FontWeight.w500,
                   spacing: -0.2,
                   color: AppColors.fg1)),
         ]),
-        const SizedBox(height: 22),
+        SizedBox(height: S.of(22)),
         SettingsGroup(
           header: 'On the other machine',
           footer: 'It prints a link and a QR code. If snippet is already '
@@ -1061,13 +1061,13 @@ class SettingsPanelState extends State<SettingsPanel> {
           if (_addMachineError != null)
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.only(left: 4, right: 12),
+                padding: EdgeInsets.only(left: S.s4, right: S.s12),
                 child: Text(_addMachineError!,
                     style: sans(12, height: 1.4, color: AppColors.danger)),
               ),
             ),
           SettingsPill('Cancel', onTap: _addMachineBusy ? null : back),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           SettingsPill(_addMachineBusy ? 'Connecting…' : 'Connect',
               onTap: canConnect ? _submitAddMachine : null),
         ]),
@@ -1087,7 +1087,7 @@ class SettingsPanelState extends State<SettingsPanel> {
             ? () => _selectInstance(i)
             : null,
         child: Padding(
-        padding: EdgeInsets.fromLTRB(compact ? 14 : S.s12, S.s8, S.s4, S.s8),
+        padding: EdgeInsets.fromLTRB(compact ? S.of(14 ) : S.s12, S.s8, S.s4, S.s8),
         child: Row(
           children: [
             if (compact)
@@ -1168,7 +1168,7 @@ class SettingsPanelState extends State<SettingsPanel> {
     }
     return Padding(
       padding: kMobile
-          ? const EdgeInsets.fromLTRB(16, 14, 16, 14)
+          ? EdgeInsets.fromLTRB(S.s16, S.of(14), S.s16, S.of(14))
           : EdgeInsets.fromLTRB(S.s12, S.s12, S.s12, S.s12),
       child: Row(children: [
         if (!kMobile) ...[
@@ -1176,7 +1176,7 @@ class SettingsPanelState extends State<SettingsPanel> {
           SizedBox(width: S.s12),
         ] else ...[
           AppIcon('bell', size: 19, color: AppColors.fg3),
-          const SizedBox(width: 14),
+          SizedBox(width: S.of(14)),
         ],
         Expanded(
           child: Column(
@@ -1748,9 +1748,9 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     Color? titleColor,
   }) {
     final body = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.of(11)),
       child: Row(children: [
-        if (leading != null) ...[leading, const SizedBox(width: 12)],
+        if (leading != null) ...[leading, SizedBox(width: S.s12)],
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1762,7 +1762,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
                   style: sans(13,
                       weight: W.label, color: titleColor ?? AppColors.fg1)),
               if (subtitle != null && subtitle.isNotEmpty) ...[
-                const SizedBox(height: 2),
+                SizedBox(height: S.s2),
                 Text(subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1771,7 +1771,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
             ],
           ),
         ),
-        if (trailing != null) ...[const SizedBox(width: 12), trailing],
+        if (trailing != null) ...[SizedBox(width: S.s12), trailing],
       ]),
     );
     if (onTap == null) return body;
@@ -1787,10 +1787,10 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     final iconColor = connected ? AppColors.ok : AppColors.fg4;
     if (_renamingUrl == i.url) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.of(9)),
         child: Row(children: [
           Icon(LucideIcons.laptop, size: 16, color: iconColor),
-          const SizedBox(width: 12),
+          SizedBox(width: S.s12),
           Expanded(
             child: InlineEditField(
               controller: _renameController,
@@ -1820,7 +1820,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         Text(connected ? 'Connected' : 'Offline',
             style: sans(13, color: AppColors.fg4)),
-        const SizedBox(width: 6),
+        SizedBox(width: S.s6),
         _machineMenu(i, connect: !isActive && widget.onSelect != null),
       ]),
     );
@@ -2064,12 +2064,12 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
       const SettingsGroupLabel('Here'),
       ListGroup(children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+          padding: EdgeInsets.fromLTRB(S.of(14), S.of(10), S.of(14), S.s12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text('Link', style: sans(15, color: AppColors.fg1)),
-              const SizedBox(height: 6),
+              SizedBox(height: S.s6),
               SettingsField(
                 controller: _addMachinePaste,
                 hint: 'https://…?token=…',
@@ -2420,11 +2420,11 @@ class AppearanceScreen extends StatelessWidget {
 
         final paletteChildren = <Widget>[
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.of(14)),
             child: _ThemeCardCarousel(client: effectiveClient),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.of(14)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -2433,7 +2433,7 @@ class AppearanceScreen extends StatelessWidget {
                     Text('Accent colour',
                         style: sans(kMobile ? 15 : 13,
                             weight: W.label, color: AppColors.fg1)),
-                    const SizedBox(width: 8),
+                    SizedBox(width: S.s8),
                     Text(
                       custom == null
                           ? 'Theme default (${base.label})'
@@ -2442,7 +2442,7 @@ class AppearanceScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: S.of(10)),
                 _AccentSwatchStrip(client: effectiveClient),
               ],
             ),
@@ -2450,11 +2450,11 @@ class AppearanceScreen extends StatelessWidget {
         ];
         final typographyChildren = <Widget>[
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.of(14)),
             child: _FontCardCarousel(mono: false, client: effectiveClient),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.of(14)),
             child: _FontCardCarousel(mono: true, client: effectiveClient),
           ),
         ];
@@ -2613,7 +2613,7 @@ class _ChromeOpacityRow extends StatelessWidget {
                     child: const Text('Reset')),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+            padding: EdgeInsets.fromLTRB(S.of(14), 0, S.of(14), S.s8),
             child: SliderTheme(
               data: SliderThemeData(
                 trackHeight: 3,
@@ -2714,7 +2714,7 @@ class _ChatWallpaperPicker extends StatelessWidget {
             ),
             if (img != null)
               Padding(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                padding: EdgeInsets.fromLTRB(S.of(14), 0, S.of(14), S.s8),
                 child: Row(children: [
                   Text('Strength', style: sans(12, color: AppColors.fg3)),
                   Expanded(
@@ -2936,13 +2936,13 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: EdgeInsets.only(bottom: S.of(10)),
               child: Row(
                 children: [
                   Text('Theme',
                       style: sans(kMobile ? 15 : 13,
                           weight: W.label, color: AppColors.fg1)),
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                   Expanded(
                     child: Text(
                       '$activeLabel · ${items.length} palettes',
@@ -2959,7 +2959,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                       tooltip: 'Scroll left',
                       onTap: () => _step(-340),
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: S.s4),
                     IconBtn(
                       'chevron-right',
                       size: 24,
@@ -2977,7 +2977,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                 controller: _scroll,
                 scrollDirection: Axis.horizontal,
                 itemCount: items.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                separatorBuilder: (_, __) => SizedBox(width: S.of(10)),
                 itemBuilder: (context, i) {
                   final item = items[i];
                   final compiled = allPresets
@@ -3018,10 +3018,10 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                         children: [
                           Container(
                             height: 82,
-                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                            padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
                             decoration: BoxDecoration(
                               color: bg,
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(R.card),
                               border: Border.all(
                                 color: selected ? AppColors.fg1 : border2,
                                 width: selected ? 1.8 : 1.0,
@@ -3042,13 +3042,13 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                                         height: 1,
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    SizedBox(width: S.s8),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 3),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: S.s6, vertical: S.of(3)),
                                       decoration: BoxDecoration(
                                         color: surface3,
-                                        borderRadius: BorderRadius.circular(4),
+                                        borderRadius: BorderRadius.circular(R.xs),
                                       ),
                                       child: Text(
                                         '~/',
@@ -3066,7 +3066,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                                       height: 22,
                                       decoration: BoxDecoration(
                                         color: accent,
-                                        borderRadius: BorderRadius.circular(4),
+                                        borderRadius: BorderRadius.circular(R.xs),
                                       ),
                                     ),
                                   ],
@@ -3094,7 +3094,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          SizedBox(height: S.s6),
                           Text(
                             item.name,
                             maxLines: 1,
@@ -3106,13 +3106,13 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                             ),
                           ),
                           if (item.isAgent) ...[
-                            const SizedBox(height: 2),
+                            SizedBox(height: S.s2),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 AgentMochi(item.agentId, size: 12),
-                                const SizedBox(width: 4),
+                                SizedBox(width: S.s4),
                                 Flexible(
                                   child: Text(
                                     _agentNames[item.agentId] ?? item.agentId,
@@ -3124,7 +3124,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                               ],
                             ),
                           ] else if (item.isUser) ...[
-                            const SizedBox(height: 2),
+                            SizedBox(height: S.s2),
                             Text(
                               'Yours',
                               maxLines: 1,
@@ -3187,7 +3187,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: EdgeInsets.only(bottom: S.of(10)),
               child: Row(
                 children: [
                   Text(
@@ -3195,7 +3195,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                     style: sans(kMobile ? 15 : 13,
                         weight: W.label, color: AppColors.fg1),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                   Expanded(
                     child: Text(
                       '${active.label} · ${active.description}',
@@ -3205,7 +3205,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                     ),
                   ),
                   if (!kMobile) ...[
-                    const SizedBox(width: 8),
+                    SizedBox(width: S.s8),
                     IconBtn(
                       'chevron-left',
                       size: 24,
@@ -3213,7 +3213,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                       tooltip: 'Scroll left',
                       onTap: () => _step(-320),
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: S.s4),
                     IconBtn(
                       'chevron-right',
                       size: 24,
@@ -3231,7 +3231,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                 controller: _scroll,
                 scrollDirection: Axis.horizontal,
                 itemCount: fonts.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                separatorBuilder: (_, __) => SizedBox(width: S.of(10)),
                 itemBuilder: (context, i) {
                   final font = fonts[i];
                   final selected = font.family == active.family;
@@ -3252,10 +3252,10 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                         children: [
                           Container(
                             height: 76,
-                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                            padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
                             decoration: BoxDecoration(
                               color: AppColors.bg,
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(R.card),
                               border: Border.all(
                                 color: selected
                                     ? AppColors.fg1
@@ -3309,7 +3309,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          SizedBox(height: S.s6),
                           Text(
                             font.label,
                             maxLines: 1,
@@ -3359,10 +3359,10 @@ class _AccentSwatchStrip extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s6),
                 decoration: BoxDecoration(
                   color: custom == null ? AppColors.accentBg : AppColors.tint2,
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(R.pill),
                   border: Border.all(
                     color: custom == null
                         ? AppColors.accentLine
@@ -3484,13 +3484,13 @@ class _AppearancePreviewCard extends StatelessWidget {
   }
 
   Widget _home(SessionInfo live, SessionInfo row) => Padding(
-        padding: const EdgeInsets.only(top: 4),
+        padding: EdgeInsets.only(top: S.s4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
               height: 40,
-              padding: const EdgeInsets.all(3),
+              padding: EdgeInsets.all(S.of(3)),
               decoration: BoxDecoration(
                 color: AppColors.tint2,
                 borderRadius: BorderRadius.circular(R.pill),
@@ -3501,7 +3501,7 @@ class _AppearancePreviewCard extends StatelessWidget {
               ]),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 18, 4, 0),
+              padding: EdgeInsets.fromLTRB(S.s4, S.of(18), S.s4, 0),
               child: Text.rich(TextSpan(children: [
                 TextSpan(
                     text: '48.6M',
@@ -3561,7 +3561,7 @@ class _V5SettingsRow extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 46),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: S.s8),
           child: Row(children: [
             leading,
             SizedBox(width: S.s12),

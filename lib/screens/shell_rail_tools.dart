@@ -38,7 +38,7 @@ Future<void> showGoalPopover({
           elevation: 4,
           shadowColor: Colors.black.withValues(alpha: 0.4),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(S.s12),
             child: GoalPopover(
               onSet: (text) {
                 Navigator.pop(context);
@@ -110,7 +110,7 @@ List<Widget> buildShellRailTools({
             enabled: false,
             height: 64,
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
+              padding: EdgeInsets.symmetric(vertical: S.s6),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -119,7 +119,7 @@ List<Widget> buildShellRailTools({
                           child: Text('Context', style: TS.ui())),
                       Text('${k(used)} / ${k(win)}', style: TS.meta()),
                     ]),
-                    const SizedBox(height: 10),
+                    SizedBox(height: S.of(10)),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -156,7 +156,7 @@ List<Widget> buildShellRailTools({
                         () => onSessionAction('compact')),
                     child: Container(
                       height: 30,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: EdgeInsets.symmetric(horizontal: S.s12),
                       alignment: Alignment.center,
                       child: Text('Compact now', style: TS.ui(AppColors.fg1)),
                     ),

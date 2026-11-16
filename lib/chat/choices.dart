@@ -138,13 +138,13 @@ class _ChoicePill extends StatelessWidget {
             constraints: BoxConstraints(minHeight: minHeight),
             child: Padding(
               padding: EdgeInsets.symmetric(
-                  horizontal: 14, vertical: verticalPadding),
+                  horizontal: S.of(14), vertical: verticalPadding),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (picked) ...[
                     AppIcon('check', size: 12, color: ink),
-                    const SizedBox(width: 6),
+                    SizedBox(width: S.s6),
                   ],
                   Flexible(
                     child: Text(

@@ -237,7 +237,8 @@ class NotificationStack extends StatelessWidget {
                     weight: W.label, color: AppColors.fg1)),
             SizedBox(width: S.s8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              padding:
+                  EdgeInsets.symmetric(horizontal: S.s6, vertical: S.of(1)),
               decoration: BoxDecoration(
                 color: AppColors.surface3,
                 borderRadius: BorderRadius.circular(R.pill),
@@ -303,7 +304,8 @@ class _Toggle extends StatelessWidget {
           : AppColors.surface3,
       child: Container(
         constraints: BoxConstraints(minHeight: kMobile ? 36 : 26),
-        padding: EdgeInsets.fromLTRB(tones.isEmpty ? 10 : 8, 0, 8, 0),
+        padding:
+            EdgeInsets.fromLTRB(tones.isEmpty ? S.of(10) : S.s8, 0, S.s8, 0),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           if (tones.isNotEmpty) ...[
             SizedBox(
@@ -353,7 +355,7 @@ class _QuietButton extends StatelessWidget {
       hoverColor: AppColors.surface3,
       child: Container(
         height: kMobile ? 36 : 26,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: EdgeInsets.symmetric(horizontal: S.of(10)),
         child: Center(
           widthFactor: 1,
           child: Text(label,

@@ -214,7 +214,7 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
     final body = sans(dense ? 13 : 14, height: 1.45, color: AppColors.fg2);
     // Everything under the header lines up with the title, past the dot.
     Widget indented(Widget child, {double top = 6}) =>
-        Padding(padding: EdgeInsets.only(left: 16, top: top), child: child);
+        Padding(padding: EdgeInsets.only(left: S.s16, top: top), child: child);
 
     return Container(
       decoration: BoxDecoration(
@@ -228,13 +228,13 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
           onTap: widget.detail ? null : () => _open(context),
           child: Padding(
             padding:
-                EdgeInsets.fromLTRB(12, dense ? 9 : 12, 12, dense ? 10 : 12),
+                EdgeInsets.fromLTRB(S.s12, dense ? S.of(9) : S.s12, S.s12, dense ? S.of(10) : S.s12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Padding(
-                    padding: EdgeInsets.only(top: dense ? 6 : 8),
+                    padding: EdgeInsets.only(top: dense ? S.s6 : S.s8),
                     child: Container(
                       width: 6,
                       height: 6,
@@ -242,7 +242,7 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
                           BoxDecoration(color: toneFg, shape: BoxShape.circle),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: S.of(10)),
                   Expanded(
                     child: Text(lane.title,
                         maxLines: 2,
@@ -251,9 +251,9 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
                             ? sans(13, weight: W.label, color: AppColors.fg1)
                             : TS.rowTitle()),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: S.of(10)),
                   Padding(
-                    padding: EdgeInsets.only(top: dense ? 3 : 4),
+                    padding: EdgeInsets.only(top: dense ? S.of(3) : S.s4),
                     child: LaneWho(
                         client: widget.client,
                         agent: MediaQuery.sizeOf(context).width < 360
@@ -264,9 +264,9 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
                             : widget.sessionProfile,
                         maxTextWidth: 64),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                   Padding(
-                    padding: EdgeInsets.only(top: dense ? 3 : 4),
+                    padding: EdgeInsets.only(top: dense ? S.of(3) : S.s4),
                     child: Text(status,
                         style: sans(12, weight: W.label, color: toneFg)),
                   ),
@@ -274,7 +274,7 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
                 if (activity != null && activity.isNotEmpty && lane.running)
                   indented(Row(children: [
                     AppIcon('terminal', size: 11, color: AppColors.fg3),
-                    const SizedBox(width: 6),
+                    SizedBox(width: S.s6),
                     Expanded(
                       child: Text(activity,
                           maxLines: 2,
@@ -330,12 +330,12 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
                   toast(context, 'Copied');
                 },
                 child: Padding(
-                  padding: const EdgeInsets.all(4),
+                  padding: EdgeInsets.all(S.s4),
                   child: Text('Copy', style: mono(10, color: AppColors.fg3)),
                 ),
               ),
             ]),
-            const SizedBox(height: 4),
+            SizedBox(height: S.s4),
             MarkdownBody(
               data: value,
               selectable: true,

@@ -76,7 +76,7 @@ class _QuestionRecord extends StatelessWidget {
     if (rows.length <= 1) {
       final (q, a) = rows.isEmpty ? ('Question', null) : rows.first;
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: EdgeInsets.symmetric(vertical: S.s4),
         child: ChatCardResolved(
             title: q.isEmpty ? 'Question' : q,
             subtitle: shown(a),
@@ -85,19 +85,19 @@ class _QuestionRecord extends StatelessWidget {
     }
     final p = ChatCard.pad;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: S.s4),
       child: ChatCard(dimmed: true, children: [
         for (var i = 0; i < rows.length; i++) ...[
           if (i > 0) const ChatCardDivider(),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: p, vertical: 10),
+            padding: EdgeInsets.symmetric(horizontal: p, vertical: S.of(10)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(rows[i].$1,
                     style: sans(kMobile ? 15 : 13,
                         weight: W.strong, color: AppColors.fg2)),
-                const SizedBox(height: 2),
+                SizedBox(height: S.s2),
                 Text(shown(rows[i].$2),
                     style: sans(13,
                         height: 1.4,
@@ -211,13 +211,13 @@ class ApprovalBarState extends State<ApprovalBar> {
                 if (detail.isNotEmpty)
                   ChatCardBody(
                     child: Tactile(
-                      radius: BorderRadius.circular(10),
+                      radius: BorderRadius.circular(R.card),
                       kind: TactileKind.inset,
                       child: Container(
-                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                        padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s6),
                         decoration: BoxDecoration(
                           color: AppColors.bg,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(R.card),
                           border: Border.all(color: AppColors.line),
                         ),
                         child: ApprovalCode(code: detail, shell: isShell),
@@ -266,7 +266,7 @@ class _PlanCard extends StatelessWidget {
         .length;
     if (kMobile) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: EdgeInsets.symmetric(vertical: S.s8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -274,18 +274,18 @@ class _PlanCard extends StatelessWidget {
                 style: sans(12,
                     weight: W.label, spacing: 0.7, color: AppColors.fg4)),
             if (explanation.isNotEmpty) ...[
-              const SizedBox(height: 4),
+              SizedBox(height: S.s4),
               Text(explanation, style: sans(14, color: AppColors.fg3)),
             ],
-            const SizedBox(height: 8),
+            SizedBox(height: S.s8),
             for (final step in steps)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: EdgeInsets.symmetric(vertical: S.s4),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(top: 3),
+                      padding: EdgeInsets.only(top: S.of(3)),
                       child: switch (step['status']?.toString()) {
                         'done' ||
                         'completed' =>
@@ -308,7 +308,7 @@ class _PlanCard extends StatelessWidget {
                           ),
                       },
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: S.s12),
                     Expanded(
                       child: Text(step['step']?.toString() ?? '',
                           style: sans(15,
@@ -328,10 +328,10 @@ class _PlanCard extends StatelessWidget {
       );
     }
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: S.s4),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+        padding: EdgeInsets.fromLTRB(S.of(10), S.s8, S.of(10), S.s8),
         decoration: BoxDecoration(
           color: AppColors.surface1,
           border: Border.all(color: AppColors.border),
@@ -343,10 +343,10 @@ class _PlanCard extends StatelessWidget {
             Text('Plan · $done of ${steps.length} done',
                 style: mono(10, color: AppColors.fg3)),
             if (explanation.isNotEmpty) ...[
-              const SizedBox(height: 4),
+              SizedBox(height: S.s4),
               Text(explanation, style: sans(12, color: AppColors.fg2)),
             ],
-            const SizedBox(height: 6),
+            SizedBox(height: S.s6),
             for (final step in steps) _row(step),
           ],
         ),
@@ -362,15 +362,15 @@ class _PlanCard extends StatelessWidget {
       _ => (Icons.radio_button_unchecked, AppColors.fg4),
     };
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: EdgeInsets.symmetric(vertical: S.s2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: EdgeInsets.only(top: S.s2),
             child: Icon(icon, size: 13, color: color),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Expanded(
             child: Text(
               step['step']?.toString() ?? '',
@@ -683,7 +683,7 @@ class QuestionBarState extends State<QuestionBar> {
       if (writing)
         Padding(
           padding: EdgeInsets.fromLTRB(
-              ChatCard.pad, k == 'free_text' ? 0 : 10, ChatCard.pad, 4),
+              ChatCard.pad, k == 'free_text' ? 0 : S.of(10), ChatCard.pad, S.s4),
           child: AppField(
               controller: controller,
               hint: 'Write your answer',
@@ -702,7 +702,7 @@ class QuestionBarState extends State<QuestionBar> {
             onTap: _sent ? null : () => _goTo(i),
             child: Padding(
               padding:
-                  EdgeInsets.symmetric(horizontal: ChatCard.pad, vertical: 10),
+                  EdgeInsets.symmetric(horizontal: ChatCard.pad, vertical: S.of(10)),
               child:
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(
@@ -710,14 +710,14 @@ class QuestionBarState extends State<QuestionBar> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(_header(_questions[i], i), style: TS.meta()),
-                      const SizedBox(height: 2),
+                      SizedBox(height: S.s2),
                       Text(_answerFor(_questions[i]),
                           style: sans(kMobile ? 15 : 13,
                               height: 1.4, color: AppColors.fg1)),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Text('Edit', style: sans(13, color: AppColors.fg3)),
               ]),
             ),
@@ -771,11 +771,11 @@ class QuestionBarState extends State<QuestionBar> {
           ),
           if (!kMobile && !_sent)
             Padding(
-              padding: EdgeInsets.fromLTRB(ChatCard.pad, 8, ChatCard.pad, 0),
+              padding: EdgeInsets.fromLTRB(ChatCard.pad, S.s8, ChatCard.pad, 0),
               child: Text(last ? 'Enter to submit' : 'Enter for next',
                   style: TS.caption(AppColors.fg4)),
             ),
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           ChatCardActions(
             stack: !(_step > 0 || _review),
             buttons: [
@@ -961,11 +961,11 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
 
   Widget _shortcut(String icon, String label, VoidCallback onTap) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(R.of(18)),
         child: SizedBox(
           width: 72,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding: EdgeInsets.symmetric(vertical: S.s6),
             child: Column(children: [
               Container(
                 width: 52,
@@ -979,7 +979,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
                 alignment: Alignment.center,
                 child: AppIcon(icon, size: 21, color: AppColors.fg1),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: S.s8),
               Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -1020,7 +1020,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
               hint: 'What should the agent work toward?',
               minLines: 2,
               maxLines: 4),
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           Btn('Set goal', full: true, onTap: () {
             final t = _goalCtl.text.trim();
             if (t.isEmpty) return;
@@ -1066,7 +1066,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
       child: Row(children: [
         for (final m in const ['ask', 'lean', 'full'])
           Padding(
-            padding: const EdgeInsets.only(right: 6),
+            padding: EdgeInsets.only(right: S.s6),
             child: Btn(
               _modeLabel(m),
               small: true,
@@ -1216,7 +1216,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
                         hint: 'What should the agent work toward?',
                         minLines: 2,
                         maxLines: 4),
-                    const SizedBox(height: 8),
+                    SizedBox(height: S.s8),
                     Btn('Set goal', onTap: () {
                       final t = _goalCtl.text.trim();
                       if (t.isEmpty) return;

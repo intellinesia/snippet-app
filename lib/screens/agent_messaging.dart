@@ -229,8 +229,8 @@ class _AgentWorkSheetState extends State<AgentWorkSheet> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 28),
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: S.of(28)),
         child: PageLoader(),
       );
     }
@@ -241,15 +241,15 @@ class _AgentWorkSheetState extends State<AgentWorkSheet> {
       children: [
         if (workspace.isNotEmpty) ...[
           Text('workspace', style: mono(10, color: AppColors.fg3)),
-          const SizedBox(height: 4),
+          SizedBox(height: S.s4),
           Text(workspace,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: sans(12, color: AppColors.fg2)),
-          const SizedBox(height: 14),
+          SizedBox(height: S.of(14)),
         ],
         Text('agent', style: mono(10, color: AppColors.fg3)),
-        const SizedBox(height: 4),
+        SizedBox(height: S.s4),
         Material(
           color: AppColors.surface2,
           borderRadius: BorderRadius.circular(R.sm),
@@ -259,10 +259,10 @@ class _AgentWorkSheetState extends State<AgentWorkSheet> {
               borderRadius: BorderRadius.circular(R.sm),
               child: Padding(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+                    EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(11)),
                 child: Row(children: [
                   AppIcon('agent', size: 15, color: AppColors.fg3),
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                   Expanded(
                     child: Text(_agentName ?? 'Choose an agent',
                         style: sans(13,
@@ -276,7 +276,7 @@ class _AgentWorkSheetState extends State<AgentWorkSheet> {
             ),
           ),
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: S.of(14)),
         AppField(
           label: 'message',
           controller: _message,
@@ -286,10 +286,10 @@ class _AgentWorkSheetState extends State<AgentWorkSheet> {
           enabled: !_sending,
         ),
         if (_error != null) ...[
-          const SizedBox(height: 12),
+          SizedBox(height: S.s12),
           Text(_error!, style: sans(12, color: AppColors.danger)),
         ],
-        const SizedBox(height: 18),
+        SizedBox(height: S.of(18)),
         Row(children: [
           if (!kMobile) ...[
             Expanded(
@@ -299,7 +299,7 @@ class _AgentWorkSheetState extends State<AgentWorkSheet> {
                   disabled: _sending,
                   onTap: () => Navigator.of(context).pop(false)),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
           ],
           Expanded(
             child: Btn(_sending ? 'Sending…' : 'Send',
@@ -997,7 +997,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           children: [
             Flexible(child: ChatHeader.statusText(text)),
             if (dots) ...[
-              const SizedBox(width: 4),
+              SizedBox(width: S.s4),
               WorkingDots(color: ChatColors.meta, size: 4),
             ],
           ],
@@ -1063,7 +1063,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 switcher,
-                const SizedBox(width: 6),
+                SizedBox(width: S.s6),
                 ChatGlassButton(
                   icon: 'x',
                   tooltip: 'Close',
@@ -1167,16 +1167,16 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         padding: EdgeInsets.only(top: _noChrome ? 0 : ChatHeader.overlap),
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(S.s24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 AppIcon('alert-circle', size: 24, color: AppColors.danger),
-                const SizedBox(height: 10),
+                SizedBox(height: S.of(10)),
                 Text(_error!,
                     textAlign: TextAlign.center,
                     style: sans(13, color: AppColors.danger)),
-                const SizedBox(height: 14),
+                SizedBox(height: S.of(14)),
                 Btn('Retry', small: true, onTap: () => _load(silent: false)),
               ],
             ),
@@ -1228,7 +1228,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         reverse: true,
         scrollCacheExtent: ScrollCacheExtent.pixels(400),
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(16, topPad, 16, 16),
+        padding: EdgeInsets.fromLTRB(S.s16, topPad, S.s16, S.s16),
         itemCount: n + 1,
         itemBuilder: (_, i) {
           if (i == 0) {
@@ -1332,8 +1332,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         child: ChatBubble(
           mine: false,
           tail: true,
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: S.s4, horizontal: S.s2),
             child: _TypingDots(key: Key('agentTypingDots')),
           ),
         ),
@@ -1442,7 +1442,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             children: [
               if (quotedLine != null)
                 Padding(
-                  padding: const EdgeInsets.only(left: 4, bottom: 2),
+                  padding: EdgeInsets.only(left: S.s4, bottom: S.s2),
                   child: quotedLine,
                 ),
               _withTapback(cappedCard, chips, mine: false),
@@ -1458,7 +1458,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               if (quotedLine != null)
                 Padding(
                   padding: EdgeInsets.only(
-                      bottom: 2, left: mine ? 0 : 4, right: mine ? 4 : 0),
+                      bottom: S.s2, left: mine ? 0 : S.s4, right: mine ? S.s4 : 0),
                   child: quotedLine,
                 ),
               _withTapback(
@@ -1507,9 +1507,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                     constraints: BoxConstraints(maxWidth: max),
                     child: Padding(
                       padding: EdgeInsets.only(
-                        top: 6,
-                        left: mine ? 0 : (card != null ? 0 : 5),
-                        right: mine ? (card != null ? 0 : 5) : 0,
+                        top: S.s6,
+                        left: mine ? 0 : (card != null ? 0 : S.of(5)),
+                        right: mine ? (card != null ? 0 : S.of(5)) : 0,
                       ),
                       child: ChatChoices(
                         choices: choices,
@@ -1605,9 +1605,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       child: LiveCaptionAnchor(
         padding: EdgeInsets.fromLTRB(
           M.gutter,
-          8,
+          S.s8,
           M.gutter,
-          10 + (keyboard > 0 ? 8 : mq.padding.bottom),
+          S.of(10) + (keyboard > 0 ? S.s8 : mq.padding.bottom),
         ),
         child: ListenableBuilder(
           listenable: Listenable.merge([_voice, _attachments]),
@@ -1809,7 +1809,7 @@ class _TypingDotsState extends State<_TypingDots> {
           mainAxisSize: MainAxisSize.min,
           children: [
             for (var i = 0; i < 3; i++) ...[
-              if (i > 0) const SizedBox(width: 4),
+              if (i > 0) SizedBox(width: S.s4),
               _dot(i, still),
             ],
           ],

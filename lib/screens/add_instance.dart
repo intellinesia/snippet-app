@@ -135,7 +135,7 @@ class _AddMachineDialogState extends State<_AddMachineDialog> {
               // Header: badge, title, dismiss. The close is here rather than
               // relying on Esc alone, so the dialog has a visible exit.
               Padding(
-                padding: const EdgeInsets.fromLTRB(18, 16, 10, 0),
+                padding: EdgeInsets.fromLTRB(S.of(18), S.s16, S.of(10), 0),
                 child: Row(children: [
                   Container(
                     width: 30,
@@ -147,14 +147,14 @@ class _AddMachineDialogState extends State<_AddMachineDialog> {
                     ),
                     child: AppIcon('plus', size: 15, color: AppColors.accent),
                   ),
-                  const SizedBox(width: 11),
+                  SizedBox(width: S.of(11)),
                   Expanded(
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text('Connect a machine', style: display(kMobile ? 16 : 14)),
-                          const SizedBox(height: 2),
+                          SizedBox(height: S.s2),
                           Text('Link this app to a computer running snippet',
                               style: TS.caption()),
                         ]),
@@ -166,19 +166,19 @@ class _AddMachineDialogState extends State<_AddMachineDialog> {
                       onTap: () => Navigator.pop(context)),
                 ]),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: S.s16),
               // Step one: the command, on its own line with a copy affordance.
               // It is something to run elsewhere, not to read in passing.
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
+                padding: EdgeInsets.symmetric(horizontal: S.of(18)),
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const _StepLabel('1', 'Run this on that computer'),
-                      const SizedBox(height: 8),
+                      SizedBox(height: S.s8),
                       Container(
-                        padding: const EdgeInsets.fromLTRB(11, 9, 6, 9),
+                        padding: EdgeInsets.fromLTRB(S.of(11), S.of(9), S.s6, S.of(9)),
                         decoration: BoxDecoration(
                           color: AppColors.surface2,
                           borderRadius: BorderRadius.circular(R.sm),
@@ -186,7 +186,7 @@ class _AddMachineDialogState extends State<_AddMachineDialog> {
                         ),
                         child: Row(children: [
                           AppIcon('terminal', size: 13, color: AppColors.fg3),
-                          const SizedBox(width: 9),
+                          SizedBox(width: S.of(9)),
                           Expanded(
                             child: Text('snippet serve --enable',
                                 style: mono(12, color: AppColors.fg1)),
@@ -203,16 +203,16 @@ class _AddMachineDialogState extends State<_AddMachineDialog> {
                       ),
                     ]),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: S.s16),
               // Step two: paste what it prints.
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
+                padding: EdgeInsets.symmetric(horizontal: S.of(18)),
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const _StepLabel('2', 'Paste the link it prints'),
-                      const SizedBox(height: 8),
+                      SizedBox(height: S.s8),
                       AppField(
                           controller: _paste,
                           mono: true,
@@ -222,13 +222,13 @@ class _AddMachineDialogState extends State<_AddMachineDialog> {
                     ]),
               ),
               if (_error != null) ...[
-                const SizedBox(height: 12),
+                SizedBox(height: S.s12),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  padding: EdgeInsets.symmetric(horizontal: S.of(18)),
                   child: Row(children: [
                     AppIcon('alert-triangle',
                         size: 13, color: AppColors.danger),
-                    const SizedBox(width: 7),
+                    SizedBox(width: S.of(7)),
                     Expanded(
                       child: Text(_error!,
                           style:
@@ -237,17 +237,17 @@ class _AddMachineDialogState extends State<_AddMachineDialog> {
                   ]),
                 ),
               ],
-              const SizedBox(height: 18),
+              SizedBox(height: S.of(18)),
               // Footer: status on the left, the action on the right.
               Container(
-                padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
+                padding: EdgeInsets.fromLTRB(S.of(18), S.s12, S.of(18), S.of(14)),
                 decoration: BoxDecoration(
                   border: Border(top: BorderSide(color: AppColors.border)),
                 ),
                 child: Row(children: [
                   if (_busy) ...[
                     Spinner(size: 13, color: AppColors.fg3),
-                    const SizedBox(width: 9),
+                    SizedBox(width: S.of(9)),
                     Text('Connecting…', style: TS.meta()),
                   ] else
                     Text('Connection stays on this device',
@@ -286,7 +286,7 @@ class _StepLabel extends StatelessWidget {
         child:
             Text(step, style: sans(11, weight: W.label, color: AppColors.fg3)),
       ),
-      const SizedBox(width: 8),
+      SizedBox(width: S.s8),
       Text(text, style: sans(11, weight: W.label, color: AppColors.fg2)),
     ]);
   }
@@ -397,7 +397,7 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
         color: AppColors.surface1,
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(32),
+            padding: EdgeInsets.all(S.s32),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Container(
                   width: 56,
@@ -407,18 +407,18 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
                       border: Border.all(color: AppColors.border),
                       borderRadius: BorderRadius.circular(R.card)),
                   child: AppIcon('camera-off', size: 26, color: AppColors.fg3)),
-              const SizedBox(height: 12),
+              SizedBox(height: S.s12),
               Text('Camera access needed',
                   style:
                       TS.sectionTitle()),
-              const SizedBox(height: 8),
+              SizedBox(height: S.s8),
               ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: 250),
                   child: Text(
                       'Grant camera access to scan the QR code, or paste the link below.',
                       textAlign: TextAlign.center,
                       style: TS.meta())),
-              const SizedBox(height: 16),
+              SizedBox(height: S.s16),
               Btn('Grant camera access',
                   variant: BtnVariant.secondary, icon: 'camera', onTap: () {
                 if (permanent) {
@@ -436,7 +436,7 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
     }
     // Rounded viewport, Claude-card style, with the scan reticle + caption inside.
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s16, S.s12),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(R.card),
         child:
@@ -463,7 +463,7 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
             child: Center(
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.s8),
                 decoration: BoxDecoration(
                     color: AppColors.scrim,
                     border: Border.all(color: AppColors.border),
@@ -488,7 +488,7 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
     final empty = _paste.text.trim().isEmpty;
     return Container(
       padding: EdgeInsets.fromLTRB(
-          16, 14, 16, 14 + MediaQuery.of(context).padding.bottom),
+          S.s16, S.of(14), S.s16, S.of(14) + MediaQuery.of(context).padding.bottom),
       decoration: BoxDecoration(
           color: AppColors.bg,
           border: Border(top: BorderSide(color: AppColors.border))),
@@ -503,7 +503,7 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
                       mono: true,
                       hint: 'Paste the link from snippet serve',
                       onSubmitted: _connect)),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               if (_busy)
                 Container(
                   width: kMobile ? 48 : 36,
@@ -518,7 +518,7 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
                     onTap: empty ? null : () => _connect(_paste.text)),
             ]),
             if (_error != null) ...[
-              SizedBox(height: 10),
+              SizedBox(height: S.of(10)),
               Text(_error!, style: sans(11, color: AppColors.danger))
             ],
           ]),
