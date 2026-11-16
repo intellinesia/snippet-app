@@ -7,6 +7,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'mobile_chrome.dart';
+import 'mobile_session_home.dart' show MobileSectionLabel;
 import 'pull_request_detail.dart';
 
 /// Open a session repository's pull requests: a side-pane tab on desktop, a
@@ -63,11 +64,6 @@ String _ago(String iso) {
   if (t == null) return '';
   return relativeTime(t.millisecondsSinceEpoch ~/ 1000);
 }
-
-Widget _size(int add, int del) => Text.rich(TextSpan(children: [
-      TextSpan(text: '+$add', style: TS.meta(AppColors.ok)),
-      TextSpan(text: ' −$del', style: TS.meta(AppColors.danger)),
-    ]));
 
 class PullRequestsScreen extends StatefulWidget {
   const PullRequestsScreen({
@@ -160,29 +156,6 @@ class _PullRequestsScreenState extends State<PullRequestsScreen> {
     _load();
   }
 
-  Future<void> _pickFilter(BuildContext anchor) async {
-    final picked = await showAppMenu<String>(
-      context,
-      anchor: anchor,
-      minWidth: 240,
-      items: [
-        for (final (key, label) in _filters)
-          appMenuRow<String>(
-            value: key,
-            icon: switch (key) {
-              'review' => 'eye',
-              'mine' => 'user',
-              'closed' => 'check-circle',
-              _ => 'git-branch',
-            },
-            label: label,
-            selected: key == _filter,
-          ),
-      ],
-    );
-    if (picked != null && picked != _filter) _pick(picked);
-  }
-
   Future<void> _open(PrSummary pr) => _openNumber(pr.number);
 
   Future<void> _openNumber(int number) async {
@@ -203,106 +176,119 @@ class _PullRequestsScreenState extends State<PullRequestsScreen> {
         _ => pr.draft ? ('git-branch', AppColors.fg4) : ('git-branch', AppColors.ok),
       };
 
-  Widget _avatar(String login) {
-    const tints = [0xFF7C8CF8, 0xFF5BC0A0, 0xFFE0A050, 0xFFD27AA8, 0xFF62A8E0, 0xFFB59A6A];
-    final tint = Color(tints[login.codeUnits.fold<int>(0, (a, b) => a + b) % tints.length]);
-    return Container(
-      width: 22,
-      height: 22,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(color: tint.withValues(alpha: 0.18), shape: BoxShape.circle),
-      child: Text(login.isEmpty ? '?' : login[0].toUpperCase(),
-          style: sans(11, weight: W.strong, color: tint)),
-    );
-  }
-
-  Widget? _checksIcon(PrSummary pr) => switch (rollup(pr.checks)) {
-        ChecksState.passing => Tooltip(
-            message: 'Checks passed',
-            child: AppIcon('check', size: 13, color: AppColors.ok)),
-        ChecksState.failing => Tooltip(
-            message: 'Checks failing',
-            child: AppIcon('x-circle', size: 13, color: AppColors.danger)),
-        ChecksState.pending => Tooltip(
-            message: 'Checks running',
-            child: Container(
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(color: AppColors.run, shape: BoxShape.circle))),
+  Widget? _checksPill(PrSummary pr) => switch (rollup(pr.checks)) {
+        ChecksState.passing => prPill('Checks passed', AppColors.ok),
+        ChecksState.failing => prPill('Checks failing', AppColors.danger),
+        ChecksState.pending => prPill('Checks running', AppColors.run),
         ChecksState.none => null,
       };
 
-  Widget? _reviewIcon(PrSummary pr) => switch (pr.reviewDecision) {
-        'APPROVED' => Tooltip(
-            message: 'Approved',
-            child: AppIcon('check-check', size: 14, color: AppColors.ok)),
-        'CHANGES_REQUESTED' => Tooltip(
-            message: 'Changes requested',
-            child: AppIcon('alert-circle', size: 13, color: AppColors.danger)),
+  Widget? _reviewPill(PrSummary pr) => switch (pr.reviewDecision) {
+        'APPROVED' => prPill('Approved', AppColors.ok),
+        'CHANGES_REQUESTED' => prPill('Changes requested', AppColors.danger),
         _ => null,
       };
 
   Widget _row(PrSummary pr) {
     final (icon, ink) = _stateIcon(pr);
-    final indicators = [
-      for (final w in [_checksIcon(pr), _reviewIcon(pr)])
+    final pills = [
+      for (final w in [_checksPill(pr), _reviewPill(pr)])
         if (w != null) w,
     ];
     return InkWell(
       onTap: () => _open(pr),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(S.s16, kMobile ? S.s12 : S.of(9), S.of(14), kMobile ? S.s12 : S.of(9)),
-        child: IntrinsicHeight(
-          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Padding(
-            padding: EdgeInsets.only(top: S.s2),
-            child: AppIcon(icon, size: 15, color: ink),
-          ),
-          SizedBox(width: S.s12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(pr.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(kMobile ? 15 : 14,
-                        weight: W.strong, height: 1.35, color: AppColors.fg1)),
-                SizedBox(height: S.of(3)),
-                Row(children: [
-                  Flexible(
-                    child: Text(
-                        '#${pr.number} · ${pr.author} · ${_ago(pr.updatedAt)}${pr.draft ? ' · draft' : ''}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TS.meta(AppColors.fg3)),
-                  ),
-                  for (final w in indicators) ...[SizedBox(width: S.s8), w],
-                  SizedBox(width: S.s8),
-                  _size(pr.additions, pr.deletions),
-                ]),
-              ],
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: M.minTarget),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
+          child: Row(children: [
+            Container(
+              width: 32,
+              height: 32,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                  color: AppColors.surface3,
+                  borderRadius: BorderRadius.circular(R.of(10))),
+              child: AppIcon(icon, size: 16, color: ink),
             ),
-          ),
-          SizedBox(width: S.s12),
-          Center(child: _avatar(pr.author)),
-        ]),
+            SizedBox(width: S.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(pr.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(14, weight: W.label, color: AppColors.fg1)),
+                  SizedBox(height: S.s2),
+                  Text(
+                      '#${pr.number} · ${pr.author} · ${_ago(pr.updatedAt)}${pr.draft ? ' · draft' : ''}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TS.meta(AppColors.fg3)),
+                ],
+              ),
+            ),
+            if (pills.isNotEmpty) ...[
+              SizedBox(width: S.s8),
+              Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    for (var i = 0; i < pills.length; i++) ...[
+                      if (i > 0) SizedBox(height: S.s4),
+                      pills[i],
+                    ],
+                  ]),
+            ],
+          ]),
         ),
       ),
     );
   }
 
-  Widget _sectionHeader(String label, int count) => Padding(
-        padding: EdgeInsets.fromLTRB(S.s16, S.of(18), S.s16, S.s6),
-        child: Row(children: [
-          Text(label, style: sans(13, weight: W.label, color: AppColors.fg2)),
-          SizedBox(width: S.s6),
-          Text('$count', style: TS.meta(AppColors.fg4)),
-        ]),
+  Widget _group(List<PrSummary> list) => Padding(
+        padding: EdgeInsets.symmetric(horizontal: S.s16),
+        child: CardGroupScope(
+            child: ListGroup(children: [for (final p in list) _row(p)])),
+      );
+
+  Widget _filterBar() => Padding(
+        padding: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s6),
+        child: Container(
+          padding: EdgeInsets.all(S.of(3)),
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(R.of(12)),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Row(children: [
+            for (final (key, label) in _filters)
+              Expanded(
+                child: InkWell(
+                  onTap: () => _pick(key),
+                  borderRadius: BorderRadius.circular(R.of(9)),
+                  child: Container(
+                    height: 36,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: key == _filter ? AppColors.surface3 : Colors.transparent,
+                      borderRadius: BorderRadius.circular(R.of(9)),
+                    ),
+                    child: Text(label,
+                        maxLines: 1,
+                        style: sans(13,
+                            weight: key == _filter ? W.label : W.body,
+                            color: key == _filter ? AppColors.fg1 : AppColors.fg3)),
+                  ),
+                ),
+              ),
+          ]),
+        ),
       );
 
   List<Widget> _body(List<PrSummary> prs) {
-    if (_filter != 'open') return [for (final p in prs) _row(p)];
+    if (_filter != 'open') return [_group(prs)];
     final me = widget.status.viewer;
     final review = prs.where((p) => p.author != me && p.reviewers.contains(me)).toList();
     final mine = prs.where((p) => p.author == me).toList();
@@ -312,11 +298,14 @@ class _PullRequestsScreenState extends State<PullRequestsScreen> {
       ('Yours', mine),
       ('Others', others),
     ].where((g) => g.$2.isNotEmpty).toList();
-    if (groups.length == 1) return [for (final p in prs) _row(p)];
+    if (groups.length == 1) return [_group(prs)];
     return [
       for (final (label, list) in groups) ...[
-        _sectionHeader(label, list.length),
-        for (final p in list) _row(p),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: S.s12),
+          child: MobileSectionLabel(label, top: 14),
+        ),
+        _group(list),
       ],
     ];
   }
@@ -355,19 +344,8 @@ class _PullRequestsScreenState extends State<PullRequestsScreen> {
       child: SafeArea(
         bottom: false,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Builder(
-            builder: (anchor) => MobileBackBar(
-              title: switch (_filter) {
-                'review' => 'Needs your review',
-                'mine' => 'My pull requests',
-                'closed' => 'Closed pull requests',
-                _ => 'Open pull requests',
-              },
-              subtitle: widget.status.repo,
-              chevron: true,
-              onTitleTap: () => _pickFilter(anchor),
-            ),
-          ),
+          MobileBackBar(title: 'Pull requests'),
+          _filterBar(),
           Expanded(
             child: RefreshIndicator(
               onRefresh: _load,
