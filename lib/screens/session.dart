@@ -319,6 +319,7 @@ class _SessionScreenState extends State<SessionScreen>
   // The list row for this session: plan and the agent standing on the header.
   SessionInfo? _me;
   String? _meAgentName;
+  String? _meAgentFetched;
   GithubStatus? _github;
   int _githubGen = 0;
   bool _githubKnown = false;
@@ -890,10 +891,10 @@ class _SessionScreenState extends State<SessionScreen>
 
   void _loadHeaderAgent(SessionInfo? me) {
     if (me == null) return;
-    final changed = _me?.displayAgentId != me.displayAgentId;
     if (mounted) setState(() => _me = me);
-    if (!changed && _meAgentName != null) return;
     final id = me.displayAgentId ?? '';
+    if (id == _meAgentFetched) return;
+    _meAgentFetched = id;
     widget.client.coordinationAgents().then((agents) {
       if (!mounted) return;
       final a = agents.where((x) => x.id == id).firstOrNull;
