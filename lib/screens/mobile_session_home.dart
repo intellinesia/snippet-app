@@ -361,7 +361,7 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
           child: Text(text,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: sans(15, height: 1.35, color: ink ?? AppColors.fg1)),
+              style: sans(14, height: 1.35, color: ink ?? AppColors.fg1)),
         ),
       ]);
 
