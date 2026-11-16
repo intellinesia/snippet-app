@@ -523,7 +523,7 @@ class LaneRecentOutput extends StatelessWidget {
             line,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: mono(kMobile ? 11 : 10.5, height: 1.35, color: AppColors.fg4),
+            style: mono(11, height: 1.35, color: AppColors.fg4),
           ),
       ],
     );
