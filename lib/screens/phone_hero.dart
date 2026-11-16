@@ -109,9 +109,8 @@ class _PhoneHeroState extends State<PhoneHero> {
       live = crew.take(3).toList();
     }
     if (live.length <= 5) return live;
-    final keep = ([...live]..sort((a, b) => rank(a).compareTo(rank(b))))
-        .take(5)
-        .toSet();
+    final keep =
+        ([...live]..sort((a, b) => rank(a).compareTo(rank(b)))).take(5).toSet();
     return live.where(keep.contains).toList();
   }
 
@@ -122,9 +121,7 @@ class _PhoneHeroState extends State<PhoneHero> {
           'question' => 1,
           _ => 9,
         };
-    final asks = _live
-        .where((s) => sessionNeedsYou(s) && rank(s) < 9)
-        .toList()
+    final asks = _live.where((s) => sessionNeedsYou(s) && rank(s) < 9).toList()
       ..sort((a, b) {
         final r = rank(a).compareTo(rank(b));
         return r != 0 ? r : b.lastActive.compareTo(a.lastActive);
@@ -148,9 +145,7 @@ class _PhoneHeroState extends State<PhoneHero> {
 
   SessionInfo? _nextWake() {
     final nowSec = _now.millisecondsSinceEpoch ~/ 1000;
-    final due = _live
-        .where((s) => (s.nextWakeAt ?? 0) > nowSec)
-        .toList()
+    final due = _live.where((s) => (s.nextWakeAt ?? 0) > nowSec).toList()
       ..sort((a, b) => a.nextWakeAt!.compareTo(b.nextWakeAt!));
     return due.firstOrNull;
   }
@@ -188,21 +183,26 @@ class _PhoneHeroState extends State<PhoneHero> {
 
   Widget _stageRow(List<CrewEntry> crew) {
     final n = crew.length;
-    double sizeAt(int i) {
-      final d = (i - (n - 1) / 2).abs();
-      return d <= 0 ? 66 : 66 - d * 9 - (d >= 1 ? 1 : 0);
-    }
+    // Mixed heights packed close, feet on one line, so it reads as a team.
+    const patterns = <List<double>>[
+      [66],
+      [66, 54],
+      [54, 68, 58],
+      [52, 68, 60, 46],
+      [46, 58, 68, 54, 44],
+    ];
+    final sizes = patterns[(n - 1).clamp(0, patterns.length - 1)];
+    double sizeAt(int i) => sizes[i.clamp(0, sizes.length - 1)];
 
     return Padding(
       padding: EdgeInsets.only(top: S.s8, bottom: S.s16),
       child: SizedBox(
-        height: 66 + 12 + 20,
+        height: 68 + 12 + 20,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             for (var i = 0; i < n; i++) ...[
-              if (i > 0) const SizedBox(width: 4),
               _stageAgent(crew[i], sizeAt(i)),
             ],
           ],
@@ -228,31 +228,46 @@ class _PhoneHeroState extends State<PhoneHero> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: e.lead == null ? null : () => widget.onOpenSession(e.lead!),
+        // The slot is narrower than the art so neighbours tuck in close.
         child: SizedBox(
-          width: size + 4,
+          width: size * 0.8,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Transform.translate(
                 offset: Offset(0, needs ? -12 : 0),
-                child: _avatar(
-                  e.agent.id,
-                  size,
-                  needs
-                      ? AgentCharacterState.needs
-                      : e.state == CrewState.working
-                          ? AgentCharacterState.working
-                          : asleep
-                              ? AgentCharacterState.sleeping
-                              : AgentCharacterState.idle,
-                  badge: needs ? '?' : null,
+                child: SizedBox(
+                  height: size,
+                  child: OverflowBox(
+                    minWidth: size,
+                    maxWidth: size,
+                    child: _avatar(
+                      e.agent.id,
+                      size,
+                      needs
+                          ? AgentCharacterState.needs
+                          : e.state == CrewState.working
+                              ? AgentCharacterState.working
+                              : asleep
+                                  ? AgentCharacterState.sleeping
+                                  : AgentCharacterState.idle,
+                      badge: needs ? '?' : null,
+                    ),
+                  ),
                 ),
               ),
               SizedBox(height: S.s2),
-              Text(name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(11, color: AppColors.fg3)),
+              SizedBox(
+                height: 16,
+                child: OverflowBox(
+                  maxWidth: size + 12,
+                  child: Text(name,
+                      maxLines: 1,
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(11, color: AppColors.fg3)),
+                ),
+              ),
             ],
           ),
         ),
@@ -270,10 +285,7 @@ class _PhoneHeroState extends State<PhoneHero> {
           return AgentMochi(agentId, size: size, state: state);
         }
         return AgentCharacter(character,
-            size: size,
-            state: state,
-            staggerKey: agentId,
-            badge: badge);
+            size: size, state: state, staggerKey: agentId, badge: badge);
       },
     );
   }
@@ -344,13 +356,14 @@ class _PhoneHeroState extends State<PhoneHero> {
                       Text('${_name(owner)} · $title',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(15,
-                              weight: W.label, color: AppColors.fg1)),
+                          style:
+                              sans(15, weight: W.label, color: AppColors.fg1)),
                       if (summary.isNotEmpty)
                         Text(summary,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: sans(13, height: 1.35, color: AppColors.fg2)),
+                            style:
+                                sans(13, height: 1.35, color: AppColors.fg2)),
                     ],
                   ),
                 ),
@@ -358,8 +371,8 @@ class _PhoneHeroState extends State<PhoneHero> {
               if (command != null && command.isNotEmpty) ...[
                 SizedBox(height: S.s12),
                 Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: S.s8, vertical: S.of(6)),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: S.s8, vertical: S.of(6)),
                   decoration: BoxDecoration(
                     color: AppColors.surface1,
                     borderRadius: BorderRadius.circular(R.of(10)),
@@ -560,8 +573,7 @@ class _HeroButton extends StatelessWidget {
                   AppIcon(icon!, size: 15, color: fg),
                   SizedBox(width: S.s6),
                 ],
-                Text(label,
-                    style: sans(14, weight: W.label, color: fg)),
+                Text(label, style: sans(14, weight: W.label, color: fg)),
               ],
             ),
           ),
