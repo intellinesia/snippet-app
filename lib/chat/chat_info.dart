@@ -386,8 +386,98 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
       widget.agentId == 'mission-control' ||
       (widget.agent?.isMissionControl ?? false);
 
+  Widget _groupLabel(String text) => Padding(
+        padding: EdgeInsets.fromLTRB(S.s2, S.s4, 0, S.s6),
+        child: Text(text, style: sans(12, weight: W.label, color: AppColors.fg3)),
+      );
+
+  /// Desktop dock for a task agent: Agent settings, then Work destinations.
+  Widget _dockedGroups(BuildContext context, CoordinationAgent agent) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _groupLabel('Agent'),
+        _InfoCard(children: [
+          _InfoRow(
+              label: 'Wakes and reporting',
+              subtitle: 'When it wakes and who it tells',
+              icon: 'calendar-clock',
+              onTap: () => showAgentWakeSettings(context,
+                  client: widget.client,
+                  owner: widget.agentId,
+                  name: widget.name,
+                  onChanged: widget.onChanged)),
+          _InfoRow(
+              label: 'How it reaches you',
+              subtitle: 'Notifications and where each kind goes',
+              icon: 'bell',
+              onTap: () => showAgentReachSettings(context,
+                  client: widget.client,
+                  agentId: widget.agentId,
+                  name: widget.name)),
+          AgentModelRows(
+            client: widget.client,
+            agent: agent,
+            name: widget.name,
+            onChanged: widget.onChanged,
+          ),
+          _InfoRow(
+              label: 'Nickname',
+              subtitle: 'What it is called here',
+              icon: 'edit',
+              value: agent.nickname ?? '',
+              onTap: () => _editNickname(context)),
+          _InfoRow(
+              label: 'Appearance',
+              subtitle: 'Avatar and colour across the app',
+              icon: 'sparkles',
+              onTap: () => showAgentAppearance(
+                  context, widget.client, widget.agentId, widget.name)),
+          _DangerRow(
+              label: 'Delete agent',
+              subtitle: 'Removes its identity and notes',
+              onTap: () => _deleteAgent(context)),
+        ]),
+        SizedBox(height: S.s8),
+        _groupLabel('Work'),
+        _InfoCard(children: [
+          if (widget.onOpenInbox != null)
+            _InfoRow(
+                label: 'Inbox',
+                subtitle: 'Everything sent to this agent',
+                icon: 'inbox',
+                onTap: widget.onOpenInbox),
+          if (widget.onOpenBoard != null)
+            _InfoRow(
+                label: 'Board',
+                subtitle: 'What it dispatched, reported and noted',
+                icon: 'kanban',
+                onTap: widget.onOpenBoard),
+          if (widget.onOpenDesk != null)
+            _InfoRow(
+                label: 'Desk session',
+                subtitle: 'The conversation where its mail arrives',
+                icon: 'terminal',
+                onTap: widget.onOpenDesk),
+          if (widget.onOpenMemory != null)
+            _InfoRow(
+                label: 'Memory',
+                subtitle: 'What this agent remembers',
+                icon: 'brain',
+                onTap: widget.onOpenMemory),
+        ]),
+        _InfoCard(children: [
+          _CopyRow(label: 'Agent ID', value: widget.agentId),
+        ]),
+      ],
+    );
+  }
+
   Widget _infoTab(BuildContext context) {
     final agent = widget.agent;
+    if (widget.docked && !kMobile && agent != null && !_mc) {
+      return _dockedGroups(context, agent);
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -508,10 +598,19 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
           body: _infoTab(ctx),
         );
     if (!widget.docked) return info(context);
+    Widget docked(BuildContext ctx) => !kMobile
+        ? _DockedAgentFrame(
+            name: widget.name,
+            onClose: widget.onClose,
+            avatar: MochiDisc(id: widget.agentId, size: 64),
+            subtitle: agent?.profile ?? 'Routing default',
+            body: _infoTab(ctx),
+          )
+        : info(ctx);
     return DockedInfoNav(
       push: _pushNested,
       pop: _popNested,
-      child: _DockedNavigator(navKey: _navKey, root: info),
+      child: _DockedNavigator(navKey: _navKey, root: docked),
     );
   }
 }
@@ -947,6 +1046,79 @@ class _InfoFrame extends StatelessWidget {
   }
 }
 
+/// Desktop dock frame: a 38px title bar, then the avatar beside name and model.
+class _DockedAgentFrame extends StatelessWidget {
+  const _DockedAgentFrame({
+    required this.name,
+    required this.onClose,
+    required this.avatar,
+    required this.subtitle,
+    required this.body,
+  });
+
+  final String name;
+  final VoidCallback? onClose;
+  final Widget avatar;
+  final String subtitle;
+  final Widget body;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        type: MaterialType.transparency,
+        child: Column(children: [
+          Container(
+            height: 38,
+            padding: EdgeInsets.fromLTRB(S.of(14), 0, S.s8, 0),
+            decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: AppColors.line))),
+            child: Row(children: [
+              Expanded(
+                child: Text(name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, weight: W.label, color: AppColors.fg1)),
+              ),
+              if (onClose != null)
+                IconBtn('x',
+                    size: 28, iconSize: 14, tooltip: 'Close agent panel', onTap: onClose),
+            ]),
+          ),
+          Expanded(
+            child: ListView(
+              physics: const ClampingScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(S.s12, S.s16, S.s12, S.s24),
+              children: [
+                Padding(
+                  padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s16),
+                  child: Row(children: [
+                    avatar,
+                    SizedBox(width: S.s12),
+                    Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: sans(20,
+                                    weight: W.strong, color: AppColors.fg1)),
+                            SizedBox(height: S.s2),
+                            Text(subtitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: sans(13, color: AppColors.fg3)),
+                          ]),
+                    ),
+                  ]),
+                ),
+                body,
+              ],
+            ),
+          ),
+        ]),
+      );
+}
+
 class _GlassCircle extends StatelessWidget {
   const _GlassCircle({required this.onTap, required this.icon, this.label});
 
@@ -1142,8 +1314,12 @@ class _InfoCard extends StatelessWidget {
         child: Tactile(
         radius: BorderRadius.circular(R.of(16)),
         child: Material(
-        color: AppColors.surface2.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(R.of(16)),
+        color: kMobile ? AppColors.surface2.withValues(alpha: 0.6) : AppColors.surface1,
+        shape: kMobile
+            ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.of(16)))
+            : RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(R.of(12)),
+                side: BorderSide(color: AppColors.line)),
         clipBehavior: Clip.antiAlias,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1151,7 +1327,10 @@ class _InfoCard extends StatelessWidget {
             for (var i = 0; i < children.length; i++) ...[
               if (i > 0)
                 Divider(
-                    height: 1, thickness: 1, indent: S.s16, endIndent: 0),
+                    height: 1,
+                    thickness: 1,
+                    indent: kMobile ? S.s16 : 0,
+                    endIndent: 0),
               children[i],
             ],
           ],
@@ -1169,9 +1348,13 @@ class _InfoRow extends StatelessWidget {
     this.trailing,
     this.icon,
     this.accent = false,
+    this.subtitle,
   });
 
   final String label;
+
+  /// Quiet second part of the title on desktop; ignored on mobile.
+  final String? subtitle;
   final String? value;
   final VoidCallback? onTap;
   final Widget? trailing;
@@ -1185,14 +1368,26 @@ class _InfoRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: kMobile ? 48 : 40),
+        constraints: BoxConstraints(minHeight: kMobile ? 48 : 34),
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: S.s16),
+          padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s16 : S.s8),
           child: Row(children: [
-            if (icon != null) ...[
+            if (icon != null && !kMobile) ...[
+              Container(
+                width: 22,
+                height: 22,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    color: AppColors.tint2,
+                    borderRadius: BorderRadius.circular(R.of(6))),
+                child: AppIcon(icon!,
+                    size: 13,
+                    color: accent ? AppColors.accent : AppColors.fg3),
+              ),
+              SizedBox(width: S.s8),
+            ] else if (icon != null) ...[
               AppIcon(icon!,
-                  size: kMobile ? 18 : 16,
-                  color: accent ? AppColors.accent : AppColors.fg3),
+                  size: 18, color: accent ? AppColors.accent : AppColors.fg3),
               SizedBox(width: S.s12),
             ],
             if (hasValue)
@@ -1204,6 +1399,18 @@ class _InfoRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: sans(kMobile ? 15 : 13, color: labelColor)),
               )
+            else if (!kMobile && subtitle != null) ...[
+              Text(label,
+                  maxLines: 1,
+                  style: sans(13, weight: W.label, color: labelColor)),
+              SizedBox(width: S.s8),
+              Expanded(
+                child: Text(subtitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12, color: AppColors.fg3)),
+              ),
+            ]
             else
               Expanded(
                 child: Text(label,
@@ -1264,17 +1471,43 @@ class _CopyRow extends StatelessWidget {
 }
 
 class _DangerRow extends StatelessWidget {
-  const _DangerRow({required this.label, required this.onTap});
+  const _DangerRow({required this.label, required this.onTap, this.subtitle});
 
   final String label;
+  final String? subtitle;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
         child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: kMobile ? 48 : 40),
-          child: Center(
+          constraints: BoxConstraints(minHeight: kMobile ? 48 : 34),
+          child: !kMobile && subtitle != null
+              ? Padding(
+                  padding: EdgeInsets.symmetric(horizontal: S.s8),
+                  child: Row(children: [
+                    Container(
+                      width: 22,
+                      height: 22,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                          color: AppColors.tint2,
+                          borderRadius: BorderRadius.circular(R.of(6))),
+                      child: AppIcon('trash', size: 13, color: AppColors.danger),
+                    ),
+                    SizedBox(width: S.s8),
+                    Text(label,
+                        style: sans(13, weight: W.label, color: AppColors.danger)),
+                    SizedBox(width: S.s8),
+                    Expanded(
+                      child: Text(subtitle!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(12, color: AppColors.fg3)),
+                    ),
+                  ]),
+                )
+              : Center(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: S.s12),
               child: Row(mainAxisSize: MainAxisSize.min, children: [

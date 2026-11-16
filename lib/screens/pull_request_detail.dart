@@ -1606,8 +1606,9 @@ class _PrMergeBoxState extends State<PrMergeBox> {
 
   Widget _mergeButton({required String label, required VoidCallback? onTap}) {
     final enabled = onTap != null && !_busy;
-    if (kMobile && widget.status.mergeMethods.length > 1) {
-      final r = Radius.circular(R.of(12));
+    if (widget.status.mergeMethods.length > 1) {
+      final r = Radius.circular(kMobile ? R.of(12) : R.md);
+      final h = kMobile ? 40.0 : 32.0;
       return Builder(
         builder: (anchor) => Row(children: [
           Expanded(
@@ -1617,7 +1618,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
               child: InkWell(
                 onTap: enabled ? onTap : null,
                 child: Container(
-                  height: 40,
+                  height: h,
                   alignment: Alignment.center,
                   child: Text(label,
                       style: sans(14, weight: W.label, color: enabled ? AppColors.accentFg : AppColors.fg4)),
@@ -1632,8 +1633,8 @@ class _PrMergeBoxState extends State<PrMergeBox> {
             child: InkWell(
               onTap: _busy ? null : () => _pickMethod(anchor),
               child: SizedBox(
-                width: 44,
-                height: 40,
+                width: kMobile ? 44 : 32,
+                height: h,
                 child: Center(
                     child: AppIcon('chevron-down',
                         size: 16, color: enabled ? AppColors.accentFg : AppColors.fg4)),
@@ -1853,7 +1854,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
                 : canAuto
                     ? 'It will merge with a ${_short(_method)} once requirements are met.'
                     : 'Merging is disabled until requirements are met.')
-            : 'Merges with a ${_short(_method)} into ${_s.base}.${widget.status.mergeMethods.length > 1 && !kMobile ? ' Long-press to choose another method.' : ''}',
+            : 'Merges with a ${_short(_method)} into ${_s.base}.${''}',
         style: TS.meta(AppColors.fg4),
       ));
     }

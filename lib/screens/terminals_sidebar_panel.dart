@@ -47,16 +47,36 @@ class TerminalsSidebarPanel extends StatelessWidget {
 
     final folder = lastPathSegment(displayPath, ifEmpty: displayPath);
     final head = <Widget>[
-          ShellSectionHeader(
-            label: 'Terminals',
-            actions: [
-              ShellSectionAction(
-                icon: 'plus',
-                tooltip: 'New terminal',
-                onTap: onNewTerminal,
+          if (kMobile)
+            ShellSectionHeader(
+              label: 'Terminals',
+              actions: [
+                ShellSectionAction(
+                  icon: 'plus',
+                  tooltip: 'New terminal',
+                  onTap: onNewTerminal,
+                ),
+              ],
+            )
+          else
+            Container(
+              height: 38,
+              padding: EdgeInsets.fromLTRB(S.of(14), 0, S.s8, 0),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: AppColors.line)),
               ),
-            ],
-          ),
+              child: Row(children: [
+                Text('Terminals',
+                    style: sans(13, weight: W.label, color: AppColors.fg1)),
+                SizedBox(width: S.s4),
+                ShellSectionAction(
+                  icon: 'plus',
+                  tooltip: 'New terminal',
+                  onTap: onNewTerminal,
+                ),
+              ]),
+            ),
+          if (!kMobile) SizedBox(height: S.s6),
           // The session's working directory, same flat 32px row the file tree
           // and git panels use for their context line.
           Padding(

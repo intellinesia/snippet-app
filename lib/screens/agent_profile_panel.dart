@@ -497,16 +497,32 @@ class _AgentModelRowsState extends State<AgentModelRows> {
   Widget _row(String label, String value, {required bool desk}) => InkWell(
         onTap: () => _pick(desk: desk),
         child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: kMobile ? 48 : 40),
+          constraints: BoxConstraints(minHeight: kMobile ? 48 : 34),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: S.s16),
+            padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s16 : S.s8),
             child: Row(children: [
-              AppIcon(desk ? 'terminal' : 'cpu',
-                  size: kMobile ? 18 : 16, color: AppColors.fg3),
-              SizedBox(width: S.s12),
+              if (kMobile) ...[
+                AppIcon(desk ? 'terminal' : 'cpu',
+                    size: 18, color: AppColors.fg3),
+                SizedBox(width: S.s12),
+              ] else ...[
+                Container(
+                  width: 22,
+                  height: 22,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                      color: AppColors.tint2,
+                      borderRadius: BorderRadius.circular(R.of(6))),
+                  child: AppIcon(desk ? 'terminal' : 'cpu',
+                      size: 13, color: AppColors.fg3),
+                ),
+                SizedBox(width: S.s8),
+              ],
               Text(label,
                   maxLines: 1,
-                  style: sans(kMobile ? 15 : 13, color: AppColors.fg1)),
+                  style: kMobile
+                      ? sans(15, color: AppColors.fg1)
+                      : sans(13, weight: W.label, color: AppColors.fg1)),
               SizedBox(width: S.s8),
               Expanded(
                 child: Text(value,
@@ -531,7 +547,7 @@ class _AgentModelRowsState extends State<AgentModelRows> {
           Divider(
               height: 1,
               thickness: 1,
-              indent: S.s16,
+              indent: kMobile ? S.s16 : 0,
               color: AppColors.border),
           _row('Desk runs on', _deskLabel, desk: true),
         ],
