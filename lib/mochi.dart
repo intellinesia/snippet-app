@@ -129,11 +129,15 @@ class MochiIcon extends StatelessWidget {
 
 class AgentMochi extends StatelessWidget {
   const AgentMochi(this.agentId,
-      {super.key, this.size = 18, this.state = AgentCharacterState.idle});
+      {super.key,
+      this.size = 18,
+      this.state = AgentCharacterState.idle,
+      this.badge});
 
   final String agentId;
   final double size;
   final AgentCharacterState state;
+  final String? badge;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -147,6 +151,7 @@ class AgentMochi extends StatelessWidget {
               size: size,
               state: state,
               staggerKey: agentId,
+              badge: badge,
             );
           }
           return MochiIcon(
