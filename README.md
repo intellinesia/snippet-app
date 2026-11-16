@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/intellinesia/snippet/main/snippet-mascot/png/snip-mascot-256.png" alt="Mochi, the snippet mascot" width="96" height="96" />
+<img src="https://raw.githubusercontent.com/intellinesia/snippet/main/snippet-mascot/png/snip-mascot-256.png" alt="Rook, the snippet mascot" width="96" height="96" />
 
 # snippet app
 
