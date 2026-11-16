@@ -4,14 +4,14 @@ import 'package:snippet/widgets.dart' show AppIcon;
 import 'package:snippet/screens/agent_messaging.dart';
 import 'package:snippet/screens/agent_panel.dart';
 import 'package:snippet/chat/chat_info.dart' show AgentInfoPanel;
-import 'package:snippet/chat/chat_style.dart' show ChatHeader;
+import 'package:snippet/chat/stage_header.dart' show StageHeader;
 import 'package:snippet/screens/memory_screen.dart';
 
 import 'support/agent_shell_harness.dart';
 
 void main() {
   Finder title() => find.descendant(
-      of: find.byType(ChatHeader), matching: find.text('Snippet'));
+      of: find.byType(StageHeader), matching: find.text('Snippet'));
 
   testWidgets(
       'desktop agent tab: the title opens the docked info panel; actions open beside it',
