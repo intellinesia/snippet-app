@@ -186,8 +186,40 @@ class _RoutingScreenState extends State<RoutingScreen> {
     await _save(key, next);
   }
 
-  Widget _chainWrap(String key, List<String> chosen,
-      {WrapAlignment alignment = WrapAlignment.start}) {
+  Widget _pill({
+    required Widget child,
+    required VoidCallback onTap,
+    bool primary = false,
+    bool add = false,
+    String? tip,
+  }) {
+    final radius = BorderRadius.circular(kMobile ? R.md : R.sm);
+    final body = Material(
+      color: add ? Colors.transparent : AppColors.surface3,
+      borderRadius: radius,
+      child: InkWell(
+        borderRadius: radius,
+        onTap: onTap,
+        child: Container(
+          constraints: BoxConstraints(minHeight: kMobile ? 40 : 32),
+          padding: EdgeInsets.symmetric(
+              horizontal: kMobile ? S.of(10) : S.s8, vertical: S.s4),
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: primary
+                ? Border.all(color: AppColors.accent)
+                : add
+                    ? Border.all(color: AppColors.border2)
+                    : null,
+          ),
+          child: child,
+        ),
+      ),
+    );
+    return tip == null ? body : Tooltip(message: tip, child: body);
+  }
+
+  Widget _chainWrap(String key, List<String> chosen) {
     final profiles = _config?.profiles ?? const <InferenceProfile>[];
     final byName = {for (final p in profiles) p.name: p};
     final limited = _config?.limited ?? const {};
@@ -196,163 +228,119 @@ class _RoutingScreenState extends State<RoutingScreen> {
         key == 'lanes' || key == 'memory' ? 'Session model' : 'Active profile';
 
     return Wrap(
-      alignment: alignment,
-      spacing: 8,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 6,
+      runSpacing: 6,
       children: [
         if (chosen.isEmpty)
           Builder(
-            builder: (anchor) => Material(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(R.of(15)),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(R.of(15)),
-                onTap: () => _addFallbackMenu(anchor, key, chosen),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 116),
-                  child: IntrinsicWidth(
-                    child: Container(
-                      height: 30,
-                      padding: EdgeInsets.symmetric(horizontal: S.s12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(R.of(15)),
-                        border: Border.all(color: AppColors.line),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(defaultLabel,
-                              style: sans(13, color: AppColors.fg3)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            builder: (anchor) => _pill(
+              onTap: () => _addFallbackMenu(anchor, key, chosen),
+              child: Text(defaultLabel, style: sans(13, color: AppColors.fg3)),
             ),
           ),
-        for (var i = 0; i < chosen.length; i++) ...[
-          if (i > 0)
-            AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+        for (var i = 0; i < chosen.length; i++)
           Builder(
             builder: (anchor) {
               final name = chosen[i];
               final p = byName[name];
               final isPrimary = i == 0;
               final until = limited[name];
-              return Tooltip(
-                message: until != null
-                    ? 'Limited until ${limitLabel(until)}'
-                    : (isPrimary ? 'Primary · tap to edit' : 'Fallback · tap to edit'),
-                child: Material(
-                  color: isPrimary ? AppColors.surface2 : Colors.transparent,
-                  borderRadius: BorderRadius.circular(R.of(15)),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(R.of(15)),
-                    onTap: () => _pillMenu(anchor, key, chosen, i),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minWidth: 116),
-                      child: IntrinsicWidth(
-                        child: Container(
-                          height: 30,
-                          padding: EdgeInsets.symmetric(horizontal: S.s12),
+              return _pill(
+                primary: isPrimary,
+                tip: until != null ? 'Limited until ${limitLabel(until)}' : null,
+                onTap: () => _pillMenu(anchor, key, chosen, i),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      ProviderLogo(p?.provider ?? name, size: 12),
+                      SizedBox(width: S.of(7)),
+                      Text(name,
+                          style: sans(13,
+                              weight: FontWeight.w500, color: AppColors.fg1)),
+                      if (until != null) ...[
+                        SizedBox(width: S.s6),
+                        Container(
+                          width: 6,
+                          height: 6,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(R.of(15)),
-                            border: Border.all(color: AppColors.line),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              ProviderLogo(p?.provider ?? name, size: 12),
-                              SizedBox(width: S.of(7)),
-                              Text(
-                                name,
-                                style: sans(
-                                  13,
-                                  color: isPrimary ? AppColors.fg1 : AppColors.fg3,
-                                ),
-                              ),
-                              if (until != null) ...[
-                                SizedBox(width: S.s6),
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.run,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
+                              color: AppColors.run, shape: BoxShape.circle),
                         ),
-                      ),
-                    ),
-                  ),
+                      ],
+                    ]),
+                    Text(
+                        isPrimary
+                            ? 'Primary · tap to edit'
+                            : 'Fallback · tap to edit',
+                        style: sans(11, color: AppColors.fg3)),
+                  ],
                 ),
               );
             },
           ),
-        ],
-        if (hasMoreProfiles)
+        if (hasMoreProfiles && chosen.isNotEmpty)
           Builder(
-            builder: (anchor) => Tooltip(
-              message: chosen.isEmpty ? 'Set profile' : 'Add fallback',
-              child: Material(
-                color: Colors.transparent,
-                shape: const CircleBorder(),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: () => _addFallbackMenu(anchor, key, chosen),
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.line),
-                    ),
-                    alignment: Alignment.center,
-                    child: AppIcon('plus', size: 13, color: AppColors.fg3),
-                  ),
-                ),
-              ),
+            builder: (anchor) => _pill(
+              add: true,
+              onTap: () => _addFallbackMenu(anchor, key, chosen),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                AppIcon('plus', size: 13, color: AppColors.fg3),
+                SizedBox(width: S.s4),
+                Text('Add fallback', style: sans(13, color: AppColors.fg3)),
+              ]),
             ),
           ),
       ],
     );
   }
 
-  Widget _desktopRouteRow(String key, String title, String about) {
+  Widget _routeCard(String key, String title, String about) {
     final chosen = _routes[key] ?? const [];
-    return SettingsRow(
-      label: title,
-      sub: about,
-      trailing: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
-        child: _chainWrap(key, chosen, alignment: WrapAlignment.end),
+    return Container(
+      margin: EdgeInsets.only(bottom: S.s12),
+      padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s12),
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(kMobile ? R.lg : R.card),
+        border: Border.all(color: AppColors.line),
       ),
-    );
-  }
-
-  Widget _mobileRouteRow(String key, String title, String about) {
-    final chosen = _routes[key] ?? const [];
-    return Padding(
-      padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.of(14)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: sans(15, color: AppColors.fg1)),
-          SizedBox(height: S.s2),
-          Text(about, style: sans(13, color: AppColors.fg4)),
-          SizedBox(height: S.of(10)),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(title,
+                  style: sans(14, weight: FontWeight.w500, color: AppColors.fg1)),
+              SizedBox(width: S.s8),
+              Expanded(
+                child: Text(about,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12, color: AppColors.fg3)),
+              ),
+            ],
+          ),
+          SizedBox(height: S.s8),
           _chainWrap(key, chosen),
         ],
       ),
     );
   }
+
+  static const _note =
+      'Select a model to make it primary, reorder it, swap it or remove it. The first model handles the work; the rest step in when it hits a limit.';
+
+  List<Widget> _cards() => [
+        Padding(
+          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s12),
+          child: Text(_note, style: sans(13, height: 1.5, color: AppColors.fg3)),
+        ),
+        for (final (key, title, about) in _routeDefs)
+          _routeCard(key, title, about),
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -372,16 +360,8 @@ class _RoutingScreenState extends State<RoutingScreen> {
       ]);
     }
     if (!kMobile) {
-      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        SettingsGroup(
-          footer:
-              'Select a model to make it primary, reorder it, swap it or remove it. The first model handles the work; the rest step in when it hits a limit.',
-          children: [
-            for (final (key, title, about) in _routeDefs)
-              _desktopRouteRow(key, title, about),
-          ],
-        ),
-      ]);
+      return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch, children: _cards());
     }
     final Widget body;
     if (_config == null) {
@@ -397,12 +377,7 @@ class _RoutingScreenState extends State<RoutingScreen> {
     } else {
       body = ListView(
         padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
-        children: [
-          ListGroup(children: [
-            for (final (key, title, about) in _routeDefs)
-              _mobileRouteRow(key, title, about),
-          ]),
-        ],
+        children: _cards(),
       );
     }
     final scoped = CardGroupScope(child: body);

@@ -259,70 +259,82 @@ class _ProviderSection extends StatelessWidget {
         '${provider.sessions} session${provider.sessions == 1 ? '' : 's'}';
     final calls = '${provider.calls} call${provider.calls == 1 ? '' : 's'}';
     final models = provider.models.where((m) => m.model.isNotEmpty).toList();
+    final radius = BorderRadius.circular(kMobile ? R.lg : R.card);
 
-    return SettingsGroup(
-      children: [
-        SettingsRow(
-          leading: ProviderLogo(provider.provider, size: kMobile ? 18 : 16),
-          label: usageProviderTitle(provider.provider),
-          sub: provider.model.isNotEmpty && models.isEmpty
-              ? provider.model
-              : null,
-          trailing: Text(
-            '$sessions · $calls',
-            style: sans(kMobile ? 13 : 12, color: AppColors.fg4, tabular: true),
+    return Container(
+      margin: EdgeInsets.only(bottom: kMobile ? S.s12 : S.s12),
+      padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s12),
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: radius,
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(children: [
+            ProviderLogo(provider.provider, size: kMobile ? 18 : 16),
+            SizedBox(width: S.s8),
+            Expanded(
+              child: Text(usageProviderTitle(provider.provider),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(14, weight: FontWeight.w500, color: AppColors.fg1)),
+            ),
+            if (hasTokens)
+              Text(fmtSi(provider.totalTokens),
+                  style: mono(13, color: AppColors.fg1)),
+          ]),
+          Padding(
+            padding: EdgeInsets.only(top: S.s2, bottom: S.s6),
+            child: Text(
+              provider.model.isNotEmpty && models.isEmpty
+                  ? '$sessions · $calls · ${provider.model}'
+                  : '$sessions · $calls',
+              style: sans(12, color: AppColors.fg3, tabular: true),
+            ),
           ),
-        ),
-        if (provider.rateLimits.isNotEmpty)
-          for (final r in provider.rateLimits) _RateRow(rate: r)
-        else
-          SettingsRow(
-            label: switch (provider.rateLimitsSupported) {
-              true => 'No rate-limit data yet',
-              false => 'Subscription limits aren\'t exposed by this API',
-              null => 'Rate limits update after the next turn',
-            },
-            labelWidget: Text(
+          if (provider.rateLimits.isNotEmpty)
+            for (final r in provider.rateLimits) _RateRow(rate: r)
+          else
+            Text(
               switch (provider.rateLimitsSupported) {
                 true => 'No rate-limit data yet — send a message to refresh.',
                 false =>
                   'Subscription limits aren\'t exposed by this provider\'s API.',
                 null => 'Rate limits appear after the next turn.',
               },
-              style: sans(kMobile ? 13 : 13, color: AppColors.fg4),
+              style: sans(12, color: AppColors.fg3),
             ),
-          ),
-        if (hasTokens)
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: kMobile ? S.s16 : S.of(14),
-              vertical: kMobile ? S.s12 : S.of(10),
+          if (hasTokens)
+            Padding(
+              padding: EdgeInsets.only(top: S.s12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _Metric('Total', fmtSi(provider.totalTokens)),
+                  _Metric('Input', fmtSi(provider.promptTokens)),
+                  _Metric('Cached', fmtSi(provider.cacheReadTokens)),
+                  _Metric('Output', fmtSi(provider.completionTokens)),
+                ],
+              ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _Metric('Total', fmtSi(provider.totalTokens)),
-                _Metric('Input', fmtSi(provider.promptTokens)),
-                _Metric('Cached', fmtSi(provider.cacheReadTokens)),
-                _Metric('Output', fmtSi(provider.completionTokens)),
-              ],
+          for (final m in models)
+            Padding(
+              padding: EdgeInsets.only(top: S.s8),
+              child: Row(children: [
+                Expanded(
+                  child: Text(m.model,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mono(12, color: AppColors.fg2)),
+                ),
+                Text('${fmtSi(m.totalTokens)} · ${m.calls}×',
+                    style: mono(12, color: AppColors.fg4)),
+              ]),
             ),
-          ),
-        for (final m in models)
-          SettingsRow(
-            label: m.model,
-            labelWidget: Text(
-              m.model,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: mono(kMobile ? 13 : 12, color: AppColors.fg2),
-            ),
-            trailing: Text(
-              '${fmtSi(m.totalTokens)} · ${m.calls}×',
-              style: mono(kMobile ? 13 : 12, color: AppColors.fg4),
-            ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -358,10 +370,17 @@ class _RateRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = usageWindowTitle(rate);
     final reset = rateResetLabel(rate.resetsAt);
+    final label = Text(title, style: sans(12, color: AppColors.fg2));
     if (rate.isExpired) {
-      return SettingsRow(
-        label: title,
-        sub: 'Rolled over · awaiting the next report',
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: S.s4),
+        child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              label,
+              Text('Rolled over · awaiting the next report',
+                  style: sans(11, color: AppColors.fg3)),
+            ]),
       );
     }
 
@@ -372,18 +391,16 @@ class _RateRow extends StatelessWidget {
             ? AppColors.run
             : AppColors.ok;
 
-    return SettingsRow(
-      label: title,
-      sub: reset,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: kMobile ? 76 : 120,
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: S.s4),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          SizedBox(width: kMobile ? 96 : 110, child: label),
+          Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(R.of(3)),
               child: SizedBox(
-                height: 5,
+                height: 4,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -398,7 +415,7 @@ class _RateRow extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(width: S.of(10)),
+          SizedBox(width: S.s8),
           SizedBox(
             width: 68,
             child: Text(
@@ -407,8 +424,10 @@ class _RateRow extends StatelessWidget {
               style: mono(12, color: color),
             ),
           ),
-        ],
-      ),
+        ]),
+        if (reset != null)
+          Text(reset, style: sans(11, color: AppColors.fg4)),
+      ]),
     );
   }
 }
