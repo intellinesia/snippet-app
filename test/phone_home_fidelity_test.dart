@@ -199,14 +199,12 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.byType(SessionGroupHeader), findsNothing);
-      // The hero's top card carries the one "Needs you" label.
-      expect(find.text('Needs you'), findsOneWidget);
+      // The hero's top card and the list section each carry a "Needs you" label.
+      expect(find.text('Needs you'), findsNWidgets(2));
 
       // The Now section holds all 3 attention sessions as live cards.
-      final nowLabel = find.widgetWithText(MobileSectionLabel, 'Now');
+      final nowLabel = find.widgetWithText(MobileSectionLabel, 'Needs you');
       expect(nowLabel, findsOneWidget);
-      expect(find.descendant(of: nowLabel, matching: find.text('3')),
-          findsOneWidget);
       expect(find.byType(LiveSessionCard), findsNWidgets(3));
 
       // alpha and beta have no remaining sessions, so no folder sections.
@@ -231,8 +229,8 @@ void main() {
           findsNothing);
 
       expect(find.textContaining('Question'), findsWidgets);
-      expect(find.textContaining('In review'), findsOneWidget);
-      expect(find.textContaining('Needs input'), findsOneWidget);
+      expect(find.textContaining('In review'), findsWidgets);
+      expect(find.textContaining('Needs input'), findsWidgets);
 
       // Project tags appear on live cards.
       expect(find.text('alpha'), findsOneWidget);

@@ -136,7 +136,7 @@ class SessionPrActionRow extends StatelessWidget {
     final btnHeight = mobile ? M.minTarget : 28.0;
     return Row(
       children: [
-        AppIcon('git-pull-request', size: mobile ? 12 : 11, color: color),
+        AppIcon('pull-request', size: mobile ? 12 : 11, color: color),
         const SizedBox(width: 4),
         Expanded(
           child: Text(

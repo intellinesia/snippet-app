@@ -12,6 +12,7 @@ import '../notification_text.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'mobile_chrome.dart';
+import 'phone_hero.dart' show heroAgentColor;
 import 'session_list_row.dart';
 
 /// Phone home top bar: the Sessions / Agents switch with search and settings.
@@ -285,8 +286,8 @@ class MobileGroupCard extends StatelessWidget {
       );
 }
 
-/// A running or waiting session, shown large at the top of the phone list.
-class LiveSessionCard extends StatelessWidget {
+/// A needs-you, running or came-back session, shown as a card on the phone list.
+class LiveSessionCard extends StatefulWidget {
   const LiveSessionCard({
     super.key,
     required this.session,
@@ -296,6 +297,7 @@ class LiveSessionCard extends StatelessWidget {
     this.pinned = false,
     this.onReviewPr,
     this.onMergePr,
+    this.onDecide,
   });
 
   final SessionInfo session;
@@ -306,154 +308,8 @@ class LiveSessionCard extends StatelessWidget {
   final VoidCallback? onReviewPr;
   final VoidCallback? onMergePr;
 
-  @override
-  Widget build(BuildContext context) {
-    final s = session;
-    final needsYou = sessionNeedsYou(s);
-    final tone = needsYou ? AppColors.run : AppColors.accent;
-    final plan = !needsYou && s.plan != null && s.plan!.total > 0 ? s.plan : null;
-    final since = needsYou
-        ? relativeTime(s.lastActive)
-        : sessionDuration(plan != null ? (plan.stepStartedAt ?? s.runningSince) : s.runningSince);
-    final label = needsYou
-        ? sessionAttentionState(s).label
-        : (plan != null ? sessionStepLabel(plan) : 'Working');
-    final note = needsYou ? _attentionText(s) : plan?.current;
-    final lanesText = sessionLanesLabel(s.lanes);
-    final pr = s.pr;
-    final diff = sessionDiff(s);
-    final branch = s.branch?.trim() ?? '';
-    final title = s.title.trim().isEmpty ? '(untitled)' : s.title;
-    return Padding(
-      padding: EdgeInsets.only(bottom: S.of(10)),
-      child: Semantics(
-        button: true,
-        label: '$label. $title',
-        child: Material(
-          color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(R.of(16)),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-            splashFactory: NoSplash.splashFactory,
-            highlightColor: Colors.transparent,
-            hoverColor: Colors.transparent,
-            focusColor: Colors.transparent,
-            onTap: onTap == null
-                ? null
-                : () {
-                    tapHaptic();
-                    onTap!();
-                  },
-            onLongPress: onLongPress == null
-                ? null
-                : () {
-                    holdHaptic();
-                    onLongPress!();
-                  },
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(R.of(16)),
-                border: Border.all(color: AppColors.line),
-              ),
-              padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.s12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(children: [
-                    if (needsYou)
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration:
-                            BoxDecoration(color: tone, shape: BoxShape.circle),
-                      )
-                    else
-                      const WorkingDots(),
-                    SizedBox(width: S.s8),
-                    Text(since.isEmpty ? label : '$label · $since',
-                        style: sans(12, weight: W.label, color: tone)),
-                    const Spacer(),
-                    if (pinned) ...[
-                      AppIcon('pin', size: 12, color: AppColors.fg3),
-                      SizedBox(width: S.s8),
-                    ],
-                    if (leading != null)
-                      SizedBox.square(
-                          dimension: 18, child: Center(child: leading)),
-                  ]),
-                  SizedBox(height: S.s6),
-                  Text(title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(16,
-                          weight: W.label, height: 1.35, color: AppColors.fg1)),
-                  if (note != null) ...[
-                    SizedBox(height: S.s4),
-                    Text(note,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(13, height: 1.4, color: AppColors.fg2)),
-                  ],
-                  if (lanesText != null) ...[
-                    SizedBox(height: S.of(4)),
-                    Text(lanesText,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TS.meta(AppColors.fg3)),
-                  ],
-                  if (pr != null) ...[
-                    SizedBox(height: S.of(6)),
-                    SessionPrActionRow(
-                      pr: pr,
-                      onReview: onReviewPr,
-                      onMerge: onMergePr,
-                      mobile: true,
-                    ),
-                  ],
-                  SizedBox(height: S.of(10)),
-                  Row(children: [
-                    AppIcon('folder', size: 11, color: AppColors.fg4),
-                    SizedBox(width: S.s4),
-                    Flexible(
-                      child: Text(projectLabel(s),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TS.meta()),
-                    ),
-                    if (branch.isNotEmpty) ...[
-                      SizedBox(width: S.s8),
-                      AppIcon('git-branch', size: 11, color: AppColors.fg4),
-                      SizedBox(width: S.s4),
-                      Flexible(
-                        child: Text(branch,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TS.meta()),
-                      ),
-                    ] else
-                      const Spacer(),
-                    if (diff != null) ...[
-                      SizedBox(width: S.s8),
-                      if (diff.added > 0)
-                        Text('+${compactCount(diff.added)}',
-                            style: TS.meta(AppColors.ok)),
-                      if (diff.added > 0 && diff.removed > 0)
-                        SizedBox(width: S.s4),
-                      if (diff.removed > 0)
-                        Text('-${compactCount(diff.removed)}',
-                            style: TS.meta(AppColors.danger)),
-                    ],
-                  ]),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  /// Approve (true) or deny (false) the pending approval; null hides the buttons.
+  final Future<void> Function(SessionInfo session, bool approve)? onDecide;
 
   static String? _attentionText(SessionInfo s) {
     final a = s.attention;
@@ -465,6 +321,330 @@ class LiveSessionCard extends StatelessWidget {
       if (v is String && v.trim().isNotEmpty) return v.trim();
     }
     return null;
+  }
+
+  @override
+  State<LiveSessionCard> createState() => _LiveSessionCardState();
+}
+
+class _LiveSessionCardState extends State<LiveSessionCard> {
+  bool _busy = false;
+
+  Future<void> _decide(bool ok) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await widget.onDecide!(widget.session, ok);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  static Color _ink(Color c) =>
+      c.computeLuminance() > 0.45 ? const Color(0xFF14141A) : Colors.white;
+
+  static String _cap(String v) =>
+      v.isEmpty ? v : '${v[0].toUpperCase()}${v.substring(1)}';
+
+  static String _checks(SessionPr pr) => switch (pr.checks) {
+        'passing' => 'Checks passed',
+        'failing' => 'Checks failing',
+        'pending' => 'Checks running',
+        _ => pr.state == 'draft' ? 'Draft' : 'Open',
+      };
+
+  Widget _statusLine({required Widget lead, required String text, Color? ink}) =>
+      Row(children: [
+        SizedBox(width: 18, child: Center(child: lead)),
+        SizedBox(width: S.s8),
+        Expanded(
+          child: Text(text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: sans(14, height: 1.35, color: ink ?? AppColors.fg1)),
+        ),
+      ]);
+
+  Widget _button(String label, VoidCallback? onTap,
+      {String? icon, Color? color, Color? ink}) {
+    final fg = ink ?? AppColors.fg1;
+    return Opacity(
+      opacity: onTap == null ? 0.5 : 1,
+      child: Material(
+        color: color ?? AppColors.surface3,
+        borderRadius: BorderRadius.circular(R.of(12)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap == null
+              ? null
+              : () {
+                  tapHaptic();
+                  onTap();
+                },
+          child: SizedBox(
+            height: M.minTarget,
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              if (icon != null) ...[
+                AppIcon(icon, size: 16, color: fg),
+                SizedBox(width: S.s6),
+              ],
+              Text(label, style: sans(15, weight: W.label, color: fg)),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.session;
+    final needsYou = sessionNeedsYou(s);
+    final cameBack = sessionCameBack(s);
+    final agent = s.displayAgentId?.trim() ?? '';
+    final colour = agent.isEmpty ? AppColors.accent : heroAgentColor(agent);
+    final plan = !needsYou && !cameBack && s.plan != null && s.plan!.total > 0
+        ? s.plan
+        : null;
+    final att = s.attention ?? const <String, dynamic>{};
+    final isApproval = needsYou && att['type'] == 'approval' && approvalOf(att) != null;
+    final isQuestion = '${att['type'] ?? ''}'.toLowerCase() == 'question';
+    final canDecide = isApproval && widget.onDecide != null;
+    final pr = s.pr;
+    final openPr = pr != null && pr.state == 'open';
+    final branch = s.branch?.trim() ?? '';
+    final title = s.title.trim().isEmpty ? '(untitled)' : s.title.trim();
+    final lanesText = sessionLanesLabel(s.lanes);
+    final sub = lanesText;
+
+    final String age;
+    if (needsYou || cameBack) {
+      age = relativeTime(s.lastActive);
+    } else {
+      age = sessionDuration(plan != null
+          ? (plan.stepStartedAt ?? s.runningSince)
+          : s.runningSince);
+    }
+    final name = agent.isEmpty ? '' : _cap(agent);
+    final String footLeft;
+    if (cameBack) {
+      footLeft = name.isEmpty ? 'Finished' : '$name · finished';
+    } else if (plan != null) {
+      final step = _cap(sessionStepLabel(plan));
+      footLeft = name.isEmpty ? step : '$step · $name';
+    } else {
+      final base = needsYou ? sessionAttentionState(s).label : 'Working';
+      footLeft = name.isEmpty ? base : '$base · $name';
+    }
+
+    final Widget status;
+    if (needsYou) {
+      status = _statusLine(
+        lead: AppIcon(isApproval || isQuestion ? 'key' : 'message',
+            size: 16, color: AppColors.fg3),
+        text: LiveSessionCard._attentionText(s) ?? sessionAttentionState(s).label,
+      );
+    } else if (cameBack) {
+      final files = s.shownChanges?.files ?? 0;
+      final summary = s.resultSummary?.trim() ?? '';
+      status = _statusLine(
+        lead: AppIcon('pull-request',
+            size: 16, color: pr == null ? AppColors.fg3 : sessionPrColor(pr)),
+        text: pr != null
+            ? 'PR #${pr.number} · ${_checks(pr)}${files > 0 ? ' · $files file${files == 1 ? '' : 's'}' : ''}'
+            : (summary.isEmpty ? 'Finished' : summary),
+      );
+    } else {
+      status = _statusLine(
+        lead: Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: AppColors.ok, shape: BoxShape.circle)),
+        text: plan?.current?.trim().isNotEmpty == true ? plan!.current!.trim() : 'Working',
+      );
+    }
+
+    final avatar = agent.isNotEmpty
+        ? AgentMochi(agent,
+            size: 36,
+            state: needsYou
+                ? AgentCharacterState.needs
+                : cameBack
+                    ? AgentCharacterState.done
+                    : AgentCharacterState.working,
+            badge: needsYou ? '?' : null)
+        : (widget.leading == null
+            ? null
+            : SizedBox.square(dimension: 36, child: Center(child: widget.leading)));
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: S.of(10)),
+      child: Semantics(
+        button: true,
+        label: '${cameBack ? 'Came back' : footLeft}. $title',
+        child: Material(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(R.of(20)),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+            splashFactory: NoSplash.splashFactory,
+            highlightColor: Colors.transparent,
+            hoverColor: Colors.transparent,
+            focusColor: Colors.transparent,
+            onTap: widget.onTap == null
+                ? null
+                : () {
+                    tapHaptic();
+                    widget.onTap!();
+                  },
+            onLongPress: widget.onLongPress == null
+                ? null
+                : () {
+                    holdHaptic();
+                    widget.onLongPress!();
+                  },
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(R.of(20)),
+                border: Border.all(color: AppColors.line),
+              ),
+              padding: EdgeInsets.fromLTRB(S.s16, S.of(14), S.s16, S.of(14)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            if (widget.pinned) ...[
+                              AppIcon('pin', size: 12, color: AppColors.fg3),
+                              SizedBox(width: S.s6),
+                            ],
+                            Expanded(
+                              child: Text(title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: sans(17,
+                                      weight: W.label,
+                                      height: 1.3,
+                                      color: AppColors.fg1)),
+                            ),
+                          ]),
+                          SizedBox(height: S.s2),
+                          Row(children: [
+                            Flexible(
+                              child: Text(projectLabel(s),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: sans(13, color: AppColors.fg3)),
+                            ),
+                            if (branch.isNotEmpty) ...[
+                              SizedBox(width: S.s8),
+                              AppIcon('git-branch', size: 12, color: AppColors.fg3),
+                              SizedBox(width: S.s4),
+                              Flexible(
+                                child: Text(branch,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: mono(12, color: AppColors.fg3)),
+                              ),
+                            ],
+                          ]),
+                        ],
+                      ),
+                    ),
+                    if (avatar != null) ...[SizedBox(width: S.s12), avatar],
+                  ]),
+                  SizedBox(height: S.s12),
+                  status,
+                  if (sub != null) ...[
+                    SizedBox(height: S.s8),
+                    Row(children: [
+                      Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                            color: AppColors.surface3, shape: BoxShape.circle),
+                        child: Center(
+                            child: AppIcon('layers', size: 11, color: AppColors.fg3)),
+                      ),
+                      SizedBox(width: S.s8),
+                      Expanded(
+                        child: Text(sub,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(13, color: AppColors.fg3)),
+                      ),
+                    ]),
+                  ],
+                  if (plan != null) ...[
+                    SizedBox(height: S.s12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: LinearProgressIndicator(
+                        key: const Key('card-progress'),
+                        value: (plan.done / plan.total).clamp(0.0, 1.0),
+                        minHeight: 6,
+                        backgroundColor: AppColors.surface3,
+                        valueColor: AlwaysStoppedAnimation(colour),
+                      ),
+                    ),
+                  ],
+                  if (canDecide) ...[
+                    SizedBox(height: S.s12),
+                    Row(children: [
+                      Expanded(
+                          child: _button('Deny', _busy ? null : () => _decide(false))),
+                      SizedBox(width: S.s8),
+                      Expanded(
+                          flex: 2,
+                          child: _button('Approve', _busy ? null : () => _decide(true),
+                              icon: 'check', color: colour, ink: _ink(colour))),
+                    ]),
+                  ] else if (cameBack && openPr && widget.onReviewPr != null) ...[
+                    SizedBox(height: S.s12),
+                    Row(children: [
+                      Expanded(
+                          child: _button('Review', widget.onReviewPr, icon: 'eye')),
+                      if (widget.onMergePr != null) ...[
+                        SizedBox(width: S.s8),
+                        Expanded(
+                            flex: 2,
+                            child: _button('Merge', widget.onMergePr,
+                                icon: 'pull-request', color: colour, ink: _ink(colour))),
+                      ],
+                    ]),
+                  ] else if (!needsYou && !cameBack && pr != null) ...[
+                    SizedBox(height: S.s8),
+                    SessionPrActionRow(
+                      pr: pr,
+                      onReview: widget.onReviewPr,
+                      onMerge: widget.onMergePr,
+                      mobile: true,
+                    ),
+                  ],
+                  SizedBox(height: S.s12),
+                  Row(children: [
+                    Expanded(
+                      child: Text(footLeft,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(12, color: AppColors.fg3)),
+                    ),
+                    if (age.isNotEmpty)
+                      Text(age, style: sans(12, color: AppColors.fg3)),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -130,7 +130,10 @@ String? approvalPreview(Object? attention) {
       ? label
       : approval.shownCommand.split(RegExp(r'\s+')).join(' ');
   final head = approval.headline('${map['tool'] ?? ''}');
-  return detail.isEmpty ? head : '$head: $detail';
+  if (detail.isEmpty) return head;
+  // Labels often already lead with the headline.
+  if (detail.toLowerCase().startsWith(head.toLowerCase())) return detail;
+  return '$head: $detail';
 }
 
 String _escape(String value) =>
