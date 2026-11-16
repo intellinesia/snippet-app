@@ -237,7 +237,8 @@ class Swr<T> {
       e['kind'] == 'coordination_event';
 
   static bool sessionStatus(DeviceEventFrame e) =>
-      (e['status'] as String?)?.isNotEmpty == true;
+      (e['status'] as String?)?.isNotEmpty == true ||
+      e['kind'] == 'session_pr';
 
   final SwrEntry<T> entry;
   final Duration dedupe;

@@ -268,6 +268,10 @@ class TaskRow extends StatelessWidget {
                       weight: W.label,
                       height: 1.3,
                       color: finished ? AppColors.fg3 : AppColors.fg1)),
+              if (task.planTotal > 0) ...[
+                const SizedBox(height: 6),
+                TaskPlanProgress(done: task.planDone, total: task.planTotal),
+              ],
               if (detail.isNotEmpty) ...[
                 const SizedBox(height: 5),
                 Text(detail,
@@ -346,6 +350,14 @@ class TaskRow extends StatelessWidget {
                           style: sans(13,
                               height: 18 / 13,
                               color: done ? AppColors.fg3 : AppColors.fg1)),
+                      if (task.planTotal > 0) ...[
+                        const SizedBox(height: 3),
+                        TaskPlanProgress(
+                          done: task.planDone,
+                          total: task.planTotal,
+                          compact: true,
+                        ),
+                      ],
                       if (detail.isNotEmpty) ...[
                         const SizedBox(height: 1),
                         Text(detail,

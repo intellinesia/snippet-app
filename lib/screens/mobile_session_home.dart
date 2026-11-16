@@ -295,6 +295,8 @@ class LiveSessionCard extends StatelessWidget {
     this.onLongPress,
     this.leading,
     this.pinned = false,
+    this.onReviewPr,
+    this.onMergePr,
   });
 
   final SessionInfo session;
@@ -302,25 +304,24 @@ class LiveSessionCard extends StatelessWidget {
   final VoidCallback? onLongPress;
   final Widget? leading;
   final bool pinned;
-
-  static String _since(int? t) {
-    if (t == null || t <= 0) return '';
-    final secs = t > 100000000000 ? t ~/ 1000 : t;
-    final d = DateTime.now()
-        .difference(DateTime.fromMillisecondsSinceEpoch(secs * 1000));
-    if (d.inMinutes < 1) return 'just now';
-    if (d.inMinutes < 60) return '${d.inMinutes}m';
-    return '${d.inHours}h ${d.inMinutes % 60}m';
-  }
+  final VoidCallback? onReviewPr;
+  final VoidCallback? onMergePr;
 
   @override
   Widget build(BuildContext context) {
     final s = session;
     final needsYou = sessionNeedsYou(s);
     final tone = needsYou ? AppColors.run : AppColors.accent;
-    final since = needsYou ? relativeTime(s.lastActive) : _since(s.runningSince);
-    final label = needsYou ? sessionAttentionState(s).label : 'Working';
-    final note = needsYou ? _attentionText(s) : null;
+    final plan = !needsYou && s.plan != null && s.plan!.total > 0 ? s.plan : null;
+    final since = needsYou
+        ? relativeTime(s.lastActive)
+        : sessionDuration(plan != null ? (plan.stepStartedAt ?? s.runningSince) : s.runningSince);
+    final label = needsYou
+        ? sessionAttentionState(s).label
+        : (plan != null ? sessionStepLabel(plan) : 'Working');
+    final note = needsYou ? _attentionText(s) : plan?.current;
+    final lanesText = sessionLanesLabel(s.lanes);
+    final pr = s.pr;
     final diff = sessionDiff(s);
     final branch = s.branch?.trim() ?? '';
     final title = s.title.trim().isEmpty ? '(untitled)' : s.title;
@@ -395,6 +396,22 @@ class LiveSessionCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: sans(13, height: 1.4, color: AppColors.fg2)),
+                  ],
+                  if (lanesText != null) ...[
+                    const SizedBox(height: 4),
+                    Text(lanesText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TS.meta(AppColors.fg3)),
+                  ],
+                  if (pr != null) ...[
+                    const SizedBox(height: 6),
+                    SessionPrActionRow(
+                      pr: pr,
+                      onReview: onReviewPr,
+                      onMerge: onMergePr,
+                      mobile: true,
+                    ),
                   ],
                   const SizedBox(height: 10),
                   Row(children: [
