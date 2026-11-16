@@ -34,7 +34,7 @@ class FakeClient extends DaemonClient {
       ];
 }
 
-Future<_Socket> pumpSession(WidgetTester tester, Map<String, dynamic> snap,
+Future<_Socket> _pumpSession(WidgetTester tester, Map<String, dynamic> snap,
     {Size size = const Size(390, 844)}) async {
   debugDefaultTargetPlatformOverride = TargetPlatform.android;
   addTearDown(() => debugDefaultTargetPlatformOverride = null);
@@ -75,7 +75,7 @@ Future<_Socket> pumpSession(WidgetTester tester, Map<String, dynamic> snap,
 void main() {
   testWidgets('running: stage header subtitle, step, lanes pill, quick actions',
       (tester) async {
-    await pumpSession(tester, {
+    await _pumpSession(tester, {
       'status': 'running',
       'events': [],
       'lanes': [
@@ -96,7 +96,7 @@ void main() {
   });
 
   testWidgets('idle: no quick actions, hint names the agent', (tester) async {
-    await pumpSession(tester, {'status': 'idle', 'events': []});
+    await _pumpSession(tester, {'status': 'idle', 'events': []});
     expect(find.text('Interrupt'), findsNothing);
     expect(find.text('Message Rook'), findsOneWidget);
     expect(find.textContaining('2 lanes'), findsNothing);
@@ -111,7 +111,7 @@ void main() {
             .subtract(const Duration(minutes: 2, seconds: 5))
             .millisecondsSinceEpoch ~/
         1000;
-    await pumpSession(tester, {
+    await _pumpSession(tester, {
       'status': 'waiting_for_input',
       'events': [
         {
