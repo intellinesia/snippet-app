@@ -19,6 +19,7 @@ import 'package:snippet/screens/group_messaging.dart';
 import 'package:snippet/screens/session.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/chat/chat_style.dart';
+import 'package:snippet/chat/stage_bar.dart';
 import 'package:snippet/message_reactions.dart';
 import 'package:snippet/theme.dart';
 
@@ -278,8 +279,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
 
-      expect(find.byType(ChatHeader), findsOneWidget);
-      expect(find.text('Argon and Fable'), findsOneWidget);
+      expect(find.byType(StageBar), findsOneWidget);
+      expect(find.text('3 members'), findsOneWidget);
       expect(find.byType(ChatSenderName), findsOneWidget);
       expect(find.byType(ChatBubble), findsNWidgets(3));
       expect(find.textContaining('Read by Argon and Fable'), findsOneWidget);
@@ -417,7 +418,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.byType(AgentMochi), findsWidgets);
-      expect(find.text('Auth fix · Worker session'), findsOneWidget);
+      expect(find.text('t1 · Auth fix · Worker session'), findsOneWidget);
 
       await tester.tap(find.text('Approve'));
       await tester.pump(const Duration(milliseconds: 50));
@@ -532,7 +533,7 @@ void main() {
       final sent = jsonDecode(ch.sent.single as String) as Map;
       expect(sent['kind'], 'answer');
       expect(sent['value'], 'Which environment?\n→ Production (prod)');
-      expect(find.text('Answered: Production'), findsOneWidget);
+      expect(find.text('Production'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox());
       debugDefaultTargetPlatformOverride = null;

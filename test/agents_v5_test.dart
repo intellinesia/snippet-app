@@ -222,7 +222,7 @@ void main() {
               question: e.payload['question'] as Map<dynamic, dynamic>,
               client: client,
               events: [e, answer]));
-      expect(find.text('Answered: Production'), findsOneWidget);
+      expect(find.text('Production'), findsOneWidget);
       expect(find.text('Send'), findsNothing);
       expect(find.text('Skip'), findsNothing);
     });
