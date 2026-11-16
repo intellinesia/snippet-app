@@ -37,7 +37,8 @@ class StageBar extends StatelessWidget {
 
   static const double phoneHeight = 140;
 
-  static double get height => kMobile ? phoneHeight : ChatHeader.overlap;
+  // Desktop leaves headroom above the cast: the characters' crowns rise past their box.
+  static double get height => kMobile ? phoneHeight : ChatHeader.overlap + 24;
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +62,7 @@ class StageBar extends StatelessWidget {
       height: height - (kMobile ? GlassTopFrame.fade : 0),
       child: Padding(
         padding: EdgeInsets.fromLTRB(kMobile ? S.s12 : S.s12,
-            kMobile ? S.s4 : S.s8, kMobile ? S.s12 : S.s12, 0),
+            kMobile ? S.s4 : S.s24, kMobile ? S.s12 : S.s12, 0),
         child: Stack(children: [
           Align(alignment: Alignment.topCenter, child: header),
           if (leading != null || back != null)

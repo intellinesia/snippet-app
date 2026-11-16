@@ -31,6 +31,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../swr.dart';
 import '../pull_refresh.dart';
+import '../chat/decided_card.dart';
 import 'agent_questions_card.dart';
 import 'agent_records.dart';
 import 'agent_thread_cards.dart';
@@ -1386,7 +1387,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         if (card != null) {
           final keyedCard = KeyedSubtree(key: bubbleKey, child: card);
           final cappedCard = kMobile
-              ? ChatBubbleRow(mine: false, child: keyedCard)
+              ? (card is DeskApprovalCard ||
+                      card is DecidedCard ||
+                      card is AgentQuestionsCard
+                  ? keyedCard
+                  : ChatBubbleRow(mine: false, child: keyedCard))
               : Align(
                   alignment: Alignment.centerLeft,
                   child: ConstrainedBox(
