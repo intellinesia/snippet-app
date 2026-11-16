@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
-import '../dialog_widgets.dart' show AppField;
 import '../models.dart';
 import '../mochi.dart';
 import '../platform.dart';
