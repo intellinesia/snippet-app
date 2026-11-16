@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../mochi.dart';
 import '../theme.dart';
+import '../widgets.dart' show AppIcon;
 
 /// One cast member on the stage.
 class StageMember {
@@ -24,6 +25,7 @@ class StageHeader extends StatelessWidget {
     this.subtitleDot,
     this.onTap,
     this.below,
+    this.compact = false,
   });
 
   /// The first member stands in the middle and largest.
@@ -36,21 +38,27 @@ class StageHeader extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget? below;
 
+  /// Desktop: smaller cast and a one-row chip (title then subtitle).
+  final bool compact;
+
   static const double leadSize = 72;
   static const double sideSize = 52;
+  static const double compactLeadSize = 56;
+  static const double compactSideSize = 40;
   static const int maxShown = 3;
 
   @override
   Widget build(BuildContext context) {
     final shown = members.take(maxShown).toList();
+    final lead = compact ? compactLeadSize : leadSize;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          height: leadSize - S.s12,
+          height: lead - S.s12,
           child: OverflowBox(
             alignment: Alignment.topCenter,
-            maxHeight: leadSize,
+            maxHeight: lead,
             child: _cast(shown),
           ),
         ),
@@ -61,7 +69,9 @@ class StageHeader extends StatelessWidget {
   }
 
   Widget _cast(List<StageMember> shown) {
-    if (shown.isEmpty) return const SizedBox(height: leadSize);
+    final leadSize = compact ? compactLeadSize : StageHeader.leadSize;
+    final sideSize = compact ? compactSideSize : StageHeader.sideSize;
+    if (shown.isEmpty) return SizedBox(height: leadSize);
     Widget char(StageMember m, double size) => AgentMochi(m.agentId,
         size: size, state: m.state, badge: m.badge);
     // Side members stand behind the lead, so they are painted first.
@@ -83,9 +93,12 @@ class StageHeader extends StatelessWidget {
   }
 
   Widget _chip() {
+    final hasSub = subtitle != null && subtitle!.isNotEmpty;
     final chip = Container(
-      constraints: const BoxConstraints(minHeight: 44, maxWidth: 280),
-      padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s6),
+      constraints:
+          BoxConstraints(minHeight: compact ? 28 : 44, maxWidth: compact ? 420 : 280),
+      padding: EdgeInsets.symmetric(
+          horizontal: compact ? S.s12 : S.s16, vertical: compact ? S.s4 : S.s6),
       decoration: BoxDecoration(
         color: AppColors.surface2,
         borderRadius: BorderRadius.circular(R.card),
@@ -99,31 +112,19 @@ class StageHeader extends StatelessWidget {
               child: Text(title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(15, weight: FontWeight.w600, color: AppColors.fg1)),
+                  style: sans(compact ? 13 : 15,
+                      weight: FontWeight.w600, color: AppColors.fg1)),
             ),
             if (onTap != null) ...[
               SizedBox(width: S.s4),
-              Icon(Icons.chevron_right, size: 14, color: AppColors.fg3),
+              AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+            ],
+            if (compact && hasSub) ...[
+              SizedBox(width: S.s8),
+              Flexible(child: _sub()),
             ],
           ]),
-          if (subtitle != null && subtitle!.isNotEmpty)
-            Row(mainAxisSize: MainAxisSize.min, children: [
-              if (subtitleDot != null) ...[
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration:
-                      BoxDecoration(color: subtitleDot, shape: BoxShape.circle),
-                ),
-                SizedBox(width: S.s6),
-              ],
-              Flexible(
-                child: Text(subtitle!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(12, color: AppColors.fg3)),
-              ),
-            ]),
+          if (!compact && hasSub) _sub(),
         ],
       ),
     );
@@ -137,6 +138,24 @@ class StageHeader extends StatelessWidget {
       ),
     );
   }
+
+  Widget _sub() => Row(mainAxisSize: MainAxisSize.min, children: [
+        if (subtitleDot != null) ...[
+          Container(
+            width: 6,
+            height: 6,
+            decoration:
+                BoxDecoration(color: subtitleDot, shape: BoxShape.circle),
+          ),
+          SizedBox(width: S.s6),
+        ],
+        Flexible(
+          child: Text(subtitle!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(compact ? 11 : 12, color: AppColors.fg3)),
+        ),
+      ]);
 }
 
 /// The small pill under the chip, e.g. "2 lanes".

@@ -531,6 +531,20 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       ? (e.payload['from_agent_id']?.toString() ?? e.actorId)
       : e.actorId;
 
+  /// A review verdict reads as one quiet line, not a message bubble.
+  String? _verdictLine(CoordinationEvent e) {
+    if (e.eventType != 'task.verdict') return null;
+    final verdict = e.payload['verdict']?.toString() ?? '';
+    final by = e.payload['by']?.toString() ?? e.actorId;
+    final taskId = e.payload['task_id']?.toString() ?? '';
+    final who = by == 'human' || by == 'user' || by == 'local' ? 'You' : by;
+    return switch (verdict) {
+      'approved' => '$who approved $taskId',
+      'sent_back' => '$who sent back $taskId',
+      _ => null,
+    };
+  }
+
   /// The speaker's name and what the post is doing: who it names, whose turn
   /// it passes, or that it needs an answer.
   Widget _speaker(CoordinationEvent e, double size) {
@@ -1838,6 +1852,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             final e = room.events[i];
             final mine = e.actorKind == 'human';
             final body = e.payload['body']?.toString() ?? '';
+            final verdictLine = _verdictLine(e);
+            if (verdictLine != null) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Center(
+                  child: Text(verdictLine,
+                      style: sans(12, color: AppColors.fg3)),
+                ),
+              );
+            }
             if (body.trim().isEmpty) return const SizedBox.shrink();
             if (kMobile) {
               final md = MarkdownBody(

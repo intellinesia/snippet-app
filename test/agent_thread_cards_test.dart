@@ -551,8 +551,7 @@ void main() {
         client: _Client(const []), agentId: 'builder');
     expect(card, isA<DeskApprovalCard>());
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: card!)));
-    expect(find.text('Run a command'), findsOneWidget);
-    expect(find.text('Auth cleanup · Fix login'), findsOneWidget);
+    expect(find.text('t1 · Auth cleanup · Fix login'), findsOneWidget);
     expect(find.text('Needs the full suite before the PR.'), findsOneWidget);
     expect(find.text('Approve'), findsOneWidget);
     expect(find.text('Deny'), findsOneWidget);
@@ -625,5 +624,93 @@ void main() {
 
     await t.pumpWidget(const SizedBox());
     debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets(
+      'desk approval renders daemon decision after restart without static map and legacy rejected uses Denied',
+      (t) async {
+    final approvedEv = _ev(1, 'agent', 'Run cargo test', {
+      'kind': 'approval',
+      'approval': {
+        'session': 's1',
+        'tool': 'bash',
+        'summary': 'cargo test',
+        'approval_id': '3:2026-11-16',
+      },
+      'decision': {
+        'kind': 'decision',
+        'request': 'approval',
+        'request_id': '3:2026-11-16',
+        'outcome': 'approved',
+        'by': 'human',
+        'via': 'desk',
+        'at': 1763250000,
+      },
+    });
+    final deniedEv = _ev(2, 'agent', 'Push', {
+      'kind': 'approval',
+      'approval': {
+        'session': 's1',
+        'tool': 'bash',
+        'summary': 'git push --force',
+        'approval_id': '4:2026-11-16',
+      },
+      'decision': {
+        'kind': 'decision',
+        'request': 'approval',
+        'request_id': '4:2026-11-16',
+        'outcome': 'denied',
+        'by': 'human',
+        'via': 'app',
+        'at': 1763250005,
+      },
+    });
+    final outdatedEv = _ev(3, 'agent', 'Old', {
+      'kind': 'approval',
+      'approval': {
+        'session': 's1',
+        'tool': 'bash',
+        'summary': 'rm -rf /tmp/x',
+        'approval_id': '5:2026-11-16',
+      },
+      'decision': {
+        'kind': 'decision',
+        'request': 'approval',
+        'request_id': '5:2026-11-16',
+        'outcome': 'outdated',
+        'by': 'human',
+        'via': 'app',
+        'at': 1763250010,
+      },
+    });
+    final legacyDenied = _ev(4, 'agent', 'Legacy', {
+      'approval': {
+        'summary': 'Run rm',
+        'status': 'denied',
+      },
+    });
+
+    final client = _Client(const []);
+    await t.pumpWidget(MaterialApp(
+      theme: buildAppTheme(),
+      home: Scaffold(
+        body: ListView(
+          children: [
+            agentThreadEventCard(approvedEv, client: client, agentId: 'builder')!,
+            agentThreadEventCard(deniedEv, client: client, agentId: 'builder')!,
+            agentThreadEventCard(outdatedEv, client: client, agentId: 'builder')!,
+            agentThreadEventCard(legacyDenied, client: client, agentId: 'builder')!,
+          ],
+        ),
+      ),
+    ));
+
+    expect(find.text('Approved'), findsOneWidget);
+    expect(find.text('Denied'), findsOneWidget);
+    expect(find.text('No longer waiting on this'), findsOneWidget);
+    expect(find.text('Approval · Denied'), findsOneWidget);
+    expect(find.text('Approval · Rejected'), findsNothing);
+    expect(find.text('Approve'), findsNothing);
+    await t.pumpWidget(const SizedBox());
   });
 }

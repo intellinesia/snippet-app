@@ -47,6 +47,27 @@ void main() {
         {'url': 'http://c', 'session': 's'}, const QuickApprove());
     expect(ok, isFalse);
   });
+
+  test('includes optional via field when set on QuickAction', () async {
+    SharedPreferences.setMockInitialValues({});
+    final ch = _Channel();
+    DaemonClient.wsConnector = (uri, {connectTimeout, pingInterval}) {
+      Timer(const Duration(milliseconds: 10),
+          () => ch.incoming.add('{"wire":"snapshot"}'));
+      return ch;
+    };
+    addTearDown(() => DaemonClient.wsConnector = null);
+
+    final ok = await quickSend(
+      client: DaemonClient('http://127.0.0.1:9090', 'tok'),
+      session: 's-1',
+      action: const QuickApprove(via: 'desk'),
+    );
+    expect(ok, isTrue);
+    final frame = jsonDecode(ch.sent.single as String) as Map;
+    expect(frame['kind'], 'approve');
+    expect(frame['via'], 'desk');
+  });
 }
 
 class _Channel extends StreamChannelMixin implements WebSocketChannel {

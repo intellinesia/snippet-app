@@ -13,6 +13,8 @@ import '../glass.dart';
 import '../ambient_loop.dart';
 import '../api.dart';
 import '../clock.dart';
+import '../chat/stage_bar.dart';
+import '../chat/stage_header.dart';
 import '../chat/chat_style.dart';
 import '../chat/message_body.dart';
 import '../composer/composer_attachments.dart';
@@ -29,6 +31,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../swr.dart';
 import '../pull_refresh.dart';
+import '../chat/decided_card.dart';
 import 'agent_questions_card.dart';
 import 'agent_records.dart';
 import 'agent_thread_cards.dart';
@@ -367,9 +370,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   String? _fetchedLine;
-  bool _fetchedPaused = false;
-  String? _fetchedProfile;
-  String? _profileProvider;
   final GlobalKey _headerKey = GlobalKey();
 
   void _loadLine() {
@@ -382,15 +382,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       ].join(' \u00b7 ');
       setState(() {
         _fetchedLine = line;
-        _fetchedPaused = !a.available;
-        _fetchedProfile = a.profile;
       });
-      final name = a.profile;
-      if (name == null) return;
-      widget.client.getConfig().then((cfg) {
-        final p = cfg.profiles.where((x) => x.name == name).firstOrNull;
-        if (p != null && mounted) setState(() => _profileProvider = p.provider);
-      }).catchError((_) {});
     }).catchError((_) {});
   }
 
@@ -455,7 +447,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   Widget _viewBody() {
-    final recordsTop = _noChrome ? 0.0 : ChatHeader.overlap;
+    final recordsTop = _noChrome ? 0.0 : StageBar.height;
     final child = switch (_view) {
       AgentView.thread => KeyedSubtree(
           key: const ValueKey(AgentView.thread), child: _body()),
@@ -622,7 +614,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       client: widget.client,
       key: 'agent-thread:${widget.agentId}',
       fetch: () => widget.client.agentThreadPage(peerId: widget.agentId),
-      revalidateOn: Swr.coordination,
+      revalidateOn: (e) => Swr.coordination(e) || e['kind'] == 'session_decision',
       onChange: _sync,
     );
     _events = _thread.data?.events ?? const [];
@@ -953,7 +945,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                           : hideChrome
                           ? _viewBody()
                           : TopFadeMask(
-                              clear: ChatHeader.overlap - 24,
+                              clear: StageBar.height - 24,
                               child: _viewBody())),
                   if (!hideChrome)
                     Positioned(
@@ -973,65 +965,16 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     );
   }
 
-  Widget _headerStatus(String subtitle) {
-    final store = widget.client.presence;
-    return ListenableBuilder(
-      listenable: store,
-      builder: (_, __) {
-        final p = store.presenceForAgentId(widget.agentId);
-        if (p == null) return _reserveStatus(_plainHeaderStatus(subtitle));
-        final status = _typing ? 'typing…' : PresenceStore.chatWord(p);
-        final dots = p.state == 'thinking' || p.state == 'typing';
-        if (status.isEmpty && !dots) {
-          return _reserveStatus(_plainHeaderStatus(subtitle));
-        }
-        final cut = subtitle.indexOf(' \u00b7 ');
-        final head = cut < 0 ? '' : subtitle.substring(0, cut);
-        final text = status.isEmpty
-            ? subtitle
-            : head.isEmpty
-                ? status
-                : '$head \u00b7 $status';
-        return _reserveStatus(Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(child: ChatHeader.statusText(text)),
-            if (dots) ...[
-              SizedBox(width: S.s4),
-              WorkingDots(color: ChatColors.meta, size: 4),
-            ],
-          ],
-        ));
-      },
-    );
-  }
-
-  // Fixed-height line so the late subtitle fades in instead of shifting the header.
-  Widget _reserveStatus(Widget child) => SizedBox(
-        height: 16,
-        child: AnimatedSwitcher(
-          duration: Motion.fast,
-          child: KeyedSubtree(key: ValueKey(child is SizedBox), child: child),
-        ),
-      );
-
-  Widget _plainHeaderStatus(String subtitle) {
-    final logo = widget.subtitle == null && _profileProvider != null;
-    if (!logo) {
-      return subtitle.isEmpty
-          ? const SizedBox.shrink()
-          : ChatHeader.statusText(subtitle);
-    }
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (_fetchedPaused)
-          Flexible(child: ChatHeader.statusText('Paused \u00b7 ')),
-        Tooltip(
-            message: _fetchedProfile ?? '',
-            child: ProviderLogo(_profileProvider, size: 13)),
-      ],
-    );
+  /// The chip's second line: the profile (or Paused), then what the agent
+  /// is doing right now.
+  String _stageSubtitle(String subtitle) {
+    final p = widget.client.presence.presenceForAgentId(widget.agentId);
+    if (p == null) return subtitle;
+    final status = _typing ? 'typing\u2026' : PresenceStore.chatWord(p);
+    if (status.isEmpty) return subtitle;
+    final cut = subtitle.indexOf(' \u00b7 ');
+    final head = cut < 0 ? '' : subtitle.substring(0, cut);
+    return head.isEmpty ? status : '$head \u00b7 $status';
   }
 
   bool get _noChrome => widget.embedded && !widget.tabHeader;
@@ -1073,20 +1016,35 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             )
           : switcher;
     }
-    return ChatHeader(
-      key: _headerKey,
-      agentIds: [widget.agentId],
-      title: widget.agentName,
-      status: _view == AgentView.thread
-          ? _headerStatus(subtitle)
-          : ChatHeader.statusText(_viewLine),
-      onTitleTap: _view == AgentView.thread
-          ? (widget.onDeskInfo ?? _openInfo)
-          : () => _openViewMenu(
-              anchor: kMobile ? null : _headerKey.currentContext),
-      titleHint: _view == AgentView.thread ? 'Info' : 'Switch view',
-      onBack: canPop && !kMobile ? _closePage : null,
-      trailing: trailing,
+    final onTap = _view == AgentView.thread
+        ? (widget.onDeskInfo ?? _openInfo)
+        : () => _openViewMenu(anchor: kMobile ? null : _headerKey.currentContext);
+    return ListenableBuilder(
+      listenable: widget.client.presence,
+      builder: (_, __) {
+        final working = widget.client.presence
+                .presenceForAgentId(widget.agentId)
+                ?.state ==
+            'running';
+        return KeyedSubtree(
+          key: _headerKey,
+          child: StageBar(
+            members: [
+              StageMember(widget.agentId,
+                  state: _typing || working
+                      ? AgentCharacterState.working
+                      : AgentCharacterState.idle),
+            ],
+            title: widget.agentName,
+            subtitle: _view == AgentView.thread
+                ? _stageSubtitle(subtitle)
+                : _viewLine,
+            onTap: onTap,
+            onBack: canPop ? _closePage : null,
+            trailing: trailing,
+          ),
+        );
+      },
     );
   }
 
@@ -1153,10 +1111,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   Widget _body() {
-    final topPad = _noChrome ? 12.0 : ChatHeader.overlap;
+    final topPad = _noChrome ? 12.0 : StageBar.height;
     if (_loading) {
       return Padding(
-        padding: EdgeInsets.only(top: _noChrome ? 0 : ChatHeader.overlap),
+        padding: EdgeInsets.only(top: _noChrome ? 0 : StageBar.height),
         child: const Center(
           child: Spinner(size: 24),
         ),
@@ -1164,7 +1122,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     }
     if (_error != null) {
       return Padding(
-        padding: EdgeInsets.only(top: _noChrome ? 0 : ChatHeader.overlap),
+        padding: EdgeInsets.only(top: _noChrome ? 0 : StageBar.height),
         child: Center(
           child: Padding(
             padding: EdgeInsets.all(S.s24),
@@ -1193,7 +1151,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         onRefresh: () => _load(silent: true),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(top: _noChrome ? 0 : ChatHeader.overlap),
+          padding: EdgeInsets.only(top: _noChrome ? 0 : StageBar.height),
           children: [
             SizedBox(
               height: MediaQuery.sizeOf(context).height * 0.45,
@@ -1429,7 +1387,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         if (card != null) {
           final keyedCard = KeyedSubtree(key: bubbleKey, child: card);
           final cappedCard = kMobile
-              ? ChatBubbleRow(mine: false, child: keyedCard)
+              ? (card is DeskApprovalCard ||
+                      card is DecidedCard ||
+                      card is AgentQuestionsCard
+                  ? keyedCard
+                  : ChatBubbleRow(mine: false, child: keyedCard))
               : Align(
                   alignment: Alignment.centerLeft,
                   child: ConstrainedBox(
