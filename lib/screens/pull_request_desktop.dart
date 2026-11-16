@@ -131,99 +131,130 @@ class _PrListPanelState extends State<PrListPanel> {
         .toList();
   }
 
-  Widget _filterChip(String key, String label) {
-    final on = _filter == key;
-    return Padding(
-      padding: EdgeInsets.only(right: S.s4),
-      child: Material(
-        color: on ? AppColors.tint2 : Colors.transparent,
-        borderRadius: BorderRadius.circular(R.pill),
-        child: InkWell(
-          onTap: () => _pick(key),
-          borderRadius: BorderRadius.circular(R.pill),
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(5)),
-            child: Text(label,
-                style: sans(13,
-                    weight: W.label, color: on ? AppColors.fg1 : AppColors.fg3)),
+  Widget _filterBar() => Padding(
+        padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s8),
+        child: Container(
+          padding: EdgeInsets.all(S.of(3)),
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(R.of(10)),
+            border: Border.all(color: AppColors.line),
           ),
+          child: Row(children: [
+            for (final (key, label) in _prFilters)
+              Expanded(
+                flex: label.length,
+                child: InkWell(
+                  onTap: () => _pick(key),
+                  borderRadius: BorderRadius.circular(R.of(7)),
+                  child: Container(
+                    height: 26,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: _filter == key ? AppColors.surface3 : Colors.transparent,
+                      borderRadius: BorderRadius.circular(R.of(7)),
+                    ),
+                    child: Text(label,
+                        maxLines: 1,
+                        style: sans(12,
+                            weight: _filter == key ? W.label : W.body,
+                            color: _filter == key ? AppColors.fg1 : AppColors.fg3)),
+                  ),
+                ),
+              ),
+          ]),
         ),
-      ),
-    );
-  }
+      );
 
   Widget _row(PrSummary pr) {
     final selected = pr.number == widget.selected;
     final (icon, ink) = _prStateIcon(pr);
-    final checks = rollup(pr.checks);
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.of(1)),
-      child: Material(
-        color: selected ? AppColors.tint2 : Colors.transparent,
-        borderRadius: BorderRadius.circular(R.md),
-        child: InkWell(
-          onTap: () => widget.onSelect(pr.number),
-          borderRadius: BorderRadius.circular(R.md),
-          child: Padding(
-            padding: widget.showTitle
-                ? EdgeInsets.fromLTRB(S.of(10), S.of( 9)
-                , S.of(10), S.of(9))
-                : EdgeInsets.fromLTRB(S.of(10), S.s6, S.of(10), S.s6),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Padding(
-                padding: EdgeInsets.only(top: S.s2),
-                child: AppIcon(icon, size: 14, color: ink),
-              ),
-              SizedBox(width: S.of(10)),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(pr.title,
-                      maxLines: widget.showTitle ? 2 : 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(13,
-                          weight: W.label, height: 1.35, color: AppColors.fg1)),
-                  SizedBox(height: widget.showTitle ? S.s4 : S.s2),
-                  Row(children: [
-                    Flexible(
-                      child: Text(
-                          '#${pr.number} · ${pr.author} · ${prAgo(pr.updatedAt)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TS.meta(AppColors.fg3)),
-                    ),
-                    if (checks != ChecksState.none) ...[
-                      SizedBox(width: S.s8),
-                      _prDot(switch (checks) {
-                        ChecksState.failing => AppColors.danger,
-                        ChecksState.pending => AppColors.run,
-                        _ => AppColors.ok,
-                      }, size: 6),
-                    ],
-                    if (pr.reviewDecision == 'APPROVED') ...[
-                      SizedBox(width: S.s6),
-                      AppIcon('check-check', size: 13, color: AppColors.ok),
-                    ],
-                    if (pr.reviewDecision == 'CHANGES_REQUESTED') ...[
-                      SizedBox(width: S.s6),
-                      AppIcon('alert-circle', size: 12, color: AppColors.danger),
+    final pills = [
+      switch (rollup(pr.checks)) {
+        ChecksState.passing => prPill('Checks passed', AppColors.ok),
+        ChecksState.failing => prPill('Checks failing', AppColors.danger),
+        ChecksState.pending => prPill('Checks running', AppColors.run),
+        ChecksState.none => null,
+      },
+      switch (pr.reviewDecision) {
+        'APPROVED' => prPill('Approved', AppColors.ok),
+        'CHANGES_REQUESTED' => prPill('Changes requested', AppColors.danger),
+        _ => null,
+      },
+    ].whereType<Widget>().toList();
+    return Material(
+      color: selected ? AppColors.tint2 : Colors.transparent,
+      child: InkWell(
+        onTap: () => widget.onSelect(pr.number),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.s8),
+          child: Row(children: [
+            Container(
+              width: 28,
+              height: 28,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                  color: AppColors.surface3,
+                  borderRadius: BorderRadius.circular(R.of(8))),
+              child: AppIcon(icon, size: 14, color: ink),
+            ),
+            SizedBox(width: S.of(10)),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(pr.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, weight: W.label, color: AppColors.fg1)),
+                SizedBox(height: S.s2),
+                Text('#${pr.number} · ${pr.author} · ${prAgo(pr.updatedAt)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TS.meta(AppColors.fg3)),
+              ]),
+            ),
+            if (pills.isNotEmpty) ...[
+              SizedBox(width: S.s8),
+              Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    for (var i = 0; i < pills.length; i++) ...[
+                      if (i > 0) SizedBox(height: S.s4),
+                      pills[i],
                     ],
                   ]),
-                ]),
-              ),
-            ]),
-          ),
+            ],
+          ]),
         ),
       ),
     );
   }
 
-  Widget _label(String text, int count) => Padding(
-        padding: EdgeInsets.fromLTRB(S.of(18), S.of(14), S.of(18), S.s6),
-        child: Text('$text  $count', style: sans(12, weight: W.label, color: AppColors.fg4)),
+  Widget _label(String text) => Padding(
+        padding: EdgeInsets.fromLTRB(S.s20, S.of(14), S.s16, S.s6),
+        child: Text(text, style: sans(12, weight: W.label, color: AppColors.fg3)),
+      );
+
+  Widget _group(List<PrSummary> list) => Padding(
+        padding: EdgeInsets.symmetric(horizontal: S.s12),
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(R.of(12)),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Column(children: [
+            for (var i = 0; i < list.length; i++) ...[
+              if (i > 0) Divider(height: 1, thickness: 1, color: AppColors.line),
+              _row(list[i]),
+            ],
+          ]),
+        ),
       );
 
   List<Widget> _rows(List<PrSummary> prs) {
-    if (_filter != 'open' || _query.trim().isNotEmpty) return [for (final p in prs) _row(p)];
+    if (_filter != 'open' || _query.trim().isNotEmpty) return [_group(prs)];
     final me = widget.status.viewer;
     final review = prs.where((p) => p.author != me && p.reviewers.contains(me)).toList();
     final mine = prs.where((p) => p.author == me).toList();
@@ -233,11 +264,11 @@ class _PrListPanelState extends State<PrListPanel> {
       ('Yours', mine),
       ('Others', others),
     ].where((g) => g.$2.isNotEmpty).toList();
-    if (groups.length == 1) return [for (final p in prs) _row(p)];
+    if (groups.length == 1) return [_group(prs)];
     return [
       for (final (label, list) in groups) ...[
-        _label(label, list.length),
-        for (final p in list) _row(p),
+        _label(label),
+        _group(list),
       ],
     ];
   }
@@ -287,15 +318,7 @@ class _PrListPanelState extends State<PrListPanel> {
           ]),
         ),
       ),
-      Padding(
-        padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s6),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(children: [
-            for (final (key, label) in _prFilters) _filterChip(key, label),
-          ]),
-        ),
-      ),
+      _filterBar(),
       Expanded(
         child: _error != null
             ? prMessage(_error!)
@@ -703,15 +726,6 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
     );
   }
 
-  Widget _branch(String name) => Container(
-        padding: EdgeInsets.symmetric(horizontal: S.of(7), vertical: S.s2),
-        decoration: BoxDecoration(
-          color: AppColors.tint2,
-          borderRadius: BorderRadius.circular(R.sm),
-        ),
-        child: Text(name, style: mono(12, color: AppColors.fg2)),
-      );
-
   Widget _header(PrDetail pr) {
     final s = pr.summary;
     final pending = _pending.length;
@@ -765,9 +779,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
             _stateBadge(s),
             Text(s.author, style: sans(13, weight: W.label, color: AppColors.fg2)),
             Text(s.state == 'MERGED' ? 'merged' : 'wants to merge', style: TS.meta(AppColors.fg3)),
-            _branch(s.head),
-            AppIcon('arrow-right', size: 12, color: AppColors.fg4),
-            _branch(s.base),
+            Text('${s.head} → ${s.base}', style: mono(12, color: AppColors.fg2)),
             Text('· opened ${prAgo(pr.createdAt)}', style: TS.meta(AppColors.fg4)),
           ],
         ),
@@ -1064,7 +1076,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
 
   Widget _sideTitle(String text) => Padding(
         padding: EdgeInsets.only(bottom: S.s8),
-        child: Text(text, style: sans(12, weight: W.label, color: AppColors.fg4)),
+        child: Text(text, style: sans(13, weight: W.label, color: AppColors.fg3)),
       );
 
   Widget _sideRow(String icon, Color ink, String label, {String detail = '', VoidCallback? onTap}) => InkWell(
