@@ -64,7 +64,7 @@ String formatCheckpointDate(String raw) {
 
 /// Checkpoint history. `onRewind`/`onFork` are supplied by the host so the shell
 /// and the session route the action back through the same session handler.
-class SessionCheckpointsPanel extends StatelessWidget {
+class SessionCheckpointsPanel extends StatefulWidget {
   const SessionCheckpointsPanel({
     super.key,
     required this.checkpoints,
@@ -82,64 +82,128 @@ class SessionCheckpointsPanel extends StatelessWidget {
   final void Function(Checkpoint) onFork;
 
   @override
+  State<SessionCheckpointsPanel> createState() =>
+      _SessionCheckpointsPanelState();
+}
+
+class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
+  Map<String, ({int files, int add, int del})> _stats = const {};
+  String _statsFor = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  @override
+  void didUpdateWidget(SessionCheckpointsPanel old) {
+    super.didUpdateWidget(old);
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    final c = widget.client;
+    final sid = widget.sessionId;
+    if (c == null || sid == null) return;
+    final ids = [for (final cp in widget.checkpoints.reversed) cp.id];
+    final sig = ids.join(',');
+    if (sig == _statsFor || ids.isEmpty) return;
+    _statsFor = sig;
+    try {
+      final s = await c.checkpointStats(sid, ids);
+      if (mounted) setState(() => _stats = s);
+    } catch (_) {}
+  }
+
+  String _stat(String id) {
+    final s = _stats[id];
+    if (s == null) return '';
+    if (s.files == 0) return 'no changes';
+    return '${s.files} file${s.files == 1 ? '' : 's'}';
+  }
+
+  Widget _row(Checkpoint c, bool latest) {
+    final stat = _stat(c.id);
+    final sub = [formatCheckpointDate(c.createdAt), if (stat.isNotEmpty) stat]
+        .join(' \u00b7 ');
+    return Padding(
+      padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.s8),
+      child: Row(children: [
+        Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.surface3,
+            borderRadius: BorderRadius.circular(R.sm),
+          ),
+          child: AppIcon('history', size: 16, color: AppColors.fg3),
+        ),
+        SizedBox(width: S.s12),
+        Expanded(
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                    c.label.trim().isEmpty
+                        ? 'Checkpoint'
+                        : c.label.trim().replaceAll(RegExp(r'\s+'), ' '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(15, color: AppColors.fg1)),
+                Text(sub,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12, color: AppColors.fg4)),
+              ]),
+        ),
+        // The newest checkpoint is the present state, so only Fork applies.
+        if (!latest) ...[
+          SizedBox(width: S.s8),
+          Btn('Restore',
+              small: true,
+              variant: BtnVariant.surface,
+              onTap: () => widget.onRewind(c)),
+        ],
+        SizedBox(width: S.s6),
+        Btn('Fork',
+            small: true,
+            variant: BtnVariant.surface,
+            onTap: () => widget.onFork(c)),
+      ]),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (checkpoints.isEmpty) {
+    final cps = widget.checkpoints;
+    if (cps.isEmpty) {
       return Padding(
         padding: EdgeInsets.all(S.s20),
         child: Text('No checkpoints yet.', style: TS.meta()),
       );
     }
-    if (!kMobile) {
-      return _CheckpointTimeline(
-          checkpoints: checkpoints,
-          onRewind: onRewind,
-          onFork: onFork,
-          client: client,
-          sessionId: sessionId);
-    }
-    final dense = !kMobile;
+    final side = kMobile ? M.gutter : S.s12;
     return ListView(
-      padding: EdgeInsets.fromLTRB(
-          dense ? S.s12 : M.gutter, S.s12, dense ? S.s12 : M.gutter, S.s24),
+      padding: EdgeInsets.fromLTRB(side, S.s12, side, S.s24),
       children: [
-        PaneLabel('Checkpoints · ${checkpoints.length}'),
-        ListGroup(children: [
-          for (final c in checkpoints)
-            InkWell(
-              onTap: () => onRewind(c),
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                    S.s12, dense ? S.s8 : S.of(10), dense ? S.s4 : S.s6, dense ? S.s8 : S.of(10)),
-                child: Row(children: [
-                  AppIcon('history',
-                      size: dense ? 13 : 16, color: AppColors.fg3),
-                  SizedBox(width: dense ? S.of(10 ) : S.s12),
-                  Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(c.label.isEmpty ? 'Checkpoint' : c.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: dense
-                                  ? sans(13, color: AppColors.fg1)
-                                  : TS.rowTitle()),
-                          SizedBox(height: S.s2),
-                          Text(formatCheckpointDate(c.createdAt),
-                              style: dense
-                                  ? mono(10, color: AppColors.fg3)
-                                  : TS.meta()),
-                        ]),
-                  ),
-                  IconBtn('git-branch',
-                      size: dense ? 26 : M.minTarget,
-                      iconSize: dense ? 13 : 17,
-                      tooltip: 'Fork from here',
-                      onTap: () => onFork(c)),
-                ]),
-              ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
+          child: Row(children: [
+            Expanded(
+              child: Text('Checkpoints \u00b7 ${cps.length}',
+                  style: sans(13, color: AppColors.fg3)),
             ),
-        ]),
+            Text('Files roll back too',
+                style: sans(12, color: AppColors.fg4)),
+          ]),
+        ),
+        CardGroupScope(
+          child: ListGroup(children: [
+            for (var i = 0; i < cps.length; i++) _row(cps[i], i == 0),
+          ]),
+        ),
       ],
     );
   }
@@ -226,193 +290,6 @@ Widget _paneLabel(String text, {Widget? trailing}) => Padding(
         if (trailing != null) trailing,
       ]),
     );
-
-class _CheckpointTimeline extends StatefulWidget {
-  const _CheckpointTimeline(
-      {required this.checkpoints,
-      required this.onRewind,
-      required this.onFork,
-      this.client,
-      this.sessionId});
-  final DaemonClient? client;
-  final String? sessionId;
-  final List<Checkpoint> checkpoints;
-  final void Function(Checkpoint) onRewind;
-  final void Function(Checkpoint) onFork;
-
-  @override
-  State<_CheckpointTimeline> createState() => _CheckpointTimelineState();
-}
-
-class _CheckpointTimelineState extends State<_CheckpointTimeline> {
-  String? _hover;
-  String? _picked;
-  Map<String, ({int files, int add, int del})> _stats = const {};
-  String _statsFor = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadStats();
-  }
-
-  @override
-  void didUpdateWidget(_CheckpointTimeline old) {
-    super.didUpdateWidget(old);
-    _loadStats();
-  }
-
-  Future<void> _loadStats() async {
-    final c = widget.client;
-    final sid = widget.sessionId;
-    if (c == null || sid == null) return;
-    final ids = [for (final cp in widget.checkpoints.reversed) cp.id];
-    final sig = ids.join(',');
-    if (sig == _statsFor || ids.isEmpty) return;
-    _statsFor = sig;
-    try {
-      final s = await c.checkpointStats(sid, ids);
-      if (mounted) setState(() => _stats = s);
-    } catch (_) {}
-  }
-
-  String _stat(String id) {
-    final s = _stats[id];
-    if (s == null) return '';
-    if (s.files == 0) return 'no changes';
-    final parts = [
-      if (s.add > 0) '+${s.add}',
-      if (s.del > 0) '−${s.del}',
-    ];
-    return '${parts.join(' ')}${parts.isEmpty ? '' : ' · '}${s.files} file${s.files == 1 ? '' : 's'}';
-  }
-
-  Widget _pill(String label, VoidCallback onTap, {bool filled = false}) =>
-      Padding(
-        padding: EdgeInsets.only(right: S.s4),
-        child: Material(
-          color: filled ? AppColors.tint2 : Colors.transparent,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(kMobile ? R.pill : R.sm),
-              side: BorderSide(
-                  color: filled ? Colors.transparent : AppColors.line)),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(kMobile ? R.pill : R.sm),
-            onTap: onTap,
-            child: Container(
-              height: 24,
-              padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-              alignment: Alignment.center,
-              child: Text(label,
-                  style: sans(12,
-                      color: filled ? AppColors.fg2 : AppColors.fg3)),
-            ),
-          ),
-        ),
-      );
-
-  @override
-  Widget build(BuildContext context) {
-    final cps = widget.checkpoints;
-    return ListView(
-      padding: EdgeInsets.fromLTRB(S.of(14), 0, S.of(14), S.s24),
-      children: [
-        _paneLabel('Checkpoints · ${cps.length}',
-            trailing: Text('Files roll back too',
-                style: sans(12, color: AppColors.fg4))),
-        Stack(children: [
-          Positioned(
-            left: 13,
-            top: 14,
-            bottom: 14,
-            child: CustomPaint(
-                size: const Size(2, double.infinity),
-                painter: _Dots(AppColors.fg1.withValues(alpha: 0.14))),
-          ),
-          Column(children: [
-            for (var i = 0; i < cps.length; i++) _row(cps[i], i == 0),
-          ]),
-        ]),
-      ],
-    );
-  }
-
-  Widget _row(Checkpoint c, bool latest) {
-    final open = _hover == c.id || _picked == c.id;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = c.id),
-      onExit: (_) => setState(() => _hover = null),
-      child: GestureDetector(
-        onTap: () => setState(() => _picked = _picked == c.id ? null : c.id),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          margin: EdgeInsets.only(bottom: S.s2),
-          padding: EdgeInsets.fromLTRB(S.of(30), S.of(9), S.of(10), S.of(10)),
-          decoration: BoxDecoration(
-            color: open ? AppColors.tint1 : Colors.transparent,
-            borderRadius: BorderRadius.circular(R.card),
-          ),
-          child: Stack(clipBehavior: Clip.none, children: [
-            Positioned(
-              left: -21,
-              top: 4,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: latest ? AppColors.accent : AppColors.fg4,
-                  border: Border.all(color: AppColors.windowBg, width: 0),
-                ),
-              ),
-            ),
-            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Text(
-                  c.label.trim().isEmpty
-                      ? 'Checkpoint'
-                      : c.label.trim().replaceAll(RegExp(r'\s+'), ' '),
-                  maxLines: open ? 4 : 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(13,
-                      height: 1.45,
-                      color: open || latest ? AppColors.fg1 : AppColors.fg2)),
-              SizedBox(height: S.s4),
-              Row(children: [
-                Expanded(
-                  child: Text(formatCheckpointDate(c.createdAt),
-                      style: sans(11, color: AppColors.fg4)),
-                ),
-                Text(_stat(c.id), style: mono(11, color: AppColors.fg3)),
-              ]),
-              if (open) ...[
-                SizedBox(height: S.s8),
-                Row(children: [
-                  _pill('Restore', () => widget.onRewind(c), filled: true),
-                  _pill('Fork', () => widget.onFork(c)),
-                ]),
-              ],
-            ]),
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-class _Dots extends CustomPainter {
-  _Dots(this.color);
-  final Color color;
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()..color = color;
-    for (var y = 0.0; y < size.height; y += 5) {
-      canvas.drawCircle(Offset(1, y), 1, p);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_Dots old) => old.color != color;
-}
 
 String _elapsed(String iso) {
   final t = DateTime.tryParse(iso);
