@@ -929,8 +929,12 @@ class _SessionActionsPanel extends StatefulWidget {
 
   /// Pass the session to another agent; null hides the row.
   final VoidCallback? onHandOff;
+  final VoidCallback? onFork;
+  final Widget? header;
   const _SessionActionsPanel({
     required this.session,
+    this.onFork,
+    this.header,
     required this.onSetGoal,
     required this.onCancelGoal,
     required this.onResumeGoal,
@@ -981,7 +985,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
   void _toggle(String id) => setState(() => _open = _open == id ? null : id);
 
   Widget _group(String label, List<Widget> rows) =>
-      ActionGroup(label: label, rows: rows);
+      ActionGroup(label: label, rows: rows, card: true);
 
   Widget _row({
     required String icon,
@@ -998,6 +1002,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
         label: label,
         detail: detail,
         value: value,
+        dense: true,
         expandable: id != null,
         open: id != null && _open == id,
         onTap: onTap ?? (id != null ? () => _toggle(id) : null),
@@ -1103,218 +1108,78 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
         _ => 'Ask',
       };
 
-  Widget _mobileBuild(HarnessState? s, bool goalOn, List<Widget> workRows,
-      List<Widget> historyRows) {
-    final sessionRows = <Widget>[
-      if (!widget.hideGoal) _mobileGoalRow(s, goalOn),
-      if (widget.onAutonomy != null)
-        _row(
-            icon: 'activity',
-            label: 'Automated wakes',
-            detail: 'Keeps the work moving while you are away',
-            onTap: widget.onAutonomy),
-      if (widget.onWakes != null)
-        _row(
-            icon: 'calendar-clock',
-            label: 'Wakes and keep warm',
-            detail: 'Scheduled wakes and prompt cache',
-            onTap: widget.onWakes),
-      if (_autoSettleRow() case final row?) row,
-      if (_resumeModeRow() case final row?) row,
-      if (widget.onHandOff != null)
-        _row(
-            icon: 'transfer',
-            label: 'Hand off',
-            detail: 'Pass this session to another agent',
-            onTap: widget.onHandOff),
-    ];
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (!widget.hideWorkspace)
-          SessionShortcutStrip(
-            counts: s?.counts ?? const SessionCounts(),
-            onGit: widget.onGit,
-            onFiles: widget.onFiles,
-            onDeliverables: widget.onDeliverables,
-            onPullRequests: widget.onPullRequests,
-            onTerm: widget.hideShell ? null : widget.onTerm,
-            onProcesses: widget.onProcesses,
-          ),
-        _group('Session', sessionRows),
-        _group('Work', workRows),
-        _group('History', historyRows),
-      ],
+  Widget _goalCard(HarnessState? s) {
+    final goal = s!.goal!;
+    return Container(
+      padding: EdgeInsets.all(S.of(14)),
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(R.of(20)),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            AppIcon('goal', size: 15, color: AppColors.accent),
+            SizedBox(width: S.s8),
+            Text('Goal', style: sans(13, color: AppColors.fg3)),
+            const Spacer(),
+            Container(
+              padding:
+                  EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s2),
+              decoration: BoxDecoration(
+                color: (goal.paused ? AppColors.run : AppColors.ok)
+                    .withValues(alpha: 0.13),
+                borderRadius: BorderRadius.circular(R.of(8)),
+              ),
+              child: Text(goal.paused ? 'Paused' : 'Working',
+                  style: sans(12,
+                      weight: W.label,
+                      color: goal.paused ? AppColors.run : AppColors.ok)),
+            ),
+          ]),
+          SizedBox(height: S.s8),
+          Text(goal.text, style: sans(15, color: AppColors.fg1)),
+          SizedBox(height: S.s12),
+          Btn(goal.paused ? 'Resume goal' : 'Cancel goal',
+              small: true,
+              variant: BtnVariant.secondary,
+              onTap: goal.paused ? widget.onResumeGoal : widget.onCancelGoal),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final s = widget.session;
-    final goalOn = s?.goal?.ongoing ?? false;
-    if (kMobile) {
-      final runningLanes = s?.lanes.where((l) => l.running).length ?? 0;
-      final workRows = <Widget>[
-        if (widget.onFileChanges != null && !widget.hideWorkspace)
-          _row(
-              icon: 'file-code',
-              label: 'File changes',
-              detail: widget.fileChangeCount == 0
-                  ? 'Nothing edited yet'
-                  : '${widget.fileChangeCount} file${widget.fileChangeCount == 1 ? '' : 's'} changed in this session',
-              onTap: widget.onFileChanges),
-        if (!widget.hideGoal && (s?.lanes.isNotEmpty ?? false))
-          _row(
-              icon: 'layers',
-              label: 'Lanes',
-              detail: runningLanes > 0
-                  ? '$runningLanes working in the background'
-                  : 'Background work, finished',
-              onTap: widget.onLanes),
-        if (widget.onTasks != null)
-          _row(
-              icon: 'task',
-              label: 'Tasks',
-              detail: 'Work on the board and its reviews',
-              onTap: widget.onTasks),
-        _row(
-            icon: 'scheduled',
-            label: 'Scheduled',
-            detail: 'Recurring jobs on this machine',
-            onTap: widget.onRecurring),
-      ];
-      final historyRows = <Widget>[
-        if (!widget.hideCheckpoints)
-          _row(
-              icon: 'history',
-              label: 'Checkpoints',
-              detail: 'Restore the workspace to an earlier point',
-              onTap: widget.onCheckpoints),
-        _row(
-            icon: kMobile ? 'book-marked' : 'brain',
-            label: 'Memory',
-            detail: 'What this session remembers',
-            onTap: widget.onMemory),
-        _row(
-            icon: 'minimize',
-            label: 'Compact history',
-            detail: 'Summarise older turns to free context',
-            onTap: widget.onCompact),
-      ];
-      return _mobileBuild(s, goalOn, workRows, historyRows);
-    }
+    final goalOn = (s?.goal?.ongoing ?? false) && s?.goal != null;
+    final runningLanes = s?.lanes.where((l) => l.running).length ?? 0;
+    final showLanes = !widget.hideGoal && (s?.lanes.isNotEmpty ?? false);
 
-    final sessionRows = <Widget>[
-      if (widget.onAutonomy != null)
+    final workRows = <Widget>[
+      if (widget.onFileChanges != null && !widget.hideWorkspace)
         _row(
-            icon: 'activity',
-            label: 'Automated wakes',
-            detail:
-                'Wakes on a schedule, keeps work moving and pings you while you are away',
-            onTap: widget.onAutonomy),
-      if (!widget.hideGoal)
+            icon: 'file-code',
+            label: 'File changes',
+            detail: widget.fileChangeCount == 0
+                ? 'Nothing edited yet'
+                : '${widget.fileChangeCount} file${widget.fileChangeCount == 1 ? '' : 's'} changed in this session',
+            onTap: widget.onFileChanges),
+      if (widget.onTasks != null)
         _row(
-          icon: 'goal',
-          label: goalOn ? 'Goal' : 'Set a goal',
-          detail: goalOn
-              ? 'The agent is driving toward this autonomously'
-              : 'Give the agent something to work toward on its own',
-          id: 'goal',
-          value: goalOn ? (s!.goal!.paused ? 'paused' : 'running') : null,
-          child: goalOn
-              ? Btn(s!.goal!.paused ? 'Resume goal' : 'Cancel goal',
-                  variant: BtnVariant.secondary,
-                  onTap: s.goal!.paused
-                      ? widget.onResumeGoal
-                      : widget.onCancelGoal)
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    AppField(
-                        controller: _goalCtl,
-                        hint: 'What should the agent work toward?',
-                        minLines: 2,
-                        maxLines: 4),
-                    SizedBox(height: S.s8),
-                    Btn('Set goal', onTap: () {
-                      final t = _goalCtl.text.trim();
-                      if (t.isEmpty) return;
-                      widget.onSetGoal(t);
-                      _goalCtl.clear();
-                    }),
-                  ],
-                ),
-        ),
-      if (kMobile && !widget.hideGoal && (s?.lanes.isNotEmpty ?? false))
-        _row(
-            icon: 'layers',
-            label: 'Lanes',
-            detail: 'Background work running in parallel',
-            onTap: widget.onLanes),
-      if (widget.onWakes != null)
-        _row(
-            icon: 'calendar-clock',
-            label: 'Wakes and keep warm',
-            detail: 'Scheduled wakes and prompt cache',
-            onTap: widget.onWakes),
+            icon: 'task',
+            label: 'Tasks',
+            detail: 'Work on the board and its reviews',
+            onTap: widget.onTasks),
       _row(
           icon: 'scheduled',
           label: 'Scheduled',
           detail: 'Recurring jobs on this machine',
           onTap: widget.onRecurring),
-      if (_autoSettleRow() case final row?) row,
-      if (_resumeModeRow() case final row?) row,
-      if (widget.onHandOff != null)
-        _row(
-            icon: 'transfer',
-            label: 'Hand off',
-            detail: 'Pass this session to another agent',
-            onTap: widget.onHandOff),
     ];
-
-    final workspaceRows = <Widget>[
-      if (kMobile)
-        _row(
-            icon: 'git-branch',
-            label: 'Git',
-            detail: 'Status, diffs, stage and commit',
-            onTap: widget.onGit),
-      _row(
-          icon: 'folder',
-          label: 'Files',
-          detail: 'Browse the workspace',
-          onTap: widget.onFiles),
-      _row(
-          icon: 'layers',
-          label: 'Artifacts & files',
-          detail: 'What the agent handed over',
-          onTap: widget.onDeliverables),
-      if (widget.onPullRequests != null)
-        _row(
-            icon: 'git-branch',
-            label: 'Pull requests',
-            detail: 'Review and merge on GitHub',
-            onTap: widget.onPullRequests!),
-      if (!widget.hideShell)
-        _row(
-            icon: 'terminal',
-            label: 'Session shell',
-            detail: 'A terminal in this workspace',
-            onTap: widget.onTerm),
-      _row(
-          icon: 'list',
-          label: 'Processes',
-          detail: 'What is running on the machine',
-          onTap: widget.onProcesses),
-    ];
-
     final historyRows = <Widget>[
-      _row(
-          icon: 'minimize',
-          label: 'Compact history',
-          detail: 'Summarise older turns to free context',
-          onTap: widget.onCompact),
       if (!widget.hideCheckpoints)
         _row(
             icon: 'history',
@@ -1326,18 +1191,195 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
           label: 'Memory',
           detail: 'What this session remembers',
           onTap: widget.onMemory),
+      _row(
+          icon: 'minimize',
+          label: 'Compact history',
+          detail: 'Summarise older turns to free context',
+          onTap: widget.onCompact),
+    ];
+    final sessionRows = <Widget>[
+      if (!widget.hideGoal && !goalOn) _mobileGoalRow(s, false),
+      if (widget.onAutonomy != null)
+        _row(
+            icon: 'activity',
+            label: 'Automated wakes',
+            detail: 'Keeps the work moving while you are away',
+            onTap: widget.onAutonomy),
+      if (_autoSettleRow() case final row?) row,
+      if (_resumeModeRow() case final row?) row,
+      if (widget.onHandOff != null)
+        _row(
+            icon: 'transfer',
+            label: 'Hand off',
+            detail: 'Pass this session to another agent',
+            onTap: widget.onHandOff),
+    ];
+    final tiles = <Widget>[
+      if (showLanes)
+        SessionFaceTile(
+            icon: 'layers',
+            label: 'Lanes',
+            detail: runningLanes > 0
+                ? '$runningLanes working in the background'
+                : 'Background work, finished',
+            onTap: widget.onLanes),
+      if (widget.onWakes != null)
+        SessionFaceTile(
+            icon: 'calendar-clock',
+            label: 'Wakes and keep warm',
+            detail: 'Scheduled wakes and prompt cache',
+            onTap: widget.onWakes!),
+      if (widget.onFork != null)
+        SessionFaceTile(
+            icon: 'git-branch',
+            label: 'Fork from here',
+            detail: 'A new session from this point',
+            onTap: widget.onFork!),
     ];
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _group('Session', sessionRows),
-        if (!widget.hideWorkspace) _group('Workspace', workspaceRows),
+        if (widget.header != null) widget.header!,
+        if (!widget.hideGoal && goalOn) ...[
+          SizedBox(height: S.s8),
+          _goalCard(s),
+        ],
+        if (tiles.isNotEmpty) ...[
+          SizedBox(height: S.s8),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < tiles.length; i++) ...[
+                  if (i > 0) SizedBox(width: S.s8),
+                  Expanded(child: tiles[i]),
+                ],
+              ],
+            ),
+          ),
+        ],
+        if (!widget.hideWorkspace) ...[
+          SizedBox(height: S.s8),
+          SessionShortcutStrip(
+            counts: s?.counts ?? const SessionCounts(),
+            onGit: widget.onGit,
+            onFiles: widget.onFiles,
+            onDeliverables: widget.onDeliverables,
+            onPullRequests: widget.onPullRequests,
+            onTerm: widget.hideShell ? null : widget.onTerm,
+            onProcesses: widget.onProcesses,
+          ),
+        ],
+        _group('Work', workRows),
         _group('History', historyRows),
+        _group('Session', sessionRows),
       ],
     );
   }
+}
+
+/// Agent character, session title and `Agent · branch` over the actions.
+class SessionActionsHeader extends StatelessWidget {
+  const SessionActionsHeader({
+    super.key,
+    required this.agentId,
+    required this.title,
+    required this.agentName,
+    this.branch,
+  });
+
+  final String agentId;
+  final String title;
+  final String agentName;
+  final String? branch;
+
+  @override
+  Widget build(BuildContext context) {
+    final b = (branch ?? '').trim();
+    return Row(children: [
+      AgentMochi(agentId, size: 40),
+      SizedBox(width: S.s12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(17, weight: W.title, color: AppColors.fg1)),
+            Row(children: [
+              Text(agentName, style: sans(12, color: AppColors.fg3)),
+              if (b.isNotEmpty) ...[
+                SizedBox(width: S.s6),
+                AppIcon('git-branch', size: 12, color: AppColors.fg3),
+                SizedBox(width: S.s4),
+                Flexible(
+                  child: Text(b,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mono(12, color: AppColors.fg3)),
+                ),
+              ],
+            ]),
+          ],
+        ),
+      ),
+    ]);
+  }
+}
+
+/// A face tile: icon, title and a two-line detail on a rounded surface.
+class SessionFaceTile extends StatelessWidget {
+  const SessionFaceTile({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.detail,
+    required this.onTap,
+  });
+
+  final String icon;
+  final String label;
+  final String detail;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(R.of(16)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(R.of(16)),
+          onTap: () {
+            tapHaptic();
+            onTap();
+          },
+          child: Container(
+            padding: EdgeInsets.all(S.of(12)),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(R.of(16)),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppIcon(icon, size: 17, color: AppColors.accent),
+                SizedBox(height: S.s8),
+                Text(label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(14, weight: W.label, color: AppColors.fg1)),
+                SizedBox(height: S.s2),
+                Text(detail,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12, color: AppColors.fg3)),
+              ],
+            ),
+          ),
+        ),
+      );
 }
 
 class SessionShortcutStrip extends StatelessWidget {
@@ -1414,7 +1456,7 @@ class SessionShortcutTile extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
         child: SizedBox(
-          width: 72,
+          width: 64,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Column(children: [
@@ -1422,8 +1464,8 @@ class SessionShortcutTile extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   Container(
-                    width: 52,
-                    height: 52,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: AppColors.surface1,
                       shape: BoxShape.circle,
@@ -1431,7 +1473,7 @@ class SessionShortcutTile extends StatelessWidget {
                           color: AppColors.fg1.withValues(alpha: 0.08)),
                     ),
                     alignment: Alignment.center,
-                    child: AppIcon(icon, size: 21, color: AppColors.fg1),
+                    child: AppIcon(icon, size: 19, color: AppColors.fg1),
                   ),
                   if (count > 0)
                     Positioned(
@@ -1456,11 +1498,11 @@ class SessionShortcutTile extends StatelessWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(13, color: AppColors.fg2)),
+                  style: sans(12, color: AppColors.fg2)),
             ]),
           ),
         ),

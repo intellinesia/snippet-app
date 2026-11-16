@@ -7,16 +7,23 @@ import '../widgets.dart';
 /// A titled block of action rows, as in a session's or an agent's Actions.
 class ActionGroup extends StatelessWidget {
   const ActionGroup(
-      {super.key, required this.label, required this.rows, this.top});
+      {super.key,
+      required this.label,
+      required this.rows,
+      this.top,
+      this.card = false});
 
   final String label;
   final List<Widget> rows;
   final double? top;
 
+  /// Rows sit on one rounded surface, as in the session sheet.
+  final bool card;
+
   @override
   Widget build(BuildContext context) {
     if (rows.isEmpty) return const SizedBox.shrink();
-    if (kMobile) {
+    if (kMobile && !card) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -79,8 +86,11 @@ class ActionRow extends StatelessWidget {
     this.onTap,
     this.trailing,
     this.child,
+    this.dense = false,
   });
 
+  /// The session-sheet row: 44px, icon tile, 15/12 text.
+  final bool dense;
   final String icon;
   final String label;
   final String? detail;
@@ -116,28 +126,49 @@ class ActionRow extends StatelessWidget {
               splashFactory: kMobile ? NoSplash.splashFactory : null,
               highlightColor: kMobile ? Colors.transparent : null,
               child: Container(
-                constraints: BoxConstraints(minHeight: M.minTarget + 8),
+                constraints: BoxConstraints(
+                    minHeight: dense ? M.minTarget : M.minTarget + 8),
                 padding: EdgeInsets.symmetric(
-                    horizontal: kMobile ? S.s4 : S.of(14), vertical: kMobile ? S.of(11) : 0),
+                    horizontal: dense ? S.of(14) : kMobile ? S.s4 : S.of(14),
+                    vertical: dense ? S.s8 : kMobile ? S.of(11) : 0),
                 child: Row(children: [
-                  AppIcon(icon,
-                      size: kMobile ? 19 : 17,
-                      color: danger ? AppColors.danger : AppColors.fg3),
-                  SizedBox(width: kMobile ? 14 : 12),
+                  if (dense)
+                    Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                          color: AppColors.surface2,
+                          borderRadius: BorderRadius.circular(R.of(9))),
+                      alignment: Alignment.center,
+                      child: AppIcon(icon, size: 16, color: AppColors.fg2),
+                    )
+                  else
+                    AppIcon(icon,
+                        size: kMobile ? 19 : 17,
+                        color: danger ? AppColors.danger : AppColors.fg3),
+                  SizedBox(width: dense ? 12 : kMobile ? 14 : 12),
                   Expanded(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(label,
-                            style: TS.rowTitle(
-                                danger ? AppColors.danger : AppColors.fg1)),
+                            style: dense
+                                ? sans(15,
+                                    weight: W.label,
+                                    color: danger
+                                        ? AppColors.danger
+                                        : AppColors.fg1)
+                                : TS.rowTitle(
+                                    danger ? AppColors.danger : AppColors.fg1)),
                         if (detail != null) ...[
-                          SizedBox(height: S.s2),
+                          SizedBox(height: dense ? 0 : S.s2),
                           Text(detail,
                               maxLines: kMobile ? 1 : 2,
                               overflow: TextOverflow.ellipsis,
-                              style: TS.meta()),
+                              style: dense
+                                  ? sans(12, color: AppColors.fg3)
+                                  : TS.meta()),
                         ],
                       ],
                     ),
