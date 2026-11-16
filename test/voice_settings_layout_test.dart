@@ -73,25 +73,31 @@ void main() {
     testWidgets('Deepgram key and region appear once, together ($label)',
         (t) async {
       await pump(t, 'both_deepgram', mobile);
-      expect(find.text('DEEPGRAM'), findsOneWidget);
+      expect(sectionHeader('Deepgram'), findsOneWidget);
       expect(find.text('API key'), findsOneWidget);
       expect(find.text('Region'), findsOneWidget);
-      expect(find.text('ASSEMBLYAI'), findsNothing);
-      expect(find.text('RIME'), findsNothing);
+      expect(sectionHeader('AssemblyAI'), findsNothing);
+      expect(sectionHeader('Rime'), findsNothing);
       debugDefaultTargetPlatformOverride = null;
     });
 
     testWidgets('only the selected providers ask for keys ($label)',
         (t) async {
       await pump(t, 'mixed', mobile);
-      expect(find.text('DEEPGRAM'), findsNothing);
-      expect(find.text('ASSEMBLYAI'), findsOneWidget);
-      expect(find.text('RIME'), findsOneWidget);
+      expect(sectionHeader('Deepgram'), findsNothing);
+      expect(sectionHeader('AssemblyAI'), findsOneWidget);
+      expect(sectionHeader('Rime'), findsOneWidget);
       expect(find.text('API key'), findsNWidgets(2));
-      for (final h in ['VOICE NOTES', 'LISTENING', 'REPLIES', 'CONVERSATION']) {
-        expect(find.text(h), findsOneWidget);
+      for (final h in ['Voice notes', 'Listening', 'Replies', 'Conversation']) {
+        expect(sectionHeader(h), findsOneWidget);
       }
       debugDefaultTargetPlatformOverride = null;
     });
   }
 }
+
+Finder sectionHeader(String text) => find.descendant(
+      of: find.byWidgetPredicate(
+          (w) => w is Semantics && w.properties.header == true),
+      matching: find.text(text),
+    );

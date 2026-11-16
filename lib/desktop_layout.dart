@@ -52,7 +52,7 @@ class MasterPane extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
-        padding: const EdgeInsets.fromLTRB(S.s16, S.s16, S.s12, S.s8),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s16, S.s12, S.s8),
         child: Row(children: [
           Expanded(
             child: Text(title,
@@ -63,14 +63,14 @@ class MasterPane extends StatelessWidget {
       ),
       if (search != null)
         Padding(
-          padding: const EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s8),
+          padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s8),
           child: search,
         ),
       Expanded(
         child: children.isEmpty && empty != null
-            ? Padding(padding: const EdgeInsets.all(S.s16), child: empty)
+            ? Padding(padding: EdgeInsets.all(S.s16), child: empty)
             : ListView(
-                padding: const EdgeInsets.fromLTRB(S.s8, 0, S.s8, S.s16),
+                padding: EdgeInsets.fromLTRB(S.s8, 0, S.s8, S.s16),
                 children: children,
               ),
       ),
@@ -104,10 +104,10 @@ class SettingsBack extends StatelessWidget {
         child: GestureDetector(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: EdgeInsets.symmetric(vertical: S.s4),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(Icons.chevron_left, size: 16, color: AppColors.fg3),
-              const SizedBox(width: 2),
+              SizedBox(width: S.s2),
               Text(label, style: sans(13, color: AppColors.fg3)),
             ]),
           ),
@@ -141,39 +141,45 @@ class SettingsHeader extends StatelessWidget {
       return SizedBox(
         height: 44,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+          padding: EdgeInsets.symmetric(horizontal: S.s4),
           child: Row(children: [
-            IconBtn(
-              'chevron-left',
-              size: 40,
-              iconSize: 20,
-              tooltip: 'Back',
-              onTap: onBack ?? () => Navigator.maybePop(context),
-            ),
-            Expanded(
-              child: Center(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(17, weight: W.label, color: AppColors.fg1),
+            Tooltip(
+              message: 'Back',
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onBack ?? () => Navigator.maybePop(context),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                      color: AppColors.surface2, shape: BoxShape.circle),
+                  child: Center(
+                    child: AppIcon('chevron-left',
+                        size: 20, color: AppColors.fg1),
+                  ),
                 ),
               ),
             ),
-            if (actions.isNotEmpty)
-              ...actions
-            else
-              const SizedBox(width: 44),
+            SizedBox(width: S.s12),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(17, weight: W.label, color: AppColors.fg1),
+              ),
+            ),
+            ...actions,
           ]),
         ),
       );
     }
     return Padding(
-      padding: const EdgeInsets.only(bottom: S.s8),
+      padding: EdgeInsets.only(bottom: S.s8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (back != null) ...[back!, const SizedBox(height: S.s8)],
+          if (back != null) ...[back!, SizedBox(height: S.s8)],
           Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
             Expanded(
               child: Text(title,
@@ -181,10 +187,10 @@ class SettingsHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TS.pageTitle()),
             ),
-            for (final a in actions) ...[const SizedBox(width: S.s8), a],
+            for (final a in actions) ...[SizedBox(width: S.s8), a],
           ]),
           if (subtitle != null && subtitle!.isNotEmpty) ...[
-            const SizedBox(height: S.s4),
+            SizedBox(height: S.s4),
             Text(subtitle!, style: TS.ui(AppColors.fg3)),
           ],
         ],
@@ -200,7 +206,7 @@ class SettingsColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, S.s32),
+      padding: EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, S.s32),
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(

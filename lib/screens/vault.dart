@@ -177,16 +177,16 @@ class VaultScreenState extends State<VaultScreen> {
       // a retry rather than dumping the raw exception at the user.
       body = Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(S.s24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             AppIcon('alert-triangle', size: 20, color: AppColors.danger),
-            const SizedBox(height: 10),
+            SizedBox(height: S.of(10)),
             Text("Couldn't load secrets", style: TS.label(AppColors.fg1)),
-            const SizedBox(height: 5),
+            SizedBox(height: S.of(5)),
             Text(_error!,
                 textAlign: TextAlign.center,
                 style: sans(11, height: 1.4, color: AppColors.fg3)),
-            const SizedBox(height: 14),
+            SizedBox(height: S.of(14)),
             Btn('Retry', small: true, onTap: _load),
           ]),
         ),
@@ -198,10 +198,13 @@ class VaultScreenState extends State<VaultScreen> {
           child: PageBody(children: [
             ListGroup(children: [
               for (final n in names) _secretRow(n),
-              if (_adding) ..._form() else _addRow(names.isEmpty),
+              if (_adding)
+                ..._form()
+              else if (!widget.embedded)
+                _addRow(names.isEmpty),
             ]),
             Padding(
-              padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+              padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
               child: Text(
                 'Use these as \$NAME in shell commands. Values stay on '
                 'the machine and are never shown again.',
@@ -212,7 +215,7 @@ class VaultScreenState extends State<VaultScreen> {
         );
       } else {
         body = PageBody(children: [
-          const SizedBox(height: 4),
+          SizedBox(height: S.s4),
           SettingsGroup(
             footer: 'Use these as \$NAME in shell commands. Values stay on '
                 'the machine and are never shown again.',
@@ -237,11 +240,14 @@ class VaultScreenState extends State<VaultScreen> {
               onBack: widget.onBack!,
               actions: [
                 if (!_adding)
-                  IconBtn('plus',
-                      size: 40,
-                      iconSize: 18,
-                      tooltip: 'Add secret',
-                      onTap: _add),
+                  Padding(
+                    padding: EdgeInsets.only(right: S.s12),
+                    child: Btn('Add secret',
+                        icon: 'plus',
+                        small: true,
+                        variant: BtnVariant.secondary,
+                        onTap: _add),
+                  ),
               ],
             )
           else
@@ -301,7 +307,7 @@ class VaultScreenState extends State<VaultScreen> {
           if (!_adding) Btn('Add secret', small: true, icon: 'plus', onTap: _add),
         ],
       ),
-      const SizedBox(height: S.s8),
+      SizedBox(height: S.s8),
       content,
     ]);
   }
@@ -334,7 +340,7 @@ class VaultScreenState extends State<VaultScreen> {
                 variant: BtnVariant.surface,
                 disabled: _busy,
                 onTap: _cancel),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             Btn(_busy ? 'Saving…' : 'Save secret',
                 small: true, disabled: _busy, onTap: _save),
           ]),
@@ -356,7 +362,7 @@ class VaultScreenState extends State<VaultScreen> {
         sub: empty ? 'No secrets yet' : null,
         labelWidget: Row(children: [
           AppIcon('plus', size: kMobile ? 15 : 13, color: AppColors.accent),
-          SizedBox(width: kMobile ? 8 : 7),
+          SizedBox(width: kMobile ? S.s8 : S.of(7)),
           Text('Add secret',
               style: sans(kMobile ? 15 : 13, color: AppColors.accent)),
         ]),
@@ -389,7 +395,7 @@ class VaultScreenState extends State<VaultScreen> {
               style: sans(kMobile ? 13 : 12, color: AppColors.danger)),
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
             SettingsPill('Cancel', onTap: _busy ? null : _cancel),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             SettingsPill(_busy ? 'Saving…' : 'Save', onTap: _save),
           ]),
         ),
@@ -398,18 +404,14 @@ class VaultScreenState extends State<VaultScreen> {
   Widget _secretRow(String name) => kMobile
       ? V5SettingsRow(
           label: name,
-          leading: const V5IconTile('key'),
-          trailing: Tooltip(
-            message: 'Remove $name',
-            child: InkResponse(
-              onTap: () => _remove(name),
-              radius: 20,
-              child: SizedBox(
-                width: 36,
-                height: 30,
-                child: Center(
-                    child: AppIcon('trash', size: 16, color: AppColors.fg4)),
-              ),
+          trailing: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _remove(name),
+            child: SizedBox(
+              height: 44,
+              child: Center(
+                  child: Text('Remove',
+                      style: sans(13, color: AppColors.danger))),
             ),
           ),
         )

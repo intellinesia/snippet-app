@@ -85,10 +85,10 @@ class RoundBtn extends StatelessWidget {
                     child: Container(
                       constraints:
                           const BoxConstraints(minWidth: 16, minHeight: 16),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      padding: EdgeInsets.symmetric(horizontal: S.s4),
                       decoration: BoxDecoration(
                         color: AppColors.accentFill,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(R.md),
                       ),
                       alignment: Alignment.center,
                       child: Text(
@@ -123,10 +123,10 @@ class ListeningPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final pill = Container(
       height: 26,
-      padding: const EdgeInsets.symmetric(horizontal: 9),
+      padding: EdgeInsets.symmetric(horizontal: S.of(9)),
       decoration: BoxDecoration(
         color: AppColors.ok.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(R.of(13)),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         SizedBox(
@@ -136,20 +136,20 @@ class ListeningPill extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               for (var i = 0; i < _heights.length; i++) ...[
-                if (i > 0) const SizedBox(width: 2),
+                if (i > 0) SizedBox(width: S.s2),
                 Container(
                   width: 2,
                   height: _heights[i],
                   decoration: BoxDecoration(
                     color: AppColors.ok,
-                    borderRadius: BorderRadius.circular(1),
+                    borderRadius: BorderRadius.circular(R.of(1)),
                   ),
                 ),
               ],
             ],
           ),
         ),
-        const SizedBox(width: 6),
+        SizedBox(width: S.s6),
         Text('Listening', style: TS.caption(AppColors.ok).copyWith(height: 1)),
       ]),
     );
@@ -191,7 +191,7 @@ class MobileHomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(M.gutter, 6, M.gutter, 6),
+        padding: EdgeInsets.fromLTRB(M.gutter, S.s6, M.gutter, S.s6),
         child: SizedBox(
           height: 44,
           child: Stack(
@@ -231,7 +231,7 @@ class MobileHomeHeader extends StatelessWidget {
                   ListeningPill(
                     onTap: onListening ?? () => openMobileVoicePage(context),
                   ),
-                  if (trailing.isNotEmpty) const SizedBox(width: 10),
+                  if (trailing.isNotEmpty) SizedBox(width: S.of(10)),
                 ],
                 ...trailing,
               ]),
@@ -262,10 +262,10 @@ class MobileMissionBar extends StatelessWidget {
     return SizedBox(
       height: 60,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: M.gutter),
+        padding: EdgeInsets.symmetric(horizontal: M.gutter),
         child: Row(children: [
-          const SizedBox(width: 40),
-          const SizedBox(width: 10),
+          SizedBox(width: S.s40),
+          SizedBox(width: S.of(10)),
           Expanded(
             child: Center(
               child: Semantics(
@@ -276,13 +276,13 @@ class MobileMissionBar extends StatelessWidget {
                   behavior: HitTestBehavior.opaque,
                   onTap: onActions,
                   child: Glass(
-                    radius: BorderRadius.circular(20),
+                    radius: BorderRadius.circular(R.of(20)),
                     child: Container(
                       height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: EdgeInsets.symmetric(horizontal: S.s16),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
                         MochiIcon(size: 20, color: AppColors.fg1),
-                        const SizedBox(width: 7),
+                        SizedBox(width: S.of(7)),
                         Flexible(
                           child: Text(
                             'Mission Control',
@@ -301,7 +301,7 @@ class MobileMissionBar extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: S.of(10)),
           if (c != null)
             ListenableBuilder(
               listenable: AmbientController.instance,
@@ -318,7 +318,7 @@ class MobileMissionBar extends StatelessWidget {
               },
             )
           else
-            const SizedBox(width: 40),
+            SizedBox(width: S.s40),
         ]),
       ),
     );
@@ -392,15 +392,15 @@ class MobileBackBar extends StatelessWidget {
                     : sans(16, weight: W.strong, color: AppColors.fg1)),
           ),
           if (chevron) ...[
-            const SizedBox(width: 4),
+            SizedBox(width: S.s4),
             AppIcon('chevron-down', size: 14, color: AppColors.fg3),
           ],
         ]),
         if (subtitleView != null)
-          Padding(padding: const EdgeInsets.only(top: 1), child: subtitleView)
+          Padding(padding: EdgeInsets.only(top: S.of(1)), child: subtitleView)
         else if (subtitle != null && subtitle!.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 1),
+            padding: EdgeInsets.only(top: S.of(1)),
             child: Text(subtitle!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -414,16 +414,16 @@ class MobileBackBar extends StatelessWidget {
         ? text
         : Row(mainAxisSize: MainAxisSize.min, children: [
             leading!,
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             Flexible(child: text),
           ]);
     return SizedBox(
       height: 60,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: M.gutter),
+        padding: EdgeInsets.symmetric(horizontal: M.gutter),
         child: Row(children: [
           if (back == null && trailing.isNotEmpty && !pill)
-            const SizedBox(width: 40)
+            SizedBox(width: S.s40)
           else if (back != null)
             RoundBtn(
                 icon: menu ? 'menu' : 'chevron-left',
@@ -431,9 +431,9 @@ class MobileBackBar extends StatelessWidget {
                 size: 40,
                 iconSize: menu ? 18 : 20,
                 onTap: back),
-          if (trailing.length == 2 && !pill) const SizedBox(width: 40),
+          if (trailing.length == 2 && !pill) SizedBox(width: S.s40),
           if (back != null || (trailing.isNotEmpty && !pill))
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
           Expanded(
             child: pill
                 ? Center(
@@ -445,7 +445,7 @@ class MobileBackBar extends StatelessWidget {
                         onTap: onTitleTap,
                         child: Container(
                           height: 44,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          padding: EdgeInsets.symmetric(horizontal: S.s8),
                           alignment: Alignment.center,
                           child: IntrinsicWidth(child: label),
                         ),
@@ -455,11 +455,11 @@ class MobileBackBar extends StatelessWidget {
                 : Center(child: label),
           ),
           if (trailing.isNotEmpty) ...[
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             ...trailing,
           ] else if (back != null && !pill) ...[
-            const SizedBox(width: 10),
-            const SizedBox(width: 40),
+            SizedBox(width: S.of(10)),
+            SizedBox(width: S.s40),
           ],
         ]),
       ),
@@ -487,7 +487,7 @@ class MobileStackedTitleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(_side, 8, _side, 8),
+        padding: EdgeInsets.fromLTRB(_side, S.s8, _side, S.s8),
         child: Center(
           child: Semantics(
             button: onTap != null,
@@ -503,7 +503,7 @@ class MobileStackedTitleBar extends StatelessWidget {
                 child: Container(
                   height: subtitle == null ? 40 : 44,
                   constraints: const BoxConstraints(minWidth: 96),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: EdgeInsets.symmetric(horizontal: S.s16),
                   decoration: _floating(subtitle == null ? 20 : 22),
                   child: Center(
                     widthFactor: 1,
@@ -545,13 +545,13 @@ class FloatingSearch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Glass(
-        radius: BorderRadius.circular(22),
+        radius: BorderRadius.circular(R.of(22)),
         child: Container(
           height: 44,
-          padding: const EdgeInsets.only(left: 18, right: 8),
+          padding: EdgeInsets.only(left: S.of(18), right: S.s8),
           child: Row(children: [
             AppIcon('search', size: 16, color: AppColors.fg4),
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             Expanded(
               child: TextField(
                 controller: controller,
@@ -570,7 +570,7 @@ class FloatingSearch extends StatelessWidget {
             ListenableBuilder(
               listenable: controller,
               builder: (_, __) => controller.text.isEmpty
-                  ? const SizedBox(width: 8)
+                  ? SizedBox(width: S.s8)
                   : IconBtn('x', size: 36, iconSize: 16, tooltip: 'Clear',
                       onTap: () {
                       controller.clear();
@@ -684,7 +684,7 @@ class _MobileMenu extends StatelessWidget {
           height: M.minTarget + 8,
           child: Row(children: [
             AppIcon(icon, size: 19, color: AppColors.fg3),
-            const SizedBox(width: 14),
+            SizedBox(width: S.of(14)),
             Expanded(child: Text(label, style: TS.rowTitle())),
             AppIcon('chevron-right', size: 15, color: AppColors.fg4),
           ]),
@@ -714,7 +714,7 @@ class _MobileMenu extends StatelessWidget {
                         onPick(MobileMenuPick.newSession);
                       },
                       child: Padding(
-                        padding: const EdgeInsets.all(14),
+                        padding: EdgeInsets.all(S.of(14)),
                         child: Row(children: [
                           Container(
                             width: 36,
@@ -726,7 +726,7 @@ class _MobileMenu extends StatelessWidget {
                             child: AppIcon('plus',
                                 size: 18, color: AppColors.accentFg),
                           ),
-                          const SizedBox(width: 14),
+                          SizedBox(width: S.of(14)),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -746,7 +746,7 @@ class _MobileMenu extends StatelessWidget {
                       ),
                     ),
                   ),
-                const SizedBox(height: S.s8),
+                SizedBox(height: S.s8),
                 if (client != null) ...[
                   _row('task', 'Tasks', MobileMenuPick.tasks),
                   _row('analytics', 'Usage', MobileMenuPick.usage),

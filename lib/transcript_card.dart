@@ -67,7 +67,7 @@ class _TranscriptCardState extends State<TranscriptCard> {
                 behavior: HitTestBehavior.opaque,
                 onTap: () => setState(() => _open = !_open),
                 child: Padding(
-                  padding: const EdgeInsets.only(top: S.s2),
+                  padding: EdgeInsets.only(top: S.s2),
                   child: Text(_open ? 'Show less' : 'Show more',
                       style: sans(TranscriptCard.metaSize,
                           weight: W.label, color: AppColors.fg3)),
@@ -83,8 +83,8 @@ class _TranscriptCardState extends State<TranscriptCard> {
     final title = widget.title?.trim() ?? '';
     final body = widget.body?.trim() ?? '';
     final pad = kMobile
-        ? const EdgeInsets.fromLTRB(12, 9, 12, 10)
-        : const EdgeInsets.fromLTRB(12, 7, 12, 8);
+        ? EdgeInsets.fromLTRB(S.s12, S.of(9), S.s12, S.of(10))
+        : EdgeInsets.fromLTRB(S.s12, S.of(7), S.s12, S.s8);
     final content = Padding(
       padding: pad,
       child: Column(
@@ -94,12 +94,12 @@ class _TranscriptCardState extends State<TranscriptCard> {
           Row(children: [
             if (widget.leading != null) ...[
               widget.leading!,
-              const SizedBox(width: S.s8),
+              SizedBox(width: S.s8),
             ] else if (widget.icon != null) ...[
               AppIcon(widget.icon!,
                   size: 12,
                   color: widget.tone == Tone.neutral ? AppColors.fg3 : fg),
-              const SizedBox(width: S.s6),
+              SizedBox(width: S.s6),
             ],
             Expanded(
               child: Text(widget.kind,
@@ -108,12 +108,12 @@ class _TranscriptCardState extends State<TranscriptCard> {
                   style: sans(TranscriptCard.metaSize, color: AppColors.fg3)),
             ),
             if (widget.status != null && widget.status!.isNotEmpty) ...[
-              const SizedBox(width: S.s8),
+              SizedBox(width: S.s8),
               CardStatus(widget.status!, tone: widget.tone),
             ],
           ]),
           if (title.isNotEmpty) ...[
-            const SizedBox(height: S.s4),
+            SizedBox(height: S.s4),
             Text(title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -125,21 +125,21 @@ class _TranscriptCardState extends State<TranscriptCard> {
             _body(body),
           ],
           if (widget.child != null) ...[
-            const SizedBox(height: S.s8),
+            SizedBox(height: S.s8),
             widget.child!,
           ],
           if (widget.footer != null) ...[
-            const SizedBox(height: S.s8),
+            SizedBox(height: S.s8),
             widget.footer!,
           ],
         ],
       ),
     );
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: EdgeInsets.symmetric(vertical: S.of(3)),
       child: Material(
         color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(R.card),
         clipBehavior: Clip.antiAlias,
         child: widget.onTap == null
             ? content

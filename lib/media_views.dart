@@ -224,7 +224,7 @@ class ImageThumb extends StatelessWidget {
           width: width,
           height: height,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(R.of(14)),
           ),
           clipBehavior: Clip.antiAlias,
           child: Image(
@@ -243,7 +243,7 @@ class ImageThumb extends StatelessWidget {
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   AppIcon('image', size: 18, color: AppColors.fg4),
                   if (height >= 72) ...[
-                    const SizedBox(height: 4),
+                    SizedBox(height: S.s4),
                     Text('Couldn’t load image',
                         textAlign: TextAlign.center,
                         style: sans(11, color: AppColors.fg4)),
@@ -442,8 +442,8 @@ class FileChip extends StatelessWidget {
         child: Container(
           constraints: const BoxConstraints(maxWidth: 260),
           padding: kMobile
-              ? const EdgeInsets.fromLTRB(10, 10, 12, 10)
-              : const EdgeInsets.fromLTRB(8, 7, 10, 7),
+              ? EdgeInsets.fromLTRB(S.of(10), S.of(10), S.s12, S.of(10))
+              : EdgeInsets.fromLTRB(S.s8, S.of(7), S.of(10), S.of(7)),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
           ),
@@ -463,7 +463,7 @@ class FileChip extends StatelessWidget {
                   color:
                       kind == MediaKind.pdf ? AppColors.danger : AppColors.fg2),
             ),
-            const SizedBox(width: 9),
+            SizedBox(width: S.of(9)),
             Flexible(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -474,7 +474,7 @@ class FileChip extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: sans(kMobile ? 14 : 13,
                           weight: W.label, color: AppColors.fg1)),
-                  if (kMobile) const SizedBox(height: 2),
+                  if (kMobile) SizedBox(height: S.s2),
                   Text(ext.length > 6 ? 'FILE' : ext,
                       style: kMobile
                           ? sans(12, color: AppColors.fg3)
@@ -482,7 +482,7 @@ class FileChip extends StatelessWidget {
                 ],
               ),
             ),
-            if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+            if (trailing != null) ...[SizedBox(width: S.s8), trailing!],
           ]),
         ),
       ),
@@ -660,7 +660,7 @@ class _VoiceNoteState extends State<VoiceNote> {
                     child: _loading
                         ? Spinner(size: 14, color: glyph)
                         : Padding(
-                            padding: EdgeInsets.only(left: _playing ? 0 : 2),
+                            padding: EdgeInsets.only(left: _playing ? 0 : S.s2),
                             child: AppIcon(_playing ? 'pause' : 'play',
                                 size: 15, color: glyph),
                           ),
@@ -669,7 +669,7 @@ class _VoiceNoteState extends State<VoiceNote> {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: S.of(10)),
           Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -693,18 +693,18 @@ class _VoiceNoteState extends State<VoiceNote> {
                   ),
                 ),
               ),
-              const SizedBox(height: 3),
+              SizedBox(height: S.of(3)),
               Text(time,
                   style: sans(12,
                       tabular: true,
                       color: _error == null ? muted : AppColors.danger)),
             ],
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: S.s4),
         ]),
         // Only when the audio can't play: the words are the fallback.
         if (_error != null && widget.transcript != null) ...[
-          const SizedBox(height: 6),
+          SizedBox(height: S.s6),
           widget.transcript!,
         ],
       ],
@@ -1046,12 +1046,12 @@ class _ImageViewerState extends State<_ImageViewer>
   Widget _action(String icon, String label, VoidCallback onTap) => Expanded(
         child: InkWell(
           onTap: _busy ? null : onTap,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(R.of(14)),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            padding: EdgeInsets.symmetric(vertical: S.of(10)),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               AppIcon(icon, size: 20, color: Colors.white),
-              const SizedBox(height: 6),
+              SizedBox(height: S.s6),
               Text(label, style: sans(12, color: Colors.white70)),
             ]),
           ),
@@ -1132,7 +1132,7 @@ class _ImageViewerState extends State<_ImageViewer>
                 child: SafeArea(
                   bottom: false,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 8, 16),
+                    padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s8, S.s16),
                     child: Row(children: [
                       Expanded(
                         child: Column(
@@ -1183,11 +1183,11 @@ class _ImageViewerState extends State<_ImageViewer>
                 child: SafeArea(
                   top: false,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                    padding: EdgeInsets.fromLTRB(S.s16, S.s24, S.s16, S.s8),
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
                       if (many)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
+                          padding: EdgeInsets.only(bottom: S.s12),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -1195,14 +1195,14 @@ class _ImageViewerState extends State<_ImageViewer>
                                 AnimatedContainer(
                                   duration: Motion.quick,
                                   margin:
-                                      const EdgeInsets.symmetric(horizontal: 3),
+                                      EdgeInsets.symmetric(horizontal: S.of(3)),
                                   width: i == _index ? 16 : 6,
                                   height: 6,
                                   decoration: BoxDecoration(
                                     color: i == _index
                                         ? Colors.white
                                         : Colors.white38,
-                                    borderRadius: BorderRadius.circular(3),
+                                    borderRadius: BorderRadius.circular(R.of(3)),
                                   ),
                                 ),
                             ],
@@ -1274,12 +1274,12 @@ class _PastedTextCardState extends State<PastedTextCard> {
           InkWell(
             onTap: () => setState(() => _open = !_open),
             borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(R.card)),
+                BorderRadius.vertical(top: Radius.circular(R.card)),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
+              padding: EdgeInsets.fromLTRB(S.of(10), S.s8, S.s6, S.s8),
               child: Row(children: [
                 AppIcon('file-text', size: 14, color: AppColors.fg3),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Expanded(
                   child: Text(
                     'Pasted text · ${lines.length} ${lines.length == 1 ? 'line' : 'lines'}',
@@ -1295,14 +1295,14 @@ class _PastedTextCardState extends State<PastedTextCard> {
                       if (context.mounted) toast(context, 'Copied');
                     },
                     child: Padding(
-                      padding: const EdgeInsets.all(6),
+                      padding: EdgeInsets.all(S.s6),
                       child: AppIcon('copy', size: 13, color: AppColors.fg3),
                     ),
                   ),
                 ),
                 AppIcon(_open ? 'chevron-up' : 'chevron-down',
                     size: 14, color: AppColors.fg3),
-                const SizedBox(width: 6),
+                SizedBox(width: S.s6),
               ]),
             ),
           ),
@@ -1312,7 +1312,7 @@ class _PastedTextCardState extends State<PastedTextCard> {
             curve: Motion.enter,
             alignment: Alignment.topCenter,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+              padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.of(10)),
               child: _open
                   ? ConstrainedBox(
                       constraints: const BoxConstraints(maxHeight: 360),

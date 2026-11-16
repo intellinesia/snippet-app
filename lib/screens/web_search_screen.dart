@@ -98,7 +98,7 @@ class _WebSearchScreenState extends State<WebSearchScreen> {
         onChanged: (_) => setState(() {}),
         onSubmitted: (_) => _saveKeyInline(),
       ),
-      const SizedBox(width: 8),
+      SizedBox(width: S.s8),
       Btn('Save',
           small: true,
           disabled: empty || _busy,
@@ -129,7 +129,7 @@ class _WebSearchScreenState extends State<WebSearchScreen> {
             ),
         ]),
         Padding(
-          padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+          padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
           child: Text(
             'Agents get web_search and web_read, powered by Exa, in '
             'sessions that start after the key is saved. The key stays on '
@@ -204,8 +204,8 @@ class _WebSearchScreenState extends State<WebSearchScreen> {
     } else {
       body = ListView(
         padding: kMobile
-            ? const EdgeInsets.fromLTRB(16, 8, 16, 40)
-            : const EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s40),
+            ? EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40)
+            : EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s40),
         children: _groups(keySet),
       );
     }

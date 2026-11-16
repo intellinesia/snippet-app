@@ -55,18 +55,18 @@ ShellPanelRequest agentPanelRequest(
             client: client,
             agentId: agentId,
             builder: (a) => SingleChildScrollView(
-                padding: const EdgeInsets.all(S.s12),
+                padding: EdgeInsets.all(S.s12),
                 child: AgentWakePanel(
                     client: client, owner: agentId, name: agentName)),
           ),
         'reach' => SingleChildScrollView(
-            padding: const EdgeInsets.all(S.s12),
+            padding: EdgeInsets.all(S.s12),
             child: AgentReachPanel(client: client, agentId: agentId)),
         'model' => _WithAgent(
             client: client,
             agentId: agentId,
             builder: (a) => SingleChildScrollView(
-                padding: const EdgeInsets.all(S.s12),
+                padding: EdgeInsets.all(S.s12),
                 child: AgentProfilePanel(
                     client: client, agent: a, name: agentName)),
           ),
@@ -77,7 +77,7 @@ ShellPanelRequest agentPanelRequest(
                 _NicknamePage(client: client, agent: a, onDone: close),
           ),
         _ => SingleChildScrollView(
-            padding: const EdgeInsets.all(S.s8),
+            padding: EdgeInsets.all(S.s8),
             child: Align(
               alignment: Alignment.topLeft,
               child: AgentAppearancePicker(
@@ -171,7 +171,7 @@ class _NicknamePageState extends State<_NicknamePage> {
         ? widget.agent.id
         : widget.agent.fullName.trim();
     return Padding(
-      padding: const EdgeInsets.all(S.s16),
+      padding: EdgeInsets.all(S.s16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -179,7 +179,7 @@ class _NicknamePageState extends State<_NicknamePage> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TS.ui(AppColors.fg2)),
-          const SizedBox(height: S.s8),
+          SizedBox(height: S.s8),
           TextField(
             controller: _text,
             autofocus: true,
@@ -199,7 +199,7 @@ class _NicknamePageState extends State<_NicknamePage> {
                   borderSide: BorderSide(color: AppColors.border)),
             ),
           ),
-          const SizedBox(height: S.s12),
+          SizedBox(height: S.s12),
           Align(
             alignment: Alignment.centerRight,
             child: Btn('Save', small: true, disabled: _saving, onTap: _save),
@@ -258,7 +258,7 @@ class AgentSidePanel extends StatelessWidget {
   Widget _seg(String text, bool on, VoidCallback onTap,
       {VoidCallback? onClose}) {
     return Padding(
-      padding: const EdgeInsets.only(right: 2),
+      padding: EdgeInsets.only(right: S.s2),
       child: Material(
         color: on ? AppColors.tint2 : Colors.transparent,
         borderRadius: BorderRadius.circular(R.sm),
@@ -266,20 +266,20 @@ class AgentSidePanel extends StatelessWidget {
           borderRadius: BorderRadius.circular(R.sm),
           onTap: onTap,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(10, 0, onClose != null ? 6 : 10, 0),
+            padding: EdgeInsets.fromLTRB(S.of(10), 0, onClose != null ? S.s6 : S.of(10), 0),
             child: SizedBox(
               height: 28,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Text(text, style: TS.ui(on ? AppColors.fg1 : AppColors.fg3)),
                 if (onClose != null) ...[
-                  const SizedBox(width: 5),
+                  SizedBox(width: S.of(5)),
                   Tooltip(
                     message: 'Close tab',
                     child: GestureDetector(
                       onTap: onClose,
                       behavior: HitTestBehavior.opaque,
                       child: Padding(
-                        padding: const EdgeInsets.all(2),
+                        padding: EdgeInsets.all(S.s2),
                         child: AppIcon('x', size: 11, color: AppColors.fg3),
                       ),
                     ),
@@ -302,7 +302,7 @@ class AgentSidePanel extends StatelessWidget {
         if (readouts.isNotEmpty)
         Container(
           height: 46,
-          padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
+          padding: EdgeInsets.fromLTRB(S.of(10), 0, S.s8, 0),
           alignment: Alignment.centerLeft,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
