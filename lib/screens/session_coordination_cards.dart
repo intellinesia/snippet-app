@@ -672,7 +672,9 @@ class AgentMessageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final lane = agentId.startsWith('lane ');
     final given = laneTitle?.trim() ?? '';
-    final laneName = given.isNotEmpty ? given : agentId.substring(5).trim();
+    final laneName = given.isNotEmpty
+        ? given
+        : (lane ? agentId.substring(5).trim() : agentId);
     final who = lane ? 'Lane · $laneName' : agentId;
     return _ThreadCard(
       icon: outbound ? 'send' : (lane ? 'message' : 'corner-down-right'),
