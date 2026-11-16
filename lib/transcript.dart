@@ -507,13 +507,129 @@ class LaneWho extends StatelessWidget {
   }
 }
 
+/// Last lines of a running lane's activity log, shown under the activity line.
+class LaneRecentOutput extends StatelessWidget {
+  final List<String> lines;
+  const LaneRecentOutput({super.key, required this.lines});
+
+  @override
+  Widget build(BuildContext context) {
+    if (lines.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final line in lines)
+          Text(
+            line,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: mono(11, height: 1.35, color: AppColors.fg4),
+          ),
+      ],
+    );
+  }
+}
+
+/// Stop (for running lanes) or Retry (for failed/cancelled lanes).
+class LaneControlButton extends StatefulWidget {
+  final DaemonClient client;
+  final String sessionId;
+  final LaneInfo lane;
+
+  const LaneControlButton({
+    super.key,
+    required this.client,
+    required this.sessionId,
+    required this.lane,
+  });
+
+  @override
+  State<LaneControlButton> createState() => _LaneControlButtonState();
+}
+
+class _LaneControlButtonState extends State<LaneControlButton> {
+  bool _busy = false;
+
+  Future<void> _onTap() async {
+    if (_busy) return;
+    final lane = widget.lane;
+    if (lane.running) {
+      final ok = await confirmAction(
+        context,
+        title: 'Stop this lane?',
+        body: lane.title.trim().isEmpty ? 'Stop this lane?' : lane.title.trim(),
+        confirmLabel: 'Stop',
+        danger: true,
+      );
+      if (!ok || !mounted) return;
+      setState(() => _busy = true);
+      try {
+        await widget.client.cancelLane(widget.sessionId, lane.id);
+      } catch (e) {
+        if (mounted) toast(context, '$e', danger: true);
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+      return;
+    }
+    if (lane.retryable) {
+      setState(() => _busy = true);
+      try {
+        await widget.client.retryLane(widget.sessionId, lane.id);
+      } catch (e) {
+        if (mounted) toast(context, '$e', danger: true);
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final running = widget.lane.running;
+    final retryable = widget.lane.retryable;
+    if (!running && !retryable) return const SizedBox.shrink();
+    final label = running ? 'Stop' : 'Retry';
+    final fg = running ? AppColors.danger : AppColors.fg1;
+    final bg = running ? AppColors.dangerBg : AppColors.surface2;
+    final border =
+        running ? AppColors.danger.withValues(alpha: 0.3) : AppColors.border;
+    final height = kMobile ? 44.0 : 28.0;
+    final radius = BorderRadius.circular(kMobile ? R.pill : R.sm);
+    return Opacity(
+      opacity: _busy ? 0.5 : 1.0,
+      child: Material(
+        color: bg,
+        shape: RoundedRectangleBorder(
+            borderRadius: radius, side: BorderSide(color: border)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          borderRadius: radius,
+          onTap: _busy ? null : _onTap,
+          child: Container(
+            height: height,
+            padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s16 : S.s12),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: sans(kMobile ? 13 : 12, weight: W.label, color: fg),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class LaneNotice extends StatefulWidget {
   final String title;
   final LaneInfo? Function() live;
   final VoidCallback onOpen;
   final String? summary;
   final DaemonClient? client;
+  final String? sessionId;
   final String? sessionProfile;
+  final String? retryOf;
 
   const LaneNotice({
     super.key,
@@ -522,7 +638,9 @@ class LaneNotice extends StatefulWidget {
     required this.onOpen,
     this.summary,
     this.client,
+    this.sessionId,
     this.sessionProfile,
+    this.retryOf,
   });
 
   @override
@@ -631,7 +749,18 @@ class _LaneNoticeState extends State<LaneNotice> {
     ]);
     Widget? body;
     if (running) {
-      body = _LaneActivityLine(lane: lane, size: small);
+      final recent = lane?.recent ?? const <String>[];
+      body = recent.isEmpty
+          ? _LaneActivityLine(lane: lane, size: small)
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _LaneActivityLine(lane: lane, size: small),
+                SizedBox(height: S.s2),
+                LaneRecentOutput(lines: recent),
+              ],
+            );
     } else if (failed && (lane?.error?.trim().isNotEmpty ?? false)) {
       body = Text(lane!.error!.trim(),
           maxLines: 2,
@@ -641,6 +770,11 @@ class _LaneNoticeState extends State<LaneNotice> {
       body = CardMarkdownBody(
           body: summary, preview: MarkdownPreview.plain(summary));
     }
+    final retryOf = widget.retryOf?.trim() ?? '';
+    final showControl = widget.client != null &&
+        widget.sessionId != null &&
+        lane != null &&
+        (running || lane.retryable);
     final pad = kMobile
         ? EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.of(9))
         : EdgeInsets.fromLTRB(S.s12, S.s6, S.s12, S.of(7));
@@ -664,10 +798,32 @@ class _LaneNoticeState extends State<LaneNotice> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   header,
+                  if (retryOf.isNotEmpty)
+                    Padding(
+                      padding: EdgeInsets.only(left: S.of(20.0), top: S.s2),
+                      child: Text(
+                        'Retry of $retryOf',
+                        style: sans(small - 1, color: AppColors.fg4),
+                      ),
+                    ),
                   if (body != null)
                     Padding(
                       padding: EdgeInsets.only(left: S.s20, top: S.s2),
                       child: body,
+                    ),
+                  if (showControl)
+                    Padding(
+                      padding: EdgeInsets.only(left: S.of(20.0), top: S.s6),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          LaneControlButton(
+                            client: widget.client!,
+                            sessionId: widget.sessionId!,
+                            lane: lane,
+                          ),
+                        ],
+                      ),
                     ),
                 ],
               ),

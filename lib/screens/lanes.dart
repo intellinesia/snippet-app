@@ -11,7 +11,7 @@ import '../panel.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import '../transcript.dart' show LaneWho;
+import '../transcript.dart' show LaneControlButton, LaneRecentOutput, LaneWho;
 import 'session.dart';
 
 /// A focused view of delegated work. The session owns the live state; this
@@ -20,12 +20,14 @@ class LanesScreen extends StatefulWidget {
   final List<LaneInfo> Function() liveLanes;
   final VoidCallback? onClose;
   final DaemonClient? client;
+  final String? sessionId;
 
   const LanesScreen({
     super.key,
     required this.liveLanes,
     this.onClose,
     this.client,
+    this.sessionId,
   });
 
   @override
@@ -79,7 +81,9 @@ class _LanesScreenState extends State<LanesScreen> {
                     padding:
                         EdgeInsets.fromLTRB(S.s16, S.s16, S.s16, S.s32),
                     children: laneSections(lanes,
-                        liveLanes: widget.liveLanes, client: widget.client),
+                        liveLanes: widget.liveLanes,
+                        client: widget.client,
+                        sessionId: widget.sessionId),
                   ),
           ),
         ]),
@@ -91,6 +95,7 @@ class _LanesScreenState extends State<LanesScreen> {
 List<Widget> laneSections(List<LaneInfo> lanes,
     {List<LaneInfo> Function()? liveLanes,
     DaemonClient? client,
+    String? sessionId,
     String? sessionProfile}) {
   final running = lanes.where((l) => l.running).toList();
   final failed = lanes.where((l) => l.status == 'failed').toList();
@@ -115,6 +120,7 @@ List<Widget> laneSections(List<LaneInfo> lanes,
           lane: items[i],
           liveLanes: liveLanes,
           client: client,
+          sessionId: sessionId,
           sessionProfile: sessionProfile));
     }
   }
@@ -128,13 +134,20 @@ List<Widget> laneSections(List<LaneInfo> lanes,
 }
 
 void openLaneView(BuildContext context, LaneInfo lane,
-    {DaemonClient? client, List<LaneInfo> Function()? liveLanes}) {
+    {DaemonClient? client,
+    String? sessionId,
+    List<LaneInfo> Function()? liveLanes}) {
   final daemon = client ?? DaemonScope.maybeOf(context);
   final live = liveLanes ?? () => [lane];
   final transcript = lane.transcript;
   Widget screen() => daemon != null && transcript != null && transcript.isNotEmpty
       ? LaneTranscriptScreen(client: daemon, laneId: lane.id, liveLanes: live)
-      : LaneDetailScreen(laneId: lane.id, liveLanes: live);
+      : LaneDetailScreen(
+          laneId: lane.id,
+          liveLanes: live,
+          client: daemon,
+          sessionId: sessionId,
+        );
   if (!kMobile &&
       ShellPanelRoot.of(context) == null &&
       ShellPanelScope.maybeOf(context) != null) {
@@ -154,6 +167,7 @@ class LaneDetailCard extends StatefulWidget {
   final List<LaneInfo> Function()? liveLanes;
   final bool detail;
   final DaemonClient? client;
+  final String? sessionId;
   final String? sessionProfile;
   const LaneDetailCard(
       {super.key,
@@ -161,6 +175,7 @@ class LaneDetailCard extends StatefulWidget {
       this.liveLanes,
       this.detail = false,
       this.client,
+      this.sessionId,
       this.sessionProfile});
 
   @override
@@ -282,6 +297,8 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
                           style: mono(11, color: AppColors.fg3)),
                     ),
                   ])),
+                if (lane.running && lane.recent.isNotEmpty)
+                  indented(LaneRecentOutput(lines: lane.recent), top: 4),
                 if (summary != null && summary.isNotEmpty && !_expanded)
                   indented(
                       MarkdownPreview(data: summary, maxLines: 2, style: body)),
@@ -290,7 +307,18 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: body.copyWith(color: AppColors.danger))),
-                if (!_expanded)
+                if (_controlButton(context) case final ctrl?)
+                  if (!_expanded)
+                    indented(
+                        Row(children: [
+                          Text('View details', style: meta),
+                          const Spacer(),
+                          ctrl,
+                        ]),
+                        top: 8)
+                  else
+                    indented(Row(children: [ctrl]), top: 8)
+                else if (!_expanded)
                   indented(Text('View details', style: meta), top: 8),
                 if (_expanded) indented(_details(context), top: 12),
               ],
@@ -301,8 +329,19 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
     );
   }
 
-  void _open(BuildContext context) =>
-      openLaneView(context, lane, client: widget.client, liveLanes: widget.liveLanes);
+  Widget? _controlButton(BuildContext context) {
+    final client = widget.client ?? DaemonScope.maybeOf(context);
+    final sessionId = widget.sessionId ?? lane.trimmedIn;
+    if (client == null || sessionId == null) return null;
+    if (!lane.running && !lane.retryable) return null;
+    return LaneControlButton(
+        client: client, sessionId: sessionId, lane: lane);
+  }
+
+  void _open(BuildContext context) => openLaneView(context, lane,
+      client: widget.client,
+      sessionId: widget.sessionId,
+      liveLanes: widget.liveLanes);
 
   Widget _details(BuildContext context) {
     final sections = <Widget>[];
@@ -384,8 +423,14 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
 class LaneDetailScreen extends StatefulWidget {
   final String laneId;
   final List<LaneInfo> Function() liveLanes;
+  final DaemonClient? client;
+  final String? sessionId;
   const LaneDetailScreen(
-      {super.key, required this.laneId, required this.liveLanes});
+      {super.key,
+      required this.laneId,
+      required this.liveLanes,
+      this.client,
+      this.sessionId});
 
   @override
   State<LaneDetailScreen> createState() => _LaneDetailScreenState();
@@ -430,7 +475,12 @@ class _LaneDetailScreenState extends State<LaneDetailScreen> {
                         title: 'Lane unavailable',
                         body: 'This delegated lane is no longer available.')
                     : ListView(padding: EdgeInsets.all(S.s16), children: [
-                        LaneDetailCard(lane: lane, detail: true),
+                        LaneDetailCard(
+                          lane: lane,
+                          detail: true,
+                          client: widget.client,
+                          sessionId: widget.sessionId,
+                        ),
                       ])),
           ])),
     );

@@ -588,12 +588,14 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           endTools(key);
           final id = _s(e['id']);
           final title = _s(e['title']);
+          final retryOf = _s(e['retry_of']).trim();
           // Dedup by ID AND title — the same lane can be spawned with
           // different IDs on reconnect (resume), producing visual duplicates.
+          // Explicit retries keep the same title and must still render.
           if (!laneRowsShown.contains(id) &&
-              !laneRowsShown.contains('t:$title')) {
+              (retryOf.isNotEmpty || !laneRowsShown.contains('t:$title'))) {
             laneRowsShown.add(id);
-            laneRowsShown.add('t:$title');
+            if (retryOf.isEmpty) laneRowsShown.add('t:$title');
             addEvent(
                 key,
                 LaneNotice(
@@ -601,7 +603,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                   live: () => liveLane(id),
                   onOpen: () => _openLane(id),
                   client: widget.client,
+                  sessionId: widget.sessionId,
                   sessionProfile: _currentProfile ?? widget.profile,
+                  retryOf: retryOf.isEmpty ? null : retryOf,
                 ));
           }
         case 'lane_cancelled':
@@ -619,6 +623,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                   onOpen: () => _openLane(id),
                   summary: _s(e['summary']),
                   client: widget.client,
+                  sessionId: widget.sessionId,
                   sessionProfile: _currentProfile ?? widget.profile,
                 ));
           }
@@ -848,6 +853,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
         liveLanes: () => _state?.lanes ?? const <LaneInfo>[],
         onClose: close,
         client: widget.client,
+        sessionId: widget.sessionId,
       ),
     );
   }
