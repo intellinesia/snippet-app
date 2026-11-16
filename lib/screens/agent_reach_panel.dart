@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../chat/chat_info.dart' show DockedInfoNav, dockedPick;
 import '../platform.dart';
+import '../settings_form.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -156,124 +157,82 @@ class _AgentReachPanelState extends State<AgentReachPanel> {
       );
     }
     final push = reach.channel('push');
-    return FlatGroupScope(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_error != null)
-            Padding(
-              padding: EdgeInsets.only(bottom: S.s8),
-              child: Text(_error!, style: sans(12, color: AppColors.danger)),
-            ),
-          AppToggle(
-            flat: true,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_error != null)
+          Padding(
+            padding: EdgeInsets.only(bottom: S.s8),
+            child: Text(_error!, style: sans(12, color: AppColors.danger)),
+          ),
+        SettingsGroup(children: [
+          SettingsRow(
             label: 'Notifications',
             sub: push.enabled
                 ? 'Questions and blockers can ping your phone'
                 : 'Nothing pings you; messages wait in chat',
-            on: push.enabled,
-            onChanged: (v) => _save(channels: {
-              'push': {'enabled': v}
-            }),
-          ),
-          if (reach.inQuietHours || reach.onCall)
-            Padding(
-              padding: EdgeInsets.only(bottom: S.s4),
-              child: Text(
-                  reach.onCall
-                      ? 'You are on a call, so held channels wait.'
-                      : 'Quiet hours now, so held channels wait.',
-                  style: sans(12, color: AppColors.run)),
+            onTap: _saving
+                ? null
+                : () => _save(channels: {
+                      'push': {'enabled': !push.enabled}
+                    }),
+            trailing: AppSwitch(
+              on: push.enabled,
+              onChanged: (v) => _save(channels: {
+                'push': {'enabled': v}
+              }),
             ),
-          _divider(),
-          _head('Where each kind goes'),
+          ),
+        ]),
+        if (reach.inQuietHours || reach.onCall)
+          Padding(
+            padding: EdgeInsets.only(bottom: S.s12),
+            child: Text(
+                reach.onCall
+                    ? 'You are on a call, so held channels wait.'
+                    : 'Quiet hours now, so held channels wait.',
+                style: sans(12, color: AppColors.run)),
+          ),
+        SettingsGroup(header: 'Where each kind goes', children: [
           for (final kind in AgentReach.kinds)
             Builder(
-              builder: (anchor) => _row(
+              builder: (anchor) => SettingsRow(
                 label: reachKindLabel(kind),
-                value: _routeLabel(reach.policy[kind] ?? const []),
+                trailing: Text(_routeLabel(reach.policy[kind] ?? const []),
+                    style: TS.meta()),
+                chevron: true,
                 onTap: _saving ? null : () => _pickRoute(anchor, kind),
               ),
             ),
-          _divider(),
-          _head('Channels'),
+        ]),
+        SettingsGroup(header: 'Channels', children: [
           for (final ch in AgentReach.channelOrder) _channel(reach, ch),
-        ],
-      ),
+        ]),
+      ],
     );
   }
 
   Widget _channel(AgentReach reach, String ch) {
     final state = reach.channel(ch);
-    final fixed = AgentReach.alwaysOn(ch);
-    return Row(children: [
-      Expanded(
-        child: InkWell(
-          key: Key('quiet-$ch'),
-          borderRadius: BorderRadius.circular(R.md),
-          onTap: _saving
-              ? null
-              : () => _save(channels: {
-                    ch: {'quiet_hours': !state.quietHours}
-                  }),
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: S.s8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(reachChannelLabel(ch),
-                    style: sans(14, color: AppColors.fg1)),
-                SizedBox(height: S.s2),
-                Text(
-                  state.quietHours
-                      ? 'Held in quiet hours'
-                      : 'Delivers in quiet hours',
-                  style: sans(12, color: AppColors.fg3),
-                ),
-              ],
+    return SettingsRow(
+      key: Key('quiet-$ch'),
+      label: reachChannelLabel(ch),
+      sub: state.quietHours ? 'Held in quiet hours' : 'Delivers in quiet hours',
+      onTap: _saving
+          ? null
+          : () => _save(channels: {
+                ch: {'quiet_hours': !state.quietHours}
+              }),
+      trailing: AgentReach.alwaysOn(ch)
+          ? Text('Always on', style: TS.meta())
+          : AppSwitch(
+              key: Key('channel-$ch'),
+              on: state.enabled,
+              onChanged: (v) => _save(channels: {
+                ch: {'enabled': v}
+              }),
             ),
-          ),
-        ),
-      ),
-      if (fixed)
-        Text('Always on', style: sans(12, color: AppColors.fg3))
-      else
-        AppSwitch(
-          key: Key('channel-$ch'),
-          on: state.enabled,
-          onChanged: (v) => _save(channels: {
-            ch: {'enabled': v}
-          }),
-        ),
-    ]);
-  }
-
-  Widget _row(
-      {required String label, required String value, VoidCallback? onTap}) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(R.md),
-      onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: S.of(10)),
-        child: Row(children: [
-          Expanded(child: Text(label, style: sans(14, color: AppColors.fg1))),
-          Text(value, style: sans(13, color: AppColors.fg2)),
-          SizedBox(width: S.s4),
-          AppIcon('chevron-down', size: 14, color: AppColors.fg3),
-        ]),
-      ),
     );
   }
-
-  Widget _divider() => Padding(
-        padding: EdgeInsets.symmetric(vertical: S.s12),
-        child: Divider(height: 1, thickness: 1, color: AppColors.border),
-      );
-
-  Widget _head(String text) => Padding(
-        padding: EdgeInsets.only(bottom: S.s4),
-        child:
-            Text(text, style: sans(12, weight: W.label, color: AppColors.fg3)),
-      );
 }
