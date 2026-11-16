@@ -280,6 +280,23 @@ class SessionInfo {
   /// because dispatch writes the roster, not the session's identity.
   final String? workerAgentId;
 
+  /// The agent that owns this session ('snippet' when nobody claimed it).
+  /// Additive: older daemons omit it and rows fall back to [displayAgentId].
+  final String? ownerAgentId;
+
+  /// The turn finished while the user was away and they have not opened the
+  /// session since — the "Came back" list section. Computed by the daemon.
+  final bool cameBack;
+
+  /// Unix seconds when the last turn finished with a result.
+  final int? finishedAt;
+
+  /// Unix seconds when the user last opened or answered this session.
+  final int? userSeenAt;
+
+  /// First line of the finishing turn's result, at most ~200 chars.
+  final String? resultSummary;
+
   /// What the session is waiting on the user for (`type`, `text`), sent only
   /// while it is waiting. Null for an approval the daemon could not describe.
   final Map<String, dynamic>? attention;
@@ -287,9 +304,12 @@ class SessionInfo {
   bool get needsInput => status == 'waiting_for_input';
 
   /// Who to name on a session row: whoever is working here, else whoever the
-  /// session belongs to. Precedence lives here so every row agrees, and so the
-  /// rule is stated once rather than repeated at each call site.
-  String? get displayAgentId => workerAgentId ?? agentId;
+  /// session belongs to, else the session's owner — 'snippet' when the daemon
+  /// reports no owner either, so every row names an agent. Precedence lives
+  /// here so every row agrees, and so the rule is stated once rather than
+  /// repeated at each call site.
+  String? get displayAgentId =>
+      workerAgentId ?? agentId ?? ownerAgentId ?? 'snippet';
 
   /// For a session in a git worktree: the folder in the main checkout it was
   /// made from, and the worktree's branch.
@@ -352,6 +372,14 @@ class SessionInfo {
         runningSince = (j['running_since'] as num?)?.toInt(),
         agentId = j['agent_id'] as String?,
         workerAgentId = j['worker_agent_id'] as String?,
+        ownerAgentId = j['owner_agent_id'] as String?,
+        cameBack = j['came_back'] == true,
+        finishedAt = (j['finished_at'] as num?)?.toInt(),
+        userSeenAt = (j['user_seen_at'] as num?)?.toInt(),
+        resultSummary = switch (j['result_summary']) {
+          final String s when s.trim().isNotEmpty => s.trim(),
+          _ => null,
+        },
         attention = j['attention'] is Map
             ? (j['attention'] as Map).cast<String, dynamic>()
             : null,
@@ -368,7 +396,8 @@ class SessionInfo {
             ? SessionPr.fromJson((j['pr'] as Map).cast<String, dynamic>())
             : null;
 
-  SessionInfo _copy({String? title, String? status}) => SessionInfo._(
+  SessionInfo _copy({String? title, String? status, int? seenAt}) =>
+      SessionInfo._(
         id: id,
         folder: folder,
         conversation: conversation,
@@ -388,6 +417,11 @@ class SessionInfo {
         runningSince: runningSince,
         agentId: agentId,
         workerAgentId: workerAgentId,
+        ownerAgentId: ownerAgentId,
+        cameBack: seenAt == null ? cameBack : false,
+        finishedAt: finishedAt,
+        userSeenAt: seenAt ?? userSeenAt,
+        resultSummary: resultSummary,
         attention: attention,
         originFolder: originFolder,
         branch: branch,
@@ -400,6 +434,11 @@ class SessionInfo {
   SessionInfo withTitle(String title) => _copy(title: title);
 
   SessionInfo withStatus(String status) => _copy(status: status);
+
+  /// The user just opened this session: it leaves "Came back" at once,
+  /// before the daemon's next sessions payload confirms it.
+  SessionInfo markSeen() =>
+      _copy(seenAt: DateTime.now().millisecondsSinceEpoch ~/ 1000);
 
   const SessionInfo._({
     required this.id,
@@ -421,6 +460,11 @@ class SessionInfo {
     this.runningSince,
     this.agentId,
     this.workerAgentId,
+    this.ownerAgentId,
+    this.cameBack = false,
+    this.finishedAt,
+    this.userSeenAt,
+    this.resultSummary,
     this.attention,
     this.originFolder,
     this.branch,

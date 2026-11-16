@@ -1156,22 +1156,51 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       for (final s in sorted)
         if (!pinnedIds.contains(s.id)) s,
     ];
-    final live = filtering
+    final needs = filtering
+        ? const <SessionInfo>[]
+        : [for (final s in remaining) if (sessionNeedsYou(s)) s];
+    final cameBack = filtering
+        ? const <SessionInfo>[]
+        : [for (final s in remaining) if (sessionCameBack(s)) s];
+    final running = filtering
         ? const <SessionInfo>[]
         : [
             for (final s in remaining)
-              if (sessionNeedsYou(s)) s,
-            for (final s in remaining)
-              if (!sessionNeedsYou(s) && sessionIsActive(s.status)) s,
+              if (!sessionNeedsYou(s) &&
+                  !sessionCameBack(s) &&
+                  sessionIsActive(s.status))
+                s,
           ];
+    var top = pinned.isEmpty ? 2.0 : 18.0;
+    final live = [...needs, ...running];
     if (live.isNotEmpty) {
-      out.add(MobileSectionLabel('Now',
-          count: live.length, top: pinned.isEmpty ? 2 : 18));
+      out.add(MobileSectionLabel('Now', count: live.length, top: top));
+      top = 18;
       for (final s in live) {
         out.add(liveCard(s));
       }
     }
-    final liveIds = {for (final s in live) s.id};
+    if (cameBack.isNotEmpty) {
+      out.add(MobileSectionLabel('Came back',
+          icon: 'bell', count: cameBack.length, top: top));
+      top = 18;
+      out.add(Appear(
+        key: const ValueKey('came-back'),
+        index: n++,
+        since: _chatsShownAt,
+        child: MobileGroupCard(children: [
+          for (var i = 0; i < cameBack.length; i++)
+            _listRow(cameBack[i],
+                above: i > 0 ? cameBack[i - 1] : null,
+                below: i + 1 < cameBack.length ? cameBack[i + 1] : null,
+                divider: i + 1 < cameBack.length,
+                showProject: true),
+        ]),
+      ));
+    }
+    final liveIds = {
+      for (final s in [...needs, ...cameBack, ...running]) s.id
+    };
     final byFolder = <String, List<SessionInfo>>{};
     for (final s in remaining) {
       if (liveIds.contains(s.id)) continue;
@@ -1182,7 +1211,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       final l = projectLabel(rows.first);
       labelCount[l] = (labelCount[l] ?? 0) + 1;
     }
-    var first = pinned.isEmpty && live.isEmpty;
+    var first = top == 2;
     for (final rows in byFolder.values) {
       var label = projectLabel(rows.first);
       if ((labelCount[label] ?? 0) > 1) label = _projectPath(rows.first);
@@ -1302,9 +1331,13 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         for (final s in unpinned)
           if (sessionNeedsYou(s)) s,
       ];
+      final cameBackRows = [
+        for (final s in unpinned)
+          if (sessionCameBack(s)) s,
+      ];
       groupedSource = [
         for (final s in unpinned)
-          if (!sessionNeedsYou(s)) s,
+          if (!sessionNeedsYou(s) && !sessionCameBack(s)) s,
       ];
       if (needsYouRows.isNotEmpty) {
         out.add(SessionGroupHeader(
@@ -1324,6 +1357,25 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
               showProject: true,
             ),
           ));
+        }
+      }
+      if (cameBackRows.isNotEmpty) {
+        out.add(SessionGroupHeader(
+          'Came back',
+          count: cameBackRows.length,
+        ));
+        for (var i = 0; i < cameBackRows.length; i++) {
+          out.add(Appear(
+            key: ValueKey('chat-${cameBackRows[i].id}'),
+            index: n++,
+            since: _chatsShownAt,
+            child: _listRow(cameBackRows[i],
+     above: i > 0 ? cameBackRows[i - 1] : null,
+     below: i + 1 < cameBackRows.length ? cameBackRows[i + 1] : null,
+                divider: kMobile && i + 1 < cameBackRows.length,
+                showProject: true,
+              ),
+            ));
         }
       }
     } else {

@@ -48,6 +48,10 @@ bool sessionNeedsYou(SessionInfo s) =>
         s.status == 'in_review' ||
         s.attention != null);
 
+/// Finished while the user was away and not yet opened — the "Came back"
+/// section. Needs-you still wins when a session is both.
+bool sessionCameBack(SessionInfo s) => s.cameBack && !sessionNeedsYou(s);
+
 ({String label, String icon}) sessionAttentionState(SessionInfo s) {
   final type = '${s.attention?['type'] ?? ''}'.toLowerCase();
   if (type == 'question') return (label: 'Question', icon: 'help-circle');
@@ -420,7 +424,14 @@ class SessionListRow extends StatelessWidget {
         : null;
     final hasExtraLine =
         pr != null || lanesText != null || plan?.current != null || wakeText != null;
-    final hasMeta = showProject || needsYou || branch.isNotEmpty || diff != null || noRepo;
+    final cameBackSummary =
+        sessionCameBack(s) ? (s.resultSummary?.trim() ?? '') : '';
+    final hasMeta = showProject ||
+        needsYou ||
+        branch.isNotEmpty ||
+        diff != null ||
+        noRepo ||
+        cameBackSummary.isNotEmpty;
 
     final stateLabel = attn?.label ??
         (working
@@ -487,7 +498,15 @@ class SessionListRow extends StatelessWidget {
               if (hasMeta)
                 SizedBox(
                   height: kMobile ? 18 : 16,
-                  child: Row(children: [
+                  child: cameBackSummary.isNotEmpty
+                      ? Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(cameBackSummary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TS.meta(AppColors.fg2)),
+                        )
+                      : Row(children: [
                     if (attn != null) ...[
                       _StateLabel(state: attn),
                       if (showProject || branch.isNotEmpty || diff != null || noRepo)
