@@ -173,7 +173,7 @@ class _PullRequestsScreenState extends State<PullRequestsScreen> {
   (String, Color) _stateIcon(PrSummary pr) => switch (pr.state) {
         'MERGED' => ('git-commit', AppColors.accent),
         'CLOSED' => ('x-circle', AppColors.fg4),
-        _ => pr.draft ? ('git-branch', AppColors.fg4) : ('git-branch', AppColors.ok),
+        _ => ('git-pull-request-arrow', pr.draft ? AppColors.fg4 : AppColors.fg2),
       };
 
   Widget? _checksPill(PrSummary pr) => switch (rollup(pr.checks)) {
@@ -222,7 +222,7 @@ class _PullRequestsScreenState extends State<PullRequestsScreen> {
                       style: sans(14, weight: W.label, color: AppColors.fg1)),
                   SizedBox(height: S.s2),
                   Text(
-                      '#${pr.number} · ${pr.author} · ${_ago(pr.updatedAt)}${pr.draft ? ' · draft' : ''}',
+                      '#${pr.number} · ${pr.author == widget.status.viewer && pr.author.isNotEmpty ? 'you' : pr.author} · ${_ago(pr.updatedAt)}${pr.draft ? ' · draft' : ''}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TS.meta(AppColors.fg3)),

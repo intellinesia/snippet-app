@@ -343,6 +343,15 @@ class _PaletteState extends State<_Palette> {
       section(PaletteKind.session, of(PaletteKind.session), 6);
       section(PaletteKind.tab, of(PaletteKind.tab), 6);
       section(PaletteKind.chat, of(PaletteKind.chat), 5);
+      // A taste of each kind, so the empty palette shows what it can reach.
+      for (final k in const [
+        PaletteKind.pr,
+        PaletteKind.task,
+        PaletteKind.agent,
+        PaletteKind.setting,
+      ]) {
+        section(k, _all.where((i) => i.kind == k), 2);
+      }
       section(PaletteKind.command, of(PaletteKind.command), 20);
       return rows;
     }

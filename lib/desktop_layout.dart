@@ -205,12 +205,13 @@ class SettingsColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Left-aligned beside the settings nav; the right inset clears the close button.
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, S.s32),
+      padding: EdgeInsets.fromLTRB(S.s24, S.s20, S.of(56), S.s32),
       child: Align(
-        alignment: Alignment.topCenter,
+        alignment: Alignment.topLeft,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 680),
+          constraints: const BoxConstraints(maxWidth: 720),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: children,

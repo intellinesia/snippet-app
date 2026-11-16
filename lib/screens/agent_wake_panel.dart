@@ -4,7 +4,13 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../chat/chat_info.dart'
-    show DockedInfoNav, dockedPick, dockedPromptText;
+    show
+        AgentPageButton,
+        AgentPageCaption,
+        AgentPageRow,
+        DockedInfoNav,
+        dockedPick,
+        dockedPromptText;
 import '../models.dart';
 import '../platform.dart';
 import '../settings_form.dart';
@@ -22,13 +28,30 @@ Future<void> showAgentWakeSettings(
   Offset? point,
   VoidCallback? onChanged,
 }) {
-  final panel = AgentWakePanel(
-      client: client, owner: owner, name: name, onChanged: onChanged);
   final nav = DockedInfoNav.maybeOf(context);
   if (nav != null) {
-    nav.push('Wakes and reporting', (_) => panel);
+    final edit = AgentWakeEdit();
+    nav.push(
+        'Wakes and reporting',
+        (_) => AgentWakePanel(
+            client: client,
+            owner: owner,
+            name: name,
+            onChanged: onChanged,
+            edit: edit),
+        actions: [
+          ListenableBuilder(
+            listenable: edit,
+            builder: (_, __) => edit.shown
+                ? AgentPageButton(edit.hasWake ? 'Edit' : 'Set schedule',
+                    onTap: edit.start)
+                : const SizedBox.shrink(),
+          ),
+        ]);
     return Future<void>.value();
   }
+  final panel = AgentWakePanel(
+      client: client, owner: owner, name: name, onChanged: onChanged);
   if (kMobile) {
     return showAppSheet(context, title: name, maxHeight: 640, child: panel);
   }
@@ -122,6 +145,26 @@ Widget _panelLine(String label, String value,
       ]),
     );
 
+/// Lets a page header carry the wake panel's Edit button.
+class AgentWakeEdit extends ChangeNotifier {
+  bool _shown = false;
+  bool _hasWake = false;
+  VoidCallback? _start;
+
+  /// False while loading or already editing.
+  bool get shown => _shown;
+  bool get hasWake => _hasWake;
+  void start() => _start?.call();
+
+  void _set(bool shown, bool hasWake, VoidCallback start) {
+    _start = start;
+    if (shown == _shown && hasWake == _hasWake) return;
+    _shown = shown;
+    _hasWake = hasWake;
+    scheduleMicrotask(notifyListeners);
+  }
+}
+
 class AgentWakePanel extends StatefulWidget {
   const AgentWakePanel({
     super.key,
@@ -129,12 +172,16 @@ class AgentWakePanel extends StatefulWidget {
     required this.owner,
     required this.name,
     this.onChanged,
+    this.edit,
   });
 
   final DaemonClient client;
   final String owner;
   final String name;
   final VoidCallback? onChanged;
+
+  /// Set when the page header shows Edit, so the panel leaves its own out.
+  final AgentWakeEdit? edit;
 
   @override
   State<AgentWakePanel> createState() => _AgentWakePanelState();
@@ -299,6 +346,12 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
   }
 
   void _startEdit() {
+    _fill();
+    setState(() => _editing = true);
+  }
+
+  /// Loads the shown wake into the editor fields.
+  void _fill() {
     final w = _wake;
     _schedule.text = w?.editableSchedule ?? '';
     _brief.text = w?.brief ?? '';
@@ -307,12 +360,38 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
     _taskId.text = w?.report.taskId ?? '';
     _group = w?.report.group;
     _cap.text = '${w?.maxRunsPerDay ?? _wakeLimits.defaultMaxRunsPerDay}';
-    setState(() {
-      _enabled = w?.enabled ?? true;
-      _reportTo = w?.report.to ?? 'mission_control';
-      _onlyOnChange = w?.report.onlyOnChange ?? true;
-      _editing = true;
-    });
+    _enabled = w?.enabled ?? true;
+    _reportTo = w?.report.to ?? 'mission_control';
+    _onlyOnChange = w?.report.onlyOnChange ?? true;
+  }
+
+  /// A Report to row: saves at once, or opens the editor when the target
+  /// needs a task or group picked.
+  Future<void> _setReport(String to) async {
+    final w = _wake;
+    if (w == null ||
+        (w.report.to == to && to != 'group' && to != 'task_room')) {
+      return;
+    }
+    _fill();
+    if (to == 'task_room' || to == 'group') {
+      setState(() {
+        _reportTo = to;
+        _editing = true;
+      });
+      if (to == 'task_room' &&
+          _taskId.text.trim().isEmpty &&
+          _tasks.isNotEmpty) {
+        final active = _tasks.where((t) => !t.status.isTerminal).toList();
+        _taskId.text = (active.isNotEmpty ? active.first : _tasks.first).id;
+      }
+      if (to == 'group' && _group == null && _groups.isNotEmpty) {
+        setState(() => _group = _groups.first.id);
+      }
+      return;
+    }
+    _reportTo = to;
+    await _save();
   }
 
   Future<void> _save() async {
@@ -635,6 +714,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
 
   @override
   Widget build(BuildContext context) {
+    widget.edit?._set(!_loading && !_editing, _wake != null, _startEdit);
     if (_loading) {
       return Padding(
         padding: EdgeInsets.symmetric(vertical: S.s24),
@@ -656,7 +736,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
             child: Text(_error!, style: sans(12, color: AppColors.danger)),
           ),
         _wakeSection(),
-        _panelDivider(),
+        SizedBox(height: S.s8),
         _warmSection(),
         if (_watches.isNotEmpty) ...[
           _panelDivider(),
@@ -717,30 +797,37 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         onTap: edit ? _startEdit : null,
       );
 
+  static const _reports = [
+    ('mission_control', 'Mission Control', 'Summarised in its feed'),
+    ('user', 'You', 'Sent as a notification'),
+    ('task_room', 'Task room', 'Posted on a task'),
+    ('group', 'Group', 'Posted in a group'),
+    ('none', 'Nobody', 'Runs silently'),
+  ];
+
   Widget _wakeSection() {
     final w = _wake;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _head('Wakes and reporting',
-          icon: 'scheduled',
-          trailing: _editing
-              ? null
-              : _actionLink(
-                  w == null ? 'Set schedule' : 'Edit',
-                  _startEdit,
-                  icon: w == null ? 'plus' : 'edit',
-                )),
-      if (_wakes.isNotEmpty && !_editing)
+      if (widget.edit == null)
+        _head('Wakes and reporting',
+            icon: 'scheduled',
+            trailing: _editing
+                ? null
+                : _actionLink(
+                    w == null ? 'Set schedule' : 'Edit',
+                    _startEdit,
+                    icon: w == null ? 'plus' : 'edit',
+                  )),
+      if (_wakes.length > 1 && !_editing)
         Padding(
           padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
           child: Pills<String>(
             key: const ValueKey('wake-switcher'),
             items: [
               for (final x in _wakes) (x.name ?? '', x.name ?? 'Default'),
-              ('__new__', 'New'),
             ],
             selected: _name ?? '',
-            onSelect: (v) =>
-                v == '__new__' ? _newWake() : _select(v.isEmpty ? null : v),
+            onSelect: (v) => _select(v.isEmpty ? null : v),
           ),
         ),
       if (_editing && _name != null && w == null)
@@ -751,7 +838,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         ),
       if (w == null && !_editing)
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: S.s4),
+          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s12),
           child: Text(
               'No wake schedule. A wake gives ${widget.name} a brief on a timetable and reports back.',
               style: sans(13, color: AppColors.fg3, height: 1.45)),
@@ -773,48 +860,64 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
                   : w.queued
                       ? 'Queued behind the current goal'
                       : w.nextRunAt > 0
-                          ? '${wakeWhen(w.nextRunAt)} (${_clock(w.nextRunAt)})'
+                          ? _clock(w.nextRunAt)
                           : 'Not scheduled',
               key: const ValueKey('wake-next')),
           _line(
               'Last',
               w.lastRunAt == null
                   ? 'Never run'
-                  : '${wakeWhen(w.lastRunAt!)}${w.lastStatus == null ? '' : ', ${w.lastStatus}'}',
+                  : '${_clock(w.lastRunAt!)}${w.lastStatus == null ? '' : ' · ${w.lastStatus}'}',
               color: w.lastError != null ? AppColors.danger : null),
           if (w.lastError != null)
-            _line('Error', w.lastError!, color: AppColors.danger)
-          else if (w.lastResult != null)
-            _line('Result', w.lastResult!),
-          _line('Today', '${w.runsLastDay} of ${w.maxRunsPerDay} runs'),
+            _line('Error', w.lastError!, color: AppColors.danger),
         ]),
-        SizedBox(height: S.s4),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: S.s4),
-          child: AppToggle(
-              flat: true,
-              on: w.enabled,
-              onChanged: _toggleWake,
-              label: 'Wake enabled',
-              sub: w.setBy.isEmpty ? null : 'Set by ${w.setBy}'),
-        ),
+        const AgentPageCaption('Report to'),
+        SettingsGroup(children: [
+          for (final (v, label, sub) in _reports)
+            AgentPageRow(
+              key: ValueKey('report-$v'),
+              label: v == 'group' && w.report.to == 'group'
+                  ? _reportLabel(w.report)
+                  : label,
+              subtitle: sub,
+              checked: w.report.to == v,
+              chevron: false,
+              onTap: () => _setReport(v),
+            ),
+        ]),
+        SettingsGroup(children: [
+          AgentPageRow(
+            label: 'Wake enabled',
+            subtitle: [
+              if (w.setBy.isNotEmpty) 'Set by ${w.setBy}',
+              '${w.runsLastDay} of ${w.maxRunsPerDay} runs today',
+            ].join(' · '),
+            trailing: SettingsSwitch(value: w.enabled, onChanged: _toggleWake),
+            onTap: () => _toggleWake(!w.enabled),
+          ),
+        ]),
       ],
       Reveal(show: _editing, child: _form()),
       if (_shownRuns.isNotEmpty && !_editing) ...[
-        SizedBox(height: S.s8),
-        Padding(
-          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s4),
-          child: Text('Recent runs',
-              style: sans(12, weight: FontWeight.w600, color: AppColors.fg3)),
-        ),
-        for (final r in _shownRuns) _runRow(r),
+        const AgentPageCaption('Recent runs'),
+        SettingsGroup(children: [for (final r in _shownRuns) _runRow(r)]),
       ],
+      if (!_editing)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: EdgeInsets.only(bottom: S.s8),
+            child: AgentPageButton('New wake', icon: 'plus', onTap: _newWake),
+          ),
+        ),
     ]);
   }
 
   Widget _runRow(WakeRun r) => Padding(
         key: ValueKey('run-${r.id}'),
-        padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: S.of(3)),
+        padding: EdgeInsets.symmetric(
+            horizontal: kMobile ? S.of(14) : S.of(10), vertical: S.s8),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(
             padding: EdgeInsets.only(top: S.of(5), right: S.s8),
@@ -1003,48 +1106,43 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
             ? 'Warmed ${wakeWhen(w!.lastWarmAt!)}${w.lastCacheReadTokens == null ? '' : ', ${tokensLabel(w.lastCacheReadTokens!)} tokens read from cache'}.'
             : 'Most providers cannot be warmed. If this one cannot, the reason appears here.');
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _head('Keep warm', icon: 'activity'),
-      Padding(
-        padding: EdgeInsets.symmetric(horizontal: S.s4),
-        child: AppToggle(
-            flat: true,
-            on: on,
-            onChanged: _setWarm,
-            label: 'Keep prompt cache warm',
-            sub:
-                'Pings the idle session so its cached prefix is not re-billed'),
-      ),
+      const AgentPageCaption('Keep warm'),
+      SettingsGroup(children: [
+        AgentPageRow(
+          label: 'Keep prompt cache warm',
+          subtitle:
+              'Pings the idle session so its cached prefix is not re-billed',
+          trailing: SettingsSwitch(value: on, onChanged: _setWarm),
+          onTap: () => _setWarm(!on),
+        ),
+        if (w != null && on) ...[
+          Builder(
+            builder: (ctx) => AgentPageRow(
+              label: 'Ping every',
+              value: '${w.intervalMinutes} min',
+              valueMono: true,
+              onTap: () => _pickWarmNumber(ctx, true, ints),
+            ),
+          ),
+          Builder(
+            builder: (ctx) => AgentPageRow(
+              label: 'Stop after idle for',
+              value: '${w.maxIdleHours} h',
+              valueMono: true,
+              onTap: () => _pickWarmNumber(ctx, false, idles),
+            ),
+          ),
+        ],
+      ]),
       Padding(
         key: const ValueKey('warm-reason'),
-        padding: EdgeInsets.fromLTRB(S.s4, S.s4, S.s4, 0),
+        padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
         child: Text(
           statusText,
           style: sans(12,
               color: reason != null ? AppColors.fg2 : AppColors.fg4,
               height: 1.4),
         ),
-      ),
-      Reveal(
-        show: w != null && on,
-        child: Column(children: [
-          SizedBox(height: S.s6),
-          Builder(
-            builder: (ctx) => ListRow(
-              title: 'Ping every',
-              trailing: Text('${w?.intervalMinutes ?? 0} min',
-                  style: mono(13, color: AppColors.fg2)),
-              onTap: () => _pickWarmNumber(ctx, true, ints),
-            ),
-          ),
-          Builder(
-            builder: (ctx) => ListRow(
-              title: 'Stop after idle for',
-              trailing: Text('${w?.maxIdleHours ?? 0} h',
-                  style: mono(13, color: AppColors.fg2)),
-              onTap: () => _pickWarmNumber(ctx, false, idles),
-            ),
-          ),
-        ]),
       ),
     ]);
   }

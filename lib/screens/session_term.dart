@@ -304,6 +304,9 @@ class _LiveTerm {
   int rows = 24;
   bool alive = false;
   bool live = false;
+
+  /// Was alive and exited; `!alive && !ended` is a shell still starting.
+  bool ended = false;
 }
 
 class TerminalInfo {

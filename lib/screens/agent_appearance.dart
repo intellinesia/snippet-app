@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
-import '../chat/chat_info.dart' show DockedInfoNav;
+import '../chat/chat_info.dart' show AgentPageButton, DockedInfoNav;
 import '../mochi.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -12,7 +12,8 @@ import '../widgets.dart';
 Future<void> showAgentAppearance(
     BuildContext context, DaemonClient client, String agentId, String name,
     {Offset? point}) {
-  final nav = DockedInfoNav.maybeOf(context);
+  // Phones keep the sheet over the agent page; the desktop panel pushes a page.
+  final nav = kMobile ? null : DockedInfoNav.maybeOf(context);
   if (nav != null) {
     nav.push(
         'Appearance',
@@ -92,7 +93,7 @@ class AgentAppearancePicker extends StatelessWidget {
       builder: (context, chars, _) {
         final current = chars[agentId];
         final gap = kMobile ? 8.0 : 6.0;
-        final target = kMobile ? 52.0 : 40.0;
+        final target = kMobile ? 48.0 : 40.0;
         final radius = BorderRadius.circular(R.of(kMobile ? 12 : 8));
 
         final grid = LayoutBuilder(builder: (context, box) {
@@ -111,27 +112,37 @@ class AgentAppearancePicker extends StatelessWidget {
         return Padding(
           padding: kMobile
               ? EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s12)
-              : EdgeInsets.all(S.s12),
+              : EdgeInsets.fromLTRB(S.s4, S.s4, S.s4, S.s12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
               Padding(
-                padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
-                child: Text('Character', style: sans(13, color: AppColors.fg3)),
+                padding: EdgeInsets.fromLTRB(S.s2, 0, S.s2, S.s6),
+                child: Text('Avatar', style: sans(12, color: AppColors.fg3)),
               ),
               grid,
-              SizedBox(height: S.s12),
-              Row(
-                children: [
-                  Btn('Use default',
-                      variant: BtnVariant.ghost,
-                      small: true,
+              SizedBox(height: S.s16),
+              if (kMobile)
+                Row(children: [
+                  Expanded(
+                    child: AgentPageButton('Use default',
+                        expand: true,
+                        onTap: () => _pickCharacter(context, null)),
+                  ),
+                  SizedBox(width: S.s8),
+                  Expanded(
+                    child: AgentPageButton('Done',
+                        primary: true, expand: true, onTap: onDone),
+                  ),
+                ])
+              else
+                Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                  AgentPageButton('Use default',
                       onTap: () => _pickCharacter(context, null)),
-                  const Spacer(),
-                  Btn('Done', small: true, onTap: onDone),
-                ],
-              ),
+                  SizedBox(width: S.s8),
+                  AgentPageButton('Done', primary: true, onTap: onDone),
+                ]),
             ],
           ),
         );
@@ -154,10 +165,11 @@ class AgentAppearancePicker extends StatelessWidget {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: sel ? tint.withValues(alpha: 0.13) : AppColors.surface2,
+              color: sel ? tint.withValues(alpha: 0.13) : AppColors.surface1,
               borderRadius: radius,
               border: Border.all(
-                  color: sel ? tint : AppColors.lineStrong, width: sel ? 1.5 : 1),
+                  color: sel ? AppColors.accent : AppColors.lineStrong,
+                  width: sel ? 2 : 1),
             ),
             child: Center(
               child: AgentCharacter(id, size: size - 14, staggerKey: id),

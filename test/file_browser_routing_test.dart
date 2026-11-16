@@ -128,8 +128,10 @@ void main() {
       // The banner carried the path as BOTH the app bar subtitle and the meta
       // row under the divider, so the same long string appeared twice within
       // ~40dp and the header read as broken.
-      expect(find.text('root'), findsOneWidget,
-          reason: 'the folder is named once: the title, not the breadcrumb too');
+      // Round 5: the title names the folder and the breadcrumb ends on it in
+      // bold; the full path is never repeated as an app bar subtitle.
+      expect(find.text('root'), findsNWidgets(2));
+      expect(find.text('/root'), findsNothing);
     });
   });
 
@@ -240,9 +242,9 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      // 1. Mobile app bar shows 'New chat here' quick action when onNewChat is set
-      expect(find.byTooltip('New chat here'), findsOneWidget);
-      await tester.tap(find.byTooltip('New chat here'));
+      // 1. The phone action tiles offer 'New chat' when onNewChat is set
+      expect(find.text('New chat'), findsOneWidget);
+      await tester.tap(find.text('New chat'));
       await tester.pumpAndSettle();
       expect(newChatFolder, equals('/root'));
 
@@ -251,11 +253,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('main.dart'), findsOneWidget);
-      expect(find.text('lib'), findsOneWidget);
+      // Title plus the bold last breadcrumb.
+      expect(find.text('lib'), findsNWidgets(2));
       expect(find.text('root'), findsOneWidget);
 
-      // In subfolder, 'New chat here' action targets '/root/lib'
-      await tester.tap(find.byTooltip('New chat here'));
+      // In subfolder, the 'New chat' tile targets '/root/lib'
+      await tester.tap(find.text('New chat'));
       await tester.pumpAndSettle();
       expect(newChatFolder, equals('/root/lib'));
 
@@ -263,7 +266,7 @@ void main() {
       await tester.tap(find.byTooltip('Back'));
       await tester.pumpAndSettle();
 
-      expect(find.text('root'), findsOneWidget);
+      expect(find.text('root'), findsNWidgets(2));
       expect(find.text('notes.txt'), findsOneWidget);
       expect(closed, isFalse);
 

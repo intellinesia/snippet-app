@@ -235,6 +235,7 @@ class AgentCharacter extends StatefulWidget {
     this.state = AgentCharacterState.idle,
     this.staggerKey,
     this.badge,
+    this.sleepMarks = true,
   });
 
   final String characterId;
@@ -244,6 +245,9 @@ class AgentCharacter extends StatefulWidget {
 
   /// Short mark (usually '?') shown top-right in the character's colour.
   final String? badge;
+
+  /// Draw the drifting 'z' when sleeping; off where a stage draws its own.
+  final bool sleepMarks;
 
   static bool useHighRes(double logicalSize, double devicePixelRatio) =>
       logicalSize * devicePixelRatio > 256.0;
@@ -653,7 +657,9 @@ class _AgentCharacterState extends State<AgentCharacter> {
           Positioned.fill(child: bodyGroup),
           if (widget.badge != null && widget.badge!.isNotEmpty)
             _badgeLayer(spec.color, size, spec.bodyTop),
-          if (widget.state == AgentCharacterState.sleeping && size >= 24)
+          if (widget.state == AgentCharacterState.sleeping &&
+              widget.sleepMarks &&
+              size >= 24)
             _sleepLayer(size, spec.bodyTop, reduced ? 0.35 : timeSec),
         ],
       ),

@@ -188,7 +188,7 @@ class _RoutingScreenState extends State<RoutingScreen> {
 
   Widget _pill({
     required Widget child,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
     bool primary = false,
     bool add = false,
     String? tip,
@@ -295,7 +295,38 @@ class _RoutingScreenState extends State<RoutingScreen> {
     );
   }
 
-  Widget _routeCard(String key, String title, String about) {
+  /// The plain session's model: the active profile. The daemon has no
+  /// fallback chain for it yet, so the card shows the primary only.
+  Widget _sessionChain() {
+    final profiles = _config?.profiles ?? const <InferenceProfile>[];
+    InferenceProfile? active;
+    for (final p in profiles) {
+      if (p.active || p.name == _config?.active) active = p;
+    }
+    if (active == null) return const SizedBox.shrink();
+    return _pill(
+      primary: true,
+      tip: 'Change it in Inference profiles',
+      onTap: null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            ProviderLogo(active.provider, size: 12),
+            SizedBox(width: S.of(7)),
+            Text(active.name,
+                style: sans(13, weight: FontWeight.w500, color: AppColors.fg1)),
+          ]),
+          Text('Primary · set in profiles',
+              style: sans(11, color: AppColors.fg3)),
+        ],
+      ),
+    );
+  }
+
+  Widget _routeCard(String key, String title, String about,
+      {Widget? chain}) {
     final chosen = _routes[key] ?? const [];
     return Container(
       margin: EdgeInsets.only(bottom: S.s12),
@@ -324,7 +355,7 @@ class _RoutingScreenState extends State<RoutingScreen> {
             ],
           ),
           SizedBox(height: S.s8),
-          _chainWrap(key, chosen),
+          chain ?? _chainWrap(key, chosen),
         ],
       ),
     );
@@ -338,6 +369,8 @@ class _RoutingScreenState extends State<RoutingScreen> {
           padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s12),
           child: Text(_note, style: sans(13, height: 1.5, color: AppColors.fg3)),
         ),
+        _routeCard('session', 'Session model', 'Active profile',
+            chain: _sessionChain()),
         for (final (key, title, about) in _routeDefs)
           _routeCard(key, title, about),
       ];

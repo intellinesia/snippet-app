@@ -84,7 +84,8 @@ class _WakesScreenState extends State<WakesScreen> {
         return a.displayName.trim().isEmpty ? a.id : a.displayName.trim();
       }
     }
-    return owner;
+    // Ids are lowercase; a bare id still reads as a name.
+    return owner.isEmpty ? owner : owner[0].toUpperCase() + owner.substring(1);
   }
 
   void _open(BuildContext ctx, String owner, String name,
@@ -163,7 +164,7 @@ class _WakesScreenState extends State<WakesScreen> {
             ]),
           if (warmPage)
           SettingsGroup(
-            header: 'Sessions',
+            header: 'Keep warm',
             footer: warm != null && warm.calls7d > 0 && warmOn.isNotEmpty
                 ? '${warm.calls7d} warm calls in the last 7 days, ${tokensLabel(warm.cacheReadTokens7d)} tokens read from cache.'
                 : null,
@@ -196,6 +197,25 @@ class _WakesScreenState extends State<WakesScreen> {
     );
   }
 
+  // A list of schedules reads better as a clock time than a countdown.
+  static String _wakeAt(int unixSec) {
+    final t = DateTime.fromMillisecondsSinceEpoch(unixSec * 1000);
+    final now = DateTime.now();
+    final days = DateTime(t.year, t.month, t.day)
+        .difference(DateTime(now.year, now.month, now.day))
+        .inDays;
+    final hm =
+        '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+    if (days > 6) return 'in ${days}d';
+    const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final day = switch (days) {
+      0 => 'today',
+      1 => 'tomorrow',
+      _ => names[t.weekday - 1],
+    };
+    return '$day $hm';
+  }
+
   Widget _wakeRow(
       BuildContext context, WakeSchedule w, List<CoordinationAgent> agents) {
     final name = _name(w.owner, agents);
@@ -205,7 +225,7 @@ class _WakesScreenState extends State<WakesScreen> {
             ? ''
             : w.nextRunAt * 1000 < DateTime.now().millisecondsSinceEpoch
                 ? 'overdue'
-                : 'next ${wakeWhen(w.nextRunAt)}';
+                : 'next ${_wakeAt(w.nextRunAt)}';
     final sub = [
       if (w.name != null)
         name
@@ -213,16 +233,17 @@ class _WakesScreenState extends State<WakesScreen> {
         w.scheduleText.isEmpty ? w.schedule : w.scheduleText,
       if (next.isNotEmpty) next,
     ].join(' · ');
-    final character = agentCharacterFor(w.owner);
+    // Every agent has a face, so the hashed default stands in for unset ones.
+    final character =
+        agentCharacterFor(w.owner) ?? defaultAgentCharacter(w.owner);
     return Builder(
       builder: (ctx) => SettingsRow(
         key: ValueKey('wake-${w.owner}'),
         label: w.name ?? name,
         sub: w.lastError != null ? '$sub · ${w.lastError}' : sub,
-        leading: character != null
-            ? AgentCharacter(character, size: 30)
-            : V5IconTile('calendar-clock',
-                color: w.enabled ? AppColors.fg2 : AppColors.fg4),
+        leading: Opacity(
+            opacity: w.enabled ? 1 : 0.5,
+            child: AgentCharacter(character, size: kMobile ? 24 : 20)),
         trailing: w.lastStatus == null
             ? null
             : Container(
@@ -231,7 +252,6 @@ class _WakesScreenState extends State<WakesScreen> {
                 decoration: BoxDecoration(
                     color: wakeStatusColor(w.lastStatus),
                     shape: BoxShape.circle)),
-        chevron: true,
         onTap: () => _open(ctx, w.owner, name, agents),
       ),
     );

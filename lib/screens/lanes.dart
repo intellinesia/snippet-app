@@ -775,9 +775,11 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
       if (ctrl != null) ...[SizedBox(height: S.s12), Row(children: [ctrl])],
       if (rows.isNotEmpty)
         _section('Activity · ${rows.length}', [
+          SizedBox(height: S.s6),
           for (var i = 0; i < rows.length; i++)
             _activityRow(rows[i].$1, rows[i].$2,
                 live: lane.running && i == rows.length - 1),
+          SizedBox(height: S.s6),
         ]),
       for (final (label, value, danger) in [
         ('Summary', lane.summary, false),
@@ -837,7 +839,7 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
 
   Widget _activityRow(String text, String at, {required bool live}) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s6),
+      padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.of(2)),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(
           width: 14,
@@ -857,7 +859,8 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
           child: Text(text,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: sans(13, height: 20 / 13, color: AppColors.fg1)),
+              style: sans(13,
+                  weight: W.body, height: 20 / 13, color: AppColors.fg2)),
         ),
         if (at.isNotEmpty) ...[
           SizedBox(width: S.s8),
@@ -868,7 +871,7 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
   }
 
   Widget _textBlock(BuildContext context, String value, bool danger) {
-    final text = sans(kMobile ? 14 : 13, height: 1.45, color: AppColors.fg2);
+    final text = sans(13, height: 1.5, color: AppColors.fg2);
     return Padding(
       padding: EdgeInsets.all(S.s12),
       child: MarkdownBody(

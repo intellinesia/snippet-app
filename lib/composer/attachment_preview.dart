@@ -302,6 +302,14 @@ class _PreviewContentState extends State<_PreviewContent> {
   final _meta = <PreviewAttachment, _Meta>{};
   final _controllers = <PreviewAttachment, TextEditingController>{};
   bool _zoomed = false;
+  // A pinch locks the pager so its swipe can't win the arena over the zoom.
+  int _fingers = 0;
+
+  void _finger(int by) {
+    final was = _fingers > 1;
+    _fingers = (_fingers + by).clamp(0, 10);
+    if (was != _fingers > 1) setState(() {});
+  }
 
   _Session get s => widget.session;
   bool get _sheet => widget.wrapHeader != null;
@@ -450,52 +458,54 @@ class _PreviewContentState extends State<_PreviewContent> {
               if (widget.onRemove != null)
                 IconBtn('trash',
                     tooltip: 'Remove', size: 26, iconSize: 14, onTap: _remove),
-              IconBtn('x', tooltip: 'Close', size: 26, iconSize: 14, onTap: _close),
+              IconBtn('x',
+                  tooltip: 'Close', size: 26, iconSize: 14, onTap: _close),
             ]),
           )
         : Padding(
-      padding: EdgeInsets.fromLTRB(S.s16, desktop ? S.s12 : S.s4,
-          round ? S.s12 : S.s8, desktop ? S.s12 : S.s8),
-      child: Row(children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: desktop
-                      ? sans(14, weight: W.label, color: AppColors.fg1)
-                      : pasted
-                          ? sans(15, weight: W.label, color: AppColors.fg1)
-                          : TS.rowTitle()),
-              Text(_metaLine(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TS.meta()),
-            ],
-          ),
-        ),
-        if (widget.onRemove != null) ...[
-          round
-              ? roundBtn('trash', 'Remove', _remove)
-              : IconBtn('trash',
-                  tooltip: 'Remove',
-                  size: iconSize,
-                  iconSize: 16,
-                  onTap: _remove),
-          if (desktop) SizedBox(width: S.s4),
-        ],
-        if (!(pasted && _sheet))
-          round
-              ? roundBtn('x', 'Close', _close)
-              : IconBtn('x',
-                  tooltip: 'Close',
-                  size: iconSize,
-                  iconSize: 16,
-                  onTap: _close),
-      ]),
-    );
+            padding: EdgeInsets.fromLTRB(S.s16, desktop ? S.s12 : S.s4,
+                round ? S.s12 : S.s8, desktop ? S.s12 : S.s8),
+            child: Row(children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: desktop
+                            ? sans(14, weight: W.label, color: AppColors.fg1)
+                            : pasted
+                                ? sans(15,
+                                    weight: W.label, color: AppColors.fg1)
+                                : TS.rowTitle()),
+                    Text(_metaLine(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TS.meta()),
+                  ],
+                ),
+              ),
+              if (widget.onRemove != null) ...[
+                round
+                    ? roundBtn('trash', 'Remove', _remove)
+                    : IconBtn('trash',
+                        tooltip: 'Remove',
+                        size: iconSize,
+                        iconSize: 16,
+                        onTap: _remove),
+                if (desktop) SizedBox(width: S.s4),
+              ],
+              if (!(pasted && _sheet))
+                round
+                    ? roundBtn('x', 'Close', _close)
+                    : IconBtn('x',
+                        tooltip: 'Close',
+                        size: iconSize,
+                        iconSize: 16,
+                        onTap: _close),
+            ]),
+          );
     if (_sheet) {
       header =
           widget.wrapHeader!(Column(mainAxisSize: MainAxisSize.min, children: [
@@ -601,7 +611,7 @@ class _PreviewContentState extends State<_PreviewContent> {
     final pager = PageView.builder(
       key: ValueKey(s.items.length),
       controller: _pages,
-      physics: _zoomed || !multi
+      physics: _zoomed || _fingers > 1 || !multi
           ? const NeverScrollableScrollPhysics()
           : const PageScrollPhysics(),
       itemCount: s.items.length,
@@ -626,7 +636,15 @@ class _PreviewContentState extends State<_PreviewContent> {
         );
       },
     );
-    if (!multi || kMobile) return ColoredBox(color: AppColors.bg, child: pager);
+    final guarded = Listener(
+      onPointerDown: (_) => _finger(1),
+      onPointerUp: (_) => _finger(-1),
+      onPointerCancel: (_) => _finger(-1),
+      child: pager,
+    );
+    if (!multi || kMobile) {
+      return ColoredBox(color: AppColors.bg, child: guarded);
+    }
     Widget arrow(String icon, String tip, int by, bool on, Alignment at) =>
         Align(
           alignment: at,

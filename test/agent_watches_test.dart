@@ -371,7 +371,7 @@ void main() {
       theme: buildAppTheme(),
       home: Scaffold(
         body: DockedInfoNav(
-          push: (title, builder) {
+          push: (title, builder, {actions = const [], scroll = true}) {
             pushed.add(title);
             navKey.currentState?.push(MaterialPageRoute<void>(
                 builder: (ctx) => Scaffold(body: builder(ctx))));

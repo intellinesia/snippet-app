@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
-import '../chat/chat_info.dart' show DockedInfoNav, dockedPick;
+import '../chat/chat_info.dart'
+    show AgentPageCaption, DockedInfoNav, dockedPick;
 import '../platform.dart';
 import '../settings_form.dart';
 import '../theme.dart';
@@ -53,14 +54,8 @@ const _routes = <List<String>>[
   ['task_room'],
 ];
 
-String _routeLabel(List<String> r) => r.isEmpty
-    ? 'Nowhere'
-    : [
-        for (var i = 0; i < r.length; i++)
-          i == 0
-              ? reachChannelLabel(r[i])
-              : reachChannelLabel(r[i]).toLowerCase()
-      ].join(', then ');
+String _routeLabel(List<String> r) =>
+    r.isEmpty ? 'Nowhere' : r.map(reachChannelLabel).join(', then ');
 
 class AgentReachPanel extends StatefulWidget {
   const AgentReachPanel(
@@ -194,7 +189,8 @@ class _AgentReachPanelState extends State<AgentReachPanel> {
                     : 'Quiet hours now, so held channels wait.',
                 style: sans(12, color: AppColors.run)),
           ),
-        SettingsGroup(header: 'Where each kind goes', children: [
+        const AgentPageCaption('Where each kind goes'),
+        SettingsGroup(children: [
           for (final kind in AgentReach.kinds)
             Builder(
               builder: (anchor) => SettingsRow(
@@ -206,7 +202,8 @@ class _AgentReachPanelState extends State<AgentReachPanel> {
               ),
             ),
         ]),
-        SettingsGroup(header: 'Channels', children: [
+        const AgentPageCaption('Channels'),
+        SettingsGroup(children: [
           for (final ch in AgentReach.channelOrder) _channel(reach, ch),
         ]),
       ],

@@ -55,7 +55,8 @@ void main() {
     await _pump(tester, _panel(c));
     expect(find.text('Wakes and reporting'), findsOneWidget);
     expect(find.text('Weekdays at 09:00'), findsOneWidget);
-    expect(find.textContaining('in 1h'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^(today|tomorrow) \d\d:\d\d$')),
+        findsOneWidget);
     expect(find.text('22:00 to 07:00'), findsOneWidget);
     expect(find.text('Recent runs'), findsOneWidget);
     expect(find.byKey(const ValueKey('run-12')), findsOneWidget);
@@ -120,13 +121,14 @@ void main() {
     await _pump(tester, _panel(c));
     expect(find.byKey(const ValueKey('wake-switcher')), findsOneWidget);
     expect(find.text('Default'), findsOneWidget);
-    expect(find.text('New'), findsOneWidget);
+    expect(find.text('New wake'), findsOneWidget);
     expect(find.text('Weekdays at 09:00'), findsOneWidget);
 
     await tester.tap(find.text('linkedin-sync'));
     await tester.pumpAndSettle();
     expect(find.text('Daily at 21:00'), findsOneWidget);
-    expect(find.text('Group'), findsOneWidget);
+    // The Reports to line and the checked Report to row.
+    expect(find.text('Group'), findsNWidgets(2));
 
     await tester.tap(find.text('Edit'));
     await tester.pumpAndSettle();

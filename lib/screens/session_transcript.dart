@@ -398,6 +398,64 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             break;
           }
           ensureAgentNames(widget.client);
+          final from = _s(e['agent_id']);
+          if (from.startsWith('lane ')) {
+            // A lane's run of notes folds into one card, with the parent's
+            // reply right after them inside it.
+            final notes = <LaneNote>[];
+            Map<String, dynamic>? reply;
+            var j = idx;
+            if (e['outbound'] == true) {
+              reply = e;
+            } else {
+              while (j < events.length &&
+                  events[j]['kind'] == 'agent_message' &&
+                  _s(events[j]['agent_id']) == from &&
+                  events[j]['outbound'] != true) {
+                notes.add(LaneNote(
+                    body: _s(events[j]['body']),
+                    at: events[j]['at'] ?? events[j]['created_at']));
+                j++;
+              }
+              idx = j - 1;
+              if (j < events.length &&
+                  events[j]['kind'] == 'agent_message' &&
+                  _s(events[j]['agent_id']) == from &&
+                  events[j]['outbound'] == true) {
+                reply = events[j];
+                idx = j;
+              }
+            }
+            final laneId = from.substring(5).trim();
+            LaneInfo? lane;
+            for (final l in _state?.lanes ?? const <LaneInfo>[]) {
+              if (l.id == laneId) lane = l;
+            }
+            final given = lane?.title.trim() ?? '';
+            final waiting = reply == null &&
+                notes.isNotEmpty &&
+                notes.last.body.contains('?') &&
+                lane?.status == 'running';
+            final open = lane;
+            addEvent(
+                key,
+                LaneMessageCard(
+                  laneTitle: given.isNotEmpty ? given : laneId,
+                  notes: notes,
+                  reply: reply == null ? null : _s(reply['body']),
+                  replyAt: reply?['at'] ?? reply?['created_at'],
+                  meId: _me?.displayAgentId,
+                  meName: _meAgentName,
+                  waiting: waiting,
+                  onOpenLane: open == null
+                      ? null
+                      : () => openLaneView(context, open,
+                          client: widget.client,
+                          sessionId: widget.sessionId,
+                          liveLanes: () => _state?.lanes ?? const <LaneInfo>[]),
+                ));
+            break;
+          }
           addEvent(
               key,
               AgentMessageCard(

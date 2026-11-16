@@ -1151,7 +1151,12 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
             Text(title, style: sans(kMobile ? 14 : 13, color: AppColors.fg1)),
             SizedBox(height: S.s4),
           ],
-          if (parsed.shownCommand.isNotEmpty)
+          // One-line commands read plainly; long-press selects to copy.
+          if (parsed.shownCommand.isNotEmpty &&
+              !parsed.shownCommand.contains('\n'))
+            SelectableText(parsed.shownCommand,
+                style: codeMono(kMobile ? 13 : 12, color: AppColors.fg1))
+          else if (parsed.shownCommand.isNotEmpty)
             ApprovalCode(code: parsed.shownCommand, collapsedLines: 4)
           else
             Text(title, style: sans(kMobile ? 14 : 13, color: AppColors.fg1)),

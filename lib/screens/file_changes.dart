@@ -94,38 +94,56 @@ class FileChangesList extends StatelessWidget {
       if (dir.isNotEmpty) dir,
       if (edits > 0) '$edits edit${edits == 1 ? '' : 's'}',
     ].join(' \u00b7 ');
+    // Desktop reads name and folder on one line, as the drawer mockup does.
+    final text = kMobile
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(15, color: AppColors.fg1)),
+              if (sub.isNotEmpty)
+                Text(sub,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12, color: AppColors.fg4)),
+            ],
+          )
+        : Row(children: [
+            Flexible(
+                child: Text(name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, weight: W.label, color: AppColors.fg1))),
+            if (sub.isNotEmpty) SizedBox(width: S.s8),
+            if (sub.isNotEmpty)
+              Flexible(
+                  child: Text(sub,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, color: AppColors.fg4))),
+          ]);
     return InkWell(
       onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s16, S.of(10)),
+      child: Container(
+        constraints: BoxConstraints(minHeight: kMobile ? 52 : 36),
+        padding: kMobile
+            ? EdgeInsets.fromLTRB(S.s12, S.of(10), S.s16, S.of(10))
+            : EdgeInsets.fromLTRB(S.s8, S.s2, S.s12, S.s2),
         child: Row(children: [
           Container(
-            width: 32,
-            height: 32,
+            width: kMobile ? 32 : 22,
+            height: kMobile ? 32 : 22,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: AppColors.surface3,
               borderRadius: BorderRadius.circular(R.sm),
             ),
-            child: FileGlyph(name, size: 16),
+            child: FileGlyph(name, size: kMobile ? 16 : 13),
           ),
-          SizedBox(width: S.s12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(15, color: AppColors.fg1)),
-                if (sub.isNotEmpty)
-                  Text(sub,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(12, color: AppColors.fg4)),
-              ],
-            ),
-          ),
+          SizedBox(width: kMobile ? S.s12 : S.s8),
+          Expanded(child: text),
           SizedBox(width: S.s8),
           trailing,
         ]),
@@ -135,9 +153,10 @@ class FileChangesList extends StatelessWidget {
 
   Widget _delta(int add, int del) =>
       Row(mainAxisSize: MainAxisSize.min, children: [
-        Text('+$add', style: mono(13, color: AppColors.ok)),
+        Text('+$add', style: mono(kMobile ? 13 : 12, color: AppColors.ok)),
         SizedBox(width: S.s6),
-        Text('\u2212$del', style: mono(13, color: AppColors.danger)),
+        Text('\u2212$del',
+            style: mono(kMobile ? 13 : 12, color: AppColors.danger)),
       ]);
 
   @override

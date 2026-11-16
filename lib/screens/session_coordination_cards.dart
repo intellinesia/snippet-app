@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../platform.dart';
@@ -601,6 +603,7 @@ class AgentMessageCard extends StatelessWidget {
     this.meId,
     this.meName,
     this.time,
+    this.at,
   });
 
   final String agentId;
@@ -613,14 +616,23 @@ class AgentMessageCard extends StatelessWidget {
   final String? meName;
   final String? time;
 
+  /// Raw event time, for lane cards.
+  final dynamic at;
+
   @override
   Widget build(BuildContext context) {
     final lane = agentId.startsWith('lane ');
     if (lane) {
       final given = laneTitle?.trim() ?? '';
       final laneName = given.isNotEmpty ? given : agentId.substring(5).trim();
-      return _LaneMessageRow(
-          lane: laneName, body: body, outbound: outbound, time: time);
+      return LaneMessageCard(
+        laneTitle: laneName,
+        notes: outbound ? const [] : [LaneNote(body: body, at: at)],
+        reply: outbound ? body : null,
+        replyAt: outbound ? at : null,
+        meId: meId,
+        meName: meName,
+      );
     }
     return AgentNamesBuilder(builder: (context, names) {
       final them = agentDisplayName(agentId, names);
@@ -653,55 +665,346 @@ class AgentMessageCard extends StatelessWidget {
   }
 }
 
-/// A lane's note to its parent, or the parent's note to it: one quiet line,
-/// the full text on tap. Lanes otherwise live in the header pill and board.
-class _LaneMessageRow extends StatefulWidget {
-  const _LaneMessageRow(
-      {required this.lane,
-      required this.body,
-      required this.outbound,
-      this.time});
-
-  final String lane;
+/// One message in a lane card: its body and when it arrived.
+class LaneNote {
+  const LaneNote({required this.body, this.at});
   final String body;
-  final bool outbound;
-  final String? time;
-
-  @override
-  State<_LaneMessageRow> createState() => _LaneMessageRowState();
+  final dynamic at;
 }
 
-class _LaneMessageRowState extends State<_LaneMessageRow> {
+/// The glyph a lane wears in chat, read from its title.
+String laneGlyph(String title) {
+  final t = title.toLowerCase();
+  if (RegExp(r'setting|config|prefer').hasMatch(t)) return 'settings';
+  if (RegExp(r'tool|terminal|shell|cli').hasMatch(t)) return 'terminal';
+  if (RegExp(r'agent|bot').hasMatch(t)) return 'bot';
+  if (RegExp(r'test|check|verif').hasMatch(t)) return 'check-check';
+  if (RegExp(r'search|research|audit').hasMatch(t)) return 'search';
+  if (RegExp(r'git|branch|pr\b|merge').hasMatch(t)) return 'git-branch';
+  return 'layers';
+}
+
+DateTime? _eventDate(dynamic raw) {
+  if (raw is num && raw > 0) {
+    final ms = raw > 100000000000 ? raw.toInt() : (raw * 1000).toInt();
+    return DateTime.fromMillisecondsSinceEpoch(ms);
+  }
+  if (raw is String && raw.isNotEmpty) return DateTime.tryParse(raw)?.toLocal();
+  return null;
+}
+
+String _elapsed(Duration d) {
+  if (d.inMinutes < 1) return '';
+  if (d.inMinutes < 60) return ' ${d.inMinutes} min';
+  return ' ${d.inHours} h';
+}
+
+/// The status word in a lane card's header.
+String laneStatusWord({required List<LaneNote> notes, bool answered = false}) {
+  if (notes.isEmpty) return '';
+  if (notes.last.body.contains('?')) return answered ? 'asked' : 'asks';
+  return notes.length > 1 ? '${notes.length} notes' : 'note';
+}
+
+/// A lane's notes to its parent, grouped, with the parent's reply inside.
+/// [notes] runs oldest first; empty means the parent told the lane first.
+class LaneMessageCard extends StatefulWidget {
+  const LaneMessageCard({
+    super.key,
+    required this.laneTitle,
+    required this.notes,
+    this.reply,
+    this.replyAt,
+    this.meId,
+    this.meName,
+    this.waiting = false,
+    this.onOpenLane,
+  });
+
+  final String laneTitle;
+  final List<LaneNote> notes;
+  final String? reply;
+  final dynamic replyAt;
+  final String? meId;
+  final String? meName;
+
+  /// The newest note asks, nobody answered, and the lane still runs.
+  final bool waiting;
+  final VoidCallback? onOpenLane;
+
+  @override
+  State<LaneMessageCard> createState() => _LaneMessageCardState();
+}
+
+class _LaneMessageCardState extends State<LaneMessageCard> {
   bool _open = false;
+  bool _earlier = false;
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncTick();
+  }
+
+  @override
+  void didUpdateWidget(covariant LaneMessageCard old) {
+    super.didUpdateWidget(old);
+    _syncTick();
+  }
+
+  // The waiting clock reads in minutes; refresh it once a minute.
+  void _syncTick() {
+    if (widget.waiting && _tick == null) {
+      _tick = Timer.periodic(
+          const Duration(minutes: 1), (_) => mounted ? setState(() {}) : null);
+    } else if (!widget.waiting) {
+      _tick?.cancel();
+      _tick = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  static String _plain(String body) => body
+      .replaceAll(RegExp(r'[#*`>_]+'), '')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
 
   @override
   Widget build(BuildContext context) {
-    final body = widget.body.trim();
-    final first = body
-        .replaceAll(RegExp(r'[#*`>_]+'), '')
-        .split('\n')
-        .map((l) => l.trim())
-        .firstWhere((l) => l.isNotEmpty, orElse: () => '');
-    final head = widget.outbound
-        ? 'Told **${widget.lane}**'
-        : '**${widget.lane}**';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SignalRow(
-          icon: 'message',
-          tone: SignalTone.neutral,
-          text: head,
-          sub: _open ? null : first,
-          time: widget.time,
-          onTap: body.isEmpty ? null : () => setState(() => _open = !_open),
+    final notes = widget.notes;
+    final told = notes.isEmpty;
+    final reply = widget.reply?.trim() ?? '';
+    final newest = told ? null : notes.last;
+    final earlier =
+        told ? const <LaneNote>[] : notes.sublist(0, notes.length - 1);
+    final indent = S.of(34);
+    final faint = AppColors.fg4;
+
+    var status =
+        told ? '' : laneStatusWord(notes: notes, answered: reply.isNotEmpty);
+    if (widget.waiting && status == 'asks') {
+      final at = _eventDate(newest!.at);
+      status =
+          'asks · waiting${at == null ? '' : _elapsed(DateTime.now().difference(at))}';
+    }
+    final time = formatEventTime(told ? widget.replyAt : newest!.at);
+
+    final header = Row(children: [
+      Container(
+        width: 26,
+        height: 26,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.surface3,
+          borderRadius: BorderRadius.circular(R.of(8)),
         ),
-        if (_open)
-          Padding(
-            padding: EdgeInsets.fromLTRB(S.of(28), S.s2, 0, S.s8),
-            child: CardMarkdownBody(body: body, collapsible: false),
+        child: AppIcon(laneGlyph(widget.laneTitle),
+            size: 14, color: AppColors.accent),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Row(children: [
+          if (told) ...[
+            Text('Told',
+                style: sans(14, height: 18 / 14, color: AppColors.fg3)),
+            const SizedBox(width: 6),
+          ],
+          Flexible(
+            child: Text(widget.laneTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(14,
+                    weight: FontWeight.w500,
+                    height: 18 / 14,
+                    color: AppColors.fg1)),
           ),
+          if (status.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            Text(status,
+                style: sans(12,
+                    height: 18 / 12.5,
+                    color: widget.waiting ? AppColors.run : AppColors.fg3)),
+          ],
+        ]),
+      ),
+      if (time != null && !widget.waiting) ...[
+        const SizedBox(width: 8),
+        Text(time, style: sans(12, color: faint)),
       ],
+    ]);
+
+    final text = sans(14, height: 20 / 14, color: AppColors.fg2);
+    Widget noteBody(LaneNote n, {required bool open}) => open
+        ? CardMarkdownBody(body: n.body.trim(), collapsible: false)
+        : Text(_plain(n.body),
+            maxLines: 3, overflow: TextOverflow.ellipsis, style: text);
+
+    final children = <Widget>[header];
+    if (earlier.isNotEmpty) {
+      children.add(Padding(
+        padding: EdgeInsets.only(left: indent),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() => _earlier = !_earlier),
+          child: Row(children: [
+            Container(
+                width: 4,
+                height: 4,
+                decoration:
+                    BoxDecoration(color: faint, shape: BoxShape.circle)),
+            const SizedBox(width: 6),
+            Text(
+                _earlier
+                    ? 'Hide ${earlier.length} earlier'
+                    : '${earlier.length} earlier',
+                style: sans(12, height: 18 / 12, color: AppColors.fg3)),
+          ]),
+        ),
+      ));
+      if (_earlier) {
+        for (final n in earlier) {
+          final t = formatEventTime(n.at);
+          children.add(Padding(
+            padding: EdgeInsets.only(left: indent),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: noteBody(n, open: _open)),
+              if (t != null) ...[
+                const SizedBox(width: 8),
+                Text(t, style: sans(12, height: 20 / 12, color: faint)),
+              ],
+            ]),
+          ));
+        }
+      }
+    }
+    if (newest != null) {
+      children.add(Padding(
+        padding: EdgeInsets.only(left: indent),
+        child: noteBody(newest, open: _open),
+      ));
+    }
+    if (reply.isNotEmpty) {
+      final me = widget.meId?.trim() ?? '';
+      children.add(AgentNamesBuilder(builder: (context, names) {
+        final given = widget.meName?.trim() ?? '';
+        final name = given.isNotEmpty
+            ? given
+            : (me.isEmpty ? 'You' : agentDisplayName(me, names));
+        final small = sans(13, height: 19 / 13, color: AppColors.fg2);
+        final body = told
+            ? (_open
+                ? CardMarkdownBody(body: reply, collapsible: false)
+                : Text(_plain(reply),
+                    maxLines: 3, overflow: TextOverflow.ellipsis, style: text))
+            : (_open
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                        Text(name,
+                            style: small.copyWith(
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.fg1)),
+                        CardMarkdownBody(body: reply, collapsible: false),
+                      ])
+                : Text.rich(
+                    TextSpan(style: small, children: [
+                      TextSpan(
+                          text: '$name ',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.fg1)),
+                      TextSpan(text: _plain(reply)),
+                    ]),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis));
+        if (told) {
+          return Padding(padding: EdgeInsets.only(left: indent), child: body);
+        }
+        return Container(
+          margin: EdgeInsets.only(left: indent, top: 4),
+          padding: const EdgeInsets.only(top: 8),
+          decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: AppColors.border))),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: me.isEmpty
+                  ? const SizedBox(width: 18, height: 18)
+                  : AgentMochi(me, size: 18),
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: body),
+          ]),
+        );
+      }));
+    }
+    if (widget.waiting && widget.onOpenLane != null) {
+      children.add(Padding(
+        padding: EdgeInsets.only(left: indent, top: 6),
+        child: Row(children: [
+          _LaneCardButton(label: 'Open lane', onTap: widget.onOpenLane!),
+        ]),
+      ));
+    }
+
+    final radius = BorderRadius.circular(R.of(14));
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: S.s4),
+      child: Material(
+        color: AppColors.surface1,
+        shape: RoundedRectangleBorder(
+            borderRadius: radius, side: BorderSide(color: AppColors.border)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          borderRadius: radius,
+          onTap: () => setState(() => _open = !_open),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < children.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 4),
+                  children[i],
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LaneCardButton extends StatelessWidget {
+  const _LaneCardButton({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(R.of(10));
+    return Material(
+      color: AppColors.surface3,
+      borderRadius: radius,
+      child: InkWell(
+        borderRadius: radius,
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 32),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(label, style: sans(13, color: AppColors.fg1)),
+        ),
+      ),
     );
   }
 }

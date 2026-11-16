@@ -207,8 +207,7 @@ void main() {
       expect(find.textContaining('API models', findRichText: true), findsWidgets);
       expect(find.textContaining('Blocked  ·  bob'), findsOneWidget);
       expect(find.text('Waiting on API models'), findsOneWidget);
-      expect(find.text('After API models, Detail view'), findsOneWidget);
-      expect(find.text('Not started'), findsOneWidget);
+      expect(find.text('T-3 Wire board \u00b7 After T-1, T-2'), findsOneWidget);
       expect(find.text('Needs review. Waiting on 1 task'), findsOneWidget);
     });
 

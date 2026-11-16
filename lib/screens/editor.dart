@@ -31,7 +31,7 @@ class EditorScreen extends StatefulWidget {
 class _EditorScreenState extends State<EditorScreen> {
   final CodeLineEditingController _controller = CodeLineEditingController();
   final FocusNode _focus = FocusNode();
-  bool _wrap = kMobile;
+  bool _wrap = false;
   String _hash = '';
   String _initial = '';
   bool _loading = true;
@@ -301,6 +301,7 @@ class _EditorScreenState extends State<EditorScreen> {
     if (i <= 0) return widget.path;
     final dir = widget.path.substring(0, i);
     final parts = dir.split('/').where((p) => p.isNotEmpty).toList();
+    if (kMobile && parts.isNotEmpty) return parts.last;
     return parts.length <= 2
         ? dir
         : '…/${parts.sublist(parts.length - 2).join('/')}';

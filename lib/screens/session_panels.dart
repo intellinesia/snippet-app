@@ -136,27 +136,13 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
     final stat = _stat(c.id);
     final sub = [formatCheckpointDate(c.createdAt), if (stat.isNotEmpty) stat]
         .join(' \u00b7 ');
-    return Padding(
-      padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.s8),
-      child: Row(children: [
-        Container(
-          width: 32,
-          height: 32,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColors.surface3,
-            borderRadius: BorderRadius.circular(R.sm),
-          ),
-          child: AppIcon('history', size: 16, color: AppColors.fg3),
-        ),
-        SizedBox(width: S.s12),
-        Expanded(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(
-                c.label.trim().isEmpty
-                    ? 'Checkpoint'
-                    : c.label.trim().replaceAll(RegExp(r'\s+'), ' '),
+    final title = c.label.trim().isEmpty
+        ? 'Checkpoint'
+        : c.label.trim().replaceAll(RegExp(r'\s+'), ' ');
+    // Desktop reads title and time on one line, as the drawer mockup does.
+    final text = kMobile
+        ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: sans(15, color: AppColors.fg1)),
@@ -164,15 +150,46 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: sans(12, color: AppColors.fg4)),
-          ]),
+          ])
+        : Row(children: [
+            Text(title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(13, weight: W.label, color: AppColors.fg1)),
+            SizedBox(width: S.s8),
+            Flexible(
+                child: Text(sub,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12, color: AppColors.fg4))),
+          ]);
+    return Container(
+      constraints: BoxConstraints(minHeight: kMobile ? 52 : 36),
+      padding: kMobile
+          ? EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.s8)
+          : EdgeInsets.fromLTRB(S.s8, S.s2, S.s8, S.s2),
+      child: Row(children: [
+        Container(
+          width: kMobile ? 32 : 22,
+          height: kMobile ? 32 : 22,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.surface3,
+            borderRadius: BorderRadius.circular(R.sm),
+          ),
+          child:
+              AppIcon('history', size: kMobile ? 16 : 13, color: AppColors.fg3),
         ),
-        // The newest checkpoint is the present state, so only Fork applies.
+        SizedBox(width: kMobile ? S.s12 : S.s8),
+        Expanded(child: text),
+        // The newest checkpoint is the present state: nothing to restore, and
+        // forking the present lives on the actions sheet's Fork tile.
         if (!latest) ...[
           SizedBox(width: S.s8),
           CompactBtn('Restore', onTap: () => widget.onRewind(c)),
+          SizedBox(width: S.s4),
+          CompactBtn('Fork', onTap: () => widget.onFork(c)),
         ],
-        SizedBox(width: S.s4),
-        CompactBtn('Fork', onTap: () => widget.onFork(c)),
       ]),
     );
   }

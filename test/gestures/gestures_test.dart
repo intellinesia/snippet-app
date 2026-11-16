@@ -165,6 +165,31 @@ void main() {
       expect(find.byType(PageView), findsNothing);
     });
 
+    testWidgets('pinch zooms instead of dragging the image', (t) async {
+      await open(t);
+      final c = t.getCenter(find.byType(PageView));
+      final f1 = await t.startGesture(c - const Offset(0, 40), pointer: 1);
+      final f2 = await t.startGesture(c + const Offset(0, 40), pointer: 2);
+      await t.pump();
+      // One finger stays put and the other moves down: a drag recogniser
+      // would read this as a downward swipe.
+      for (var i = 0; i < 12; i++) {
+        await f2.moveBy(const Offset(0, 12));
+        await t.pump(const Duration(milliseconds: 16));
+      }
+      final zoom = t
+          .widget<InteractiveViewer>(find.byType(InteractiveViewer))
+          .transformationController!
+          .value
+          .getMaxScaleOnAxis();
+      expect(zoom, greaterThan(1.3));
+      expect(t.getTopLeft(find.byType(PageView)).dy, closeTo(0, .5));
+      await f1.up();
+      await f2.up();
+      await t.pumpAndSettle();
+      expect(find.byType(PageView), findsOneWidget);
+    });
+
     testWidgets('slow short drag springs back', (t) async {
       await open(t);
       await t.timedDrag(find.byType(PageView), const Offset(0, 60),

@@ -7,6 +7,7 @@ import 'package:flutter_zxing/flutter_zxing.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../api.dart';
+import '../desktop_layout.dart';
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -375,7 +376,10 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
       body: SafeArea(
         bottom: false,
         child: Column(children: [
-          SnAppBar(title: 'Add machine', onBack: () => Navigator.pop(context)),
+          SettingsHeader(
+              title: 'Add machine',
+              compact: true,
+              onBack: () => Navigator.pop(context)),
           // Phone-only screen now (desktop uses the compact dialog above).
           Expanded(child: _body()),
         ]),
@@ -389,19 +393,38 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
       padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16,
           S.s24 + MediaQuery.of(context).padding.bottom),
       children: [
-        SizedBox(height: 280, child: _scanArea()),
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: S.s12),
-          child: Text.rich(
-            TextSpan(style: sans(13, color: AppColors.fg3), children: [
-              const TextSpan(text: 'Scan the QR from '),
-              TextSpan(
-                  text: 'snippet serve --enable',
-                  style: mono(13, color: AppColors.fg2)),
-            ]),
-            textAlign: TextAlign.center,
+        // The viewport and its caption share one card, as in the mockup.
+        Container(
+          padding: EdgeInsets.all(S.s16),
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(R.lg),
+            border: Border.all(color: AppColors.line),
           ),
+          child: Column(children: [
+            Center(
+              child: SizedBox(
+                width: 248,
+                height: 248,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(R.md),
+                  child: _scanArea(),
+                ),
+              ),
+            ),
+            SizedBox(height: S.s12),
+            Text.rich(
+              TextSpan(style: sans(13, color: AppColors.fg3), children: [
+                const TextSpan(text: 'Scan the QR from '),
+                TextSpan(
+                    text: 'snippet serve --enable',
+                    style: mono(13, color: AppColors.fg2)),
+              ]),
+              textAlign: TextAlign.center,
+            ),
+          ]),
         ),
+        SizedBox(height: S.s16),
         AppField(
             label: 'Paste the link from snippet serve',
             controller: _paste,
@@ -474,9 +497,8 @@ class _AddInstanceScreenState extends State<AddInstanceScreen>
     // Rounded viewport, Claude-card style, with the scan reticle + caption inside.
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface1,
+        color: AppColors.surface2,
         borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: AppColors.line),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(R.lg),

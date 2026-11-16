@@ -84,7 +84,7 @@ void main() {
     await _pump(t, _FakeReachClient());
     expect(find.text('Notifications'), findsOneWidget);
     expect(find.text('Questions'), findsOneWidget);
-    expect(find.text('Push, then chat'), findsNWidgets(2));
+    expect(find.text('Push, then Chat'), findsNWidgets(2));
     expect(find.text('Chat'), findsWidgets);
     expect(find.text('Task room'), findsWidgets);
     expect(find.text('Always on'), findsNWidgets(2));
@@ -108,12 +108,12 @@ void main() {
     await _pump(t, c);
     await t.tap(find.text('Results'));
     await t.pumpAndSettle();
-    await t.tap(find.text('Voice, then push, then chat').last);
+    await t.tap(find.text('Voice, then Push, then Chat').last);
     await t.pumpAndSettle();
     expect(c.saves.single['policy'], {
       'result': ['voice', 'push', 'chat']
     });
-    expect(find.text('Voice, then push, then chat'), findsOneWidget);
+    expect(find.text('Voice, then Push, then Chat'), findsOneWidget);
   });
 
   phone('tapping the quiet-hours line flips it for that channel', (t) async {

@@ -887,7 +887,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           ),
           SizedBox(width: S.s8),
           Flexible(
-            child: Text(t.id.length > 8 ? t.id.substring(0, 8) : t.id,
+            child: Text(_shortTaskId(t.id),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: mono(12, color: AppColors.fg3)),
@@ -913,6 +913,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       ]),
     );
   }
+
+  /// 'T-244' for short task ids, the first eight characters otherwise, as the list shows.
+  static String _shortTaskId(String id) {
+    final m = RegExp(r'^t-?(\d+)$', caseSensitive: false).firstMatch(id);
+    if (m != null) return 'T-${m.group(1)}';
+    return (id.length > 8 ? id.substring(0, 8) : id).toUpperCase();
+  }
+
+  static String _name(String id) =>
+      id.isEmpty ? id : id[0].toUpperCase() + id.substring(1);
 
   Widget _v5Pill(String text, {bool lit = false, bool code = false}) => Container(
         height: 22,
@@ -980,7 +990,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.s12),
           child: brief.trim().isEmpty
               ? Text('No brief yet.', style: sans(15, color: AppColors.fg4))
-              : _Description(markdown: brief),
+              : _Description(markdown: brief, size: 13),
         ),
         if (t.workPlan.isNotEmpty) ...[
           _v5Label('Plan'),
@@ -990,7 +1000,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           ),
         ],
         _v5Label('Details'),
-        _v5Card(child: Column(children: _detailRows(t))),
+        _v5Card(
+            padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.s8),
+            child: Column(children: _detailRows(t))),
         _v5AgentsLabel(),
         if (roster.isEmpty)
           _v5Card(
@@ -1058,7 +1070,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(a.agentId,
+                  Text(_name(a.agentId),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(14,
@@ -1103,8 +1115,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         .toSet()
         .toList();
     final rows = <(String, String)>[
-      ('Holder', agentId),
-      ('Review', reviewers.isEmpty ? '' : reviewers.join(', ')),
+      ('Holder', _name(agentId)),
+      ('Review', reviewers.isEmpty ? '' : reviewers.map(_name).join(', ')),
       ('Seat', seat),
       ('Branch', branch.trim()),
       ('Changes', changesText),
@@ -1118,17 +1130,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     ];
   }
 
-  /// Dim label left, bright value right (mono for paths), hairline between rows.
+  /// Dim label left, value right (code face for paths), as a tight key list.
   Widget _detailRow(String label, String value,
           {bool last = false, bool code = false}) =>
       Container(
-        constraints: const BoxConstraints(minHeight: 36),
-        padding: EdgeInsets.symmetric(vertical: S.s6),
-        decoration: BoxDecoration(
-          border: last
-              ? null
-              : Border(bottom: BorderSide(color: AppColors.line)),
-        ),
+        constraints: const BoxConstraints(minHeight: 26),
+        padding: EdgeInsets.symmetric(vertical: S.of(3)),
         child: Row(children: [
           Text(label,
               maxLines: 1,
@@ -1141,7 +1148,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: code && value.isNotEmpty
-                    ? mono(12, color: AppColors.fg1)
+                    ? codeMono(12, color: AppColors.fg3)
                     : sans(13, color: value.isEmpty ? AppColors.fg4 : AppColors.fg1)),
           ),
         ]),
@@ -2196,9 +2203,13 @@ class _WorkPlan extends StatelessWidget {
 }
 
 class _Description extends StatefulWidget {
-  const _Description({required this.markdown});
+  const _Description({required this.markdown, this.size});
 
   final String markdown;
+
+  /// Body size for a compact card, e.g. the phone Brief; null keeps the
+  /// markdown default.
+  final double? size;
 
   @override
   State<_Description> createState() => _DescriptionState();
@@ -2217,7 +2228,10 @@ class _DescriptionState extends State<_Description> {
     final body = MarkdownBody(
       data: widget.markdown,
       selectable: true,
-      styleSheet: markdownStyle(context),
+      styleSheet: widget.size == null
+          ? markdownStyle(context)
+          : markdownStyle(context).copyWith(
+              p: sans(widget.size!, height: 1.5, color: AppColors.fg1)),
       builders: {'pre': PreBlockBuilder()},
       onTapLink: (txt, href, title) => openMarkdownLink(href, context),
     );

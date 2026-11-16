@@ -438,7 +438,7 @@ class _GitScreenState extends State<GitScreen> {
                         st.branch.isEmpty ? '(no branch)' : st.branch,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: mono(kMobile ? 13 : 12, color: AppColors.fg1),
+                        style: codeMono(kMobile ? 13 : 12, color: AppColors.fg1),
                       ),
                     ),
                     SizedBox(width: S.s4),
@@ -538,8 +538,9 @@ class _GitScreenState extends State<GitScreen> {
             ),
             const Spacer(),
             if (hasStaged)
+              // Stays primary while the message is empty; _commit focuses the field.
               CompactBtn('Commit ${st.staged.length}',
-                  primary: true, disabled: !canCommit, onTap: _commit)
+                  primary: true, disabled: _busy, onTap: _commit)
             else if (hasAny)
               CompactBtn('Commit all',
                   disabled: !canCommit, onTap: _stageAllAndCommit)
@@ -632,7 +633,7 @@ class _GitScreenState extends State<GitScreen> {
                   child: Text(f.path,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: mono(kMobile ? 13 : 12, color: AppColors.fg1)),
+                      style: codeMono(kMobile ? 13 : 12, color: AppColors.fg1)),
                 ),
                 IconBtn(
                   staged ? 'minus' : 'plus',
@@ -652,6 +653,7 @@ class _GitScreenState extends State<GitScreen> {
         'A' => Tone.ok,
         'D' => Tone.danger,
         'R' => Tone.accent,
+        '?' => Tone.ok,
         _ => Tone.neutral,
       };
 }

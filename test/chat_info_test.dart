@@ -154,8 +154,8 @@ void _phone(WidgetTester tester) {
 }
 
 void main() {
-  testWidgets('phone agent sheet shows identity, actions and model rows, no Files/Links; '
-      'X closes it', (tester) async {
+  testWidgets('phone agent page shows identity, agent and work rows, no Files/Links; '
+      'Back closes it', (tester) async {
     _phone(tester);
     final client = _Client(agent: _agent(), threadEvents: const []);
     await tester.pumpWidget(_app(Builder(
@@ -178,21 +178,28 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Revenue Scout'), findsOneWidget);
-    expect(find.text('Active'), findsOneWidget);
-    for (final label in ['Inbox', 'Board', 'Desk']) {
+    // The page title and the hero both carry the name.
+    expect(find.text('Revenue Scout'), findsNWidgets(2));
+    for (final label in ['Inbox', 'Board', 'Desk session', 'Memory']) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
     expect(find.text('Tasks'), findsNothing);
     for (final tab in ['Files', 'Links']) {
       expect(find.text(tab), findsNothing, reason: tab);
     }
-    expect(find.text('Tasks run on'), findsOneWidget);
-    expect(find.text('Desk runs on'), findsOneWidget);
-    expect(find.text('Agent ID'), findsOneWidget);
-    expect(find.text('Delete agent'), findsOneWidget);
+    for (final label in [
+      'Wakes and reporting',
+      'How it reaches you',
+      'Inference profile',
+      'Nickname',
+      'Appearance',
+      'Delete agent',
+    ]) {
+      expect(find.text(label), findsOneWidget, reason: label);
+    }
+    expect(find.text('Tasks run on'), findsNothing);
 
-    await tester.tap(find.bySemanticsLabel('Close'));
+    await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
     expect(find.text('Revenue Scout'), findsNothing);
     debugDefaultTargetPlatformOverride = null;
@@ -251,8 +258,8 @@ void main() {
     )));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(find.text('Revenue Scout'), findsOneWidget);
-    expect(find.text('Tasks run on'), findsOneWidget);
+    expect(find.text('Revenue Scout'), findsWidgets);
+    expect(find.text('Inference profile'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 

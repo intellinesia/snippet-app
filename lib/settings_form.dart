@@ -215,7 +215,40 @@ class SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = ConstrainedBox(
+    final Widget content;
+    if (!kMobile) {
+      // Compact desktop row per round 5: inline title and subtitle.
+      content = ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 32),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: S.of(12), vertical: S.of(4)),
+          child: Row(children: [
+            if (leading != null) ...[leading!, SizedBox(width: S.s12)],
+            labelWidget ??
+                Text(label,
+                    style: sans(13,
+                        weight: W.label,
+                        color: danger ? AppColors.danger : AppColors.fg1)),
+            if (sub != null && sub!.isNotEmpty) ...[
+              SizedBox(width: S.s8),
+              Expanded(
+                child: Text(sub!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12, color: AppColors.fg3)),
+              ),
+            ] else
+              const Spacer(),
+            if (trailing != null) ...[SizedBox(width: S.s12), trailing!],
+            if (chevron) ...[
+              SizedBox(width: S.s8),
+              AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+            ],
+          ]),
+        ),
+      );
+    } else {
+    content = ConstrainedBox(
       constraints: BoxConstraints(minHeight: kMobile ? 46 : 40),
       child: Padding(
         padding: kMobile
@@ -246,6 +279,7 @@ class SettingsRow extends StatelessWidget {
         ]),
       ),
     );
+    }
     if (onTap == null) return content;
     return Material(
       color: Colors.transparent,

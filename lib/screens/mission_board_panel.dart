@@ -48,6 +48,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
   List<Goal> _goals = const [];
   bool _loaded = false;
   Revalidator? _live;
+  _BoardFilter _filter = _BoardFilter.active;
 
   @override
   void initState() {
@@ -119,9 +120,8 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
   }
 
   Widget _label(String text) => Padding(
-        padding: EdgeInsets.fromLTRB(S.of(18), S.of(14), S.of(18), S.s8),
-        child: Text(text.toUpperCase(),
-            style: sans(11, spacing: 0.9, color: AppColors.fg4)),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s16, S.s16, S.s8),
+        child: Text(text, style: sans(13, color: AppColors.fg3)),
       );
 
   TaskNote _note(MissionControlTask t) {
@@ -136,58 +136,180 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
     );
   }
 
-  Widget _taskRow(MissionControlTask t, {required bool done}) {
+  (String, Color, Color) _pill(MissionControlTask t) => switch (t.status) {
+        'in_review' => ('In review', AppColors.accent, AppColors.accentBg),
+        'blocked' => ('Blocked', AppColors.danger, AppColors.dangerBg),
+        'done' => ('Done', AppColors.ok, AppColors.okBg),
+        _ when t.planTotal > 0 => (
+            'Step ${t.planDone.clamp(1, t.planTotal)} of ${t.planTotal}',
+            AppColors.run,
+            AppColors.runBg
+          ),
+        _ => ('Working', AppColors.run, AppColors.runBg),
+      };
+
+  String _when(MissionControlTask t) {
+    if (t.status == 'done' || t.status == 'in_review') return _at(t.updatedAt);
+    final m = DateTime.now()
+        .difference(DateTime.fromMillisecondsSinceEpoch(t.updatedAt * 1000))
+        .inMinutes;
+    if (m < 1) return 'now';
+    return m < 60 ? '$m min' : _at(t.updatedAt);
+  }
+
+  Widget _taskCard(MissionControlTask t) {
     final sid = t.sessionId;
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(R.md),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(R.md),
-        onTap: sid == null ? null : () => widget.onOpenSession(sid, t.title),
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s8),
-          child: Row(children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: done ? AppColors.ok : AppColors.accent,
-              ),
-            ),
-            SizedBox(width: S.s12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(t.title.isEmpty ? '(untitled)' : t.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(13,
-                          color: done ? AppColors.fg3 : AppColors.fg1)),
-                  if (_note(t).line case final line?)
-                    Padding(
-                      padding: EdgeInsets.only(top: S.s2),
-                      child: Text(line,
-                          key: ValueKey('note-${t.id}'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(12,
-                              color: t.status == 'blocked'
-                                  ? AppColors.danger
-                                  : AppColors.fg4)),
+    final open = sid == null ? null : () => widget.onOpenSession(sid, t.title);
+    final review = t.status == 'in_review';
+    final (label, fg, bg) = _pill(t);
+    final note = _note(t).line;
+    final radius = BorderRadius.circular(R.of(20));
+    return Padding(
+      key: ValueKey('board-card-${t.id}'),
+      padding: EdgeInsets.fromLTRB(S.s16, 0, S.s16, S.s8),
+      child: Material(
+        color: AppColors.surface2,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(color: review ? AppColors.border2 : AppColors.border),
+        ),
+        child: InkWell(
+          borderRadius: radius,
+          onTap: open,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(S.of(15), S.of(13), S.of(15), S.of(13)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(children: [
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface3,
+                      borderRadius: BorderRadius.circular(R.of(6)),
                     ),
+                    child: Text(t.id, style: mono(12, color: AppColors.fg2)),
+                  ),
+                  SizedBox(width: S.s8),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s2),
+                    decoration: BoxDecoration(
+                      color: bg,
+                      borderRadius: BorderRadius.circular(R.of(8)),
+                    ),
+                    child: Text(label,
+                        style: sans(12, weight: W.label, color: fg)),
+                  ),
+                  const Spacer(),
+                  Text(_when(t),
+                      style: sans(12, color: AppColors.fg3, tabular: true)),
+                ]),
+                SizedBox(height: S.s6),
+                Text(t.title.isEmpty ? '(untitled)' : t.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(15,
+                        weight: W.label, height: 20 / 15, color: AppColors.fg1)),
+                SizedBox(height: S.s6),
+                Row(children: [
+                  Expanded(
+                    child: Text(note ?? '',
+                        key: ValueKey('note-${t.id}'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12,
+                            color: t.status == 'blocked'
+                                ? AppColors.danger
+                                : AppColors.fg3)),
+                  ),
+                  if (open != null) ...[
+                    SizedBox(width: S.s8),
+                    _cardButton(
+                        review
+                            ? 'Review'
+                            : t.status == 'done'
+                                ? 'Read'
+                                : 'Open',
+                        primary: review,
+                        onTap: open),
+                  ],
+                ]),
+                if (t.status != 'done' && t.planTotal > 0) ...[
+                  SizedBox(height: S.of(10)),
+                  Progress(
+                      pct: 100 * t.planDone / t.planTotal,
+                      height: 4,
+                      color: AppColors.run),
                 ],
-              ),
+              ],
             ),
-            SizedBox(width: S.s8),
-            Text(relativeTime(t.updatedAt),
-                style: sans(12, color: AppColors.fg4, tabular: true)),
-          ]),
+          ),
         ),
       ),
     );
   }
+
+  Widget _cardButton(String text,
+          {required bool primary, required VoidCallback onTap}) =>
+      Material(
+        color: primary ? AppColors.accentFill : AppColors.surface3,
+        borderRadius: BorderRadius.circular(R.of(10)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(R.of(10)),
+          onTap: onTap,
+          child: Container(
+            height: 30,
+            padding: EdgeInsets.symmetric(horizontal: S.of(11)),
+            alignment: Alignment.center,
+            child: Text(text,
+                style: sans(12,
+                    weight: W.label,
+                    color: primary ? AppColors.accentFg : AppColors.fg1)),
+          ),
+        ),
+      );
+
+  Widget _filterBar() => Padding(
+        padding: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s4),
+        child: Container(
+          padding: EdgeInsets.all(S.s4),
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(R.of(16)),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(children: [
+            for (final f in _BoardFilter.values)
+              Expanded(
+                child: GestureDetector(
+                  key: ValueKey('board-filter-${f.name}'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => setState(() => _filter = f),
+                  child: AnimatedContainer(
+                    duration: Motion.quick,
+                    height: 32,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: _filter == f ? AppColors.surface3 : Colors.transparent,
+                      borderRadius: BorderRadius.circular(R.of(12)),
+                    ),
+                    child: Text(f.label,
+                        style: sans(13,
+                            weight: _filter == f ? W.label : W.body,
+                            color: _filter == f ? AppColors.fg1 : AppColors.fg3)),
+                  ),
+                ),
+              ),
+          ]),
+        ),
+      );
+
+  int get _activeCount => _tasks
+      .where((t) =>
+          t.status == 'in_progress' ||
+          t.status == 'in_review' ||
+          t.status == 'blocked')
+      .length;
 
   RightTab? get _readout => widget.readouts
       .where((r) => r.key == widget.activeReadout)
@@ -233,7 +355,13 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         height: 46,
         padding: EdgeInsets.symmetric(horizontal: S.of(18)),
         alignment: Alignment.centerLeft,
-        child: Text('Board', style: sans(13, color: AppColors.fg3)),
+        child: Row(children: [
+          Text('Task board', style: sans(13, weight: W.label, color: AppColors.fg2)),
+          const Spacer(),
+          if (_activeCount > 0)
+            Text('$_activeCount active',
+                style: sans(12, color: AppColors.accent)),
+        ]),
       );
     }
     final reading = _readout;
@@ -284,14 +412,19 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
       return t.year == now.year && t.month == now.month && t.day == now.day;
     }
 
-    final doing = _tasks
-        .where((t) =>
-            t.status == 'in_progress' ||
-            t.status == 'in_review' ||
-            t.status == 'blocked')
+    final review = _tasks.where((t) => t.status == 'in_review').toList();
+    final flight = _tasks
+        .where((t) => t.status == 'in_progress' || t.status == 'blocked')
         .toList();
-    final done =
-        _tasks.where((t) => t.status == 'done' && today(t.updatedAt)).toList();
+    final done = _tasks
+        .where((t) =>
+            t.status == 'done' &&
+            (_filter == _BoardFilter.done || today(t.updatedAt)))
+        .toList();
+    final showReview = _filter != _BoardFilter.done;
+    final showFlight = _filter == _BoardFilter.active;
+    final showDone = _filter != _BoardFilter.review;
+    final doing = [...review, ...flight];
     return ColoredBox(
       color: Colors.transparent,
       child: !_loaded
@@ -317,7 +450,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                               height: 1.5, color: AppColors.fg4)),
                     ]),
                   ),
-                if (_goals.isNotEmpty) ...[
+                if (showFlight && _goals.isNotEmpty) ...[
                   _label('Goals'),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: S.of(10)),
@@ -331,20 +464,29 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                     ]),
                   ),
                 ],
-                if (doing.isNotEmpty) ...[
-                  _label('Working now'),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-                    child: Column(children: [
-                      for (final t in doing) _taskRow(t, done: false),
-                    ]),
-                  ),
+                if (_tasks.isNotEmpty) _filterBar(),
+                if (showReview && review.isNotEmpty) ...[
+                  _label('Needs review'),
+                  for (final t in review) _taskCard(t),
                 ],
-                if (_jobs.isNotEmpty) ...[
+                if (showFlight && flight.isNotEmpty) ...[
+                  _label('In flight'),
+                  for (final t in flight) _taskCard(t),
+                ],
+                if (_filter != _BoardFilter.active &&
+                    (showReview ? review.isEmpty : done.isEmpty))
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(S.s16, S.s24, S.s16, 0),
+                    child: Text(
+                        showReview ? 'Nothing waiting for review.' : 'Nothing finished yet.',
+                        textAlign: TextAlign.center,
+                        style: sans(13, color: AppColors.fg4)),
+                  ),
+                if (showFlight && _jobs.isNotEmpty) ...[
                   _label('Up next'),
                   for (final j in _jobs.take(6))
                     Padding(
-                      padding: EdgeInsets.fromLTRB(S.of(18), S.s6, S.of(18), S.s6),
+                      padding: EdgeInsets.fromLTRB(S.s16, S.s6, S.s16, S.s6),
                       child: Row(children: [
                         SizedBox(
                           width: 48,
@@ -360,17 +502,22 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                       ]),
                     ),
                 ],
-                if (done.isNotEmpty) ...[
-                  _label('Done today'),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-                    child: Column(children: [
-                      for (final t in done.take(8)) _taskRow(t, done: true),
-                    ]),
-                  ),
+                if (showDone && done.isNotEmpty) ...[
+                  _label(_filter == _BoardFilter.done ? 'Done' : 'Done today'),
+                  for (final t in done.take(_filter == _BoardFilter.done ? 30 : 8))
+                    _taskCard(t),
                 ],
               ],
             ),
     );
   }
+}
+
+enum _BoardFilter {
+  active('Active'),
+  review('Needs review'),
+  done('Done');
+
+  const _BoardFilter(this.label);
+  final String label;
 }

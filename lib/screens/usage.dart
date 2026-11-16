@@ -273,8 +273,6 @@ class _ProviderSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(children: [
-            ProviderLogo(provider.provider, size: kMobile ? 18 : 16),
-            SizedBox(width: S.s8),
             Expanded(
               child: Text(usageProviderTitle(provider.provider),
                   maxLines: 1,
@@ -299,24 +297,21 @@ class _ProviderSection extends StatelessWidget {
           else
             Text(
               switch (provider.rateLimitsSupported) {
-                true => 'No rate-limit data yet — send a message to refresh.',
-                false =>
-                  'Subscription limits aren\'t exposed by this provider\'s API.',
-                null => 'Rate limits appear after the next turn.',
+                true => 'No rate-limit data yet',
+                false => 'This provider does not report rate limits',
+                null => 'Rate limits appear after the next turn',
               },
               style: sans(12, color: AppColors.fg3),
             ),
-          if (hasTokens)
+          // One quiet line instead of a metric grid; the total is in the header.
+          if (provider.promptTokens + provider.completionTokens > 0)
             Padding(
-              padding: EdgeInsets.only(top: S.s12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _Metric('Total', fmtSi(provider.totalTokens)),
-                  _Metric('Input', fmtSi(provider.promptTokens)),
-                  _Metric('Cached', fmtSi(provider.cacheReadTokens)),
-                  _Metric('Output', fmtSi(provider.completionTokens)),
-                ],
+              padding: EdgeInsets.only(top: S.s6),
+              child: Text(
+                'Input ${fmtSi(provider.promptTokens)} · cached '
+                '${fmtSi(provider.cacheReadTokens)} · output '
+                '${fmtSi(provider.completionTokens)}',
+                style: sans(12, color: AppColors.fg4, tabular: true),
               ),
             ),
           for (final m in models)
@@ -337,29 +332,6 @@ class _ProviderSection extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Metric extends StatelessWidget {
-  final String label;
-  final String value;
-  const _Metric(this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: sans(12, color: AppColors.fg4)),
-          SizedBox(height: S.of(3)),
-          Text(
-            value,
-            style: mono(
-              kMobile ? 15 : 14,
-              weight: FontWeight.w500,
-              color: AppColors.fg1,
-            ),
-          ),
-        ],
-      );
 }
 
 class _RateRow extends StatelessWidget {
@@ -384,18 +356,13 @@ class _RateRow extends StatelessWidget {
       );
     }
 
-    final remaining = rate.leftPercent;
-    final color = remaining < 20
-        ? AppColors.danger
-        : remaining < 50
-            ? AppColors.run
-            : AppColors.ok;
+    final used = rate.usedPercent.clamp(0, 100).toDouble();
+    final color = used >= 85 ? AppColors.danger : AppColors.accent;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: S.s4),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          SizedBox(width: kMobile ? 96 : 110, child: label),
+    final row = Padding(
+      padding: EdgeInsets.symmetric(vertical: S.of(3)),
+      child: Row(children: [
+          SizedBox(width: 110, child: label),
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(R.of(3)),
@@ -407,7 +374,7 @@ class _RateRow extends StatelessWidget {
                     Container(color: AppColors.tint3),
                     FractionallySizedBox(
                       alignment: Alignment.centerLeft,
-                      widthFactor: (remaining / 100).clamp(0.0, 1.0),
+                      widthFactor: (used / 100).clamp(0.0, 1.0),
                       child: Container(color: color),
                     ),
                   ],
@@ -417,18 +384,17 @@ class _RateRow extends StatelessWidget {
           ),
           SizedBox(width: S.s8),
           SizedBox(
-            width: 68,
+            width: 40,
             child: Text(
-              '${remaining.round()}% left',
+              '${used.round()}%',
               textAlign: TextAlign.right,
-              style: mono(12, color: color),
+              style: mono(12, color: AppColors.fg3),
             ),
           ),
         ]),
-        if (reset != null)
-          Text(reset, style: sans(11, color: AppColors.fg4)),
-      ]),
     );
+    // The reset time stays one hover or long-press away.
+    return reset == null ? row : Tooltip(message: reset, child: row);
   }
 }
 

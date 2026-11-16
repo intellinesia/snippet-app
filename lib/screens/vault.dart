@@ -308,9 +308,14 @@ class VaultScreenState extends State<VaultScreen> {
     return SettingsColumn(children: [
       SettingsHeader(
         title: 'Vault',
-        subtitle: 'Secrets agents can use as \$NAME without seeing the value.',
+        subtitle: 'Secrets agents use as \$NAME',
         actions: [
-          if (!_adding) Btn('Add secret', small: true, icon: 'plus', onTap: _add),
+          if (!_adding)
+            Btn('Add secret',
+                small: true,
+                icon: 'plus',
+                variant: BtnVariant.secondary,
+                onTap: _add),
         ],
       ),
       SizedBox(height: S.s8),
@@ -375,22 +380,38 @@ class VaultScreenState extends State<VaultScreen> {
         onTap: _add,
       );
 
+  // A plain 44px row: a name and one action need no tile or chevron.
   Widget _secretRow(String name) => kMobile
-      ? V5SettingsRow(
-          label: name,
-          labelWidget: Text(name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: mono(15, color: AppColors.fg1)),
-          trailing: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => _remove(name),
-            child: SizedBox(
-              height: 44,
-              child: Center(
-                  child: Text('Remove',
-                      style: sans(13, color: AppColors.danger))),
-            ),
+      ? Semantics(
+          container: true,
+          child: SizedBox(
+            height: 44,
+            child: Row(children: [
+              SizedBox(width: S.s16),
+              Expanded(
+                child: Text(name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: mono(14, color: AppColors.fg1)),
+              ),
+              Semantics(
+                button: true,
+                label: 'Remove $name',
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _remove(name),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: S.s16),
+                    child: SizedBox(
+                      height: 44,
+                      child: Center(
+                          child: Text('Remove',
+                              style: sans(12, color: AppColors.danger))),
+                    ),
+                  ),
+                ),
+              ),
+            ]),
           ),
         )
       : SettingsRow(

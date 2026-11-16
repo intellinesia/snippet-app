@@ -39,6 +39,7 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
   void initState() {
     super.initState();
     _nickname.addListener(() => setState(() {}));
+    _prompt.addListener(_promptChanged);
     CharacterRoster.load().then((r) {
       if (mounted) setState(() => _characters = r.characters.keys.toList());
     }).catchError((_) {});
@@ -66,9 +67,8 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
       _error = null;
     });
     try {
-      await widget.client
-          .buildCoordinationAgent(prompt,
-              nickname: _nickname.text.trim(), character: _character);
+      await widget.client.buildCoordinationAgent(prompt,
+          nickname: _nickname.text.trim(), character: _character);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
@@ -81,20 +81,37 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
   }
 
   static const _starters = [
-    ('Code reviewer',
-        'A code reviewer that reads pull requests, flags risks and suggests fixes without pushing.'),
-    ('Release manager',
-        'A release manager that builds, tests and ships releases, and writes the notes.'),
-    ('Research scout',
-        'A research scout that searches the web and summarises what matters, with sources.'),
-    ('Docs writer',
-        'A docs writer that keeps the README and guides in step with the code, in British English.'),
+    (
+      'Code reviewer',
+      'A code reviewer that reads pull requests, flags risks and suggests fixes without pushing.'
+    ),
+    (
+      'Release manager',
+      'A release manager that builds, tests and ships releases, and writes the notes.'
+    ),
+    (
+      'Research scout',
+      'A research scout that searches the web and summarises what matters, with sources.'
+    ),
+    (
+      'Docs writer',
+      'A docs writer that keeps the README and guides in step with the code, in British English.'
+    ),
   ];
 
   void _start(String text) {
     _prompt.text = text;
     _prompt.selection = TextSelection.collapsed(offset: text.length);
     setState(() => _error = null);
+  }
+
+  String _lastPrompt = '';
+
+  /// Rebuilds only when the text changes, so the chosen starter stays marked.
+  void _promptChanged() {
+    if (_prompt.text == _lastPrompt) return;
+    _lastPrompt = _prompt.text;
+    setState(() {});
   }
 
   Widget _picker() {
@@ -106,39 +123,41 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
         final gap = kMobile ? S.s8 : 6.0;
         final cell = (box.maxWidth - 5 * gap) / 6;
         return ListView.separated(
-        key: const ValueKey('character-picker'),
-        scrollDirection: Axis.horizontal,
-        itemCount: _characters.length,
-        separatorBuilder: (_, __) => SizedBox(width: gap),
-        itemBuilder: (_, i) {
-          final id = _characters[i];
-          final sel = id == _character;
-          final tint =
-              CharacterRoster.current?.character(id)?.color ?? AppColors.accent;
-          return Semantics(
-            button: true,
-            selected: sel,
-            label: 'Character $id',
-            child: GestureDetector(
-              key: ValueKey('character-$id'),
-              behavior: HitTestBehavior.opaque,
-              onTap: _busy ? null : () => setState(() => _character = id),
-              child: Container(
-                width: cell,
-                decoration: BoxDecoration(
-                  color: sel ? tint.withValues(alpha: 0.13) : AppColors.surface2,
-                  borderRadius: BorderRadius.circular(R.of(kMobile ? 12 : 8)),
-                  border: Border.all(
-                      color: sel ? tint : AppColors.lineStrong,
-                      width: sel ? 1.5 : 1),
-                ),
-                child: Center(
-                  child: AgentCharacter(id, size: kMobile ? h - 14 : 26, staggerKey: id),
+          key: const ValueKey('character-picker'),
+          scrollDirection: Axis.horizontal,
+          itemCount: _characters.length,
+          separatorBuilder: (_, __) => SizedBox(width: gap),
+          itemBuilder: (_, i) {
+            final id = _characters[i];
+            final sel = id == _character;
+            final tint = CharacterRoster.current?.character(id)?.color ??
+                AppColors.accent;
+            return Semantics(
+              button: true,
+              selected: sel,
+              label: 'Character $id',
+              child: GestureDetector(
+                key: ValueKey('character-$id'),
+                behavior: HitTestBehavior.opaque,
+                onTap: _busy ? null : () => setState(() => _character = id),
+                child: Container(
+                  width: cell,
+                  decoration: BoxDecoration(
+                    color:
+                        sel ? tint.withValues(alpha: 0.13) : AppColors.surface2,
+                    borderRadius: BorderRadius.circular(R.of(kMobile ? 12 : 8)),
+                    border: Border.all(
+                        color: sel ? tint : AppColors.lineStrong,
+                        width: sel ? 1.5 : 1),
+                  ),
+                  child: Center(
+                    child: AgentCharacter(id,
+                        size: kMobile ? h - 14 : 26, staggerKey: id),
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
         );
       }),
     );
@@ -195,7 +214,8 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
         label('Name'),
         FieldWell(
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.of(10)),
+            padding:
+                EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.of(10)),
             child: TextField(
               controller: _nickname,
               cursorColor: AppColors.accent,
@@ -208,51 +228,61 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
           ),
         ),
         if (roomy) ...[
-        SizedBox(height: S.s16),
-        Text('Start from', style: sans(13, color: AppColors.fg3)),
-        SizedBox(height: S.s8),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final (label, text) in _starters)
-            Pressable(
-              kind: PressKind.button,
-              radius: 16,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _busy ? null : () => _start(text),
-                child: Container(
-                  constraints: BoxConstraints(minHeight: kMobile ? 34 : 28),
-                  padding: EdgeInsets.symmetric(horizontal: S.s12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(R.of(16)),
-                    border: Border.all(color: AppColors.lineStrong),
-                  ),
-                  child: Center(
-                    widthFactor: 1,
-                    heightFactor: 1,
-                    child: Text(label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(13, color: AppColors.fg2)),
+          SizedBox(height: S.s16),
+          Text('Start from', style: sans(13, color: AppColors.fg3)),
+          SizedBox(height: S.s8),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final (label, text) in _starters)
+              Pressable(
+                kind: PressKind.button,
+                radius: 16,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _busy ? null : () => _start(text),
+                  child: Container(
+                    constraints: BoxConstraints(minHeight: kMobile ? 34 : 28),
+                    padding: EdgeInsets.symmetric(horizontal: S.s12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(R.of(16)),
+                      border: Border.all(
+                          color: _prompt.text == text
+                              ? AppColors.accent
+                              : AppColors.lineStrong),
+                    ),
+                    child: Center(
+                      widthFactor: 1,
+                      heightFactor: 1,
+                      child: Text(label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(13,
+                              color: _prompt.text == text
+                                  ? AppColors.fg1
+                                  : AppColors.fg2)),
+                    ),
                   ),
                 ),
               ),
-            ),
-        ]),
+          ]),
         ],
         if (_error != null) ...[
           SizedBox(height: S.s12),
           Text(_error!, style: sans(13, color: AppColors.danger)),
         ],
         SizedBox(height: S.of(18)),
-        Btn(
-          _busy
-              ? 'Starting build…'
-              : (name.isEmpty ? 'Build agent' : 'Build $name'),
-          full: true,
-          small: !kMobile,
-          disabled: _busy,
-          icon: 'sparkles',
-          onTap: _submit,
+        // Full width on phones; a trailing button on desktop.
+        Align(
+          alignment: Alignment.centerRight,
+          child: Btn(
+            _busy
+                ? 'Starting build…'
+                : (name.isEmpty ? 'Build agent' : 'Build $name'),
+            full: kMobile,
+            small: !kMobile,
+            disabled: _busy,
+            icon: 'sparkles',
+            onTap: _submit,
+          ),
         ),
       ],
     );

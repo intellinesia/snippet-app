@@ -95,6 +95,38 @@ Future<void> presentFileOnDesktop(
   );
 }
 
+String _homeShort(String path) =>
+    path.replaceFirst(RegExp(r'^/(home|Users)/[^/]+(?=/|$)'), '~');
+
+/// The phone header's Edit button: a pill beside the download action.
+class _EditPill extends StatelessWidget {
+  const _EditPill({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.only(left: S.s8),
+        child: Material(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(R.pill),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(R.pill),
+            onTap: onTap,
+            child: Container(
+              height: 40,
+              padding: EdgeInsets.symmetric(horizontal: S.of(14)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                AppIcon('edit', size: 15, color: AppColors.fg1),
+                SizedBox(width: S.s6),
+                Text('Edit',
+                    style: sans(14, weight: W.label, color: AppColors.fg1)),
+              ]),
+            ),
+          ),
+        ),
+      );
+}
+
 /// One row over a file: mode tabs, size, save and download.
 class _FileToolbar extends StatelessWidget {
   const _FileToolbar(
@@ -107,8 +139,10 @@ class _FileToolbar extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         height: 40,
         padding: EdgeInsets.only(left: S.s12, right: S.s8),
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.border))),
+        decoration: kMobile
+            ? null
+            : BoxDecoration(
+                border: Border(bottom: BorderSide(color: AppColors.border))),
         child: Row(children: [
           ...leading,
           const Spacer(),
@@ -246,7 +280,9 @@ class _FileViewerState extends State<FileViewer> {
                 child: MarkdownBody(
                   data: content,
                   selectable: false,
-                  styleSheet: documentMarkdownStyle(context),
+                  styleSheet: kMobile
+                      ? markdownStyle(context)
+                      : documentMarkdownStyle(context),
                   builders: {'pre': PreBlockBuilder()},
                   onTapLink: (_, href, __) => openMarkdownLink(href, context),
                 ),
@@ -337,29 +373,9 @@ class _FileViewerState extends State<FileViewer> {
               onClose: close),
         ).then((_) => _load());
     final actions = <Widget>[
-      if (kMobile && editable)
-        Builder(
-          builder: (anchor) =>
-              IconBtn('more-horizontal', tooltip: 'More', onTap: () async {
-            final pick = await showAppMenu<String>(context,
-                anchor: anchor,
-                minWidth: 200,
-                items: [
-                  appMenuRow<String>(
-                      value: 'edit', icon: 'edit', label: 'Edit'),
-                  appMenuRow<String>(
-                      value: 'download', icon: 'download', label: 'Download'),
-                ]);
-            if (!mounted) return;
-            if (pick == 'edit') edit();
-            if (pick == 'download' && !_downloading) _download();
-          }),
-        )
-      else ...[
-        IconBtn('download',
-            tooltip: 'Download', onTap: _downloading ? null : _download),
-        if (editable && kMobile) IconBtn('edit', tooltip: 'Edit', onTap: edit),
-      ],
+      IconBtn('download',
+          tooltip: 'Download', onTap: _downloading ? null : _download),
+      if (editable && kMobile) _EditPill(onTap: edit),
     ];
     // The Mac window bar has no file actions; other desktops get them from CardTabStrip.
     final barActions =
@@ -380,7 +396,9 @@ class _FileViewerState extends State<FileViewer> {
           if (!widget.embedded)
             SnAppBar(
                 title: widget.name,
-                subtitle: meta == null ? widget.path : '$meta · ${widget.path}',
+                subtitle: meta == null
+                    ? _homeShort(widget.path)
+                    : '$meta · ${_homeShort(widget.path)}',
                 onBack: widget.onClose ?? () => Navigator.pop(context),
                 actions: merged ? const [] : actions),
           if (merged && (_isMedia || f == null || f.binary) &&

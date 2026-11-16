@@ -30,30 +30,7 @@ Future<void> openTasksPage(BuildContext context, DaemonClient client,
               title: 'Tasks',
               onBack: () => Navigator.of(page).pop(),
               trailing: [
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => panel.currentState?.create(),
-                  child: SizedBox(
-                    height: 44,
-                    child: Center(
-                      child: Container(
-                        height: 32,
-                        padding: EdgeInsets.symmetric(horizontal: S.s12),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface2,
-                          borderRadius: BorderRadius.circular(R.of(16)),
-                        ),
-                        child:
-                            Row(mainAxisSize: MainAxisSize.min, children: [
-                          AppIcon('plus', size: 14, color: AppColors.fg1),
-                          SizedBox(width: S.s6),
-                          Text('New task',
-                              style: sans(13, color: AppColors.fg1)),
-                        ]),
-                      ),
-                    ),
-                  ),
-                ),
+                newTaskPill(() => panel.currentState?.create()),
               ],
             ),
             Expanded(
@@ -70,6 +47,30 @@ Future<void> openTasksPage(BuildContext context, DaemonClient client,
     ),
   ));
 }
+
+/// The "New task" pill on a pushed Tasks page's back bar.
+Widget newTaskPill(VoidCallback onTap) => GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: SizedBox(
+        height: 44,
+        child: Center(
+          child: Container(
+            height: 32,
+            padding: EdgeInsets.symmetric(horizontal: S.s12),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(R.of(16)),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              AppIcon('plus', size: 14, color: AppColors.fg1),
+              SizedBox(width: S.s6),
+              Text('New task', style: sans(13, color: AppColors.fg1)),
+            ]),
+          ),
+        ),
+      ),
+    );
 
 /// Open tasks the given agents are on, counted once each.
 Future<int> openTaskCountFor(DaemonClient client, Iterable<String> agentIds) async {
@@ -618,14 +619,26 @@ class TasksPanelState extends State<TasksPanel> {
     );
   }
 
-  Widget _phoneHeader() => Padding(
-        padding: EdgeInsets.fromLTRB(M.gutter, S.s16, M.gutter, S.s6),
-        child: Row(children: [
-          Text('Tasks', style: TS.pageTitle()),
-          const Spacer(),
-          ...widget.trailing,
-        ]),
+  /// A pushed page (from a session's tools) gets the back bar and New task;
+  /// the Tasks tab keeps its large title.
+  Widget _phoneHeader() {
+    final nav = Navigator.maybeOf(context);
+    if (nav != null && nav.canPop()) {
+      return MobileBackBar(
+        title: 'Tasks',
+        onBack: () => nav.maybePop(),
+        trailing: [newTaskPill(create), ...widget.trailing],
       );
+    }
+    return Padding(
+      padding: EdgeInsets.fromLTRB(M.gutter, S.s16, M.gutter, S.s6),
+      child: Row(children: [
+        Text('Tasks', style: TS.pageTitle()),
+        const Spacer(),
+        ...widget.trailing,
+      ]),
+    );
+  }
 
   Widget _desktopHeader() => ShellSectionHeader(
         label: 'Tasks',

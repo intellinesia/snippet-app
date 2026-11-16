@@ -37,7 +37,6 @@ import '../window_background.dart';
 import 'dart:io' show File;
 import '../desktop_pick.dart';
 import '../desktop_layout.dart';
-import '../wake_models.dart';
 import 'memory_screen.dart';
 import 'wakes_screen.dart';
 
@@ -657,18 +656,8 @@ class SettingsPanelState extends State<SettingsPanel> {
             subtitle: active == null
                 ? 'Add one to begin'
                 : 'Connected${live == null ? '' : ' · $live live'}',
-            leading: Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: AppColors.tint2,
-                borderRadius: BorderRadius.circular(R.md),
-              ),
-              child: Center(
-                child: Icon(LucideIcons.laptop,
-                    size: 17, color: AppColors.ok),
-              ),
-            ),
+            leading: _SettingsTile(null,
+                iconData: LucideIcons.laptop, ok: active != null),
             onTap: () => widget.onSection?.call(SettingsPage.general),
           ),
         ]),
@@ -1102,6 +1091,28 @@ class SettingsPanelState extends State<SettingsPanel> {
     final isRenaming = _renamingUrl == i.url;
     final compact = kMobile && widget.embedded;
     final canConnect = !isActive && widget.onSelect != null;
+    if (compact && !isRenaming) {
+      // The row is the menu: Connect, Rename and Remove all live behind a tap.
+      return Builder(
+        builder: (anchor) => _V5SettingsRow(
+          label: i.label,
+          subtitle: hostOf(i.url),
+          leading:
+              _SettingsTile(null, iconData: LucideIcons.laptop, ok: isActive),
+          value: isActive ? 'Active' : (canConnect ? 'Connect' : null),
+          trailing: const SizedBox.shrink(),
+          onTap: () => _showMachineMenu(
+            context,
+            anchor: anchor,
+            instance: i,
+            connect: canConnect,
+            onSelect: () => _selectInstance(i),
+            onRename: () => _startRename(i),
+            onRemove: () => _confirmRemove(i),
+          ),
+        ),
+      );
+    }
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1113,8 +1124,7 @@ class SettingsPanelState extends State<SettingsPanel> {
         child: Row(
           children: [
             if (compact)
-              V5IconTile('server',
-                  color: isActive ? AppColors.ok : AppColors.fg2)
+              _SettingsTile(null, iconData: LucideIcons.laptop, ok: isActive)
             else
               IconTile('server', tone: isActive ? Tone.ok : Tone.neutral),
             SizedBox(width: S.s12),
@@ -1148,9 +1158,6 @@ class SettingsPanelState extends State<SettingsPanel> {
               ),
               SizedBox(width: S.s8),
               if (compact) ...[
-                if (isActive || canConnect)
-                  Text(isActive ? 'Active' : 'Connect',
-                      style: sans(14, color: AppColors.fg3)),
                 _machineMenu(i, connect: canConnect),
               ] else ...[
                 if (isActive)
@@ -1353,7 +1360,6 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   bool _notifBusy = false;
   final Map<String, bool> _health = {};
   int? _liveCount;
-  int? _warmActiveCount;
 
   static const _plainPages = {
     SettingsPage.general,
@@ -1488,13 +1494,6 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         setState(() => _liveCount = sessions.where((s) => !s.settled).length);
       }
     } catch (_) {}
-    try {
-      final KeepWarmList warm = await widget.client.keepWarm();
-      if (mounted) {
-        setState(
-            () => _warmActiveCount = warm.entries.where((e) => e.enabled).length);
-      }
-    } catch (_) {}
   }
 
   Future<void> _loadManual() async {
@@ -1527,11 +1526,17 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     if (err != null) toast(context, err);
   }
 
-  void _addMachine() => setState(() {
-        _addingMachine = true;
-        _addMachineError = null;
-        _addMachinePaste.clear();
-      });
+  void _addMachine() {
+    if (widget.v5Desktop) {
+      _openConnectDialog();
+      return;
+    }
+    setState(() {
+      _addingMachine = true;
+      _addMachineError = null;
+      _addMachinePaste.clear();
+    });
+  }
 
   void _closeAddMachine() => setState(() {
         _addingMachine = false;
@@ -1623,21 +1628,21 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
 
   String _pageSubtitle(SettingsPage page) => switch (page) {
         SettingsPage.general => widget.v5Desktop
-            ? 'Computers this app can reach. Sessions run on the selected one.'
+            ? ''
             : 'Machines this app connects to, and how sessions behave.',
         SettingsPage.appearance =>
           'Theme palette, accent colour, UI typeface and code font saved on this device.',
-        SettingsPage.routing =>
-          'Which model does each kind of work, and who steps in when it hits a limit.',
-        SettingsPage.usage =>
-          'Rate limits and token usage across your providers.',
-        SettingsPage.voice => 'Voice notes, transcription and speech services.',
-        SettingsPage.webSearch => 'Let agents search the web and read pages.',
+        SettingsPage.routing => 'Which model does each kind of work',
+        SettingsPage.usage => 'Tokens and rate limits by provider',
+        SettingsPage.voice => '',
+        SettingsPage.webSearch => '',
         _ => '',
       };
 
   Widget? _pageAction(SettingsPage page) {
-    if (widget.v5Desktop && page == SettingsPage.general) return null;
+    if (widget.v5Desktop && page == SettingsPage.general) {
+      return HeaderAction('Add machine', onTap: _openConnectDialog);
+    }
     return switch (page) {
       SettingsPage.general => _addingMachine
           ? null
@@ -1734,40 +1739,55 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     );
   }
 
+  /// Desktop group caption, as `.dk4 .sec`.
+  Widget _v5Caption(String text) => Padding(
+        padding: EdgeInsets.fromLTRB(S.s4, S.s16, 0, S.s6),
+        child: Text(text, style: sans(12, color: AppColors.fg3)),
+      );
+
+  /// A compact desktop row: 22px tile, title with its detail on one line,
+  /// a muted value and a chevron when it leads somewhere.
   Widget _v5Row({
     Widget? leading,
     required String title,
     String? subtitle,
+    String? value,
     Widget? trailing,
     VoidCallback? onTap,
     Color? titleColor,
+    bool chevron = false,
   }) {
-    final body = Padding(
-      padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.of(11)),
-      child: Row(children: [
-        if (leading != null) ...[leading, SizedBox(width: S.s12)],
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(13,
-                      weight: W.label, color: titleColor ?? AppColors.fg1)),
-              if (subtitle != null && subtitle.isNotEmpty) ...[
-                SizedBox(height: S.s2),
-                Text(subtitle,
+    final body = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 36),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: S.of(12), vertical: S.s4),
+        child: Row(children: [
+          if (leading != null) ...[leading, SizedBox(width: S.s8)],
+          Text(title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(13,
+                  weight: W.label, color: titleColor ?? AppColors.fg1)),
+          SizedBox(width: S.s8),
+          Expanded(
+            child: subtitle == null || subtitle.isEmpty
+                ? const SizedBox.shrink()
+                : Text(subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(12, color: AppColors.fg4)),
-              ],
-            ],
+                    style: sans(12, color: AppColors.fg3)),
           ),
-        ),
-        if (trailing != null) ...[SizedBox(width: S.s12), trailing],
-      ]),
+          if (value != null) ...[
+            SizedBox(width: S.s8),
+            Text(value, style: sans(12, color: AppColors.fg3)),
+          ],
+          if (trailing != null) ...[SizedBox(width: S.s8), trailing],
+          if (chevron) ...[
+            SizedBox(width: S.s6),
+            AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+          ],
+        ]),
+      ),
     );
     if (onTap == null) return body;
     return Material(
@@ -1776,16 +1796,32 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     );
   }
 
+  Widget _v5Tile({IconData? iconData, String? icon, bool ok = false}) {
+    final color = ok ? AppColors.ok : AppColors.fg2;
+    return Container(
+      width: 22,
+      height: 22,
+      decoration: BoxDecoration(
+        color: ok ? AppColors.ok.withValues(alpha: 0.13) : AppColors.tint2,
+        borderRadius: BorderRadius.circular(R.sm),
+      ),
+      child: Center(
+        child: iconData != null
+            ? Icon(iconData, size: 14, color: color)
+            : AppIcon(icon!, size: 14, color: color),
+      ),
+    );
+  }
+
   Widget _v5MachineRow(Instance i) {
     final isActive = i.url == widget.active?.url;
     final connected = _health[i.url] ?? isActive;
-    final iconColor = connected ? AppColors.ok : AppColors.fg4;
     if (_renamingUrl == i.url) {
       return Padding(
-        padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.of(9)),
+        padding: EdgeInsets.symmetric(horizontal: S.of(12), vertical: S.s4),
         child: Row(children: [
-          Icon(LucideIcons.laptop, size: 16, color: iconColor),
-          SizedBox(width: S.s12),
+          _v5Tile(iconData: LucideIcons.laptop, ok: isActive),
+          SizedBox(width: S.s8),
           Expanded(
             child: InlineEditField(
               controller: _renameController,
@@ -1799,88 +1835,93 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         ]),
       );
     }
+    final canConnect = !isActive && widget.onSelect != null;
     final live = _liveCount;
-    final sub = isActive
-        ? (live == null
-            ? 'This machine'
-            : 'This machine · $live live session${live == 1 ? '' : 's'}')
-        : hostOf(i.url);
-    return _v5Row(
-      leading: Icon(LucideIcons.laptop, size: 16, color: iconColor),
-      title: i.label.isEmpty ? hostOf(i.url) : i.label,
-      subtitle: sub,
-      onTap: !isActive && widget.onSelect != null
-          ? () => widget.onSelect?.call(i)
-          : null,
-      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text(connected ? 'Connected' : 'Offline',
-            style: sans(13, color: AppColors.fg4)),
-        SizedBox(width: S.s6),
-        _machineMenu(i, connect: !isActive && widget.onSelect != null),
-      ]),
+    final host = hostOf(i.url);
+    return Builder(
+      builder: (anchor) => _v5Row(
+        leading: _v5Tile(iconData: LucideIcons.laptop, ok: isActive),
+        title: i.label.isEmpty ? host : i.label,
+        subtitle: isActive && live != null ? '$host · $live live' : host,
+        value: isActive
+            ? 'Active'
+            : !connected
+                ? 'Offline'
+                : canConnect
+                    ? 'Connect'
+                    : null,
+        // The row is the menu: Connect, Rename and Remove.
+        onTap: () => _showMachineMenu(
+          context,
+          anchor: anchor,
+          instance: i,
+          connect: canConnect,
+          onSelect: () => widget.onSelect?.call(i),
+          onRename: () => _startRename(i),
+          onRemove: () => _confirmRemove(i),
+        ),
+      ),
     );
   }
 
+  Future<void> _pickApprovals() async {
+    final manual = _manual;
+    if (manual == null) return;
+    final picked = await showApprovalsSheet(context, manual: manual);
+    if (picked != null && picked != manual) await _setManual(picked);
+  }
+
+  Future<void> _openConnectDialog() async {
+    final inst = await showDialog<Instance>(
+      context: context,
+      barrierColor: AppColors.modalScrim,
+      builder: (_) => const _ConnectMachineDialog(),
+    );
+    if (inst == null || !mounted) return;
+    await _saveInstances((items) => items
+      ..removeWhere((e) => e.url == inst.url || e.token == inst.token)
+      ..add(inst));
+    widget.onAdd?.call(inst);
+  }
+
   List<Widget> _v5General() {
-    if (_addingMachine) return _addMachineBody();
-    final warmCount = _warmActiveCount;
+    final manual = _manual;
     return [
+      _v5Caption('Machines'),
       _v5Card([
         if (_instances.isEmpty)
           _v5Row(
-            leading: Icon(LucideIcons.laptop, size: 16, color: AppColors.fg4),
+            leading: _v5Tile(iconData: LucideIcons.laptop),
             title: 'No saved machines',
             subtitle: 'Run snippet serve on one and add its link.',
           )
         else
           for (final i in _instances) _v5MachineRow(i),
-        _v5Row(
-          leading: AppIcon('plus', size: 16, color: AppColors.fg4),
-          title: 'Add machine',
-          titleColor: AppColors.fg2,
-          onTap: _addMachine,
-        ),
       ]),
-      SizedBox(height: S.s16),
+      _v5Caption('Approvals'),
       _v5Card([
         _v5Row(
           title: 'Approvals',
           subtitle: 'Applies to every session on this machine',
-          trailing: _manual == null
-              ? const SizedBox.shrink()
-              : _InlineSeg(
-                  labels: const ['Ask', 'Yolo'],
-                  selected: _manual! ? 0 : 1,
-                  onChanged: (i) => _setManual(i == 0),
-                ),
+          value: manual == null ? null : (manual ? 'Ask' : 'Yolo'),
+          chevron: true,
+          onTap: manual == null ? null : _pickApprovals,
         ),
-        if (kCanNotify)
+      ]),
+      if (kCanNotify) ...[
+        _v5Caption('Notifications'),
+        _v5Card([
           _v5Row(
             title: 'Notifications',
-            subtitle: 'Questions and finished tasks',
+            subtitle: 'When a chat needs you or finishes',
             onTap: _notifBusy ? null : () => _toggleNotif(!_notif),
             trailing: _notifBusy
                 ? const DelayedSpinner(size: 18)
                 : SettingsSwitch(
-                    value: _notif,
-                    onChanged: _notifBusy ? null : _toggleNotif),
+                    value: _notif, onChanged: _notifBusy ? null : _toggleNotif),
           ),
-        _v5Row(
-          title: 'Keep sessions warm',
-          subtitle: 'Hold the prompt cache while idle',
-          onTap: widget.onSelectPage != null
-              ? () => widget.onSelectPage!(SettingsPage.keepWarm)
-              : null,
-          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (warmCount != null) ...[
-              Text(warmCount == 0 ? 'Off' : '$warmCount active',
-                  style: sans(13, color: AppColors.fg3)),
-              SizedBox(width: S.s6),
-            ],
-            AppIcon('chevron-right', size: 14, color: AppColors.fg3),
-          ]),
-        ),
-      ]),
+        ]),
+      ],
     ];
   }
 
@@ -2325,46 +2366,97 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
     }
   }
 
+  Future<void> _pick() async {
+    final manual = _manual;
+    if (manual == null) return;
+    final picked = await showApprovalsSheet(context, manual: manual);
+    if (picked != null) await _apply(picked);
+  }
+
   @override
   Widget build(BuildContext context) {
     final manual = _manual;
+    final value = manual == null ? null : (manual ? 'Ask' : 'Yolo');
     if (kMobile) {
-      // Answered on the row: two choices need no menu.
       return _V5SettingsRow(
         label: 'Approvals',
-        leading: Container(
-          width: 30,
-          height: 30,
-          decoration: BoxDecoration(
-            color: AppColors.tint2,
-            borderRadius: BorderRadius.circular(R.md),
-          ),
-          child: Center(
-            child: AppIcon('shield-check', size: 16, color: AppColors.fg2),
-          ),
-        ),
-        trailing: manual == null
-            ? const SizedBox.shrink()
-            : _InlineSeg(
-                labels: const ['Ask', 'Yolo'],
-                selected: manual ? 0 : 1,
-                onChanged: (i) => _apply(i == 0),
-              ),
+        leading: _SettingsTile('shield-check'),
+        value: value,
+        onTap: manual == null ? null : _pick,
       );
     }
     return ListRow(
       title: 'Approvals',
       subtitle: 'Applies to every session on this machine',
       leading: AppIcon('shield', size: 19, color: AppColors.fg3),
-      trailing: manual == null
-          ? const SizedBox.shrink()
-          : _InlineSeg(
-              labels: const ['Ask', 'Yolo'],
-              selected: manual ? 0 : 1,
-              onChanged: (i) => _apply(i == 0),
-            ),
+      onTap: manual == null ? null : _pick,
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (value != null) Text(value, style: sans(13, color: AppColors.fg3)),
+        SizedBox(width: S.s6),
+        AppIcon('chevron-right', size: 14, color: AppColors.fg3),
+      ]),
     );
   }
+}
+
+/// The 30px rounded tile a phone settings row leads with; [ok] tints it for
+/// the machine this app is connected to.
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile(this.icon, {this.iconData, this.ok = false});
+  final String? icon;
+  final IconData? iconData;
+  final bool ok;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = ok ? AppColors.ok : AppColors.fg2;
+    return Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(
+        color: ok ? AppColors.ok.withValues(alpha: 0.13) : AppColors.tint2,
+        borderRadius: BorderRadius.circular(R.md),
+      ),
+      child: Center(
+        child: iconData != null
+            ? Icon(iconData, size: 17, color: color)
+            : AppIcon(icon!, size: 16, color: color),
+      ),
+    );
+  }
+}
+
+/// The Approvals menu: Ask or Yolo for every session on this machine. A bottom
+/// sheet on the phone, a small dialog on desktop. Returns the pick, or null.
+Future<bool?> showApprovalsSheet(BuildContext context, {required bool manual}) {
+  const sub = 'Applies to every session on this machine';
+  Widget option(String label, String detail, bool value) => _V5SettingsRow(
+        label: label,
+        subtitle: detail,
+        onTap: () => Navigator.pop(context, value),
+        trailing: value == manual
+            ? AppIcon('check', size: 16, color: AppColors.accent)
+            : const SizedBox(width: 16),
+      );
+  final group = CardGroupScope(
+    child: ListGroup(children: [
+      option('Ask', 'Pause for approval on each change', true),
+      option('Yolo', 'Run shell and file edits without asking', false),
+    ]),
+  );
+  if (!kMobile) {
+    return showAppSheet<bool>(context,
+        title: 'Approvals',
+        maxWidth: 400,
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text(sub, style: sans(12, color: AppColors.fg3)),
+          SizedBox(height: S.s12),
+          group,
+        ]));
+  }
+  return showAppSheet<bool>(context,
+      title: 'Approvals', subtitle: sub, child: group);
 }
 
 class AppearanceScreen extends StatelessWidget {
@@ -3517,53 +3609,11 @@ class _AppearancePreviewCard extends StatelessWidget {
       );
 }
 
-/// A small two-or-more way switch that lives on a settings row.
-class _InlineSeg extends StatelessWidget {
-  const _InlineSeg({
-    required this.labels,
-    required this.selected,
-    required this.onChanged,
-  });
-
-  final List<String> labels;
-  final int selected;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          color: AppColors.surface3,
-          borderRadius: BorderRadius.circular(R.md),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          for (var i = 0; i < labels.length; i++)
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onChanged(i),
-              child: Container(
-                height: 28,
-                padding: EdgeInsets.symmetric(horizontal: S.s12),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: i == selected ? AppColors.surface1 : null,
-                  borderRadius: BorderRadius.circular(R.sm),
-                ),
-                child: Text(labels[i],
-                    style: sans(13,
-                        weight: i == selected ? W.label : W.body,
-                        color: i == selected ? AppColors.fg1 : AppColors.fg3)),
-              ),
-            ),
-        ]),
-      );
-}
-
 /// v5 `.pgi`: a 46px row, 30px tile, 15px label, 15px muted value, chevron.
 class _V5SettingsRow extends StatelessWidget {
   const _V5SettingsRow({
     required this.label,
-    required this.leading,
+    this.leading,
     this.value,
     this.subtitle,
     this.trailing,
@@ -3571,7 +3621,7 @@ class _V5SettingsRow extends StatelessWidget {
   });
 
   final String label;
-  final Widget leading;
+  final Widget? leading;
   final String? value;
   final String? subtitle;
   final Widget? trailing;
@@ -3585,10 +3635,10 @@ class _V5SettingsRow extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 46),
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: S.s8),
+          padding: EdgeInsets.symmetric(
+              horizontal: leading == null ? S.of(14) : S.s4, vertical: S.s8),
           child: Row(children: [
-            leading,
-            SizedBox(width: S.s12),
+            if (leading != null) ...[leading!, SizedBox(width: S.s12)],
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -3602,7 +3652,7 @@ class _V5SettingsRow extends StatelessWidget {
                     Text(subtitle!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(13, color: AppColors.fg3)),
+                        style: sans(12, color: AppColors.fg3)),
                 ],
               ),
             ),
@@ -3613,13 +3663,156 @@ class _V5SettingsRow extends StatelessWidget {
                 child: Text(v,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(15, color: AppColors.fg3)),
+                    style: sans(13, color: AppColors.fg3)),
               ),
             ],
             SizedBox(width: S.s6),
             trailing ??
                 AppIcon('chevron-right', size: 14, color: AppColors.fg3),
           ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// Desktop "Connect a machine" dialog over the Machines page: the command to
+/// run on the other computer, then the link it prints. Pops the new [Instance].
+class _ConnectMachineDialog extends StatefulWidget {
+  const _ConnectMachineDialog();
+
+  @override
+  State<_ConnectMachineDialog> createState() => _ConnectMachineDialogState();
+}
+
+class _ConnectMachineDialogState extends State<_ConnectMachineDialog> {
+  static const _command = 'snippet serve --enable';
+  final TextEditingController _link = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _link.dispose();
+    super.dispose();
+  }
+
+  Future<void> _connect() async {
+    final raw = _link.text.trim();
+    if (raw.isEmpty || _busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final inst = await _connectMachineFromLink(raw);
+      if (mounted) Navigator.pop(context, inst);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = 'Connection failed: $e';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canConnect = !_busy && _link.text.trim().isNotEmpty;
+    Widget label(String text) => Padding(
+          padding: EdgeInsets.fromLTRB(0, S.s12, 0, S.s4),
+          child: Text(text, style: sans(12, color: AppColors.fg3)),
+        );
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () =>
+            Navigator.pop(context),
+      },
+      child: Center(
+        child: Material(
+          type: MaterialType.transparency,
+          child: Container(
+            width: 440,
+            padding: EdgeInsets.all(S.s16),
+            decoration: BoxDecoration(
+              color: AppColors.surface1,
+              borderRadius: BorderRadius.circular(R.lg),
+              border: Border.all(color: AppColors.border2),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Connect a machine',
+                            style: sans(15,
+                                weight: W.strong, color: AppColors.fg1)),
+                        SizedBox(height: S.s2),
+                        Text('Link this app to a computer running snippet',
+                            style: sans(12, color: AppColors.fg3)),
+                      ],
+                    ),
+                  ),
+                  IconBtn('x',
+                      size: 28,
+                      iconSize: 15,
+                      tooltip: 'Close',
+                      onTap: () => Navigator.pop(context)),
+                ]),
+                label('Run this on that computer'),
+                Container(
+                  height: 40,
+                  padding: EdgeInsets.fromLTRB(S.s12, 0, S.s6, 0),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface2,
+                    borderRadius: BorderRadius.circular(R.md),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(children: [
+                    Expanded(
+                      child: SelectableText(_command,
+                          maxLines: 1, style: mono(13, color: AppColors.fg1)),
+                    ),
+                    Btn('Copy command',
+                        small: true, variant: BtnVariant.secondary, onTap: () {
+                      Clipboard.setData(const ClipboardData(text: _command));
+                      toast(context, 'Copied');
+                    }),
+                  ]),
+                ),
+                label('Paste the link it prints'),
+                SettingsField(
+                  controller: _link,
+                  hint: 'https://…?token=…',
+                  mono: true,
+                  width: 408,
+                  onChanged: (_) => setState(() {}),
+                  onSubmitted: (_) => _connect(),
+                ),
+                if (_error != null) ...[
+                  SizedBox(height: S.s8),
+                  Text(_error!,
+                      style: sans(12, height: 1.4, color: AppColors.danger)),
+                ],
+                SizedBox(height: S.s16),
+                Row(children: [
+                  Expanded(
+                    child: Text('Connection stays on this device',
+                        style: sans(12, color: AppColors.fg3)),
+                  ),
+                  Btn(_busy ? 'Connecting…' : 'Connect',
+                      small: true,
+                      disabled: !canConnect,
+                      onTap: canConnect ? _connect : null),
+                ]),
+              ],
+            ),
+          ),
         ),
       ),
     );

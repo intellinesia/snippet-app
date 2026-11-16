@@ -261,8 +261,8 @@ class _AgentWorkSheetState extends State<AgentWorkSheet> {
               onTap: _sending ? null : () => _chooseAgent(ctx),
               borderRadius: BorderRadius.circular(R.sm),
               child: Padding(
-                padding:
-                    EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(11)),
+                padding: EdgeInsets.symmetric(
+                    horizontal: S.of(10), vertical: S.of(11)),
                 child: Row(children: [
                   AppIcon('agent', size: 15, color: AppColors.fg3),
                   SizedBox(width: S.s8),
@@ -390,11 +390,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   String? _filter;
   int _unread = 0;
 
-  void _loadUnread() => agentInboxUnread(widget.client, widget.agentId)
-      .then((n) {
+  void _loadUnread() =>
+      agentInboxUnread(widget.client, widget.agentId).then((n) {
         if (mounted) setState(() => _unread = n);
-      })
-      .catchError((_) {});
+      }).catchError((_) {});
 
   void _setView(AgentView v) {
     final leftInbox = _view == AgentView.inbox;
@@ -449,8 +448,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   Widget _viewBody() {
     final recordsTop = _noChrome ? 0.0 : StageBar.height;
     final child = switch (_view) {
-      AgentView.thread => KeyedSubtree(
-          key: const ValueKey(AgentView.thread), child: _body()),
+      AgentView.thread =>
+        KeyedSubtree(key: const ValueKey(AgentView.thread), child: _body()),
       _ => KeyedSubtree(
           key: ValueKey(_view),
           child: Padding(
@@ -573,6 +572,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       setState(() => _filter = f.isEmpty ? null : f);
     }
   }
+
   final _input = TextEditingController();
   final _inputFocus = FocusNode();
   final _scroll = ScrollController();
@@ -622,7 +622,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       key: 'agent-thread:${widget.agentId}',
       fetch: () => widget.client.agentThreadPage(peerId: widget.agentId),
       revalidateOn: (e) =>
-          Swr.coordinationForThread(e, _openThreadId) || e['kind'] == 'session_decision',
+          Swr.coordinationForThread(e, _openThreadId) ||
+          e['kind'] == 'session_decision',
       onChange: _sync,
     );
     _events = _thread.data?.events ?? const [];
@@ -937,38 +938,40 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         child: child!,
       ),
       child: Material(
-      color: kMobile ? AppColors.pageCanvas : Colors.transparent,
-      child: _chrome(SafeArea(
-        top: !hideChrome,
-        bottom: false,
-        child: Column(
-          children: [
-            Expanded(
-              child: Stack(
-                clipBehavior: Clip.none,
+        color: kMobile ? AppColors.pageCanvas : Colors.transparent,
+        child: _chrome(
+            SafeArea(
+              top: !hideChrome,
+              bottom: false,
+              child: Column(
                 children: [
-                  Positioned.fill(
-                      child: kMobile
-                          ? _viewBody()
-                          : hideChrome
-                          ? _viewBody()
-                          : TopFadeMask(
-                              clear: StageBar.height - 24,
-                              child: _viewBody())),
-                  if (!hideChrome)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      top: 0,
-                      child: _header(),
+                  Expanded(
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Positioned.fill(
+                            child: kMobile
+                                ? _viewBody()
+                                : hideChrome
+                                    ? _viewBody()
+                                    : TopFadeMask(
+                                        clear: StageBar.height - 24,
+                                        child: _viewBody())),
+                        if (!hideChrome)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            top: 0,
+                            child: _header(),
+                          ),
+                      ],
                     ),
+                  ),
+                  if (_view == AgentView.thread) _composer(),
                 ],
               ),
             ),
-            if (_view == AgentView.thread) _composer(),
-          ],
-        ),
-      ), hideChrome),
+            hideChrome),
       ),
     );
   }
@@ -1026,14 +1029,14 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     }
     final onTap = _view == AgentView.thread
         ? (widget.onDeskInfo ?? _openInfo)
-        : () => _openViewMenu(anchor: kMobile ? null : _headerKey.currentContext);
+        : () =>
+            _openViewMenu(anchor: kMobile ? null : _headerKey.currentContext);
     return ListenableBuilder(
       listenable: widget.client.presence,
       builder: (_, __) {
-        final working = widget.client.presence
-                .presenceForAgentId(widget.agentId)
-                ?.state ==
-            'running';
+        final working =
+            widget.client.presence.presenceForAgentId(widget.agentId)?.state ==
+                'running';
         return KeyedSubtree(
           key: _headerKey,
           child: StageBar(
@@ -1400,13 +1403,17 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                       card is AgentQuestionsCard
                   ? keyedCard
                   : ChatBubbleRow(mine: false, child: keyedCard))
-              : Align(
-                  alignment: Alignment.centerLeft,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 440),
-                    child: keyedCard,
-                  ),
-                );
+              : card is DeskApprovalCard ||
+                      card is DecidedCard ||
+                      card is AgentQuestionsCard
+                  ? keyedCard
+                  : Align(
+                      alignment: Alignment.centerLeft,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 440),
+                        child: keyedCard,
+                      ),
+                    );
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1428,7 +1435,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               if (quotedLine != null)
                 Padding(
                   padding: EdgeInsets.only(
-                      bottom: S.s2, left: mine ? 0 : S.s4, right: mine ? S.s4 : 0),
+                      bottom: S.s2,
+                      left: mine ? 0 : S.s4,
+                      right: mine ? S.s4 : 0),
                   child: quotedLine,
                 ),
               _withTapback(
@@ -1502,7 +1511,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       ? child
       : Center(
           child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 740),
+              constraints: const BoxConstraints(maxWidth: 560),
               child: SizedBox(width: double.infinity, child: child)));
 
   Widget _composerCard() => ComposerCard(
@@ -1535,7 +1544,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               if (!kMobile) _send();
             },
             style: TS.body(AppColors.fg1),
-            decoration: ComposerCard.decoration('Message ${widget.agentName}…'),
+            decoration: ComposerCard.decoration('Message ${widget.agentName}'),
           ),
         ),
         attach: ComposerIconButton(
@@ -1556,6 +1565,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                     _attachments.isNotEmpty ||
                     _voice.isActive) &&
                 !_sending;
+            // Mic alone until there is something to send, as in the desk.
+            if (!canSend && !_sending && kCanRecord) {
+              return const SizedBox.shrink();
+            }
             return ComposerSendButton(
               enabled: canSend,
               sending: _sending,
@@ -1666,8 +1679,6 @@ void openAgentThread(
     ),
   );
 }
-
-
 
 @visibleForTesting
 int debugAgentMessageRowBuilds = 0;

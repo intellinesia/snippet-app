@@ -11,7 +11,6 @@ import '../glass.dart';
 import '../models.dart';
 import '../mochi.dart';
 import '../platform.dart';
-import '../presence.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../screens/agent_appearance.dart' show showAgentAppearance;
@@ -19,9 +18,11 @@ import '../screens/agent_reach_panel.dart' show showAgentReachSettings;
 import '../screens/agent_wake_panel.dart' show showAgentWakeSettings;
 import '../screens/group_messaging.dart' show confirmDeleteGroup;
 import 'agent_cluster.dart';
-import '../screens/agent_profile_panel.dart'
-    show AgentModelRows, showAgentProfileSettings;
-import 'chat_style.dart';
+import '../screens/agent_profile_panel.dart' show showAgentProfileSettings;
+import '../desktop_layout.dart' show SettingsHeader;
+import '../screens/memory_screen.dart' show MemoryScreen;
+import '../settings_form.dart' show SettingsGroup;
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Lets rows inside a docked [AgentInfoPanel] push a nested page instead of
 /// opening a popover or sheet. Absent everywhere else, so the same rows keep
@@ -31,18 +32,27 @@ class DockedInfoNav extends InheritedWidget {
     super.key,
     required this.push,
     required this.pop,
+    this.close,
     required super.child,
   });
 
-  final void Function(String title, WidgetBuilder body) push;
+  /// Opens [body] as a page titled [title]; [actions] sit at the right of its
+  /// header, and [scroll] false hands the body the page height.
+  final void Function(String title, WidgetBuilder body,
+      {List<Widget> actions, bool scroll}) push;
   final VoidCallback pop;
+
+  /// Closes the whole panel, when it can be closed.
+  final VoidCallback? close;
 
   static DockedInfoNav? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<DockedInfoNav>();
 
   @override
   bool updateShouldNotify(DockedInfoNav oldWidget) =>
-      push != oldWidget.push || pop != oldWidget.pop;
+      push != oldWidget.push ||
+      pop != oldWidget.pop ||
+      close != oldWidget.close;
 }
 
 Future<String?> dockedPromptText(BuildContext context,
@@ -84,25 +94,19 @@ Future<T?> dockedPick<T>(BuildContext context,
       title,
       (_) => _CompleteOnDispose(
             done: done,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _InfoCard(children: [
-                  for (final (value, label, icon) in options)
-                    _InfoRow(
-                      label: label,
-                      icon: icon,
-                      trailing: value == selected
-                          ? AppIcon('check', size: 16, color: AppColors.accent)
-                          : null,
-                      onTap: () {
-                        if (!done.isCompleted) done.complete(value);
-                        nav.pop();
-                      },
-                    ),
-                ]),
-              ],
-            ),
+            child: SettingsGroup(children: [
+              for (final (value, label, icon) in options)
+                AgentPageRow(
+                  label: label,
+                  icon: icon,
+                  checked: value == selected,
+                  chevron: false,
+                  onTap: () {
+                    if (!done.isCompleted) done.complete(value);
+                    nav.pop();
+                  },
+                ),
+            ]),
           ));
   return done.future;
 }
@@ -179,7 +183,8 @@ class _DockedPromptState extends State<_DockedPrompt> {
         SizedBox(height: S.s12),
         Align(
           alignment: Alignment.centerRight,
-          child: Btn('Save', small: true, onTap: () => widget.onDone(_text.text)),
+          child:
+              Btn('Save', small: true, onTap: () => widget.onDone(_text.text)),
         ),
       ],
     );
@@ -215,8 +220,9 @@ Future<void> showAgentInfo(
       );
   if (kMobile) {
     return Navigator.of(context, rootNavigator: true).push<void>(
-      _InfoSheetRoute(builder: (ctx) => _PhoneSheet(
-          child: panel(() => Navigator.of(ctx, rootNavigator: true).pop()))),
+      MaterialPageRoute(
+          builder: (ctx) =>
+              panel(() => Navigator.of(ctx, rootNavigator: true).pop())),
     );
   }
   return _showDesktopInfo(context, panel);
@@ -240,8 +246,10 @@ Future<void> showGroupInfo(
       );
   if (kMobile) {
     return Navigator.of(context, rootNavigator: true).push<void>(
-      _InfoSheetRoute(builder: (ctx) => _PhoneSheet(
-          child: panel(() => Navigator.of(ctx, rootNavigator: true).pop()))),
+      _InfoSheetRoute(
+          builder: (ctx) => _PhoneSheet(
+              child:
+                  panel(() => Navigator.of(ctx, rootNavigator: true).pop()))),
     );
   }
   return _showDesktopInfo(context, panel);
@@ -297,8 +305,10 @@ class AgentInfoPanel extends StatefulWidget {
 class _AgentInfoPanelState extends State<AgentInfoPanel> {
   final _navKey = GlobalKey<NavigatorState>();
 
-  void _pushNested(String title, WidgetBuilder body) {
-    _navKey.currentState?.push(_NestedPageRoute(title: title, builder: body));
+  void _pushNested(String title, WidgetBuilder body,
+      {List<Widget> actions = const [], bool scroll = true}) {
+    _navKey.currentState?.push(_NestedPageRoute(
+        title: title, builder: body, actions: actions, scroll: scroll));
   }
 
   void _popNested() => _navKey.currentState?.maybePop();
@@ -344,9 +354,8 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
   Future<void> _deleteAgent(BuildContext ctx) async {
     final agent = widget.agent;
     if (agent == null) return;
-    final name = agent.displayName.trim().isEmpty
-        ? agent.id
-        : agent.displayName.trim();
+    final name =
+        agent.displayName.trim().isEmpty ? agent.id : agent.displayName.trim();
     final ok = await confirmAction(ctx,
         title: 'Delete $name?',
         body:
@@ -364,253 +373,447 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     }
   }
 
-  Widget _statusLine() {
-    final fallback = widget.agent?.status ?? 'Active';
-    return ListenableBuilder(
-      listenable: widget.client.presence,
-      builder: (_, __) {
-        final p = widget.client.presence.presenceForAgentId(widget.agentId);
-        final s = p != null ? PresenceStore.chatWord(p) : fallback;
-        final text = s.isEmpty
-            ? 'Active'
-            : s[0].toUpperCase() + s.substring(1);
-        return Text(text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: sans(13, color: AppColors.fg3));
-      },
-    );
-  }
-
   bool get _mc =>
       widget.agentId == 'mission-control' ||
       (widget.agent?.isMissionControl ?? false);
 
-  Widget _groupLabel(String text) => Padding(
-        padding: EdgeInsets.fromLTRB(S.s2, S.s4, 0, S.s6),
-        child: Text(text, style: sans(12, weight: W.label, color: AppColors.fg3)),
-      );
+  void _go(VoidCallback open) {
+    // On the phone the page covers the thread, so it leaves before the view changes.
+    if (!widget.docked && kMobile) _close();
+    open();
+  }
 
-  /// Desktop dock for a task agent: Agent settings, then Work destinations.
-  Widget _dockedGroups(BuildContext context, CoordinationAgent agent) {
+  void _openMemory(BuildContext ctx) {
+    final open = widget.onOpenMemory;
+    if (open != null) return _go(open);
+    DockedInfoNav.maybeOf(ctx)?.push(
+        'Memory',
+        (_) => MemoryScreen(
+            client: widget.client,
+            embedded: true,
+            hideBack: true,
+            initialKey: 'agent:${widget.agentId}'),
+        scroll: false);
+  }
+
+  void _openAppearance(BuildContext ctx) => showAgentAppearance(
+      kMobile ? context : ctx, widget.client, widget.agentId, widget.name);
+
+  /// The agent page: who it is, then its settings, then where its work lives.
+  Widget _groups(BuildContext ctx) {
+    final agent = widget.agent;
+    final mc = _mc;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _groupLabel('Agent'),
-        _InfoCard(children: [
-          _InfoRow(
-              label: 'Wakes and reporting',
-              subtitle: 'When it wakes and who it tells',
-              icon: 'calendar-clock',
-              onTap: () => showAgentWakeSettings(context,
-                  client: widget.client,
-                  owner: widget.agentId,
-                  name: widget.name,
-                  onChanged: widget.onChanged)),
-          _InfoRow(
+        if (mc && widget.onCompact != null)
+          SettingsGroup(children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: S.s4),
+              child: _ContextMeter(
+                  used: widget.contextUsed,
+                  window: widget.contextWindow,
+                  onCompact: widget.onCompact!),
+            ),
+          ]),
+        const AgentPageCaption('Agent'),
+        SettingsGroup(children: [
+          if (mc && widget.onAutonomy != null)
+            AgentPageRow(
+                label: 'Automated wakes',
+                subtitle: 'What wakes it without you',
+                icon: 'activity',
+                onTap: widget.onAutonomy),
+          if (mc && widget.onScheduled != null)
+            AgentPageRow(
+                label: 'Scheduled',
+                subtitle: 'Recurring goals and messages',
+                icon: 'scheduled',
+                onTap: widget.onScheduled),
+          if (!mc)
+            AgentPageRow(
+                label: 'Wakes and reporting',
+                subtitle: 'When it wakes and who it tells',
+                icon: 'repeat',
+                onTap: () => showAgentWakeSettings(ctx,
+                    client: widget.client,
+                    owner: widget.agentId,
+                    name: widget.name,
+                    onChanged: widget.onChanged)),
+          AgentPageRow(
               label: 'How it reaches you',
               subtitle: 'Notifications and where each kind goes',
               icon: 'bell',
-              onTap: () => showAgentReachSettings(context,
+              onTap: () => showAgentReachSettings(ctx,
                   client: widget.client,
                   agentId: widget.agentId,
                   name: widget.name)),
-          AgentModelRows(
-            client: widget.client,
-            agent: agent,
-            name: widget.name,
-            onChanged: widget.onChanged,
-          ),
-          _InfoRow(
-              label: 'Nickname',
-              subtitle: 'What it is called here',
-              icon: 'edit',
-              value: agent.nickname ?? '',
-              onTap: () => _editNickname(context)),
-          _InfoRow(
+          if (agent != null && !mc)
+            AgentPageRow(
+                label: 'Inference profile',
+                subtitle: 'The model it runs on',
+                icon: 'cpu',
+                onTap: () => showAgentProfileSettings(ctx,
+                    client: widget.client,
+                    agent: agent,
+                    name: widget.name,
+                    onChanged: widget.onChanged)),
+          if (agent != null && !mc)
+            AgentPageRow(
+                label: 'Nickname',
+                subtitle: 'What it is called here',
+                icon: 'edit',
+                onTap: () => _editNickname(ctx)),
+          AgentPageRow(
               label: 'Appearance',
               subtitle: 'Avatar and colour across the app',
-              icon: 'sparkles',
-              onTap: () => showAgentAppearance(
-                  context, widget.client, widget.agentId, widget.name)),
-          _DangerRow(
-              label: 'Delete agent',
-              subtitle: 'Removes its identity and notes',
-              onTap: () => _deleteAgent(context)),
+              iconData: LucideIcons.star,
+              onTap: () => _openAppearance(ctx)),
+          if (agent != null && !mc)
+            AgentPageRow(
+                label: 'Delete agent',
+                subtitle: 'Removes its identity and notes',
+                icon: 'trash',
+                danger: true,
+                onTap: () => _deleteAgent(ctx)),
         ]),
-        SizedBox(height: S.s8),
-        _groupLabel('Work'),
-        _InfoCard(children: [
+        const AgentPageCaption('Work'),
+        SettingsGroup(children: [
           if (widget.onOpenInbox != null)
-            _InfoRow(
+            AgentPageRow(
                 label: 'Inbox',
                 subtitle: 'Everything sent to this agent',
                 icon: 'inbox',
-                onTap: widget.onOpenInbox),
+                onTap: () => _go(widget.onOpenInbox!)),
           if (widget.onOpenBoard != null)
-            _InfoRow(
+            AgentPageRow(
                 label: 'Board',
                 subtitle: 'What it dispatched, reported and noted',
-                icon: 'kanban',
-                onTap: widget.onOpenBoard),
-          if (widget.onOpenDesk != null)
-            _InfoRow(
+                iconData: LucideIcons.columns3,
+                onTap: () => _go(widget.onOpenBoard!)),
+          if (widget.onOpenDesk != null && !mc)
+            AgentPageRow(
                 label: 'Desk session',
                 subtitle: 'The conversation where its mail arrives',
-                icon: 'terminal',
-                onTap: widget.onOpenDesk),
-          if (widget.onOpenMemory != null)
-            _InfoRow(
-                label: 'Memory',
-                subtitle: 'What this agent remembers',
-                icon: 'brain',
-                onTap: widget.onOpenMemory),
-        ]),
-        _InfoCard(children: [
-          _CopyRow(label: 'Agent ID', value: widget.agentId),
+                iconData: LucideIcons.messageCircle,
+                onTap: () => _go(widget.onOpenDesk!)),
+          AgentPageRow(
+              label: 'Memory',
+              subtitle: 'What this agent remembers',
+              iconData: LucideIcons.book,
+              onTap: () => _openMemory(ctx)),
         ]),
       ],
     );
   }
 
-  Widget _infoTab(BuildContext context) {
+  Widget _hero() {
     final agent = widget.agent;
-    if (widget.docked && !kMobile && agent != null && !_mc) {
-      return _dockedGroups(context, agent);
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (_mc && widget.onCompact != null)
-          _InfoCard(children: [
-            _ContextMeter(
-                used: widget.contextUsed,
-                window: widget.contextWindow,
-                onCompact: widget.onCompact!),
-          ]),
-        if (_mc && (widget.onAutonomy != null || widget.onScheduled != null))
-          _InfoCard(children: [
-            if (widget.onAutonomy != null)
-              _InfoRow(
-                  label: 'Automated wakes',
-                  icon: 'activity',
-                  onTap: widget.onAutonomy),
-            if (widget.onScheduled != null)
-              _InfoRow(
-                  label: 'Scheduled',
-                  icon: 'scheduled',
-                  onTap: widget.onScheduled),
-          ]),
-        if (agent != null && !_mc)
-          _InfoCard(children: [
-            AgentModelRows(
-              client: widget.client,
-              agent: agent,
-              name: widget.name,
-              onChanged: widget.onChanged,
+    final sub = _mc
+        ? 'Coordinator'
+        : ((agent?.profile ?? '').trim().isNotEmpty
+            ? agent!.profile!.trim()
+            : 'Routing default');
+    return Semantics(
+      label: '${widget.name}, $sub',
+      excludeSemantics: true,
+      child: GestureDetector(
+        // The id is still one long press away for scripts and the CLI.
+        onLongPress: () {
+          Clipboard.setData(ClipboardData(text: widget.agentId));
+          toast(context, 'Agent ID copied');
+        },
+        child: Padding(
+          padding: kMobile
+              ? EdgeInsets.fromLTRB(S.s4, S.s8, S.s4, S.s16)
+              : EdgeInsets.fromLTRB(S.s4, S.s4, S.s4, S.s12),
+          child: Row(children: [
+            AgentMochi(widget.agentId, size: 64),
+            SizedBox(width: S.s16),
+            Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            sans(20, weight: W.strong, color: AppColors.fg1)),
+                    SizedBox(height: S.s2),
+                    Text(sub,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13, color: AppColors.fg3)),
+                  ]),
             ),
           ]),
-        if (agent != null)
-          _InfoCard(children: [
-            if (!agent.isMissionControl)
-              _InfoRow(
-                  label: 'Nickname',
-                  icon: 'edit',
-                  value: agent.nickname ?? '',
-                  onTap: () => _editNickname(context)),
-            if (widget.onOpenMemory != null)
-              _InfoRow(
-                  label: 'Memory',
-                  icon: 'brain',
-                  onTap: widget.onOpenMemory),
-            _InfoRow(
-                label: 'Appearance',
-                icon: 'sparkles',
-                onTap: () => showAgentAppearance(
-                    context, widget.client, widget.agentId, widget.name)),
-            if (!agent.isMissionControl)
-              _InfoRow(
-                  label: 'Wakes and reporting',
-                  icon: 'calendar-clock',
-                  onTap: () => showAgentWakeSettings(context,
-                      client: widget.client,
-                      owner: widget.agentId,
-                      name: widget.name,
-                      onChanged: widget.onChanged)),
-            _InfoRow(
-                label: 'How it reaches you',
-                icon: 'bell',
-                onTap: () => showAgentReachSettings(context,
-                    client: widget.client,
-                    agentId: widget.agentId,
-                    name: widget.name)),
-          ]),
-        _InfoCard(children: [
-          _CopyRow(label: 'Agent ID', value: widget.agentId),
-        ]),
-        if (widget.agentId != 'mission-control')
-          _InfoCard(children: [
-            _DangerRow(
-                label: 'Delete agent', onTap: () => _deleteAgent(context)),
-          ]),
-      ],
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final agent = widget.agent;
-    final actions = <_CircleAction>[
-      if (widget.onOpenInbox != null)
-        _CircleAction('inbox', 'Inbox', () {
-          if (!widget.docked) _close();
-          widget.onOpenInbox!();
-        }),
-      if (widget.onOpenBoard != null)
-        _CircleAction('kanban', 'Board', () {
-          if (!widget.docked) _close();
-          widget.onOpenBoard!();
-        }),
-      if (widget.onOpenDesk != null && !_mc)
-        _CircleAction('terminal', 'Desk', () {
-          if (!widget.docked) _close();
-          widget.onOpenDesk!();
-        }),
-    ];
-    Widget info(BuildContext ctx) => _InfoFrame(
-          onClose: widget.docked ? null : _close,
-          edit: agent == null || _mc
-              ? null
-              : _EditPill(onTap: () => showAgentProfileSettings(
-                    ctx,
-                    client: widget.client,
-                    agent: agent,
-                    name: widget.name,
-                    onChanged: widget.onChanged,
-                  )),
-          avatar: AgentDisc(id: widget.agentId, size: kMobile ? 88 : 64),
-          name: widget.name,
-          status: _statusLine(),
-          actions: actions,
-          tabs: const [],
-          tab: 0,
-          onTab: (_) {},
-          body: _infoTab(ctx),
+    Widget root(BuildContext ctx) => _AgentPageFrame(
+          title: widget.name,
+          onBack: widget.docked || !kMobile ? null : _close,
+          onClose: widget.docked || !kMobile ? widget.onClose : null,
+          children: [_hero(), _groups(ctx)],
         );
-    if (!widget.docked) return info(context);
-    Widget docked(BuildContext ctx) => !kMobile
-        ? _DockedAgentFrame(
-            name: widget.name,
-            onClose: widget.onClose,
-            avatar: AgentDisc(id: widget.agentId, size: 64),
-            subtitle: agent?.profile ?? 'Routing default',
-            body: _infoTab(ctx),
-          )
-        : info(ctx);
     return DockedInfoNav(
       push: _pushNested,
       pop: _popNested,
-      child: _DockedNavigator(navKey: _navKey, root: docked),
+      close: widget.onClose,
+      child: NavigatorPopHandler<Object?>(
+        onPopWithResult: (_) => _navKey.currentState?.maybePop(),
+        child: _DockedNavigator(navKey: _navKey, root: root),
+      ),
+    );
+  }
+}
+
+/// One page of the agent panel: the subHead on phones (back circle and title),
+/// the 40px drawer bar on desktop, then a scrolling column of groups.
+class _AgentPageFrame extends StatelessWidget {
+  const _AgentPageFrame({
+    required this.title,
+    required this.children,
+    this.onBack,
+    this.onClose,
+    this.actions = const [],
+    this.scroll = true,
+  });
+
+  final String title;
+  final List<Widget> children;
+  final VoidCallback? onBack;
+  final VoidCallback? onClose;
+  final List<Widget> actions;
+  final bool scroll;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    final body = scroll
+        ? ListView(
+            physics: kMobile
+                ? const BouncingScrollPhysics()
+                : const ClampingScrollPhysics(),
+            padding: kMobile
+                ? EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s24 + bottom)
+                : EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s24),
+            children: children,
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [for (final c in children) Expanded(child: c)]);
+    final Widget head;
+    if (kMobile) {
+      head = Padding(
+        padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s16, S.s4),
+        child: SettingsHeader(
+          title: title,
+          compact: true,
+          onBack: onBack ?? () => Navigator.of(context).maybePop(),
+          actions: actions,
+        ),
+      );
+    } else {
+      head = Container(
+        height: 40,
+        padding: EdgeInsets.fromLTRB(onBack != null ? S.s6 : S.s16, 0, S.s8, 0),
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.line))),
+        child: Row(children: [
+          if (onBack != null) ...[
+            IconBtn('chevron-left',
+                size: 28, iconSize: 15, tooltip: 'Back', onTap: onBack),
+            SizedBox(width: S.s2),
+          ],
+          Expanded(
+            child: Text(title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(13, weight: W.strong, color: AppColors.fg1)),
+          ),
+          for (final a in actions) ...[a, SizedBox(width: S.s4)],
+          if (onClose != null)
+            IconBtn('x',
+                size: 28, iconSize: 14, tooltip: 'Close', onTap: onClose),
+        ]),
+      );
+    }
+    return Material(
+      color: kMobile ? AppColors.bg : Colors.transparent,
+      child: SafeArea(
+        bottom: false,
+        top: kMobile,
+        child: Column(children: [head, Expanded(child: body)]),
+      ),
+    );
+  }
+}
+
+/// A group caption on the agent pages, sentence case and quiet; it sits a
+/// few pixels inside the group's edge.
+class AgentPageCaption extends StatelessWidget {
+  const AgentPageCaption(this.text, {super.key});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: kMobile
+            ? EdgeInsets.fromLTRB(S.s4, S.s2, S.s4, S.s6)
+            : EdgeInsets.fromLTRB(S.s2, S.s2, S.s2, S.s4),
+        child: Semantics(
+          header: true,
+          child:
+              Text(text, style: sans(kMobile ? 13 : 12, color: AppColors.fg3)),
+        ),
+      );
+}
+
+/// A row of the agent pages, after the round 5 `.sitem`: a 30px icon tile,
+/// 15px title over a 12px line on phones; a 22px tile with the line inline at
+/// 32px on desktop.
+class AgentPageRow extends StatelessWidget {
+  const AgentPageRow({
+    super.key,
+    required this.label,
+    this.subtitle,
+    this.icon,
+    this.iconData,
+    this.value,
+    this.valueMono = false,
+    this.trailing,
+    this.onTap,
+    this.danger = false,
+    this.checked = false,
+    this.selected = false,
+    this.chevron,
+  });
+
+  final String label;
+  final String? subtitle;
+  final String? icon;
+  final IconData? iconData;
+  final String? value;
+  final bool valueMono;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final bool danger;
+
+  /// The chosen row of a pick list: an accent tick instead of the chevron.
+  final bool checked;
+
+  /// The current choice of a pick list: a faint accent wash and accent tile.
+  final bool selected;
+
+  /// Defaults to showing when the row opens something, and never for danger.
+  final bool? chevron;
+
+  @override
+  Widget build(BuildContext context) {
+    final phone = kMobile;
+    final labelColor = danger ? AppColors.danger : AppColors.fg1;
+    final hasIcon = icon != null || iconData != null;
+    final tileSize = phone ? 30.0 : 22.0;
+    final glyph = phone ? 16.0 : 14.0;
+    final glyphColor = selected ? AppColors.accent : AppColors.fg2;
+    final tile = !hasIcon
+        ? null
+        : Container(
+            width: tileSize,
+            height: tileSize,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+                color: selected
+                    ? AppColors.accent.withValues(alpha: 0.14)
+                    : AppColors.surface2,
+                borderRadius: BorderRadius.circular(R.of(phone ? 9 : 6))),
+            child: iconData != null
+                ? Icon(iconData, size: glyph, color: glyphColor)
+                : AppIcon(icon!, size: glyph, color: glyphColor),
+          );
+    final sub = subtitle != null && subtitle!.isNotEmpty ? subtitle : null;
+    final title = Text(label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: sans(phone ? 15 : 13, weight: W.label, color: labelColor));
+    final Widget text = phone
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              title,
+              if (sub != null)
+                Text(sub,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12, color: AppColors.fg3)),
+            ],
+          )
+        : Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+                Flexible(flex: 0, child: title),
+                if (sub != null) ...[
+                  SizedBox(width: S.s8),
+                  Flexible(
+                    child: Text(sub,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12, color: AppColors.fg3)),
+                  ),
+                ],
+              ]);
+    final v = value;
+    final showChevron =
+        !checked && trailing == null && (chevron ?? (onTap != null && !danger));
+    final row = ConstrainedBox(
+      constraints: BoxConstraints(minHeight: phone ? 52 : 32),
+      child: Padding(
+        padding: phone
+            ? EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.s8)
+            : EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s4),
+        child: Row(children: [
+          if (tile != null) ...[tile, SizedBox(width: phone ? S.s12 : S.s8)],
+          Expanded(child: text),
+          if (v != null && v.isNotEmpty) ...[
+            SizedBox(width: S.s8),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: phone ? 150 : 220),
+              child: Text(v,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: valueMono
+                      ? mono(12, color: AppColors.fg3)
+                      : sans(phone ? 12.5 : 12, color: AppColors.fg3)),
+            ),
+          ],
+          if (trailing != null) ...[SizedBox(width: S.s8), trailing!],
+          if (checked) ...[
+            SizedBox(width: S.s8),
+            AppIcon('check', size: phone ? 16 : 14, color: AppColors.accent),
+          ],
+          if (showChevron) ...[
+            SizedBox(width: S.s6),
+            AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+          ],
+        ]),
+      ),
+    );
+    final shown = selected
+        ? ColoredBox(
+            color: AppColors.accent.withValues(alpha: 0.07), child: row)
+        : row;
+    if (onTap == null) return shown;
+    return Semantics(
+      button: true,
+      selected: selected || checked,
+      child: InkWell(onTap: onTap, child: shown),
     );
   }
 }
@@ -647,8 +850,10 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   bool _busy = false;
   final _navKey = GlobalKey<NavigatorState>();
 
-  void _pushNested(String title, WidgetBuilder body) {
-    _navKey.currentState?.push(_NestedPageRoute(title: title, builder: body));
+  void _pushNested(String title, WidgetBuilder body,
+      {List<Widget> actions = const [], bool scroll = true}) {
+    _navKey.currentState?.push(_NestedPageRoute(
+        title: title, builder: body, actions: actions, scroll: scroll));
   }
 
   void _popNested() => _navKey.currentState?.maybePop();
@@ -660,7 +865,8 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   }
 
   /// Docked: a nested page in the panel. Elsewhere: a sheet.
-  Future<String?> _pickFrom(String title, List<Widget> Function(void Function(String)) rows) {
+  Future<String?> _pickFrom(
+      String title, List<Widget> Function(void Function(String)) rows) {
     if (widget.docked && _navKey.currentState != null) {
       final done = Completer<String?>();
       _navKey.currentState!
@@ -835,8 +1041,8 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
     return _LongPressRow(
       onLongPress: _busy || m.isHuman
           ? null
-          : () => _update(() => widget.client
-              .updateGroup(_group.id, removeMembers: [m.id])),
+          : () => _update(() =>
+              widget.client.updateGroup(_group.id, removeMembers: [m.id])),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 48),
         child: Padding(
@@ -909,7 +1115,8 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
       edit: _EditPill(onTap: _busy ? null : _rename),
       avatar: AgentCluster(ids: _group.agentIds, size: kMobile ? 88 : 64),
       name: title,
-      status: Text('${_group.members.length} '
+      status: Text(
+          '${_group.members.length} '
           '${_group.members.length == 1 ? 'member' : 'members'}',
           style: sans(13, color: AppColors.fg3)),
       actions: actions,
@@ -963,160 +1170,87 @@ class _InfoFrame extends StatelessWidget {
     return Material(
       type: MaterialType.transparency,
       child: Column(children: [
-      SizedBox(
-        height: 52,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: S.s16),
-          child: Row(children: [
-            if (onClose != null)
-              _GlassCircle(onTap: onClose!, icon: 'x', label: 'Close'),
-            const Spacer(),
-            if (edit != null) edit!,
-          ]),
-        ),
-      ),
-      Padding(
-        padding: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, 0),
-        child: Column(children: [
-          avatar,
-          SizedBox(height: S.s12),
-          Text(name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: sans(kMobile ? 26 : 20,
-                  weight: W.strong, color: AppColors.fg1)),
-          SizedBox(height: S.s4),
-          status,
-          if (actions.isNotEmpty) ...[
-            SizedBox(height: S.s16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (final a in actions) ...[
-                  Flexible(child: _ActionCircle(action: a)),
-                  if (a != actions.last) SizedBox(width: S.s12),
-                ],
-              ],
-            ),
-          ],
-          SizedBox(height: S.s20),
-          if (tabs.length > 1) ...[
-            _Segmented(labels: tabs, index: tab, onSelect: onTab),
-            SizedBox(height: S.s16),
-          ],
-        ]),
-      ),
-      Expanded(
-        child: ListView(
-          physics: kMobile
-              ? const BouncingScrollPhysics()
-              : const ClampingScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-              S.s16, 0, S.s16, S.s24 + MediaQuery.paddingOf(context).bottom),
-          children: [
-            AnimatedSwitcher(
-              duration:
-                  reduced ? Motion.fast : const Duration(milliseconds: 180),
-              switchInCurve: Motion.enter,
-              switchOutCurve: Motion.exit,
-              transitionBuilder: (child, anim) {
-                final curved =
-                    CurvedAnimation(parent: anim, curve: Motion.enter);
-                if (reduced) {
-                  return FadeTransition(opacity: curved, child: child);
-                }
-                return FadeTransition(
-                  opacity: curved,
-                  child: SlideTransition(
-                    position: Tween(
-                            begin: const Offset(0, 0.02), end: Offset.zero)
-                        .animate(curved),
-                    child: child,
-                  ),
-                );
-              },
-              child: KeyedSubtree(key: ValueKey(tab), child: body),
-            ),
-          ],
-        ),
-      ),
-    ]),
-    );
-  }
-}
-
-/// Desktop dock frame: a 38px title bar, then the avatar beside name and model.
-class _DockedAgentFrame extends StatelessWidget {
-  const _DockedAgentFrame({
-    required this.name,
-    required this.onClose,
-    required this.avatar,
-    required this.subtitle,
-    required this.body,
-  });
-
-  final String name;
-  final VoidCallback? onClose;
-  final Widget avatar;
-  final String subtitle;
-  final Widget body;
-
-  @override
-  Widget build(BuildContext context) => Material(
-        type: MaterialType.transparency,
-        child: Column(children: [
-          Container(
-            height: 38,
-            padding: EdgeInsets.fromLTRB(S.of(14), 0, S.s8, 0),
-            decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: AppColors.line))),
+        SizedBox(
+          height: 52,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: S.s16),
             child: Row(children: [
-              Expanded(
-                child: Text(name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13, weight: W.label, color: AppColors.fg1)),
-              ),
               if (onClose != null)
-                IconBtn('x',
-                    size: 28, iconSize: 14, tooltip: 'Close agent panel', onTap: onClose),
+                _GlassCircle(onTap: onClose!, icon: 'x', label: 'Close'),
+              const Spacer(),
+              if (edit != null) edit!,
             ]),
           ),
-          Expanded(
-            child: ListView(
-              physics: const ClampingScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(S.s12, S.s16, S.s12, S.s24),
-              children: [
-                Padding(
-                  padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s16),
-                  child: Row(children: [
-                    avatar,
-                    SizedBox(width: S.s12),
-                    Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: sans(20,
-                                    weight: W.strong, color: AppColors.fg1)),
-                            SizedBox(height: S.s2),
-                            Text(subtitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: sans(13, color: AppColors.fg3)),
-                          ]),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, 0),
+          child: Column(children: [
+            avatar,
+            SizedBox(height: S.s12),
+            Text(name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: sans(kMobile ? 26 : 20,
+                    weight: W.strong, color: AppColors.fg1)),
+            SizedBox(height: S.s4),
+            status,
+            if (actions.isNotEmpty) ...[
+              SizedBox(height: S.s16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (final a in actions) ...[
+                    Flexible(child: _ActionCircle(action: a)),
+                    if (a != actions.last) SizedBox(width: S.s12),
+                  ],
+                ],
+              ),
+            ],
+            SizedBox(height: S.s20),
+            if (tabs.length > 1) ...[
+              _Segmented(labels: tabs, index: tab, onSelect: onTab),
+              SizedBox(height: S.s16),
+            ],
+          ]),
+        ),
+        Expanded(
+          child: ListView(
+            physics: kMobile
+                ? const BouncingScrollPhysics()
+                : const ClampingScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+                S.s16, 0, S.s16, S.s24 + MediaQuery.paddingOf(context).bottom),
+            children: [
+              AnimatedSwitcher(
+                duration:
+                    reduced ? Motion.fast : const Duration(milliseconds: 180),
+                switchInCurve: Motion.enter,
+                switchOutCurve: Motion.exit,
+                transitionBuilder: (child, anim) {
+                  final curved =
+                      CurvedAnimation(parent: anim, curve: Motion.enter);
+                  if (reduced) {
+                    return FadeTransition(opacity: curved, child: child);
+                  }
+                  return FadeTransition(
+                    opacity: curved,
+                    child: SlideTransition(
+                      position:
+                          Tween(begin: const Offset(0, 0.02), end: Offset.zero)
+                              .animate(curved),
+                      child: child,
                     ),
-                  ]),
-                ),
-                body,
-              ],
-            ),
+                  );
+                },
+                child: KeyedSubtree(key: ValueKey(tab), child: body),
+              ),
+            ],
           ),
-        ]),
-      );
+        ),
+      ]),
+    );
+  }
 }
 
 class _GlassCircle extends StatelessWidget {
@@ -1136,8 +1270,8 @@ class _GlassCircle extends StatelessWidget {
           child: Glass(
             child: SizedBox.square(
               dimension: 36,
-              child: Center(
-                  child: AppIcon(icon, size: 16, color: AppColors.fg1)),
+              child:
+                  Center(child: AppIcon(icon, size: 16, color: AppColors.fg1)),
             ),
           ),
         ),
@@ -1156,8 +1290,7 @@ class _EditPill extends StatelessWidget {
         child: Glass(
           radius: BorderRadius.circular(R.pill),
           child: Padding(
-            padding:
-                EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s6),
+            padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s6),
             child: Text('Edit',
                 style: sans(13, weight: W.label, color: AppColors.fg1)),
           ),
@@ -1172,30 +1305,30 @@ class _ActionCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: action.label,
-        excludeSemantics: true,
-        child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: action.onTap,
-        child: SizedBox(
-        width: kMobile ? 64 : 56,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Glass(
-            child: SizedBox.square(
-              dimension: kMobile ? 48 : 40,
-              child: Center(
-                  child: AppIcon(action.icon,
-                      size: kMobile ? 20 : 17, color: AppColors.fg1)),
-            ),
-          ),
-          SizedBox(height: S.s6),
-          Text(action.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(11, color: AppColors.fg3)),
-        ]),
-      )));
+      button: true,
+      label: action.label,
+      excludeSemantics: true,
+      child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: action.onTap,
+          child: SizedBox(
+            width: kMobile ? 64 : 56,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Glass(
+                child: SizedBox.square(
+                  dimension: kMobile ? 48 : 40,
+                  child: Center(
+                      child: AppIcon(action.icon,
+                          size: kMobile ? 20 : 17, color: AppColors.fg1)),
+                ),
+              ),
+              SizedBox(height: S.s6),
+              Text(action.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(11, color: AppColors.fg3)),
+            ]),
+          )));
 }
 
 class _Segmented extends StatelessWidget {
@@ -1220,8 +1353,8 @@ class _Segmented extends StatelessWidget {
               onTap: i == index ? null : () => onSelect(i),
               child: AnimatedContainer(
                 duration: reduced ? Duration.zero : Motion.fast,
-                padding: EdgeInsets.symmetric(
-                    horizontal: S.s12, vertical: S.s6),
+                padding:
+                    EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s6),
                 decoration: BoxDecoration(
                   color: i == index
                       ? AppColors.fg1.withValues(alpha: 0.12)
@@ -1312,30 +1445,33 @@ class _InfoCard extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: EdgeInsets.only(bottom: S.s12),
         child: Tactile(
-        radius: BorderRadius.circular(R.of(16)),
-        child: Material(
-        color: kMobile ? AppColors.surface2.withValues(alpha: 0.6) : AppColors.surface1,
-        shape: kMobile
-            ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.of(16)))
-            : RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(R.of(12)),
-                side: BorderSide(color: AppColors.line)),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var i = 0; i < children.length; i++) ...[
-              if (i > 0)
-                Divider(
-                    height: 1,
-                    thickness: 1,
-                    indent: kMobile ? S.s16 : 0,
-                    endIndent: 0),
-              children[i],
-            ],
-          ],
-        ),
-        ),
+          radius: BorderRadius.circular(R.of(16)),
+          child: Material(
+            color: kMobile
+                ? AppColors.surface2.withValues(alpha: 0.6)
+                : AppColors.surface1,
+            shape: kMobile
+                ? RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(R.of(16)))
+                : RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(R.of(12)),
+                    side: BorderSide(color: AppColors.line)),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < children.length; i++) ...[
+                  if (i > 0)
+                    Divider(
+                        height: 1,
+                        thickness: 1,
+                        indent: kMobile ? S.s16 : 0,
+                        endIndent: 0),
+                  children[i],
+                ],
+              ],
+            ),
+          ),
         ),
       );
 }
@@ -1345,19 +1481,13 @@ class _InfoRow extends StatelessWidget {
     required this.label,
     this.value,
     this.onTap,
-    this.trailing,
     this.icon,
     this.accent = false,
-    this.subtitle,
   });
 
   final String label;
-
-  /// Quiet second part of the title on desktop; ignored on mobile.
-  final String? subtitle;
   final String? value;
   final VoidCallback? onTap;
-  final Widget? trailing;
   final String? icon;
   final bool accent;
 
@@ -1381,8 +1511,7 @@ class _InfoRow extends StatelessWidget {
                     color: AppColors.tint2,
                     borderRadius: BorderRadius.circular(R.of(6))),
                 child: AppIcon(icon!,
-                    size: 13,
-                    color: accent ? AppColors.accent : AppColors.fg3),
+                    size: 13, color: accent ? AppColors.accent : AppColors.fg3),
               ),
               SizedBox(width: S.s8),
             ] else if (icon != null) ...[
@@ -1399,18 +1528,6 @@ class _InfoRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: sans(kMobile ? 15 : 13, color: labelColor)),
               )
-            else if (!kMobile && subtitle != null) ...[
-              Text(label,
-                  maxLines: 1,
-                  style: sans(13, weight: W.label, color: labelColor)),
-              SizedBox(width: S.s8),
-              Expanded(
-                child: Text(subtitle!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(12, color: AppColors.fg3)),
-              ),
-            ]
             else
               Expanded(
                 child: Text(label,
@@ -1429,11 +1546,7 @@ class _InfoRow extends StatelessWidget {
                       style: sans(13, color: AppColors.fg3)),
                 ),
               ),
-            if (trailing != null) ...[
-              SizedBox(width: S.s4),
-              trailing!,
-            ],
-            if (onTap != null && trailing == null)
+            if (onTap != null)
               AppIcon('chevron-right', size: 14, color: AppColors.fg4),
           ]),
         ),
@@ -1442,39 +1555,10 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _CopyRow extends StatelessWidget {
-  const _CopyRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => _InfoRow(
-        label: label,
-        icon: 'hash',
-        onTap: () {
-          Clipboard.setData(ClipboardData(text: value));
-          toast(context, 'Copied');
-        },
-        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 150),
-            child: Text(value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: mono(12, color: AppColors.fg3)),
-          ),
-          SizedBox(width: S.s4),
-          AppIcon('copy', size: 13, color: AppColors.fg4),
-        ]),
-      );
-}
-
 class _DangerRow extends StatelessWidget {
-  const _DangerRow({required this.label, required this.onTap, this.subtitle});
+  const _DangerRow({required this.label, required this.onTap});
 
   final String label;
-  final String? subtitle;
   final VoidCallback onTap;
 
   @override
@@ -1482,41 +1566,15 @@ class _DangerRow extends StatelessWidget {
         onTap: onTap,
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: kMobile ? 48 : 34),
-          child: !kMobile && subtitle != null
-              ? Padding(
-                  padding: EdgeInsets.symmetric(horizontal: S.s8),
-                  child: Row(children: [
-                    Container(
-                      width: 22,
-                      height: 22,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                          color: AppColors.tint2,
-                          borderRadius: BorderRadius.circular(R.of(6))),
-                      child: AppIcon('trash', size: 13, color: AppColors.danger),
-                    ),
-                    SizedBox(width: S.s8),
-                    Text(label,
-                        style: sans(13, weight: W.label, color: AppColors.danger)),
-                    SizedBox(width: S.s8),
-                    Expanded(
-                      child: Text(subtitle!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(12, color: AppColors.fg3)),
-                    ),
-                  ]),
-                )
-              : Center(
+          child: Center(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: S.s12),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 AppIcon('trash', size: 16, color: AppColors.danger),
                 SizedBox(width: S.s8),
                 Text(label,
-                    style:
-                        sans(kMobile ? 15 : 13,
-                            weight: W.label, color: AppColors.danger)),
+                    style: sans(kMobile ? 15 : 13,
+                        weight: W.label, color: AppColors.danger)),
               ]),
             ),
           ),
@@ -1546,54 +1604,32 @@ class _LongPressRow extends StatelessWidget {
 /// back circle and centred title, then a scrolling body. Paints nothing, so
 /// the see-through panel background shows through.
 class _NestedPage extends StatelessWidget {
-  const _NestedPage({required this.title, required this.builder});
+  const _NestedPage({
+    required this.title,
+    required this.builder,
+    this.actions = const [],
+    this.scroll = true,
+  });
 
   final String title;
   final WidgetBuilder builder;
+  final List<Widget> actions;
+  final bool scroll;
 
   @override
   Widget build(BuildContext context) {
     final nav = DockedInfoNav.maybeOf(context);
-    return Material(
-      type: MaterialType.transparency,
-      // The transparent colour is only hit absorption: empty areas must not
-      // fall through to the info page underneath.
-      child: Container(
-        color: Colors.transparent,
-        child: Column(children: [
-          SizedBox(
-            height: 52,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: S.s16),
-              child: Stack(children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: _GlassCircle(
-                    onTap: nav == null
-                        ? () => Navigator.of(context).maybePop()
-                        : nav.pop,
-                    icon: 'chevron-left',
-                    label: 'Back',
-                  ),
-                ),
-                Center(
-                  child: Text(title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(15,
-                          weight: W.label, color: AppColors.fg1)),
-                ),
-              ]),
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding:
-                  EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s24),
-              child: builder(context),
-            ),
-          ),
-        ]),
+    // The transparent colour is only hit absorption: empty areas must not
+    // fall through to the page underneath.
+    return ColoredBox(
+      color: Colors.transparent,
+      child: _AgentPageFrame(
+        title: title,
+        onBack: nav?.pop ?? () => Navigator.of(context).maybePop(),
+        onClose: kMobile ? null : nav?.close,
+        actions: actions,
+        scroll: scroll,
+        children: [Builder(builder: builder)],
       ),
     );
   }
@@ -1632,16 +1668,21 @@ class _DockedNavigatorState extends State<_DockedNavigator> {
         key: widget.navKey,
         onGenerateRoute: (_) => _NestedPageRoute(
             builder: (_) => ValueListenableBuilder<WidgetBuilder>(
-                valueListenable: _root,
-                builder: (ctx, root, _) => root(ctx))),
+                valueListenable: _root, builder: (ctx, root, _) => root(ctx))),
       );
 }
 
 class _NestedPageRoute extends PageRoute<void> {
-  _NestedPageRoute({this.title, required this.builder});
+  _NestedPageRoute(
+      {this.title,
+      required this.builder,
+      this.actions = const [],
+      this.scroll = true});
 
   final String? title;
   final WidgetBuilder builder;
+  final List<Widget> actions;
+  final bool scroll;
 
   @override
   bool get opaque => false;
@@ -1666,7 +1707,11 @@ class _NestedPageRoute extends PageRoute<void> {
           Animation<double> secondaryAnimation) =>
       title == null
           ? builder(context)
-          : _NestedPage(title: title!, builder: builder);
+          : _NestedPage(
+              title: title!,
+              builder: builder,
+              actions: actions,
+              scroll: scroll);
 
   @override
   Widget buildTransitions(
@@ -1676,9 +1721,7 @@ class _NestedPageRoute extends PageRoute<void> {
     Widget child,
   ) {
     final curved = CurvedAnimation(
-        parent: animation,
-        curve: Motion.enter,
-        reverseCurve: Motion.exit);
+        parent: animation, curve: Motion.enter, reverseCurve: Motion.exit);
     // The panel is see-through, so a covered page must fade or it shows under the new one.
     final covered = FadeTransition(
         opacity: ReverseAnimation(secondaryAnimation), child: child);
@@ -1740,35 +1783,120 @@ class _NicknameEditorState extends State<_NicknameEditor> {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
+  Widget build(BuildContext context) {
+    final phone = kMobile;
+    final full = widget.agent.fullName.trim().isEmpty
+        ? widget.agent.id
+        : widget.agent.fullName.trim();
+    final radius = BorderRadius.circular(R.of(phone ? 12 : 8));
+    OutlineInputBorder edge(Color c) => OutlineInputBorder(
+        borderRadius: radius, borderSide: BorderSide(color: c));
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: S.s4),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Padding(
+            padding: EdgeInsets.only(bottom: S.s4),
+            child: Text('Nickname', style: sans(12, color: AppColors.fg3)),
+          ),
           TextField(
             controller: _text,
             autofocus: true,
-            style: TS.body(AppColors.fg1),
+            textInputAction: TextInputAction.done,
+            style: sans(phone ? 15 : 13, color: AppColors.fg1),
             onSubmitted: (_) => _save(),
             decoration: InputDecoration(
-              hintText: 'Leave empty to use the name',
-              hintStyle: TS.body(AppColors.fg4),
+              hintText: full,
+              hintStyle: sans(phone ? 15 : 13, color: AppColors.fg4),
               isDense: true,
               filled: true,
-              fillColor: AppColors.surface2,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(R.sm),
-                  borderSide: BorderSide(color: AppColors.border)),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(R.sm),
-                  borderSide: BorderSide(color: AppColors.border)),
+              fillColor: AppColors.surface1,
+              contentPadding: EdgeInsets.symmetric(
+                  horizontal: S.s12, vertical: phone ? S.s12 : S.s8),
+              border: edge(AppColors.lineStrong),
+              enabledBorder: edge(AppColors.lineStrong),
+              focusedBorder: edge(AppColors.accent),
             ),
           ),
-          SizedBox(height: S.s12),
+          Padding(
+            padding: EdgeInsets.only(top: S.s6),
+            child: Text('What it is called here. Leave empty to use $full.',
+                style: sans(12, color: AppColors.fg3)),
+          ),
+          SizedBox(height: S.s16),
           Align(
             alignment: Alignment.centerRight,
-            child: Btn('Save', small: true, disabled: _saving, onTap: _save),
+            child: AgentPageButton('Save',
+                primary: true, expand: phone, onTap: _saving ? null : _save),
           ),
         ],
-      );
+      ),
+    );
+  }
+}
+
+/// The round 5 page button: 44px with 12px corners on phones, 28px on
+/// desktop. [expand] fills the row, as the phone sheets do.
+class AgentPageButton extends StatelessWidget {
+  const AgentPageButton(this.label,
+      {super.key,
+      this.primary = false,
+      this.expand = false,
+      this.icon,
+      this.iconData,
+      this.onTap});
+
+  final String label;
+  final bool primary;
+  final bool expand;
+  final String? icon;
+  final IconData? iconData;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final phone = kMobile;
+    final fg = primary ? AppColors.accentFg : AppColors.fg1;
+    final radius = BorderRadius.circular(R.of(phone ? 12 : 7));
+    final glyph = phone ? 16.0 : 13.0;
+    final body = Container(
+      height: phone ? 44 : 28,
+      padding: EdgeInsets.symmetric(horizontal: phone ? S.s16 : S.of(10)),
+      child: Row(
+        mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (iconData != null || icon != null) ...[
+            iconData != null
+                ? Icon(iconData, size: glyph, color: fg)
+                : AppIcon(icon!, size: glyph, color: fg),
+            SizedBox(width: S.s6),
+          ],
+          Flexible(
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(phone ? 14 : 12.5, weight: W.label, color: fg)),
+          ),
+        ],
+      ),
+    );
+    return Semantics(
+      button: true,
+      enabled: onTap != null,
+      label: label,
+      excludeSemantics: true,
+      child: Opacity(
+        opacity: onTap == null ? 0.5 : 1,
+        child: Material(
+          color: primary ? AppColors.accentFill : AppColors.surface2,
+          borderRadius: radius,
+          child: InkWell(borderRadius: radius, onTap: onTap, child: body),
+        ),
+      ),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1803,9 +1931,7 @@ class _InfoSheetRoute extends PageRoute<void> {
       sheetMotion.reverseDuration ?? const Duration(milliseconds: 220);
 
   @override
-  Widget buildPage(
-          BuildContext context,
-          Animation<double> animation,
+  Widget buildPage(BuildContext context, Animation<double> animation,
           Animation<double> secondaryAnimation) =>
       builder(context);
 
@@ -1924,8 +2050,7 @@ class _PhoneSheetState extends State<_PhoneSheet>
             behavior: HitTestBehavior.translucent,
             onVerticalDragStart: (_) => setState(() => _dragging = true),
             onVerticalDragUpdate: (d) => _dragUpdate(d.delta.dy),
-            onVerticalDragEnd: (d) =>
-                _dragEnd(d.primaryVelocity ?? 0),
+            onVerticalDragEnd: (d) => _dragEnd(d.primaryVelocity ?? 0),
             onVerticalDragCancel: () {
               setState(() => _dragging = false);
               _settleBack();
@@ -1969,8 +2094,8 @@ Future<void> _showDesktopInfo(
         return FadeTransition(opacity: curved, child: child);
       }
       return SlideTransition(
-        position:
-            Tween(begin: const Offset(0.35, 0), end: Offset.zero).animate(curved),
+        position: Tween(begin: const Offset(0.35, 0), end: Offset.zero)
+            .animate(curved),
         child: FadeTransition(opacity: curved, child: child),
       );
     },

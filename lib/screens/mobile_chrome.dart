@@ -378,14 +378,13 @@ class MobileBackBar extends StatelessWidget {
                 : null);
     final text = Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(mainAxisSize: MainAxisSize.min, children: [
           Flexible(
             child: Text(title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
                 style: pill
                     ? TS.ui(AppColors.fg1).copyWith(
                         fontSize: 15, fontWeight: W.strong, height: 1.25)
@@ -422,21 +421,18 @@ class MobileBackBar extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: M.gutter),
         child: Row(children: [
-          if (back == null && trailing.isNotEmpty && !pill)
-            SizedBox(width: S.s40)
-          else if (back != null)
+          if (back != null)
             RoundBtn(
                 icon: menu ? 'menu' : 'chevron-left',
                 tooltip: menu ? 'Menu' : 'Back',
                 size: 40,
                 iconSize: menu ? 18 : 20,
                 onTap: back),
-          if (trailing.length == 2 && !pill) SizedBox(width: S.s40),
-          if (back != null || (trailing.isNotEmpty && !pill))
-            SizedBox(width: S.of(10)),
+          if (back != null) SizedBox(width: S.s4),
           Expanded(
             child: pill
-                ? Center(
+                ? Align(
+                    alignment: Alignment.centerLeft,
                     child: Semantics(
                       button: onTitleTap != null,
                       onTapHint: onTitleTapHint,
@@ -445,21 +441,18 @@ class MobileBackBar extends StatelessWidget {
                         onTap: onTitleTap,
                         child: Container(
                           height: 44,
-                          padding: EdgeInsets.symmetric(horizontal: S.s8),
-                          alignment: Alignment.center,
+                          padding: EdgeInsets.only(right: S.s8),
+                          alignment: Alignment.centerLeft,
                           child: IntrinsicWidth(child: label),
                         ),
                       ),
                     ),
                   )
-                : Center(child: label),
+                : Align(alignment: Alignment.centerLeft, child: label),
           ),
           if (trailing.isNotEmpty) ...[
             SizedBox(width: S.of(10)),
             ...trailing,
-          ] else if (back != null && !pill) ...[
-            SizedBox(width: S.of(10)),
-            SizedBox(width: S.s40),
           ],
         ]),
       ),

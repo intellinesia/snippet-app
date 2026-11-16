@@ -830,11 +830,17 @@ class _VoiceScreenState extends State<VoiceScreen> {
       ),
       if (_tuning != null) _attentionGroup(_tuning!),
       SettingsGroup(
-        footer: 'A wake phrase starts a conversation, even in Passive mode.',
         children: [
           SettingsRow(
             label: 'Wake phrases',
-            sub: a.wakePhrases.isEmpty ? 'None' : a.wakePhrases.join(', '),
+            trailing: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 180),
+              child: Text(
+                  a.wakePhrases.isEmpty ? 'None' : a.wakePhrases.join(', '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TS.meta()),
+            ),
             chevron: true,
             onTap: () => _editPhrases(a),
           ),

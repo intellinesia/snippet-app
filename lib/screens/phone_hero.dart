@@ -1,5 +1,9 @@
+import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../ambient_loop.dart';
 import '../crew_status.dart';
 import '../mochi.dart';
 import '../models.dart';
@@ -98,12 +102,48 @@ class _PhoneHeroState extends State<PhoneHero> {
   List<SessionInfo> get _live =>
       widget.sessions.where((s) => !s.settled).toList();
 
+  List<CrewEntry> _crew() => deriveCrew(
+      widget.agents
+          .where((a) => !a.isMissionControl && a.status != 'archived')
+          .toList(),
+      _live);
+
+  /// Nobody is working or waiting: the idle home, everyone asleep.
+  bool _isIdle(List<CrewEntry> crew) =>
+      widget.idleCast &&
+      !widget.wholeTeam &&
+      crew.isNotEmpty &&
+      crew.every((e) => e.state == CrewState.standingBy);
+
+  /// The idle cast, lead first: the agent of the most recently active
+  /// session, else 'snippet', else the first agent; then up to two others,
+  /// the more recently active first.
+  List<CrewEntry> _napCast(List<CrewEntry> crew) {
+    final recent = [...widget.sessions]
+      ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
+    final lastSeen = <String, int>{};
+    for (final s in recent) {
+      final id = s.displayAgentId;
+      if (id != null) lastSeen.putIfAbsent(id, () => s.lastActive);
+    }
+    final ids = crew.map((e) => e.agent.id).toSet();
+    final leadId = recent.map((s) => s.displayAgentId).firstWhere(
+            (id) => id != null && ids.contains(id),
+            orElse: () => null) ??
+        (ids.contains('snippet') ? 'snippet' : crew.first.agent.id);
+    final lead = crew.firstWhere((e) => e.agent.id == leadId);
+    final rest = crew.where((e) => e != lead).toList();
+    final order = {for (var i = 0; i < rest.length; i++) rest[i]: i};
+    rest.sort((a, b) {
+      final r =
+          (lastSeen[b.agent.id] ?? -1).compareTo(lastSeen[a.agent.id] ?? -1);
+      return r != 0 ? r : order[a]!.compareTo(order[b]!);
+    });
+    return [lead, ...rest.take(2)];
+  }
+
   List<CrewEntry> _stage() {
-    final crew = deriveCrew(
-        widget.agents
-            .where((a) => !a.isMissionControl && a.status != 'archived')
-            .toList(),
-        _live);
+    final crew = _crew();
     // Whoever needs you first, then the working ones, then agents standing by
     // with a session open, so the stage reads as the team.
     int rank(CrewEntry e) => e.state.index;
@@ -189,7 +229,9 @@ class _PhoneHeroState extends State<PhoneHero> {
 
   @override
   Widget build(BuildContext context) {
-    final stage = _stage();
+    final crew = _crew();
+    final idle = _isIdle(crew);
+    final stage = idle ? const <CrewEntry>[] : _stage();
     final top = _top();
     final pr = _prReady();
     final run = _running();
@@ -197,8 +239,26 @@ class _PhoneHeroState extends State<PhoneHero> {
     final lines = <Widget>[
       if (pr != null) _prLine(pr),
       for (final r in run) _runLine(r),
-      if (wake != null) _wakeLine(wake),
+      if (wake != null && !idle) _wakeLine(wake),
     ];
+    if (idle) {
+      return Padding(
+        padding: EdgeInsets.only(bottom: S.s8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _idleStage(_napCast(crew)),
+            if (wake != null) ...[
+              const SizedBox(height: 14),
+              _wakeLine(wake),
+            ],
+            if (top != null) ...[SizedBox(height: S.s8), _approvalCard(top)],
+            for (final l in lines) ...[SizedBox(height: S.s6), l],
+          ],
+        ),
+      );
+    }
     if (stage.isEmpty && top == null && lines.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -242,6 +302,73 @@ class _PhoneHeroState extends State<PhoneHero> {
           ),
         ),
       ),
+    );
+  }
+
+  // Idle stage --------------------------------------------------------------
+
+  Widget _idleStage(List<CrewEntry> cast) {
+    final lead = cast.first;
+    final others = cast.skip(1).map((e) => e.agent.displayName).toList();
+    final sub = switch (others.length) {
+      0 => 'A message wakes them',
+      1 => '${others[0]} too · a message wakes them',
+      _ => '${others[0]} and ${others[1]} too · a message wakes them',
+    };
+    Widget sleeper(CrewEntry e, double size) => Semantics(
+          button: e.lead != null,
+          label: '${e.agent.displayName} is asleep',
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: e.lead == null ? null : () => widget.onOpenSession(e.lead!),
+            child: _avatar(e.agent.id, size, AgentCharacterState.sleeping,
+                sleepMarks: false),
+          ),
+        );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          key: const Key('hero-idle-stage'),
+          height: 150,
+          child: LayoutBuilder(builder: (context, c) {
+            final w = c.maxWidth;
+            final mid = w / 2;
+            return Stack(clipBehavior: Clip.none, children: [
+              Positioned(
+                left: w * 0.24,
+                right: w * 0.24,
+                bottom: 10,
+                height: 10,
+                child: const _Floor(),
+              ),
+              if (cast.length > 1)
+                Positioned(
+                    left: mid - 104, bottom: 14, child: sleeper(cast[1], 40)),
+              if (cast.length > 2)
+                Positioned(
+                    left: mid + 64, bottom: 14, child: sleeper(cast[2], 40)),
+              Positioned(left: mid - 41, bottom: 14, child: sleeper(lead, 82)),
+              Positioned(left: mid + 38, top: 26, child: const _SleepMarks()),
+            ]);
+          }),
+        ),
+        Text('${lead.agent.displayName} is napping',
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: sans(15,
+                weight: FontWeight.w500,
+                height: 20 / 15,
+                color: AppColors.fg1)),
+        const SizedBox(height: 2),
+        Text(sub,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: sans(12, height: 18 / 12, color: AppColors.fg3)),
+      ],
     );
   }
 
@@ -299,7 +426,7 @@ class _PhoneHeroState extends State<PhoneHero> {
   }
 
   Widget _avatar(String agentId, double size, AgentCharacterState state,
-      {String? badge}) {
+      {String? badge, bool sleepMarks = true}) {
     return ListenableBuilder(
       listenable: agentCharacters,
       builder: (_, __) {
@@ -308,7 +435,11 @@ class _PhoneHeroState extends State<PhoneHero> {
           return AgentMochi(agentId, size: size, state: state, badge: badge);
         }
         return AgentCharacter(character,
-            size: size, state: state, staggerKey: agentId, badge: badge);
+            size: size,
+            state: state,
+            staggerKey: agentId,
+            badge: badge,
+            sleepMarks: sleepMarks);
       },
     );
   }
@@ -598,6 +729,124 @@ class _PhoneHeroState extends State<PhoneHero> {
         SizedBox(width: S.s4),
       ],
       text,
+    );
+  }
+}
+
+/// The soft floor under the idle cast: a radial fade of fg1 at 7%, stretched
+/// to an ellipse.
+class _Floor extends StatelessWidget {
+  const _Floor();
+
+  @override
+  Widget build(BuildContext context) => FittedBox(
+        fit: BoxFit.fill,
+        child: SizedBox.square(
+          dimension: 20,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                radius: 0.5,
+                colors: [
+                  AppColors.fg1.withValues(alpha: 0.07),
+                  AppColors.fg1.withValues(alpha: 0),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+/// One set of 'z z z' beside the lead's head, drifting up and fading on the
+/// shared ambient clock; still when motion is reduced or tickers are off.
+class _SleepMarks extends StatefulWidget {
+  const _SleepMarks();
+
+  @override
+  State<_SleepMarks> createState() => _SleepMarksState();
+}
+
+class _SleepMarksState extends State<_SleepMarks> {
+  ValueListenable<TickerModeData>? _mode;
+  bool _listening = false;
+
+  static const _period = 4.8;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final mode = TickerMode.getValuesNotifier(context);
+    if (mode != _mode) {
+      _mode?.removeListener(_sync);
+      _mode = mode..addListener(_sync);
+    }
+    _sync();
+  }
+
+  void _sync() {
+    final want =
+        mounted && (_mode?.value.enabled ?? true) && !reduceMotion(context);
+    if (want == _listening) return;
+    _listening = want;
+    if (want) {
+      AmbientClock.instance.addListener(_tick);
+    } else {
+      AmbientClock.instance.removeListener(_tick);
+    }
+  }
+
+  void _tick() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _mode?.removeListener(_sync);
+    if (_listening) AmbientClock.instance.removeListener(_tick);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 0 at rest, 1 at the top of the drift.
+    final k = _listening
+        ? (1 -
+                math.cos(AmbientClock.instance.seconds %
+                    _period /
+                    _period *
+                    2 *
+                    math.pi)) /
+            2
+        : 0.0;
+    Widget z(double size, double left, double opacity) => Padding(
+          padding: EdgeInsets.only(left: left),
+          child: Text('z',
+              textScaler: TextScaler.noScaling,
+              style: mono(size, color: AppColors.fg3.withValues(alpha: opacity))
+                  .copyWith(height: 1)),
+        );
+    return IgnorePointer(
+      child: RepaintBoundary(
+        child: Transform.translate(
+          offset: Offset(2 * k, -4 * k),
+          child: Opacity(
+            opacity: 1 - 0.45 * k,
+            child: Column(
+              key: const Key('hero-idle-z'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                z(12, 0, 1),
+                Transform.translate(
+                    offset: const Offset(0, -1), child: z(10, 8, 0.75)),
+                Transform.translate(
+                    offset: const Offset(0, -2), child: z(8, 14, 0.5)),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

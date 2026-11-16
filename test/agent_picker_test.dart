@@ -133,7 +133,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(c.saved.last, isNull);
     expect(agentCharacterFor('rook'), isNull);
-    expect(find.text('Avatar'), findsNothing);
+    expect(find.text('Avatar'), findsOneWidget);
     expect(find.text('Colour'), findsNothing);
   });
 }

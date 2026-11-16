@@ -5,7 +5,8 @@ import '../models.dart';
 import '../shell_panel.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import '../chat/chat_info.dart' show AgentInfoPanel;
+import '../chat/chat_info.dart' show AgentInfoPanel, AgentPageButton;
+import '../platform.dart';
 import 'agent_appearance.dart';
 import 'agent_profile_panel.dart';
 import 'agent_reach_panel.dart';
@@ -170,39 +171,52 @@ class _NicknamePageState extends State<_NicknamePage> {
     final full = widget.agent.fullName.trim().isEmpty
         ? widget.agent.id
         : widget.agent.fullName.trim();
+    final phone = kMobile;
+    final fs = phone ? 15.0 : 13.0;
+    final radius = BorderRadius.circular(R.of(phone ? 12 : 7));
+    OutlineInputBorder edge(Color c) => OutlineInputBorder(
+        borderRadius: radius, borderSide: BorderSide(color: c));
     return Padding(
-      padding: EdgeInsets.all(S.s16),
+      padding: phone
+          ? EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s16)
+          : EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Nickname for $full',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TS.ui(AppColors.fg2)),
-          SizedBox(height: S.s8),
+          Padding(
+            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6),
+            child: Text('Nickname', style: sans(12, color: AppColors.fg3)),
+          ),
           TextField(
             controller: _text,
             autofocus: true,
-            style: TS.body(AppColors.fg1),
+            style: sans(fs, color: AppColors.fg1),
+            cursorColor: AppColors.accent,
             onSubmitted: (_) => _save(),
             decoration: InputDecoration(
-              hintText: 'Leave empty to use the name',
-              hintStyle: TS.body(AppColors.fg4),
+              hintText: full,
+              hintStyle: sans(fs, color: AppColors.fg4),
               isDense: true,
               filled: true,
-              fillColor: AppColors.tint2,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(R.sm),
-                  borderSide: BorderSide(color: AppColors.border)),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(R.sm),
-                  borderSide: BorderSide(color: AppColors.border)),
+              fillColor: AppColors.surface1,
+              contentPadding: EdgeInsets.symmetric(
+                  horizontal: phone ? S.of(14) : S.of(10),
+                  vertical: phone ? S.of(13) : S.s8),
+              border: edge(AppColors.lineStrong),
+              enabledBorder: edge(AppColors.lineStrong),
+              focusedBorder: edge(AppColors.accent),
             ),
           ),
-          SizedBox(height: S.s12),
+          Padding(
+            padding: EdgeInsets.fromLTRB(S.s4, S.s6, S.s4, 0),
+            child: Text('What it is called here. Leave empty to use $full.',
+                style: sans(12, color: AppColors.fg3)),
+          ),
+          SizedBox(height: S.s16),
           Align(
             alignment: Alignment.centerRight,
-            child: Btn('Save', small: true, disabled: _saving, onTap: _save),
+            child: AgentPageButton('Save',
+                primary: true, expand: phone, onTap: _saving ? null : _save),
           ),
         ],
       ),
@@ -266,7 +280,8 @@ class AgentSidePanel extends StatelessWidget {
           borderRadius: BorderRadius.circular(R.sm),
           onTap: onTap,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(S.of(10), 0, onClose != null ? S.s6 : S.of(10), 0),
+            padding: EdgeInsets.fromLTRB(
+                S.of(10), 0, onClose != null ? S.s6 : S.of(10), 0),
             child: SizedBox(
               height: 28,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -300,21 +315,21 @@ class AgentSidePanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (readouts.isNotEmpty)
-        Container(
-          height: 46,
-          padding: EdgeInsets.fromLTRB(S.of(10), 0, S.s8, 0),
-          alignment: Alignment.centerLeft,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: [
-              _seg('Info', reading == null, () => onClearReadout?.call()),
-              for (final r in readouts)
-                _seg(r.label, r.key == reading?.key,
-                    () => onSelectReadout?.call(r),
-                    onClose: () => onCloseReadout?.call(r)),
-            ]),
+          Container(
+            height: 46,
+            padding: EdgeInsets.fromLTRB(S.of(10), 0, S.s8, 0),
+            alignment: Alignment.centerLeft,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                _seg('Info', reading == null, () => onClearReadout?.call()),
+                for (final r in readouts)
+                  _seg(r.label, r.key == reading?.key,
+                      () => onSelectReadout?.call(r),
+                      onClose: () => onCloseReadout?.call(r)),
+              ]),
+            ),
           ),
-        ),
         Expanded(
           child: reading != null && readoutBody != null
               ? readoutBody!(reading)

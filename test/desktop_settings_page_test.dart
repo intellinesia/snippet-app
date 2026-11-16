@@ -144,35 +144,33 @@ void main() {
     }
 
     // Machines page content.
-    expect(find.text('Computers this app can reach. Sessions run on the selected one.'),
-        findsOneWidget);
     expect(find.text('snippet-linux'), findsOneWidget);
-    expect(find.text('This machine · 1 live session'), findsOneWidget);
-    expect(find.text('Connected'), findsOneWidget);
+    expect(find.textContaining('1 live'), findsOneWidget);
+    expect(find.text('Active'), findsOneWidget);
     expect(find.text('studio-mac'), findsOneWidget);
     expect(find.text('Offline'), findsOneWidget);
     expect(find.text('Add machine'), findsOneWidget);
 
-    // Preferences card: Approvals menu and Keep sessions warm link.
-    expect(find.text('Approvals'), findsOneWidget);
+    // Approvals: a caption and a row that opens the Ask or Yolo sheet.
+    expect(find.text('Approvals'), findsNWidgets(2));
     expect(find.text('Ask'), findsOneWidget);
-    expect(find.text('Keep sessions warm'), findsOneWidget);
-    expect(find.text('1 active'), findsOneWidget);
-
-    await tester.tap(find.text('Approvals'));
+    await tester.tap(find.text('Approvals').last);
     await tester.pumpAndSettle();
+    expect(find.text('Applies to every session on this machine'), findsWidgets);
     await tester.tap(find.text('Yolo'));
     await tester.pumpAndSettle();
     expect(daemon.setApprovalCalls, 1);
     expect(daemon.manualApproval, isFalse);
     expect(find.text('Yolo'), findsOneWidget);
 
-    // Add machine flow and back to Machines.
+    // Add machine opens the connect dialog.
     await tester.tap(find.text('Add machine'));
     await tester.pumpAndSettle();
     expect(find.text('Connect a machine'), findsOneWidget);
-    await tester.tap(find.text('Machines').last);
+    expect(find.text('snippet serve --enable'), findsOneWidget);
+    Navigator.of(tester.element(find.text('Connect a machine'))).pop();
     await tester.pumpAndSettle();
+    expect(find.text('Connect a machine'), findsNothing);
     expect(find.text('studio-mac'), findsOneWidget);
 
     // Switch to Theme and accent.
@@ -192,10 +190,8 @@ void main() {
     expect(find.text('Profiles'), findsOneWidget);
     expect(find.text('default'), findsWidgets);
 
-    // Back to Machines, then jump to Keep warm via Keep sessions warm.
-    await tester.tap(find.text('Machines'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Keep sessions warm'));
+    // Keep warm is its own page in the nav.
+    await tester.tap(find.text('Keep warm'));
     await tester.pumpAndSettle();
     expect(find.text('Sessions that hold their prompt cache while idle.'), findsOneWidget);
 

@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
-import '../chat/chat_info.dart' show DockedInfoNav, dockedPromptText;
+import '../chat/chat_info.dart'
+    show AgentPageCaption, AgentPageRow, DockedInfoNav, dockedPromptText;
+import '../settings_form.dart' show SettingsGroup, SettingsSwitch;
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -23,11 +25,12 @@ Future<void> showAgentProfileSettings(
   final nav = DockedInfoNav.maybeOf(context);
   if (nav != null) {
     nav.push(
-        'Model',
+        'Inference profile',
         (_) => AgentProfilePanel(
             client: client,
             agent: agent,
             name: name,
+            showTitle: false,
             onChanged: onChanged,
             onPicked: nav.pop));
     return Future<void>.value();
@@ -78,8 +81,11 @@ class AgentProfilePanel extends StatefulWidget {
     required this.name,
     this.onChanged,
     this.onPicked,
+    this.showTitle = true,
   });
 
+  /// False when the page header already says 'Inference profile'.
+  final bool showTitle;
   final DaemonClient client;
   final CoordinationAgent agent;
   final String name;
@@ -108,8 +114,8 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
     });
   }
 
-  Future<void> _save(Future<void> Function() call, VoidCallback apply,
-      VoidCallback revert,
+  Future<void> _save(
+      Future<void> Function() call, VoidCallback apply, VoidCallback revert,
       {bool notifyProfile = false}) async {
     setState(apply);
     try {
@@ -193,23 +199,16 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
         ]),
       );
 
-  Widget _divider() => Padding(
-        padding: EdgeInsets.symmetric(vertical: S.s12),
-        child: Divider(height: 1, thickness: 1, color: AppColors.border),
-      );
-
-  Widget _row(String icon, String label, String? detail, bool selected,
-          VoidCallback onTap,
-          {Widget? trailing}) =>
-      ListRow(
-        title: label,
+  Widget _profile(
+          String label, String detail, bool selected, VoidCallback onTap,
+          {String icon = 'cpu'}) =>
+      AgentPageRow(
+        label: label,
         subtitle: detail,
+        icon: icon,
         selected: selected,
-        leading: AppIcon(icon, size: 16, color: AppColors.fg2),
-        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (trailing != null) trailing,
-          if (selected) AppIcon('check', size: 14, color: AppColors.fg1),
-        ]),
+        checked: selected,
+        chevron: false,
         onTap: onTap,
       );
 
@@ -243,77 +242,68 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
             ? 'Desk is on $running, moving to $deskTarget after this turn'
             : 'Desk is running on $running';
 
-    return FlatGroupScope(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _head('Inference profile', icon: 'cpu'),
-          if (_separate)
-            Padding(
-              padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s4),
-              child: Text('Tasks run on', style: TS.meta(AppColors.fg3)),
-            ),
-          if (statusLine != null && !_separate)
-            Padding(
-              padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
-              child: Text(statusLine, style: TS.meta(AppColors.fg3)),
-            ),
-          _row('sparkles', 'Routing default',
-              'Your Routing settings for desks', _work == null,
-              () => _pickWork(null)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.showTitle) _head('Inference profile', icon: 'cpu'),
+        const AgentPageCaption('Tasks run on'),
+        SettingsGroup(children: [
+          _profile('Routing default', 'Your Routing settings for desks',
+              _work == null, () => _pickWork(null),
+              icon: 'sparkles'),
           for (final p in cfg.profiles)
-            _row('provider:${p.provider}', p.name, '${p.provider} · ${p.model}',
-                p.name == _work, () => _pickWork(p.name)),
-          _divider(),
+            _profile(p.name, '${p.provider} · ${p.model}', p.name == _work,
+                () => _pickWork(p.name)),
+        ]),
+        SettingsGroup(children: [
+          AgentPageRow(
+            label: 'Separate desk model',
+            subtitle:
+                'Keep the desk on its own model while tasks use the one above',
+            icon: 'layers',
+            trailing:
+                SettingsSwitch(value: _separate, onChanged: _toggleSeparate),
+            onTap: () => _toggleSeparate(!_separate),
+          ),
+        ]),
+        if (_separate || statusLine != null)
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: S.s4),
-            child: AppToggle(
-              flat: true,
-              on: _separate,
-              onChanged: _toggleSeparate,
-              label: 'Separate desk model',
-              sub: 'Keep the desk on its own model while tasks use the one above',
-            ),
-          ),
-          if (_separate) ...[
-            SizedBox(height: S.s8),
-            Padding(
-              padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Desk runs on',
-                      style: sans(13,
-                          weight: FontWeight.w600, color: AppColors.fg1)),
-                  if (statusLine != null)
-                    Text(statusLine, style: TS.meta(AppColors.fg3)),
+            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_separate)
+                  Text('Desk runs on', style: sans(12, color: AppColors.fg3)),
+                if (statusLine != null) ...[
+                  if (_separate) SizedBox(height: S.s4),
+                  Text(statusLine, style: sans(12, color: AppColors.fg3)),
                 ],
-              ),
+              ],
             ),
-            for (final p in cfg.profiles)
-              _row('provider:${p.provider}', p.name,
-                  '${p.provider} · ${p.model}', p.name == _desk,
-                  () => _pickDesk(p.name)),
-          ],
-          _divider(),
-          _head('Context length'),
-          _row(
-            'layers',
-            'Compact above',
-            'Smaller ceilings compact sooner and cost less per turn',
-            false,
-            _editContext,
-            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(_context == null ? 'Model window' : tokensLabel(_context!),
-                  key: const ValueKey('context-value'),
-                  style: mono(13, color: AppColors.fg2)),
-              SizedBox(width: S.s4),
-              AppIcon('chevron-right', size: 14, color: AppColors.fg4),
-            ]),
           ),
-        ],
-      ),
+        if (_separate)
+          SettingsGroup(children: [
+            for (final p in cfg.profiles)
+              _profile(p.name, '${p.provider} · ${p.model}', p.name == _desk,
+                  () => _pickDesk(p.name)),
+          ]),
+        Padding(
+          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6),
+          child: Text('Context length',
+              style: sans(13, weight: W.strong, color: AppColors.fg1)),
+        ),
+        SettingsGroup(children: [
+          AgentPageRow(
+            label: 'Compact above',
+            subtitle: 'Smaller ceilings compact sooner and cost less per turn',
+            icon: 'shrink',
+            value: _context == null ? 'Model window' : tokensLabel(_context!),
+            valueMono: true,
+            onTap: _editContext,
+          ),
+        ]),
+      ],
     );
   }
 }
@@ -348,8 +338,8 @@ class _AgentModelRowsState extends State<AgentModelRows> {
   String get _deskLabel =>
       _separate ? (_desk ?? _work ?? 'Routing default') : _workLabel;
 
-  Future<void> _save(Future<void> Function() call, VoidCallback apply,
-      VoidCallback revert,
+  Future<void> _save(
+      Future<void> Function() call, VoidCallback apply, VoidCallback revert,
       {bool notifyProfile = false}) async {
     setState(apply);
     try {
@@ -422,9 +412,7 @@ class _AgentModelRowsState extends State<AgentModelRows> {
       final done = Completer<String?>();
       nav.push(
           title,
-          (ctx) => _pickOptions(ctx, cfg,
-              desk: desk,
-              onPick: (v) {
+          (ctx) => _pickOptions(ctx, cfg, desk: desk, onPick: (v) {
                 if (!done.isCompleted) done.complete(v);
                 nav.pop();
               }));
@@ -454,8 +442,7 @@ class _AgentModelRowsState extends State<AgentModelRows> {
     if (name == null) {
       if (!_separate) return;
       final beforeDesk = _desk;
-      _save(() => widget.client.setAgentDeskProfile(widget.agent.id, null),
-          () {
+      _save(() => widget.client.setAgentDeskProfile(widget.agent.id, null), () {
         _separate = false;
         _desk = null;
       }, () {
@@ -488,9 +475,8 @@ class _AgentModelRowsState extends State<AgentModelRows> {
         subtitle: detail,
         selected: selected,
         leading: AppIcon(icon, size: 16, color: AppColors.fg2),
-        trailing: selected
-            ? AppIcon('check', size: 14, color: AppColors.fg1)
-            : null,
+        trailing:
+            selected ? AppIcon('check', size: 14, color: AppColors.fg1) : null,
         onTap: onTap,
       );
 

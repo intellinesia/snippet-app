@@ -211,7 +211,12 @@ class TaskRow extends StatelessWidget {
         ? 'T-${num.group(1)}'
         : (task.id.length > 8 ? task.id.substring(0, 8) : task.id)
             .toUpperCase();
-    final who = (agentName ?? '').trim().isEmpty ? agent : agentName!.trim();
+    // Agent ids are lowercase handles; show them as names when no display name is known.
+    final who = (agentName ?? '').trim().isNotEmpty
+        ? agentName!.trim()
+        : agent.isEmpty
+            ? agent
+            : agent[0].toUpperCase() + agent.substring(1);
     final meta =
         [id, who, task.status.label].where((p) => p.isNotEmpty).join(' · ');
     final avatar = kMobile ? 24.0 : 22.0;
@@ -269,7 +274,7 @@ class TaskRow extends StatelessWidget {
                   Text(meta,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: mono(11, color: AppColors.fg3)),
+                      style: codeMono(11, color: AppColors.fg3)),
                   if (line.isNotEmpty)
                     Text(line,
                         maxLines: 1,

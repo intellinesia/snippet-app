@@ -16,33 +16,77 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     if (!mounted) return;
     _setState(() {
       final pane = _ensureTerm(id);
+      final wasAlive = pane.alive;
       pane.alive = j['alive'] == true;
-      if (op == 'snapshot') return;
-      if (bytes.isNotEmpty) {
-        pane.terminal.write(utf8.decode(bytes, allowMalformed: true));
+      // Only a shell that ran can end; a fresh pane reports !alive while its
+      // pty spawns, and that must stay "starting".
+      final exited = !pane.alive && !pane.ended && (wasAlive || pane.live);
+      if (pane.alive) pane.ended = false;
+      if (op != 'snapshot') {
+        if (bytes.isNotEmpty) {
+          pane.terminal.write(utf8.decode(bytes, allowMalformed: true));
+        }
+        if (cols != null) pane.cols = cols;
+        if (rows != null) pane.rows = rows;
+        if (op == 'out') pane.live = true;
       }
-      if (cols != null) pane.cols = cols;
-      if (rows != null) pane.rows = rows;
-      if (op == 'out') pane.live = true;
+      if (exited) {
+        pane.ended = true;
+        final t = pane.terminal;
+        final nl = t.buffer.cursorX == 0 ? '' : '\r\n';
+        t.write('$nl\x1b[90m[process exited]\x1b[0m\r\n\x1b[?25l');
+      }
     });
     // Only an `alive`/`live` transition or a new terminal changes what the
     // sidebar shows. Output frames must not republish: that would rebuild the
     // shell on every byte the pty writes.
     _publishTerminals();
-    if (op == 'out' && j['alive'] == false) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _closeTerm(id);
-      });
-    }
+  }
+
+  /// Respawn an ended shell in place: same id, tab and scrollback. The daemon
+  /// reaps the dead pty and spawns a new one on `new` for a known id.
+  void _restartTerm(String id) {
+    final i = _terms.indexWhere((t) => t.id == id);
+    if (i < 0) return;
+    final t = _terms[i];
+    _setState(() {
+      t.ended = false;
+      t.alive = false;
+      t.live = false;
+      _termFocus = i;
+    });
+    t.terminal.write('\x1b[?25h');
+    _send({
+      'wire': 'term',
+      'op': 'new',
+      'id': t.id,
+      'cols': t.cols,
+      'rows': t.rows,
+    });
+    _publishTerminals();
+  }
+
+  /// The session's folder with the home prefix folded to `~`.
+  String get _termCwd {
+    final ws = (_state?.workspace ?? '').trim();
+    final raw = ws.isNotEmpty ? ws : (_me?.folder ?? '').trim();
+    return raw
+        .replaceFirst(RegExp(r'^(/home/[^/]+|/Users/[^/]+)(?=/|$)'), '~')
+        .replaceFirst(RegExp(r'/+$'), '');
+  }
+
+  String? get _termBranch {
+    final b = _me?.branch?.trim() ?? '';
+    return b.isEmpty ? null : b;
   }
 
   String _nextTermTitle() {
     var n = _terms.length + 1;
     final used = _terms.map((t) => t.title).toSet();
-    while (used.contains('shell $n')) {
+    while (used.contains('Shell $n')) {
       n++;
     }
-    return 'shell $n';
+    return 'Shell $n';
   }
 
   _LiveTerm _ensureTerm(String id) {
@@ -167,6 +211,11 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     final t = _terms.firstWhere((e) => e.id == id, orElse: () => _terms.first);
     return SessionTermView(
       alive: t.alive,
+      ended: t.ended,
+      title: t.title,
+      onRestart: () => _restartTerm(t.id),
+      cwd: _termCwd,
+      branch: _termBranch,
       terminal: t.terminal,
       onInput: (bytes) => _termInFor(t.id, bytes),
       onResize: (cols, rows) => _termResizeFor(t.id, cols, rows),
@@ -605,11 +654,14 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       ),
       child: Stack(children: [
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          SizedBox(
-            height: 36,
-            child: Row(children: [
-              Expanded(child: _termTabStrip(i)),
-              _dockAction('plus', 'New terminal', () => _openTerm(fresh: true)),
+          TermDockBar(
+            tabs: _termTabs,
+            focus: i,
+            onSelect: _selectTermTab,
+            onRename: (n) => _renameTerm(_terms[n].id),
+            onClose: (n) => _closeTerm(_terms[n].id),
+            onNew: () => _openTerm(fresh: true),
+            actions: [
               _dockAction(
                   _termMax ? 'shrink' : 'expand',
                   _termMax ? 'Restore' : 'Maximize',
@@ -621,13 +673,17 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                 });
                 _publishTerminals();
               }),
-              SizedBox(width: S.s8),
-            ]),
+            ],
           ),
           Expanded(
             child: SessionTermView(
               key: ValueKey('dock-term-${_terms[i].id}'),
               alive: _terms[i].alive,
+              ended: _terms[i].ended,
+              title: _terms[i].title,
+              onRestart: () => _restartTerm(_terms[i].id),
+              cwd: _termCwd,
+              branch: _termBranch,
               terminal: _terms[i].terminal,
               onInput: _termIn,
               onResize: _termResize,
@@ -665,12 +721,20 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   Widget _mobileTermTab() {
     final i = _termFocus.clamp(0, _terms.length - 1);
     final t = _terms[i];
+    final cwd = _termCwd;
+    final branch = _termBranch;
+    final sub = [if (cwd.isNotEmpty) cwd, if (branch != null) branch].join(' · ');
     return Material(
       color: AppColors.canvas,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         MobileBackBar(
-          title: _terms.length > 1 ? 'Shell ${i + 1}' : 'Shell',
-          subtitle: t.alive ? null : 'Starting…',
+          title: 'Terminals',
+          subtitleView: sub.isEmpty
+              ? null
+              : Text(sub,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: codeMono(12, height: 1.4, color: AppColors.fg3)),
           onBack: () => _setState(() => _termOpen = false),
           keepBack: true,
           trailing: [
@@ -680,14 +744,24 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                 onTap: () => _openTerm(fresh: true)),
           ],
         ),
-        if (_terms.length > 1)
+        if (_terms.isNotEmpty)
           Padding(
-            padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.s2),
-            child: _mobileTermTabs(i),
+            padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: MobileTermTabs(
+              tabs: _termTabs,
+              focus: i,
+              onSelect: _selectTermTab,
+              onRename: (n) => _renameTerm(_terms[n].id),
+              onClose: (n) => _closeTerm(_terms[n].id),
+            ),
           ),
         Expanded(
           child: SessionTermView(
+            key: ValueKey('mobile-term-${t.id}'),
             alive: t.alive,
+            ended: t.ended,
+            title: t.title,
+            onRestart: () => _restartTerm(t.id),
             terminal: t.terminal,
             onInput: _termIn,
             onResize: _termResize,
@@ -714,74 +788,15 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     _publishTerminals();
   }
 
-  Widget _mobileTermTabs(int focus) {
-    return SizedBox(
-      height: 34,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _terms.length,
-        separatorBuilder: (_, __) => SizedBox(width: S.s6),
-        itemBuilder: (_, n) {
-          final on = n == focus;
-          final pane = _terms[n];
-          return Material(
-            color: on ? AppColors.surface2 : Colors.transparent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(R.pill),
-              side: BorderSide(
-                  color: on ? AppColors.surface2 : AppColors.border2),
-            ),
-            child: InkWell(
-              customBorder: const StadiumBorder(),
-              onTap: () {
-                _setState(() => _termFocus = n);
-                _publishTerminals();
-              },
-              onLongPress: () => _renameTerm(pane.id),
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(S.of(14), 0, S.s6, 0),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Text(pane.title,
-                      style:
-                          sans(13, color: on ? AppColors.fg1 : AppColors.fg3)),
-                  GestureDetector(
-                    onTap: () => _closeTerm(pane.id),
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: EdgeInsets.all(S.s6),
-                      child: AppIcon('x', size: 12, color: AppColors.fg4),
-                    ),
-                  ),
-                ]),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
+  List<TermTab> get _termTabs => [
+        for (final t in _terms)
+          TermTab(t.title,
+              termDotColor(alive: t.alive, ended: t.ended)),
+      ];
 
-  Widget _termTabStrip(int focus) {
-    return ListView.separated(
-      scrollDirection: Axis.horizontal,
-      padding: EdgeInsets.only(left: S.of(10), right: S.s8),
-      itemCount: _terms.length,
-      separatorBuilder: (_, __) => SizedBox(width: S.s2),
-      itemBuilder: (_, n) {
-        final pane = _terms[n];
-        return _DockTab(
-          title: pane.title,
-          alive: pane.alive,
-          selected: n == focus,
-          onTap: () {
-            _setState(() => _termFocus = n);
-            _publishTerminals();
-          },
-          onRename: () => _renameTerm(pane.id),
-          onClose: () => _closeTerm(pane.id),
-        );
-      },
-    );
+  void _selectTermTab(int n) {
+    _setState(() => _termFocus = n);
+    _publishTerminals();
   }
 
   // macOS keeps this row focused on the active session title. Workspace
@@ -1460,10 +1475,120 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
 
 const double _kDeskHeaderH = 44;
 
-class _DockTab extends StatefulWidget {
-  const _DockTab({
+/// Status dot for a terminal tab: ok while alive, faint once ended, accent
+/// while the pty is still starting.
+Color termDotColor({required bool alive, required bool ended}) => alive
+    ? AppColors.ok
+    : ended
+        ? AppColors.fg4
+        : AppColors.accent;
+
+/// One terminal tab's label and status dot.
+class TermTab {
+  const TermTab(this.title, this.dot);
+  final String title;
+  final Color dot;
+}
+
+/// Phone terminal tabs: a scrolling row of 32px chips.
+class MobileTermTabs extends StatelessWidget {
+  const MobileTermTabs({
+    super.key,
+    required this.tabs,
+    required this.focus,
+    required this.onSelect,
+    required this.onRename,
+    required this.onClose,
+  });
+
+  final List<TermTab> tabs;
+  final int focus;
+  final ValueChanged<int> onSelect;
+  final ValueChanged<int> onRename;
+  final ValueChanged<int> onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 32,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: tabs.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 6),
+        itemBuilder: (_, n) => TermTabChip(
+          title: tabs[n].title,
+          dot: tabs[n].dot,
+          selected: n == focus,
+          onTap: () => onSelect(n),
+          onRename: () => onRename(n),
+          onClose: () => onClose(n),
+        ),
+      ),
+    );
+  }
+}
+
+/// Desktop dock header: 28px tab chips, then +, then the dock's own actions
+/// on the right.
+class TermDockBar extends StatelessWidget {
+  const TermDockBar({
+    super.key,
+    required this.tabs,
+    required this.focus,
+    required this.onSelect,
+    required this.onRename,
+    required this.onClose,
+    required this.onNew,
+    this.actions = const [],
+  });
+
+  final List<TermTab> tabs;
+  final int focus;
+  final ValueChanged<int> onSelect;
+  final ValueChanged<int> onRename;
+  final ValueChanged<int> onClose;
+  final VoidCallback onNew;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 40,
+      child: Row(children: [
+        Flexible(
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            shrinkWrap: true,
+            padding: const EdgeInsets.only(left: 12, right: 4),
+            itemCount: tabs.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 4),
+            itemBuilder: (_, n) => _DockTab(
+              title: tabs[n].title,
+              dot: tabs[n].dot,
+              selected: n == focus,
+              onTap: () => onSelect(n),
+              onRename: () => onRename(n),
+              onClose: () => onClose(n),
+            ),
+          ),
+        ),
+        IconBtn('plus',
+            size: 26, iconSize: 13, tooltip: 'New terminal', onTap: onNew),
+        const Spacer(),
+        ...actions,
+        const SizedBox(width: 8),
+      ]),
+    );
+  }
+}
+
+/// Phone terminal tab: a 32px chip with a status dot. Long-press renames; the
+/// active chip carries the close control.
+class TermTabChip extends StatelessWidget {
+  const TermTabChip({
+    super.key,
     required this.title,
-    required this.alive,
+    required this.dot,
     required this.selected,
     required this.onTap,
     required this.onRename,
@@ -1471,7 +1596,67 @@ class _DockTab extends StatefulWidget {
   });
 
   final String title;
-  final bool alive;
+  final Color dot;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback onRename;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final on = selected;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(R.of(10)),
+      side: BorderSide(color: on ? AppColors.border2 : AppColors.border),
+    );
+    return Material(
+      color: on ? AppColors.surface2 : AppColors.surface1,
+      shape: shape,
+      child: InkWell(
+        customBorder: shape,
+        onTap: onTap,
+        onLongPress: onRename,
+        child: Padding(
+          padding: EdgeInsets.only(left: 12, right: on ? 4 : 12),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 7),
+            Text(title,
+                style: sans(13, color: on ? AppColors.fg1 : AppColors.fg3)),
+            if (on)
+              GestureDetector(
+                onTap: onClose,
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(6, 8, 6, 8),
+                  child: AppIcon('x', size: 12, color: AppColors.fg4),
+                ),
+              ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// Desktop dock tab: a 28px chip in the header row with a status dot and a
+/// close control. Double-click or right-click renames.
+class _DockTab extends StatefulWidget {
+  const _DockTab({
+    required this.title,
+    required this.dot,
+    required this.selected,
+    required this.onTap,
+    required this.onRename,
+    required this.onClose,
+  });
+
+  final String title;
+  final Color dot;
   final bool selected;
   final VoidCallback onTap;
   final VoidCallback onRename;
@@ -1500,39 +1685,41 @@ class _DockTabState extends State<_DockTab> {
         child: Tooltip(
           message: 'Double-click to rename',
           waitDuration: const Duration(milliseconds: 700),
-          child: Container(
-            padding: EdgeInsets.only(left: S.s8, right: S.s4),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  width: 1.5,
-                  color: on ? AppColors.fg2 : Colors.transparent,
+          child: Center(
+            child: Container(
+              height: 28,
+              padding: const EdgeInsets.only(left: 10, right: 6),
+              decoration: BoxDecoration(
+                color: on
+                    ? AppColors.surface2
+                    : _hover
+                        ? AppColors.surface1
+                        : null,
+                borderRadius: BorderRadius.circular(R.of(8)),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration:
+                      BoxDecoration(color: widget.dot, shape: BoxShape.circle),
                 ),
-              ),
+                const SizedBox(width: 6),
+                Text(widget.title, style: sans(12, color: fg)),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: widget.onClose,
+                  behavior: HitTestBehavior.opaque,
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: Center(
+                      child: AppIcon('x', size: 12, color: AppColors.fg4),
+                    ),
+                  ),
+                ),
+              ]),
             ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon('terminal',
-                  size: 12, color: on ? AppColors.fg2 : AppColors.fg4),
-              SizedBox(width: S.s6),
-              Text(widget.title,
-                  style: sans(13, weight: on ? W.label : W.body, color: fg)),
-              if (!widget.alive) ...[
-                SizedBox(width: S.s6),
-                Text('exited', style: sans(11, color: AppColors.fg4)),
-              ],
-              SizedBox(
-                width: 20,
-                child: on || _hover
-                    ? GestureDetector(
-                        onTap: widget.onClose,
-                        behavior: HitTestBehavior.opaque,
-                        child: Center(
-                          child: AppIcon('x', size: 10, color: AppColors.fg3),
-                        ),
-                      )
-                    : null,
-              ),
-            ]),
           ),
         ),
       ),

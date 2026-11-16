@@ -68,7 +68,7 @@ class _DockState extends State<_Dock> {
 
   @override
   Widget build(BuildContext context) => DockedInfoNav(
-        push: (title, body) => setState(() => _page = Builder(builder: body)),
+        push: (title, body, {actions = const [], scroll = true}) => setState(() => _page = Builder(builder: body)),
         pop: () => setState(() => _page = null),
         child: _page ?? widget.child,
       );

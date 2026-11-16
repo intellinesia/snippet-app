@@ -76,6 +76,17 @@ const Map<String, _AccountKind> _kinds = {
 String accountProviderTitle(String provider) =>
     _kinds[provider]?.title ?? provider;
 
+/// "5-hour window 42%", the wording the Usage page uses for the same windows.
+String _windowUse(RateWindow r) {
+  final name = switch (limitWindowLabel(r)) {
+    '5h' => '5-hour window',
+    '7d' => 'Weekly window',
+    '30d' => 'Monthly window',
+    final other => other,
+  };
+  return '$name ${r.usedPercent.clamp(0, 100).round()}%';
+}
+
 class AccountsScreen extends StatefulWidget {
   const AccountsScreen(
       {super.key,
@@ -586,22 +597,16 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final name = account.label.isEmpty ? account.id : account.label;
     final usage = account.usage;
     final parts = <String>[
-      if (usage?.primary != null)
-        '${limitWindowLabel(usage!.primary!)} ${usage.primary!.usedPercent.clamp(0, 100).round()}%',
-      if (usage?.secondary != null)
-        '${limitWindowLabel(usage!.secondary!)} ${usage.secondary!.usedPercent.clamp(0, 100).round()}%',
+      if (usage?.primary != null) _windowUse(usage!.primary!),
+      if (usage?.secondary != null) _windowUse(usage!.secondary!),
     ];
     return SettingsRow(
       label: name,
-      sub: parts.isEmpty ? null : parts.join('  ·  '),
-      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (account.limitedUntil != null) ...[
-          const Tag('Limit reached', tone: Tone.danger),
-          SizedBox(width: S.s8),
-        ],
-        if (account.active) const Tag('In use', tone: Tone.accent),
-      ]),
-      chevron: true,
+      sub: parts.isEmpty ? null : parts.join(' · '),
+      trailing: account.limitedUntil != null || account.active
+          ? Text(account.limitedUntil != null ? 'Limit reached' : 'In use',
+              style: sans(12, color: AppColors.fg3))
+          : null,
       onTap: () => _selectKey('$provider/${account.id}'),
     );
   }
@@ -836,27 +841,22 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final usage = account.usage;
     final canRemove = _canRemove(provider, account);
     final parts = <String>[
-      if (usage?.primary != null)
-        '${limitWindowLabel(usage!.primary!)} ${usage.primary!.usedPercent.clamp(0, 100).round()}%',
-      if (usage?.secondary != null)
-        '${limitWindowLabel(usage!.secondary!)} ${usage.secondary!.usedPercent.clamp(0, 100).round()}%',
+      if (usage?.primary != null) _windowUse(usage!.primary!),
+      if (usage?.secondary != null) _windowUse(usage!.secondary!),
       if (limitedLabel != null) limitedLabel,
     ];
-    return V5SettingsRow(
-      label: name,
-      subtitle: parts.isEmpty ? null : parts.join(' · '),
-      value: limited != null
-          ? 'Limit reached'
-          : account.active
-              ? 'In use'
-              : null,
-      valueColor: limited != null ? AppColors.danger : null,
-      chevron: false,
-      trailing: Builder(
-          builder: (anchor) => IconBtn('more-horizontal',
-              size: kMobile ? 40 : 30,
-              iconSize: 17,
-              tooltip: 'Account actions',
+    return Builder(
+        builder: (anchor) => V5SettingsRow(
+              label: name,
+              subtitle: parts.isEmpty ? null : parts.join(' · '),
+              value: limited != null
+                  ? 'Limit reached'
+                  : account.active
+                      ? 'In use'
+                      : null,
+              chevron: false,
+              trailing: const SizedBox.shrink(),
+              // The row is the menu: order, rename and remove.
               onTap: _busy
                   ? null
                   : () async {
@@ -895,8 +895,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                         case 'remove':
                           await _remove(provider, account);
                       }
-                    })),
-    );
+                    },
+            ));
   }
 
   Widget _meter(String label, RateWindow rate) {

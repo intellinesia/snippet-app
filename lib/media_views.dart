@@ -627,7 +627,6 @@ class _VoiceNoteState extends State<VoiceNote> {
     return '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
   }
 
-
   Widget _mobile(double progress) {
     final active = _playing || _position > Duration.zero;
     final time = _error ??
@@ -971,6 +970,20 @@ class _ImageViewerState extends State<_ImageViewer>
 
   bool get _zoomed => _zoomFor(_index).value.getMaxScaleOnAxis() > 1.01;
 
+  // A second finger means a pinch: drop the dismiss drag and the page swipe
+  // so they leave the gesture arena before they can move the image.
+  int _fingers = 0;
+  bool get _locked => _zoomed || _fingers > 1;
+  bool _wasZoomed = false;
+
+  void _finger(int by) {
+    final was = _fingers > 1;
+    _fingers = (_fingers + by).clamp(0, 10);
+    if (was == _fingers > 1) return;
+    if (_fingers > 1 && _dragY != 0) springTo(_dragC, 0, 0);
+    setState(() {});
+  }
+
   @override
   void dispose() {
     _dragC.dispose();
@@ -1024,7 +1037,10 @@ class _ImageViewerState extends State<_ImageViewer>
       transformationController: zoom,
       minScale: 1,
       maxScale: 6,
-      onInteractionEnd: (_) => setState(() {}),
+      onInteractionUpdate: (_) {
+        if (_zoomed != _wasZoomed) setState(() => _wasZoomed = _zoomed);
+      },
+      onInteractionEnd: (_) => setState(() => _wasZoomed = _zoomed),
       child: Center(
         child: Image(
           image: ResizeImage.resizeIfNeeded(
@@ -1069,45 +1085,51 @@ class _ImageViewerState extends State<_ImageViewer>
       backgroundColor: Colors.black.withValues(alpha: fade),
       body: Stack(children: [
         Positioned.fill(
-          child: GestureDetector(
-            onTap: kMobile
-                ? () => setState(() => _chrome = !_chrome)
-                : () => Navigator.of(context).pop(),
-            onVerticalDragStart: _zoomed ? null : (_) => _dragC.stop(),
-            onVerticalDragUpdate:
-                _zoomed ? null : (d) => _dragC.value += d.delta.dy,
-            onVerticalDragEnd: _zoomed
-                ? null
-                : (d) {
-                    final v = d.primaryVelocity ?? 0;
-                    final dir = _dragY == 0 ? v.sign : _dragY.sign;
-                    if (dragDismisses(
-                        distance: _dragY.abs(),
-                        velocity: v * dir,
-                        distanceThreshold: 120,
-                        velocityThreshold: 900)) {
-                      HapticFeedback.lightImpact();
-                      Navigator.of(context).pop();
-                      springTo(_dragC, _dragY + dir * size.height * .5,
-                          v * dir > 0 ? v : 0);
-                    } else {
-                      springTo(_dragC, 0, v);
-                    }
+          child: Listener(
+            onPointerDown: (_) => _finger(1),
+            onPointerUp: (_) => _finger(-1),
+            onPointerCancel: (_) => _finger(-1),
+            child: GestureDetector(
+              onTap: kMobile
+                  ? () => setState(() => _chrome = !_chrome)
+                  : () => Navigator.of(context).pop(),
+              onVerticalDragStart: _locked ? null : (_) => _dragC.stop(),
+              onVerticalDragUpdate:
+                  _locked ? null : (d) => _dragC.value += d.delta.dy,
+              onVerticalDragEnd: _locked
+                  ? null
+                  : (d) {
+                      final v = d.primaryVelocity ?? 0;
+                      final dir = _dragY == 0 ? v.sign : _dragY.sign;
+                      if (dragDismisses(
+                          distance: _dragY.abs(),
+                          velocity: v * dir,
+                          distanceThreshold: 120,
+                          velocityThreshold: 900)) {
+                        HapticFeedback.lightImpact();
+                        Navigator.of(context).pop();
+                        springTo(_dragC, _dragY + dir * size.height * .5,
+                            v * dir > 0 ? v : 0);
+                      } else {
+                        springTo(_dragC, 0, v);
+                      }
+                    },
+              onVerticalDragCancel:
+                  _locked ? null : () => springTo(_dragC, 0, 0),
+              child: Transform.translate(
+                offset: Offset(0, _dragY),
+                child: PageView.builder(
+                  controller: _pages,
+                  itemCount: widget.paths.length,
+                  physics: _locked
+                      ? const NeverScrollableScrollPhysics()
+                      : const PageScrollPhysics(),
+                  onPageChanged: (i) {
+                    _zooms[_index]?.value = Matrix4.identity();
+                    setState(() => _index = i);
                   },
-            onVerticalDragCancel: _zoomed ? null : () => springTo(_dragC, 0, 0),
-            child: Transform.translate(
-              offset: Offset(0, _dragY),
-              child: PageView.builder(
-                controller: _pages,
-                itemCount: widget.paths.length,
-                physics: _zoomed
-                    ? const NeverScrollableScrollPhysics()
-                    : const PageScrollPhysics(),
-                onPageChanged: (i) {
-                  _zooms[_index]?.value = Matrix4.identity();
-                  setState(() => _index = i);
-                },
-                itemBuilder: (_, i) => _page(i, size, dpr),
+                  itemBuilder: (_, i) => _page(i, size, dpr),
+                ),
               ),
             ),
           ),
@@ -1202,7 +1224,8 @@ class _ImageViewerState extends State<_ImageViewer>
                                     color: i == _index
                                         ? Colors.white
                                         : Colors.white38,
-                                    borderRadius: BorderRadius.circular(R.of(3)),
+                                    borderRadius:
+                                        BorderRadius.circular(R.of(3)),
                                   ),
                                 ),
                             ],
@@ -1273,8 +1296,7 @@ class _PastedTextCardState extends State<PastedTextCard> {
         children: [
           InkWell(
             onTap: () => setState(() => _open = !_open),
-            borderRadius:
-                BorderRadius.vertical(top: Radius.circular(R.card)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(R.card)),
             child: Padding(
               padding: EdgeInsets.fromLTRB(S.of(10), S.s8, S.s6, S.s8),
               child: Row(children: [

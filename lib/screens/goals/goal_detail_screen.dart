@@ -83,7 +83,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
           ),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(value, style: mono(16, weight: W.label, color: AppColors.fg1)),
+            Text(value, style: codeMono(16, weight: W.label, color: AppColors.fg1)),
             SizedBox(height: S.s2),
             Text(label, style: sans(12, color: AppColors.fg3)),
           ]),
@@ -180,14 +180,15 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             Text(g.outcome, style: sans(14, height: 1.5, color: AppColors.fg2)),
           ],
           SizedBox(height: S.s12),
-          Row(children: [
+          IntrinsicHeight(
+            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             _stat('${g.progress.done} of ${g.progress.total}', 'slices done'),
             SizedBox(width: S.s8),
             _stat('${g.evidence.done} of ${g.evidence.total}',
                 'criteria evidenced'),
             SizedBox(width: S.s8),
             _stat('${d.blockers.length}', 'Blockers'),
-          ]),
+          ])),
           if (d.blockers.isNotEmpty)
             _section(
                 'Blockers',
@@ -237,7 +238,11 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                     Text(c.criterion,
                         style: sans(13,
                                 height: 1.4,
-                                color: gone ? AppColors.fg4 : AppColors.fg1)
+                                color: gone
+                                    ? AppColors.fg4
+                                    : has
+                                        ? AppColors.fg2
+                                        : AppColors.fg1)
                             .copyWith(
                                 decoration:
                                     gone ? TextDecoration.lineThrough : null)),
@@ -284,82 +289,77 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         ])),
       );
 
+  /// 'T-241' for the daemon's short task ids, else null so long ids stay out of the row.
+  static String? _shortId(String? id) {
+    final m = RegExp(r'^t-?(\d+)$', caseSensitive: false).firstMatch(id ?? '');
+    return m == null ? null : 'T-${m.group(1)}';
+  }
+
   Widget _slice(GoalDetail d, GoalPlanStep s) {
     final t = d.taskFor(s);
     final status = TaskStatus.parse(t?.status);
-    final deps = d.dependencyTitles(s);
+    final done = t != null && status == TaskStatus.done;
     final titles = {for (final x in d.tasks) x.id: x.title};
-    final note = t == null
-        ? null
-        : taskNote(
+    final deps = [
+      for (final n in s.dependsOn)
+        for (final p in d.plan.where((p) => p.n == n))
+          _shortId(d.taskFor(p)?.id ?? p.taskId) ??
+              (p.title.isEmpty ? 'Slice $n' : p.title),
+    ];
+    final blocked = t != null && status == TaskStatus.blocked;
+    final active = t != null && !done && status != TaskStatus.todo;
+    final note = blocked
+        ? taskNote(
             status: t.status,
             statusReason: t.statusReason,
             waitingOn: t.waitingOn,
             currentStep: null,
             titleOf: (id) => titles[id],
-          ).line;
-    final waitingLine = note ??
-        ((t == null || t.status != 'done') && deps.isNotEmpty
-            ? 'After ${deps.join(', ')}'
-            : null);
-    final meta = [
-      t == null ? 'Not started' : status.label,
-      if (t?.agent != null) t!.agent!,
-    ].join('  ·  ');
+          ).line
+        : null;
     final id = t?.id ?? s.taskId;
+    final label = _shortId(id);
+    final title = s.title.isEmpty ? (t?.title ?? '') : s.title;
+    final after = !done && deps.isNotEmpty ? ' \u00b7 After ${deps.join(', ')}' : '';
     return HoverSurface(
       key: ValueKey('slice-${s.n}'),
       radius: 8,
       onTap:
           id == null ? null : () => openTaskDetail(context, widget.client, id),
       child: Padding(
-        padding:
-            EdgeInsets.symmetric(horizontal: S.s4, vertical: kMobile ? S.of(10) : S.of(7)),
+        padding: EdgeInsets.symmetric(
+            horizontal: S.s4, vertical: kMobile ? S.of(5) : S.of(3)),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _tick(t != null && status == TaskStatus.done),
+          _tick(done),
           SizedBox(width: S.of(10)),
           Expanded(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text.rich(TextSpan(children: [
-                TextSpan(
-                    text: '${s.n}  ', style: mono(12, color: AppColors.fg4)),
-                TextSpan(
-                    text: s.title.isEmpty ? (t?.title ?? '') : s.title,
-                    style: sans(13, height: 1.4, color: AppColors.fg1)),
-              ])),
-              if (t == null || status != TaskStatus.done) ...[
-              SizedBox(height: S.of(3)),
-              Row(children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: t == null ? AppColors.fg4 : statusColor(status)),
-                ),
-                SizedBox(width: S.s6),
-                Flexible(
-                  child: Text(meta,
+              Text(
+                  '${label == null ? '' : '$label '}$title$after',
+                  key: ValueKey('slice-title-${s.n}'),
+                  style: sans(13,
+                      height: 1.4, color: done ? AppColors.fg2 : AppColors.fg1)),
+              // Work under way says who holds it; a slice not started stays one line.
+              if (active)
+                Padding(
+                  padding: EdgeInsets.only(top: S.s2),
+                  child: Text(
+                      [status.label, if (t.agent != null) t.agent!]
+                          .join('  \u00b7  '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(12, color: AppColors.fg3)),
                 ),
-              ]),
-              ],
-              if (waitingLine != null)
+              if (note != null && note.isNotEmpty)
                 Padding(
                   padding: EdgeInsets.only(top: S.s2),
-                  child: Text(waitingLine,
+                  child: Text(note,
                       key: ValueKey('slice-note-${s.n}'),
-                      style: sans(12,
-                          color: status == TaskStatus.blocked
-                              ? AppColors.danger
-                              : AppColors.fg4)),
+                      style: sans(12, color: AppColors.danger)),
                 ),
             ]),
           ),
-          AppIcon('chevron-right', size: 13, color: AppColors.fg4),
         ]),
       ),
     );

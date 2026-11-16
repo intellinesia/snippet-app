@@ -909,7 +909,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
       );
 
   Widget _row({
-    required String icon,
+    String? icon,
     required Color ink,
     required String label,
     String detail = '',
@@ -921,7 +921,9 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: kMobile ? S.s8 : S.s12),
           child: Row(children: [
-            if (kMobile)
+            if (icon == null)
+              const SizedBox.shrink()
+            else if (kMobile)
               Container(
                 width: 32,
                 height: 32,
@@ -935,7 +937,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
               )
             else
               AppIcon(icon, size: 17, color: ink),
-            SizedBox(width: S.s12),
+            if (icon != null) SizedBox(width: S.s12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(label, style: sans(kMobile ? 15 : 14, weight: W.label, color: AppColors.fg1)),
@@ -1221,8 +1223,9 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
         ])),
       ),
     ]);
+    // The phone's Changes card reads as plain rows, as the mockup draws it.
     final files = _row(
-      icon: 'file-code',
+      icon: kMobile ? null : 'file-code',
       ink: AppColors.fg2,
       label: '${pr.files.length} file${pr.files.length == 1 ? '' : 's'}${kMobile ? '' : ' changed'}',
       detail: [
@@ -1233,7 +1236,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
       onTap: _openFiles,
     );
     final commits = _row(
-      icon: 'git-commit',
+      icon: kMobile ? null : 'git-commit',
       ink: AppColors.fg2,
       label: '${pr.commits.length} commit${pr.commits.length == 1 ? '' : 's'}',
       trailing: kMobile ? null : Text(lastCommit, style: TS.meta(AppColors.fg3)),
@@ -1246,7 +1249,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
           padding: EdgeInsets.fromLTRB(S.s16, S.s16, S.s16, 0),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(s.title,
-                style: sans(kMobile ? 20 : 20, weight: W.strong, height: 1.25, color: AppColors.fg1)),
+                style: sans(kMobile ? 17 : 20, weight: W.strong, height: 1.25, color: AppColors.fg1)),
             SizedBox(height: S.s12),
             if (kMobile)
               Row(children: [
@@ -1256,7 +1259,7 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
                   child: Text('${s.head} → ${s.base}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: mono(12, color: AppColors.fg2)),
+                      style: codeMono(12, color: AppColors.fg3)),
                 ),
               ])
             else ...[
