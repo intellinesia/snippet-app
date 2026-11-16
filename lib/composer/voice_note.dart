@@ -454,7 +454,7 @@ class VoiceNoteRecorderStrip extends StatelessWidget {
           radius: BorderRadius.circular(ComposerCard.radius),
           tint: AppColors.surface1.withValues(alpha: 0.78),
           child: Padding(
-            padding: const EdgeInsets.all(6),
+            padding: EdgeInsets.all(S.s6),
             child: Row(children: [
               if (reviewing) ...[
                 slot(btn('trash', 'Discard',
@@ -466,7 +466,7 @@ class VoiceNoteRecorderStrip extends StatelessWidget {
                     color: AppColors.fg1)),
               ] else
                 slot(Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: EdgeInsets.symmetric(horizontal: S.s12),
                   child: StatusDot(
                       status: 'running', size: 8, color: AppColors.danger),
                 )),
@@ -479,12 +479,12 @@ class VoiceNoteRecorderStrip extends StatelessWidget {
                       progress: progress),
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Text(time,
                   style: sans(13,
                       tabular: true,
                       color: reviewing ? AppColors.fg3 : AppColors.danger)),
-              const SizedBox(width: 6),
+              SizedBox(width: S.s6),
               if (recording)
                 slot(Semantics(
                   button: true,
@@ -497,7 +497,7 @@ class VoiceNoteRecorderStrip extends StatelessWidget {
               else ...[
                 if (onMore != null) ...[
                   slot(btn('mic', 'Record more', onMore!)),
-                  const SizedBox(width: 4),
+                  SizedBox(width: S.s4),
                 ],
                 slot(Semantics(
                   button: true,

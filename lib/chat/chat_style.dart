@@ -283,7 +283,7 @@ class ChatBubbleRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             SizedBox(width: avatarSize, height: avatarSize, child: avatar),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             Flexible(child: bubble),
           ],
         );
@@ -299,7 +299,7 @@ class ChatSenderName extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.only(left: indent + 14, bottom: 2, top: 2),
+        padding: EdgeInsets.only(left: indent + 14, bottom: S.s2, top: S.s2),
         child: Text(name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -327,7 +327,7 @@ class ChatSystemLine extends StatelessWidget {
     return Align(
       alignment: align,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        padding: EdgeInsets.symmetric(vertical: S.s4, horizontal: S.s4),
         child: Text.rich(
           TextSpan(style: style, children: [
             if (bold != null)
@@ -403,10 +403,10 @@ class ChatGlassButton extends StatelessWidget {
                   child: Container(
                     constraints:
                         const BoxConstraints(minWidth: 17, minHeight: 17),
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: EdgeInsets.symmetric(horizontal: S.s4),
                     decoration: BoxDecoration(
                         color: ChatColors.action,
-                        borderRadius: BorderRadius.circular(9)),
+                        borderRadius: BorderRadius.circular(R.of(9))),
                     alignment: Alignment.center,
                     child: Text('${badge!}',
                         style: sans(11,
@@ -476,10 +476,10 @@ class ChatHeader extends StatelessWidget {
   }
 
   Widget _pill() => Glass(
-        radius: BorderRadius.circular(999),
+        radius: BorderRadius.circular(R.pill),
         child: Padding(
           padding: EdgeInsets.symmetric(
-              horizontal: kMobile ? 11 : 10, vertical: kMobile ? 4 : 3),
+              horizontal: kMobile ? S.of(11) : S.of(10), vertical: kMobile ? S.s4 : S.of(3)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Flexible(
               child: Text(title,
@@ -489,7 +489,7 @@ class ChatHeader extends StatelessWidget {
                       weight: W.label, color: ChatColors.receivedText)),
             ),
             if (onTitleTap != null) ...[
-              const SizedBox(width: 3),
+              SizedBox(width: S.of(3)),
               AppIcon('chevron-right',
                   size: kMobile ? 11 : 10, color: ChatColors.meta),
             ],
@@ -506,18 +506,18 @@ class ChatHeader extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: onBack,
             child: Glass(
-              radius: BorderRadius.circular(20),
+              radius: BorderRadius.circular(R.of(20)),
               child: Container(
                 height: 40,
                 constraints: const BoxConstraints(minWidth: 40),
                 padding: EdgeInsets.symmetric(
-                    horizontal: backCount != null && backCount! > 0 ? 12 : 0),
+                    horizontal: backCount != null && backCount! > 0 ? S.s12 : 0),
                 alignment: Alignment.center,
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   AppIcon('chevron-left',
                       size: 18, color: ChatColors.receivedText),
                   if (backCount != null && backCount! > 0) ...[
-                    const SizedBox(width: 2),
+                    SizedBox(width: S.s2),
                     Text('${backCount!}',
                         style: sans(15, color: ChatColors.receivedText)),
                   ],
@@ -545,7 +545,7 @@ class ChatHeader extends StatelessWidget {
             children: [
               _avatar(),
               Padding(
-                padding: EdgeInsets.only(top: 36.0 - (kMobile ? 4 : 3)),
+                padding: EdgeInsets.only(top: 36.0 - (kMobile ? S.s4 : S.of(3))),
                 child: _pill(),
               ),
             ],
@@ -558,7 +558,7 @@ class ChatHeader extends StatelessWidget {
       height: overlap - GlassTopFrame.fade,
       child: Padding(
           padding: EdgeInsets.fromLTRB(
-              kMobile ? 16 : 12, kMobile ? 4 : 8, kMobile ? 16 : 12, 0),
+              kMobile ? S.s16 : S.s12, kMobile ? S.s4 : S.s8, kMobile ? S.s16 : S.s12, 0),
           child: Stack(children: [
             Align(alignment: Alignment.topCenter, child: centre),
             if (onBack != null || leading != null)

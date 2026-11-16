@@ -236,7 +236,7 @@ class _DenseToolRowState extends State<DenseToolRow> {
           alignment: Alignment.topCenter,
           child: open
               ? Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 2, 0, 8),
+                  padding: EdgeInsets.fromLTRB(S.s24, S.s2, 0, S.s8),
                   child: _StepDetail(step: step),
                 )
               : const SizedBox(width: double.infinity),
@@ -289,10 +289,10 @@ class _StepDetailState extends State<_StepDetail> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
           decoration: BoxDecoration(
             color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(R.card),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -329,7 +329,7 @@ class _StepDetailState extends State<_StepDetail> {
         ),
         if (meta.isNotEmpty || copy.isNotEmpty)
           Padding(
-            padding: EdgeInsets.only(top: S.s6, left: 2),
+            padding: EdgeInsets.only(top: S.s6, left: S.s2),
             child: Row(children: [
               if (meta.isNotEmpty) Text(meta.join(' · '), style: metaStyle),
               if (meta.isNotEmpty && copy.isNotEmpty)
@@ -642,18 +642,18 @@ class _LaneNoticeState extends State<LaneNotice> {
           body: summary, preview: MarkdownPreview.plain(summary));
     }
     final pad = kMobile
-        ? const EdgeInsets.fromLTRB(12, 8, 12, 9)
-        : const EdgeInsets.fromLTRB(12, 6, 12, 7);
+        ? EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.of(9))
+        : EdgeInsets.fromLTRB(S.s12, S.s6, S.s12, S.of(7));
     return Semantics(
       button: true,
       label:
           '$title${agent.isEmpty ? '' : ', $agent'}${profile.isEmpty ? '' : ', on $profile'}, ${(status ?? '').toLowerCase()}. Open the lane.',
       onTap: widget.onOpen,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
+        padding: EdgeInsets.symmetric(vertical: S.of(3)),
         child: Material(
           color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(R.card),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: widget.onOpen,
@@ -666,7 +666,7 @@ class _LaneNoticeState extends State<LaneNotice> {
                   header,
                   if (body != null)
                     Padding(
-                      padding: EdgeInsets.only(left: 20, top: S.s2),
+                      padding: EdgeInsets.only(left: S.s20, top: S.s2),
                       child: body,
                     ),
                 ],
@@ -774,7 +774,7 @@ class SystemRow extends StatelessWidget {
     if (isGoal) {
       if (step == 'goal_set') {
         return Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 20),
+          padding: EdgeInsets.only(top: S.s4, bottom: S.s20),
           child: Bubble(mine: true, text: reasoning),
         );
       }
@@ -854,7 +854,7 @@ class SystemRow extends StatelessWidget {
         SizedBox(
             width: 16,
             child: Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: EdgeInsets.only(top: S.s2),
               child: Center(
                   child: AppIcon('activity', size: 14, color: AppColors.fg4)),
             )),
@@ -1040,22 +1040,22 @@ class AgentEventRow extends StatelessWidget {
     Theme.of(context);
     final color = accent ? AppColors.accent : AppColors.fg3;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+      padding: EdgeInsets.symmetric(vertical: S.s6, horizontal: S.s2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 1),
+            padding: EdgeInsets.only(top: S.of(1)),
             child: AppIcon(icon, size: 13, color: color),
           ),
-          const SizedBox(width: 9),
+          SizedBox(width: S.of(9)),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, style: sans(12, weight: W.label, color: color)),
                 if (detail.trim().isNotEmpty) ...[
-                  const SizedBox(height: 2),
+                  SizedBox(height: S.s2),
                   Text(detail,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,

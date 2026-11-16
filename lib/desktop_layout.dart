@@ -104,10 +104,10 @@ class SettingsBack extends StatelessWidget {
         child: GestureDetector(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: EdgeInsets.symmetric(vertical: S.s4),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(Icons.chevron_left, size: 16, color: AppColors.fg3),
-              const SizedBox(width: 2),
+              SizedBox(width: S.s2),
               Text(label, style: sans(13, color: AppColors.fg3)),
             ]),
           ),
@@ -141,7 +141,7 @@ class SettingsHeader extends StatelessWidget {
       return SizedBox(
         height: 44,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+          padding: EdgeInsets.symmetric(horizontal: S.s4),
           child: Row(children: [
             IconBtn(
               'chevron-left',
@@ -163,7 +163,7 @@ class SettingsHeader extends StatelessWidget {
             if (actions.isNotEmpty)
               ...actions
             else
-              const SizedBox(width: 44),
+              SizedBox(width: S.of(44)),
           ]),
         ),
       );

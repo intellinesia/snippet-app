@@ -83,8 +83,8 @@ class _TranscriptCardState extends State<TranscriptCard> {
     final title = widget.title?.trim() ?? '';
     final body = widget.body?.trim() ?? '';
     final pad = kMobile
-        ? const EdgeInsets.fromLTRB(12, 9, 12, 10)
-        : const EdgeInsets.fromLTRB(12, 7, 12, 8);
+        ? EdgeInsets.fromLTRB(S.s12, S.of(9), S.s12, S.of(10))
+        : EdgeInsets.fromLTRB(S.s12, S.of(7), S.s12, S.s8);
     final content = Padding(
       padding: pad,
       child: Column(
@@ -136,10 +136,10 @@ class _TranscriptCardState extends State<TranscriptCard> {
       ),
     );
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: EdgeInsets.symmetric(vertical: S.of(3)),
       child: Material(
         color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(R.card),
         clipBehavior: Clip.antiAlias,
         child: widget.onTap == null
             ? content

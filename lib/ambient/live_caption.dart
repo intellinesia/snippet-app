@@ -67,12 +67,12 @@ class LiveCaptionAnchor extends StatelessWidget {
                                 border: Border.all(color: AppColors.border2),
                               ),
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Padding(
-                                      padding: EdgeInsets.only(top: (lineHeight - 6) / 2, right: 8),
+                                      padding: EdgeInsets.only(top: (lineHeight - 6) / 2, right: S.s8),
                                       child: DecoratedBox(
                                         decoration: BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
                                         child: const SizedBox.square(dimension: 6),

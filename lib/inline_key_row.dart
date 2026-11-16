@@ -74,11 +74,12 @@ class _InlineKeyRowState extends State<InlineKeyRow> {
     }
     return Padding(
       padding: EdgeInsets.symmetric(
-          horizontal: kMobile ? 16 : 14, vertical: kMobile ? 12 : 10),
+          horizontal: kMobile ? S.s16 : S.of(14),
+          vertical: kMobile ? S.s12 : S.of(10)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(widget.keySet ? 'Replace ${widget.label}' : widget.label,
             style: sans(kMobile ? 15 : 13, color: AppColors.fg1)),
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         TextField(
           controller: _ctl,
           autofocus: true,
@@ -94,13 +95,13 @@ class _InlineKeyRowState extends State<InlineKeyRow> {
             filled: true,
             fillColor: AppColors.surface2,
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                EdgeInsets.symmetric(horizontal: S.s12, vertical: S.of(10)),
             border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(R.md),
                 borderSide: BorderSide.none),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         Row(mainAxisAlignment: MainAxisAlignment.end, children: [
           Btn('Cancel',
               small: true,
@@ -109,7 +110,7 @@ class _InlineKeyRowState extends State<InlineKeyRow> {
                     _ctl.clear();
                     _editing = false;
                   })),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Btn('Save key', small: true, onTap: widget.busy ? null : _submit),
         ]),
       ]),
