@@ -29,7 +29,10 @@ import '../ambient/controller.dart';
 import '../chat_scene.dart' show ChatScene;
 import 'mobile_chrome.dart';
 import 'mobile_session_home.dart';
+import 'phone_hero.dart';
+import '../session_quick_send.dart';
 import 'mobile_voice_page.dart' show startMobileVoice;
+import 'pull_requests.dart' show openPullRequest;
 export 'sidebar_mobile.dart';
 
 class Sidebar extends StatefulWidget {
@@ -204,54 +207,48 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     } catch (_) {}
   }
 
-  int _heroVisit = 0;
-  UsageSummary? _todayUsage;
-  DateTime? _todayUsageAt;
+  List<CoordinationAgent> _heroAgents = const [];
+  DateTime? _heroAgentsAt;
 
-  Future<void> _loadTodayUsage() async {
+  Future<void> _loadHeroAgents() async {
     final client = widget.client;
-    final at = _todayUsageAt;
+    final at = _heroAgentsAt;
     final now = DateTime.now();
     if (client == null) return;
-    if (at != null && now.difference(at) < const Duration(minutes: 2)) return;
-    _todayUsageAt = now;
+    if (at != null && now.difference(at) < const Duration(minutes: 1)) return;
+    _heroAgentsAt = now;
     try {
-      final u = await client
-          .getUsage(since: DateTime(now.year, now.month, now.day));
-      if (mounted) setState(() => _todayUsage = u);
+      final all = await client.coordinationAgents();
+      if (mounted) setState(() => _heroAgents = all);
     } catch (_) {}
   }
 
-  /// Readings both homes share: lines and tokens today.
-  List<HeroStat> _sharedHeroStats() {
-    final now = DateTime.now();
-    final midnight =
-        DateTime(now.year, now.month, now.day).millisecondsSinceEpoch ~/ 1000;
-    var added = 0, removed = 0;
-    for (final s in widget.sessions ?? const <SessionInfo>[]) {
-      if (s.lastActive < midnight) continue;
-      final c = s.totalChanges ?? s.changes;
-      if (c == null) continue;
-      added += c.added;
-      removed += c.removed;
+  Future<void> _decideHero(SessionInfo s, bool approve) async {
+    final client = widget.client;
+    if (client == null) return;
+    final ok = await quickSend(
+      client: client,
+      session: s.id,
+      action: approve ? const QuickApprove() : const QuickDeny(),
+    );
+    if (!mounted) return;
+    if (!ok) {
+      toast(context, "Couldn't send the decision", danger: true);
+      return;
     }
-    final out = <HeroStat>[
-      if (added + removed > 0)
-        HeroStat('+${heroCompact(added)}', 'lines today',
-            '-${heroCompact(removed)} removed'),
-    ];
-    final u = _todayUsage;
-    if (u != null) {
-      var tokens = 0, calls = 0;
-      for (final p in u.providers) {
-        tokens += p.totalTokens;
-        calls += p.calls;
-      }
-      if (tokens > 0) {
-        out.add(HeroStat(heroCompact(tokens), 'tokens today', '$calls calls'));
-      }
-    }
-    return out;
+    widget.onRefreshSessions();
+  }
+
+  Widget _phoneHero(List<SessionInfo> sessions) {
+    final c = widget.client;
+    return PhoneHero(
+      sessions: sessions,
+      agents: _heroAgents,
+      onOpenSession: (s) => widget.onOpenSession(s.id, s.title, s.profile),
+      onDecide: c == null ? null : _decideHero,
+      onReviewPr: c == null ? null : _reviewSessionPr,
+      onMergePr: c == null ? null : _mergeSessionPr,
+    );
   }
 
   @override
@@ -262,7 +259,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     if (kMobile) ChatScene.instance.addListener(_onDrafts);
     _loadProviders();
     _mountedHomes.add(_currentHome);
-    if (kMobile) _loadTodayUsage();
+    if (kMobile) _loadHeroAgents();
     if (!kMobile) sidebarAgentsFirst.addListener(_onAgentsList);
     if (widget.mobileHome != MobileHome.settings) {
       _lastMainHome = widget.mobileHome;
@@ -272,6 +269,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   @override
   void didUpdateWidget(covariant Sidebar oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (kMobile) _loadHeroAgents();
     if (oldWidget.client != widget.client ||
         (widget.sessions ?? const <SessionInfo>[]).any((s) =>
             (s.profile ?? '').isNotEmpty &&
@@ -282,8 +280,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       if (oldWidget.mobileHome != MobileHome.settings) {
         _lastMainHome = oldWidget.mobileHome;
       }
-      _heroVisit++;
-      if (kMobile) _loadTodayUsage();
+      if (kMobile) _loadHeroAgents();
       if (widget.mobileHome != _currentHome) {
         _prevHome = _currentHome;
         _currentHome = widget.mobileHome;
@@ -772,20 +769,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         bottomPadding: _scrollBottomPad,
         groupsKey: mirror ? 'groups-mirror' : null,
         heroBuilder: kMobile
-            ? (count, needs, working) => HomeHero(
-                  visit: _heroVisit,
-                  stats: [
-                    HeroStat(
-                      working.toString().padLeft(2, '0'),
-                      'agents working',
-                      [
-                        '${(count - working - needs).clamp(0, count)} idle',
-                        if (needs > 0) '$needs need you',
-                      ].join(' · '),
-                    ),
-                    ..._sharedHeroStats(),
-                  ],
-                )
+            ? (count, needs, working) =>
+                _phoneHero(widget.sessions ?? const <SessionInfo>[])
             : null,
         onSearchChanged: (v) => setState(() {
           _agentFilterQuery = v;
@@ -1025,7 +1010,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         !isInboxSessionRow(s) &&
         _matchesQuery(s))));
     final children = <Widget>[
-      if (kMobile && _filterQuery.trim().isEmpty) _sessionsHero(split.main),
+      if (kMobile && _filterQuery.trim().isEmpty) _phoneHero(split.main),
       ...(kMobile
           ? _mobileGroupedRows(split.main)
           : _groupedRows(split.main, attentionFirst: true)),
@@ -1070,32 +1055,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     return list;
   }
 
-  Widget _sessionsHero(List<SessionInfo> main) {
-    final live = main.where((s) => sessionIsActive(s.status)).length;
-    final needs = main.where(sessionNeedsYou).length;
-    final settled = main.where((s) => s.settled).length;
-    return HomeHero(
-      visit: _heroVisit,
-      stats: [
-        HeroStat(
-          live.toString().padLeft(2, '0'),
-          'sessions working',
-          [
-            '${(main.length - live - needs - settled).clamp(0, main.length)} idle',
-            if (needs > 0) '$needs need you',
-          ].join(' · '),
-        ),
-        if (settled > 0)
-          HeroStat(
-            settled.toString().padLeft(2, '0'),
-            'sessions settled',
-            'of ${main.length} sessions',
-          ),
-        ..._sharedHeroStats(),
-      ],
-    );
-  }
-
   /// Phone list: pinned sessions first, live sessions as cards, then each folder in its own card.
   List<Widget> _mobileGroupedRows(List<SessionInfo> sorted) {
     if (sorted.isEmpty) return const [];
@@ -1113,6 +1072,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             session: s,
             pinned: pinned,
             leading: _agentBadge(s),
+            onReviewPr: s.pr?.state == 'open' && widget.client != null
+                ? () => _reviewSessionPr(s)
+                : null,
+            onMergePr: s.pr?.state == 'open' && widget.client != null
+                ? () => _mergeSessionPr(s)
+                : null,
             onTap: () => _selecting
                 ? _toggleSelected(s.id)
                 : widget.onOpenSession(s.id, s.title, s.profile),
@@ -1149,22 +1114,51 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       for (final s in sorted)
         if (!pinnedIds.contains(s.id)) s,
     ];
-    final live = filtering
+    final needs = filtering
+        ? const <SessionInfo>[]
+        : [for (final s in remaining) if (sessionNeedsYou(s)) s];
+    final cameBack = filtering
+        ? const <SessionInfo>[]
+        : [for (final s in remaining) if (sessionCameBack(s)) s];
+    final running = filtering
         ? const <SessionInfo>[]
         : [
             for (final s in remaining)
-              if (sessionNeedsYou(s)) s,
-            for (final s in remaining)
-              if (!sessionNeedsYou(s) && sessionIsActive(s.status)) s,
+              if (!sessionNeedsYou(s) &&
+                  !sessionCameBack(s) &&
+                  sessionIsActive(s.status))
+                s,
           ];
+    var top = pinned.isEmpty ? 2.0 : 18.0;
+    final live = [...needs, ...running];
     if (live.isNotEmpty) {
-      out.add(MobileSectionLabel('Now',
-          count: live.length, top: pinned.isEmpty ? 2 : 18));
+      out.add(MobileSectionLabel('Now', count: live.length, top: top));
+      top = 18;
       for (final s in live) {
         out.add(liveCard(s));
       }
     }
-    final liveIds = {for (final s in live) s.id};
+    if (cameBack.isNotEmpty) {
+      out.add(MobileSectionLabel('Came back',
+          icon: 'bell', count: cameBack.length, top: top));
+      top = 18;
+      out.add(Appear(
+        key: const ValueKey('came-back'),
+        index: n++,
+        since: _chatsShownAt,
+        child: MobileGroupCard(children: [
+          for (var i = 0; i < cameBack.length; i++)
+            _listRow(cameBack[i],
+                above: i > 0 ? cameBack[i - 1] : null,
+                below: i + 1 < cameBack.length ? cameBack[i + 1] : null,
+                divider: i + 1 < cameBack.length,
+                showProject: true),
+        ]),
+      ));
+    }
+    final liveIds = {
+      for (final s in [...needs, ...cameBack, ...running]) s.id
+    };
     final byFolder = <String, List<SessionInfo>>{};
     for (final s in remaining) {
       if (liveIds.contains(s.id)) continue;
@@ -1175,7 +1169,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       final l = projectLabel(rows.first);
       labelCount[l] = (labelCount[l] ?? 0) + 1;
     }
-    var first = pinned.isEmpty && live.isEmpty;
+    var first = top == 2;
     for (final rows in byFolder.values) {
       var label = projectLabel(rows.first);
       if ((labelCount[label] ?? 0) > 1) label = _projectPath(rows.first);
@@ -1295,9 +1289,13 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         for (final s in unpinned)
           if (sessionNeedsYou(s)) s,
       ];
+      final cameBackRows = [
+        for (final s in unpinned)
+          if (sessionCameBack(s)) s,
+      ];
       groupedSource = [
         for (final s in unpinned)
-          if (!sessionNeedsYou(s)) s,
+          if (!sessionNeedsYou(s) && !sessionCameBack(s)) s,
       ];
       if (needsYouRows.isNotEmpty) {
         out.add(SessionGroupHeader(
@@ -1317,6 +1315,25 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
               showProject: true,
             ),
           ));
+        }
+      }
+      if (cameBackRows.isNotEmpty) {
+        out.add(SessionGroupHeader(
+          'Came back',
+          count: cameBackRows.length,
+        ));
+        for (var i = 0; i < cameBackRows.length; i++) {
+          out.add(Appear(
+            key: ValueKey('chat-${cameBackRows[i].id}'),
+            index: n++,
+            since: _chatsShownAt,
+            child: _listRow(cameBackRows[i],
+     above: i > 0 ? cameBackRows[i - 1] : null,
+     below: i + 1 < cameBackRows.length ? cameBackRows[i + 1] : null,
+                divider: kMobile && i + 1 < cameBackRows.length,
+                showProject: true,
+              ),
+            ));
         }
       }
     } else {
@@ -1428,6 +1445,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       showProject: showProject,
       renameField: renaming ? _inlineRenameField(s, compact: !kMobile) : null,
       leading: _agentBadge(s),
+      onReviewPr: s.pr?.state == 'open' && widget.client != null
+          ? () => _reviewSessionPr(s)
+          : null,
+      onMergePr: s.pr?.state == 'open' && widget.client != null
+          ? () => _mergeSessionPr(s)
+          : null,
       onTap: renaming
           ? null
           : () => _selecting
@@ -1950,7 +1973,51 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     widget.onRefreshSessions();
   }
 
+  Future<void> _reviewSessionPr(SessionInfo s) async {
+    final c = widget.client;
+    final pr = s.pr;
+    if (c == null || pr == null) return;
+    final status = await c.githubStatus(s.id);
+    if (!mounted) return;
+    if (status == null || !status.available) {
+      toast(
+        context,
+        status?.reason.isNotEmpty == true
+            ? status!.reason
+            : 'GitHub PRs are unavailable',
+        danger: true,
+      );
+      return;
+    }
+    await openPullRequest(
+      context,
+      client: c,
+      session: s.id,
+      status: status,
+      number: pr.number,
+    );
+  }
 
+  Future<void> _mergeSessionPr(SessionInfo s) async {
+    final c = widget.client;
+    final pr = s.pr;
+    if (c == null || pr == null) return;
+    final ok = await confirmAction(
+      context,
+      title: 'Merge PR #${pr.number}?',
+      body: pr.title,
+      confirmLabel: 'Merge',
+    );
+    if (!ok || !mounted) return;
+    try {
+      await c.mergePr(s.id, pr.number);
+      if (!mounted) return;
+      toast(context, 'Merged #${pr.number}');
+      widget.onRefreshSessions();
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+    }
+  }
 }
 
 class _DockPlus extends StatelessWidget {

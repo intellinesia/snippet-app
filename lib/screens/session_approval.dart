@@ -884,6 +884,9 @@ class _SessionActionsPanel extends StatefulWidget {
   /// session is allowed to change it.
   final String? resumeMode;
   final ValueChanged<String>? onResumeMode;
+
+  /// Pass the session to another agent; null hides the row.
+  final VoidCallback? onHandOff;
   const _SessionActionsPanel({
     required this.session,
     required this.onSetGoal,
@@ -914,6 +917,7 @@ class _SessionActionsPanel extends StatefulWidget {
     this.onAutoSettle,
     this.resumeMode,
     this.onResumeMode,
+    this.onHandOff,
   });
 
   @override
@@ -1075,6 +1079,12 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
             onTap: widget.onWakes),
       if (_autoSettleRow() case final row?) row,
       if (_resumeModeRow() case final row?) row,
+      if (widget.onHandOff != null)
+        _row(
+            icon: 'transfer',
+            label: 'Hand off',
+            detail: 'Pass this session to another agent',
+            onTap: widget.onHandOff),
     ];
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1213,6 +1223,12 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
           onTap: widget.onRecurring),
       if (_autoSettleRow() case final row?) row,
       if (_resumeModeRow() case final row?) row,
+      if (widget.onHandOff != null)
+        _row(
+            icon: 'transfer',
+            label: 'Hand off',
+            detail: 'Pass this session to another agent',
+            onTap: widget.onHandOff),
     ];
 
     final workspaceRows = <Widget>[

@@ -704,6 +704,22 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     _toast('Cancelling the goal');
   }
 
+  /// Hand the session to another agent: pick one, optional note, done.
+  void _showHandOff() {
+    showAppSheet(context,
+        title: 'Hand off',
+        subtitle: 'Pass this session to another agent',
+        maxWidth: 400,
+        maxHeight: 560,
+        child: SessionHandOffSheet(
+          client: widget.client,
+          sessionId: widget.sessionId,
+          onHandedOff: (name, pending) => _toast(pending
+              ? 'Hands to $name after this turn'
+              : 'Handed to $name'),
+        ));
+  }
+
   void _openAutonomy() {
     if (!kMobile) {
       presentScreen(context,
@@ -1052,6 +1068,11 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           : null,
       onCompact: () => run(_confirmCompact),
       onCheckpoints: () => navigate!(_showCheckpoints),
+      onHandOff: _isMissionControl ||
+              widget.readOnly ||
+              _inboxAgentId(widget.sessionId) != null
+          ? null
+          : () => run(_showHandOff),
       onMemory: () => navigate!(() => presentScreen(context,
           builder: (_, close) => MemoryScreen(
               client: widget.client, embedded: true, onBack: close))),

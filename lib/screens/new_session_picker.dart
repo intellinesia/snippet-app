@@ -66,6 +66,10 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
   Worktree? _existing;
   List<InferenceProfile> _profiles = const [];
   String? _profile;
+
+  /// `profile` goes to POST /sessions only when the user picked one; the
+  /// default follows whatever the daemon resolves.
+  bool _profileExplicit = false;
   List<String> _recentFolders = const [];
   bool _starting = false;
   int _repoRun = 0;
@@ -260,7 +264,12 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
           ),
       ],
     );
-    if (picked != null && mounted) setState(() => _profile = picked);
+    if (picked != null && mounted) {
+      setState(() {
+        _profile = picked;
+        _profileExplicit = true;
+      });
+    }
   }
 
   Future<void> _onAttachTap() async {
@@ -342,7 +351,8 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
     setState(() => _starting = true);
     try {
       if (widget.onStart != null) {
-        await widget.onStart!(folder, mode, _profile, text, attachments);
+        await widget.onStart!(
+            folder, mode, _profileExplicit ? _profile : null, text, attachments);
       } else {
         await widget.onOpenFolder(folder, mode);
       }

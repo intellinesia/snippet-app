@@ -47,6 +47,7 @@ import '../term.dart';
 import '../panel.dart';
 import '../settings_form.dart';
 import '../share_inbound.dart';
+import '../session_seen.dart';
 import '../widgets.dart';
 import '../plain_text.dart';
 import '../turn_changes_card.dart';
@@ -79,6 +80,7 @@ import 'mobile_chrome.dart';
 import 'mobile_session_home.dart' show DotField;
 import 'session_panels.dart';
 import 'session_coordination_cards.dart';
+import 'session_handoff.dart';
 import 'mission_control/widgets/autonomy_panel.dart';
 import 'mission_control/mission_control_state.dart'
     show
@@ -350,6 +352,11 @@ class _SessionScreenState extends State<SessionScreen>
   String? _modelLabel;
   String? _modelProvider;
   String? _currentProfile;
+
+  /// The session's pinned profile, or null when it follows its owner agent's
+  /// profile (or the global default). [_modelFollowing] names that agent.
+  String? _modelPin;
+  String? _modelFollowing;
 
   /// When set, the composer sends a DIRECT MESSAGE to this agent instead of a
   /// turn in the current session. Null means ordinary chat input.
@@ -875,6 +882,15 @@ class _SessionScreenState extends State<SessionScreen>
     }).catchError((_) {});
   }
 
+  /// Tell the daemon this session is on screen, and ping local lists so a
+  /// Came back row leaves immediately. Best-effort: an older daemon 404s and
+  /// the next sessions fetch simply disagrees.
+  void _postSeen() {
+    if (_isMissionControl) return;
+    pingSessionSeen(widget.sessionId);
+    unawaited(widget.client.sessionSeen(widget.sessionId).catchError((_) {}));
+  }
+
   Future<void> _wake() async {
     try {
       await widget.client.unsettleSession(widget.sessionId);
@@ -939,6 +955,7 @@ class _SessionScreenState extends State<SessionScreen>
     _lastInput = _input.text;
     _input.addListener(_interceptBigPaste);
     _restoreDraft();
+    _postSeen();
     _input.addListener(_saveDraft);
     _input.addListener(_trackMention);
     WidgetsBinding.instance.addObserver(this);
@@ -1138,6 +1155,7 @@ class _SessionScreenState extends State<SessionScreen>
       _switchingSession = false;
       _lastInput = '';
       _restoreDraft();
+      _postSeen();
       _consumedShare = null;
       final cached = _sessionStateCache[_cacheKey];
       _state = cached?.$1;
@@ -1199,12 +1217,14 @@ class _SessionScreenState extends State<SessionScreen>
       // below. Reading the server, not the list cache, is what keeps a
       // per-chat model sticky when you leave and come back to the window.
       String? wanted = _currentProfile;
+      SessionInfo? me;
+      var found = false;
       if (wanted == null) {
         try {
           final list = await widget.client.sessions();
-          var found = false;
           for (final s in list) {
             if (s.id == widget.sessionId) {
+              me = s;
               wanted = s.profile; // null here means "uses the global default"
               found = true;
               break;
@@ -1215,6 +1235,24 @@ class _SessionScreenState extends State<SessionScreen>
           wanted = widget.profile;
         }
       }
+
+      // No pin: the session follows its owner agent's profile, then default.
+      String? agentProfile;
+      String? agentName;
+      if (wanted == null && me != null) {
+        try {
+          final owner = me.ownerAgentId ?? me.displayAgentId ?? '';
+          final agent = (await widget.client.coordinationAgents())
+              .where((a) => a.id == owner)
+              .firstOrNull;
+          agentProfile = agent?.profile;
+          agentName = agent?.displayName;
+        } catch (_) {}
+        wanted = agentProfile;
+      }
+      final pin = me != null
+          ? (_currentProfile ?? me.profile)
+          : (_currentProfile ?? widget.profile);
 
       InferenceProfile? p;
       if (wanted != null) {
@@ -1239,6 +1277,12 @@ class _SessionScreenState extends State<SessionScreen>
         setState(() {
           _modelLabel = p?.name;
           _modelProvider = p?.provider;
+          _modelPin = pin;
+          _modelFollowing = pin == null && agentProfile != null
+              ? (agentName == null || agentName.isEmpty
+                  ? 'the agent'
+                  : agentName)
+              : null;
         });
       }
     } catch (_) {}

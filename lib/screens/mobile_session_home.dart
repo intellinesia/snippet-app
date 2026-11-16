@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' show PointMode;
 
@@ -295,6 +294,8 @@ class LiveSessionCard extends StatelessWidget {
     this.onLongPress,
     this.leading,
     this.pinned = false,
+    this.onReviewPr,
+    this.onMergePr,
   });
 
   final SessionInfo session;
@@ -302,25 +303,24 @@ class LiveSessionCard extends StatelessWidget {
   final VoidCallback? onLongPress;
   final Widget? leading;
   final bool pinned;
-
-  static String _since(int? t) {
-    if (t == null || t <= 0) return '';
-    final secs = t > 100000000000 ? t ~/ 1000 : t;
-    final d = DateTime.now()
-        .difference(DateTime.fromMillisecondsSinceEpoch(secs * 1000));
-    if (d.inMinutes < 1) return 'just now';
-    if (d.inMinutes < 60) return '${d.inMinutes}m';
-    return '${d.inHours}h ${d.inMinutes % 60}m';
-  }
+  final VoidCallback? onReviewPr;
+  final VoidCallback? onMergePr;
 
   @override
   Widget build(BuildContext context) {
     final s = session;
     final needsYou = sessionNeedsYou(s);
     final tone = needsYou ? AppColors.run : AppColors.accent;
-    final since = needsYou ? relativeTime(s.lastActive) : _since(s.runningSince);
-    final label = needsYou ? sessionAttentionState(s).label : 'Working';
-    final note = needsYou ? _attentionText(s) : null;
+    final plan = !needsYou && s.plan != null && s.plan!.total > 0 ? s.plan : null;
+    final since = needsYou
+        ? relativeTime(s.lastActive)
+        : sessionDuration(plan != null ? (plan.stepStartedAt ?? s.runningSince) : s.runningSince);
+    final label = needsYou
+        ? sessionAttentionState(s).label
+        : (plan != null ? sessionStepLabel(plan) : 'Working');
+    final note = needsYou ? _attentionText(s) : plan?.current;
+    final lanesText = sessionLanesLabel(s.lanes);
+    final pr = s.pr;
     final diff = sessionDiff(s);
     final branch = s.branch?.trim() ?? '';
     final title = s.title.trim().isEmpty ? '(untitled)' : s.title;
@@ -395,6 +395,22 @@ class LiveSessionCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: sans(13, height: 1.4, color: AppColors.fg2)),
+                  ],
+                  if (lanesText != null) ...[
+                    SizedBox(height: S.of(4)),
+                    Text(lanesText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TS.meta(AppColors.fg3)),
+                  ],
+                  if (pr != null) ...[
+                    SizedBox(height: S.of(6)),
+                    SessionPrActionRow(
+                      pr: pr,
+                      onReview: onReviewPr,
+                      onMerge: onMergePr,
+                      mobile: true,
+                    ),
                   ],
                   SizedBox(height: S.of(10)),
                   Row(children: [
@@ -579,232 +595,4 @@ class _DotGridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DotGridPainter old) => old.color != color;
-}
-
-/// One reading for the home hero.
-class HeroStat {
-  const HeroStat(this.value, this.label, [this.detail]);
-
-  final String value;
-  final String label;
-  final String? detail;
-}
-
-/// The home hero: one dot-matrix reading from [stats], picked at random each
-/// time the home is shown again ([visit] changes or a covering chat closes).
-/// A tap moves to the next reading.
-class HomeHero extends StatefulWidget {
-  const HomeHero({super.key, required this.stats, this.visit = 0});
-
-  final List<HeroStat> stats;
-  final int visit;
-
-  @override
-  State<HomeHero> createState() => _HomeHeroState();
-}
-
-class _HomeHeroState extends State<HomeHero> {
-  static final _rng = Random();
-  String? _label;
-  bool? _shown;
-
-  @override
-  void initState() {
-    super.initState();
-    _shuffle();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final shown = TickerMode.valuesOf(context).enabled;
-    if (_shown == false && shown) _shuffle();
-    _shown = shown;
-  }
-
-  @override
-  void didUpdateWidget(HomeHero old) {
-    super.didUpdateWidget(old);
-    if (old.visit != widget.visit) _shuffle();
-  }
-
-  void _shuffle() {
-    final s = widget.stats;
-    _label = s.isEmpty ? null : s[_rng.nextInt(s.length)].label;
-  }
-
-  int get _index {
-    final i = widget.stats.indexWhere((s) => s.label == _label);
-    return i < 0 ? 0 : i;
-  }
-
-  void _advance() {
-    final s = widget.stats;
-    if (s.length < 2) return;
-    setState(() => _label = s[(_index + 1) % s.length].label);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final stats = widget.stats;
-    if (stats.isEmpty) return const SizedBox.shrink();
-    final stat = stats[_index];
-    final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    return Semantics(
-      label: [stat.value, stat.label, if (stat.detail != null) stat.detail]
-          .join(' '),
-      button: stats.length > 1,
-      child: ExcludeSemantics(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _advance,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(S.s2, S.of(10), S.s2, S.of(14)),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: AnimatedSwitcher(
-                duration: reduced
-                    ? Duration.zero
-                    : const Duration(milliseconds: 320),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
-                layoutBuilder: (current, previous) => Stack(
-                  alignment: Alignment.centerLeft,
-                  children: [...previous, if (current != null) current],
-                ),
-                child: _reading(stat),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _reading(HeroStat stat) => SizedBox(
-        key: ValueKey(stat.label),
-        height: 63,
-        child: _readingRow(stat),
-      );
-
-  Widget _readingRow(HeroStat stat) => Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          DotMatrixNumber(stat.value,
-              cell: _DotMatrixPainter.columns(stat.value) > 22 ? 7 : 9),
-          SizedBox(width: S.s12),
-          Flexible(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: S.of(1)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(stat.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: mono(12, color: AppColors.fg2)),
-                  if (stat.detail != null)
-                    Text(stat.detail!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: mono(12, color: AppColors.accent)),
-                ],
-              ),
-            ),
-          ),
-        ],
-      );
-}
-
-/// Compact hero value: 842, 16.8k, 4.2M.
-String heroCompact(int n) {
-  final a = n.abs();
-  String f(double v, String u) =>
-      '${v >= 100 ? v.toStringAsFixed(0) : v.toStringAsFixed(1)}$u';
-  if (a >= 1000000) return f(n / 1000000, 'M');
-  if (a >= 1000) return f(n / 1000, 'k');
-  return n.toString().padLeft(2, '0');
-}
-
-/// Text drawn as a 7-row dot matrix: digits and `%.:kM+-`.
-class DotMatrixNumber extends StatelessWidget {
-  const DotMatrixNumber(this.digits, {super.key, this.cell = 9, this.color});
-
-  final String digits;
-  final double cell;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) => CustomPaint(
-        size: Size(cell * _DotMatrixPainter.columns(digits), cell * 7),
-        painter: _DotMatrixPainter(digits, cell, color ?? AppColors.fg1),
-      );
-}
-
-class _DotMatrixPainter extends CustomPainter {
-  _DotMatrixPainter(this.digits, this.cell, this.color);
-
-  final String digits;
-  final double cell;
-  final Color color;
-
-  static const _glyphs = {
-    '0': ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
-    '1': ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
-    '2': ['01110', '10001', '00001', '00010', '00100', '01000', '11111'],
-    '3': ['11111', '00010', '00100', '00010', '00001', '10001', '01110'],
-    '4': ['00010', '00110', '01010', '10010', '11111', '00010', '00010'],
-    '5': ['11111', '10000', '11110', '00001', '00001', '10001', '01110'],
-    '6': ['00110', '01000', '10000', '11110', '10001', '10001', '01110'],
-    '7': ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
-    '8': ['01110', '10001', '10001', '01110', '10001', '10001', '01110'],
-    '9': ['01110', '10001', '10001', '01111', '00001', '00010', '01100'],
-    '%': ['11001', '11010', '00010', '00100', '01000', '01011', '10011'],
-    '.': ['0', '0', '0', '0', '0', '0', '1'],
-    ':': ['0', '0', '1', '0', '1', '0', '0'],
-    'k': ['1000', '1000', '1001', '1010', '1100', '1010', '1001'],
-    'M': ['10001', '11011', '10101', '10101', '10001', '10001', '10001'],
-    '+': ['000', '000', '010', '111', '010', '000', '000'],
-    '-': ['000', '000', '000', '111', '000', '000', '000'],
-  };
-
-  static int columns(String text) {
-    var w = 0;
-    for (final ch in text.split('')) {
-      final g = _glyphs[ch];
-      if (g != null) w += g[0].length + 1;
-    }
-    return w == 0 ? 0 : w - 1;
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final on = <double>[], off = <double>[];
-    var x = 0;
-    for (final ch in digits.split('')) {
-      final g = _glyphs[ch];
-      if (g == null) continue;
-      final w = g[0].length;
-      for (var row = 0; row < 7; row++) {
-        for (var col = 0; col < w; col++) {
-          (g[row][col] == '1' ? on : off)
-              .addAll([(x + col + 0.5) * cell, (row + 0.5) * cell]);
-        }
-      }
-      x += w + 1;
-    }
-    Paint dots(Color c) => Paint()
-      ..color = c
-      ..strokeWidth = cell * 0.72
-      ..strokeCap = StrokeCap.round;
-    canvas.drawRawPoints(PointMode.points, Float32List.fromList(off),
-        dots(color.withValues(alpha: color.a * 0.08)));
-    canvas.drawRawPoints(PointMode.points, Float32List.fromList(on), dots(color));
-  }
-
-  @override
-  bool shouldRepaint(_DotMatrixPainter old) =>
-      old.digits != digits || old.cell != cell || old.color != color;
 }

@@ -153,6 +153,90 @@ class CatalogModel {
         reasoning = j['reasoning'] as bool?;
 }
 
+class SessionPlan {
+  final int done;
+  final int total;
+  final String? current;
+  final int? stepStartedAt;
+
+  const SessionPlan({
+    required this.done,
+    required this.total,
+    this.current,
+    this.stepStartedAt,
+  });
+
+  factory SessionPlan.fromJson(Map<String, dynamic> j) => SessionPlan(
+        done: (j['done'] as num?)?.toInt() ?? 0,
+        total: (j['total'] as num?)?.toInt() ?? 0,
+        current: _optText(j['current']),
+        stepStartedAt: (j['step_started_at'] as num?)?.toInt(),
+      );
+}
+
+class SessionLaneItem {
+  final String id;
+  final String title;
+  final String? agent;
+  final String? activity;
+
+  const SessionLaneItem({
+    required this.id,
+    required this.title,
+    this.agent,
+    this.activity,
+  });
+
+  factory SessionLaneItem.fromJson(Map<String, dynamic> j) => SessionLaneItem(
+        id: j['id'] as String? ?? '',
+        title: j['title'] as String? ?? '',
+        agent: _optText(j['agent']),
+        activity: _optText(j['activity']),
+      );
+}
+
+class SessionLanes {
+  final int running;
+  final List<SessionLaneItem> items;
+
+  const SessionLanes({required this.running, required this.items});
+
+  factory SessionLanes.fromJson(Map<String, dynamic> j) => SessionLanes(
+        running: (j['running'] as num?)?.toInt() ?? 0,
+        items: ((j['items'] as List?) ?? const [])
+            .whereType<Map>()
+            .map((e) => SessionLaneItem.fromJson(e.cast<String, dynamic>()))
+            .toList(),
+      );
+}
+
+class SessionPr {
+  final int number;
+  final String title;
+  final String state;
+  final String checks;
+  final bool? mergeable;
+  final String url;
+
+  const SessionPr({
+    required this.number,
+    required this.title,
+    required this.state,
+    required this.checks,
+    this.mergeable,
+    required this.url,
+  });
+
+  factory SessionPr.fromJson(Map<String, dynamic> j) => SessionPr(
+        number: (j['number'] as num?)?.toInt() ?? 0,
+        title: j['title'] as String? ?? '',
+        state: (j['state'] as String? ?? '').toLowerCase(),
+        checks: (j['checks'] as String? ?? 'none').toLowerCase(),
+        mergeable: j['mergeable'] is bool ? j['mergeable'] as bool : null,
+        url: j['url'] as String? ?? '',
+      );
+}
+
 class SessionInfo {
   final String id;
   final String folder;
@@ -196,6 +280,23 @@ class SessionInfo {
   /// because dispatch writes the roster, not the session's identity.
   final String? workerAgentId;
 
+  /// The agent that owns this session ('snippet' when nobody claimed it).
+  /// Additive: older daemons omit it and rows fall back to [displayAgentId].
+  final String? ownerAgentId;
+
+  /// The turn finished while the user was away and they have not opened the
+  /// session since — the "Came back" list section. Computed by the daemon.
+  final bool cameBack;
+
+  /// Unix seconds when the last turn finished with a result.
+  final int? finishedAt;
+
+  /// Unix seconds when the user last opened or answered this session.
+  final int? userSeenAt;
+
+  /// First line of the finishing turn's result, at most ~200 chars.
+  final String? resultSummary;
+
   /// What the session is waiting on the user for (`type`, `text`), sent only
   /// while it is waiting. Null for an approval the daemon could not describe.
   final Map<String, dynamic>? attention;
@@ -203,14 +304,21 @@ class SessionInfo {
   bool get needsInput => status == 'waiting_for_input';
 
   /// Who to name on a session row: whoever is working here, else whoever the
-  /// session belongs to. Precedence lives here so every row agrees, and so the
-  /// rule is stated once rather than repeated at each call site.
-  String? get displayAgentId => workerAgentId ?? agentId;
+  /// session belongs to, else the session's owner — 'snippet' when the daemon
+  /// reports no owner either, so every row names an agent. Precedence lives
+  /// here so every row agrees, and so the rule is stated once rather than
+  /// repeated at each call site.
+  String? get displayAgentId =>
+      workerAgentId ?? agentId ?? ownerAgentId ?? 'snippet';
 
   /// For a session in a git worktree: the folder in the main checkout it was
   /// made from, and the worktree's branch.
   final String? originFolder;
   final String? branch;
+  final SessionPlan? plan;
+  final SessionLanes? lanes;
+  final int? nextWakeAt;
+  final SessionPr? pr;
 
   /// The folder a person knows this session by: the project, not the
   /// generated worktree directory.
@@ -264,13 +372,32 @@ class SessionInfo {
         runningSince = (j['running_since'] as num?)?.toInt(),
         agentId = j['agent_id'] as String?,
         workerAgentId = j['worker_agent_id'] as String?,
+        ownerAgentId = j['owner_agent_id'] as String?,
+        cameBack = j['came_back'] == true,
+        finishedAt = (j['finished_at'] as num?)?.toInt(),
+        userSeenAt = (j['user_seen_at'] as num?)?.toInt(),
+        resultSummary = switch (j['result_summary']) {
+          final String s when s.trim().isNotEmpty => s.trim(),
+          _ => null,
+        },
         attention = j['attention'] is Map
             ? (j['attention'] as Map).cast<String, dynamic>()
             : null,
         originFolder = j['origin_folder'] as String?,
-        branch = j['branch'] as String?;
+        branch = j['branch'] as String?,
+        plan = j['plan'] is Map
+            ? SessionPlan.fromJson((j['plan'] as Map).cast<String, dynamic>())
+            : null,
+        lanes = j['lanes'] is Map
+            ? SessionLanes.fromJson((j['lanes'] as Map).cast<String, dynamic>())
+            : null,
+        nextWakeAt = (j['next_wake_at'] as num?)?.toInt(),
+        pr = j['pr'] is Map
+            ? SessionPr.fromJson((j['pr'] as Map).cast<String, dynamic>())
+            : null;
 
-  SessionInfo _copy({String? title, String? status}) => SessionInfo._(
+  SessionInfo _copy({String? title, String? status, int? seenAt}) =>
+      SessionInfo._(
         id: id,
         folder: folder,
         conversation: conversation,
@@ -290,14 +417,28 @@ class SessionInfo {
         runningSince: runningSince,
         agentId: agentId,
         workerAgentId: workerAgentId,
+        ownerAgentId: ownerAgentId,
+        cameBack: seenAt == null ? cameBack : false,
+        finishedAt: finishedAt,
+        userSeenAt: seenAt ?? userSeenAt,
+        resultSummary: resultSummary,
         attention: attention,
         originFolder: originFolder,
         branch: branch,
+        plan: plan,
+        lanes: lanes,
+        nextWakeAt: nextWakeAt,
+        pr: pr,
       );
 
   SessionInfo withTitle(String title) => _copy(title: title);
 
   SessionInfo withStatus(String status) => _copy(status: status);
+
+  /// The user just opened this session: it leaves "Came back" at once,
+  /// before the daemon's next sessions payload confirms it.
+  SessionInfo markSeen() =>
+      _copy(seenAt: DateTime.now().millisecondsSinceEpoch ~/ 1000);
 
   const SessionInfo._({
     required this.id,
@@ -319,9 +460,18 @@ class SessionInfo {
     this.runningSince,
     this.agentId,
     this.workerAgentId,
+    this.ownerAgentId,
+    this.cameBack = false,
+    this.finishedAt,
+    this.userSeenAt,
+    this.resultSummary,
     this.attention,
     this.originFolder,
     this.branch,
+    this.plan,
+    this.lanes,
+    this.nextWakeAt,
+    this.pr,
   });
 }
 
@@ -1607,6 +1757,8 @@ class MissionControlTask {
   final List<String> waitingOn;
   final String? currentStep;
   final String? supersededBy;
+  final int planDone;
+  final int planTotal;
 
   MissionControlTask.preview(MissionControlTask o)
       : id = o.id,
@@ -1622,6 +1774,8 @@ class MissionControlTask {
         waitingOn = o.waitingOn,
         currentStep = o.currentStep,
         supersededBy = o.supersededBy,
+        planDone = o.planDone,
+        planTotal = o.planTotal,
         summary = false;
 
   MissionControlTask.fromJson(Map<String, dynamic> j)
@@ -1641,7 +1795,9 @@ class MissionControlTask {
         statusReason = _optText(j['status_reason']),
         waitingOn = _textList(j['waiting_on']),
         currentStep = _optText(j['current_step']),
-        supersededBy = _optText(j['superseded_by']);
+        supersededBy = _optText(j['superseded_by']),
+        planDone = (j['plan_done'] as num?)?.toInt() ?? 0,
+        planTotal = (j['plan_total'] as num?)?.toInt() ?? 0;
 
   bool get isActive =>
       !archived && (status == 'pending' || status == 'in_progress');
@@ -1912,6 +2068,8 @@ class TaskItem {
   final String? supersededBy;
   final String? goalId;
   final String? goalTitle;
+  final int planDone;
+  final int planTotal;
 
   TaskItem.fromJson(Map<String, dynamic> j)
       : id = j['id'] as String? ?? '',
@@ -1938,7 +2096,17 @@ class TaskItem {
         currentStep = _optText(j['current_step']),
         supersededBy = _optText(j['superseded_by']),
         goalId = _optText(j['goal_id']),
-        goalTitle = _optText(j['goal_title']);
+        goalTitle = _optText(j['goal_title']),
+        planDone = (j['plan_done'] as num?)?.toInt() ??
+            ((j['work_plan'] as List?) ?? const [])
+                .whereType<Map>()
+                .where((e) => e['status'] == 'done')
+                .length,
+        planTotal = (j['plan_total'] as num?)?.toInt() ??
+            ((j['work_plan'] as List?) ?? const [])
+                .whereType<Map>()
+                .where((e) => (e['step'] ?? '').toString().trim().isNotEmpty)
+                .length;
 
   /// This task in another column, for showing a move before the daemon
   /// confirms it.
@@ -1964,7 +2132,9 @@ class TaskItem {
         currentStep = t.currentStep,
         supersededBy = t.supersededBy,
         goalId = t.goalId,
-        goalTitle = t.goalTitle;
+        goalTitle = t.goalTitle,
+        planDone = t.planDone,
+        planTotal = t.planTotal;
 }
 
 String? _optText(dynamic v) {
