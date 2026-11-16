@@ -122,6 +122,25 @@ String groupMemberName(GroupMember m, Map<String, CoordinationAgent> agents) {
   return name.isEmpty ? m.id : name;
 }
 
+/// The one-line status a group header or sidebar row shows for live work:
+/// the turn holder on a task room, else who is still replying.
+String? groupActivityStatus(
+    GroupSummary group, String Function(String id) nameOf) {
+  final turn = group.turnAgent;
+  if (turn != null && turn.isNotEmpty) {
+    return '${nameOf(turn)} has the turn';
+  }
+  final replying = group.replying;
+  if (replying.isEmpty) return null;
+  String names(int n) =>
+      replying.take(n).map(nameOf).join(', ');
+  if (replying.length == 1) return '${nameOf(replying.first)} is replying';
+  if (replying.length == 2) {
+    return '${nameOf(replying[0])} and ${nameOf(replying[1])} are replying';
+  }
+  return '${names(2)} and ${replying.length - 2} more are replying';
+}
+
 /// Open a group thread, the same way openAgentThread opens a direct one.
 void openGroupThread(
   BuildContext context, {
@@ -202,12 +221,16 @@ class GroupRow extends StatelessWidget {
       required this.group,
       required this.onTap,
       this.onLongPress,
-      this.pinned = false});
+      this.pinned = false,
+      this.nameOf});
 
   final GroupSummary group;
   final bool pinned;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+
+  /// Resolves an agent id to a display name for the activity status line.
+  final String Function(String id)? nameOf;
 
   @override
   Widget build(BuildContext context) {
@@ -218,7 +241,10 @@ class GroupRow extends StatelessWidget {
       '$members ${members == 1 ? 'member' : 'members'}',
       if (group.lead != null) 'lead ${group.lead}',
     ].join(' · ');
-    final sub = group.preview ?? line;
+    final nameOf = this.nameOf;
+    final status =
+        nameOf == null ? null : groupActivityStatus(group, nameOf);
+    final sub = status ?? group.preview ?? line;
     final shown = agents.take(4).toList();
     final extra = agents.length - shown.length;
     final unread = group.unread;
@@ -1252,6 +1278,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   }
 
   Widget _statusLine() {
+    final status = groupActivityStatus(_group, _agentName);
+    if (status != null) return ChatHeader.statusText(status);
     final typing = _typingStatus();
     if (typing != null) return ChatHeader.statusText(typing);
     return LayoutBuilder(
@@ -1447,6 +1475,19 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       return toId.isEmpty
           ? '$from passed the turn'
           : '$from passed the turn to ${_agentName(toId)}';
+    }
+    if (e.eventType == 'task.verdict') {
+      final verdict = e.payload['verdict']?.toString() ?? '';
+      final by = e.payload['by']?.toString() ?? e.actorId;
+      final taskId = e.payload['task_id']?.toString() ?? '';
+      final who = by == 'human' || by == 'user' || by == 'local'
+          ? 'You'
+          : _agentName(by);
+      return switch (verdict) {
+        'approved' => '$who approved $taskId',
+        'sent_back' => '$who sent back $taskId',
+        _ => body.isEmpty ? null : body,
+      };
     }
     return null;
   }
