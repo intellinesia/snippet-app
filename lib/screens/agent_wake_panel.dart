@@ -7,6 +7,7 @@ import '../chat/chat_info.dart'
     show DockedInfoNav, dockedPick, dockedPromptText;
 import '../models.dart';
 import '../platform.dart';
+import '../settings_form.dart';
 import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
@@ -698,8 +699,23 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
         ),
       );
 
-  Widget _line(String label, String value, {Color? color, Key? key}) =>
-      _panelLine(label, value, color: color, key: key);
+  /// One row of the grouped list; `edit` rows open the editor, as Edit does.
+  Widget _line(String label, String value,
+          {Color? color, Key? key, bool edit = false}) =>
+      SettingsRow(
+        key: key,
+        label: label,
+        trailing: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: kMobile ? 200 : 240),
+          child: Text(value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+              style: sans(kMobile ? 14 : 13, color: color ?? AppColors.fg3)),
+        ),
+        chevron: edit,
+        onTap: edit ? _startEdit : null,
+      );
 
   Widget _wakeSection() {
     final w = _wake;
@@ -741,33 +757,37 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
               style: sans(13, color: AppColors.fg3, height: 1.45)),
         ),
       if (w != null && !_editing) ...[
-        _line('Schedule', w.scheduleText.isEmpty ? w.schedule : w.scheduleText,
-            key: const ValueKey('wake-schedule')),
-        if (w.brief.isNotEmpty) _line('Brief', w.brief),
-        _line('Quiet hours', w.quietHours?.label ?? 'None'),
-        _line('Reports to',
-            '${_reportLabel(w.report)}${w.report.onlyOnChange ? ', only on change' : ''}'),
-        _line(
-            'Next',
-            !w.enabled
-                ? 'Paused'
-                : w.queued
-                    ? 'Queued behind the current goal'
-                    : w.nextRunAt > 0
-                        ? '${wakeWhen(w.nextRunAt)} (${_clock(w.nextRunAt)})'
-                        : 'Not scheduled',
-            key: const ValueKey('wake-next')),
-        _line(
-            'Last',
-            w.lastRunAt == null
-                ? 'Never run'
-                : '${wakeWhen(w.lastRunAt!)}${w.lastStatus == null ? '' : ', ${w.lastStatus}'}',
-            color: w.lastError != null ? AppColors.danger : null),
-        if (w.lastError != null)
-          _line('Error', w.lastError!, color: AppColors.danger)
-        else if (w.lastResult != null)
-          _line('Result', w.lastResult!),
-        _line('Today', '${w.runsLastDay} of ${w.maxRunsPerDay} runs'),
+        SettingsGroup(children: [
+          _line(
+              'Schedule', w.scheduleText.isEmpty ? w.schedule : w.scheduleText,
+              key: const ValueKey('wake-schedule'), edit: true),
+          if (w.brief.isNotEmpty) _line('Brief', w.brief, edit: true),
+          _line('Quiet hours', w.quietHours?.label ?? 'None', edit: true),
+          _line('Reports to',
+              '${_reportLabel(w.report)}${w.report.onlyOnChange ? ', only on change' : ''}',
+              edit: true),
+          _line(
+              'Next',
+              !w.enabled
+                  ? 'Paused'
+                  : w.queued
+                      ? 'Queued behind the current goal'
+                      : w.nextRunAt > 0
+                          ? '${wakeWhen(w.nextRunAt)} (${_clock(w.nextRunAt)})'
+                          : 'Not scheduled',
+              key: const ValueKey('wake-next')),
+          _line(
+              'Last',
+              w.lastRunAt == null
+                  ? 'Never run'
+                  : '${wakeWhen(w.lastRunAt!)}${w.lastStatus == null ? '' : ', ${w.lastStatus}'}',
+              color: w.lastError != null ? AppColors.danger : null),
+          if (w.lastError != null)
+            _line('Error', w.lastError!, color: AppColors.danger)
+          else if (w.lastResult != null)
+            _line('Result', w.lastResult!),
+          _line('Today', '${w.runsLastDay} of ${w.maxRunsPerDay} runs'),
+        ]),
         SizedBox(height: S.s4),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: S.s4),
