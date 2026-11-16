@@ -64,6 +64,44 @@ flutter:
   uses-material-design: true
   assets:
     - assets/providers/
+    - assets/avatars/
+    - assets/avatars/eyes/
+    - assets/avatars/01/
+    - assets/avatars/02/
+    - assets/avatars/03/
+    - assets/avatars/04/
+    - assets/avatars/05/
+    - assets/avatars/06/
+    - assets/avatars/07/
+    - assets/avatars/08/
+    - assets/avatars/09/
+    - assets/avatars/10/
+    - assets/avatars/11/
+    - assets/avatars/12/
+    - assets/avatars/13/
+    - assets/avatars/14/
+    - assets/avatars/15/
+    - assets/avatars/16/
+    - assets/avatars/17/
+    - assets/avatars/18/
+    - assets/avatars/19/
+    - assets/avatars/20/
+    - assets/avatars/21/
+    - assets/avatars/22/
+    - assets/avatars/23/
+    - assets/avatars/24/
+    - assets/avatars/25/
+    - assets/avatars/26/
+    - assets/avatars/27/
+    - assets/avatars/28/
+    - assets/avatars/29/
+    - assets/avatars/30/
+    - assets/avatars/31/
+    - assets/avatars/32/
+    - assets/avatars/33/
+    - assets/avatars/34/
+    - assets/avatars/35/
+    - assets/avatars/36/
   fonts:
     - family: Cove
       fonts:
