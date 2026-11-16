@@ -262,6 +262,24 @@ class _SessionTermViewState extends State<SessionTermView> {
     );
   }
 
+  /// The shell sits in a bordered rounded box; the docked flat terminal stays
+  /// edge to edge.
+  Widget _frame(Widget child) {
+    if (widget.flat) return child;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          kMobile ? S.s16 : S.s12, S.s4, kMobile ? S.s16 : S.s12, S.s8),
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.border2),
+          borderRadius: BorderRadius.circular(R.of(14)),
+        ),
+        child: child,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(children: [
@@ -286,7 +304,7 @@ class _SessionTermViewState extends State<SessionTermView> {
           ]),
         ),
       Expanded(
-        child: TerminalView(
+        child: _frame(TerminalView(
           widget.terminal,
           key: _termView,
           controller: _termController,
@@ -303,7 +321,7 @@ class _SessionTermViewState extends State<SessionTermView> {
                   ? EdgeInsets.fromLTRB(S.of(14), S.s8, S.s12, S.s8)
                   : EdgeInsets.fromLTRB(S.s16, S.s12, S.of(14), S.s12),
           textStyle: TerminalStyle(fontSize: 13, fontFamily: kMonoFamily),
-        ),
+        )),
       ),
       if (widget.mobileKeys)
         Container(
