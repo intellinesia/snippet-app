@@ -61,7 +61,7 @@ void main() {
     for (final label in [
       'Inbox',
       'Board',
-      'Desk',
+      'Desk session',
       'Memory',
       'Wakes and reporting',
       'Delete agent',

@@ -874,6 +874,11 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
       final wide = box.maxWidth >= 980;
       final side = _sidebar(pr);
       final main = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (!wide) ...[
+          side,
+          SizedBox(height: S.s20),
+          _sideTitle('Conversation'),
+        ],
         _event(
           avatar: pr.summary.author,
           header: Text.rich(TextSpan(children: [
@@ -886,10 +891,6 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
           card: true,
         ),
         ..._timeline(pr),
-        if (!wide) ...[
-          SizedBox(height: S.s8),
-          side,
-        ],
         SizedBox(height: S.of(14)),
         if (_open || pr.summary.state == 'CLOSED')
           Padding(
@@ -1076,23 +1077,57 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
 
   Widget _sideTitle(String text) => Padding(
         padding: EdgeInsets.only(bottom: S.s8),
-        child: Text(text, style: sans(13, weight: W.label, color: AppColors.fg3)),
+        child: Text(text, style: sans(12, weight: W.label, color: AppColors.fg3)),
       );
 
-  Widget _sideRow(String icon, Color ink, String label, {String detail = '', VoidCallback? onTap}) => InkWell(
+  Widget _sideCard(List<Widget> rows) => Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(R.of(12)),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: Column(children: [
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0) Divider(height: 1, thickness: 1, color: AppColors.line),
+            rows[i],
+          ],
+        ]),
+      );
+
+  // Tinted icon tile, title with a quiet detail beside it, chevron when tappable.
+  Widget _sideRow(String icon, Color ink, String label,
+          {String detail = '', VoidCallback? onTap, Widget? trailing}) =>
+      InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(R.sm),
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: S.of(5)),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Padding(padding: EdgeInsets.only(top: S.of(1)), child: AppIcon(icon, size: 14, color: ink)),
-            SizedBox(width: S.of(9)),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(label, style: sans(13, color: AppColors.fg1)),
-                if (detail.isNotEmpty) Text(detail, style: TS.meta(AppColors.fg4)),
-              ]),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 32),
+          padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s4),
+          child: Row(children: [
+            Container(
+              width: 20,
+              height: 20,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                  color: ink.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(R.of(6))),
+              child: AppIcon(icon, size: 12, color: ink),
             ),
+            SizedBox(width: S.s8),
+            Expanded(
+              child: Text.rich(
+                TextSpan(children: [
+                  TextSpan(text: label, style: sans(13, color: AppColors.fg1)),
+                  if (detail.isNotEmpty)
+                    TextSpan(text: '  $detail', style: TS.meta(AppColors.fg4)),
+                ]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (trailing != null) trailing,
+            if (onTap != null && trailing == null)
+              AppIcon('chevron-right', size: 12, color: AppColors.fg4),
           ]),
         ),
       );
@@ -1105,7 +1140,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
     final reviewers = {...s.reviewers, ...reviews.keys}.toList();
     final checks = s.checks;
     final merge = switch (pr.mergeState) {
-      'CLEAN' || 'HAS_HOOKS' => ('check-circle', AppColors.ok, 'No conflicts', 'Ready to merge into ${s.base}'),
+      'CLEAN' || 'HAS_HOOKS' => ('check', AppColors.ok, 'Ready to merge', 'No conflicts with ${s.base}'),
       'DIRTY' => ('alert-triangle', AppColors.danger, 'Conflicts', 'Resolve them before merging'),
       'BEHIND' => ('alert-triangle', AppColors.run, 'Out of date', 'Update it with ${s.base}'),
       'BLOCKED' => ('x-circle', AppColors.danger, 'Blocked', 'Required reviews or checks are missing'),
@@ -1113,60 +1148,107 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
       'DRAFT' => ('git-branch', AppColors.fg3, 'Draft', 'Mark it ready before merging'),
       _ => ('clock', AppColors.fg3, 'Checking mergeability', ''),
     };
+    final rollupState = rollup(checks);
+    final checkTone = switch (rollupState) {
+      ChecksState.failing => AppColors.danger,
+      ChecksState.pending => AppColors.run,
+      _ => AppColors.ok,
+    };
+    final checksLine = switch (rollupState) {
+      ChecksState.failing => 'Some checks failed',
+      ChecksState.pending => 'Checks are running',
+      ChecksState.passing => 'All checks have passed',
+      ChecksState.none => 'No checks',
+    };
+    final decision = s.reviewDecision;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _sideTitle('Reviewers'),
-      if (reviewers.isEmpty)
-        Text('No reviewers', style: TS.meta(AppColors.fg4))
-      else
-        for (final r in reviewers)
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: S.s4),
-            child: Row(children: [
-              prAvatar(r, size: 20),
-              SizedBox(width: S.s8),
-              Expanded(child: Text(r, style: sans(13, color: AppColors.fg1))),
-              switch (reviews[r]) {
-                'APPROVED' => Tooltip(message: 'Approved', child: AppIcon('check', size: 14, color: AppColors.ok)),
-                'CHANGES_REQUESTED' => Tooltip(
-                    message: 'Changes requested', child: AppIcon('alert-circle', size: 13, color: AppColors.danger)),
-                'COMMENTED' => Tooltip(message: 'Commented', child: AppIcon('message', size: 13, color: AppColors.fg3)),
-                _ => Tooltip(message: 'Awaiting review', child: _prDot(AppColors.run, size: 6)),
-              },
-            ]),
-          ),
-      SizedBox(height: S.s20),
-      _sideTitle(checks.isEmpty ? 'Checks' : 'Checks  ${checks.length}'),
-      if (checks.isEmpty)
-        Text('No checks', style: TS.meta(AppColors.fg4))
-      else
-        for (final c in checks)
+      _sideTitle('Status'),
+      _sideCard([
+        _sideRow(merge.$1, merge.$2, merge.$3, detail: merge.$4),
+        if (checks.isNotEmpty)
           _sideRow(
-            switch (c.state) {
-              ChecksState.failing => 'x-circle',
-              ChecksState.pending => 'clock',
-              _ => 'check-circle',
-            },
-            switch (c.state) {
-              ChecksState.failing => AppColors.danger,
-              ChecksState.pending => AppColors.run,
-              _ => AppColors.ok,
-            },
-            c.name,
-            detail: c.workflow,
-            onTap: c.url.isEmpty ? null : () => launchUrl(Uri.parse(c.url), mode: LaunchMode.externalApplication),
+            rollupState == ChecksState.failing
+                ? 'x'
+                : rollupState == ChecksState.pending
+                    ? 'clock'
+                    : 'check',
+            checkTone,
+            checksLine,
+            detail: '${checks.length} ${checks.length == 1 ? 'check' : 'checks'}',
           ),
+        if (decision == 'APPROVED' || decision == 'CHANGES_REQUESTED')
+          _sideRow(
+            decision == 'APPROVED' ? 'eye' : 'alert-circle',
+            decision == 'APPROVED' ? AppColors.fg2 : AppColors.danger,
+            decision == 'APPROVED' ? 'Approved' : 'Changes requested',
+            detail: reviews.isEmpty ? '' : '${reviews.length} ${reviews.length == 1 ? 'review' : 'reviews'}',
+          ),
+      ]),
       if (_open) ...[
-        SizedBox(height: S.s20),
-        _sideTitle('Merge'),
-        if (pr.autoMergeMethod.isEmpty && !s.draft) _sideRow(merge.$1, merge.$2, merge.$3, detail: merge.$4),
+        SizedBox(height: S.s8),
         PrMergeBox(
           client: widget.client,
           session: widget.session,
           pr: pr,
           status: widget.status,
           onDone: _reload,
-          padding: EdgeInsets.only(top: S.s6),
+          padding: EdgeInsets.zero,
         ),
+      ],
+      SizedBox(height: S.s20),
+      _sideTitle('Changes'),
+      _sideCard([
+        _sideRow('file', AppColors.fg2, '${pr.files.length} ${pr.files.length == 1 ? 'file' : 'files'}',
+            detail: '+${s.additions} \u2212${s.deletions}', onTap: () => _showFiles(null)),
+        _sideRow('git-commit', AppColors.fg2,
+            '${pr.commits.length} ${pr.commits.length == 1 ? 'commit' : 'commits'}',
+            onTap: () => setState(() => _tab = 1)),
+      ]),
+      SizedBox(height: S.s20),
+      _sideTitle('Reviewers'),
+      if (reviewers.isEmpty)
+        Text('No reviewers', style: TS.meta(AppColors.fg4))
+      else
+        _sideCard([
+          for (final r in reviewers)
+            Container(
+              constraints: const BoxConstraints(minHeight: 32),
+              padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s4),
+              child: Row(children: [
+                prAvatar(r, size: 20),
+                SizedBox(width: S.s8),
+                Expanded(child: Text(r, style: sans(13, color: AppColors.fg1))),
+                switch (reviews[r]) {
+                  'APPROVED' => Tooltip(message: 'Approved', child: AppIcon('check', size: 14, color: AppColors.ok)),
+                  'CHANGES_REQUESTED' => Tooltip(
+                      message: 'Changes requested', child: AppIcon('alert-circle', size: 13, color: AppColors.danger)),
+                  'COMMENTED' => Tooltip(message: 'Commented', child: AppIcon('message', size: 13, color: AppColors.fg3)),
+                  _ => Tooltip(message: 'Awaiting review', child: _prDot(AppColors.run, size: 6)),
+                },
+              ]),
+            ),
+        ]),
+      if (checks.isNotEmpty) ...[
+        SizedBox(height: S.s20),
+        _sideTitle('Checks  ${checks.length}'),
+        _sideCard([
+          for (final c in checks)
+            _sideRow(
+              switch (c.state) {
+                ChecksState.failing => 'x-circle',
+                ChecksState.pending => 'clock',
+                _ => 'check-circle',
+              },
+              switch (c.state) {
+                ChecksState.failing => AppColors.danger,
+                ChecksState.pending => AppColors.run,
+                _ => AppColors.ok,
+              },
+              c.name,
+              detail: c.workflow,
+              onTap: c.url.isEmpty ? null : () => launchUrl(Uri.parse(c.url), mode: LaunchMode.externalApplication),
+            ),
+        ]),
       ],
     ]);
   }
