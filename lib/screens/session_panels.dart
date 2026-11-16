@@ -8,7 +8,7 @@ import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import '../transcript.dart' show LaneWho;
+import '../transcript.dart' show LaneControlButton, LaneRecentOutput, LaneWho;
 import 'lanes.dart' show laneSections, openLaneView;
 
 /// Human-readable checkpoint timestamp ('Today · 3:04 PM').
@@ -209,7 +209,9 @@ class _SessionLanesPanelState extends State<SessionLanesPanel> {
     return ListView(
       padding: EdgeInsets.fromLTRB(side, S.s12, side, S.s24),
       children: laneSections(lanes,
-          client: client, sessionProfile: _sessionProfile),
+          client: client,
+          sessionId: widget.sessionId,
+          sessionProfile: _sessionProfile),
     );
   }
 }
@@ -497,7 +499,9 @@ class _DeskLanesState extends State<_DeskLanes> {
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () => openLaneView(context, l,
-              client: widget.client, liveLanes: () => widget.lanes),
+              client: widget.client,
+              sessionId: widget.sessionId,
+              liveLanes: () => widget.lanes),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -511,6 +515,16 @@ class _DeskLanesState extends State<_DeskLanes> {
                       style: sans(13, color: AppColors.fg1)),
                 ),
                 Text(status, style: sans(12, color: color)),
+                if (widget.client != null &&
+                    widget.sessionId != null &&
+                    (l.running || l.retryable)) ...[
+                  const SizedBox(width: S.s8),
+                  LaneControlButton(
+                    client: widget.client!,
+                    sessionId: widget.sessionId!,
+                    lane: l,
+                  ),
+                ],
               ]),
               if (task.isNotEmpty) ...[
                 const SizedBox(height: 7),
@@ -518,6 +532,10 @@ class _DeskLanesState extends State<_DeskLanes> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: sans(13, height: 1.45, color: AppColors.fg3)),
+              ],
+              if (l.running && l.recent.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                LaneRecentOutput(lines: l.recent),
               ],
               const SizedBox(height: 8),
               Row(children: [

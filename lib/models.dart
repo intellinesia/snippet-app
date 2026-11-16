@@ -826,6 +826,7 @@ class LaneInfo {
   final String? activityKind;
   final String? activityAt;
   final List<LaneActivity> activityLog;
+  final List<String> recent;
   final String? transcript;
   final String? agent;
   final bool readOnly;
@@ -846,6 +847,7 @@ class LaneInfo {
     this.activityKind,
     this.activityAt,
     this.activityLog = const [],
+    this.recent = const [],
     this.transcript,
     this.agent,
     this.readOnly = false,
@@ -874,6 +876,14 @@ class LaneInfo {
         }
       }
     }
+    final recent = <String>[];
+    final rawRecent = j['recent'];
+    if (rawRecent is List) {
+      for (final e in rawRecent) {
+        final line = e?.toString().trim() ?? '';
+        if (line.isNotEmpty) recent.add(line);
+      }
+    }
     return LaneInfo(
       id: s(j['id']),
       title: s(j['title']),
@@ -887,6 +897,7 @@ class LaneInfo {
       activityKind: opt(j['activity_kind']),
       activityAt: opt(j['activity_at']),
       activityLog: log,
+      recent: recent,
       transcript: opt(j['transcript']),
       agent: opt(j['agent']),
       readOnly: j['read_only'] == true,
@@ -895,6 +906,7 @@ class LaneInfo {
     );
   }
   bool get running => status == 'running';
+  bool get retryable => status == 'failed' || status == 'cancelled';
 }
 
 class LaneActivity {
