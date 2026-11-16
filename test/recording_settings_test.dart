@@ -108,7 +108,7 @@ void main() {
   testWidgets('Recording section lists rules, windows and recordings',
       (t) async {
     await pump(t, RecordingPolicy.fromJson(_json));
-    expect(find.text('RECORDING'), findsOneWidget);
+    expect(sectionHeader('Recording'), findsOneWidget);
     expect(find.text('Snooze'), findsOneWidget);
     expect(find.text('Keep recordings'), findsOneWidget);
     expect(find.text('30 days'), findsOneWidget);
@@ -135,9 +135,15 @@ void main() {
 
   testWidgets('a 404 hides the section', (t) async {
     await pump(t, null);
-    expect(find.text('RECORDING'), findsNothing);
-    expect(find.text('RULES'), findsNothing);
-    expect(find.text('CONVERSATION'), findsOneWidget);
+    expect(sectionHeader('Recording'), findsNothing);
+    expect(sectionHeader('Rules'), findsNothing);
+    expect(sectionHeader('Conversation'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 }
+
+Finder sectionHeader(String text) => find.descendant(
+      of: find.byWidgetPredicate(
+          (w) => w is Semantics && w.properties.header == true),
+      matching: find.text(text),
+    );

@@ -198,7 +198,10 @@ class VaultScreenState extends State<VaultScreen> {
           child: PageBody(children: [
             ListGroup(children: [
               for (final n in names) _secretRow(n),
-              if (_adding) ..._form() else _addRow(names.isEmpty),
+              if (_adding)
+                ..._form()
+              else if (!widget.embedded)
+                _addRow(names.isEmpty),
             ]),
             Padding(
               padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
@@ -237,11 +240,14 @@ class VaultScreenState extends State<VaultScreen> {
               onBack: widget.onBack!,
               actions: [
                 if (!_adding)
-                  IconBtn('plus',
-                      size: 40,
-                      iconSize: 18,
-                      tooltip: 'Add secret',
-                      onTap: _add),
+                  Padding(
+                    padding: EdgeInsets.only(right: S.s12),
+                    child: Btn('Add secret',
+                        icon: 'plus',
+                        small: true,
+                        variant: BtnVariant.secondary,
+                        onTap: _add),
+                  ),
               ],
             )
           else
@@ -398,18 +404,14 @@ class VaultScreenState extends State<VaultScreen> {
   Widget _secretRow(String name) => kMobile
       ? V5SettingsRow(
           label: name,
-          leading: const V5IconTile('key'),
-          trailing: Tooltip(
-            message: 'Remove $name',
-            child: InkResponse(
-              onTap: () => _remove(name),
-              radius: 20,
-              child: SizedBox(
-                width: 36,
-                height: 30,
-                child: Center(
-                    child: AppIcon('trash', size: 16, color: AppColors.fg4)),
-              ),
+          trailing: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _remove(name),
+            child: SizedBox(
+              height: 44,
+              child: Center(
+                  child: Text('Remove',
+                      style: sans(13, color: AppColors.danger))),
             ),
           ),
         )

@@ -247,6 +247,16 @@ class SettingsPanel extends StatefulWidget {
   State<SettingsPanel> createState() => SettingsPanelState();
 }
 
+/// Labelled pill in the phone sub-page header, as in the settings mockup.
+Widget _headerAdd(String label, VoidCallback onTap) => Padding(
+      padding: EdgeInsets.only(right: S.s12),
+      child: Btn(label,
+          icon: 'plus',
+          small: true,
+          variant: BtnVariant.secondary,
+          onTap: onTap),
+    );
+
 class SettingsPanelState extends State<SettingsPanel> {
   late final List<Instance> _instances = [...widget.instances];
 
@@ -626,7 +636,7 @@ class SettingsPanelState extends State<SettingsPanel> {
 
   /// v5 `.plb`: a quiet 13px group caption, indented past the card edge.
   Widget _settingsGroupLabel(String text) => Padding(
-        padding: EdgeInsets.fromLTRB(S.s16, S.s16, 0, S.s4),
+        padding: EdgeInsets.fromLTRB(S.s20, S.s16, 0, S.s6),
         child: Text(text, style: sans(13, color: AppColors.fg3)),
       );
 
@@ -659,7 +669,7 @@ class SettingsPanelState extends State<SettingsPanel> {
             onTap: () => widget.onSection?.call(SettingsPage.general),
           ),
         ]),
-        _settingsGroupLabel('General'),
+        _settingsGroupLabel('Models'),
         ListGroup(children: [
           _settingsRow('Inference profiles', 'cpu',
               page: SettingsPage.models,
@@ -671,16 +681,18 @@ class SettingsPanelState extends State<SettingsPanel> {
               value: _usageTokens == null
                   ? null
                   : '${fmtSi(_usageTokens!)} this week'),
-          ApprovalsRow(client: widget.client),
-          if (kCanNotify) _notifRow(),
         ]),
         _settingsGroupLabel('Agents'),
         ListGroup(children: [
+          ApprovalsRow(client: widget.client),
           _settingsRow('Memory', 'book-marked', page: SettingsPage.memory),
+          _settingsRow('Wakes', 'repeat', page: SettingsPage.wakes),
+          _settingsRow('Scheduled', 'calendar-clock',
+              page: SettingsPage.scheduled),
           _settingsRow('Vault', 'lock',
               page: SettingsPage.vault,
               value: _vaultCount?.toString()),
-          _settingsRow('Wakes', 'repeat', page: SettingsPage.wakes),
+          _settingsRow('Web search', 'globe', page: SettingsPage.webSearch),
           _settingsRow('Voice', 'mic',
               page: SettingsPage.voice,
               value: _ambientOn == null
@@ -688,11 +700,8 @@ class SettingsPanelState extends State<SettingsPanel> {
                   : _ambientOn!
                       ? 'Listening'
                       : 'Off'),
-          _settingsRow('Scheduled', 'calendar-clock',
-              page: SettingsPage.scheduled),
-          _settingsRow('Web search', 'globe', page: SettingsPage.webSearch),
         ]),
-        _settingsGroupLabel('Appearance'),
+        _settingsGroupLabel('This device'),
         ListenableBuilder(
           listenable: ThemeManager.instance,
           builder: (context, _) {
@@ -706,6 +715,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                     ? tm.baseTheme.label
                     : '${tm.baseTheme.label} · ${accent.name}',
               ),
+              if (kCanNotify) _notifRow(),
             ]);
           },
         ),
@@ -726,11 +736,7 @@ class SettingsPanelState extends State<SettingsPanel> {
               compact: true,
               onBack: back,
               actions: [
-                IconBtn('plus',
-                    size: 40,
-                    iconSize: 18,
-                    tooltip: 'Add machine',
-                    onTap: _addMachine),
+                _headerAdd('Add machine', _addMachine),
               ],
             ),
             Expanded(child: _generalPage(includeNotifications: false)),
@@ -2006,32 +2012,17 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   Widget? _mobilePageAction(SettingsPage page) => switch (page) {
         SettingsPage.general => _addingMachine
             ? null
-            : IconBtn('plus',
-                size: 40,
-                iconSize: 18,
-                tooltip: 'Add machine',
-                onTap: _addMachine),
+            : _headerAdd('Add machine', _addMachine),
         SettingsPage.models => _modelsEditing
             ? null
-            : IconBtn('plus',
-                size: 40,
-                iconSize: 18,
-                tooltip: 'Add profile',
-                onTap: () => _modelsKey.currentState?.addProfile()),
+            : _headerAdd(
+                'Add profile', () => _modelsKey.currentState?.addProfile()),
         SettingsPage.vault => _vaultAdding
             ? null
-            : IconBtn('plus',
-                size: 40,
-                iconSize: 18,
-                tooltip: 'Add secret',
-                onTap: () => _vaultKey.currentState?.add()),
+            : _headerAdd('Add secret', () => _vaultKey.currentState?.add()),
         SettingsPage.scheduled => _recurringAdding
             ? null
-            : IconBtn('plus',
-                size: 40,
-                iconSize: 18,
-                tooltip: 'New job',
-                onTap: () => _recurringKey.currentState?.add()),
+            : _headerAdd('New job', () => _recurringKey.currentState?.add()),
         _ => null,
       };
 
@@ -2334,9 +2325,14 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
   }
 
   Future<void> _pick(BuildContext anchor) async {
+    final picked =
+        await _showApprovalsMenu(context, anchor, _manual ?? false);
+    if (picked != null) await _apply(picked);
+  }
+
+  Future<void> _apply(bool picked) async {
     final current = _manual ?? false;
-    final picked = await _showApprovalsMenu(context, anchor, current);
-    if (picked == null || picked == current || !mounted) return;
+    if (picked == current || !mounted) return;
     setState(() => _manual = picked);
     try {
       await widget.client.setManualApproval(picked);
@@ -2351,23 +2347,27 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
   Widget build(BuildContext context) {
     final manual = _manual;
     if (kMobile) {
-      return Builder(
-        builder: (anchor) => _V5SettingsRow(
-          label: 'Approvals',
-          value: manual == null ? null : (manual ? 'Ask' : 'Yolo'),
-          leading: Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              color: AppColors.surface2,
-              borderRadius: BorderRadius.circular(R.md),
-            ),
-            child: Center(
-              child: AppIcon('shield-check', size: 16, color: AppColors.fg2),
-            ),
+      // Answered on the row: two choices need no menu.
+      return _V5SettingsRow(
+        label: 'Approvals',
+        leading: Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: AppColors.tint2,
+            borderRadius: BorderRadius.circular(R.md),
           ),
-          onTap: () => _pick(anchor),
+          child: Center(
+            child: AppIcon('shield-check', size: 16, color: AppColors.fg2),
+          ),
         ),
+        trailing: manual == null
+            ? const SizedBox.shrink()
+            : _InlineSeg(
+                labels: const ['Ask', 'Yolo'],
+                selected: manual ? 0 : 1,
+                onChanged: (i) => _apply(i == 0),
+              ),
       );
     }
     return Builder(
@@ -3533,6 +3533,48 @@ class _AppearancePreviewCard extends StatelessWidget {
                   weight: on ? W.label : W.body,
                   color: on ? AppColors.fg1 : AppColors.fg3)),
         ),
+      );
+}
+
+/// A small two-or-more way switch that lives on a settings row.
+class _InlineSeg extends StatelessWidget {
+  const _InlineSeg({
+    required this.labels,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<String> labels;
+  final int selected;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: AppColors.surface3,
+          borderRadius: BorderRadius.circular(R.md),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          for (var i = 0; i < labels.length; i++)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onChanged(i),
+              child: Container(
+                height: 28,
+                padding: EdgeInsets.symmetric(horizontal: S.s12),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: i == selected ? AppColors.surface1 : null,
+                  borderRadius: BorderRadius.circular(R.sm),
+                ),
+                child: Text(labels[i],
+                    style: sans(13,
+                        weight: i == selected ? W.label : W.body,
+                        color: i == selected ? AppColors.fg1 : AppColors.fg3)),
+              ),
+            ),
+        ]),
       );
 }
 

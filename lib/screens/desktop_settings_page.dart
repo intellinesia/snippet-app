@@ -48,7 +48,7 @@ typedef _NavEntry = ({
 
 const List<(String, List<_NavEntry>)> _groups = [
   (
-    'General',
+    'This machine',
     [
       (
         page: SettingsPage.general,
@@ -56,6 +56,11 @@ const List<(String, List<_NavEntry>)> _groups = [
         icon: null,
         iconData: LucideIcons.laptop,
       ),
+    ],
+  ),
+  (
+    'Models',
+    [
       (
         page: SettingsPage.models,
         label: 'Inference profiles',
@@ -92,21 +97,9 @@ const List<(String, List<_NavEntry>)> _groups = [
         iconData: null,
       ),
       (
-        page: SettingsPage.vault,
-        label: 'Vault',
-        icon: 'lock',
-        iconData: null,
-      ),
-      (
         page: SettingsPage.wakes,
         label: 'Wakes',
         icon: 'repeat',
-        iconData: null,
-      ),
-      (
-        page: SettingsPage.voice,
-        label: 'Voice',
-        icon: 'mic',
         iconData: null,
       ),
       (
@@ -116,15 +109,27 @@ const List<(String, List<_NavEntry>)> _groups = [
         iconData: null,
       ),
       (
+        page: SettingsPage.vault,
+        label: 'Vault',
+        icon: 'lock',
+        iconData: null,
+      ),
+      (
         page: SettingsPage.webSearch,
         label: 'Web search',
         icon: 'globe',
         iconData: null,
       ),
+      (
+        page: SettingsPage.voice,
+        label: 'Voice',
+        icon: 'mic',
+        iconData: null,
+      ),
     ],
   ),
   (
-    'Appearance',
+    'This device',
     [
       (
         page: SettingsPage.appearance,

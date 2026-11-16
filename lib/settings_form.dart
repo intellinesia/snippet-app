@@ -13,7 +13,7 @@ class SettingsGroupLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(S.s16, S.s16, 0, S.s4),
+        padding: EdgeInsets.fromLTRB(S.s20, S.s16, 0, S.s6),
         child: Text(text, style: sans(13, color: AppColors.fg3)),
       );
 }
@@ -147,24 +147,30 @@ class SettingsGroup extends StatelessWidget {
         ));
       }
     }
+    final radius = BorderRadius.circular(kMobile ? R.lg : R.card);
     return Padding(
-      padding: EdgeInsets.only(bottom: kMobile ? S.of(26) : S.s24),
+      padding: EdgeInsets.only(bottom: kMobile ? S.s20 : S.s16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (header != null)
           Padding(
-            padding: EdgeInsets.fromLTRB(kMobile ? S.s16 : S.s4, 0, S.s4, S.s6),
-            child: Text(header!.toUpperCase(), style: TS.overline()),
+            padding: EdgeInsets.fromLTRB(
+                kMobile ? S.s20 : S.s16, 0, S.s4, S.s6),
+            child: Semantics(
+              header: true,
+              child: Text(header!,
+                  style: sans(kMobile ? 13 : 12, color: AppColors.fg3)),
+            ),
           ),
         Tactile(
-          radius: BorderRadius.circular(kMobile ? 14 : 10),
+          radius: radius,
           child: Container(
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(kMobile ? 14 : 10),
+            borderRadius: radius,
           ),
           foregroundDecoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(kMobile ? 14 : 10),
+            borderRadius: radius,
             border: Border.all(color: AppColors.line),
           ),
           // Ink must paint inside the clip, not on a Material further up.
@@ -177,8 +183,9 @@ class SettingsGroup extends StatelessWidget {
         ),
         if (footer != null)
           Padding(
-            padding: EdgeInsets.fromLTRB(kMobile ? S.s16 : S.s4, S.of(7), S.s4, 0),
-            child: Text(footer!, style: TS.meta()),
+            padding: EdgeInsets.fromLTRB(
+                kMobile ? S.s20 : S.s16, S.s6, S.s4, 0),
+            child: Text(footer!, style: sans(12, color: AppColors.fg3)),
           ),
       ]),
     );
@@ -209,11 +216,11 @@ class SettingsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final content = ConstrainedBox(
-      constraints: BoxConstraints(minHeight: kMobile ? 52 : 40),
+      constraints: BoxConstraints(minHeight: kMobile ? 46 : 40),
       child: Padding(
         padding: kMobile
-            ? EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s12)
-            : EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.of(9)),
+            ? EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.s8)
+            : EdgeInsets.symmetric(horizontal: S.of(12), vertical: S.s6),
         child: Row(children: [
           if (leading != null) ...[leading!, SizedBox(width: S.s12)],
           Expanded(
