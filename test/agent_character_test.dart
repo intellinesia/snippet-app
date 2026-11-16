@@ -273,7 +273,12 @@ void main() {
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            AgentCharacter(cid, size: 54, state: st),
+                            AgentCharacter(cid,
+                                size: 54,
+                                state: st,
+                                badge: st == AgentCharacterState.needs
+                                    ? '?'
+                                    : null),
                             const SizedBox(height: 6),
                             Text(stLabel,
                                 style: sans(11, color: AppColors.fg3)),

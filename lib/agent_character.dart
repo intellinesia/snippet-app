@@ -76,6 +76,7 @@ class CharacterSpec {
     required this.body256,
     this.over,
     this.over256,
+    this.bodyTop = 0,
   });
 
   factory CharacterSpec.fromJson(Map<String, dynamic> j) {
@@ -95,6 +96,7 @@ class CharacterSpec {
       body256: p['body_256'] as String,
       over: p['over'] as String?,
       over256: p['over_256'] as String?,
+      bodyTop: (p['body_top'] as num?)?.toDouble() ?? 0,
     );
   }
 
@@ -102,6 +104,12 @@ class CharacterSpec {
   final String shape;
   final String colour;
   final String colorHex;
+
+  Color get color {
+    final hex = colorHex.replaceFirst('#', '');
+    return Color(int.tryParse('FF$hex', radix: 16) ?? 0xFFEDEDED);
+  }
+
   final String eyeStyle;
   final List<CharacterEyeAnchor> eyes;
   final CharacterShadowSpec shadow;
@@ -109,6 +117,9 @@ class CharacterSpec {
   final String body256;
   final String? over;
   final String? over256;
+
+  /// Top of the body's opaque area as a fraction of the plate height.
+  final double bodyTop;
 }
 
 @immutable
@@ -222,12 +233,16 @@ class AgentCharacter extends StatefulWidget {
     this.size = 24,
     this.state = AgentCharacterState.idle,
     this.staggerKey,
+    this.badge,
   });
 
   final String characterId;
   final double size;
   final AgentCharacterState state;
   final String? staggerKey;
+
+  /// Short mark (usually '?') shown top-right in the character's colour.
+  final String? badge;
 
   static bool useHighRes(double logicalSize, double devicePixelRatio) =>
       logicalSize * devicePixelRatio > 256.0;
@@ -439,6 +454,37 @@ class _AgentCharacterState extends State<AgentCharacter> {
         filterQuality: FilterQuality.medium,
       );
 
+  Widget _badgeLayer(Color fill, double size, double bodyTop) {
+    // Matches the mockup: 11px at sidebar size up to 20px on the stage.
+    final d = (size * 0.34).clamp(11.0, 20.0);
+    final ring = d < 14 ? 1.0 : 1.5;
+    final ink = fill.computeLuminance() > 0.4
+        ? const Color(0xFF121110)
+        : const Color(0xFFFFFFFF);
+    final edge = d < 14 ? -3.0 : -2.0;
+    return Positioned(
+      right: edge,
+      // Low shapes such as the dome would otherwise float the badge in air.
+      top: bodyTop * size + edge,
+      child: Container(
+        width: d,
+        height: d,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: fill,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.bg, width: ring),
+        ),
+        child: Text(
+          widget.badge!,
+          textScaler: TextScaler.noScaling,
+          style: sans(d * 0.58, weight: FontWeight.w700, color: ink)
+              .copyWith(height: 1),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = widget.size;
@@ -572,6 +618,8 @@ class _AgentCharacterState extends State<AgentCharacter> {
         children: [
           shadowLayer,
           Positioned.fill(child: bodyGroup),
+          if (widget.badge != null && widget.badge!.isNotEmpty)
+            _badgeLayer(spec.color, size, spec.bodyTop),
         ],
       ),
     );
