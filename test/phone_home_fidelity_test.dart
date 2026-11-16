@@ -130,11 +130,11 @@ void main() {
       expect(find.text('2'), findsOneWidget);
 
       // Rows carry their owner's avatar too, so look inside the dock only.
-      final mcMochi = tester.widget<MochiIcon>(find.descendant(
+      final mc = tester.widget<AgentMochi>(find.descendant(
           of: find.byType(MissionControlDock),
-          matching: find.byType(MochiIcon)));
-      expect(mcMochi.size, 24);
-      expect(mcMochi.color, AppColors.ok);
+          matching: find.byType(AgentMochi)));
+      expect(mc.agentId, 'mission-control');
+      expect(mc.state, AgentCharacterState.working);
 
       await tester.tap(find.byTooltip('Mission Control, voice on'));
       await tester.tap(find.byTooltip('New session'));

@@ -200,8 +200,11 @@ class MissionControlDock extends StatelessWidget {
                     bare: true,
                     badgeCount: badgeCount,
                     onTap: onOpen,
-                    child: MochiIcon(
-                        color: live ? AppColors.ok : AppColors.fg1, size: 24),
+                    child: AgentMochi('mission-control',
+                        size: 28,
+                        state: live
+                            ? AgentCharacterState.working
+                            : AgentCharacterState.idle),
                   ),
                 ),
                 SizedBox(width: S.s12),

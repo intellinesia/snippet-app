@@ -1047,9 +1047,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         child: SizedBox(
           height: 44,
           child: Row(children: [
-            _holdsTurn(a)
-                ? WorkingMochi(size: 22, color: mochiColorFor(a.agentId))
-                : AgentMochi(a.agentId, size: 22),
+            AgentMochi(a.agentId,
+                size: 22,
+                state: _holdsTurn(a)
+                    ? AgentCharacterState.working
+                    : AgentCharacterState.idle),
             SizedBox(width: S.s12),
             Expanded(
               child: Column(
@@ -1296,9 +1298,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   child: SizedBox(
                     height: 48,
                     child: Row(children: [
-                      _holdsTurn(a)
-                          ? WorkingMochi(size: 22, color: mochiColorFor(a.agentId))
-                          : AgentMochi(a.agentId, size: 22),
+                      AgentMochi(a.agentId,
+                          size: 22,
+                          state: _holdsTurn(a)
+                              ? AgentCharacterState.working
+                              : AgentCharacterState.idle),
                       SizedBox(width: S.s12),
                       Expanded(
                         child: Text(a.agentId,
@@ -1344,11 +1348,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       padding: EdgeInsets.symmetric(
                           horizontal: S.of(10), vertical: S.s8),
                       child: Row(children: [
-                        _holdsTurn(roster[i])
-                            ? WorkingMochi(
-                                size: 18,
-                                color: mochiColorFor(roster[i].agentId))
-                            : AgentMochi(roster[i].agentId, size: 18),
+                        AgentMochi(roster[i].agentId,
+                            size: 18,
+                            state: _holdsTurn(roster[i])
+                                ? AgentCharacterState.working
+                                : AgentCharacterState.idle),
                         SizedBox(width: S.s8),
                         Expanded(
                           child: Text(roster[i].agentId,

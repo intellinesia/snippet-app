@@ -146,7 +146,7 @@ class TopWorkspaceTabChip extends StatelessWidget {
           onTap: onTap,
           chipKey: chipKey,
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            MochiIcon(color: AppColors.fg1, size: 18),
+            AgentMochi('mission-control', size: 18),
             if (attentionCount > 0) ...[
               SizedBox(width: S.s6),
               Text('$attentionCount', style: mono(11, color: AppColors.fg4)),

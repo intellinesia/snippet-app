@@ -224,7 +224,7 @@ class MobileHomeHeader extends StatelessWidget {
                     size: 40,
                     badgeCount: mcBadgeCount,
                     onTap: onMc,
-                    child: MochiIcon(color: AppColors.fg1, size: 22),
+                    child: AgentMochi('mission-control', size: 26),
                   ),
                 const Spacer(),
                 if (listening) ...[
@@ -281,7 +281,7 @@ class MobileMissionBar extends StatelessWidget {
                       height: 40,
                       padding: EdgeInsets.symmetric(horizontal: S.s16),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        MochiIcon(size: 20, color: AppColors.fg1),
+                        AgentMochi('mission-control', size: 22),
                         SizedBox(width: S.of(7)),
                         Flexible(
                           child: Text(
