@@ -197,7 +197,7 @@ class _PhoneHeroState extends State<PhoneHero> {
     return Padding(
       padding: EdgeInsets.only(top: S.s8, bottom: S.s16),
       child: SizedBox(
-        height: 68 + 12 + 20,
+        height: 68 + 12,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -254,18 +254,6 @@ class _PhoneHeroState extends State<PhoneHero> {
                       badge: needs ? '?' : null,
                     ),
                   ),
-                ),
-              ),
-              SizedBox(height: S.s2),
-              SizedBox(
-                height: 16,
-                child: OverflowBox(
-                  maxWidth: size + 12,
-                  child: Text(name,
-                      maxLines: 1,
-                      textAlign: TextAlign.center,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(11, color: AppColors.fg3)),
                 ),
               ),
             ],

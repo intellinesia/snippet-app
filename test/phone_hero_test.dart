@@ -41,7 +41,8 @@ SessionInfo _running() => _session('s2', 'moss', {
       'title': 'Staging deploy',
       'status': 'running',
       'running': true,
-      'running_since': _sec(DateTime.now().subtract(const Duration(minutes: 11, seconds: 5))),
+      'running_since': _sec(
+          DateTime.now().subtract(const Duration(minutes: 11, seconds: 5))),
       'plan': {'done': 3, 'total': 6, 'current': 'Health checks'},
     });
 
@@ -77,7 +78,8 @@ void main() {
       _session('idle', 'rook', {'status': 'idle'}),
     ]));
     expect(find.byType(PhoneHero), findsOneWidget);
-    expect(find.text('Rook'), findsOneWidget);
+    // The cast carries no name labels; the name lives in semantics only.
+    expect(find.text('Rook'), findsNothing);
     expect(find.text('Needs you'), findsNothing);
     expect(find.bySemanticsLabel(RegExp('Rook is asleep')), findsOneWidget);
   });
@@ -92,9 +94,10 @@ void main() {
     rememberAgentCharacters(
         const [('rook', '01'), ('moss', '07'), ('wren', '05')]);
     await tester.pumpWidget(_host([_asking(), _running()]));
-    expect(find.text('Rook'), findsOneWidget);
-    expect(find.text('Moss'), findsOneWidget);
-    expect(find.text('Wren'), findsNothing);
+    expect(find.bySemanticsLabel(RegExp('Rook needs you')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Moss is working')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Wren')), findsNothing);
+    expect(find.text('Moss'), findsNothing);
     final chars = tester
         .widgetList<AgentCharacter>(find.byType(AgentCharacter))
         .where((c) => c.size != 36 && c.size != 24)
@@ -116,8 +119,7 @@ void main() {
     expect(find.text('2 min'), findsOneWidget);
     expect(find.text('Rook · Sidebar density'), findsOneWidget);
     expect(find.text('Run a command'), findsOneWidget);
-    expect(
-        find.textContaining('git push --force-with-lease'), findsOneWidget);
+    expect(find.textContaining('git push --force-with-lease'), findsOneWidget);
     await tester.tap(find.text('Approve'));
     await tester.pump();
     await tester.tap(find.text('Deny'));
@@ -210,6 +212,7 @@ void main() {
         ),
       ),
     ));
-    expect(find.textContaining(RegExp(r'^Agent\d$')), findsNWidgets(5));
+    expect(find.bySemanticsLabel(RegExp(r'^Agent\d is working$')),
+        findsNWidgets(5));
   });
 }
