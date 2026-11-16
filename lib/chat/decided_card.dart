@@ -87,7 +87,7 @@ class DecidedCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: code
-                      ? codeMono(13, height: 20 / 13, color: titleColor)
+                      ? codeMono(12, height: 20 / 12, color: titleColor)
                       : sans(kMobile ? 14 : 13,
                           height: 20 / (kMobile ? 14 : 13), color: titleColor)),
               if (subtitle != null && subtitle!.isNotEmpty)

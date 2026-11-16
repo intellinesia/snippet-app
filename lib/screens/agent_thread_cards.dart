@@ -1117,6 +1117,7 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
     final head = [
       if (taskId.isNotEmpty) taskId,
       if (_s('task_title').isNotEmpty) _s('task_title'),
+      if (_s('session_title').isNotEmpty) _s('session_title'),
     ].join(' \u00b7 ');
     final counter = total != null && total > 1 && index != null
         ? '$index of $total'
@@ -1143,6 +1144,10 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
             if (counter != null) ChatCardPill(counter),
           ]),
           SizedBox(height: S.s6),
+          if (parsed.shownCommand.isNotEmpty && !isCommand) ...[
+            Text(title, style: sans(kMobile ? 14 : 13, color: AppColors.fg1)),
+            SizedBox(height: S.s4),
+          ],
           if (parsed.shownCommand.isNotEmpty)
             ApprovalCode(code: parsed.shownCommand, collapsedLines: 4)
           else

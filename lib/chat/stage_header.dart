@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../mochi.dart';
 import '../theme.dart';
+import '../widgets.dart' show AppIcon;
 
 /// One cast member on the stage.
 class StageMember {
@@ -116,7 +117,7 @@ class StageHeader extends StatelessWidget {
             ),
             if (onTap != null) ...[
               SizedBox(width: S.s4),
-              Icon(Icons.chevron_right, size: 14, color: AppColors.fg3),
+              AppIcon('chevron-right', size: 14, color: AppColors.fg3),
             ],
             if (compact && hasSub) ...[
               SizedBox(width: S.s8),
