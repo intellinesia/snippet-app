@@ -9,6 +9,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../pull_refresh.dart';
+import 'compact_btn.dart';
 
 /// Git for one session's workspace: status (staged / changed / untracked),
 /// per-file diff, stage/unstage/commit, branch switch, push/pull. All operations
@@ -450,28 +451,22 @@ class _GitScreenState extends State<GitScreen> {
         ),
         SizedBox(width: S.s8),
         if (hasUp) ...[
-          Btn(
+          CompactBtn(
             st.behind > 0 ? 'Pull ${st.behind}' : 'Pull',
-            small: true,
-            variant: BtnVariant.surface,
             disabled: _busy,
             onTap: () =>
                 _op(() => widget.client.gitPull(_repo), okMsg: 'Pulled'),
           ),
           SizedBox(width: S.s6),
-          Btn(
+          CompactBtn(
             st.ahead > 0 ? 'Push ${st.ahead}' : 'Push',
-            small: true,
-            variant: BtnVariant.surface,
             disabled: _busy,
             onTap: () =>
                 _op(() => widget.client.gitPush(_repo), okMsg: 'Pushed'),
           ),
         ] else
-          Btn(
+          CompactBtn(
             'Publish',
-            small: true,
-            variant: BtnVariant.surface,
             disabled: _busy,
             onTap: () =>
                 _op(() => widget.client.gitPush(_repo), okMsg: 'Published'),
@@ -543,18 +538,13 @@ class _GitScreenState extends State<GitScreen> {
             ),
             const Spacer(),
             if (hasStaged)
-              Btn('Commit ${st.staged.length}',
-                  small: true,
-                  disabled: !canCommit,
-                  onTap: _commit)
+              CompactBtn('Commit ${st.staged.length}',
+                  primary: true, disabled: !canCommit, onTap: _commit)
             else if (hasAny)
-              Btn('Commit all',
-                  small: true,
-                  variant: BtnVariant.secondary,
-                  disabled: !canCommit,
-                  onTap: _stageAllAndCommit)
+              CompactBtn('Commit all',
+                  disabled: !canCommit, onTap: _stageAllAndCommit)
             else
-              const Btn('Commit', small: true, disabled: true),
+              const CompactBtn('Commit', disabled: true),
           ]),
         ],
       ),
@@ -624,7 +614,7 @@ class _GitScreenState extends State<GitScreen> {
           child: InkWell(
             onTap: () => _openDiff(f),
             child: Padding(
-              padding: EdgeInsets.fromLTRB(S.s12, S.s4, S.s4, S.s4),
+              padding: EdgeInsets.fromLTRB(S.s12, kMobile ? 0 : S.s2, S.s4, kMobile ? 0 : S.s2),
               child: Row(children: [
                 Container(
                   width: kMobile ? 22 : 20,
