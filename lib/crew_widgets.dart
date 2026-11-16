@@ -343,8 +343,8 @@ class _CrewStackState extends State<CrewStack> {
                         width: 22,
                         height: 22,
                         alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                            color: AppColors.bg, shape: BoxShape.circle),
+                        decoration:
+                            avatarDecoration(22, color: AppColors.bg),
                         child: AgentMochi(shown[i].agent.id, size: 18),
                       ),
                     ),

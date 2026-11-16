@@ -131,8 +131,8 @@ class _MissionControlCardState extends State<MissionControlCard> {
                 dimension: 32,
                 child: Stack(clipBehavior: Clip.none, children: [
                   Container(
-                    decoration: BoxDecoration(
-                        color: AppColors.surface2, shape: BoxShape.circle),
+                    decoration:
+                        avatarDecoration(32, color: AppColors.surface2),
                     alignment: Alignment.center,
                     child: const AgentMochi('mission-control', size: 20),
                   ),

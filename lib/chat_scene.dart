@@ -165,27 +165,39 @@ fn fbm(q: vec2<f32>) -> f32 {
 }
 ''';
 
-/// WGSL for [scene], coloured from the current theme.
-String sceneSource(String scene) {
+double _param(Map<String, dynamic> p, String key, double max) {
+  final v = p[key];
+  return v is num ? v.toDouble().clamp(0.0, max) : 1.0;
+}
+
+/// WGSL for [scene], coloured from the current theme. The theme's
+/// `backdrop.params` may set `speed` (0-4), `intensity` (0-3) and `tint`.
+String sceneSource(String scene, [Map<String, dynamic>? params]) {
+  final p = params ?? ThemeManager.instance.resolved.backdrop.params;
+  final tint = parseThemeColor(p['tint']) ?? AppColors.accent;
   final head = 'const BG = ${_vec3(AppColors.bg)};\n'
-      'const ACCENT = ${_vec3(AppColors.accent)};\n'
-      'const OK = ${_vec3(AppColors.ok)};\n$_noise';
+      'const ACCENT = ${_vec3(tint)};\n'
+      'const OK = ${_vec3(AppColors.ok)};\n'
+      'const SPEED = ${_param(p, 'speed', 4).toStringAsFixed(3)};\n'
+      'const INTENSITY = ${_param(p, 'intensity', 3).toStringAsFixed(3)};\n'
+      '$_noise';
   return switch (scene) {
     'stars' => '''$head
 fn main_image(p: vec2<f32>) -> vec4<f32> {
   let uv = p / u.resolution.y;
-  var c = BG + ACCENT * 0.06 * fbm(uv * 1.2 + vec2<f32>(u.time * 0.01, 0.0));
+  let time = u.time * SPEED;
+  var c = BG + ACCENT * 0.06 * INTENSITY * fbm(uv * 1.2 + vec2<f32>(time * 0.01, 0.0));
   for (var l = 0; l < 3; l++) {
     let scale = 18.0 + f32(l) * 14.0;
-    let drift = vec2<f32>(u.time * (0.004 + f32(l) * 0.003), 0.0);
+    let drift = vec2<f32>(time * (0.004 + f32(l) * 0.003), 0.0);
     let g = (uv + drift) * scale;
     let cell = floor(g);
     let h = hash(cell + f32(l) * 17.0);
     let pos = vec2<f32>(hash(cell + 3.1), hash(cell + 7.7));
     let d = length(fract(g) - pos);
-    let twinkle = 0.55 + 0.45 * sin(u.time * (0.6 + h * 1.4) + h * 40.0);
+    let twinkle = 0.55 + 0.45 * sin(time * (0.6 + h * 1.4) + h * 40.0);
     let star = smoothstep(0.08, 0.0, d) * step(0.86, h) * twinkle;
-    c += mix(vec3<f32>(1.0), ACCENT, 0.4) * star * 0.7;
+    c += mix(vec3<f32>(1.0), ACCENT, 0.4) * star * 0.7 * INTENSITY;
   }
   return vec4<f32>(c, 1.0);
 }
@@ -193,12 +205,12 @@ fn main_image(p: vec2<f32>) -> vec4<f32> {
     _ => '''$head
 fn main_image(p: vec2<f32>) -> vec4<f32> {
   let uv = p / u.resolution.y;
-  let t = u.time * 0.035;
+  let t = u.time * 0.035 * SPEED;
   let n = fbm(uv * 1.4 + vec2<f32>(t, -t * 0.6));
   let m = fbm(uv * 2.2 - vec2<f32>(t * 0.7, t) + n);
   let glow = smoothstep(0.35, 0.9, m);
   let band = smoothstep(0.55, 1.0, n);
-  let c = mix(BG, ACCENT, glow * 0.45) + OK * band * 0.12;
+  let c = mix(BG, ACCENT, min(glow * 0.45 * INTENSITY, 1.0)) + OK * band * 0.12 * INTENSITY;
   return vec4<f32>(c, 1.0);
 }
 ''',

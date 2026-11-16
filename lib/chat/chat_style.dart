@@ -591,11 +591,11 @@ class MochiDisc extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
-          color: ChatColors.cardButton,
-          shape: BoxShape.circle,
-          border: ring ? Border.all(color: readingBg, width: 2) : null,
-        ),
+        decoration: avatarDecoration(size,
+            color: ChatColors.cardButton,
+            side: ring
+                ? BorderSide(color: readingBg, width: 2)
+                : BorderSide.none),
         alignment: Alignment.center,
         child: AgentMochi(id, size: size * 0.6),
       );

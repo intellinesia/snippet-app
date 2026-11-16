@@ -427,18 +427,13 @@ class _MobileVoicePageState extends State<MobileVoicePage>
             child: Container(
               width: 132,
               height: 132,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: live ? AppColors.okBg : AppColors.surface1,
-              ),
+              decoration: avatarDecoration(132,
+                  color: live ? AppColors.okBg : AppColors.surface1),
               alignment: Alignment.center,
               child: Container(
                 width: 96,
                 height: 96,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.surface2,
-                ),
+                decoration: avatarDecoration(96, color: AppColors.surface2),
                 alignment: Alignment.center,
                 child: const AgentMochi('mission-control', size: 48),
               ),

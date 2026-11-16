@@ -320,8 +320,8 @@ class GroupRow extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   Container(
-                    decoration: BoxDecoration(
-                        color: AppColors.surface2, shape: BoxShape.circle),
+                    decoration:
+                        avatarDecoration(32, color: AppColors.surface2),
                     alignment: Alignment.center,
                     child: shown.isEmpty
                         ? const AppIcon('users', size: 15)
@@ -1621,10 +1621,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: ChatColors.cardButton,
-        shape: BoxShape.circle,
-      ),
+      decoration: avatarDecoration(size, color: ChatColors.cardButton),
       alignment: Alignment.center,
       child: AgentMochi(actorId, size: size * 0.6),
     );

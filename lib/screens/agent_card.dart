@@ -322,8 +322,7 @@ class _AgentCardState extends State<AgentCard> {
   Widget _agentAvatar(CoordinationAgent agent, double size) => Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
-            color: AppColors.surface2, shape: BoxShape.circle),
+        decoration: avatarDecoration(size, color: AppColors.surface2),
         alignment: Alignment.center,
         child: AgentMochi(agent.id, size: size * 0.58),
       );
@@ -464,8 +463,8 @@ class _AgentCardState extends State<AgentCard> {
                   dimension: 32,
                   child: Stack(clipBehavior: Clip.none, children: [
                     Container(
-                      decoration: BoxDecoration(
-                          color: AppColors.surface2, shape: BoxShape.circle),
+                      decoration:
+                          avatarDecoration(32, color: AppColors.surface2),
                       alignment: Alignment.center,
                       child: AgentMochi(agent.id, size: 20),
                     ),
@@ -594,18 +593,24 @@ class _RingPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = (Offset.zero & size).deflate(1);
+    final outline = avatarBorder(rect.width).getOuterPath(rect);
     final track = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5
       ..color = color.withValues(alpha: 0.18);
-    canvas.drawOval(rect, track);
+    canvas.drawPath(outline, track);
     final arc = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round
       ..color = color;
-    canvas.drawArc(
-        rect, turn.value * 2 * 3.141592653589793 - 1.5707963, 1.9, false, arc);
+    // Same sweep as the old 1.9 rad arc, traced along whatever outline the theme uses.
+    final metric = outline.computeMetrics().first;
+    final len = metric.length;
+    final start = turn.value * len;
+    final end = start + len * 1.9 / (2 * 3.141592653589793);
+    canvas.drawPath(metric.extractPath(start, end.clamp(0, len)), arc);
+    if (end > len) canvas.drawPath(metric.extractPath(0, end - len), arc);
   }
 
   @override

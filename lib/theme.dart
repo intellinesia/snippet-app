@@ -1882,6 +1882,18 @@ class R {
   static double of(double v) => v * _scale;
 }
 
+/// Outline of an agent avatar of [size], circle or squircle per the theme.
+ShapeBorder avatarBorder(double size, {BorderSide side = BorderSide.none}) =>
+    ThemeManager.instance.resolved.shape.avatar == 'squircle'
+        ? RoundedSuperellipseBorder(
+            side: side,
+            borderRadius: BorderRadius.all(Radius.circular(size * 0.36)))
+        : CircleBorder(side: side);
+
+ShapeDecoration avatarDecoration(double size,
+        {required Color color, BorderSide side = BorderSide.none}) =>
+    ShapeDecoration(color: color, shape: avatarBorder(size, side: side));
+
 AnimationStyle get sheetMotion => AnimationStyle(
       duration: Motion._scaled(320),
       reverseDuration: Motion._scaled(220),
