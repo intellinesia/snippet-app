@@ -659,8 +659,8 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
                   customBorder: const CircleBorder(),
                   onTap: _onAttachTap,
                   child: SizedBox(
-                    width: 34,
-                    height: 34,
+                    width: kMobile ? M.minTarget : 34,
+                    height: kMobile ? M.minTarget : 34,
                     child: Center(
                       child: AppIcon('plus', size: 17, color: AppColors.fg3),
                     ),
@@ -721,22 +721,28 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
 
   Widget _startPill(bool canSend) => Tooltip(
         message: 'Start',
-        child: Material(
-          color: canSend ? AppColors.accentFill : AppColors.surface2,
-          borderRadius: BorderRadius.circular(R.of(15)),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(R.of(15)),
-            onTap: canSend ? _start : null,
-            child: Container(
-              height: 30,
-              padding: EdgeInsets.symmetric(horizontal: S.of(14)),
-              alignment: Alignment.center,
-              child: _starting
-                  ? Spinner(size: 14, color: AppColors.accentFg)
-                  : Text('Start',
-                      style: sans(13,
-                          weight: W.label,
-                          color: canSend ? AppColors.accentFg : AppColors.fg4)),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: canSend ? _start : null,
+          child: SizedBox(
+            height: M.minTarget,
+            child: Center(
+              child: Container(
+                height: 30,
+                padding: EdgeInsets.symmetric(horizontal: S.of(14)),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: canSend ? AppColors.accentFill : AppColors.surface2,
+                  borderRadius: BorderRadius.circular(R.of(15)),
+                ),
+                child: _starting
+                    ? Spinner(size: 14, color: AppColors.accentFg)
+                    : Text('Start',
+                        style: sans(13,
+                            weight: W.label,
+                            color:
+                                canSend ? AppColors.accentFg : AppColors.fg4)),
+              ),
             ),
           ),
         ),

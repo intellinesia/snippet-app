@@ -222,7 +222,7 @@ class _Palette extends StatefulWidget {
 }
 
 class _PaletteState extends State<_Palette> {
-  static double get _rowHeight => kMobile ? 40.0 : 30.0;
+  static double get _rowHeight => kMobile ? 44.0 : 30.0;
   static double get _headerHeight => kMobile ? 30.0 : 28.0;
 
   final _ctrl = TextEditingController();
