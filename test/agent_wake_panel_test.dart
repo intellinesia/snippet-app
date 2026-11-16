@@ -175,14 +175,15 @@ void main() {
       ];
     await _pump(tester, WakesScreen(client: c, embedded: true), scroll: false);
     expect(find.text('Wave 2 merge'), findsOneWidget);
-    expect(find.text('Conversation · Paused for quiet hours'), findsOneWidget);
+    expect(find.text('Paused for quiet hours'), findsOneWidget);
     expect(find.textContaining('snippet-mobile-8f8d'), findsNothing);
     expect(find.text('0 warms'), findsNothing);
     expect(find.text('No wakes yet'), findsNothing);
 
     await tester.tap(find.text('Wave 2 merge'));
     await tester.pumpAndSettle();
-    expect(find.text('Open conversation'), findsOneWidget);
+    // The row action and the menu entry both read Open conversation.
+    expect(find.text('Open conversation'), findsNWidgets(2));
     await tester.tap(find.text('Stop keeping warm'));
     await tester.pumpAndSettle();
     expect(c.warmPuts.single['enabled'], isFalse);
