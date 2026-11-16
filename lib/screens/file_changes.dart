@@ -68,25 +68,47 @@ class FileChangesScreen extends StatelessWidget {
   final List<ShellChange> shell;
   final void Function(String path)? onOpenFile;
 
+  /// How many change_files edits touched [path] in this session.
+  int _edits(String path) {
+    var n = 0;
+    for (final s in steps) {
+      if (s.failed) continue;
+      for (final c in s.changes) {
+        final p = c['action'] == 'move'
+            ? '${c['path']} \u2192 ${c['to']}'
+            : c['path']?.toString();
+        if (p == path) n++;
+      }
+    }
+    return n;
+  }
+
   Widget _row(BuildContext context,
       {required String path,
-      required bool last,
+      int edits = 0,
       required Widget trailing,
       required VoidCallback? onTap}) {
     final (name, dir) = _split(path);
+    final sub = [
+      if (dir.isNotEmpty) dir,
+      if (edits > 0) '$edits edit${edits == 1 ? '' : 's'}',
+    ].join(' \u00b7 ');
     return InkWell(
       onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.fromLTRB(S.s4, S.s12, S.s4, S.s12),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom:
-                BorderSide(color: last ? Colors.transparent : AppColors.line),
-          ),
-        ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s16, S.of(10)),
         child: Row(children: [
-          FileGlyph(name, size: 18),
-          SizedBox(width: S.of(14)),
+          Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.surface3,
+              borderRadius: BorderRadius.circular(R.sm),
+            ),
+            child: FileGlyph(name, size: 16),
+          ),
+          SizedBox(width: S.s12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,17 +117,16 @@ class FileChangesScreen extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: sans(15, color: AppColors.fg1)),
-                if (dir.isNotEmpty)
-                  Text(dir,
+                if (sub.isNotEmpty)
+                  Text(sub,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(13, color: AppColors.fg4)),
+                      style: sans(12, color: AppColors.fg4)),
               ],
             ),
           ),
-          trailing,
           SizedBox(width: S.s8),
-          AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+          trailing,
         ]),
       ),
     );
@@ -129,8 +150,13 @@ class FileChangesScreen extends StatelessWidget {
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           MobileBackBar(
             title: 'File changes',
-            subtitle: '$total file${total == 1 ? '' : 's'} in this session',
-            onTitleTap: () {},
+            trailing: [
+              Padding(
+                padding: EdgeInsets.only(right: S.s4),
+                child: Text('$total file${total == 1 ? '' : 's'}',
+                    style: sans(12, color: AppColors.fg3)),
+              ),
+            ],
           ),
           Expanded(
             child: total == 0
@@ -138,35 +164,35 @@ class FileChangesScreen extends StatelessWidget {
                     icon: 'file',
                     title: 'No file changes yet',
                     body: 'Files this session edits show up here.')
-                : ListView.builder(
+                : ListView(
                     padding: EdgeInsets.fromLTRB(S.s16, S.s6, S.s16, S.s32),
-                    itemCount: total,
-                    itemBuilder: (_, i) {
-                      if (i >= changes.length) {
-                        final c = shell[i - changes.length];
-                        return _row(context,
-                            path: c.path,
-                            last: i + 1 == total,
-                            trailing: _delta(c.add, c.del),
-                            onTap: onOpenFile == null
-                                ? null
-                                : () => onOpenFile!(c.path));
-                      }
-                      final c = changes[i];
-                      return _row(context,
-                          path: c.path,
-                          last: i + 1 == total,
-                          trailing: c.kind == FileChangeKind.deleted
-                              ? Text('deleted',
-                                  style: sans(13, color: AppColors.danger))
-                              : _delta(c.added, c.removed),
-                          onTap: () => Navigator.of(context).push(
-                                AppPageRoute<void>(
-                                  builder: (_) => FileChangeDetail(
-                                      path: c.path, steps: steps),
-                                ),
-                              ));
-                    },
+                    children: [
+                      CardGroupScope(
+                        child: ListGroup(children: [
+                          for (final c in changes)
+                            _row(context,
+                                path: c.path,
+                                edits: _edits(c.path),
+                                trailing: c.kind == FileChangeKind.deleted
+                                    ? Text('deleted',
+                                        style: sans(13, color: AppColors.danger))
+                                    : _delta(c.added, c.removed),
+                                onTap: () => Navigator.of(context).push(
+                                      AppPageRoute<void>(
+                                        builder: (_) => FileChangeDetail(
+                                            path: c.path, steps: steps),
+                                      ),
+                                    )),
+                          for (final c in shell)
+                            _row(context,
+                                path: c.path,
+                                trailing: _delta(c.add, c.del),
+                                onTap: onOpenFile == null
+                                    ? null
+                                    : () => onOpenFile!(c.path)),
+                        ]),
+                      ),
+                    ],
                   ),
           ),
         ]),
