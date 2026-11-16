@@ -1221,6 +1221,7 @@ class CoordinationAgent {
 
   final String? color;
   final String? shape;
+  final String? character;
 
   /// The inference profile this agent works on in every session; null when it
   /// uses the session's own model.
@@ -1256,6 +1257,9 @@ class CoordinationAgent {
         id = j['id'] as String? ?? '',
         color = j['color'] as String?,
         shape = j['shape'] as String?,
+        character = (j['character'] as String?)?.trim().isEmpty ?? true
+            ? null
+            : (j['character'] as String).trim(),
         profile = (j['profile'] as String?)?.trim().isEmpty ?? true
             ? null
             : (j['profile'] as String).trim(),
