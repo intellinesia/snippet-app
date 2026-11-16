@@ -127,7 +127,8 @@ String groupMemberName(GroupMember m, Map<String, CoordinationAgent> agents) {
 String? groupActivityStatus(
     GroupSummary group, String Function(String id) nameOf) {
   final turn = group.turnAgent;
-  if (turn != null && turn.isNotEmpty) {
+  // With one agent on the task the turn is never in question.
+  if (turn != null && turn.isNotEmpty && group.agentIds.length > 1) {
     return '${nameOf(turn)} has the turn';
   }
   final replying = group.replying;
