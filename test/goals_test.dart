@@ -204,7 +204,7 @@ void main() {
       expect(find.text('Ship it'), findsOneWidget);
       expect(find.text('Stalled'), findsOneWidget);
       expect(find.text('List shows progress'), findsOneWidget);
-      expect(find.text('API models'), findsWidgets);
+      expect(find.textContaining('API models', findRichText: true), findsWidgets);
       expect(find.textContaining('Blocked  ·  bob'), findsOneWidget);
       expect(find.text('Waiting on API models'), findsOneWidget);
       expect(find.text('After API models, Detail view'), findsOneWidget);
@@ -212,14 +212,14 @@ void main() {
       expect(find.text('Needs review. Waiting on 1 task'), findsOneWidget);
     });
 
-    phoneTest('criterion expands to show method and evidence', (tester) async {
+    phoneTest('criterion shows evidence and expands to show the check', (tester) async {
       await _phone(tester, GoalDetailScreen(client: _Daemon(), goalId: 'g1'));
+      expect(find.text('Evidence · test passes'), findsOneWidget);
+      expect(find.text('Evidence · None recorded yet'), findsOneWidget);
       expect(
-          find.textContaining('test passes', findRichText: true), findsNothing);
+          find.textContaining('widget test', findRichText: true), findsNothing);
       await tester.tap(find.text('List shows progress'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('test passes', findRichText: true),
-          findsOneWidget);
       expect(find.textContaining('widget test', findRichText: true),
           findsOneWidget);
     });

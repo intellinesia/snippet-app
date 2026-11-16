@@ -54,18 +54,63 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   Widget _section(String label, Widget child) => Padding(
-        padding: EdgeInsets.only(top: S.s24),
+        padding: EdgeInsets.only(top: S.s16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SectionLabel(label),
-          SizedBox(height: S.s8),
-          child,
+          Padding(
+            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s6),
+            child: Text(label, style: sans(13, color: AppColors.fg3)),
+          ),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s4),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(R.of(14)),
+              border: Border.all(color: AppColors.line),
+            ),
+            child: child,
+          ),
         ]),
+      );
+
+  Widget _stat(String value, String label) => Expanded(
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.of(10)),
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(R.of(12)),
+            border: Border.all(color: AppColors.line),
+          ),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(value, style: mono(16, weight: W.label, color: AppColors.fg1)),
+            SizedBox(height: S.s2),
+            Text(label, style: sans(12, color: AppColors.fg3)),
+          ]),
+        ),
+      );
+
+  Widget _tick(bool done, {Key? key}) => SizedBox(
+        key: key,
+        width: 18,
+        height: 18,
+        child: Center(
+          child: done
+              ? AppIcon('check', size: 15, color: AppColors.ok)
+              : Container(
+                  width: 13,
+                  height: 13,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.fg4, width: 1.5),
+                  ),
+                ),
+        ),
       );
 
   @override
   Widget build(BuildContext context) {
     final d = _detail;
-    final title = d?.goal.title.isNotEmpty == true ? d!.goal.title : 'Goal';
     return Scaffold(
       backgroundColor: AppColors.pageBg,
       body: SafeArea(
@@ -73,9 +118,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         child: Column(children: [
           if (kMobile)
             MobileBackBar(
-                title: title,
-                onBack: widget.onClose ?? () => Navigator.of(context).pop(),
-                onTitleTap: () {})
+                title: 'Goal',
+                onBack: widget.onClose ?? () => Navigator.of(context).pop())
           else
           Padding(
             padding: EdgeInsets.fromLTRB(S.s6, S.s8, S.of(10), S.s4),
@@ -87,11 +131,10 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   onTap: widget.onClose ?? () => Navigator.of(context).pop()),
               SizedBox(width: S.s4),
               Expanded(
-                child: Text(title,
+                child: Text('Goal',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(kMobile ? 15 : 13,
-                        weight: W.label, color: AppColors.fg1)),
+                    style: sans(13, weight: W.label, color: AppColors.fg1)),
               ),
             ]),
           ),
@@ -120,20 +163,31 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       child: ListView(
         padding: EdgeInsets.fromLTRB(M.gutter + S.s4, S.s8, M.gutter + S.s4, S.s32),
         children: [
+          if (g.title.isNotEmpty)
+            Text(g.title,
+                style: sans(kMobile ? 17 : 15,
+                    weight: W.strong, height: 1.3, color: AppColors.fg1)),
+          SizedBox(height: S.s6),
           Wrap(spacing: 8, runSpacing: 6, children: [
             Tag(g.status == 'open' ? 'Open' : _cap(g.status),
-                tone: g.status == 'closed' ? Tone.ok : Tone.neutral),
+                tone: g.status == 'closed' || g.status == 'open'
+                    ? Tone.ok
+                    : Tone.neutral),
             if (g.attention != null) AttentionChip(g.attention!),
           ]),
           if (g.outcome.trim().isNotEmpty) ...[
             SizedBox(height: S.s12),
             Text(g.outcome, style: sans(14, height: 1.5, color: AppColors.fg2)),
           ],
-          SizedBox(height: S.s16),
-          _metric('Slices', g.progress, 'slices done'),
           SizedBox(height: S.s12),
-          _metric('Evidence', g.evidence, 'criteria evidenced',
-              colour: AppColors.ok),
+          Row(children: [
+            _stat('${g.progress.done} of ${g.progress.total}', 'slices done'),
+            SizedBox(width: S.s8),
+            _stat('${g.evidence.done} of ${g.evidence.total}',
+                'criteria evidenced'),
+            SizedBox(width: S.s8),
+            _stat('${d.blockers.length}', 'Blockers'),
+          ]),
           if (d.blockers.isNotEmpty)
             _section(
                 'Blockers',
@@ -159,23 +213,11 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
   String _cap(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
-  Widget _metric(String label, GoalProgress p, String unit, {Color? colour}) =>
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Text(label, style: sans(13, color: AppColors.fg3)),
-          const Spacer(),
-          Text('${p.done} of ${p.total} $unit',
-              style: sans(13, color: AppColors.fg2, tabular: true)),
-        ]),
-        SizedBox(height: S.s6),
-        GoalProgressBar(p, colour: colour),
-      ]);
-
   Widget _criterion(int i, GoalCriterion c) {
     final on = _open.contains(i);
     final has = c.hasEvidence;
     final gone = c.isDropped;
-    final expandable = c.method.isNotEmpty || has || gone;
+    final expandable = c.method.isNotEmpty || gone;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       HoverSurface(
         radius: 8,
@@ -186,34 +228,27 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
           padding:
               EdgeInsets.symmetric(horizontal: S.s4, vertical: kMobile ? S.of(10) : S.of(7)),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(
-              key: ValueKey('criterion-tick-$i'),
-              width: 18,
-              height: 18,
-              margin: EdgeInsets.only(top: S.of(1)),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: has ? AppColors.okBg : Colors.transparent,
-                border:
-                    Border.all(color: has ? AppColors.ok : AppColors.border2),
-              ),
-              child: has
-                  ? Center(
-                      child: AppIcon('check', size: 11, color: AppColors.ok))
-                  : null,
-            ),
+            _tick(has, key: ValueKey('criterion-tick-$i')),
             SizedBox(width: S.of(10)),
             Expanded(
-              child: Text(c.criterion,
-                  style: sans(13,
-                          height: 1.4,
-                          color: gone
-                              ? AppColors.fg4
-                              : has
-                                  ? AppColors.fg1
-                                  : AppColors.fg2)
-                      .copyWith(
-                          decoration: gone ? TextDecoration.lineThrough : null)),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(c.criterion,
+                        style: sans(13,
+                                height: 1.4,
+                                color: gone ? AppColors.fg4 : AppColors.fg1)
+                            .copyWith(
+                                decoration:
+                                    gone ? TextDecoration.lineThrough : null)),
+                    if (!gone)
+                      Padding(
+                        padding: EdgeInsets.only(top: S.s2),
+                        child: Text(
+                            'Evidence · ${has ? c.evidence! : 'None recorded yet'}',
+                            style: sans(12, color: AppColors.fg4)),
+                      ),
+                  ]),
             ),
             if (expandable) ...[
               SizedBox(width: S.s6),
@@ -229,13 +264,11 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       Reveal(
         show: on,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(S.s32, 0, S.s4, S.of(10)),
+          padding: EdgeInsets.fromLTRB(S.of(30), 0, S.s4, S.of(10)),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (c.method.isNotEmpty) _kv('Check', c.method),
-            if (c.evidence != null) _kv('Evidence', c.evidence!),
             if (gone) _kv('Dropped', c.dropped!),
-            if (!has && !gone) _kv('Evidence', 'None recorded yet'),
           ]),
         ),
       ),
@@ -283,15 +316,19 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         padding:
             EdgeInsets.symmetric(horizontal: S.s4, vertical: kMobile ? S.of(10) : S.of(7)),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(
-            width: 22,
-            child: Text('${s.n}', style: mono(12, color: AppColors.fg4)),
-          ),
+          _tick(t != null && status == TaskStatus.done),
+          SizedBox(width: S.of(10)),
           Expanded(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(s.title.isEmpty ? (t?.title ?? '') : s.title,
-                  style: sans(13, height: 1.4, color: AppColors.fg1)),
+              Text.rich(TextSpan(children: [
+                TextSpan(
+                    text: '${s.n}  ', style: mono(12, color: AppColors.fg4)),
+                TextSpan(
+                    text: s.title.isEmpty ? (t?.title ?? '') : s.title,
+                    style: sans(13, height: 1.4, color: AppColors.fg1)),
+              ])),
+              if (t == null || status != TaskStatus.done) ...[
               SizedBox(height: S.of(3)),
               Row(children: [
                 Container(
@@ -309,6 +346,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                       style: sans(12, color: AppColors.fg3)),
                 ),
               ]),
+              ],
               if (waitingLine != null)
                 Padding(
                   padding: EdgeInsets.only(top: S.s2),
