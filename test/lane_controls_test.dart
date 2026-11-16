@@ -61,7 +61,7 @@ void main() {
     expect(old.retryable, isTrue);
   });
 
-  testWidgets('running LaneDetailCard shows recent lines and Stop confirm',
+  testWidgets('running LaneDetailCard keeps to one activity line, Stop confirms',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
@@ -78,8 +78,8 @@ void main() {
       ));
       await t.pump();
 
-      expect(find.text('Read src/lanes.rs'), findsOneWidget);
-      expect(find.text('cargo test'), findsOneWidget);
+      expect(find.text('Read src/lanes.rs'), findsNothing);
+      expect(find.text('cargo test'), findsNothing);
       final stopFinder = find.widgetWithText(LaneControlButton, 'Stop');
       expect(stopFinder, findsOneWidget);
       expect(t.getSize(stopFinder).height, 44.0);
@@ -122,7 +122,7 @@ void main() {
 
       final retries = find.widgetWithText(LaneControlButton, 'Retry');
       expect(retries, findsNWidgets(2));
-      expect(t.getSize(retries.first).height, 28.0);
+      expect(t.getSize(retries.first).height, 26.0);
 
       await t.tap(retries.first);
       await t.pumpAndSettle();

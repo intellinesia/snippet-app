@@ -736,7 +736,7 @@ class _LaneNoticeState extends State<LaneNotice> {
                 : AppColors.fg4;
     final small = TranscriptCard.metaSize;
     final whoText = [
-      if (agent.isNotEmpty) _laneAgentName(agent),
+      if (agent.isNotEmpty) laneAgentName(agent),
       if (profile.isNotEmpty) profile,
     ].join(' · ');
     final who = whoText.isEmpty
@@ -880,7 +880,7 @@ class _LaneNoticeState extends State<LaneNotice> {
   }
 }
 
-String _laneAgentName(String id) => id
+String laneAgentName(String id) => id
     .split(RegExp(r'[-_]'))
     .where((w) => w.isNotEmpty)
     .map((w) => w[0].toUpperCase() + w.substring(1))

@@ -11,7 +11,11 @@ import '../panel.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import '../transcript.dart' show LaneControlButton, LaneRecentOutput, LaneWho;
+import '../crew_widgets.dart' show AgentProviderMark;
+import '../mochi.dart';
+import '../transcript.dart'
+    show LaneControlButton, LaneWho, laneAgentName;
+import 'mobile_chrome.dart' show MobileBackBar;
 import 'session.dart';
 
 /// A focused view of delegated work. The session owns the live state; this
@@ -65,12 +69,19 @@ class _LanesScreenState extends State<LanesScreen> {
       body: SafeArea(
         bottom: false,
         child: Column(children: [
-          SnAppBar(
-            title: 'Delegated lanes',
-            titleSize: 14,
-            compact: true,
-            onBack: widget.onClose ?? () => Navigator.pop(context),
-          ),
+          if (kMobile)
+            MobileBackBar(
+              title: 'Delegated lanes',
+              keepBack: true,
+              onBack: widget.onClose ?? () => Navigator.pop(context),
+            )
+          else
+            SnAppBar(
+              title: 'Delegated lanes',
+              titleSize: 14,
+              compact: true,
+              onBack: widget.onClose ?? () => Navigator.pop(context),
+            ),
           Expanded(
             child: lanes.isEmpty
                 ? const EmptyState(
@@ -244,8 +255,13 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
         child: InkWell(
           onTap: () => _open(context),
           child: Padding(
-            padding:
-                EdgeInsets.fromLTRB(S.s12, dense ? S.of(9) : S.s12, S.s12, dense ? S.of(10) : S.s12),
+            padding: EdgeInsets.fromLTRB(
+                S.s12,
+                dense ? S.of(9) : S.s12,
+                S.s12,
+                dense
+                    ? S.of(10)
+                    : (_controlButton(context) != null ? S.s2 : S.s12)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -271,15 +287,7 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
                   SizedBox(width: S.of(10)),
                   Padding(
                     padding: EdgeInsets.only(top: dense ? S.of(3) : S.s4),
-                    child: LaneWho(
-                        client: widget.client,
-                        agent: MediaQuery.sizeOf(context).width < 360
-                            ? null
-                            : lane.agent,
-                        profile: (lane.profile ?? '').isNotEmpty
-                            ? lane.profile
-                            : widget.sessionProfile,
-                        maxTextWidth: 64),
+                    child: _who(context, toneFg),
                   ),
                   SizedBox(width: S.s8),
                   Padding(
@@ -299,8 +307,6 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
                           style: mono(11, color: AppColors.fg3)),
                     ),
                   ])),
-                if (lane.running && lane.recent.isNotEmpty)
-                  indented(LaneRecentOutput(lines: lane.recent), top: 4),
                 if (summary != null && summary.isNotEmpty)
                   indented(
                       MarkdownPreview(data: summary, maxLines: 2, style: body)),
@@ -316,7 +322,7 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
                         const Spacer(),
                         ctrl,
                       ]),
-                      top: 8)
+                      top: kMobile ? 0 : 8)
                 else
                   indented(Text('View details', style: meta), top: 8),
               ],
@@ -492,7 +498,47 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
     if (client == null || sessionId == null) return null;
     if (!lane.running && !lane.retryable) return null;
     return LaneControlButton(
-        client: client, sessionId: sessionId, lane: lane);
+        client: client, sessionId: sessionId, lane: lane, quiet: !widget.detail);
+  }
+
+  /// The agent's character and name, or the provider mark and profile when the
+  /// lane runs under the session's own identity.
+  Widget _who(BuildContext context, Color toneFg) {
+    final agent = lane.agent?.trim() ?? '';
+    final profile = ((lane.profile ?? '').trim().isNotEmpty
+            ? lane.profile!
+            : widget.sessionProfile ?? '')
+        .trim();
+    final client = widget.client ?? DaemonScope.maybeOf(context);
+    final text = [
+      if (agent.isNotEmpty) laneAgentName(agent),
+      if (profile.isNotEmpty) profile,
+    ].join(' · ');
+    if (text.isEmpty && client == null) return const SizedBox.shrink();
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      if (agent.isNotEmpty)
+        AgentMochi(agent,
+            size: 16,
+            state: lane.running
+                ? AgentCharacterState.working
+                : lane.status == 'failed'
+                    ? AgentCharacterState.needs
+                    : AgentCharacterState.done)
+      else if (client != null)
+        AgentProviderMark(
+            client: client, profile: profile, size: 12, orActive: true),
+      if (text.isNotEmpty) ...[
+        SizedBox(width: S.s4),
+        ConstrainedBox(
+          constraints: BoxConstraints(
+              maxWidth: MediaQuery.sizeOf(context).width < 360 ? 56 : 96),
+          child: Text(text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(12, color: AppColors.fg3)),
+        ),
+      ],
+    ]);
   }
 
   void _open(BuildContext context) => openLaneView(context, lane,
