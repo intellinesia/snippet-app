@@ -8,7 +8,6 @@ import '../../platform.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../../desktop_layout.dart';
-import '../list_search_field.dart';
 import '../mobile_chrome.dart' show MobileBackBar;
 import '../shell_nav.dart';
 import 'create_task_form.dart';
@@ -124,6 +123,7 @@ class TasksPanelState extends State<TasksPanel> {
   String? _selectedTaskId;
   bool _creatingTask = false;
   Map<String, String> _sessionFolders = const {};
+  Map<String, String> _agentNames = const {};
   Set<String>? _agentTaskIds;
 
   List<TaskItem> get _tasks {
@@ -137,6 +137,7 @@ class TasksPanelState extends State<TasksPanel> {
   void initState() {
     super.initState();
     _loadFolders();
+    _loadAgentNames();
     _loadAgentTasks();
   }
 
@@ -180,6 +181,17 @@ class TasksPanelState extends State<TasksPanel> {
       setState(() => _sessionFolders = {
             for (final s in sessions)
               s.id: s.projectFolder.split('/').where((p) => p.isNotEmpty).last,
+          });
+    } catch (_) {}
+  }
+
+  Future<void> _loadAgentNames() async {
+    try {
+      final agents = await widget.client.coordinationAgents();
+      if (!mounted) return;
+      setState(() => _agentNames = {
+            for (final a in agents)
+              if (a.displayName.trim().isNotEmpty) a.id: a.displayName.trim(),
           });
     } catch (_) {}
   }
@@ -297,6 +309,50 @@ class TasksPanelState extends State<TasksPanel> {
       builder: (context, c) => c.maxWidth >= _wideMin ? _wide() : _stacked(),
     );
   }
+
+  /// 36px field inside a 44px hit area.
+  Widget _phoneSearch() => SizedBox(
+        height: 44,
+        child: Center(
+          child: Container(
+            height: 36,
+            padding: EdgeInsets.symmetric(horizontal: S.s12),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(R.md),
+              border: Border.all(color: AppColors.line),
+            ),
+            child: Row(children: [
+              AppIcon('search', size: 14, color: AppColors.fg4),
+              SizedBox(width: S.s8),
+              Expanded(
+                child: TextField(
+                  controller: _search,
+                  onChanged: (v) => setState(() => _query = v),
+                  textInputAction: TextInputAction.search,
+                  cursorColor: AppColors.accent,
+                  style: sans(13, color: AppColors.fg1),
+                  decoration: InputDecoration(
+                    isCollapsed: true,
+                    border: InputBorder.none,
+                    hintText: 'Search tasks',
+                    hintStyle: sans(13, color: AppColors.fg4),
+                  ),
+                ),
+              ),
+              if (_query.isNotEmpty)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    _search.clear();
+                    setState(() => _query = '');
+                  },
+                  child: AppIcon('x', size: 14, color: AppColors.fg3),
+                ),
+            ]),
+          ),
+        ),
+      );
 
   Widget _desktopSearch() => Container(
         height: 32,
@@ -501,11 +557,7 @@ class TasksPanelState extends State<TasksPanel> {
                 ? Padding(
                     padding: EdgeInsets.fromLTRB(
                         M.gutter, S.s2, M.gutter, S.s4),
-                    child: ListSearchField(
-                      controller: _search,
-                      hint: 'Search tasks',
-                      onChanged: (v) => setState(() => _query = v),
-                    ),
+                    child: _phoneSearch(),
                   )
                 : Padding(
                     padding: EdgeInsets.fromLTRB(S.of(10), S.s4, S.of(10), S.s6),
@@ -621,6 +673,7 @@ class TasksPanelState extends State<TasksPanel> {
       hasMore: _feed.hasMore,
       onLoadMore: _feed.loadMore,
       sessionFolders: _sessionFolders,
+      agentNames: _agentNames,
       padding: kMobile
           ? EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s16)
           : EdgeInsets.fromLTRB(S.of(10), S.s2, S.of(10), S.s16),

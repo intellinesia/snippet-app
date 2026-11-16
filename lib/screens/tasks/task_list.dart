@@ -28,6 +28,7 @@ class TaskList extends StatelessWidget {
     this.hasMore,
     this.onLoadMore,
     this.sessionFolders,
+    this.agentNames,
   });
 
   final bool Function(TaskStatus status)? hasMore;
@@ -49,6 +50,9 @@ class TaskList extends StatelessWidget {
 
   /// session id → folder name, for the phone card's "agent · folder" line.
   final Map<String, String>? sessionFolders;
+
+  /// agent id → display name, for the row's meta line.
+  final Map<String, String>? agentNames;
 
   List<TaskItem> get _visible => tasks
       .where((t) => filter.isEmpty || filter.contains(t.status))
@@ -82,6 +86,7 @@ class TaskList extends StatelessWidget {
                   task: ordered[i],
                   note: noteForTask(ordered[i], tasks),
                   folder: sessionFolders?[ordered[i].sessionId],
+                  agentName: agentNames?[ordered[i].createdById],
                   selected: ordered[i].id == selectedId,
                   onTap: () => onOpen(ordered[i]),
                   divider: i < ordered.length - 1),
@@ -173,7 +178,8 @@ class TaskRow extends StatelessWidget {
       this.note,
       this.selected = false,
       this.divider = false,
-      this.folder});
+      this.folder,
+      this.agentName});
   final TaskItem task;
   final TaskNote? note;
   final bool selected;
@@ -184,6 +190,9 @@ class TaskRow extends StatelessWidget {
 
   /// Project folder name for the phone card's meta line.
   final String? folder;
+
+  /// Display name of the creating agent; the id when unknown.
+  final String? agentName;
 
   @override
   Widget build(BuildContext context) {
@@ -197,16 +206,21 @@ class TaskRow extends StatelessWidget {
     }.contains(task.status);
     final agent = task.createdByKind == 'agent' ? task.createdById : '';
     final age = taskAge(task);
-    final id = task.id.length > 8 ? task.id.substring(0, 8) : task.id;
+    final num = RegExp(r'^t-?(\d+)$', caseSensitive: false).firstMatch(task.id);
+    final id = num != null
+        ? 'T-${num.group(1)}'
+        : (task.id.length > 8 ? task.id.substring(0, 8) : task.id)
+            .toUpperCase();
+    final who = (agentName ?? '').trim().isEmpty ? agent : agentName!.trim();
     final meta =
-        [id, agent, task.status.label].where((p) => p.isNotEmpty).join(' · ');
+        [id, who, task.status.label].where((p) => p.isNotEmpty).join(' · ');
     final avatar = kMobile ? 24.0 : 22.0;
     return Material(
       color: selected ? AppColors.accentBg : Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Container(
-          constraints: BoxConstraints(minHeight: kMobile ? 44 : 40),
+          constraints: BoxConstraints(minHeight: kMobile ? 52 : 40),
           padding: EdgeInsets.symmetric(
               horizontal: S.s12, vertical: kMobile ? S.s8 : S.s6),
           decoration: BoxDecoration(
@@ -245,7 +259,7 @@ class TaskRow extends StatelessWidget {
                       child: Text(task.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(kMobile ? 14 : 13,
+                          style: sans(kMobile ? 15 : 13,
                               weight: W.label,
                               height: 1.3,
                               color:
@@ -261,7 +275,7 @@ class TaskRow extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: sans(12, color: AppColors.fg4)),
-                  if (task.planTotal > 0) ...[
+                  if (!kMobile && task.planTotal > 0) ...[
                     SizedBox(height: S.s4),
                     TaskPlanProgress(
                         done: task.planDone,
@@ -271,7 +285,7 @@ class TaskRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (age.isNotEmpty) ...[
+            if (!kMobile && age.isNotEmpty) ...[
               SizedBox(width: S.s8),
               Text(age,
                   style: mono(11,
