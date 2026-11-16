@@ -21,6 +21,8 @@ import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../chat/chat_card.dart';
+import '../chat/stage_header.dart';
+import 'session_list_row.dart' show sessionStepLabel;
 import '../desktop_look.dart';
 import '../ambient_loop.dart';
 import '../approval_code.dart';
@@ -47,6 +49,7 @@ import '../term.dart';
 import '../panel.dart';
 import '../settings_form.dart';
 import '../share_inbound.dart';
+import '../session_seen.dart';
 import '../widgets.dart';
 import '../plain_text.dart';
 import '../turn_changes_card.dart';
@@ -79,6 +82,7 @@ import 'mobile_chrome.dart';
 import 'mobile_session_home.dart' show DotField;
 import 'session_panels.dart';
 import 'session_coordination_cards.dart';
+import 'session_handoff.dart';
 import 'mission_control/widgets/autonomy_panel.dart';
 import 'mission_control/mission_control_state.dart'
     show
@@ -312,6 +316,10 @@ class _SessionScreenState extends State<SessionScreen>
   bool _confirmingRecording = false;
   SharedInbound? _consumedShare;
   HarnessState? _state;
+  // The list row for this session: plan and the agent standing on the header.
+  SessionInfo? _me;
+  String? _meAgentName;
+  String? _meAgentFetched;
   GithubStatus? _github;
   int _githubGen = 0;
   bool _githubKnown = false;
@@ -350,6 +358,11 @@ class _SessionScreenState extends State<SessionScreen>
   String? _modelLabel;
   String? _modelProvider;
   String? _currentProfile;
+
+  /// The session's pinned profile, or null when it follows its owner agent's
+  /// profile (or the global default). [_modelFollowing] names that agent.
+  String? _modelPin;
+  String? _modelFollowing;
 
   /// When set, the composer sends a DIRECT MESSAGE to this agent instead of a
   /// turn in the current session. Null means ordinary chat input.
@@ -770,6 +783,7 @@ class _SessionScreenState extends State<SessionScreen>
       // Decisions can be retried across reconnects too; give the retry the same
       // idempotency key instead of sending an untracked frame.
       outbound['nonce'] ??= _nextNonce();
+      outbound['via'] ??= 'app';
       setState(() => _pendingDecision = outbound);
       _decisionGiveUp?.cancel();
       _decisionGiveUp = Timer(const Duration(seconds: 15), () {
@@ -865,6 +879,7 @@ class _SessionScreenState extends State<SessionScreen>
       _keepAwake = me?.keepAwake ?? false;
       final now = me?.settled ?? false;
       final mode = me?.resumeMode;
+      _loadHeaderAgent(me);
       if (now != _settled || (mode != null && mode != _resumeMode)) {
         setState(() {
           _settled = now;
@@ -872,6 +887,28 @@ class _SessionScreenState extends State<SessionScreen>
         });
       }
     }).catchError((_) {});
+  }
+
+  void _loadHeaderAgent(SessionInfo? me) {
+    if (me == null) return;
+    if (mounted) setState(() => _me = me);
+    final id = me.displayAgentId ?? '';
+    if (id == _meAgentFetched) return;
+    _meAgentFetched = id;
+    widget.client.coordinationAgents().then((agents) {
+      if (!mounted) return;
+      final a = agents.where((x) => x.id == id).firstOrNull;
+      if (a != null) setState(() => _meAgentName = a.displayName);
+    }).catchError((_) {});
+  }
+
+  /// Tell the daemon this session is on screen, and ping local lists so a
+  /// Came back row leaves immediately. Best-effort: an older daemon 404s and
+  /// the next sessions fetch simply disagrees.
+  void _postSeen() {
+    if (_isMissionControl) return;
+    pingSessionSeen(widget.sessionId);
+    unawaited(widget.client.sessionSeen(widget.sessionId).catchError((_) {}));
   }
 
   Future<void> _wake() async {
@@ -938,6 +975,7 @@ class _SessionScreenState extends State<SessionScreen>
     _lastInput = _input.text;
     _input.addListener(_interceptBigPaste);
     _restoreDraft();
+    _postSeen();
     _input.addListener(_saveDraft);
     _input.addListener(_trackMention);
     WidgetsBinding.instance.addObserver(this);
@@ -1137,6 +1175,7 @@ class _SessionScreenState extends State<SessionScreen>
       _switchingSession = false;
       _lastInput = '';
       _restoreDraft();
+      _postSeen();
       _consumedShare = null;
       final cached = _sessionStateCache[_cacheKey];
       _state = cached?.$1;
@@ -1198,12 +1237,14 @@ class _SessionScreenState extends State<SessionScreen>
       // below. Reading the server, not the list cache, is what keeps a
       // per-chat model sticky when you leave and come back to the window.
       String? wanted = _currentProfile;
+      SessionInfo? me;
+      var found = false;
       if (wanted == null) {
         try {
           final list = await widget.client.sessions();
-          var found = false;
           for (final s in list) {
             if (s.id == widget.sessionId) {
+              me = s;
               wanted = s.profile; // null here means "uses the global default"
               found = true;
               break;
@@ -1214,6 +1255,24 @@ class _SessionScreenState extends State<SessionScreen>
           wanted = widget.profile;
         }
       }
+
+      // No pin: the session follows its owner agent's profile, then default.
+      String? agentProfile;
+      String? agentName;
+      if (wanted == null && me != null) {
+        try {
+          final owner = me.ownerAgentId ?? me.displayAgentId ?? '';
+          final agent = (await widget.client.coordinationAgents())
+              .where((a) => a.id == owner)
+              .firstOrNull;
+          agentProfile = agent?.profile;
+          agentName = agent?.displayName;
+        } catch (_) {}
+        wanted = agentProfile;
+      }
+      final pin = me != null
+          ? (_currentProfile ?? me.profile)
+          : (_currentProfile ?? widget.profile);
 
       InferenceProfile? p;
       if (wanted != null) {
@@ -1238,6 +1297,12 @@ class _SessionScreenState extends State<SessionScreen>
         setState(() {
           _modelLabel = p?.name;
           _modelProvider = p?.provider;
+          _modelPin = pin;
+          _modelFollowing = pin == null && agentProfile != null
+              ? (agentName == null || agentName.isEmpty
+                  ? 'the agent'
+                  : agentName)
+              : null;
         });
       }
     } catch (_) {}
@@ -1497,6 +1562,12 @@ class _SessionScreenState extends State<SessionScreen>
                                   child: ApprovalBar(
                                       events: events,
                                       onSend: _sendDecision,
+                                      agentId: _me?.displayAgentId,
+                                      agentName: _meAgentName,
+                                      stepLabel: _me?.plan != null &&
+                                              _me!.plan!.total > 0
+                                          ? sessionStepLabel(_me!.plan!)
+                                          : null,
                                       showApproveAll:
                                           _pendingApprovalTotal(events) > 1),
                                 ),

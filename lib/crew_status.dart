@@ -86,7 +86,11 @@ class CrewEntry {
 
 String? crewOwner(SessionInfo s) {
   final id = s.displayAgentId;
-  return id == null || id.isEmpty ? null : id;
+  if (id == null || id.isEmpty) return null;
+  // 'snippet' is the fallback owner of every plain session; only live ones
+  // count as crew, or idle chats would all read as Snippet's work.
+  if (id == 'snippet' && !s.running && !s.needsInput) return null;
+  return id;
 }
 
 /// Status comes only from sessions: any waiting -> needs you, else any running

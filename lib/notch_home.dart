@@ -130,11 +130,13 @@ class NotchHome {
         await quickSend(
             client: client,
             session: target.session,
-            action: const QuickApprove());
+            action: const QuickApprove(via: 'notification'));
         _push();
       case 'deny':
         await quickSend(
-            client: client, session: target.session, action: const QuickDeny());
+            client: client,
+            session: target.session,
+            action: const QuickDeny(via: 'notification'));
         _push();
       case final a when a.startsWith('choice:'):
         final value = a.substring(7);
@@ -142,7 +144,9 @@ class NotchHome {
         await quickSend(
             client: client,
             session: target.session,
-            action: QuickAnswer(q.isEmpty || target.more > 0 ? value : '$q\n→ $value'));
+            action: QuickAnswer(
+                q.isEmpty || target.more > 0 ? value : '$q\n→ $value',
+                via: 'notification'));
         _push();
       case 'open':
         if (target.payload != null) {

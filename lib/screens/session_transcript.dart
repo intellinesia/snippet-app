@@ -22,6 +22,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
         event['id'],
         event['path'],
         event['step'],
+        event['request_id'],
+        event['at'],
         event['created_at'],
       ).toString();
       final occurrence = eventOccurrences.update(
@@ -442,6 +444,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
               NoteLine(
                   '${_s(e['from'])} hit its usage limit. Continuing on ${_s(e['to'])}.',
                   icon: 'transfer'));
+        case 'session_handoff':
+          endTools(key);
+          addEvent(key, HandoffNotice(event: e));
         case 'limit_wait':
           endTools(key);
           final at = (e['resets_at'] as num?)?.toInt() ?? 0;
@@ -643,6 +648,12 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           addEvent(key, _QuestionRecord(e, answer: answer));
         case 'approval_request':
           break; // shown by the approval bar
+        case 'decision':
+          endTools(key);
+          final line = _decisionLine(e);
+          if (line != null && line.isNotEmpty) {
+            addEvent(key, NoteLine(line));
+          }
         default:
           break;
       }
@@ -660,6 +671,53 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
   }
 
   String _s(dynamic v) => v?.toString() ?? '';
+
+  String? _decisionLine(Map<String, dynamic> e) {
+    final outcome = _s(e['outcome']).trim();
+    if (outcome.isEmpty) return null;
+    final request = _s(e['request']).trim();
+    final byRaw = _s(e['by']).trim();
+    final actor = switch (byRaw) {
+      '' || 'human' => 'You',
+      'mission-control' || 'mission_control' => 'Mission Control',
+      _ => byRaw,
+    };
+    final at = (e['at'] as num?)?.toInt() ?? 0;
+    final time = at > 0
+        ? () {
+            final dt = DateTime.fromMillisecondsSinceEpoch(at * 1000).toLocal();
+            return '${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+          }()
+        : '';
+    final rawSummary = _s(e['summary']).trim();
+    final cleanedSummary = rawSummary.isEmpty
+        ? _s(e['tool_name']).trim()
+        : ApprovalSummary.parse(rawSummary)
+            .shownCommand
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim();
+    final answer = _s(e['answer']).replaceAll(RegExp(r'\s+'), ' ').trim();
+    final head = switch (outcome) {
+      'approved' => '$actor approved',
+      'approved_all' => '$actor approved all',
+      'denied' => '$actor denied',
+      'answered' =>
+        answer.isEmpty ? '$actor answered' : '$actor answered: $answer',
+      'skipped' => '$actor skipped the question',
+      'outdated' =>
+        request == 'question' ? 'Question outdated' : 'Approval outdated',
+      _ => '$actor $outcome',
+    };
+    final parts = <String>[
+      head,
+      if (outcome != 'answered' &&
+          outcome != 'skipped' &&
+          cleanedSummary.isNotEmpty)
+        cleanedSummary,
+      if (time.isNotEmpty) time,
+    ];
+    return parts.join(' · ');
+  }
 
   /// Live thought stays until this turn produces a tool/action the user can see.
   bool _turnHasVisibleAction(List<Map<String, dynamic>> events) {
@@ -720,6 +778,17 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       maxWidth: 360,
       items: [
         appMenuHeading<String>('Inference profile'),
+        appMenuRow<String>(
+          value: '',
+          icon: 'info',
+          label: _modelPin != null
+              ? 'Pinned to $_modelPin'
+              : _modelFollowing != null
+                  ? "Following $_modelFollowing's profile"
+                  : 'Following the default model',
+          description: 'Picking a profile pins it to this session',
+          enabled: false,
+        ),
         for (final p in cfg.profiles)
           appMenuRow<String>(
             value: p.name,
@@ -730,9 +799,13 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           ),
       ],
     );
-    if (picked == null || picked == current) return;
+    if (picked == null || picked.isEmpty || picked == current) return;
     final before = _currentProfile;
-    _setState(() => _currentProfile = picked);
+    _setState(() {
+      _currentProfile = picked;
+      _modelPin = picked;
+      _modelFollowing = null;
+    });
     try {
       await widget.client.setSessionModel(widget.sessionId, picked);
       if (mounted) {

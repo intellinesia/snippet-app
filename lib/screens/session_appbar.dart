@@ -400,6 +400,10 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         client: widget.client,
       );
     }
+    final keyboardUp = MediaQuery.viewInsetsOf(context).bottom > 0;
+    if (!offline && !keyboardUp && s != null && _me != null) {
+      return _stageHeader(s, back);
+    }
     final ws = s?.workspace.trim() ?? '';
     final folder = ws.isEmpty ? '' : lastPathSegment(ws, ifEmpty: ws);
     String joinFolder(String state) =>
@@ -453,6 +457,82 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           onTap: _openTerm,
         ),
       ],
+    );
+  }
+
+  /// The phone header: the session's agent on stage, title chip over its feet.
+  Widget _stageHeader(HarnessState s, VoidCallback back) {
+    final me = _me!;
+    final agentId = me.displayAgentId ?? 'snippet';
+    final agent = (_meAgentName ?? '').trim().isEmpty ? agentId : _meAgentName!;
+    final needsYou = s.pendingQuestion != null || s.status == 'waiting_for_input';
+    final working = s.status == 'running';
+    final plan = me.plan != null && me.plan!.total > 0 ? me.plan : null;
+    final step = plan?.current?.trim() ?? '';
+    final state = needsYou
+        ? 'waiting on you'
+        : working
+            ? (step.isNotEmpty ? step : 'working')
+            : s.status == 'in_review'
+                ? 'in review'
+                : '';
+    final subtitle = [
+      agent,
+      if (state.isNotEmpty) state,
+      if (plan != null && !needsYou) sessionStepLabel(plan),
+    ].join(' · ');
+    final lanes = s.lanes.where((l) => l.running).length;
+    return SizedBox(
+      child: Stack(alignment: Alignment.topCenter, children: [
+        Padding(
+          padding: EdgeInsets.only(top: S.s8),
+          child: StageHeader(
+            members: [
+              StageMember(
+                agentId,
+                state: needsYou
+                    ? AgentCharacterState.needs
+                    : working
+                        ? AgentCharacterState.working
+                        : AgentCharacterState.idle,
+                badge: needsYou ? '?' : null,
+              ),
+            ],
+            title: _title.isEmpty ? 'Session' : _title,
+            subtitle: subtitle,
+            subtitleDot: working && !needsYou ? AppColors.run : null,
+            onTap: () => _openActionsDrawer(s),
+            below: lanes > 0
+                ? StagePill(
+                    label: lanes == 1 ? '1 lane' : '$lanes lanes',
+                    icon: Icons.layers_outlined,
+                    onTap: _showLanes,
+                  )
+                : null,
+          ),
+        ),
+        Positioned(
+          left: M.gutter,
+          top: S.s8,
+          child: RoundBtn(
+              icon: 'chevron-left',
+              tooltip: 'Back',
+              size: 40,
+              iconSize: 20,
+              onTap: back),
+        ),
+        Positioned(
+          right: M.gutter,
+          top: S.s8,
+          child: RoundBtn(
+            icon: 'terminal',
+            tooltip: 'Shell',
+            size: 40,
+            iconSize: 18,
+            onTap: _openTerm,
+          ),
+        ),
+      ]),
     );
   }
 
@@ -702,6 +782,22 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   void _cancelGoal() {
     _send({'kind': 'cancel_goal'});
     _toast('Cancelling the goal');
+  }
+
+  /// Hand the session to another agent: pick one, optional note, done.
+  void _showHandOff() {
+    showAppSheet(context,
+        title: 'Hand off',
+        subtitle: 'Pass this session to another agent',
+        maxWidth: 400,
+        maxHeight: 560,
+        child: SessionHandOffSheet(
+          client: widget.client,
+          sessionId: widget.sessionId,
+          onHandedOff: (name, pending) => _toast(pending
+              ? 'Hands to $name after this turn'
+              : 'Handed to $name'),
+        ));
   }
 
   void _openAutonomy() {
@@ -1052,6 +1148,11 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           : null,
       onCompact: () => run(_confirmCompact),
       onCheckpoints: () => navigate!(_showCheckpoints),
+      onHandOff: _isMissionControl ||
+              widget.readOnly ||
+              _inboxAgentId(widget.sessionId) != null
+          ? null
+          : () => run(_showHandOff),
       onMemory: () => navigate!(() => presentScreen(context,
           builder: (_, close) => MemoryScreen(
               client: widget.client, embedded: true, onBack: close))),
