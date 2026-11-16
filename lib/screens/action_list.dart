@@ -24,14 +24,14 @@ class ActionGroup extends StatelessWidget {
             SizedBox(height: top ?? S.s16)
           else
             Padding(
-              padding: EdgeInsets.fromLTRB(4, top ?? S.s24, 4, S.s2),
+              padding: EdgeInsets.fromLTRB(S.s4, top ?? S.s24, S.s4, S.s2),
               child: Text(label.toUpperCase(), style: TS.overline()),
             ),
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0)
               Container(
                   height: 1,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  margin: EdgeInsets.symmetric(horizontal: S.s4),
                   color: AppColors.line),
             rows[i],
           ],
@@ -42,7 +42,7 @@ class ActionGroup extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, S.s16, 4, S.s8),
+          padding: EdgeInsets.fromLTRB(S.s4, S.s16, S.s4, S.s8),
           child: Text(label.toUpperCase(), style: TS.overline()),
         ),
         Container(
@@ -116,9 +116,9 @@ class ActionRow extends StatelessWidget {
               splashFactory: kMobile ? NoSplash.splashFactory : null,
               highlightColor: kMobile ? Colors.transparent : null,
               child: Container(
-                constraints: const BoxConstraints(minHeight: M.minTarget + 8),
+                constraints: BoxConstraints(minHeight: M.minTarget + 8),
                 padding: EdgeInsets.symmetric(
-                    horizontal: kMobile ? 4 : 14, vertical: kMobile ? 11 : 0),
+                    horizontal: kMobile ? S.s4 : S.of(14), vertical: kMobile ? S.of(11) : 0),
                 child: Row(children: [
                   AppIcon(icon,
                       size: kMobile ? 19 : 17,
@@ -133,7 +133,7 @@ class ActionRow extends StatelessWidget {
                             style: TS.rowTitle(
                                 danger ? AppColors.danger : AppColors.fg1)),
                         if (detail != null) ...[
-                          const SizedBox(height: 2),
+                          SizedBox(height: S.s2),
                           Text(detail,
                               maxLines: kMobile ? 1 : 2,
                               overflow: TextOverflow.ellipsis,
@@ -143,7 +143,7 @@ class ActionRow extends StatelessWidget {
                     ),
                   ),
                   if (value != null) ...[
-                    const SizedBox(width: 8),
+                    SizedBox(width: S.s8),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 140),
                       child: Text(value,
@@ -153,7 +153,7 @@ class ActionRow extends StatelessWidget {
                           style: TS.meta()),
                     ),
                   ],
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                   if (trailing != null)
                     trailing
                   else if (expandable || (kMobile && onTap != null))
@@ -167,8 +167,8 @@ class ActionRow extends StatelessWidget {
         if (open && child != null)
           Padding(
             padding: kMobile
-                ? const EdgeInsets.fromLTRB(4, 0, 4, 14)
-                : const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                ? EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.of(14))
+                : EdgeInsets.fromLTRB(S.of(14), 0, S.of(14), S.of(14)),
             child: child,
           ),
       ],

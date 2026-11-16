@@ -120,26 +120,26 @@ class _SessionGroupHeaderState extends State<SessionGroupHeader> {
                 style: TS.label(labelColor)),
           ),
           if (widget.count != null) ...[
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             Text('${widget.count}', maxLines: 1, style: countStyle),
           ],
         ]),
       ),
       if (widget.onToggle != null) ...[
-        const SizedBox(width: 6),
+        SizedBox(width: S.s6),
         chevron,
       ],
     ]);
 
     final row = kMobile
         ? Padding(
-            padding: const EdgeInsets.fromLTRB(0, 16, 0, 4),
+            padding: EdgeInsets.fromLTRB(0, S.s16, 0, S.s4),
             child: labelRow,
           )
         : Container(
             height: 30,
             alignment: Alignment.bottomLeft,
-            padding: const EdgeInsets.fromLTRB(10, 0, 10, 4),
+            padding: EdgeInsets.fromLTRB(S.of(10), 0, S.of(10), S.s4),
             child: labelRow,
           );
 
@@ -273,7 +273,7 @@ class SessionListRow extends StatelessWidget {
             height: lineH,
             child: Center(child: leading),
           ),
-          SizedBox(width: kMobile ? 12 : 9),
+          SizedBox(width: kMobile ? S.s12 : S.of(9)),
         ],
         Expanded(
           child: Column(
@@ -291,29 +291,29 @@ class SessionListRow extends StatelessWidget {
                             style: titleStyle),
                   ),
                   if (pinned && renameField == null) ...[
-                    const SizedBox(width: 6),
+                    SizedBox(width: S.s6),
                     AppIcon('pin', size: 11, color: AppColors.fg3),
                   ],
                   if (s.keepAwake && renameField == null) ...[
-                    const SizedBox(width: 6),
+                    SizedBox(width: S.s6),
                     AppIcon('lock', size: 11, color: AppColors.fg3),
                   ],
                   if (renameField == null && working) ...[
-                    const SizedBox(width: 8),
+                    SizedBox(width: S.s8),
                     const WorkingDots(),
-                    const SizedBox(width: 5),
+                    SizedBox(width: S.of(5)),
                     Text('Working',
                         maxLines: 1,
                         style: (kMobile ? TS.meta : TS.caption)(AppColors.accent)),
                   ] else if (renameField == null && timeText.isNotEmpty) ...[
-                    const SizedBox(width: 8),
+                    SizedBox(width: S.s8),
                     Text(timeText,
                         maxLines: 1,
                         style: (kMobile ? TS.meta : TS.caption)(timeColor)),
                   ],
                 ]),
               ),
-              if (hasMeta) const SizedBox(height: 2),
+              if (hasMeta) SizedBox(height: S.s2),
               if (hasMeta)
                 SizedBox(
                   height: kMobile ? 18 : 16,
@@ -321,14 +321,14 @@ class SessionListRow extends StatelessWidget {
                     if (attn != null) ...[
                       _StateLabel(state: attn),
                       if (showProject || branch.isNotEmpty || diff != null || noRepo)
-                        const SizedBox(width: 8),
+                        SizedBox(width: S.s8),
                     ],
                     if (showProject) ...[
                       _ProjectChip(label: projectLabel(s)),
                       if (branch.isNotEmpty) ...[
-                        const SizedBox(width: 8),
+                        SizedBox(width: S.s8),
                         AppIcon('git-branch', size: 11, color: AppColors.fg4),
-                        const SizedBox(width: 4),
+                        SizedBox(width: S.s4),
                         Flexible(
                           child: Text(branch,
                               maxLines: 1,
@@ -342,7 +342,7 @@ class SessionListRow extends StatelessWidget {
                           child: Row(children: [
                             AppIcon('git-branch',
                                 size: 11, color: AppColors.fg4),
-                            const SizedBox(width: 4),
+                            SizedBox(width: S.s4),
                             Flexible(
                               child: Text(branch,
                                   maxLines: 1,
@@ -356,7 +356,7 @@ class SessionListRow extends StatelessWidget {
                           child: Row(children: [
                             AppIcon('folder-x',
                                 size: 11, color: AppColors.fg4),
-                            const SizedBox(width: 4),
+                            SizedBox(width: S.s4),
                             Flexible(
                               child: Text('No git repo',
                                   maxLines: 1,
@@ -369,12 +369,12 @@ class SessionListRow extends StatelessWidget {
                         const Spacer(),
                       if (diff != null) ...[
                         if (branch.isNotEmpty || noRepo)
-                          const SizedBox(width: 8),
+                          SizedBox(width: S.s8),
                         if (diff.added > 0)
                           Text('+${compactCount(diff.added)}',
                               maxLines: 1, style: TS.meta(AppColors.ok)),
                         if (diff.added > 0 && diff.removed > 0)
-                          const SizedBox(width: 4),
+                          SizedBox(width: S.s4),
                         if (diff.removed > 0)
                           Text('-${compactCount(diff.removed)}',
                               maxLines: 1, style: TS.meta(AppColors.danger)),
@@ -429,9 +429,9 @@ class SessionListRow extends StatelessWidget {
                   onLongPress: onLongPress == null ? null : longPress,
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: M.minTarget),
+                      constraints: BoxConstraints(minHeight: M.minTarget),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        padding: EdgeInsets.symmetric(vertical: S.s8),
                         child: Align(
                             alignment: Alignment.centerLeft, child: content),
                       ),
@@ -453,7 +453,7 @@ class SessionListRow extends StatelessWidget {
             onSecondaryTapDown: onSecondaryTapDown,
             child: Container(
               height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: EdgeInsets.symmetric(horizontal: S.of(10)),
               alignment: Alignment.centerLeft,
               child: content,
             ),
@@ -478,7 +478,7 @@ class _StateLabel extends StatelessWidget {
     final color = AppColors.run;
     return Row(mainAxisSize: MainAxisSize.min, children: [
       AppIcon(state.icon, size: 11, color: color),
-      const SizedBox(width: 4),
+      SizedBox(width: S.s4),
       Text(state.label, maxLines: 1, style: TS.meta(color)),
     ]);
   }
@@ -494,7 +494,7 @@ class _ProjectChip extends StatelessWidget {
     return Flexible(
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         AppIcon('folder', size: 11, color: AppColors.fg4),
-        const SizedBox(width: 4),
+        SizedBox(width: S.s4),
         Flexible(
           child: Text(
             label,

@@ -85,7 +85,7 @@ Future<void> showCommandPalette(
       pageBuilder: (ctx, _, __) => Align(
         alignment: const Alignment(0, -0.55),
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(S.s24),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640, maxHeight: 520),
             child: _glassFrame(body()),
@@ -126,7 +126,7 @@ Widget _frame(Widget child) => ClipRRect(
     );
 
 Widget _glassFrame(Widget child) {
-  const radius = BorderRadius.all(Radius.circular(12));
+  final radius = BorderRadius.all(Radius.circular(R.lg));
   return Glass(
     radius: radius,
     border: false,
@@ -435,13 +435,13 @@ class _PaletteState extends State<_Palette> {
       },
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
-          padding: EdgeInsets.fromLTRB(16, kMobile ? 16 : 14, 16, kMobile ? 16 : 14),
-          margin: const EdgeInsets.only(bottom: 4),
+          padding: EdgeInsets.fromLTRB(S.s16, kMobile ? S.s16 : S.of(14), S.s16, kMobile ? S.s16 : S.of(14)),
+          margin: EdgeInsets.only(bottom: S.s4),
           decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.line))),
           child: Row(children: [
             AppIcon('search', size: 17, color: AppColors.fg3),
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             Expanded(
               child: TextField(
                 controller: _ctrl,
@@ -457,8 +457,8 @@ class _PaletteState extends State<_Palette> {
               ),
             ),
             if (busy)
-              const Padding(
-                padding: EdgeInsets.only(left: 8),
+              Padding(
+                padding: EdgeInsets.only(left: S.s8),
                 child: DelayedSpinner(size: 12),
               ),
           ]),
@@ -466,7 +466,7 @@ class _PaletteState extends State<_Palette> {
         Flexible(
           child: selectable.isEmpty
               ? Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                  padding: EdgeInsets.fromLTRB(S.s16, S.s20, S.s16, S.s24),
                   child: Center(
                       heightFactor: 1,
                       child: Text(busy ? 'Searching…' : 'No matches',
@@ -476,7 +476,7 @@ class _PaletteState extends State<_Palette> {
                   controller: _scroll,
                   shrinkWrap: true,
                   padding: EdgeInsets.fromLTRB(
-                      kMobile ? 6 : 4, 0, kMobile ? 6 : 4, kMobile ? 6 : 4),
+                      kMobile ? S.s6 : S.s4, 0, kMobile ? S.s6 : S.s4, kMobile ? S.s6 : S.s4),
                   children: [
                     for (final r in _rows)
                       if (r is PaletteKind)
@@ -494,7 +494,7 @@ class _PaletteState extends State<_Palette> {
   Widget _header(PaletteKind k) => SizedBox(
         height: _headerHeight,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 10, 10, 2),
+          padding: EdgeInsets.fromLTRB(S.of(10), S.of(10), S.of(10), S.s2),
           child: kMobile
               ? Text(k.label.toUpperCase(),
                   style: sans(11, spacing: 0.9, color: AppColors.fg4))
@@ -513,7 +513,7 @@ class _PaletteState extends State<_Palette> {
         onTap: () => _run(item),
         child: Container(
           height: _rowHeight,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: EdgeInsets.symmetric(horizontal: S.of(10)),
           decoration: BoxDecoration(
             color: selected
                 ? (kMobile ? AppColors.raised : AppColors.tint2)
@@ -523,7 +523,7 @@ class _PaletteState extends State<_Palette> {
           child: Row(children: [
             AppIcon(item.icon,
                 size: 15, color: selected ? AppColors.fg1 : AppColors.fg3),
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             Expanded(
               child: Text.rich(
                 TextSpan(children: [
@@ -541,7 +541,7 @@ class _PaletteState extends State<_Palette> {
             ),
             if (item.shortcut.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(left: 8),
+                padding: EdgeInsets.only(left: S.s8),
                 child:
                     Text(item.shortcut, style: sans(11, color: AppColors.fg4)),
               ),
@@ -553,7 +553,7 @@ class _PaletteState extends State<_Palette> {
 
   Widget _footer() {
     Widget hint(String k, String label, {bool last = false}) => Padding(
-          padding: EdgeInsets.only(right: last ? 0 : 14),
+          padding: EdgeInsets.only(right: last ? 0 : S.of(14)),
           child: Text.rich(TextSpan(children: [
             TextSpan(text: k, style: sans(11, color: AppColors.fg2)),
             if (label.isNotEmpty)
@@ -561,7 +561,7 @@ class _PaletteState extends State<_Palette> {
           ])),
         );
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      padding: EdgeInsets.fromLTRB(S.s16, S.of(10), S.s16, S.of(10)),
       decoration: BoxDecoration(
           border: Border(top: BorderSide(color: AppColors.line))),
       child: Row(children: [

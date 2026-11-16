@@ -106,7 +106,7 @@ class _AutonomyChipState extends State<AutonomyChip> {
             initial: autonomy,
             onChanged: (d) => setState(() => _autonomy = d))),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s6),
           decoration: BoxDecoration(
             color: on ? AppColors.okBg : AppColors.surface2,
             borderRadius: BorderRadius.circular(R.sm),
@@ -119,7 +119,7 @@ class _AutonomyChipState extends State<AutonomyChip> {
                   color: on ? AppColors.ok : AppColors.fg4,
                   shape: BoxShape.circle),
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             Text(on ? 'Wakes on' : 'Wakes off',
                 style: TS.label(on ? AppColors.ok : AppColors.fg3)),
           ]),
@@ -220,17 +220,17 @@ class _AutonomyPanelState extends State<AutonomyPanel> {
   }
 
   Widget _card({required List<Widget> children}) => Container(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.s12),
         decoration: BoxDecoration(
           color: kMobile ? AppColors.surface1 : AppColors.surface2,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(R.lg),
         ),
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
       );
 
   Widget _stat(String text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        padding: EdgeInsets.symmetric(horizontal: S.of(9), vertical: S.s4),
         decoration: BoxDecoration(
           color: kMobile ? AppColors.surface2 : AppColors.surface3,
           borderRadius: BorderRadius.circular(R.pill),
@@ -262,11 +262,11 @@ class _AutonomyPanelState extends State<AutonomyPanel> {
       if (general) 'Next check-in',
     ].where((p) => p.isNotEmpty).join(' · ');
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: EdgeInsets.symmetric(vertical: S.of(10)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('${w['note'] ?? ''}',
             style: sans(13, height: 1.45, color: AppColors.fg1)),
-        const SizedBox(height: 4),
+        SizedBox(height: S.s4),
         Text(meta, style: sans(12, tabular: true, color: AppColors.fg4)),
       ]),
     );
@@ -290,13 +290,13 @@ class _AutonomyPanelState extends State<AutonomyPanel> {
     final children = <Widget>[
       if (!widget.embedded) ...[
         Text('Automated wakes', style: TS.sectionTitle()),
-        const SizedBox(height: 6),
+        SizedBox(height: S.s6),
       ],
       if (!kMobile) ...[
         Text(
             'With automated wakes on, Mission Control is woken on a schedule while you are away, like a chief of staff checking in: it looks at running work, verifies results, retries and re-routes, answers workers when it can, and pings your phone only for decisions, finished work and problems.',
             style: TS.meta().copyWith(height: 1.45)),
-        const SizedBox(height: 16),
+        SizedBox(height: S.s16),
       ],
       AppToggle(
         flat: kMobile,
@@ -313,24 +313,24 @@ class _AutonomyPanelState extends State<AutonomyPanel> {
               }()
             : 'Mission Control only acts when you message it',
       ),
-      const SizedBox(height: 20),
+      SizedBox(height: S.s20),
       Text('Wake every', style: TS.label(AppColors.fg2)),
-      const SizedBox(height: 8),
+      SizedBox(height: S.s8),
       Pills<int>(
         items: _rhythms,
         selected: rhythm,
         onSelect: (v) => _set({'round_minutes': v}),
       ),
       if (!kMobile) ...[
-        const SizedBox(height: 6),
+        SizedBox(height: S.s6),
         Text(
             'Reports and worker questions wake it at once. A scheduled wake only runs when something changed, so quiet hours cost nothing.',
             style: TS.meta().copyWith(height: 1.4)),
       ],
-      const SizedBox(height: 20),
+      SizedBox(height: S.s20),
       Text('Quiet hours · ${_offsetLabel(_offset)}',
           style: TS.label(AppColors.fg2)),
-      const SizedBox(height: 8),
+      SizedBox(height: S.s8),
       Pills<String>(
         items: quietItems,
         selected: quietKey,
@@ -343,7 +343,7 @@ class _AutonomyPanelState extends State<AutonomyPanel> {
         },
       ),
       if (!kMobile || held > 0) ...[
-        const SizedBox(height: 6),
+        SizedBox(height: S.s6),
         Text(
             held > 0
                 ? '$held ping${held == 1 ? '' : 's'} held until quiet hours end.'
@@ -351,17 +351,17 @@ class _AutonomyPanelState extends State<AutonomyPanel> {
             style: TS.meta().copyWith(height: 1.4)),
       ],
       if (lastAt != null) ...[
-        const SizedBox(height: 22),
+        SizedBox(height: S.of(22)),
         _card(children: [
           Row(children: [
             AppIcon('activity', size: 13, color: AppColors.fg3),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             Text('Last wake', style: TS.label(AppColors.fg2)),
             const Spacer(),
             Text(_relative(lastAt), style: sans(12, color: AppColors.fg4)),
           ]),
           if (summary != null && summary.trim().isNotEmpty) ...[
-            const SizedBox(height: 10),
+            SizedBox(height: S.of(10)),
             Wrap(spacing: 6, runSpacing: 6, children: [
               for (final part in summary.split(' · '))
                 if (part.trim().isNotEmpty) _stat(part.trim()),
@@ -370,16 +370,16 @@ class _AutonomyPanelState extends State<AutonomyPanel> {
         ]),
       ],
       if (wakes.isNotEmpty) ...[
-        const SizedBox(height: 12),
+        SizedBox(height: S.s12),
         _card(children: [
           Row(children: [
             AppIcon('clock', size: 13, color: AppColors.fg3),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             Text('Wake-ups it scheduled', style: TS.label(AppColors.fg2)),
             const Spacer(),
             Text('${wakes.length}', style: sans(12, color: AppColors.fg4)),
           ]),
-          const SizedBox(height: 4),
+          SizedBox(height: S.s4),
           for (var i = 0; i < wakes.length; i++) ...[
             if (i > 0) Divider(height: 1, color: AppColors.border),
             _wakeRow(wakes[i]),
@@ -387,7 +387,7 @@ class _AutonomyPanelState extends State<AutonomyPanel> {
         ]),
       ],
       if (_error != null) ...[
-        const SizedBox(height: 16),
+        SizedBox(height: S.s16),
         Text(_error!, style: TS.meta().copyWith(color: AppColors.danger)),
       ],
     ];
@@ -398,7 +398,7 @@ class _AutonomyPanelState extends State<AutonomyPanel> {
           NavBackRow(title: 'Automated wakes', onBack: widget.onBack!),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+              padding: EdgeInsets.fromLTRB(S.s20, S.s8, S.s20, S.s40),
               children: children,
             ),
           ),
@@ -407,12 +407,12 @@ class _AutonomyPanelState extends State<AutonomyPanel> {
     }
     if (widget.embedded) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s4),
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
       );
     }
     return ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32), children: children);
+        padding: EdgeInsets.fromLTRB(S.s20, S.s16, S.s20, S.s32), children: children);
   }
 }

@@ -59,7 +59,7 @@ Future<String?> showVoicePicker(BuildContext context,
         width: 360,
         maxHeight: 520,
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(S.s12),
           child: _VoicePicker(voices: voices, selected: selected),
         ));
   }
@@ -112,22 +112,22 @@ class _VoicePickerState extends State<_VoicePicker> {
             filled: true,
             fillColor: kMobile ? AppColors.surface2 : AppColors.surface1,
             prefixIcon: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(S.s12),
               child: AppIcon('search', size: 14, color: AppColors.fg4),
             ),
             prefixIconConstraints:
                 const BoxConstraints(minWidth: 0, minHeight: 0),
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                EdgeInsets.symmetric(horizontal: S.s12, vertical: S.of(10)),
             border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(R.md),
                 borderSide: kMobile
                     ? BorderSide.none
                     : BorderSide(color: AppColors.lineStrong)),
           ),
         ),
         if (groups.length > 1) ...[
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           SizedBox(
             height: 32,
             child: ListView(scrollDirection: Axis.horizontal, children: [
@@ -137,7 +137,7 @@ class _VoicePickerState extends State<_VoicePicker> {
             ]),
           ),
         ],
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         Expanded(
           child: shown.isEmpty
               ? Center(
@@ -149,16 +149,16 @@ class _VoicePickerState extends State<_VoicePicker> {
                     final v = shown[i];
                     final on = v.id == widget.selected;
                     return InkWell(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(R.md),
                       onTap: () => Navigator.pop(context, v.id),
                       child: Container(
                         constraints:
                             BoxConstraints(minHeight: kMobile ? 48 : 38),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: S.of(10), vertical: S.s6),
                         decoration: BoxDecoration(
                           color: on ? AppColors.surface2 : null,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(R.md),
                         ),
                         child: Row(children: [
                           Expanded(
@@ -177,7 +177,7 @@ class _VoicePickerState extends State<_VoicePicker> {
                             Text(v.group,
                                 style: sans(12, color: AppColors.fg4)),
                           if (on) ...[
-                            const SizedBox(width: 10),
+                            SizedBox(width: S.of(10)),
                             AppIcon('check', size: 14, color: AppColors.fg1),
                           ],
                         ]),
@@ -191,16 +191,16 @@ class _VoicePickerState extends State<_VoicePicker> {
   }
 
   Widget _chip(String label, bool on, VoidCallback onTap) => Padding(
-        padding: const EdgeInsets.only(right: 6),
+        padding: EdgeInsets.only(right: S.s6),
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(R.of(16)),
           onTap: onTap,
           child: Container(
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: EdgeInsets.symmetric(horizontal: S.s12),
             decoration: BoxDecoration(
               color: on ? AppColors.fg1 : AppColors.surface2,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(R.of(16)),
             ),
             child: Text(label,
                 style: sans(13, color: on ? AppColors.bg : AppColors.fg3)),

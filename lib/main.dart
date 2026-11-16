@@ -21,15 +21,15 @@ Widget _buildErrorWidget(FlutterErrorDetails details) {
     color: AppColors.bg,
     child: Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(S.s24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             AppIcon('alert-triangle', size: 28, color: AppColors.danger),
-            const SizedBox(height: 12),
+            SizedBox(height: S.s12),
             Text('This panel could not be displayed',
                 textAlign: TextAlign.center, style: TS.sectionTitle()),
-            const SizedBox(height: 6),
+            SizedBox(height: S.s6),
             Text('Close it and try again.',
                 textAlign: TextAlign.center, style: TS.meta()),
           ],
@@ -75,7 +75,8 @@ void main() async {
 }
 
 class SnippetApp extends StatefulWidget {
-  const SnippetApp({super.key});
+  const SnippetApp({super.key, @visibleForTesting this.home});
+  final Widget? home;
   @override
   State<SnippetApp> createState() => _SnippetAppState();
 }
@@ -96,7 +97,16 @@ class _SnippetAppState extends State<SnippetApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  void _onThemeChange() => setState(() {});
+  String? _tokens;
+
+  void _onThemeChange() {
+    if (!mounted) return;
+    setState(() {});
+    final next = ThemeManager.instance.tokenSignature;
+    if (next == _tokens) return;
+    _tokens = next;
+    rebuildThemeElements(context);
+  }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -123,7 +133,7 @@ class _SnippetAppState extends State<SnippetApp> with WidgetsBindingObserver {
       builder: (context, child) => NotificationPopovers(
         child: AmbientEdgeGlow(child: child ?? const SizedBox.shrink()),
       ),
-      home: const AdaptiveHome(),
+      home: widget.home ?? const AdaptiveHome(),
     );
   }
 }

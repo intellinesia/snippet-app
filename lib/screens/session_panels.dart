@@ -85,7 +85,7 @@ class SessionCheckpointsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     if (checkpoints.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(S.s20),
         child: Text('No checkpoints yet.', style: TS.meta()),
       );
     }
@@ -109,11 +109,11 @@ class SessionCheckpointsPanel extends StatelessWidget {
               onTap: () => onRewind(c),
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
-                    12, dense ? 8 : 10, dense ? 4 : 6, dense ? 8 : 10),
+                    S.s12, dense ? S.s8 : S.of(10), dense ? S.s4 : S.s6, dense ? S.s8 : S.of(10)),
                 child: Row(children: [
                   AppIcon('history',
                       size: dense ? 13 : 16, color: AppColors.fg3),
-                  SizedBox(width: dense ? 10 : 12),
+                  SizedBox(width: dense ? S.of(10 ) : S.s12),
                   Expanded(
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,7 +124,7 @@ class SessionCheckpointsPanel extends StatelessWidget {
                               style: dense
                                   ? sans(13, color: AppColors.fg1)
                                   : TS.rowTitle()),
-                          const SizedBox(height: 2),
+                          SizedBox(height: S.s2),
                           Text(formatCheckpointDate(c.createdAt),
                               style: dense
                                   ? mono(10, color: AppColors.fg3)
@@ -215,7 +215,7 @@ class _SessionLanesPanelState extends State<SessionLanesPanel> {
 }
 
 Widget _paneLabel(String text, {Widget? trailing}) => Padding(
-      padding: const EdgeInsets.fromLTRB(2, 14, 2, 8),
+      padding: EdgeInsets.fromLTRB(S.s2, S.of(14), S.s2, S.s8),
       child: Row(children: [
         Expanded(
           child: Text(text.toUpperCase(),
@@ -287,7 +287,7 @@ class _CheckpointTimelineState extends State<_CheckpointTimeline> {
 
   Widget _pill(String label, VoidCallback onTap, {bool filled = false}) =>
       Padding(
-        padding: const EdgeInsets.only(right: 4),
+        padding: EdgeInsets.only(right: S.s4),
         child: Material(
           color: filled ? AppColors.tint2 : Colors.transparent,
           shape: RoundedRectangleBorder(
@@ -299,7 +299,7 @@ class _CheckpointTimelineState extends State<_CheckpointTimeline> {
             onTap: onTap,
             child: Container(
               height: 24,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: EdgeInsets.symmetric(horizontal: S.of(10)),
               alignment: Alignment.center,
               child: Text(label,
                   style: sans(12,
@@ -313,7 +313,7 @@ class _CheckpointTimelineState extends State<_CheckpointTimeline> {
   Widget build(BuildContext context) {
     final cps = widget.checkpoints;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 0, 14, 24),
+      padding: EdgeInsets.fromLTRB(S.of(14), 0, S.of(14), S.s24),
       children: [
         _paneLabel('Checkpoints · ${cps.length}',
             trailing: Text('Files roll back too',
@@ -344,11 +344,11 @@ class _CheckpointTimelineState extends State<_CheckpointTimeline> {
         onTap: () => setState(() => _picked = _picked == c.id ? null : c.id),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
-          margin: const EdgeInsets.only(bottom: 2),
-          padding: const EdgeInsets.fromLTRB(30, 9, 10, 10),
+          margin: EdgeInsets.only(bottom: S.s2),
+          padding: EdgeInsets.fromLTRB(S.of(30), S.of(9), S.of(10), S.of(10)),
           decoration: BoxDecoration(
             color: open ? AppColors.tint1 : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(R.card),
           ),
           child: Stack(clipBehavior: Clip.none, children: [
             Positioned(
@@ -374,7 +374,7 @@ class _CheckpointTimelineState extends State<_CheckpointTimeline> {
                   style: sans(13,
                       height: 1.45,
                       color: open || latest ? AppColors.fg1 : AppColors.fg2)),
-              const SizedBox(height: 4),
+              SizedBox(height: S.s4),
               Row(children: [
                 Expanded(
                   child: Text(formatCheckpointDate(c.createdAt),
@@ -383,7 +383,7 @@ class _CheckpointTimelineState extends State<_CheckpointTimeline> {
                 Text(_stat(c.id), style: mono(11, color: AppColors.fg3)),
               ]),
               if (open) ...[
-                const SizedBox(height: 8),
+                SizedBox(height: S.s8),
                 Row(children: [
                   _pill('Restore', () => widget.onRewind(c), filled: true),
                   _pill('Fork', () => widget.onFork(c)),
@@ -487,23 +487,23 @@ class _DeskLanesState extends State<_DeskLanes> {
         : (l.summary ?? l.handoff ?? '').trim();
     final steps = l.activityLog.length.clamp(0, 14);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: S.s8),
       child: Material(
         color: AppColors.tint1,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(R.lg),
           side: BorderSide(color: AppColors.line),
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(R.lg),
           onTap: () => openLaneView(context, l,
               client: widget.client, liveLanes: () => widget.lanes),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+            padding: EdgeInsets.fromLTRB(S.s12, S.of(11), S.s12, S.of(11)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Row(children: [
                 AgentMochi(l.agent ?? l.id, size: 18),
-                const SizedBox(width: 9),
+                SizedBox(width: S.of(9)),
                 Expanded(
                   child: Text(l.title.isEmpty ? 'Lane' : l.title,
                       maxLines: 1,
@@ -513,19 +513,19 @@ class _DeskLanesState extends State<_DeskLanes> {
                 Text(status, style: sans(12, color: color)),
               ]),
               if (task.isNotEmpty) ...[
-                const SizedBox(height: 7),
+                SizedBox(height: S.of(7)),
                 Text(task,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: sans(13, height: 1.45, color: AppColors.fg3)),
               ],
-              const SizedBox(height: 8),
+              SizedBox(height: S.s8),
               Row(children: [
                 for (var i = 0; i < 14; i++)
                   Container(
                     width: 5,
                     height: 5,
-                    margin: const EdgeInsets.only(right: 3),
+                    margin: EdgeInsets.only(right: S.of(3)),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: i < steps
@@ -534,7 +534,7 @@ class _DeskLanesState extends State<_DeskLanes> {
                     ),
                   ),
                 const Spacer(),
-                const SizedBox(width: S.s8),
+                SizedBox(width: S.s8),
                 Flexible(
                   child: LaneWho(
                       client: widget.client,
@@ -545,7 +545,7 @@ class _DeskLanesState extends State<_DeskLanes> {
                       maxTextWidth: 96),
                 ),
                 if (_elapsed(l.startedAt).isNotEmpty) ...[
-                  const SizedBox(width: S.s8),
+                  SizedBox(width: S.s8),
                   Text(_elapsed(l.startedAt),
                       style: mono(11, color: AppColors.fg4)),
                 ],
@@ -562,14 +562,14 @@ class _DeskLanesState extends State<_DeskLanes> {
     final lanes = widget.lanes;
     final running = lanes.where((l) => l.running).length;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 0, 14, 24),
+      padding: EdgeInsets.fromLTRB(S.of(14), 0, S.of(14), S.s24),
       children: [
         _paneLabel(running > 0
             ? 'Lanes · $running running'
             : 'Lanes${lanes.isEmpty ? '' : ' · ${lanes.length}'}'),
         if (lanes.isEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(2, 0, 2, 4),
+            padding: EdgeInsets.fromLTRB(S.s2, 0, S.s2, S.s4),
             child: Text(
                 'Parallel work this session hands off shows up here.',
                 style: sans(13, height: 1.5, color: AppColors.fg4)),

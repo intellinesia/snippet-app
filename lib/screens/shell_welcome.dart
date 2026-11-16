@@ -209,7 +209,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
   }
 
   Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.only(bottom: S.s8),
         child: Text(text,
             textAlign: TextAlign.center,
             style: sans(13, weight: W.label, color: AppColors.fg1)),
@@ -229,10 +229,10 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
             decoration:
                 BoxDecoration(color: AppColors.ok, shape: BoxShape.circle),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Text('Snippet is running here',
               style: sans(13, color: AppColors.fg1)),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Flexible(
             child: Text(_found!.name,
                 maxLines: 1,
@@ -240,7 +240,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                 style: mono(11, color: AppColors.fg4)),
           ),
         ]),
-        const SizedBox(height: 12),
+        SizedBox(height: S.s12),
         Btn('Connect',
             small: true, onTap: () => widget.onConnected?.call(_found!)),
       ]);
@@ -250,9 +250,9 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
         _label('Not set to start automatically'),
         _body('It works now, but stops when this computer restarts. '
             'To fix that, run:'),
-        const SizedBox(height: 10),
+        SizedBox(height: S.of(10)),
         const _CommandBox(enableCommand),
-        const SizedBox(height: 12),
+        SizedBox(height: S.s12),
         Btn('Continue',
             small: true, onTap: () => widget.onConnected?.call(_pending!)),
       ]);
@@ -271,10 +271,10 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
       return Column(mainAxisSize: MainAxisSize.min, children: [
         _body('Run these in a terminal. This screen picks the service up '
             'as soon as it is running.'),
-        const SizedBox(height: 10),
+        SizedBox(height: S.of(10)),
         if (!_installed) ...[
           const _CommandBox(installCommand),
-          const SizedBox(height: 6),
+          SizedBox(height: S.s6),
         ],
         const _CommandBox(enableCommand),
       ]);
@@ -282,15 +282,15 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
     return Column(mainAxisSize: MainAxisSize.min, children: [
       if (_installed) ...[
         _body('Snippet is installed but not running.'),
-        const SizedBox(height: 12),
+        SizedBox(height: S.s12),
       ],
       if (_error != null) ...[
         Text(_error!,
             textAlign: TextAlign.center,
             style: sans(12, height: 1.45, color: AppColors.danger)),
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         const _CommandBox(installCommand),
-        const SizedBox(height: 12),
+        SizedBox(height: S.s12),
       ],
       Btn(
           _error != null
@@ -312,13 +312,13 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                   mono: true,
                   hint: 'https://\u2026?token=\u2026',
                   onSubmitted: _connectRemote)),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Btn('Connect',
               small: true,
               disabled: _remoteBusy,
               onTap: () => _connectRemote(_paste.text)),
         ]),
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         if (_remoteError != null)
           Text(_remoteError!,
               textAlign: TextAlign.center,
@@ -372,7 +372,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
           opacity: dim ? 0.55 : 1,
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(vertical: 24),
+              padding: EdgeInsets.symmetric(vertical: S.s24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -386,9 +386,9 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                       builder: (_, h, __) => _artFor(index, h),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: S.of(10)),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 36),
+                    padding: EdgeInsets.symmetric(horizontal: S.of(36)),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 380),
                       child: Column(
@@ -396,12 +396,12 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                         children: [
                           Text(title,
                               textAlign: TextAlign.center, style: display(18)),
-                          const SizedBox(height: 8),
+                          SizedBox(height: S.s8),
                           Text(body,
                               textAlign: TextAlign.center,
                               style: sans(13,
                                   height: 1.55, color: AppColors.fg3)),
-                          const SizedBox(height: 22),
+                          SizedBox(height: S.of(22)),
                           controls,
                         ],
                       ),
@@ -452,7 +452,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
         Positioned.fill(
           child: stacked
               ? SingleChildScrollView(
-                  padding: const EdgeInsets.only(top: 40),
+                  padding: EdgeInsets.only(top: S.s40),
                   child: Column(children: [left, line, right]))
               : Row(children: [
                   AnimatedContainer(
@@ -472,7 +472,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
           child: IgnorePointer(
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               MochiIcon(color: const Color(0xFFB9C6FF), size: 16),
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               Text('Snippet needs a service',
                   style: sans(13, color: AppColors.fg3)),
             ]),
@@ -496,7 +496,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
               child:
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 AppIcon(icon, size: 16, color: AppColors.accentFg),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Text(label,
                     style: sans(kMobile ? 15 : 13,
                         weight: W.label, color: AppColors.accentFg)),
@@ -508,7 +508,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
 
   Widget _phone() => LayoutBuilder(
         builder: (context, box) => SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+          padding: EdgeInsets.fromLTRB(S.s24, S.s8, S.s24, S.s32),
           child: ConstrainedBox(
             constraints: BoxConstraints(
                 maxWidth: 460, minHeight: box.maxHeight - 40),
@@ -520,29 +520,29 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                   height: 200,
                   child: PlugArt(time: _clock, hover: 0.5),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: S.s8),
                 Text('Connect to your computer',
                     textAlign: TextAlign.center, style: display(24)),
-                const SizedBox(height: 10),
+                SizedBox(height: S.of(10)),
                 Text(
                   'Snippet does its work in a small service that runs on a '
                   'computer or server. This app is your window onto it.',
                   textAlign: TextAlign.center,
                   style: sans(14, height: 1.5, color: AppColors.fg3),
                 ),
-                const SizedBox(height: 28),
+                SizedBox(height: S.of(28)),
                 _wideButton('Scan QR code', 'scan', widget.onAddInstance),
-                const SizedBox(height: 18),
+                SizedBox(height: S.of(18)),
                 Row(children: [
                   Expanded(child: Container(height: 1, color: AppColors.border)),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: EdgeInsets.symmetric(horizontal: S.s12),
                     child: Text('or paste its link',
                         style: sans(13, color: AppColors.fg4)),
                   ),
                   Expanded(child: Container(height: 1, color: AppColors.border)),
                 ]),
-                const SizedBox(height: 18),
+                SizedBox(height: S.of(18)),
                 Row(children: [
                   Expanded(
                       child: AppField(
@@ -550,21 +550,21 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                           mono: true,
                           hint: 'https://\u2026?token=\u2026',
                           onSubmitted: _connectRemote)),
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                   PillBtn('Connect',
                       onTap: _remoteBusy || _paste.text.trim().isEmpty
                           ? null
                           : () => _connectRemote(_paste.text)),
                 ]),
                 if (_remoteError != null) ...[
-                  const SizedBox(height: 10),
+                  SizedBox(height: S.of(10)),
                   Text(_remoteError!,
                       textAlign: TextAlign.center,
                       style: sans(13, height: 1.4, color: AppColors.danger)),
                 ],
-                const SizedBox(height: 32),
+                SizedBox(height: S.s32),
                 Container(
-                  padding: const EdgeInsets.all(18),
+                  padding: EdgeInsets.all(S.of(18)),
                   decoration: BoxDecoration(
                     color: AppColors.surface1,
                     borderRadius: BorderRadius.circular(R.lg),
@@ -576,15 +576,15 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                       Text('Not running yet? On your computer:',
                           style: sans(13,
                               weight: W.label, color: AppColors.fg1)),
-                      const SizedBox(height: 14),
+                      SizedBox(height: S.of(14)),
                       const _WelcomeStep(
                           n: '1', title: 'Install', command: installCommand),
-                      const SizedBox(height: 14),
+                      SizedBox(height: S.of(14)),
                       const _WelcomeStep(
                           n: '2',
                           title: 'Start it',
                           command: enableCommand),
-                      const SizedBox(height: 14),
+                      SizedBox(height: S.of(14)),
                       const _WelcomeStep(
                         n: '3',
                         title: 'Show its link and QR code',
@@ -637,10 +637,10 @@ class _StageRow extends StatelessWidget {
           )),
     };
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: S.s4),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(width: 18, height: 18, child: Center(child: lead)),
-        const SizedBox(width: 8),
+        SizedBox(width: S.s8),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -652,7 +652,7 @@ class _StageRow extends StatelessWidget {
                           : AppColors.fg1)),
               if (detail.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 3),
+                  padding: EdgeInsets.only(top: S.of(3)),
                   child: Text(detail,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -672,7 +672,7 @@ class _CommandBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
+        padding: EdgeInsets.fromLTRB(S.s12, S.s6, S.s4, S.s6),
         decoration: BoxDecoration(
           color: AppColors.bg,
           borderRadius: BorderRadius.circular(R.sm),
@@ -713,23 +713,23 @@ class _WelcomeStep extends StatelessWidget {
         ),
         child: Text(n, style: sans(12, weight: W.label, color: AppColors.fg2)),
       ),
-      const SizedBox(width: 12),
+      SizedBox(width: S.s12),
       Expanded(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: EdgeInsets.only(top: S.s2),
               child: Text(title,
                   style: sans(kMobile ? 14 : 13, color: AppColors.fg1)),
             ),
             if (command != null) ...[
-              const SizedBox(height: 8),
+              SizedBox(height: S.s8),
               _CommandBox(command!),
             ],
             if (note != null) ...[
-              const SizedBox(height: 6),
+              SizedBox(height: S.s6),
               Text(note!, style: sans(12, height: 1.4, color: AppColors.fg4)),
             ],
           ],
@@ -756,30 +756,30 @@ class ShellRecentPlaceholder extends StatelessWidget {
     final list = (sessions ?? const <SessionInfo>[]).take(8).toList();
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: EdgeInsets.symmetric(horizontal: S.s20),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520, maxHeight: 520),
           child: ListView(
             shrinkWrap: true,
-            padding: const EdgeInsets.symmetric(vertical: 24),
+            padding: EdgeInsets.symmetric(vertical: S.s24),
             children: [
               Text('Recent sessions', style: display(kMobile ? 24 : 20)),
-              const SizedBox(height: 6),
+              SizedBox(height: S.s6),
               Text(
                 'Pick up where you left off, or start a new chat from Browse.',
                 style: sans(12, height: 1.4, color: AppColors.fg3),
               ),
-              const SizedBox(height: 18),
+              SizedBox(height: S.of(18)),
               if (sessionsLoading && sessions == null)
                 Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(S.s16),
                     child: Spinner(size: 20, color: AppColors.fg3),
                   ),
                 )
               else if (list.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: EdgeInsets.symmetric(vertical: S.s16),
                   child: Text(
                     'No sessions yet.',
                     style: TS.meta(),
@@ -788,10 +788,10 @@ class ShellRecentPlaceholder extends StatelessWidget {
               else
                 ...list.map(
                   (s) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
+                    padding: EdgeInsets.only(bottom: S.s8),
                     child: AppCard(
                       onTap: () => onOpenSession(s.id, s.title, s.profile),
-                      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+                      padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.s12, S.s12),
                       child: Row(children: [
                         Expanded(
                           child: Column(
@@ -803,7 +803,7 @@ class ShellRecentPlaceholder extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: sans(13, color: AppColors.fg1),
                               ),
-                              const SizedBox(height: 3),
+                              SizedBox(height: S.of(3)),
                               Text(
                                 lastPathSegment(s.projectFolder,
                                     ifEmpty: s.projectFolder),
@@ -814,7 +814,7 @@ class ShellRecentPlaceholder extends StatelessWidget {
                             ],
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: S.s8),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [

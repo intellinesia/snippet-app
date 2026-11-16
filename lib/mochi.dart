@@ -4,8 +4,11 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'agent_character.dart';
 import 'ambient_loop.dart';
 import 'theme.dart';
+
+export 'agent_character.dart';
 
 const mochiPalette = <(String, Color)>[
   ('Periwinkle', Color(0xFFB9C6FF)),
@@ -25,6 +28,29 @@ MascotShape mascotShapeNamed(String? name) => MascotShape.values
 
 final agentColors = ValueNotifier<Map<String, String>>(const {});
 final agentShapes = ValueNotifier<Map<String, String>>(const {});
+final agentCharacters = ValueNotifier<Map<String, String>>(const {});
+
+String? agentCharacterFor(String agentId) => agentCharacters.value[agentId];
+
+void rememberAgentCharacters(Iterable<(String, String?)> agents) {
+  final next = <String, String>{};
+  for (final (id, character) in agents) {
+    final trimmed = character?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) next[id] = trimmed;
+  }
+  if (!mapEquals(next, agentCharacters.value)) agentCharacters.value = next;
+}
+
+void setRememberedAgentCharacter(String id, String? character) {
+  final next = Map<String, String>.of(agentCharacters.value);
+  final trimmed = character?.trim();
+  if (trimmed == null || trimmed.isEmpty) {
+    next.remove(id);
+  } else {
+    next[id] = trimmed;
+  }
+  agentCharacters.value = next;
+}
 
 MascotShape mascotShapeFor(String agentId) =>
     mascotShapeNamed(agentShapes.value[agentId]);
@@ -102,18 +128,32 @@ class MochiIcon extends StatelessWidget {
 }
 
 class AgentMochi extends StatelessWidget {
-  const AgentMochi(this.agentId, {super.key, this.size = 18});
+  const AgentMochi(this.agentId,
+      {super.key, this.size = 18, this.state = AgentCharacterState.idle});
 
   final String agentId;
   final double size;
+  final AgentCharacterState state;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-        listenable: Listenable.merge([agentColors, agentShapes]),
-        builder: (_, __) => MochiIcon(
-            color: mochiColorFor(agentId),
-            size: size,
-            shape: mascotShapeFor(agentId)),
+        listenable:
+            Listenable.merge([agentColors, agentShapes, agentCharacters]),
+        builder: (_, __) {
+          final character = agentCharacterFor(agentId);
+          if (character != null) {
+            return AgentCharacter(
+              character,
+              size: size,
+              state: state,
+              staggerKey: agentId,
+            );
+          }
+          return MochiIcon(
+              color: mochiColorFor(agentId),
+              size: size,
+              shape: mascotShapeFor(agentId));
+        },
       );
 }
 

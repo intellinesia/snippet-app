@@ -30,7 +30,8 @@ class _FakeAgentsClient extends DaemonClient {
   String? builtPrompt;
 
   @override
-  Future<void> buildCoordinationAgent(String prompt, {String? nickname}) async {
+  Future<void> buildCoordinationAgent(String prompt,
+      {String? nickname, String? character}) async {
     builtPrompt = prompt;
   }
 

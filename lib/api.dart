@@ -17,7 +17,9 @@ import 'goal_models.dart';
 import 'wake_models.dart';
 import 'github_models.dart';
 import 'reach_models.dart';
+import 'theme_models.dart';
 export 'reach_models.dart';
+export 'theme_models.dart';
 
 class DownloadCancelled implements Exception {
   const DownloadCancelled();
@@ -1402,6 +1404,7 @@ class DaemonClient {
         .toList();
     rememberAgentColors(agents.map((a) => (a.id, a.color)));
     rememberAgentShapes(agents.map((a) => (a.id, a.shape)));
+    rememberAgentCharacters(agents.map((a) => (a.id, a.character)));
     return agents;
   }
 
@@ -1419,6 +1422,16 @@ class DaemonClient {
         headers: _json, body: jsonEncode({'shape': shape}));
     if (r.statusCode != 200) throw _err('set agent shape', r);
     setRememberedAgentShape(agentId, shape);
+  }
+
+  /// POST /agents/{id}/character: the agent's character ("01".."36"), or null for the default.
+  Future<void> setAgentCharacter(String agentId, String? character) async {
+    final r = await _post(
+        _uri('/agents/${Uri.encodeComponent(agentId)}/character'),
+        headers: _json,
+        body: jsonEncode({'character': character}));
+    if (r.statusCode != 200) throw _err('set agent character', r);
+    setRememberedAgentCharacter(agentId, character);
   }
 
   /// POST /agents/{id}/nickname — a short name shown instead of the name, or null to clear it.
@@ -1736,13 +1749,15 @@ class DaemonClient {
   }
 
   /// POST /agents/build — ask the runtime to research and build an agent from one prompt.
-  Future<void> buildCoordinationAgent(String prompt, {String? nickname}) async {
+  Future<void> buildCoordinationAgent(String prompt,
+      {String? nickname, String? character}) async {
     final r = await _post(
       _uri('/agents/build'),
       headers: _json,
       body: jsonEncode({
         'prompt': prompt,
         if (nickname != null && nickname.isNotEmpty) 'nickname': nickname,
+        if (character != null) 'character': character,
       }),
     );
     if (r.statusCode != 202) throw _err('build coordination agent', r);
@@ -2356,6 +2371,91 @@ class DaemonClient {
   Future<void> deleteRecurring(String id) async {
     final r = await _delete(_uri('/recurring/$id'));
     if (r.statusCode != 200) throw _err('delete recurring job', r);
+  }
+
+  // ---- theme store & sync ----
+
+  Future<ThemeListResponse> listThemes() async {
+    final r = await _get(_uri('/themes'));
+    if (r.statusCode != 200) throw _err('list themes', r);
+    return ThemeListResponse.fromJson(
+        jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  Future<ThemeDetail> getTheme(String id) async {
+    final r = await _get(_uri('/themes/${Uri.encodeComponent(id)}'));
+    if (r.statusCode != 200) throw _err('load theme', r);
+    return ThemeDetail.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  Future<ThemeDetail?> putTheme(
+      String id, Map<String, dynamic> document) async {
+    final r = await _put(_uri('/themes/${Uri.encodeComponent(id)}'),
+        headers: _json, body: jsonEncode(document));
+    if (r.statusCode == 400 || r.statusCode == 422) {
+      try {
+        final j = jsonDecode(r.body);
+        if (j is Map<String, dynamic> && j['problems'] is List) {
+          throw ThemeValidationException(
+            j['error'] as String? ?? 'Theme invalid',
+            [for (final p in (j['problems'] as List)) '$p'],
+          );
+        }
+      } catch (e) {
+        if (e is ThemeValidationException) rethrow;
+      }
+    }
+    if (r.statusCode != 200 && r.statusCode != 201 && r.statusCode != 204) {
+      throw _err('save theme', r);
+    }
+    if (r.body.trim().isEmpty) return null;
+    final j = jsonDecode(r.body);
+    if (j is Map<String, dynamic> &&
+        (j['resolved'] is Map || j['color'] is Map)) {
+      return ThemeDetail.fromJson(j);
+    }
+    return null;
+  }
+
+  Future<void> deleteTheme(String id) async {
+    final r = await _delete(_uri('/themes/${Uri.encodeComponent(id)}'));
+    if (r.statusCode != 200 && r.statusCode != 204) {
+      throw _err('delete theme', r);
+    }
+  }
+
+  Future<ResolvedTheme> getActiveTheme() async {
+    final r = await _get(_uri('/themes/active'));
+    if (r.statusCode != 200) throw _err('load active theme', r);
+    return ResolvedTheme.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  Future<ResolvedTheme?> setActiveTheme(String id) async {
+    final r = await _put(_uri('/themes/active'),
+        headers: _json, body: jsonEncode({'id': id}));
+    if (r.statusCode != 200 && r.statusCode != 204) {
+      throw _err('apply theme', r);
+    }
+    if (r.body.trim().isEmpty) return null;
+    final j = jsonDecode(r.body);
+    if (j is Map<String, dynamic> &&
+        (j['resolved'] is Map || j['color'] is Map)) {
+      return ResolvedTheme.fromJson(j);
+    }
+    return null;
+  }
+
+  Future<ThemeValidationResult> validateTheme(
+      Map<String, dynamic> document) async {
+    final r = await _post(_uri('/themes/validate'),
+        headers: _json, body: jsonEncode(document));
+    if (r.statusCode != 200 && r.statusCode != 400 && r.statusCode != 422) {
+      throw _err('validate theme', r);
+    }
+    return ThemeValidationResult.fromJson(
+      jsonDecode(r.body) as Map<String, dynamic>,
+      okStatus: r.statusCode == 200,
+    );
   }
 
   String _err(String what, http.Response r) {

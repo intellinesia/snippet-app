@@ -102,7 +102,7 @@ class MessageReactionGrid extends StatelessWidget {
                 button: true,
                 label: 'React $emoji, $meaning',
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(R.card),
                   onTap: () => Navigator.of(context).pop(emoji),
                   child: SizedBox(
                     width: w,
@@ -112,7 +112,7 @@ class MessageReactionGrid extends StatelessWidget {
                       children: [
                         Text(emoji,
                             style: const TextStyle(fontSize: 24, height: 1.1)),
-                        const SizedBox(height: 4),
+                        SizedBox(height: S.s4),
                         Text(
                           meaning,
                           maxLines: 1,
@@ -324,7 +324,7 @@ class MessageFocusOverlay extends StatelessWidget {
           final scrimColor = AppColors.glassScrim
               .withValues(alpha: AppColors.glassScrim.a * t);
           Widget backdrop = ColoredBox(color: scrimColor);
-          if (Glass.enabled && t > 0.001) {
+          if (Glass.effectiveEnabled && t > 0.001) {
             backdrop = BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 20 * t, sigmaY: 20 * t),
               child: backdrop,
@@ -424,11 +424,11 @@ class _ReactionBar extends StatelessWidget {
     return SizedBox(
       height: 52,
       child: Glass(
-        radius: BorderRadius.circular(28),
+        radius: BorderRadius.circular(R.of(28)),
         child: Material(
           type: MaterialType.transparency,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: EdgeInsets.symmetric(horizontal: S.of(10)),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -437,7 +437,7 @@ class _ReactionBar extends StatelessWidget {
                     button: true,
                     label: 'React $emoji',
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(R.of(20)),
                       onTap: () => onReact(emoji),
                       child: SizedBox(
                         width: 42,
@@ -453,12 +453,12 @@ class _ReactionBar extends StatelessWidget {
                   ),
                 if (showMore)
                   Padding(
-                    padding: const EdgeInsets.only(left: 4),
+                    padding: EdgeInsets.only(left: S.s4),
                     child: Semantics(
                       button: true,
                       label: 'More reactions',
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(R.of(18)),
                         onTap: onMore,
                         child: Container(
                           width: 34,
@@ -503,7 +503,7 @@ class _ActionsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final dividerColor = AppColors.fg1.withValues(alpha: 0.08);
     return Glass(
-      radius: BorderRadius.circular(16),
+      radius: BorderRadius.circular(R.of(16)),
       child: Material(
         type: MaterialType.transparency,
         child: Column(
@@ -548,7 +548,7 @@ class _ActionRow extends StatelessWidget {
       child: SizedBox(
         height: 44,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: S.s16),
           child: Row(
             children: [
               Expanded(
