@@ -162,8 +162,9 @@ class ChatCardButton {
   final bool busy;
 }
 
-/// Full-width pill buttons. Stacked on the phone when [stack] is set (the
-/// Duet shape), side by side otherwise; an optional quiet link sits below.
+/// Card buttons. On the phone: full-width pills, stacked when [stack] is set
+/// (the Duet shape), with an optional quiet link below. On desktop: compact
+/// buttons at their own width, right-aligned, with the link on the left.
 class ChatCardActions extends StatelessWidget {
   const ChatCardActions({
     super.key,
@@ -183,6 +184,7 @@ class ChatCardActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = ChatCard.pad;
+    if (!kMobile) return _desktop(p);
     final vertical = stack && kMobile;
     final ordered = vertical ? buttons.reversed.toList() : buttons;
     final pills = [for (final b in ordered) _ChatCardPill(b)];
@@ -227,6 +229,48 @@ class ChatCardActions extends StatelessWidget {
   }
 }
 
+extension on ChatCardActions {
+  // Pointer-sized: buttons sit at their own width so a card never reads as a
+  // pair of big slabs.
+  Widget _desktop(double p) {
+    final pills = [for (final b in buttons) _ChatCardPill(b)];
+    return Padding(
+      padding: EdgeInsets.fromLTRB(p, 4, p, p),
+      child: Row(children: [
+        if (link != null)
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 260),
+            child: Semantics(
+              button: true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onLink,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Text(link!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12,
+                          color: onLink == null
+                              ? AppColors.fg4
+                              : AppColors.fg3)),
+                ),
+              ),
+            ),
+          ),
+        Expanded(
+          child: Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 8,
+            runSpacing: 8,
+            children: pills,
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
 class _ChatCardPill extends StatelessWidget {
   const _ChatCardPill(this.b);
 
@@ -234,7 +278,7 @@ class _ChatCardPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final h = kMobile ? 44.0 : 34.0;
+    final h = kMobile ? 44.0 : 28.0;
     final enabled = b.onTap != null && !b.busy;
     final (bg, fg, border) = switch (b.kind) {
       ChatCardButtonKind.primary => (
@@ -269,18 +313,25 @@ class _ChatCardPill extends StatelessWidget {
             opacity: enabled ? 1 : 0.45,
             child: Container(
               height: h,
-              alignment: Alignment.center,
+              alignment: kMobile ? Alignment.center : null,
+              padding: kMobile
+                  ? null
+                  : const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: bg,
                 borderRadius: BorderRadius.circular(h / 2),
                 border: Border.all(color: border),
               ),
               child: ExcludeSemantics(
-                child: Text(b.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(kMobile ? 15 : 13,
-                        weight: W.strong, color: fg)),
+                // Desktop: as wide as the label, centred in the pill height.
+                child: Align(
+                  widthFactor: kMobile ? null : 1,
+                  child: Text(b.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(kMobile ? 15 : 13,
+                          weight: W.strong, color: fg)),
+                ),
               ),
             ),
           ),
