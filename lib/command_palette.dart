@@ -120,10 +120,20 @@ Future<void> showCommandPalette(
   );
 }
 
-Widget _frame(Widget child) => ClipRRect(
-      borderRadius: BorderRadius.circular(R.card),
+Widget _frame(Widget child) {
+  final radius = BorderRadius.vertical(top: Radius.circular(R.sheetTop));
+  return ClipRRect(
+    borderRadius: radius,
+    child: DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border(top: BorderSide(color: AppColors.border2)),
+      ),
       child: Material(color: AppColors.glassSurface, child: child),
-    );
+    ),
+  );
+}
 
 Widget _glassFrame(Widget child) {
   final radius = BorderRadius.all(Radius.circular(R.lg));
@@ -212,8 +222,8 @@ class _Palette extends StatefulWidget {
 }
 
 class _PaletteState extends State<_Palette> {
-  static const _rowHeight = 40.0;
-  static const _headerHeight = 28.0;
+  static double get _rowHeight => kMobile ? 40.0 : 30.0;
+  static double get _headerHeight => kMobile ? 30.0 : 28.0;
 
   final _ctrl = TextEditingController();
   final _scroll = ScrollController();
@@ -435,24 +445,30 @@ class _PaletteState extends State<_Palette> {
       },
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
-          padding: EdgeInsets.fromLTRB(S.s16, kMobile ? S.s16 : S.of(14), S.s16, kMobile ? S.s16 : S.of(14)),
-          margin: EdgeInsets.only(bottom: S.s4),
+          height: kMobile ? 44 : 36,
+          padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s12 : S.of(10)),
+          margin: kMobile
+              ? EdgeInsets.fromLTRB(S.s16, S.s16, S.s16, S.s8)
+              : EdgeInsets.fromLTRB(S.s8, S.s8, S.s8, S.s4),
           decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.line))),
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(kMobile ? R.of(12) : R.of(9)),
+            border: kMobile ? Border.all(color: AppColors.border2) : null,
+          ),
           child: Row(children: [
-            AppIcon('search', size: 17, color: AppColors.fg3),
-            SizedBox(width: S.of(10)),
+            AppIcon('search', size: 16, color: AppColors.fg3),
+            SizedBox(width: S.s8),
             Expanded(
               child: TextField(
                 controller: _ctrl,
                 autofocus: true,
                 cursorColor: AppColors.accent,
-                style: sans(kMobile ? 15 : 16, color: AppColors.fg1),
+                style: sans(kMobile ? 14 : 13, color: AppColors.fg1),
                 decoration: InputDecoration(
                   isCollapsed: true,
                   border: InputBorder.none,
                   hintText: 'Search or jump to anything',
-                  hintStyle: sans(kMobile ? 15 : 16, color: AppColors.fg4),
+                  hintStyle: sans(kMobile ? 14 : 13, color: AppColors.fg4),
                 ),
               ),
             ),
@@ -476,7 +492,7 @@ class _PaletteState extends State<_Palette> {
                   controller: _scroll,
                   shrinkWrap: true,
                   padding: EdgeInsets.fromLTRB(
-                      kMobile ? S.s6 : S.s4, 0, kMobile ? S.s6 : S.s4, kMobile ? S.s6 : S.s4),
+                      kMobile ? S.s12 : S.s8, 0, kMobile ? S.s12 : S.s8, S.s8),
                   children: [
                     for (final r in _rows)
                       if (r is PaletteKind)
@@ -494,11 +510,11 @@ class _PaletteState extends State<_Palette> {
   Widget _header(PaletteKind k) => SizedBox(
         height: _headerHeight,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(S.of(10), S.of(10), S.of(10), S.s2),
+          padding: EdgeInsets.fromLTRB(
+              kMobile ? S.s4 : S.of(10), S.of(10), S.of(10), S.s2),
           child: kMobile
-              ? Text(k.label.toUpperCase(),
-                  style: sans(11, spacing: 0.9, color: AppColors.fg4))
-              : Text(_desktopLabel(k), style: sans(11, color: AppColors.fg4)),
+              ? Text(k.label, style: sans(12, color: AppColors.fg3))
+              : Text(_desktopLabel(k), style: sans(11, color: AppColors.fg3)),
         ),
       );
 
@@ -513,32 +529,38 @@ class _PaletteState extends State<_Palette> {
         onTap: () => _run(item),
         child: Container(
           height: _rowHeight,
-          padding: EdgeInsets.symmetric(horizontal: S.of(10)),
+          padding: EdgeInsets.symmetric(horizontal: S.s8),
           decoration: BoxDecoration(
             color: selected
-                ? (kMobile ? AppColors.raised : AppColors.tint2)
+                ? (kMobile ? AppColors.surface3 : AppColors.tint2)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(R.md),
+            borderRadius: BorderRadius.circular(kMobile ? R.of(10) : R.of(7)),
           ),
           child: Row(children: [
-            AppIcon(item.icon,
-                size: 15, color: selected ? AppColors.fg1 : AppColors.fg3),
-            SizedBox(width: S.of(10)),
-            Expanded(
-              child: Text.rich(
-                TextSpan(children: [
-                  TextSpan(
-                      text: item.title,
-                      style: sans(13, color: AppColors.fg1)),
-                  if (item.subtitle.isNotEmpty)
-                    TextSpan(
-                        text: '  ${item.subtitle}',
-                        style: sans(12, color: AppColors.fg4)),
-                ]),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            SizedBox(
+              width: 22,
+              child: Center(
+                child: AppIcon(item.icon, size: 15, color: AppColors.fg3),
               ),
             ),
+            SizedBox(width: S.of(10)),
+            Expanded(
+              child: Text(item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(kMobile ? 14 : 13, color: AppColors.fg1)),
+            ),
+            if (item.subtitle.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.only(left: S.s8),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: kMobile ? 150 : 240),
+                  child: Text(item.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, color: AppColors.fg4)),
+                ),
+              ),
             if (item.shortcut.isNotEmpty)
               Padding(
                 padding: EdgeInsets.only(left: S.s8),
