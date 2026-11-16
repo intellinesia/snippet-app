@@ -61,13 +61,6 @@ Future<void> _settle(WidgetTester t) async {
   }
 }
 
-Future<void> _pick(WidgetTester t, String label) async {
-  await t.tap(find.text('Growth').first);
-  await _settle(t);
-  await t.tap(find.text(label).last);
-  await _settle(t);
-}
-
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -100,33 +93,20 @@ void main() {
     await t.tap(find.text('Board'));
     await _settle(t);
 
-    expect(find.text('Board'), findsOneWidget);
-    expect(find.text('By task'), findsNothing, reason: 'no chips row');
+    // Board stacks on the agent page as its own page with filter chips.
+    expect(find.text('By task'), findsOneWidget);
     expect(client.boardCalls.last, (null, false, null));
 
-    await _pick(t, 'Waiting');
-    expect(find.text('Board · Waiting'), findsOneWidget);
-    expect(client.boardCalls.last, (null, true, null));
-
-    await _pick(t, 'Inbox');
-    expect(find.text('Inbox'), findsOneWidget);
-    await _pick(t, 'Task rooms');
-    expect(find.text('Inbox · Task rooms'), findsOneWidget);
-    expect(client.inboxKinds.last, 'room');
-
-    await _pick(t, 'More actions');
-    expect(find.text('Wakes and reporting'), findsOneWidget);
-    for (final row in [
-      'Memory',
-      'Inference profile',
-      'Nickname',
-      'Avatar and colour across the app',
-      'Delete agent'
-    ]) {
+    // Back returns to the agent page, not the agent list.
+    await t.binding.handlePopRoute();
+    await _settle(t);
+    expect(find.text('By task'), findsNothing);
+    for (final row in ['Inbox', 'Board', 'Desk session']) {
       expect(find.text(row), findsOneWidget, reason: row);
     }
-    expect(find.text('Desk session'), findsNothing);
-    expect(find.text('Board'), findsNothing);
+    await t.binding.handlePopRoute();
+    await _settle(t);
+
     debugDefaultTargetPlatformOverride = null;
   });
 }
