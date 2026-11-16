@@ -322,8 +322,7 @@ class _AgentCardState extends State<AgentCard> {
   Widget _agentAvatar(CoordinationAgent agent, double size) => Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
-            color: AppColors.surface2, shape: BoxShape.circle),
+        decoration: avatarDecoration(size, color: AppColors.surface2),
         alignment: Alignment.center,
         child: AgentMochi(agent.id, size: size * 0.58),
       );
@@ -376,8 +375,8 @@ class _AgentCardState extends State<AgentCard> {
             child: Opacity(
               opacity: agent.available ? 1 : 0.55,
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: M.gutter, vertical: 8),
+                padding: EdgeInsets.symmetric(
+                    horizontal: M.gutter, vertical: S.s8),
                 child: Row(children: [
                   SizedBox.square(
                     dimension: 52,
@@ -398,7 +397,7 @@ class _AgentCardState extends State<AgentCard> {
                             ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: S.s12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -414,15 +413,15 @@ class _AgentCardState extends State<AgentCard> {
                                     : AppColors.fg3)),
                           ),
                           if (_isPinned) ...[
-                            const SizedBox(width: 6),
+                            SizedBox(width: S.s6),
                             AppIcon('pin', size: 12, color: AppColors.fg3),
                           ],
                           if (time.isNotEmpty) ...[
-                            const SizedBox(width: 8),
+                            SizedBox(width: S.s8),
                             Text(time, style: TS.meta()),
                           ],
                         ]),
-                        const SizedBox(height: 2),
+                        SizedBox(height: S.s2),
                         Text.rich(
                             markdownPreviewSpan(
                                 status, sans(13, color: AppColors.fg3)),
@@ -447,16 +446,16 @@ class _AgentCardState extends State<AgentCard> {
       onSecondaryTapUp: (d) => _actions(d.globalPosition),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(R.md),
         child: InkWell(
           onTap: widget.onOpen,
           onLongPress: () {
             holdHaptic();
             _actions(null);
           },
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(R.md),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 7, 10, 7),
+            padding: EdgeInsets.fromLTRB(S.s8, S.of(7), S.of(10), S.of(7)),
             child: Row(children: [
               Opacity(
                 opacity: agent.available ? 1 : 0.5,
@@ -464,8 +463,8 @@ class _AgentCardState extends State<AgentCard> {
                   dimension: 32,
                   child: Stack(clipBehavior: Clip.none, children: [
                     Container(
-                      decoration: BoxDecoration(
-                          color: AppColors.surface2, shape: BoxShape.circle),
+                      decoration:
+                          avatarDecoration(32, color: AppColors.surface2),
                       alignment: Alignment.center,
                       child: AgentMochi(agent.id, size: 20),
                     ),
@@ -494,7 +493,7 @@ class _AgentCardState extends State<AgentCard> {
                   ]),
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -512,17 +511,17 @@ class _AgentCardState extends State<AgentCard> {
                                     : AppColors.fg3)),
                       ),
                       if (_isPinned) ...[
-                        const SizedBox(width: 6),
+                        SizedBox(width: S.s6),
                         AppIcon('pin', size: 11, color: AppColors.fg3),
                       ],
                       if (deskTime.isNotEmpty) ...[
-                        const SizedBox(width: 6),
+                        SizedBox(width: S.s6),
                         Text(deskTime,
                             style: sans(metaSize,
                                 color: AppColors.fg4, tabular: true)),
                       ],
                     ]),
-                    const SizedBox(height: 2),
+                    SizedBox(height: S.s2),
                     Row(children: [
                       Expanded(
                         child: Text.rich(
@@ -532,7 +531,7 @@ class _AgentCardState extends State<AgentCard> {
                             overflow: TextOverflow.ellipsis),
                       ),
                       if (summary != null) ...[
-                        const SizedBox(width: 8),
+                        SizedBox(width: S.s8),
                         SwapText(summaryText,
                             style: sans(metaSize,
                                 color: summaryColor, tabular: true)),
@@ -594,18 +593,24 @@ class _RingPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = (Offset.zero & size).deflate(1);
+    final outline = avatarBorder(rect.width).getOuterPath(rect);
     final track = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5
       ..color = color.withValues(alpha: 0.18);
-    canvas.drawOval(rect, track);
+    canvas.drawPath(outline, track);
     final arc = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round
       ..color = color;
-    canvas.drawArc(
-        rect, turn.value * 2 * 3.141592653589793 - 1.5707963, 1.9, false, arc);
+    // Same sweep as the old 1.9 rad arc, traced along whatever outline the theme uses.
+    final metric = outline.computeMetrics().first;
+    final len = metric.length;
+    final start = turn.value * len;
+    final end = start + len * 1.9 / (2 * 3.141592653589793);
+    canvas.drawPath(metric.extractPath(start, end.clamp(0, len)), arc);
+    if (end > len) canvas.drawPath(metric.extractPath(0, end - len), arc);
   }
 
   @override

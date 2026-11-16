@@ -316,7 +316,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                 (m.displayName?.toLowerCase().contains(q) ?? false))
             .toList();
     return Container(
-      margin: const EdgeInsets.only(top: 8),
+      margin: EdgeInsets.only(top: S.s8),
       constraints: const BoxConstraints(maxHeight: 220),
       decoration: BoxDecoration(
         color: AppColors.surface2,
@@ -328,11 +328,11 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 6, 8, 6),
+            padding: EdgeInsets.fromLTRB(S.of(10), S.s6, S.s8, S.s6),
             child: Row(
               children: [
                 AppIcon('search', size: 14, color: AppColors.fg3),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Expanded(
                   child: TextField(
                     controller: _modelSearch,
@@ -342,14 +342,14 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                       hintText: 'Search ${_catalogModels!.length} models…',
                       hintStyle: TS.meta(AppColors.fg4),
                       isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                      contentPadding: EdgeInsets.symmetric(vertical: S.s4),
                       border: InputBorder.none,
                     ),
                   ),
                 ),
                 Text('${filtered.length}',
                     style: mono(11, color: AppColors.fg4)),
-                const SizedBox(width: 4),
+                SizedBox(width: S.s4),
                 IconBtn('x',
                     size: 22,
                     iconSize: 12,
@@ -362,13 +362,13 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
           Flexible(
             child: filtered.isEmpty
                 ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    padding: EdgeInsets.symmetric(vertical: S.s20),
                     child: Center(
                       child: Text('No matching models', style: TS.meta()),
                     ),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    padding: EdgeInsets.symmetric(vertical: S.s2),
                     shrinkWrap: true,
                     itemCount: filtered.length,
                     separatorBuilder: (_, __) => Divider(
@@ -383,8 +383,8 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                           setState(() => _showModelBrowser = false);
                         },
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 7),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: S.s12, vertical: S.of(7)),
                           child: Row(
                             children: [
                               Expanded(
@@ -403,7 +403,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                                     if (m.displayName != null &&
                                         m.displayName!.isNotEmpty &&
                                         m.displayName != m.id) ...[
-                                      const SizedBox(height: 1),
+                                      SizedBox(height: S.of(1)),
                                       Text(m.displayName!,
                                           style:
                                               sans(11, color: AppColors.fg3)),
@@ -416,7 +416,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                                 Text(_fmtCtx(m.contextWindow!),
                                     style: mono(10, color: AppColors.fg4)),
                               if (isSelected) ...[
-                                const SizedBox(width: 8),
+                                SizedBox(width: S.s8),
                                 AppIcon('check',
                                     size: 14, color: AppColors.accent),
                               ],
@@ -536,7 +536,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
     final footer = kMobile
         ? Padding(
             padding: EdgeInsets.fromLTRB(
-                16, 8, 16, 12 + MediaQuery.of(context).padding.bottom),
+                S.s16, S.s8, S.s16, S.s12 + MediaQuery.of(context).padding.bottom),
             child: Btn(_busy ? 'Saving…' : 'Save profile',
                 full: true,
                 disabled: _busy || _model.text.trim().isEmpty,
@@ -544,19 +544,19 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
           )
         : Container(
             padding: EdgeInsets.fromLTRB(
-                16,
-                6,
-                16,
+                S.s16,
+                S.s6,
+                S.s16,
                 widget.embedded
-                    ? 8
-                    : 8 + MediaQuery.of(context).padding.bottom),
+                    ? S.s8
+                    : S.s8 + MediaQuery.of(context).padding.bottom),
             decoration: const BoxDecoration(),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Btn('Cancel',
                     variant: BtnVariant.ghost, small: true, onTap: _dismiss),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Btn(_busy ? 'Saving…' : 'Save',
                     small: true,
                     disabled: _busy || _model.text.trim().isEmpty,
@@ -638,7 +638,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
         );
     final connection = <Widget>[
       if (signIn != null)
-        Padding(padding: const EdgeInsets.all(12), child: signIn)
+        Padding(padding: EdgeInsets.all(S.s12), child: signIn)
       else
         SettingsRow(
           label: 'API key',
@@ -681,7 +681,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
               small: true, disabled: !canSave, onTap: _save),
         ],
       ),
-      const SizedBox(height: S.s8),
+      SizedBox(height: S.s8),
       SettingsGroup(
         header: 'Model',
         footer: _modelHint,
@@ -700,7 +700,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
             trailing: _isEdit
                 ? Row(mainAxisSize: MainAxisSize.min, children: [
                     ProviderLogo(_provider, size: 12),
-                    const SizedBox(width: 6),
+                    SizedBox(width: S.s6),
                     Text(_providerLabel(_provider),
                         style: sans(13, color: AppColors.fg3)),
                   ])
@@ -734,7 +734,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                       behavior: HitTestBehavior.opaque,
                       onTap: _busy ? null : _browseModels,
                       child: Padding(
-                        padding: const EdgeInsets.only(left: 2),
+                        padding: EdgeInsets.only(left: S.s2),
                         child: AppIcon(
                           _showModelBrowser ? 'x' : 'chevrons-up-down',
                           size: 13,
@@ -746,7 +746,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
           ),
           if (_showModelBrowser && _catalogModels != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s12),
               child: _inlineModelBrowser(),
             ),
           SettingsRow(
@@ -857,7 +857,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
         ]),
       if (_error != null)
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s12),
           child: Text(_error!, style: sans(12, color: AppColors.danger)),
         ),
     ]);
@@ -886,7 +886,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
         );
     final header = kMobile
         ? Padding(
-            padding: const EdgeInsets.fromLTRB(4, 10, 4, 10),
+            padding: EdgeInsets.fromLTRB(S.s4, S.of(10), S.s4, S.of(10)),
             child: Text(title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -897,19 +897,19 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                     color: AppColors.fg1)),
           )
         : Padding(
-            padding: const EdgeInsets.only(bottom: 22),
+            padding: EdgeInsets.only(bottom: S.of(22)),
             child: Row(children: [
               Container(
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
                   color: AppColors.surface1,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(R.lg),
                   border: Border.all(color: AppColors.line),
                 ),
                 child: Center(child: ProviderLogo(_provider, size: 20)),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: S.of(14)),
               Expanded(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -919,7 +919,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                           overflow: TextOverflow.ellipsis,
                           style: sans(17,
                               weight: FontWeight.w500, color: AppColors.fg1)),
-                      const SizedBox(height: 2),
+                      SizedBox(height: S.s2),
                       Text(
                           [
                             _providerLabel(_provider),
@@ -938,7 +938,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
     final signIn = _subscriptionSignIn();
     final connection = <Widget>[
       if (signIn != null)
-        Padding(padding: const EdgeInsets.all(12), child: signIn)
+        Padding(padding: EdgeInsets.all(S.s12), child: signIn)
       else
         SettingsRow(
           label: 'API key',
@@ -973,7 +973,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
             : ((constraints.maxWidth - 768) / 2).clamp(0.0, double.infinity);
         return ListView(
           padding: EdgeInsets.fromLTRB(
-              baseH + extra, kMobile ? 4 : 8, baseH + extra, 24),
+              baseH + extra, kMobile ? S.s4 : S.s8, baseH + extra, S.s24),
           children: [
         header,
         SettingsGroup(header: 'Model', children: [
@@ -991,7 +991,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
             trailing: _isEdit
                 ? Row(mainAxisSize: MainAxisSize.min, children: [
                     ProviderLogo(_provider, size: 12),
-                    const SizedBox(width: 6),
+                    SizedBox(width: S.s6),
                     Text(_providerLabel(_provider),
                         style: sans(kMobile ? 15 : 13, color: AppColors.fg3)),
                   ])
@@ -1025,7 +1025,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                       behavior: HitTestBehavior.opaque,
                       onTap: _busy ? null : _browseModels,
                       child: Padding(
-                        padding: const EdgeInsets.only(left: 2),
+                        padding: EdgeInsets.only(left: S.s2),
                         child: AppIcon(
                           _showModelBrowser ? 'x' : 'chevrons-up-down',
                           size: kMobile ? 14 : 13,
@@ -1037,7 +1037,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
           ),
           if (_showModelBrowser && _catalogModels != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s12),
               child: _inlineModelBrowser(),
             ),
           SettingsRow(
@@ -1062,7 +1062,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
         ]),
         if (_modelHint != null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 18),
+            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.of(18)),
             child: Text(_modelHint!,
                 style: sans(12, height: 1.4, color: AppColors.fg4)),
           ),
@@ -1153,7 +1153,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
           ]),
         if (_error != null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s12),
             child: Text(_error!, style: sans(12, color: AppColors.danger)),
           ),
           ],
@@ -1214,15 +1214,15 @@ class _ModelPickerSheetState extends State<_ModelPickerSheet> {
             // just a grab handle and a labelled field, so nothing named the
             // surface or offered a visible way out.
             Padding(
-              padding: const EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s12),
+              padding: EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s12),
               child: Row(children: [
                 AppIcon('cpu', size: 16, color: AppColors.fg2),
-                const SizedBox(width: 9),
+                SizedBox(width: S.of(9)),
                 Text('Inference profiles', style: TS.sectionTitle()),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
                   decoration: BoxDecoration(
                     color: AppColors.surface3,
                     borderRadius: BorderRadius.circular(R.pill),
@@ -1233,7 +1233,7 @@ class _ModelPickerSheetState extends State<_ModelPickerSheet> {
               ]),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: EdgeInsets.fromLTRB(S.s16, 0, S.s16, S.s8),
               child: AppField(
                 controller: _query,
                 mono: true,
@@ -1245,17 +1245,17 @@ class _ModelPickerSheetState extends State<_ModelPickerSheet> {
                   // An empty filter result used to render as a blank sheet --
                   // indistinguishable from "still loading".
                   ? Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 28, 16, 32),
+                      padding: EdgeInsets.fromLTRB(S.s16, S.of(28), S.s16, S.s32),
                       child: Column(children: [
                         AppIcon('search', size: 18, color: AppColors.fg4),
-                        const SizedBox(height: 9),
+                        SizedBox(height: S.of(9)),
                         Text('No profile matches “${_query.text.trim()}”',
                             textAlign: TextAlign.center, style: TS.meta()),
                       ]),
                     )
                   : ListView.builder(
                       shrinkWrap: true,
-                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                      padding: EdgeInsets.fromLTRB(S.s8, 0, S.s8, S.s8),
                       itemCount: filtered.length,
                       itemBuilder: (ctx, i) => _modelRow(ctx, filtered[i]),
                     ),
@@ -1285,7 +1285,7 @@ class _ModelPickerSheetState extends State<_ModelPickerSheet> {
     ].join(' · ');
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: EdgeInsets.only(bottom: S.s2),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(R.sm),
@@ -1294,7 +1294,7 @@ class _ModelPickerSheetState extends State<_ModelPickerSheet> {
           hoverColor: AppColors.surface2,
           onTap: () => Navigator.pop(ctx, m),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.of(10)),
             child: Row(children: [
               Expanded(
                 child: Column(
@@ -1306,7 +1306,7 @@ class _ModelPickerSheetState extends State<_ModelPickerSheet> {
                           overflow: TextOverflow.ellipsis,
                           style: mono(13, color: AppColors.fg1)),
                       if (subtitle.isNotEmpty) ...[
-                        const SizedBox(height: 3),
+                        SizedBox(height: S.of(3)),
                         Text(subtitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1314,7 +1314,7 @@ class _ModelPickerSheetState extends State<_ModelPickerSheet> {
                       ],
                     ]),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               AppIcon('chevron-right', size: 14, color: AppColors.fg4),
             ]),
           ),
@@ -1423,7 +1423,7 @@ class _CliAgentStatusState extends State<_CliAgentStatus> {
       state = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           AppIcon(icon, size: 16, color: color),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           Expanded(
               child: Text(title.trim(),
                   style: sans(13, color: AppColors.fg2),
@@ -1431,9 +1431,9 @@ class _CliAgentStatusState extends State<_CliAgentStatus> {
           recheck,
         ]),
         if (hint.isNotEmpty) ...[
-          const SizedBox(height: 4),
+          SizedBox(height: S.s4),
           Padding(
-              padding: const EdgeInsets.only(left: 24),
+              padding: EdgeInsets.only(left: S.s24),
               child: Text(hint,
                   style: installed && signedIn
                       ? mono(11, color: AppColors.fg4)
@@ -1443,7 +1443,7 @@ class _CliAgentStatusState extends State<_CliAgentStatus> {
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       state,
-      const SizedBox(height: 10),
+      SizedBox(height: S.of(10)),
       blurb,
     ]);
   }
@@ -1547,12 +1547,12 @@ class _SubSignInState extends State<_SubSignIn> {
   Widget build(BuildContext context) {
     Theme.of(context);
     if (_loading && _code == null) {
-      return const SizedBox(height: 20);
+      return SizedBox(height: S.s20);
     }
     if (_signedIn) {
       return Row(children: [
         AppIcon('check', size: 16, color: AppColors.ok),
-        const SizedBox(width: 8),
+        SizedBox(width: S.s8),
         Text(widget.signedInLabel, style: sans(13, color: AppColors.fg2)),
         const Spacer(),
         GestureDetector(
@@ -1563,27 +1563,27 @@ class _SubSignInState extends State<_SubSignIn> {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Open this URL and enter the code:',
             style: sans(12, height: 1.4, color: AppColors.fg2)),
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         SelectableText(_url ?? '', style: mono(12, color: AppColors.accent)),
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         Row(children: [
           Text(_code!, style: mono(18, weight: W.label, color: AppColors.fg1)),
-          const SizedBox(width: 10),
+          SizedBox(width: S.of(10)),
           GestureDetector(
             onTap: () => Clipboard.setData(ClipboardData(text: _code!)),
             child: Text('copy', style: TS.meta()),
           ),
         ]),
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         Text('Waiting for approval…', style: TS.meta()),
       ]);
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(widget.blurb, style: sans(12, height: 1.4, color: AppColors.fg3)),
-      const SizedBox(height: 10),
+      SizedBox(height: S.of(10)),
       Btn(widget.buttonLabel, icon: 'key', small: true, onTap: _begin),
       if (_err != null) ...[
-        SizedBox(height: 8),
+        SizedBox(height: S.s8),
         Text(_err!, style: sans(12, color: AppColors.danger))
       ],
     ]);

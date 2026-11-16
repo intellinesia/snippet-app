@@ -460,8 +460,8 @@ class _AmbientStageState extends State<AmbientStage>
     return Container(
       width: popover ? 296 : (wide ? 312 : double.infinity),
       padding: wide
-          ? const EdgeInsets.fromLTRB(14, 12, 14, 12)
-          : const EdgeInsets.fromLTRB(20, 10, 20, 22),
+          ? EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.s12)
+          : EdgeInsets.fromLTRB(S.s20, S.of(10), S.s20, S.of(22)),
       decoration: BoxDecoration(
         color: AppColors.surface1,
         borderRadius: BorderRadius.circular(wide ? R.lg : 22),
@@ -477,14 +477,14 @@ class _AmbientStageState extends State<AmbientStage>
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 orbWidget,
-                const SizedBox(width: 10),
+                SizedBox(width: S.of(10)),
                 Expanded(child: _statusText(fontSize: 13)),
-                const SizedBox(width: 8),
+                SizedBox(width: S.s8),
                 _toggleControl(),
               ],
             ),
             AmbientHeardLine(wide: true),
-            const SizedBox(height: 10),
+            SizedBox(height: S.of(10)),
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -498,7 +498,7 @@ class _AmbientStageState extends State<AmbientStage>
               child: Container(
                 width: 36,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 18),
+                margin: EdgeInsets.only(bottom: S.of(18)),
                 decoration: BoxDecoration(
                   color: AppColors.border2,
                   borderRadius: BorderRadius.circular(R.pill),
@@ -506,10 +506,10 @@ class _AmbientStageState extends State<AmbientStage>
               ),
             ),
             Center(child: orbWidget),
-            const SizedBox(height: 12),
+            SizedBox(height: S.s12),
             _statusText(fontSize: 15, align: TextAlign.center),
             AmbientHeardLine(wide: false),
-            const SizedBox(height: 20),
+            SizedBox(height: S.s20),
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -520,7 +520,7 @@ class _AmbientStageState extends State<AmbientStage>
             ),
           ],
           if (err != null && !kIsWeb) ...[
-            const SizedBox(height: 10),
+            SizedBox(height: S.of(10)),
             NoteLine(err, error: true),
           ],
           if (_recent.isNotEmpty) ...[
@@ -529,7 +529,7 @@ class _AmbientStageState extends State<AmbientStage>
             SizedBox(height: wide ? 6 : 8),
             for (final e in _recent)
               Padding(
-                padding: EdgeInsets.symmetric(vertical: wide ? 3.5 : 5),
+                padding: EdgeInsets.symmetric(vertical: wide ? S.of(3.5) : S.of(5)),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -540,7 +540,7 @@ class _AmbientStageState extends State<AmbientStage>
                           style: sans(wide ? 12 : 13,
                               height: 1.35, color: AppColors.fg2)),
                     ),
-                    const SizedBox(width: 10),
+                    SizedBox(width: S.of(10)),
                     Text(_ago(e.startedAt),
                         style: mono(11, color: AppColors.fg4)),
                   ],
@@ -721,7 +721,7 @@ class _AmbientStageState extends State<AmbientStage>
                 onVerticalDragCancel: () => springTo(_dragC, 0, 0),
                 child: SafeArea(
                   top: false,
-                  minimum: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                  minimum: EdgeInsets.fromLTRB(S.s8, 0, S.s8, S.s8),
                   child: panel,
                 ),
               ),

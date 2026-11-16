@@ -200,14 +200,14 @@ class RecurringScreenState extends State<RecurringScreen>
                       'The first run fires immediately, then repeats per the schedule. Minimum interval is 5 minutes. A plan file is reread each fire.',
                       style: TS.caption(),
                     ),
-                    const SizedBox(height: 14),
+                    SizedBox(height: S.of(14)),
                     AppField(
                         label: 'Title',
                         controller: title,
                         hint: 'Nightly review'),
-                    const SizedBox(height: 12),
+                    SizedBox(height: S.s12),
                     Text('Schedule', style: TS.meta()),
-                    const SizedBox(height: 6),
+                    SizedBox(height: S.s6),
                     Wrap(spacing: 8, runSpacing: 8, children: [
                       for (final s in const [
                         'every 5m',
@@ -235,7 +235,7 @@ class RecurringScreenState extends State<RecurringScreen>
                       }),
                     ]),
                     if (mode == 'custom') ...[
-                      const SizedBox(height: 10),
+                      SizedBox(height: S.of(10)),
                       AppField(
                           label: 'Every (min 5m)',
                           controller: customEvery,
@@ -243,7 +243,7 @@ class RecurringScreenState extends State<RecurringScreen>
                           hint: '5m  ·  90m  ·  2h  ·  300s'),
                     ],
                     if (mode == 'daily') ...[
-                      const SizedBox(height: 10),
+                      SizedBox(height: S.of(10)),
                       AppField(
                           label: 'Time (HH:MM)',
                           controller: daily,
@@ -251,7 +251,7 @@ class RecurringScreenState extends State<RecurringScreen>
                           hint: '09:00'),
                     ],
                     if (mode == 'onceAt') ...[
-                      const SizedBox(height: 10),
+                      SizedBox(height: S.of(10)),
                       AppField(
                           label: 'Time today/tomorrow (HH:MM)',
                           controller: daily,
@@ -259,21 +259,21 @@ class RecurringScreenState extends State<RecurringScreen>
                           hint: '14:30'),
                     ],
                     if (mode == 'onceIn') ...[
-                      const SizedBox(height: 10),
+                      SizedBox(height: S.of(10)),
                       AppField(
                           label: 'From now (e.g. 30m, 2h)',
                           controller: customEvery,
                           mono: true,
                           hint: '30m'),
                     ],
-                    const SizedBox(height: 12),
+                    SizedBox(height: S.s12),
                     AppField(
                         label: 'Goal',
                         controller: prompt,
                         hint: 'The piece of work to complete',
                         minLines: 3,
                         maxLines: 6),
-                    const SizedBox(height: 12),
+                    SizedBox(height: S.s12),
                     AppField(
                         label: 'Plan file (optional)',
                         controller: plan,
@@ -284,7 +284,7 @@ class RecurringScreenState extends State<RecurringScreen>
                             iconSize: 16,
                             tooltip: 'Pick file',
                             onTap: pickPlan)),
-                    const SizedBox(height: 16),
+                    SizedBox(height: S.s16),
                     Btn('Save',
                         full: true, onTap: () => Navigator.pop(ctx, true)),
                   ]);
@@ -398,7 +398,7 @@ class RecurringScreenState extends State<RecurringScreen>
       borderRadius: BorderRadius.circular(R.sm),
       child: Container(
         padding:
-            EdgeInsets.symmetric(horizontal: 10, vertical: kMobile ? 14 : 6),
+            EdgeInsets.symmetric(horizontal: S.of(10), vertical: kMobile ? S.of(14 ) : S.s6),
         decoration: BoxDecoration(
           // Selection = a NEUTRAL surface step, accent reserved for state.
           color: on ? AppColors.surface3 : AppColors.surface2,
@@ -479,8 +479,8 @@ class RecurringScreenState extends State<RecurringScreen>
 
   Widget _inlineAddCard() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(14),
+      margin: EdgeInsets.only(bottom: S.of(14)),
+      padding: EdgeInsets.all(S.of(14)),
       decoration: BoxDecoration(
         color: AppColors.surface2,
         borderRadius: BorderRadius.circular(R.md),
@@ -503,20 +503,20 @@ class RecurringScreenState extends State<RecurringScreen>
               }),
             ],
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: S.s4),
           Text(
             'The first run fires immediately, then repeats per the schedule. Minimum interval is 5 minutes.',
             style: TS.meta(),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: S.s12),
           AppField(
             label: 'Title',
             controller: _titleCtrl,
             hint: 'Nightly review',
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           Text('Schedule', style: TS.meta()),
-          const SizedBox(height: 6),
+          SizedBox(height: S.s6),
           Wrap(spacing: 6, runSpacing: 6, children: [
             for (final s in const [
               'every 5m',
@@ -544,7 +544,7 @@ class RecurringScreenState extends State<RecurringScreen>
             }),
           ]),
           if (_mode == 'custom') ...[
-            const SizedBox(height: 8),
+            SizedBox(height: S.s8),
             AppField(
               label: 'Every (min 5m)',
               controller: _customEveryCtrl,
@@ -553,7 +553,7 @@ class RecurringScreenState extends State<RecurringScreen>
             ),
           ],
           if (_mode == 'daily') ...[
-            const SizedBox(height: 8),
+            SizedBox(height: S.s8),
             AppField(
               label: 'Time (HH:MM)',
               controller: _dailyCtrl,
@@ -562,7 +562,7 @@ class RecurringScreenState extends State<RecurringScreen>
             ),
           ],
           if (_mode == 'onceAt') ...[
-            const SizedBox(height: 8),
+            SizedBox(height: S.s8),
             AppField(
               label: 'Time today/tomorrow (HH:MM)',
               controller: _dailyCtrl,
@@ -571,7 +571,7 @@ class RecurringScreenState extends State<RecurringScreen>
             ),
           ],
           if (_mode == 'onceIn') ...[
-            const SizedBox(height: 8),
+            SizedBox(height: S.s8),
             AppField(
               label: 'From now (e.g. 30m, 2h)',
               controller: _customEveryCtrl,
@@ -579,7 +579,7 @@ class RecurringScreenState extends State<RecurringScreen>
               hint: '30m',
             ),
           ],
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           AppField(
             label: 'Goal',
             controller: _promptCtrl,
@@ -587,7 +587,7 @@ class RecurringScreenState extends State<RecurringScreen>
             minLines: 2,
             maxLines: 5,
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           AppField(
             label: 'Plan file (optional)',
             controller: _planCtrl,
@@ -599,7 +599,7 @@ class RecurringScreenState extends State<RecurringScreen>
                 tooltip: 'Pick file',
                 onTap: _pickPlanInline),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: S.of(14)),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -696,12 +696,12 @@ class RecurringScreenState extends State<RecurringScreen>
               controller: _titleCtrl, hint: 'Nightly review', width: 280),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(S.s16, S.s12, S.s16, S.s12),
+          padding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s16, S.s12),
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text('Schedule', style: sans(13, color: AppColors.fg1)),
-                const SizedBox(height: S.s8),
+                SizedBox(height: S.s8),
                 Wrap(spacing: 6, runSpacing: 6, children: [
                   for (final s in const [
                     'every 5m',
@@ -725,7 +725,7 @@ class RecurringScreenState extends State<RecurringScreen>
                       () => setState(() => _mode = 'onceIn')),
                 ]),
                 if (_mode == 'custom') ...[
-                  const SizedBox(height: S.s8),
+                  SizedBox(height: S.s8),
                   AppField(
                       label: 'Every (min 5m)',
                       controller: _customEveryCtrl,
@@ -733,7 +733,7 @@ class RecurringScreenState extends State<RecurringScreen>
                       hint: '5m  ·  90m  ·  2h  ·  300s'),
                 ],
                 if (_mode == 'daily') ...[
-                  const SizedBox(height: S.s8),
+                  SizedBox(height: S.s8),
                   AppField(
                       label: 'Time (HH:MM)',
                       controller: _dailyCtrl,
@@ -741,7 +741,7 @@ class RecurringScreenState extends State<RecurringScreen>
                       hint: '09:00'),
                 ],
                 if (_mode == 'onceAt') ...[
-                  const SizedBox(height: S.s8),
+                  SizedBox(height: S.s8),
                   AppField(
                       label: 'Time today/tomorrow (HH:MM)',
                       controller: _dailyCtrl,
@@ -749,21 +749,21 @@ class RecurringScreenState extends State<RecurringScreen>
                       hint: '14:30'),
                 ],
                 if (_mode == 'onceIn') ...[
-                  const SizedBox(height: S.s8),
+                  SizedBox(height: S.s8),
                   AppField(
                       label: 'From now (e.g. 30m, 2h)',
                       controller: _customEveryCtrl,
                       mono: true,
                       hint: '30m'),
                 ],
-                const SizedBox(height: S.s12),
+                SizedBox(height: S.s12),
                 AppField(
                     label: 'Goal',
                     controller: _promptCtrl,
                     hint: 'The piece of work to complete',
                     minLines: 3,
                     maxLines: 6),
-                const SizedBox(height: S.s12),
+                SizedBox(height: S.s12),
                 AppField(
                   label: 'Plan file (optional)',
                   controller: _planCtrl,
@@ -803,7 +803,7 @@ class RecurringScreenState extends State<RecurringScreen>
               onTap: () => _saveEdit(job)),
         ],
       ),
-      const SizedBox(height: S.s8),
+      SizedBox(height: S.s8),
       SettingsGroup(children: [
         SettingsRow(
           label: 'Status',
@@ -811,7 +811,7 @@ class RecurringScreenState extends State<RecurringScreen>
             Tag(paused ? 'Paused' : 'Active',
                 tone: paused ? Tone.neutral : Tone.accent),
             if (next.isNotEmpty && !paused) ...[
-              const SizedBox(width: S.s8),
+              SizedBox(width: S.s8),
               Text(next, style: mono(12, color: AppColors.fg3)),
             ],
           ]),
@@ -848,7 +848,7 @@ class RecurringScreenState extends State<RecurringScreen>
       future: _future,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
-          return const SettingsColumn(children: [
+          return SettingsColumn(children: [
             SettingsHeader(
               title: 'Scheduled',
               subtitle: 'Goals and messages that run on a schedule.',
@@ -864,7 +864,7 @@ class RecurringScreenState extends State<RecurringScreen>
               title: 'Scheduled',
               subtitle: 'Goals and messages that run on a schedule.',
             ),
-            const SizedBox(height: S.s8),
+            SizedBox(height: S.s8),
             SettingsGroup(children: [
               SettingsRow(
                 label: "Couldn't load scheduled jobs",
@@ -893,7 +893,7 @@ class RecurringScreenState extends State<RecurringScreen>
                     small: true, disabled: _submitting, onTap: _saveInline),
               ],
             ),
-            const SizedBox(height: S.s8),
+            SizedBox(height: S.s8),
             _deskFields(),
           ]);
         }
@@ -908,7 +908,7 @@ class RecurringScreenState extends State<RecurringScreen>
                 Btn('New job', small: true, icon: 'plus', onTap: _add),
             ],
           ),
-          const SizedBox(height: S.s8),
+          SizedBox(height: S.s8),
           if (jobs.isEmpty)
             const SettingsGroup(children: [
               SettingsRow(
@@ -955,7 +955,7 @@ class RecurringScreenState extends State<RecurringScreen>
         }
         if (snap.hasError) {
           return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+            padding: EdgeInsets.fromLTRB(S.s16, S.of(18), S.s16, S.s24),
             child: Text('${snap.error}',
                 style: sans(13, height: 1.4, color: AppColors.danger)),
           );
@@ -980,20 +980,20 @@ class RecurringScreenState extends State<RecurringScreen>
               Expanded(child: PaneLabel('Scheduled jobs · ${jobs.length}')),
               if (_canAdd && !_adding)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: S.s8),
+                  padding: EdgeInsets.only(bottom: S.s8),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(R.xs),
                     onTap: _add,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: S.s4, vertical: 2),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: S.s4, vertical: S.s2),
                       child: Text('+ New',
                           style: mono(10, color: AppColors.accent)),
                     ),
                   ),
                 ),
             ]),
-          if (_adding) ...[_inlineAddCard(), const SizedBox(height: S.s12)],
+          if (_adding) ...[_inlineAddCard(), SizedBox(height: S.s12)],
           if (jobs.isEmpty && !_adding)
             EmptyState(
               icon: 'repeat',
@@ -1009,7 +1009,7 @@ class RecurringScreenState extends State<RecurringScreen>
         ];
         if (!widget.pane) return PageBody(children: children);
         return ListView(
-          padding: const EdgeInsets.fromLTRB(S.s12, S.s12, S.s12, S.s24),
+          padding: EdgeInsets.fromLTRB(S.s12, S.s12, S.s12, S.s24),
           children: children,
         );
       },
@@ -1125,12 +1125,12 @@ class RecurringScreenState extends State<RecurringScreen>
     final ico = dense ? 13.0 : 16.0;
     return Padding(
       padding: dense
-          ? const EdgeInsets.fromLTRB(12, 8, 4, 8)
-          : const EdgeInsets.fromLTRB(S.s12, S.s12, S.s4, S.s12),
+          ? EdgeInsets.fromLTRB(S.s12, S.s8, S.s4, S.s8)
+          : EdgeInsets.fromLTRB(S.s12, S.s12, S.s4, S.s12),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         if (dense)
           Padding(
-            padding: const EdgeInsets.only(top: 6, right: 10),
+            padding: EdgeInsets.only(top: S.s6, right: S.of(10)),
             child: Container(
               width: 6,
               height: 6,
@@ -1141,7 +1141,7 @@ class RecurringScreenState extends State<RecurringScreen>
           )
         else ...[
           IconTile('repeat', tone: paused ? Tone.neutral : Tone.accent),
-          const SizedBox(width: S.s12),
+          SizedBox(width: S.s12),
         ],
         Expanded(
           child:
@@ -1157,15 +1157,15 @@ class RecurringScreenState extends State<RecurringScreen>
                         : TS.rowTitle(paused ? AppColors.fg3 : AppColors.fg1)),
               ),
               if (paused && !dense) ...[
-                const SizedBox(width: S.s8),
+                SizedBox(width: S.s8),
                 const Tag('Paused'),
               ],
             ]),
-            const SizedBox(height: S.s2),
+            SizedBox(height: S.s2),
             Text(sub,
                 style: dense ? mono(10, color: AppColors.fg3) : TS.meta()),
             if (error.isNotEmpty) ...[
-              const SizedBox(height: S.s4),
+              SizedBox(height: S.s4),
               Text(error,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,

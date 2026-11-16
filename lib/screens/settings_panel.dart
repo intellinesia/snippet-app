@@ -30,6 +30,7 @@ import 'vault.dart';
 import 'voice_screen.dart';
 import 'web_search_screen.dart';
 import 'accounts_screen.dart';
+import '../mochi.dart';
 import '../motion.dart';
 import '../desktop_look.dart';
 import '../window_background.dart';
@@ -124,7 +125,7 @@ class _MachineListState extends State<MachineList> {
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: S.of(10)),
           Expanded(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -134,7 +135,7 @@ class _MachineListState extends State<MachineList> {
                   style: kMobile
                       ? TS.rowTitle(AppColors.fg1)
                       : TS.ui(AppColors.fg1)),
-              const SizedBox(height: S.s2),
+              SizedBox(height: S.s2),
               Text(hostOf(i.url),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -162,7 +163,7 @@ class _MachineListState extends State<MachineList> {
         },
         child: Padding(
           padding: EdgeInsets.fromLTRB(
-              S.s12, kMobile ? 14 : 8, S.s12, kMobile ? 14 : 8),
+              S.s12, kMobile ? S.of(14 ) : S.s8, S.s12, kMobile ? S.of(14 ) : S.s8),
           child: Row(children: [
             SizedBox(
               width: kMobile ? 8 : 16,
@@ -173,7 +174,7 @@ class _MachineListState extends State<MachineList> {
                 child: AppIcon('plus', size: 16, color: AppColors.accent),
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             Text('Add machine', style: TS.label(AppColors.accent)),
           ]),
         ),
@@ -518,7 +519,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                       children: [
                         Container(
                           height: 56,
-                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          padding: EdgeInsets.symmetric(horizontal: S.of(18)),
                           alignment: Alignment.centerLeft,
                           child: Text('Settings',
                               style: sans(15,
@@ -526,13 +527,13 @@ class SettingsPanelState extends State<SettingsPanel> {
                         ),
                         Expanded(
                           child: ListView(
-                            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                            padding: EdgeInsets.fromLTRB(S.s8, 0, S.s8, S.s8),
                             children: [
                               for (final (page, icon, label) in _nav) ...[
                                 if (_navGroups[page] != null)
                                   Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        10, 14, 10, 4),
+                                    padding: EdgeInsets.fromLTRB(
+                                        S.of(10), S.of(14), S.of(10), S.s4),
                                     child: Text(_navGroups[page]!.toUpperCase(),
                                         style: TS.overline()),
                                   ),
@@ -542,7 +543,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(18, 10, 16, 16),
+                          padding: EdgeInsets.fromLTRB(S.of(18), S.of(10), S.s16, S.s16),
                           child: Row(children: [
                             Container(
                               width: 7,
@@ -552,7 +553,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                                 shape: BoxShape.circle,
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: S.s8),
                             Expanded(
                               child: Text(
                                 widget.active?.label.isNotEmpty == true
@@ -575,7 +576,7 @@ class SettingsPanelState extends State<SettingsPanel> {
             return Column(children: [
               Container(
                 height: 46,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                padding: EdgeInsets.symmetric(horizontal: S.of(14)),
                 decoration: BoxDecoration(
                   color: AppColors.tint1,
                   border: Border(bottom: BorderSide(color: AppColors.border)),
@@ -625,7 +626,7 @@ class SettingsPanelState extends State<SettingsPanel> {
 
   /// v5 `.plb`: a quiet 13px group caption, indented past the card edge.
   Widget _settingsGroupLabel(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(S.s16, S.s16, 0, S.s4),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s16, 0, S.s4),
         child: Text(text, style: sans(13, color: AppColors.fg3)),
       );
 
@@ -635,7 +636,7 @@ class SettingsPanelState extends State<SettingsPanel> {
     final name = active?.label.trim() ?? '';
     final live = _liveCount;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
+      padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
       children: [
         ListGroup(children: [
           _V5SettingsRow(
@@ -736,6 +737,7 @@ class SettingsPanelState extends State<SettingsPanel> {
           ],
         ),
       SettingsPage.appearance => AppearanceScreen(
+          client: widget.client,
           embedded: true,
           onBack: back,
         ),
@@ -867,23 +869,23 @@ class SettingsPanelState extends State<SettingsPanel> {
   Widget _settingsNavRow(SettingsPage page, String icon, String label) {
     final selected = _page == page;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: EdgeInsets.only(bottom: S.s2),
       child: Material(
         color: selected ? AppColors.tint2 : Colors.transparent,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(R.of(9)),
         child: InkWell(
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(R.of(9)),
           onTap: () {
             setState(() => _page = page);
             _deskSectionKey.currentState?.resetTransient();
           },
           child: Container(
             height: 34,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: EdgeInsets.symmetric(horizontal: S.of(10)),
             child: Row(children: [
               AppIcon(icon,
                   size: 15, color: selected ? AppColors.accent : AppColors.fg3),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Expanded(
                 child: Text(label,
                     maxLines: 1,
@@ -901,11 +903,11 @@ class SettingsPanelState extends State<SettingsPanel> {
   Widget _navChips() {
     return ListView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.s4),
       children: [
         for (final (page, icon, label) in _nav)
           Padding(
-            padding: const EdgeInsets.only(right: 6),
+            padding: EdgeInsets.only(right: S.s6),
             child: Material(
               color: _page == page
                   ? (kMobile ? AppColors.surface3 : AppColors.tint2)
@@ -918,13 +920,13 @@ class SettingsPanelState extends State<SettingsPanel> {
                 },
                 borderRadius: BorderRadius.circular(R.sm),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
+                  padding: EdgeInsets.symmetric(
                       horizontal: S.s12, vertical: S.s6),
                   child: Row(children: [
                     AppIcon(icon,
                         size: 14,
                         color: _page == page ? AppColors.fg1 : AppColors.fg3),
-                    const SizedBox(width: S.s6),
+                    SizedBox(width: S.s6),
                     Text(label,
                         style: sans(13,
                             weight: _page == page ? W.label : W.body,
@@ -990,12 +992,12 @@ class SettingsPanelState extends State<SettingsPanel> {
       else
         ListGroup(children: [for (final i in _instances) _instanceRow(i)]),
       if (includeNotifications) ...[
-        const SizedBox(height: S.s24),
+        SizedBox(height: S.s24),
         const SectionLabel('Approvals'),
         ListGroup(children: [ApprovalsRow(client: widget.client)]),
       ],
       if (includeNotifications && kCanNotify) ...[
-        const SizedBox(height: S.s24),
+        SizedBox(height: S.s24),
         const SectionLabel('Notifications'),
         ListGroup(children: [_notifRow()]),
       ],
@@ -1015,14 +1017,14 @@ class SettingsPanelState extends State<SettingsPanel> {
         Row(children: [
           IconBtn('chevron-left',
               size: 28, iconSize: 15, tooltip: 'Back', onTap: back),
-          const SizedBox(width: 6),
+          SizedBox(width: S.s6),
           Text('Connect a machine',
               style: sans(17,
                   weight: FontWeight.w500,
                   spacing: -0.2,
                   color: AppColors.fg1)),
         ]),
-        const SizedBox(height: 22),
+        SizedBox(height: S.of(22)),
         SettingsGroup(
           header: 'On the other machine',
           footer: 'It prints a link and a QR code. If snippet is already '
@@ -1059,13 +1061,13 @@ class SettingsPanelState extends State<SettingsPanel> {
           if (_addMachineError != null)
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.only(left: 4, right: 12),
+                padding: EdgeInsets.only(left: S.s4, right: S.s12),
                 child: Text(_addMachineError!,
                     style: sans(12, height: 1.4, color: AppColors.danger)),
               ),
             ),
           SettingsPill('Cancel', onTap: _addMachineBusy ? null : back),
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           SettingsPill(_addMachineBusy ? 'Connecting…' : 'Connect',
               onTap: canConnect ? _submitAddMachine : null),
         ]),
@@ -1085,7 +1087,7 @@ class SettingsPanelState extends State<SettingsPanel> {
             ? () => _selectInstance(i)
             : null,
         child: Padding(
-        padding: EdgeInsets.fromLTRB(compact ? 14 : S.s12, S.s8, S.s4, S.s8),
+        padding: EdgeInsets.fromLTRB(compact ? S.of(14 ) : S.s12, S.s8, S.s4, S.s8),
         child: Row(
           children: [
             if (compact)
@@ -1093,7 +1095,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                   color: isActive ? AppColors.ok : AppColors.fg2)
             else
               IconTile('server', tone: isActive ? Tone.ok : Tone.neutral),
-            const SizedBox(width: S.s12),
+            SizedBox(width: S.s12),
             if (isRenaming) ...[
               Expanded(
                 child: InlineEditField(
@@ -1114,7 +1116,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TS.rowTitle()),
-                    const SizedBox(height: S.s2),
+                    SizedBox(height: S.s2),
                     Text(hostOf(i.url),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1122,7 +1124,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                   ],
                 ),
               ),
-              const SizedBox(width: S.s8),
+              SizedBox(width: S.s8),
               if (compact) ...[
                 if (isActive)
                   AppIcon('check', size: 16, color: AppColors.accent),
@@ -1132,7 +1134,7 @@ class SettingsPanelState extends State<SettingsPanel> {
                   const Tag('Active', tone: Tone.ok, dot: true)
                 else if (canConnect)
                   TextAction('Connect', onTap: () => _selectInstance(i)),
-                const SizedBox(width: S.s4),
+                SizedBox(width: S.s4),
                 IconBtn('edit',
                     size: 30,
                     iconSize: 16,
@@ -1166,15 +1168,15 @@ class SettingsPanelState extends State<SettingsPanel> {
     }
     return Padding(
       padding: kMobile
-          ? const EdgeInsets.fromLTRB(16, 14, 16, 14)
-          : const EdgeInsets.fromLTRB(S.s12, S.s12, S.s12, S.s12),
+          ? EdgeInsets.fromLTRB(S.s16, S.of(14), S.s16, S.of(14))
+          : EdgeInsets.fromLTRB(S.s12, S.s12, S.s12, S.s12),
       child: Row(children: [
         if (!kMobile) ...[
           const IconTile('bell'),
-          const SizedBox(width: S.s12),
+          SizedBox(width: S.s12),
         ] else ...[
           AppIcon('bell', size: 19, color: AppColors.fg3),
-          const SizedBox(width: 14),
+          SizedBox(width: S.of(14)),
         ],
         Expanded(
           child: Column(
@@ -1182,7 +1184,7 @@ class SettingsPanelState extends State<SettingsPanel> {
             children: [
               Text(kMobile ? 'Notifications' : 'Session notifications',
                   style: TS.rowTitle()),
-              const SizedBox(height: S.s2),
+              SizedBox(height: S.s2),
               Text(
                   kMobile
                       ? 'When a chat needs you or finishes'
@@ -1191,7 +1193,7 @@ class SettingsPanelState extends State<SettingsPanel> {
             ],
           ),
         ),
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         if (_notifBusy)
           const DelayedSpinner(size: 18)
         else
@@ -1701,7 +1703,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         Btn('Cancel',
             variant: BtnVariant.secondary,
             onTap: _addMachineBusy ? null : _closeAddMachine),
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         Btn(_addMachineBusy ? 'Connecting…' : 'Connect',
             disabled: !canConnect,
             onTap: canConnect ? _submitAddMachine : null),
@@ -1746,9 +1748,9 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     Color? titleColor,
   }) {
     final body = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.of(11)),
       child: Row(children: [
-        if (leading != null) ...[leading, const SizedBox(width: 12)],
+        if (leading != null) ...[leading, SizedBox(width: S.s12)],
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1760,7 +1762,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
                   style: sans(13,
                       weight: W.label, color: titleColor ?? AppColors.fg1)),
               if (subtitle != null && subtitle.isNotEmpty) ...[
-                const SizedBox(height: 2),
+                SizedBox(height: S.s2),
                 Text(subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1769,7 +1771,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
             ],
           ),
         ),
-        if (trailing != null) ...[const SizedBox(width: 12), trailing],
+        if (trailing != null) ...[SizedBox(width: S.s12), trailing],
       ]),
     );
     if (onTap == null) return body;
@@ -1785,10 +1787,10 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     final iconColor = connected ? AppColors.ok : AppColors.fg4;
     if (_renamingUrl == i.url) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.of(9)),
         child: Row(children: [
           Icon(LucideIcons.laptop, size: 16, color: iconColor),
-          const SizedBox(width: 12),
+          SizedBox(width: S.s12),
           Expanded(
             child: InlineEditField(
               controller: _renameController,
@@ -1818,7 +1820,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         Text(connected ? 'Connected' : 'Offline',
             style: sans(13, color: AppColors.fg4)),
-        const SizedBox(width: 6),
+        SizedBox(width: S.s6),
         _machineMenu(i, connect: !isActive && widget.onSelect != null),
       ]),
     );
@@ -1844,7 +1846,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
           onTap: _addMachine,
         ),
       ]),
-      const SizedBox(height: S.s16),
+      SizedBox(height: S.s16),
       _v5Card([
         Builder(
           builder: (anchor) => _v5Row(
@@ -1860,7 +1862,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(_manual == null ? '' : (_manual! ? 'Ask' : 'Yolo'),
                   style: sans(13, color: AppColors.fg3)),
-              const SizedBox(width: S.s6),
+              SizedBox(width: S.s6),
               AppIcon('chevron-down', size: 12, color: AppColors.fg3),
             ]),
           ),
@@ -1886,7 +1888,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
             if (warmCount != null) ...[
               Text(warmCount == 0 ? 'Off' : '$warmCount active',
                   style: sans(13, color: AppColors.fg3)),
-              const SizedBox(width: S.s6),
+              SizedBox(width: S.s6),
             ],
             AppIcon('chevron-right', size: 14, color: AppColors.fg3),
           ]),
@@ -1923,7 +1925,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
               small: true,
               variant: BtnVariant.secondary,
               onTap: () => widget.onSelect?.call(i)),
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         _machineMenu(i),
       ]),
     );
@@ -1984,7 +1986,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   List<Widget> _plainBody(SettingsPage page) => switch (page) {
         SettingsPage.general => _nativeGeneral(),
         SettingsPage.appearance => [
-            const AppearanceScreen(embedded: true),
+            AppearanceScreen(client: widget.client, embedded: true),
           ],
         SettingsPage.routing => [
             RoutingScreen(client: widget.client, embedded: true)
@@ -2052,7 +2054,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         ),
       ]),
       Padding(
-        padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
         child: Text(
           'It prints a link and a QR code. If snippet is already running '
           'there, snippet serve --status shows them again.',
@@ -2062,12 +2064,12 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
       const SettingsGroupLabel('Here'),
       ListGroup(children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+          padding: EdgeInsets.fromLTRB(S.of(14), S.of(10), S.of(14), S.s12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text('Link', style: sans(15, color: AppColors.fg1)),
-              const SizedBox(height: 6),
+              SizedBox(height: S.s6),
               SettingsField(
                 controller: _addMachinePaste,
                 hint: 'https://…?token=…',
@@ -2081,16 +2083,16 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
       ]),
       if (_addMachineError != null)
         Padding(
-          padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+          padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
           child: Text(_addMachineError!,
               style: sans(12, height: 1.4, color: AppColors.danger)),
         ),
-      const SizedBox(height: S.s16),
+      SizedBox(height: S.s16),
       Row(mainAxisAlignment: MainAxisAlignment.end, children: [
         Btn('Cancel',
             variant: BtnVariant.secondary,
             onTap: _addMachineBusy ? null : _closeAddMachine),
-        const SizedBox(width: S.s8),
+        SizedBox(width: S.s8),
         Btn(_addMachineBusy ? 'Connecting…' : 'Connect',
             disabled: !canConnect,
             onTap: canConnect ? _submitAddMachine : null),
@@ -2112,7 +2114,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
           for (final i in _instances) _machineRow(i),
       ]),
       Padding(
-        padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
         child: Text(
           'Snippet talks to the daemon on each machine. Run snippet serve on '
           'a new one and paste the link it prints.',
@@ -2142,7 +2144,8 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
 
   Widget _mobileBody(SettingsPage page) => switch (page) {
         SettingsPage.general => _mobileGeneralBody(),
-        SettingsPage.appearance => const AppearanceScreen(embedded: true),
+        SettingsPage.appearance =>
+          AppearanceScreen(client: widget.client, embedded: true),
         SettingsPage.models => InferenceProfilesScreen(
             key: _modelsKey,
             client: widget.client,
@@ -2262,7 +2265,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
               : null,
           actions: [if (action != null) action],
         ),
-        const SizedBox(height: S.s16),
+        SizedBox(height: S.s16),
         ..._plainBody(page),
       ]);
     } else {
@@ -2389,7 +2392,7 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           Text(manual == null ? '' : (manual ? 'Ask' : 'Yolo'),
               style: sans(13, color: AppColors.fg3)),
-          const SizedBox(width: S.s6),
+          SizedBox(width: S.s6),
           AppIcon(kMobile ? 'chevron-right' : 'chevron-down',
               size: 14, color: AppColors.fg3),
         ]),
@@ -2399,7 +2402,9 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
 }
 
 class AppearanceScreen extends StatelessWidget {
-  const AppearanceScreen({super.key, this.embedded = false, this.onBack});
+  const AppearanceScreen(
+      {super.key, this.client, this.embedded = false, this.onBack});
+  final DaemonClient? client;
   final bool embedded;
   final VoidCallback? onBack;
 
@@ -2409,16 +2414,17 @@ class AppearanceScreen extends StatelessWidget {
       listenable: ThemeManager.instance,
       builder: (context, _) {
         final tm = ThemeManager.instance;
+        final effectiveClient = client ?? tm.client;
         final base = tm.baseTheme;
         final custom = tm.customAccent;
 
         final paletteChildren = <Widget>[
-          const Padding(
-            padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
-            child: _ThemeCardCarousel(),
+          Padding(
+            padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.of(14)),
+            child: _ThemeCardCarousel(client: effectiveClient),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.of(14)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -2427,7 +2433,7 @@ class AppearanceScreen extends StatelessWidget {
                     Text('Accent colour',
                         style: sans(kMobile ? 15 : 13,
                             weight: W.label, color: AppColors.fg1)),
-                    const SizedBox(width: 8),
+                    SizedBox(width: S.s8),
                     Text(
                       custom == null
                           ? 'Theme default (${base.label})'
@@ -2436,20 +2442,20 @@ class AppearanceScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                const _AccentSwatchStrip(),
+                SizedBox(height: S.of(10)),
+                _AccentSwatchStrip(client: effectiveClient),
               ],
             ),
           ),
         ];
-        const typographyChildren = <Widget>[
+        final typographyChildren = <Widget>[
           Padding(
-            padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
-            child: _FontCardCarousel(mono: false),
+            padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.of(14)),
+            child: _FontCardCarousel(mono: false, client: effectiveClient),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(14, 12, 14, 14),
-            child: _FontCardCarousel(mono: true),
+            padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.of(14)),
+            child: _FontCardCarousel(mono: true, client: effectiveClient),
           ),
         ];
 
@@ -2462,7 +2468,7 @@ class AppearanceScreen extends StatelessWidget {
                     title: 'Appearance', compact: true, onBack: onBack!),
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
+                  padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
                   children: [
                     _AppearancePreviewCard(),
                     const SettingsGroupLabel('Home'),
@@ -2474,7 +2480,7 @@ class AppearanceScreen extends StatelessWidget {
                     const SettingsGroupLabel('Palette'),
                     ListGroup(children: paletteChildren),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+                      padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
                       child: Text(
                         'Theme and accent colour are saved locally on this device.',
                         style: TS.meta(),
@@ -2483,7 +2489,7 @@ class AppearanceScreen extends StatelessWidget {
                     const SettingsGroupLabel('Typography'),
                     ListGroup(children: typographyChildren),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
+                      padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, 0),
                       child: Text(
                         'UI typeface applies to headings, chat and controls; code font applies to diffs, terminals and IDs.',
                         style: TS.meta(),
@@ -2500,7 +2506,7 @@ class AppearanceScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _AppearancePreviewCard(),
-            const SizedBox(height: S.s16),
+            SizedBox(height: S.s16),
             const SettingsGroup(
               header: 'Home',
               children: [_HomeFirstRow()],
@@ -2607,7 +2613,7 @@ class _ChromeOpacityRow extends StatelessWidget {
                     child: const Text('Reset')),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+            padding: EdgeInsets.fromLTRB(S.of(14), 0, S.of(14), S.s8),
             child: SliderTheme(
               data: SliderThemeData(
                 trackHeight: 3,
@@ -2708,7 +2714,7 @@ class _ChatWallpaperPicker extends StatelessWidget {
             ),
             if (img != null)
               Padding(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                padding: EdgeInsets.fromLTRB(S.of(14), 0, S.of(14), S.s8),
                 child: Row(children: [
                   Text('Strength', style: sans(12, color: AppColors.fg3)),
                   Expanded(
@@ -2789,8 +2795,18 @@ class _WindowBackgroundRow extends StatelessWidget {
   }
 }
 
+Future<void> _runThemeUpdate(
+    BuildContext context, Future<void> Function() action) async {
+  try {
+    await action();
+  } catch (e) {
+    if (context.mounted) toast(context, '$e', danger: true);
+  }
+}
+
 class _ThemeCardCarousel extends StatefulWidget {
-  const _ThemeCardCarousel();
+  const _ThemeCardCarousel({this.client});
+  final DaemonClient? client;
 
   @override
   State<_ThemeCardCarousel> createState() => _ThemeCardCarouselState();
@@ -2798,6 +2814,42 @@ class _ThemeCardCarousel extends StatefulWidget {
 
 class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
   final ScrollController _scroll = ScrollController();
+  Map<String, String> _agentNames = const {};
+
+  static final Map<String, int> _builtinOrder = {
+    for (var i = 0; i < allPresets.length; i++) allPresets[i].name: i,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFromDaemon();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ThemeCardCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.client, widget.client)) {
+      _loadFromDaemon();
+    }
+  }
+
+  void _loadFromDaemon() {
+    final c = widget.client;
+    if (c == null) return;
+    unawaited(ThemeManager.instance.syncFromDaemon(client: c));
+    unawaited(c.coordinationAgents().then((all) {
+      rememberAgentColors([for (final a in all) (a.id, a.color)]);
+      rememberAgentShapes([for (final a in all) (a.id, a.shape)]);
+      if (!mounted) return;
+      setState(() {
+        _agentNames = {
+          for (final a in all)
+            a.id: a.displayName.trim().isEmpty ? a.id : a.displayName,
+        };
+      });
+    }, onError: (_) {}));
+  }
 
   @override
   void dispose() {
@@ -2816,29 +2868,89 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
     );
   }
 
+  List<ThemeSummary> _orderedItems(ThemeManager tm) {
+    final source = tm.daemonThemes.isNotEmpty
+        ? tm.daemonThemes
+        : [for (final p in allPresets) ThemeSummary.fromPreset(p)];
+    final builtins = <ThemeSummary>[];
+    final yours = <ThemeSummary>[];
+    final agents = <ThemeSummary>[];
+    for (final t in source) {
+      if (t.builtin) {
+        builtins.add(t);
+      } else if (t.isAgent) {
+        agents.add(t);
+      } else {
+        yours.add(t);
+      }
+    }
+    builtins.sort((a, b) {
+      final oa = _builtinOrder[a.id] ?? 9999;
+      final ob = _builtinOrder[b.id] ?? 9999;
+      if (oa != ob) return oa.compareTo(ob);
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+    yours.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    agents.sort((a, b) {
+      final na = _agentNames[a.agentId] ?? a.agentId;
+      final nb = _agentNames[b.agentId] ?? b.agentId;
+      final byAgent = na.toLowerCase().compareTo(nb.toLowerCase());
+      return byAgent != 0
+          ? byAgent
+          : a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+    return [...builtins, ...yours, ...agents];
+  }
+
+  Future<void> _confirmDelete(ThemeSummary item, String activeId) async {
+    final c = widget.client;
+    if (c == null) return;
+    final fallbackNote = item.id == activeId
+        ? ' The active theme will fall back to Pure Black.'
+        : '';
+    final ok = await confirmAction(
+      context,
+      title: 'Delete theme?',
+      body: 'Remove "${item.name}" from this daemon?$fallbackNote',
+      confirmLabel: 'Delete',
+    );
+    if (!ok || !mounted) return;
+    await _runThemeUpdate(
+      context,
+      () => ThemeManager.instance.deleteTheme(item.id, client: c),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: ThemeManager.instance,
       builder: (context, _) {
         final tm = ThemeManager.instance;
-        final currentName = tm.baseTheme.name;
+        final items = _orderedItems(tm);
+        final currentId = tm.activeId;
+        final activeLabel =
+            tm.resolved.name.isNotEmpty ? tm.resolved.name : tm.baseTheme.label;
+        final showMetaRow = items.any((t) => !t.builtin);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: EdgeInsets.only(bottom: S.of(10)),
               child: Row(
                 children: [
                   Text('Theme',
                       style: sans(kMobile ? 15 : 13,
                           weight: W.label, color: AppColors.fg1)),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${tm.baseTheme.label} · ${allPresets.length} palettes',
-                    style: sans(12, color: AppColors.fg3),
+                  SizedBox(width: S.s8),
+                  Expanded(
+                    child: Text(
+                      '$activeLabel · ${items.length} palettes',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, color: AppColors.fg3),
+                    ),
                   ),
-                  const Spacer(),
                   if (!kMobile) ...[
                     IconBtn(
                       'chevron-left',
@@ -2847,7 +2959,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                       tooltip: 'Scroll left',
                       onTap: () => _step(-340),
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: S.s4),
                     IconBtn(
                       'chevron-right',
                       size: 24,
@@ -2860,25 +2972,44 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
               ),
             ),
             SizedBox(
-              height: 112,
+              height: showMetaRow ? 128 : 112,
               child: ListView.separated(
                 controller: _scroll,
                 scrollDirection: Axis.horizontal,
-                itemCount: allPresets.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                itemCount: items.length,
+                separatorBuilder: (_, __) => SizedBox(width: S.of(10)),
                 itemBuilder: (context, i) {
-                  final preset = allPresets[i];
-                  final selected = preset.name == currentName;
+                  final item = items[i];
+                  final compiled = allPresets
+                      .where((p) => p.name == item.id)
+                      .firstOrNull;
+                  final bg = compiled?.bg ?? item.preview.bg;
+                  final surface1 = compiled?.surface1 ?? item.preview.surface1;
+                  final fg1 = compiled?.fg1 ?? item.preview.fg1;
+                  final fg2 =
+                      compiled?.fg2 ?? fg1.withValues(alpha: 0.82);
+                  final surface3 = compiled?.surface3 ??
+                      Color.lerp(surface1, fg1, 0.10)!;
+                  final border2 =
+                      compiled?.border2 ?? fg1.withValues(alpha: 0.16);
+                  final accent = compiled?.accent ?? item.preview.accent;
+                  final selected = item.id == currentId;
                   final dots = [
-                    preset.surface1,
-                    preset.danger,
-                    preset.ok,
-                    preset.run,
-                    preset.accent,
-                    preset.fg2,
+                    surface1,
+                    compiled?.danger ?? AppColors.danger,
+                    compiled?.ok ?? AppColors.ok,
+                    compiled?.run ?? AppColors.run,
+                    accent,
+                    fg2,
                   ];
                   return GestureDetector(
-                    onTap: () => tm.setName(preset.name),
+                    onTap: () => unawaited(_runThemeUpdate(
+                      context,
+                      () => tm.applyTheme(item.id, client: widget.client),
+                    )),
+                    onLongPress: item.builtin || widget.client == null
+                        ? null
+                        : () => unawaited(_confirmDelete(item, currentId)),
                     behavior: HitTestBehavior.opaque,
                     child: SizedBox(
                       width: 152,
@@ -2887,14 +3018,12 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                         children: [
                           Container(
                             height: 82,
-                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                            padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
                             decoration: BoxDecoration(
-                              color: preset.bg,
-                              borderRadius: BorderRadius.circular(10),
+                              color: bg,
+                              borderRadius: BorderRadius.circular(R.card),
                               border: Border.all(
-                                color: selected
-                                    ? AppColors.fg1
-                                    : preset.border2,
+                                color: selected ? AppColors.fg1 : border2,
                                 width: selected ? 1.8 : 1.0,
                               ),
                             ),
@@ -2909,24 +3038,24 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                                       style: sans(
                                         20,
                                         weight: W.strong,
-                                        color: preset.fg1,
+                                        color: fg1,
                                         height: 1,
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    SizedBox(width: S.s8),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 3),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: S.s6, vertical: S.of(3)),
                                       decoration: BoxDecoration(
-                                        color: preset.surface3,
-                                        borderRadius: BorderRadius.circular(4),
+                                        color: surface3,
+                                        borderRadius: BorderRadius.circular(R.xs),
                                       ),
                                       child: Text(
                                         '~/',
                                         style: mono(
                                           11,
                                           weight: W.label,
-                                          color: preset.fg2,
+                                          color: fg2,
                                           height: 1,
                                         ),
                                       ),
@@ -2936,8 +3065,8 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                                       width: 14,
                                       height: 22,
                                       decoration: BoxDecoration(
-                                        color: preset.accent,
-                                        borderRadius: BorderRadius.circular(4),
+                                        color: accent,
+                                        borderRadius: BorderRadius.circular(R.xs),
                                       ),
                                     ),
                                   ],
@@ -2965,9 +3094,9 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          SizedBox(height: S.s6),
                           Text(
-                            preset.label,
+                            item.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: sans(
@@ -2976,6 +3105,33 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                               color: selected ? AppColors.fg1 : AppColors.fg3,
                             ),
                           ),
+                          if (item.isAgent) ...[
+                            SizedBox(height: S.s2),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AgentMochi(item.agentId, size: 12),
+                                SizedBox(width: S.s4),
+                                Flexible(
+                                  child: Text(
+                                    _agentNames[item.agentId] ?? item.agentId,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: sans(11, color: AppColors.fg3),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else if (item.isUser) ...[
+                            SizedBox(height: S.s2),
+                            Text(
+                              'Yours',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(11, color: AppColors.fg4),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -2991,8 +3147,9 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
 }
 
 class _FontCardCarousel extends StatefulWidget {
-  const _FontCardCarousel({required this.mono});
+  const _FontCardCarousel({required this.mono, this.client});
   final bool mono;
+  final DaemonClient? client;
 
   @override
   State<_FontCardCarousel> createState() => _FontCardCarouselState();
@@ -3030,7 +3187,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: EdgeInsets.only(bottom: S.of(10)),
               child: Row(
                 children: [
                   Text(
@@ -3038,7 +3195,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                     style: sans(kMobile ? 15 : 13,
                         weight: W.label, color: AppColors.fg1),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: S.s8),
                   Expanded(
                     child: Text(
                       '${active.label} · ${active.description}',
@@ -3048,7 +3205,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                     ),
                   ),
                   if (!kMobile) ...[
-                    const SizedBox(width: 8),
+                    SizedBox(width: S.s8),
                     IconBtn(
                       'chevron-left',
                       size: 24,
@@ -3056,7 +3213,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                       tooltip: 'Scroll left',
                       onTap: () => _step(-320),
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: S.s4),
                     IconBtn(
                       'chevron-right',
                       size: 24,
@@ -3074,14 +3231,19 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                 controller: _scroll,
                 scrollDirection: Axis.horizontal,
                 itemCount: fonts.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                separatorBuilder: (_, __) => SizedBox(width: S.of(10)),
                 itemBuilder: (context, i) {
                   final font = fonts[i];
                   final selected = font.family == active.family;
                   return GestureDetector(
-                    onTap: () => widget.mono
-                        ? tm.setMonoFontFamily(font.family)
-                        : tm.setFontFamily(font.family),
+                    onTap: () => unawaited(_runThemeUpdate(
+                      context,
+                      () => widget.mono
+                          ? tm.setMonoFontFamily(font.family,
+                              client: widget.client)
+                          : tm.setFontFamily(font.family,
+                              client: widget.client),
+                    )),
                     behavior: HitTestBehavior.opaque,
                     child: SizedBox(
                       width: 148,
@@ -3090,10 +3252,10 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                         children: [
                           Container(
                             height: 76,
-                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                            padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
                             decoration: BoxDecoration(
                               color: AppColors.bg,
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(R.card),
                               border: Border.all(
                                 color: selected
                                     ? AppColors.fg1
@@ -3147,7 +3309,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          SizedBox(height: S.s6),
                           Text(
                             font.label,
                             maxLines: 1,
@@ -3175,7 +3337,8 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
 }
 
 class _AccentSwatchStrip extends StatelessWidget {
-  const _AccentSwatchStrip();
+  const _AccentSwatchStrip({this.client});
+  final DaemonClient? client;
 
   @override
   Widget build(BuildContext context) {
@@ -3189,14 +3352,17 @@ class _AccentSwatchStrip extends StatelessWidget {
           runSpacing: 8,
           children: [
             GestureDetector(
-              onTap: () => tm.setAccentName(null),
+              onTap: () => unawaited(_runThemeUpdate(
+                context,
+                () => tm.setAccentName(null, client: client),
+              )),
               behavior: HitTestBehavior.opaque,
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s6),
                 decoration: BoxDecoration(
                   color: custom == null ? AppColors.accentBg : AppColors.tint2,
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(R.pill),
                   border: Border.all(
                     color: custom == null
                         ? AppColors.accentLine
@@ -3213,7 +3379,10 @@ class _AccentSwatchStrip extends StatelessWidget {
             ),
             for (final a in allAccents)
               GestureDetector(
-                onTap: () => tm.setAccentName(a.name),
+                onTap: () => unawaited(_runThemeUpdate(
+                  context,
+                  () => tm.setAccentName(a.name, client: client),
+                )),
                 behavior: HitTestBehavior.opaque,
                 child: Tooltip(
                   message: a.label,
@@ -3315,13 +3484,13 @@ class _AppearancePreviewCard extends StatelessWidget {
   }
 
   Widget _home(SessionInfo live, SessionInfo row) => Padding(
-        padding: const EdgeInsets.only(top: 4),
+        padding: EdgeInsets.only(top: S.s4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
               height: 40,
-              padding: const EdgeInsets.all(3),
+              padding: EdgeInsets.all(S.of(3)),
               decoration: BoxDecoration(
                 color: AppColors.tint2,
                 borderRadius: BorderRadius.circular(R.pill),
@@ -3332,7 +3501,7 @@ class _AppearancePreviewCard extends StatelessWidget {
               ]),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 18, 4, 0),
+              padding: EdgeInsets.fromLTRB(S.s4, S.of(18), S.s4, 0),
               child: Text.rich(TextSpan(children: [
                 TextSpan(
                     text: '48.6M',
@@ -3392,10 +3561,10 @@ class _V5SettingsRow extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 46),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: S.s8),
           child: Row(children: [
             leading,
-            const SizedBox(width: S.s12),
+            SizedBox(width: S.s12),
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -3414,7 +3583,7 @@ class _V5SettingsRow extends StatelessWidget {
               ),
             ),
             if (v != null && v.isNotEmpty) ...[
-              const SizedBox(width: S.s8),
+              SizedBox(width: S.s8),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 150),
                 child: Text(v,
@@ -3423,7 +3592,7 @@ class _V5SettingsRow extends StatelessWidget {
                     style: sans(15, color: AppColors.fg3)),
               ),
             ],
-            const SizedBox(width: S.s6),
+            SizedBox(width: S.s6),
             trailing ??
                 AppIcon('chevron-right', size: 14, color: AppColors.fg3),
           ]),

@@ -265,13 +265,13 @@ class _CrewStackState extends State<CrewStack> {
                 onExit: (_) => _later(),
                 child: Material(
                   color: AppColors.surface2,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(R.lg),
                   elevation: 0,
                   child: Container(
                     width: 412,
-                    padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+                    padding: EdgeInsets.fromLTRB(S.s8, S.of(10), S.s8, S.s8),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(R.of(14)),
                       border: Border.all(color: AppColors.lineStrong),
                     ),
                     child: Column(
@@ -279,12 +279,12 @@ class _CrewStackState extends State<CrewStack> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                          padding: EdgeInsets.fromLTRB(S.s8, 0, S.s8, S.s8),
                           child: Row(children: [
                             Text('Crew',
                                 style: sans(12,
                                     weight: W.label, color: AppColors.fg3)),
-                            const SizedBox(width: 6),
+                            SizedBox(width: S.s6),
                             Text('${list.length}',
                                 style: mono(11, color: AppColors.fg4)),
                           ]),
@@ -331,7 +331,7 @@ class _CrewStackState extends State<CrewStack> {
             behavior: HitTestBehavior.opaque,
             onTap: () => _portal.isShowing ? _portal.hide() : _portal.show(),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s6),
               child: SizedBox(
                 height: 22,
                 width: 22.0 + 14 * (shown.length.clamp(1, 4) - 1),
@@ -343,8 +343,8 @@ class _CrewStackState extends State<CrewStack> {
                         width: 22,
                         height: 22,
                         alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                            color: AppColors.bg, shape: BoxShape.circle),
+                        decoration:
+                            avatarDecoration(22, color: AppColors.bg),
                         child: AgentMochi(shown[i].agent.id, size: 18),
                       ),
                     ),
@@ -379,12 +379,12 @@ class _CrewTile extends StatelessWidget {
             ? null
             : (d) => onMenu!(context, e.agent, d.globalPosition),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: EdgeInsets.symmetric(horizontal: S.of(10)),
           child: Row(children: [
             Opacity(
                 opacity: idle ? .85 : 1,
                 child: AgentMochi(e.agent.id, size: 30)),
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -428,7 +428,7 @@ Widget _presenceLine(CrewEntry e) {
       ),
     ),
     if (e.presenceDots) ...[
-      const SizedBox(width: 4),
+      SizedBox(width: S.s4),
       WorkingDots(color: color, size: 4),
     ],
   ]);
@@ -448,7 +448,7 @@ class _NewAgentTile extends StatelessWidget {
           radius: 10,
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: EdgeInsets.symmetric(horizontal: S.of(10)),
             child: Row(children: [
               Container(
                 width: 30,
@@ -460,7 +460,7 @@ class _NewAgentTile extends StatelessWidget {
                 ),
                 child: AppIcon('plus', size: 14, color: AppColors.fg3),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Text('New agent', style: sans(13, color: AppColors.fg3)),
             ]),
           ),

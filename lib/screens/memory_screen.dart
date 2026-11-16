@@ -11,6 +11,7 @@ import '../shell_panel.dart';
 import '../theme.dart';
 import '../desktop_layout.dart';
 import '../widgets.dart';
+import 'memory_entries.dart';
 import 'shell_nav.dart';
 
 /// What agents remember: one git repo per scope (you, each project, each
@@ -178,7 +179,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
         child: _error == null
             ? const Spinner(size: 20)
             : Padding(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(S.s24),
                 child: Text(_error!,
                     textAlign: TextAlign.center, style: TS.meta()),
               ),
@@ -200,7 +201,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
         index: index++,
         since: _shownAt,
         child: Padding(
-          padding: EdgeInsets.only(bottom: kMobile ? 0 : 18),
+          padding: EdgeInsets.only(bottom: kMobile ? 0 : S.of(18)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -236,9 +237,8 @@ class _MemoryScreenState extends State<MemoryScreen> {
       onRefresh: _load,
       child: PageBody(
         children: [
-          if (!kMobile)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
+          Padding(
+              padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s16),
               child: Text(
                   'What your agents remember, kept as files in git. Agents write it as they work, and it is consolidated in the background.',
                   style: sans(13, height: 19 / 13, color: AppColors.fg3)),
@@ -251,8 +251,8 @@ class _MemoryScreenState extends State<MemoryScreen> {
             shownSessions,
             footer: sessions.length > 5 && !_allSessions
                 ? ListRow(
-                    title: 'Show all ${sessions.length}',
-                    titleWidget: Text('Show all ${sessions.length}',
+                    title: 'Show all ${sessions.length} sessions',
+                    titleWidget: Text('Show all ${sessions.length} sessions',
                         style: sans(14, color: AppColors.accent)),
                     onTap: () => setState(() => _allSessions = true),
                   )
@@ -277,7 +277,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 0),
+            padding: EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 0),
             child: Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
@@ -310,7 +310,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
           subtitle:
               'What your agents remember, kept as files in git and consolidated in the background.',
         ),
-        const SizedBox(height: S.s8),
+        SizedBox(height: S.s8),
         SettingsGroup(children: [
           _error == null
               ? const SettingsRow(label: 'Loading memory…')
@@ -356,7 +356,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
         subtitle:
             'What your agents remember, kept as files in git and consolidated in the background.',
       ),
-      const SizedBox(height: S.s8),
+      SizedBox(height: S.s8),
       if (scopes.isEmpty)
         const SettingsGroup(children: [
           SettingsRow(
@@ -411,17 +411,32 @@ String scopeIcon(String kind) => switch (kind) {
       _ => 'chat-thread',
     };
 
+/// "2 hours ago" style, as the status lines read in full words.
+String memoryAgo(int unixSec) {
+  final d = DateTime.now()
+      .difference(DateTime.fromMillisecondsSinceEpoch(unixSec * 1000));
+  String n(int v, String unit) => '$v $unit${v == 1 ? '' : 's'} ago';
+  if (d.inMinutes < 1) return 'just now';
+  if (d.inMinutes < 60) return n(d.inMinutes, 'minute');
+  if (d.inHours < 24) {
+    return n(d.inHours, 'hour');
+  }
+  if (d.inDays == 1) return 'yesterday';
+  if (d.inDays < 30) return n(d.inDays, 'day');
+  return n((d.inDays / 30).floor(), 'month');
+}
+
 String scopeStatus(MemoryScope s) {
   final entries = '${s.entries} ${s.entries == 1 ? 'entry' : 'entries'}';
   if (s.consolidating) return '$entries · consolidating now';
   if (s.kind == 'session') {
     return s.lastCommitAt == null
         ? entries
-        : '$entries · updated ${relativeTime(s.lastCommitAt!)}';
+        : '$entries · updated ${memoryAgo(s.lastCommitAt!)}';
   }
   final consolidated = s.lastConsolidated == null
       ? 'not consolidated yet'
-      : 'consolidated ${relativeTime(s.lastConsolidated!)}';
+      : 'consolidated ${memoryAgo(s.lastConsolidated!)}';
   return '$entries · $consolidated';
 }
 
@@ -452,13 +467,23 @@ class _ScopeViewState extends State<_ScopeView> {
   List<String> _files = const [];
   List<MemoryCommit>? _history;
   String? _error;
+  final _search = TextEditingController();
+  MemoryEntry? _topic;
+  MemoryEntry? _note;
 
   String get _path => _trail.last;
 
   @override
   void initState() {
     super.initState();
+    _search.addListener(() => setState(() {}));
     _loadFile();
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
   }
 
   Future<void> _loadFile() async {
@@ -498,8 +523,15 @@ class _ScopeViewState extends State<_ScopeView> {
   }
 
   void _backFile() {
+    if (_note != null) {
+      setState(() => _note = null);
+      return;
+    }
     if (_trail.length < 2) return;
-    setState(() => _trail.removeLast());
+    setState(() {
+      _trail.removeLast();
+      if (_trail.length < 2) _topic = null;
+    });
     _loadFile();
   }
 
@@ -508,7 +540,7 @@ class _ScopeViewState extends State<_ScopeView> {
     final s = widget.scope;
     final side = kMobile ? M.gutter : 24.0;
     final page = PopScope(
-      canPop: _trail.length < 2,
+      canPop: _trail.length < 2 && _note == null,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _backFile();
       },
@@ -517,14 +549,14 @@ class _ScopeViewState extends State<_ScopeView> {
         children: [
           if (s != null && !widget.hideSubtitle)
             Padding(
-              padding: EdgeInsets.fromLTRB(side + 4, 0, side, 8),
+              padding: EdgeInsets.fromLTRB(side + S.s4, 0, side, S.s8),
               child: Text(scopeStatus(s),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: sans(13, color: AppColors.fg4)),
             ),
           Padding(
-            padding: EdgeInsets.fromLTRB(side, 0, side, 10),
+            padding: EdgeInsets.fromLTRB(side, 0, side, S.of(10)),
             child: Row(children: [
               Pills<_Tab>(
                 items: const [
@@ -601,9 +633,13 @@ class _ScopeViewState extends State<_ScopeView> {
         ),
       );
     }
+    if (kMobile && _trail.length < 2) {
+      return _note == null ? _index(side, content) : _noteView(side, _note!);
+    }
+    final topic = kMobile && _trail.length == 2 ? _topic : null;
     return SelectionArea(
       child: ListView(
-        padding: EdgeInsets.fromLTRB(side, 4, side, 40),
+        padding: EdgeInsets.fromLTRB(side, S.s4, side, S.s40),
         children: [
           if (_trail.length > 1)
             Align(
@@ -613,7 +649,7 @@ class _ScopeViewState extends State<_ScopeView> {
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.fg3,
                   minimumSize: kMobile ? const Size(0, 30) : const Size(0, 28),
-                  padding: EdgeInsets.symmetric(horizontal: kMobile ? 6 : 8),
+                  padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s6 : S.s8),
                   tapTargetSize: kMobile
                       ? null
                       : MaterialTapTargetSize.shrinkWrap,
@@ -622,6 +658,19 @@ class _ScopeViewState extends State<_ScopeView> {
                 label: Text(_trail[_trail.length - 2],
                     style: sans(13, color: AppColors.fg3)),
               ),
+            ),
+          if (topic != null)
+            Padding(
+              padding: EdgeInsets.only(left: S.s4, bottom: S.s8),
+              child: Row(children: [
+                Expanded(
+                  child: Text('${topic.file}.md',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mono(14, color: AppColors.fg1)),
+                ),
+                MemoryAction('Forget', () => _forgetTopic(topic), danger: true),
+              ]),
             ),
           Center(
             child: ConstrainedBox(
@@ -645,6 +694,109 @@ class _ScopeViewState extends State<_ScopeView> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _forgetTopic(MemoryEntry e) async {
+    if (!await forgetMemoryEntry(context, widget.client, widget.scopeKey, e)) {
+      return;
+    }
+    _backFile();
+    _loadFile();
+  }
+
+  Future<void> _forgetNote(MemoryEntry e) async {
+    if (!await forgetMemoryEntry(context, widget.client, widget.scopeKey, e)) {
+      return;
+    }
+    setState(() => _note = null);
+    _loadFile();
+  }
+
+  Future<void> _editNote(MemoryEntry e) async {
+    final text =
+        await editMemoryNote(context, widget.client, widget.scopeKey, e);
+    if (text == null) return;
+    setState(() => _note = null);
+    _loadFile();
+  }
+
+  /// Phone: the scope's index as entries with search; a topic or note opens in full.
+  Widget _index(double side, String content) {
+    final all = parseMemoryEntries(content);
+    final shown = [
+      for (final e in all)
+        if (memoryEntryMatches(e, _search.text)) e
+    ];
+    final q = _search.text.trim();
+    return ListView(
+      padding: EdgeInsets.fromLTRB(side, S.s2, side, S.s40),
+      children: [
+        Padding(
+          padding: EdgeInsets.only(bottom: S.s8),
+          child: MemorySearchField(controller: _search),
+        ),
+        if (shown.isEmpty)
+          Padding(
+            padding: EdgeInsets.all(S.s24),
+            child: Text(q.isEmpty ? _emptyBody() : 'No entries match.',
+                textAlign: TextAlign.center,
+                style: sans(13, height: 1.5, color: AppColors.fg4)),
+          )
+        else
+          for (final e in shown)
+            MemoryEntryCard(
+              entry: e,
+              onTap: () {
+                final f = e.file;
+                if (f == null) {
+                  setState(() => _note = e);
+                } else {
+                  _topic = e;
+                  _openFile(f);
+                }
+              },
+            ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(S.s4, S.s4, S.s4, 0),
+          child: Text('Saved by agents while they work.',
+              style: sans(12, color: AppColors.fg4)),
+        ),
+      ],
+    );
+  }
+
+  Widget _noteView(double side, MemoryEntry e) {
+    final when = memoryDay(e.added);
+    return SelectionArea(
+      child: ListView(
+        padding: EdgeInsets.fromLTRB(side, S.s4, side, S.s40),
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _backFile,
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.fg3,
+                minimumSize: const Size(0, 44),
+                padding: EdgeInsets.symmetric(horizontal: S.s6),
+              ),
+              icon: AppIcon('chevron-left', size: 14, color: AppColors.fg3),
+              label: Text('Memory', style: sans(13, color: AppColors.fg3)),
+            ),
+          ),
+          Row(children: [
+            Expanded(
+              child: Text(when.isEmpty ? 'Note' : 'Added $when',
+                  style: sans(12, color: AppColors.fg4)),
+            ),
+            MemoryAction('Edit', () => _editNote(e)),
+            MemoryAction('Forget', () => _forgetNote(e), danger: true),
+          ]),
+          SizedBox(height: S.s8),
+          Text(e.text, style: sans(14, height: 1.55, color: AppColors.fg2)),
         ],
       ),
     );
@@ -683,16 +835,16 @@ class _ScopeViewState extends State<_ScopeView> {
       children: [
         for (final c in history)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: EdgeInsets.symmetric(vertical: S.s8),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Padding(
-                padding: const EdgeInsets.only(top: 2),
+                padding: EdgeInsets.only(top: S.s2),
                 child: AppIcon(c.isConsolidation ? 'layers' : 'git-commit',
                     size: 15,
                     color:
                         c.isConsolidation ? AppColors.accent : AppColors.fg4),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Expanded(
                 child: Text(
                     c.isConsolidation
@@ -700,7 +852,7 @@ class _ScopeViewState extends State<_ScopeView> {
                         : c.subject,
                     style: sans(14, height: 19 / 14, color: AppColors.fg1)),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Text(relativeTime(c.date),
                   style: sans(12, color: AppColors.fg4, tabular: true)),
             ]),

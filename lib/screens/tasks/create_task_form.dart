@@ -132,7 +132,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 ),
                 child: Center(child: AgentMochi(id, size: 24)),
               ),
-              const SizedBox(height: S.s6),
+              SizedBox(height: S.s6),
               Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -157,10 +157,10 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
               hint: 'Ship the coordinator panel',
               autofocus: true,
             ),
-            const SizedBox(height: S.s16),
+            SizedBox(height: S.s16),
             Text('Who',
                 style: sans(12, weight: W.label, color: AppColors.fg3)),
-            const SizedBox(height: S.s8),
+            SizedBox(height: S.s8),
             SizedBox(
               height: 66,
               child: ListView(
@@ -182,7 +182,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
                 ],
               ),
             ),
-            const SizedBox(height: S.s16),
+            SizedBox(height: S.s16),
             AppField(
               controller: _description,
               label: 'Briefing',
@@ -191,16 +191,16 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
               maxLines: 8,
             ),
             if (_error != null) ...[
-              const SizedBox(height: S.s8),
+              SizedBox(height: S.s8),
               Text(_error!, style: sans(12, color: AppColors.danger)),
             ],
-            const SizedBox(height: S.s12),
+            SizedBox(height: S.s12),
             Text(
               'Mission Control files it, picks or starts the session, and '
               'hands it over.',
               style: sans(12, color: AppColors.fg4, height: 1.45),
             ),
-            const SizedBox(height: S.s12),
+            SizedBox(height: S.s12),
             Btn(
               _busy ? 'Sending…' : 'Send to Mission Control',
               full: true,

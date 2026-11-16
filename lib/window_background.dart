@@ -97,8 +97,11 @@ class WindowBackground extends StatelessWidget {
                     errorBuilder: (_, __, ___) =>
                         ColoredBox(color: AppColors.bg)),
                 IgnorePointer(
-                  child:
-                      ColoredBox(color: AppColors.bg.withValues(alpha: 0.35)),
+                  child: ColoredBox(
+                    color: AppColors.bg.withValues(
+                        alpha: ThemeManager
+                            .instance.resolved.translucency.windowTint),
+                  ),
                 ),
               ],
               if (scene.active) const ChatSceneLayer(),

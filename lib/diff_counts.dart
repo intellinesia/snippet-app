@@ -16,7 +16,7 @@ class DiffCounts extends StatelessWidget {
     }
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Text('+${c.added}', style: sans(size, color: AppColors.ok, tabular: true)),
-      const SizedBox(width: 5),
+      SizedBox(width: S.of(5)),
       Text('-${c.removed}',
           style: sans(size, color: AppColors.danger, tabular: true)),
     ]);

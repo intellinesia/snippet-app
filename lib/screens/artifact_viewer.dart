@@ -72,7 +72,7 @@ Future<void> showArtifactSheet(
     enableDrag: false,
     backgroundColor: AppColors.bg,
     sheetAnimationStyle: sheetMotion,
-    shape: const RoundedRectangleBorder(
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
     ),
     clipBehavior: Clip.antiAlias,
@@ -207,7 +207,7 @@ Widget _artifactIconTile(String kind) => Container(
       height: 40,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-          color: AppColors.surface3, borderRadius: BorderRadius.circular(10)),
+          color: AppColors.surface3, borderRadius: BorderRadius.circular(R.card)),
       child: AppIcon(artifactIcon(kind), size: 20, color: AppColors.fg2),
     );
 
@@ -357,7 +357,7 @@ class _TextPreview extends StatelessWidget {
     return Stack(children: [
       Positioned.fill(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+          padding: EdgeInsets.fromLTRB(S.s16, S.of(14), S.s16, 0),
           child: SingleChildScrollView(
             physics: const NeverScrollableScrollPhysics(),
             child: Column(
@@ -368,7 +368,7 @@ class _TextPreview extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: sans(15, weight: W.strong, color: AppColors.fg2)),
               if (rest.isNotEmpty) ...[
-                const SizedBox(height: 6),
+                SizedBox(height: S.s6),
                 Text(rest,
                     maxLines: 8,
                     overflow: TextOverflow.clip,
@@ -458,7 +458,7 @@ class _ArtifactInlineState extends State<ArtifactInline>
   Widget _loading() => const ArtifactSkeleton();
 
   Widget _note(String text) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: EdgeInsets.symmetric(vertical: S.s8),
         child: Text(text, style: sans(13, color: AppColors.fg3)),
       );
 
@@ -494,10 +494,10 @@ class _ArtifactInlineState extends State<ArtifactInline>
             v,
             (text) => Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(S.s12),
                   decoration: BoxDecoration(
                     color: AppColors.tint1,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(R.card),
                   ),
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -507,7 +507,7 @@ class _ArtifactInlineState extends State<ArtifactInline>
                 ));
       case 'image':
         return ClipRRect(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(R.card),
           child: Image.network(
             uri.toString(),
             fit: BoxFit.contain,
@@ -531,7 +531,7 @@ class _ArtifactInlineState extends State<ArtifactInline>
   Widget build(BuildContext context) {
     super.build(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: EdgeInsets.symmetric(vertical: S.s6),
       child: ChatCard(
         maxWidth: double.infinity,
         children: [
@@ -671,13 +671,13 @@ class _ArtifactSkeletonState extends State<ArtifactSkeleton>
       mainAxisSize: widget.fill ? MainAxisSize.max : MainAxisSize.min,
       children: [
         Skeleton(width: 140, height: 14, radius: 6, color: block),
-        const SizedBox(height: 14),
+        SizedBox(height: S.of(14)),
         Skeleton(height: 10, radius: 5, color: block),
-        const SizedBox(height: 8),
+        SizedBox(height: S.s8),
         FractionallySizedBox(
             widthFactor: 0.8,
             child: Skeleton(height: 10, radius: 5, color: block)),
-        const SizedBox(height: 16),
+        SizedBox(height: S.s16),
         if (widget.fill)
           Expanded(
               child:           Skeleton(height: double.infinity, radius: 12, color: AppColors.tint1))
@@ -691,7 +691,7 @@ class _ArtifactSkeletonState extends State<ArtifactSkeleton>
         opacity: Tween(begin: 0.55, end: 1.0).animate(
             CurvedAnimation(parent: _pulse, curve: Curves.easeInOut)),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: EdgeInsets.symmetric(vertical: S.s8),
           child: ClipRect(child: body),
         ),
       ),
@@ -1123,12 +1123,12 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
     final versions = a?.versions.length ?? 0;
     return Container(
       color: AppColors.surface1,
-      padding: const EdgeInsets.fromLTRB(6, 6, 6, 8),
+      padding: EdgeInsets.fromLTRB(S.s6, S.s6, S.s6, S.s8),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
           width: 36,
           height: 4,
-          margin: const EdgeInsets.only(bottom: 6),
+          margin: EdgeInsets.only(bottom: S.s6),
           decoration: BoxDecoration(
             color: AppColors.border2,
             borderRadius: BorderRadius.circular(R.pill),
@@ -1140,7 +1140,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
               iconSize: 20,
               tooltip: 'Close',
               onTap: widget.onClose),
-          const SizedBox(width: 2),
+          SizedBox(width: S.s2),
           Expanded(
             child: Text(a?.title ?? 'Artifact',
                 maxLines: 1,
@@ -1154,8 +1154,8 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
                 onTap: versions > 1 ? () => _pickVersion(anchor) : null,
                 child: Container(
                   height: 30,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  margin: const EdgeInsets.only(left: 6, right: 2),
+                  padding: EdgeInsets.symmetric(horizontal: S.of(10)),
+                  margin: EdgeInsets.only(left: S.s6, right: S.s2),
                   decoration: BoxDecoration(
                     color: AppColors.surface2,
                     borderRadius: BorderRadius.circular(R.pill),
@@ -1163,7 +1163,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Text('v${v.n}', style: TS.meta(AppColors.fg2)),
                     if (versions > 1) ...[
-                      const SizedBox(width: 3),
+                      SizedBox(width: S.of(3)),
                       AppIcon('chevron-down', size: 12, color: AppColors.fg3),
                     ],
                   ]),
@@ -1192,11 +1192,11 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
     final a = _artifact;
     final v = _version;
     return Container(
-      padding: EdgeInsets.fromLTRB(16, kMobile ? 8 : 12, 8, 10),
+      padding: EdgeInsets.fromLTRB(S.s16, kMobile ? S.s8 : S.s12, S.s8, S.of(10)),
       child: Row(children: [
         if (a != null)
           Padding(
-            padding: const EdgeInsets.only(right: 10),
+            padding: EdgeInsets.only(right: S.of(10)),
             child: AppIcon(artifactIcon(a.kind), size: 16, color: AppColors.accent),
           ),
         Expanded(
@@ -1213,13 +1213,13 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
                   : null,
               style: TextButton.styleFrom(
                 minimumSize: const Size(0, 30),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: EdgeInsets.symmetric(horizontal: S.s8),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Text('v${v.n}', style: TS.meta(AppColors.fg2)),
                 if ((a?.versions.length ?? 0) > 1) ...[
-                  const SizedBox(width: 2),
+                  SizedBox(width: S.s2),
                   AppIcon('chevron-down', size: 12, color: AppColors.fg3),
                 ],
               ]),
@@ -1252,12 +1252,12 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
 
   Widget _centered(String text, {Widget? action}) => Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(S.s24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Text(text,
                 textAlign: TextAlign.center,
                 style: sans(13, color: AppColors.fg3, height: 1.5)),
-            if (action != null) ...[const SizedBox(height: 12), action],
+            if (action != null) ...[SizedBox(height: S.s12), action],
           ]),
         ),
       );
@@ -1267,7 +1267,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
     final ext = _ext(name);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(28),
+        padding: EdgeInsets.all(S.of(28)),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(
             width: 64,
@@ -1275,7 +1275,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: AppColors.tint2,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(R.of(20)),
             ),
             child: AppIcon(
                 ext == 'pdf'
@@ -1286,18 +1286,18 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
                 size: 28,
                 color: AppColors.fg2),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: S.s16),
           Text(name,
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: sans(16, weight: W.label, color: AppColors.fg1)),
-          const SizedBox(height: 4),
+          SizedBox(height: S.s4),
           Text(ext.isEmpty ? 'File' : '${ext.toUpperCase()} file',
               style: sans(13, color: AppColors.fg3)),
-          const SizedBox(height: 22),
+          SizedBox(height: S.of(22)),
           Btn('Download', icon: 'download', onTap: _download),
-          const SizedBox(height: 8),
+          SizedBox(height: S.s8),
           Btn('Open in browser',
               icon: 'external-link',
               variant: BtnVariant.ghost,
@@ -1320,7 +1320,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
   Widget _sourceView(ArtifactVersion v) => _textBody(
         v,
         (text) => SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(S.s16),
           child: SelectableText(text,
               style: codeMono(12, height: 1.5, color: AppColors.fg2)),
         ),
@@ -1333,7 +1333,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
         return _textBody(
           v,
           (text) => SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            padding: EdgeInsets.fromLTRB(S.s20, S.s16, S.s20, S.s32),
             child: SelectionArea(
               child: MarkdownBody(
                   data: text,
@@ -1481,14 +1481,14 @@ class _WebPreviewState extends State<_WebPreview> {
     if (_failed != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(S.s24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Text(_failed!,
                 textAlign: TextAlign.center,
                 style: sans(13, color: AppColors.fg3, height: 1.5)),
-            const SizedBox(height: 14),
+            SizedBox(height: S.of(14)),
             Btn('Retry', icon: 'refresh', small: true, onTap: _retry),
-            const SizedBox(height: 6),
+            SizedBox(height: S.s6),
             Btn('Open in browser',
                 icon: 'external-link',
                 small: true,
@@ -1558,14 +1558,14 @@ class _CsvTable extends StatelessWidget {
     if (rows.isEmpty) return const SizedBox.shrink();
     final width = rows.map((r) => r.length).reduce((a, b) => a > b ? a : b);
     Widget cell(String text, {bool head = false}) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
           child: Text(text,
               style: head
                   ? sans(13, weight: W.label, color: AppColors.fg1)
                   : sans(13, color: AppColors.fg2)),
         );
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(S.s16),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Table(
@@ -1627,7 +1627,7 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
   }
 
   Widget _section(String label) => Padding(
-        padding: const EdgeInsets.fromLTRB(0, 18, 0, 6),
+        padding: EdgeInsets.fromLTRB(0, S.of(18), 0, S.s6),
         child: Text(label, style: TS.meta(AppColors.fg3)),
       );
 
@@ -1649,7 +1649,7 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
               child: Container(
                 width: 36,
                 height: 4,
-                margin: const EdgeInsets.only(top: 6),
+                margin: EdgeInsets.only(top: S.s6),
                 decoration: BoxDecoration(
                   color: AppColors.border2,
                   borderRadius: BorderRadius.circular(R.pill),
@@ -1658,7 +1658,7 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
             ),
           if (!ShellPanelRoot.inPanel(context))
           Container(
-            padding: EdgeInsets.fromLTRB(16, kMobile ? 8 : 12, 8, 10),
+            padding: EdgeInsets.fromLTRB(S.s16, kMobile ? S.s8 : S.s12, S.s8, S.of(10)),
             child: Row(children: [
               Expanded(
                 child: Text('Artifacts & files',
@@ -1692,7 +1692,7 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
                             onOpenFileTab: widget.onOpenFileTab,
                           )
                         : ListView(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                            padding: EdgeInsets.fromLTRB(S.s16, 0, S.s16, S.s32),
                             children: [
                               if (artifacts.isNotEmpty) ...[
                                 _section('Artifacts · ${artifacts.length}'),

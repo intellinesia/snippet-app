@@ -9,9 +9,43 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'agent_cluster.dart';
 
-/// Chat palette for agent and group chats. Values measured from
-/// the reference screenshots; the received grey follows the theme brightness.
+/// Provides the active peer agent colour to descendant [ChatBubble]s when
+/// `chat.sent` is `"agent"`.
+class ChatAgentScope extends InheritedWidget {
+  const ChatAgentScope({
+    super.key,
+    required this.agentColor,
+    required super.child,
+  });
+
+  final Color agentColor;
+
+  static Color? colorOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ChatAgentScope>()?.agentColor;
+
+  @override
+  bool updateShouldNotify(ChatAgentScope oldWidget) =>
+      agentColor != oldWidget.agentColor;
+}
+
+/// Provides a [ChatBubble]'s resolved background fill so nested text and media
+/// can pick contrasting ink when `chat.sentText` is `"auto"`.
+class ChatBubbleFill extends InheritedWidget {
+  const ChatBubbleFill({super.key, required this.fill, required super.child});
+
+  final Color fill;
+
+  static Color? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ChatBubbleFill>()?.fill;
+
+  @override
+  bool updateShouldNotify(ChatBubbleFill oldWidget) => fill != oldWidget.fill;
+}
+
+/// Chat palette for agent and group chats, read from the active theme.
 class ChatColors {
+  static ThemeChatTokens get _tokens => ThemeManager.instance.resolved.chat;
+
   static bool get light => AppColors.bg.computeLuminance() > 0.18;
 
   /// Primary actions only (one per view): the theme accent, never a fixed hue.
@@ -19,50 +53,82 @@ class ChatColors {
   static Color get onAction => AppColors.accentFg;
   @Deprecated('Use action')
   static Color get blue => action;
-  // Grey, not accent: the accent stays for the few main actions.
-  static Color get sent => const Color(0xFF3A3A3C);
-  static Color get sentText => const Color(0xFFFFFFFF);
-  static Color get received =>
-      light ? const Color(0xFFE9E9EB) : const Color(0xFF26262A);
-  static Color get receivedText =>
-      light ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
-  static Color get card =>
-      light ? const Color(0xFFF2F2F7) : const Color(0xFF1C1C1E);
-  static Color get cardButton =>
-      light ? const Color(0xFFE5E5EA) : const Color(0xFF2C2C2E);
-  static const meta = Color(0xFF8E8E93);
-  static Color get glass =>
-      light ? const Color(0xF2F2F2F7) : const Color(0xCC2C2C2E);
 
-  static double get fontSize => kMobile ? 16 : 13.5;
-  static double get radius => kMobile ? 18 : 16;
+  static Color sentFor([Color? agentColor]) {
+    final t = _tokens;
+    switch (t.sentRaw) {
+      case 'agent':
+        return agentColor ?? AppColors.accent;
+      case 'accent':
+        return AppColors.accent;
+      case 'grey':
+        return const Color(0xFF3A3A3C);
+      default:
+        return t.sentColor ?? const Color(0xFF3A3A3C);
+    }
+  }
+
+  static Color get sent => sentFor();
+  static Color sentIn(BuildContext context) =>
+      sentFor(ChatAgentScope.colorOf(context));
+
+  static Color sentTextFor([Color? bubbleFill]) {
+    final t = _tokens;
+    if (t.sentTextRaw == 'auto') {
+      final bg = bubbleFill ?? sent;
+      return bg.computeLuminance() > 0.179
+          ? const Color(0xFF0A0A0A)
+          : const Color(0xFFFFFFFF);
+    }
+    return t.sentTextColor ?? const Color(0xFFFFFFFF);
+  }
+
+  static Color get sentText => sentTextFor();
+  static Color sentTextIn(BuildContext context) =>
+      sentTextFor(ChatBubbleFill.of(context) ?? sentIn(context));
+
+  static Color get received => _tokens.received;
+  static Color get receivedText => _tokens.receivedText;
+  static Color get card => _tokens.card;
+  static Color get cardButton => _tokens.cardButton;
+  static Color get meta => _tokens.meta;
+  static Color get glass => _tokens.glass;
+
+  static double get fontSize => _tokens.fontSize.current;
+  static double get radius => _tokens.bubbleRadius.current;
 
   /// Gap between bubbles in one run, and between runs.
-  static const runGap = 2.0;
-  static const groupGap = 10.0;
+  static double get runGap => _tokens.runGap;
+  static double get groupGap => _tokens.groupGap;
 
   /// Widest a bubble may grow, as a share of the transcript width.
-  static double get maxShare => kMobile ? 0.78 : 0.66;
+  static double get maxShare => _tokens.maxShare.current;
 }
 
-TextStyle chatText({required bool mine}) => sans(ChatColors.fontSize,
-    height: 1.3, color: mine ? ChatColors.sentText : ChatColors.receivedText);
+TextStyle chatText({required bool mine, BuildContext? context}) =>
+    sans(ChatColors.fontSize,
+        height: 1.3,
+        color: mine
+            ? (context != null
+                ? ChatColors.sentTextIn(context)
+                : ChatColors.sentText)
+            : ChatColors.receivedText);
 
 /// Markdown inside a bubble: the base sheet recoloured for the bubble fill.
 MarkdownStyleSheet chatMarkdownStyle(BuildContext context,
     {required bool mine}) {
   final base = mine ? markdownStyle(context) : agentMarkdownStyle(context);
-  final prose = chatText(mine: mine);
+  final prose = chatText(mine: mine, context: context);
   final soft = prose.copyWith(color: prose.color!.withValues(alpha: 0.72));
+  final linkColor = mine ? ChatColors.sentTextIn(context) : ChatColors.action;
   return base.copyWith(
     p: prose,
     strong: prose.copyWith(fontWeight: weightFor(W.strong)),
     em: prose.copyWith(fontStyle: FontStyle.italic),
     a: prose.copyWith(
-        color: mine ? ChatColors.sentText : ChatColors.action,
+        color: linkColor,
         decoration: TextDecoration.underline,
-        decorationColor: (mine ? ChatColors.sentText : ChatColors.action)
-            .withValues(alpha: 0.5)),
+        decorationColor: linkColor.withValues(alpha: 0.5)),
     listBullet: soft,
     blockquote: soft.copyWith(fontStyle: FontStyle.italic),
     h1: prose.copyWith(
@@ -95,19 +161,24 @@ class ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fill = color ?? (mine ? ChatColors.sent : ChatColors.received);
+    final fill = color ?? (mine ? ChatColors.sentIn(context) : ChatColors.received);
     final h = kMobile ? 12.0 : 11.0;
     final v = kMobile ? 8.0 : 6.0;
-    return CustomPaint(
-      painter: _BubblePainter(
-          color: fill, mine: mine, tail: tail, radius: ChatColors.radius),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-            h + (!mine ? _tailW : 0), v, h + (mine ? _tailW : 0), v + 1),
-        child: DefaultTextStyle.merge(
-          style: chatText(mine: mine),
-          textWidthBasis: TextWidthBasis.longestLine,
-          child: child,
+    return ChatBubbleFill(
+      fill: fill,
+      child: Builder(
+        builder: (bubbleCtx) => CustomPaint(
+          painter: _BubblePainter(
+              color: fill, mine: mine, tail: tail, radius: ChatColors.radius),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+                h + (!mine ? _tailW : 0), v, h + (mine ? _tailW : 0), v + 1),
+            child: DefaultTextStyle.merge(
+              style: chatText(mine: mine, context: bubbleCtx),
+              textWidthBasis: TextWidthBasis.longestLine,
+              child: child,
+            ),
+          ),
         ),
       ),
     );
@@ -193,7 +264,8 @@ class ChatBubbleRow extends StatelessWidget {
   /// Reserve the avatar column even when this bubble has none, so a run lines up.
   final bool avatarSlot;
 
-  static double get avatarSize => kMobile ? 28 : 24;
+  static double get avatarSize =>
+      ThemeManager.instance.resolved.chat.avatarSize.current;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (_, box) {
@@ -211,7 +283,7 @@ class ChatBubbleRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             SizedBox(width: avatarSize, height: avatarSize, child: avatar),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             Flexible(child: bubble),
           ],
         );
@@ -227,7 +299,7 @@ class ChatSenderName extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.only(left: indent + 14, bottom: 2, top: 2),
+        padding: EdgeInsets.only(left: indent + 14, bottom: S.s2, top: S.s2),
         child: Text(name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -255,7 +327,7 @@ class ChatSystemLine extends StatelessWidget {
     return Align(
       alignment: align,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        padding: EdgeInsets.symmetric(vertical: S.s4, horizontal: S.s4),
         child: Text.rich(
           TextSpan(style: style, children: [
             if (bold != null)
@@ -331,10 +403,10 @@ class ChatGlassButton extends StatelessWidget {
                   child: Container(
                     constraints:
                         const BoxConstraints(minWidth: 17, minHeight: 17),
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: EdgeInsets.symmetric(horizontal: S.s4),
                     decoration: BoxDecoration(
                         color: ChatColors.action,
-                        borderRadius: BorderRadius.circular(9)),
+                        borderRadius: BorderRadius.circular(R.of(9))),
                     alignment: Alignment.center,
                     child: Text('${badge!}',
                         style: sans(11,
@@ -404,10 +476,10 @@ class ChatHeader extends StatelessWidget {
   }
 
   Widget _pill() => Glass(
-        radius: BorderRadius.circular(999),
+        radius: BorderRadius.circular(R.pill),
         child: Padding(
           padding: EdgeInsets.symmetric(
-              horizontal: kMobile ? 11 : 10, vertical: kMobile ? 4 : 3),
+              horizontal: kMobile ? S.of(11) : S.of(10), vertical: kMobile ? S.s4 : S.of(3)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Flexible(
               child: Text(title,
@@ -417,7 +489,7 @@ class ChatHeader extends StatelessWidget {
                       weight: W.label, color: ChatColors.receivedText)),
             ),
             if (onTitleTap != null) ...[
-              const SizedBox(width: 3),
+              SizedBox(width: S.of(3)),
               AppIcon('chevron-right',
                   size: kMobile ? 11 : 10, color: ChatColors.meta),
             ],
@@ -434,18 +506,18 @@ class ChatHeader extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: onBack,
             child: Glass(
-              radius: BorderRadius.circular(20),
+              radius: BorderRadius.circular(R.of(20)),
               child: Container(
                 height: 40,
                 constraints: const BoxConstraints(minWidth: 40),
                 padding: EdgeInsets.symmetric(
-                    horizontal: backCount != null && backCount! > 0 ? 12 : 0),
+                    horizontal: backCount != null && backCount! > 0 ? S.s12 : 0),
                 alignment: Alignment.center,
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   AppIcon('chevron-left',
                       size: 18, color: ChatColors.receivedText),
                   if (backCount != null && backCount! > 0) ...[
-                    const SizedBox(width: 2),
+                    SizedBox(width: S.s2),
                     Text('${backCount!}',
                         style: sans(15, color: ChatColors.receivedText)),
                   ],
@@ -473,7 +545,7 @@ class ChatHeader extends StatelessWidget {
             children: [
               _avatar(),
               Padding(
-                padding: EdgeInsets.only(top: 36.0 - (kMobile ? 4 : 3)),
+                padding: EdgeInsets.only(top: 36.0 - (kMobile ? S.s4 : S.of(3))),
                 child: _pill(),
               ),
             ],
@@ -486,7 +558,7 @@ class ChatHeader extends StatelessWidget {
       height: overlap - GlassTopFrame.fade,
       child: Padding(
           padding: EdgeInsets.fromLTRB(
-              kMobile ? 16 : 12, kMobile ? 4 : 8, kMobile ? 16 : 12, 0),
+              kMobile ? S.s16 : S.s12, kMobile ? S.s4 : S.s8, kMobile ? S.s16 : S.s12, 0),
           child: Stack(children: [
             Align(alignment: Alignment.topCenter, child: centre),
             if (onBack != null || leading != null)
@@ -519,11 +591,11 @@ class MochiDisc extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
-          color: ChatColors.cardButton,
-          shape: BoxShape.circle,
-          border: ring ? Border.all(color: readingBg, width: 2) : null,
-        ),
+        decoration: avatarDecoration(size,
+            color: ChatColors.cardButton,
+            side: ring
+                ? BorderSide(color: readingBg, width: 2)
+                : BorderSide.none),
         alignment: Alignment.center,
         child: AgentMochi(id, size: size * 0.6),
       );
