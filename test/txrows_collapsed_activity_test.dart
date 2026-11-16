@@ -49,7 +49,7 @@ void main() {
     await _pump(tester, CollapsedActivity(_rows()));
 
     final summary =
-        find.text('Ran 6 commands · edited 2 files', findRichText: true);
+        find.text('Edited f0.dart and f1.dart · ran echo', findRichText: true);
     expect(summary, findsOneWidget);
     final text = tester.widget<Text>(find.ancestor(
         of: summary,
@@ -80,7 +80,7 @@ void main() {
     await _pump(tester, CollapsedActivity(_rows()));
 
     await tester.tap(
-        find.text('Ran 6 commands · edited 2 files', findRichText: true));
+        find.text('Edited f0.dart and f1.dart · ran echo', findRichText: true));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -89,11 +89,67 @@ void main() {
     expect(find.text('Hide'), findsNothing);
 
     await tester.tap(
-        find.text('Ran 6 commands · edited 2 files', findRichText: true));
+        find.text('Edited f0.dart and f1.dart · ran echo', findRichText: true));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(DenseToolRow), findsNothing);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('work summary shows test excerpt when collapsed and command '
+      'duration when expanded', (tester) async {
+    _usePhone();
+    await _pump(
+      tester,
+      CollapsedActivity(const [
+        DenseToolRow(
+          tool: 'read_file',
+          args: {'path': 'lib/a.dart'},
+          result: {'status': 'ok'},
+        ),
+        DenseToolRow(
+          tool: 'change_files',
+          args: {
+            'path': 'lib/a.dart',
+            'action': 'replace',
+            'find': 'old',
+            'with': 'new',
+          },
+          result: {'status': 'ok'},
+        ),
+        DenseToolRow(
+          tool: 'bash',
+          args: {'command': 'flutter test test/work_notes_test.dart'},
+          result: {
+            'status': 'ok',
+            'data': {
+              'exit_code': 0,
+              'duration_ms': 1400,
+              'stdout': '00:01 +7: All tests passed!',
+            },
+          },
+        ),
+      ]),
+    );
+
+    final summary = find.text(
+      'Read a.dart, edited a.dart · ran flutter test · All tests passed!',
+      findRichText: true,
+    );
+    expect(summary, findsOneWidget);
+
+    await tester.tap(summary);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(DenseToolRow), findsNWidgets(3));
+    await tester.tap(find.text('Ran flutter test test/work_notes_test.dart',
+        findRichText: true));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('1.4s'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 }
