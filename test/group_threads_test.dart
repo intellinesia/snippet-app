@@ -539,6 +539,86 @@ void main() {
     });
 
     testWidgets(
+        'GroupThreadScreen refreshes on coordination_event_updated for its group',
+        (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      tester.view.physicalSize = const Size(390, 844) * 3;
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      final group = GroupSummary.fromJson({
+        'id': 'g-refresh',
+        'title': 'Launch',
+        'members': [
+          {'kind': 'agent', 'id': 'argon'},
+          {'kind': 'human', 'id': 'local'},
+        ],
+      });
+      CoordinationEvent makeApproval({Map<String, dynamic>? outcome}) =>
+          CoordinationEvent.fromJson({
+            'event_id': 'e-app-g',
+            'thread_id': 'g-refresh',
+            'sequence': 1,
+            'event_type': 'group_message',
+            'actor_kind': 'agent',
+            'actor_id': 'argon',
+            'idempotency_key': 'ka1',
+            'created_at': DateTime.now().toUtc().toIso8601String(),
+            'payload': {
+              'body': 'Approval needed: run tests',
+              'approval': {
+                'session': 'sess-app-1',
+                'approval_id': 'attn-app-1',
+                'tool': 'bash',
+                'summary': 'cargo test --lib',
+                if (outcome != null) 'outcome': outcome,
+              },
+            },
+          });
+
+      final client = _GroupClient([makeApproval()]);
+      await tester.pumpWidget(MaterialApp(
+        theme: buildAppTheme(),
+        home: GroupThreadScreen(client: client, group: group),
+      ));
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      final before = client.groupEventsCalls;
+      expect(find.text('Approve'), findsOneWidget);
+
+      client.thread = [
+        makeApproval(
+          outcome: {'state': 'outdated', 'at': '2026-11-15T12:00:00Z'},
+        ),
+      ];
+      client.deviceEvents.add({
+        'kind': 'coordination_event_updated',
+        'thread_id': 'other-group',
+        'event_id': 'e-app-g',
+      });
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(client.groupEventsCalls, before);
+      expect(find.text('Approve'), findsOneWidget);
+
+      client.deviceEvents.add({
+        'kind': 'coordination_event_updated',
+        'thread_id': 'g-refresh',
+        'event_id': 'e-app-g',
+      });
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+
+      expect(client.groupEventsCalls, before + 1);
+      expect(find.text('Outdated: no longer waiting on this'), findsOneWidget);
+      expect(find.text('Approve'), findsNothing);
+
+      await tester.pumpWidget(const SizedBox());
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets(
         'task_result payload renders TaskResultCard and tap opens session',
         (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
@@ -690,10 +770,11 @@ InlineSpan? _findSpan(InlineSpan span, String needle) {
 
 class _GroupClient extends DaemonClient {
   _GroupClient(this.thread) : super('https://daemon.invalid', 'test-token');
-  final List<CoordinationEvent> thread;
+  List<CoordinationEvent> thread;
   final List<({String? name, int length})> uploads = [];
   final List<({String groupId, String body, List<String>? mentions})> posted =
       [];
+  int groupEventsCalls = 0;
   final _deviceEvents = DeviceEventHub.local();
 
   @override
@@ -704,8 +785,10 @@ class _GroupClient extends DaemonClient {
     String id, {
     int after = 0,
     int limit = 100,
-  }) async =>
-      thread;
+  }) async {
+    groupEventsCalls++;
+    return thread;
+  }
 
   @override
   Future<String> uploadFile(List<int> bytes,

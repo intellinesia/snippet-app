@@ -1,7 +1,12 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:stream_channel/stream_channel.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:snippet/api.dart';
 import 'package:snippet/approval_code.dart';
@@ -49,16 +54,24 @@ class _Client extends DaemonClient {
     Map<String, TaskItem>? tasksById,
   })  : tasksMap = tasksById ?? {},
         super('https://daemon.invalid', 'test-token');
-  final List<CoordinationEvent> thread;
+  List<CoordinationEvent> thread;
   final List<ArtifactInfo> artifactList;
   final Map<String, TaskItem> tasksMap;
   final Map<String, int> getTaskCalls = {};
   final List<_VerdictCall> verdicts = [];
   Object? verdictError;
+  int sessionsCalls = 0;
+  int threadPageCalls = 0;
   final _events = DeviceEventHub.local();
 
   @override
   DeviceEventHub get deviceEvents => _events;
+
+  @override
+  Future<List<SessionInfo>> sessions({String? folder, int? limit}) async {
+    sessionsCalls++;
+    return const [];
+  }
 
   @override
   Future<List<CoordinationEvent>> agentThread({
@@ -77,8 +90,10 @@ class _Client extends DaemonClient {
     String actorId = 'local',
     int afterSequence = 0,
     int limit = 100,
-  }) async =>
-      DirectThreadPage(events: thread);
+  }) async {
+    threadPageCalls++;
+    return DirectThreadPage(events: thread);
+  }
 
   @override
   Future<List<ArtifactInfo>> artifacts(String session) async => artifactList;
@@ -626,4 +641,199 @@ void main() {
     await t.pumpWidget(const SizedBox());
     debugDefaultTargetPlatformOverride = null;
   });
+
+  group('DeskApprovalCard outcomes', () {
+    CoordinationEvent approvalEv({
+      String eventId = 'e-app',
+      String threadId = 'dm:human:local:agent:builder',
+      Map<String, dynamic>? outcome,
+    }) =>
+        CoordinationEvent.fromJson({
+          'event_id': eventId,
+          'thread_id': threadId,
+          'sequence': 1,
+          'actor_kind': 'agent',
+          'actor_id': 'builder',
+          'idempotency_key': 'k-$eventId',
+          'created_at': DateTime.now().toUtc().toIso8601String(),
+          'payload': {
+            'body': 'Run cargo test',
+            'approval': {
+              'session': 's1',
+              'session_title': 'Fix login',
+              'task_id': 't1',
+              'task_title': 'Auth cleanup',
+              'tool': 'bash',
+              'summary': 'cargo test',
+              'approval_id': '3:2026-11-13',
+              if (outcome != null) 'outcome': outcome,
+            },
+          },
+        });
+
+    testWidgets('live card renders buttons without network probe and updates optimistically per widget',
+        (t) async {
+      final ch = _WsChannel();
+      DaemonClient.wsConnector = (uri, {connectTimeout, pingInterval}) {
+        Timer(const Duration(milliseconds: 10),
+            () => ch.incoming.add('{"wire":"snapshot"}'));
+        return ch;
+      };
+      addTearDown(() => DaemonClient.wsConnector = null);
+
+      final client = _Client(const []);
+      final e1 = approvalEv(eventId: 'e-app-1');
+      final e2 = approvalEv(eventId: 'e-app-2');
+      await t.pumpWidget(MaterialApp(
+        theme: buildAppTheme(),
+        home: Scaffold(
+          body: Column(
+            children: [
+              DeskApprovalCard(
+                key: const ValueKey('c1'),
+                event: e1,
+                approval: e1.payload['approval'] as Map,
+                client: client,
+              ),
+              DeskApprovalCard(
+                key: const ValueKey('c2'),
+                event: e2,
+                approval: e2.payload['approval'] as Map,
+                client: client,
+              ),
+            ],
+          ),
+        ),
+      ));
+      await t.pump();
+
+      expect(client.sessionsCalls, 0);
+      expect(find.text('Approve'), findsNWidgets(2));
+      expect(find.text('Deny'), findsNWidgets(2));
+
+      await t.tap(find.descendant(
+        of: find.byKey(const ValueKey('c1')),
+        matching: find.text('Approve'),
+      ));
+      await t.pump(const Duration(milliseconds: 50));
+      await t.pump(const Duration(milliseconds: 50));
+
+      final sent = jsonDecode(ch.sent.single as String) as Map;
+      expect(sent['kind'], 'approve');
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('c1')),
+          matching: find.text('Approved'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('c2')),
+          matching: find.text('Approve'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    for (final c in [
+      (state: 'approved', label: 'Approved'),
+      (state: 'denied', label: 'Denied'),
+      (state: 'outdated', label: 'Outdated: no longer waiting on this'),
+    ]) {
+      testWidgets('renders stored outcome ${c.state} with no network call',
+          (t) async {
+        final client = _Client(const []);
+        final ev = approvalEv(
+          outcome: {'state': c.state, 'at': '2026-11-15T12:00:00Z'},
+        );
+        await t.pumpWidget(MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            body: DeskApprovalCard(
+              event: ev,
+              approval: ev.payload['approval'] as Map,
+              client: client,
+            ),
+          ),
+        ));
+        await t.pump();
+
+        expect(client.sessionsCalls, 0);
+        expect(find.text(c.label), findsOneWidget);
+        expect(find.text('Approve'), findsNothing);
+        expect(find.text('Deny'), findsNothing);
+      });
+    }
+
+    testWidgets(
+        'AgentThreadScreen refreshes on coordination_event_updated for its thread',
+        (t) async {
+      final live = approvalEv(threadId: 'dm:human:local:agent:builder');
+      final resolved = approvalEv(
+        threadId: 'dm:human:local:agent:builder',
+        outcome: {'state': 'approved', 'at': '2026-11-15T12:00:00Z'},
+      );
+      final client = await _open(t, [live]);
+      final before = client.threadPageCalls;
+
+      expect(find.text('Approve'), findsOneWidget);
+      expect(find.text('Approved'), findsNothing);
+
+      client.thread = [resolved];
+      client.deviceEvents.add({
+        'kind': 'coordination_event_updated',
+        'thread_id': 'dm:human:local:agent:other',
+        'event_id': 'e-app',
+      });
+      await t.pump(const Duration(milliseconds: 400));
+      expect(client.threadPageCalls, before);
+      expect(find.text('Approve'), findsOneWidget);
+
+      client.deviceEvents.add({
+        'kind': 'coordination_event_updated',
+        'thread_id': 'dm:human:local:agent:builder',
+        'event_id': 'e-app',
+      });
+      await t.pump(const Duration(milliseconds: 400));
+      await t.pump();
+
+      expect(client.threadPageCalls, before + 1);
+      expect(find.text('Approved'), findsOneWidget);
+      expect(find.text('Approve'), findsNothing);
+      await t.pumpWidget(const SizedBox());
+    });
+  });
+}
+
+class _WsChannel extends StreamChannelMixin implements WebSocketChannel {
+  final incoming = StreamController<dynamic>.broadcast();
+  final sent = <dynamic>[];
+  @override
+  Stream get stream => incoming.stream;
+  @override
+  late final WebSocketSink sink = _WsSink(this);
+  @override
+  int? get closeCode => null;
+  @override
+  String? get closeReason => null;
+  @override
+  String? get protocol => null;
+  @override
+  Future<void> get ready => Future.value();
+}
+
+class _WsSink implements WebSocketSink {
+  _WsSink(this.ch);
+  final _WsChannel ch;
+  @override
+  void add(dynamic data) => ch.sent.add(data);
+  @override
+  void addError(Object error, [StackTrace? stackTrace]) {}
+  @override
+  Future addStream(Stream stream) async {}
+  @override
+  Future close([int? closeCode, String? closeReason]) async {}
+  @override
+  Future get done => Future.value();
 }

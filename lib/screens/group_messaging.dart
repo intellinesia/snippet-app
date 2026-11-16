@@ -1008,7 +1008,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       client: widget.client,
       key: 'group-thread:${widget.group.id}',
       fetch: () => widget.client.groupEventsAll(widget.group.id),
-      revalidateOn: Swr.coordination,
+      revalidateOn: (e) => Swr.coordinationForThread(e, widget.group.id),
       onChange: _sync,
     );
     _events = _thread.data ?? const [];

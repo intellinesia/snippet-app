@@ -593,6 +593,13 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   String? _error;
   late final Swr<DirectThreadPage> _thread;
 
+  String? get _openThreadId {
+    for (final e in _events) {
+      if (e.threadId.isNotEmpty) return e.threadId;
+    }
+    return null;
+  }
+
   late final ComposerAttachmentController _attachments =
       ComposerAttachmentController(
     client: widget.client,
@@ -622,7 +629,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       client: widget.client,
       key: 'agent-thread:${widget.agentId}',
       fetch: () => widget.client.agentThreadPage(peerId: widget.agentId),
-      revalidateOn: Swr.coordination,
+      revalidateOn: (e) => Swr.coordinationForThread(e, _openThreadId),
       onChange: _sync,
     );
     _events = _thread.data?.events ?? const [];
