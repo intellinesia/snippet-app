@@ -13,31 +13,51 @@ sealed class QuickAction {
 }
 
 class QuickReply extends QuickAction {
-  const QuickReply(this.text);
+  const QuickReply(this.text, {this.via});
   final String text;
+  final String? via;
   @override
-  Map<String, dynamic> frame(String nonce) =>
-      {'kind': 'user_message', 'value': text, 'nonce': nonce};
+  Map<String, dynamic> frame(String nonce) => {
+        'kind': 'user_message',
+        'value': text,
+        'nonce': nonce,
+        if (via != null) 'via': via,
+      };
 }
 
 class QuickAnswer extends QuickAction {
-  const QuickAnswer(this.text);
+  const QuickAnswer(this.text, {this.via});
   final String text;
+  final String? via;
   @override
-  Map<String, dynamic> frame(String nonce) =>
-      {'kind': 'answer', 'value': text, 'nonce': nonce};
+  Map<String, dynamic> frame(String nonce) => {
+        'kind': 'answer',
+        'value': text,
+        'nonce': nonce,
+        if (via != null) 'via': via,
+      };
 }
 
 class QuickApprove extends QuickAction {
-  const QuickApprove();
+  const QuickApprove({this.via});
+  final String? via;
   @override
-  Map<String, dynamic> frame(String nonce) => {'kind': 'approve', 'nonce': nonce};
+  Map<String, dynamic> frame(String nonce) => {
+        'kind': 'approve',
+        'nonce': nonce,
+        if (via != null) 'via': via,
+      };
 }
 
 class QuickDeny extends QuickAction {
-  const QuickDeny();
+  const QuickDeny({this.via});
+  final String? via;
   @override
-  Map<String, dynamic> frame(String nonce) => {'kind': 'deny', 'nonce': nonce};
+  Map<String, dynamic> frame(String nonce) => {
+        'kind': 'deny',
+        'nonce': nonce,
+        if (via != null) 'via': via,
+      };
 }
 
 int _nonceCounter = 0;
