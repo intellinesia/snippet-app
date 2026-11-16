@@ -536,11 +536,15 @@ class LaneControlButton extends StatefulWidget {
   final String sessionId;
   final LaneInfo lane;
 
+  /// Text-only action, for the footer of the in-chat lane card.
+  final bool quiet;
+
   const LaneControlButton({
     super.key,
     required this.client,
     required this.sessionId,
     required this.lane,
+    this.quiet = false,
   });
 
   @override
@@ -590,6 +594,24 @@ class _LaneControlButtonState extends State<LaneControlButton> {
     final retryable = widget.lane.retryable;
     if (!running && !retryable) return const SizedBox.shrink();
     final label = running ? 'Stop' : 'Retry';
+    if (widget.quiet) {
+      return Opacity(
+        opacity: _busy ? 0.5 : 1.0,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(R.sm),
+          onTap: _busy ? null : _onTap,
+          child: Container(
+            height: kMobile ? 44.0 : 26.0,
+            padding: EdgeInsets.symmetric(horizontal: S.s8),
+            alignment: Alignment.center,
+            child: Text(label,
+                style: sans(12,
+                    weight: W.label,
+                    color: running ? AppColors.danger : AppColors.fg2)),
+          ),
+        ),
+      );
+    }
     final fg = running ? AppColors.danger : AppColors.fg1;
     final bg = running ? AppColors.dangerBg : AppColors.surface2;
     final border =
@@ -661,7 +683,7 @@ class _LaneNoticeState extends State<LaneNotice> {
     if (started == null) return 'Running';
     final d = DateTime.now().toUtc().difference(started.toUtc());
     if (d.inMinutes < 1) return '${d.inSeconds}s';
-    if (d.inHours < 1) return '${d.inMinutes}m ${d.inSeconds % 60}s';
+    if (d.inHours < 1) return '${d.inMinutes}m';
     return '${d.inHours}h ${d.inMinutes % 60}m';
   }
 
@@ -692,80 +714,101 @@ class _LaneNoticeState extends State<LaneNotice> {
     final title = widget.title.trim().isNotEmpty
         ? widget.title.trim()
         : lane?.title.trim() ?? '';
-    final (String? status, Tone tone) = running
-        ? (_elapsed(lane), Tone.accent)
+    final statusText = running
+        ? (_elapsed(lane) == 'Running' ? 'running' : 'running · ${_elapsed(lane)}')
         : failed
-            ? ('Failed', Tone.danger)
+            ? 'failed'
             : completed
-                ? ('Completed', Tone.ok)
+                ? 'done'
                 : paused
-                    ? ('Paused', Tone.neutral)
+                    ? 'paused'
                     : lane == null
-                        ? (null, Tone.neutral)
-                        : (
-                            state == 'cancelled' ? 'Cancelled' : 'Queued',
-                            Tone.neutral
-                          );
-    final color = agent.isEmpty ? mochiPalette.first.$2 : mochiColorFor(agent);
+                        ? ''
+                        : state == 'cancelled'
+                            ? 'cancelled'
+                            : 'queued';
+    final statusColor = running
+        ? AppColors.run
+        : failed
+            ? AppColors.danger
+            : completed
+                ? AppColors.ok
+                : AppColors.fg4;
     final small = TranscriptCard.metaSize;
+    final whoText = [
+      if (agent.isNotEmpty) _laneAgentName(agent),
+      if (profile.isNotEmpty) profile,
+    ].join(' · ');
+    final who = whoText.isEmpty
+        ? null
+        : Row(mainAxisSize: MainAxisSize.min, children: [
+            if (agent.isNotEmpty)
+              AgentMochi(agent,
+                  size: 16,
+                  state: running
+                      ? AgentCharacterState.working
+                      : failed
+                          ? AgentCharacterState.needs
+                          : AgentCharacterState.done)
+            else if (widget.client != null)
+              AgentProviderMark(
+                  client: widget.client!,
+                  profile: profile,
+                  size: 12,
+                  orActive: true),
+            SizedBox(width: S.s4),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: narrow ? 64 : 120),
+              child: Text(whoText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(small - 1, color: AppColors.fg3)),
+            ),
+          ]);
     final header = Row(children: [
-      running
-          ? WorkingMochi(size: 14, color: color)
-          : MochiIcon(
-              color: failed
-                  ? AppColors.danger
-                  : completed
-                      ? color
-                      : AppColors.fg4,
-              size: 14),
-      SizedBox(width: S.s6),
-      Expanded(
-        child: Text.rich(
-          TextSpan(text: title.isEmpty ? 'Lane' : title),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: sans(TranscriptCard.titleSize,
-              weight: W.label, height: 1.3, color: AppColors.fg1),
-        ),
+      Container(
+        width: 6,
+        height: 6,
+        decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
       ),
-      if (agent.isNotEmpty || profile.isNotEmpty) ...[
+      SizedBox(width: S.s8),
+      Expanded(
+        child: Text(title.isEmpty ? 'Lane' : title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: sans(TranscriptCard.titleSize,
+                weight: W.label, height: 1.3, color: AppColors.fg1)),
+      ),
+      if (who != null) ...[SizedBox(width: S.s8), Flexible(flex: 0, child: who)],
+      if (statusText.isNotEmpty) ...[
         SizedBox(width: S.s8),
-        Flexible(
-          flex: 0,
-          child: LaneWho(
-              client: widget.client,
-              agent: agent,
-              profile: profile,
-              textSize: small - 1,
-              maxTextWidth: narrow ? 48 : 80),
-        ),
-      ],
-      if (status != null && status.isNotEmpty) ...[
-        SizedBox(width: S.s8),
-        running
-            ? Text(status, style: sans(small - 1, color: AppColors.fg3))
-            : CardStatus(status, tone: tone),
+        Text(statusText,
+            style: sans(small - 1, weight: W.label, color: statusColor)),
       ],
     ]);
     Widget? body;
     if (running) {
       final recent = lane?.recent ?? const <String>[];
-      body = recent.isEmpty
-          ? _LaneActivityLine(lane: lane, size: small)
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _LaneActivityLine(lane: lane, size: small),
-                SizedBox(height: S.s2),
-                LaneRecentOutput(lines: recent),
-              ],
-            );
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(children: [
+            AppIcon('terminal', size: 12, color: AppColors.fg4),
+            SizedBox(width: S.s6),
+            Expanded(child: _LaneActivityLine(lane: lane, size: small - 1)),
+          ]),
+          if (recent.isNotEmpty) ...[
+            SizedBox(height: S.s2),
+            LaneRecentOutput(lines: recent),
+          ],
+        ],
+      );
     } else if (failed && (lane?.error?.trim().isNotEmpty ?? false)) {
       body = Text(lane!.error!.trim(),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: sans(small, height: 1.4, color: AppColors.fg3));
+          style: sans(small, height: 1.4, color: AppColors.danger));
     } else if (summary.isNotEmpty) {
       body = CardMarkdownBody(
           body: summary, preview: MarkdownPreview.plain(summary));
@@ -776,12 +819,23 @@ class _LaneNoticeState extends State<LaneNotice> {
         lane != null &&
         (running || lane.retryable);
     final pad = kMobile
-        ? EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.of(9))
-        : EdgeInsets.fromLTRB(S.s12, S.s6, S.s12, S.of(7));
+        ? EdgeInsets.fromLTRB(S.s12, S.of(10.0), S.s12, showControl ? 0 : S.of(10.0))
+        : EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.s8);
+    final footer = Row(children: [
+      Text('View details', style: sans(small - 1, color: AppColors.fg4)),
+      const Spacer(),
+      if (showControl)
+        LaneControlButton(
+          client: widget.client!,
+          sessionId: widget.sessionId!,
+          lane: lane,
+          quiet: true,
+        ),
+    ]);
     return Semantics(
       button: true,
       label:
-          '$title${agent.isEmpty ? '' : ', $agent'}${profile.isEmpty ? '' : ', on $profile'}, ${(status ?? '').toLowerCase()}. Open the lane.',
+          '$title${agent.isEmpty ? '' : ', $agent'}${profile.isEmpty ? '' : ', on $profile'}, $statusText. Open the lane.',
       onTap: widget.onOpen,
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: S.of(3)),
@@ -800,7 +854,7 @@ class _LaneNoticeState extends State<LaneNotice> {
                   header,
                   if (retryOf.isNotEmpty)
                     Padding(
-                      padding: EdgeInsets.only(left: S.of(20.0), top: S.s2),
+                      padding: EdgeInsets.only(left: S.of(14.0), top: S.s2),
                       child: Text(
                         'Retry of $retryOf',
                         style: sans(small - 1, color: AppColors.fg4),
@@ -808,23 +862,14 @@ class _LaneNoticeState extends State<LaneNotice> {
                     ),
                   if (body != null)
                     Padding(
-                      padding: EdgeInsets.only(left: S.s20, top: S.s2),
+                      padding: EdgeInsets.only(left: S.of(14.0), top: S.s4),
                       child: body,
                     ),
-                  if (showControl)
-                    Padding(
-                      padding: EdgeInsets.only(left: S.of(20.0), top: S.s6),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          LaneControlButton(
-                            client: widget.client!,
-                            sessionId: widget.sessionId!,
-                            lane: lane,
-                          ),
-                        ],
-                      ),
-                    ),
+                  Padding(
+                    padding: EdgeInsets.only(
+                        left: S.of(14.0), top: showControl ? 0 : S.s6),
+                    child: footer,
+                  ),
                 ],
               ),
             ),
@@ -834,6 +879,12 @@ class _LaneNoticeState extends State<LaneNotice> {
     );
   }
 }
+
+String _laneAgentName(String id) => id
+    .split(RegExp(r'[-_]'))
+    .where((w) => w.isNotEmpty)
+    .map((w) => w[0].toUpperCase() + w.substring(1))
+    .join(' ');
 
 class _LaneActivityLine extends StatelessWidget {
   final LaneInfo? lane;
@@ -854,7 +905,7 @@ class _LaneActivityLine extends StatelessWidget {
       }
     }
     final now = thinking ? 'Thinking' : current;
-    final style = sans(size, height: 1.4, color: AppColors.fg2);
+    final style = mono(size, height: 1.4, color: AppColors.fg2);
     return AnimatedSwitcher(
       duration: Motion.fast,
       layoutBuilder: (cur, prev) => Stack(

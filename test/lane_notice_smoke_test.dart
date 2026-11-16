@@ -36,7 +36,7 @@ void main() {
   testWidgets('completed lane renders markdown summary', (t) async {
     await pump(t, lane('completed', summary: '## Client audit\n\nRead-only; **no files changed**.'));
     expect(find.textContaining('##'), findsNothing);
-    expect(find.text('Completed'), findsOneWidget);
+    expect(find.text('done'), findsOneWidget);
     expect(t.takeException(), isNull);
   });
 }
