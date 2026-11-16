@@ -1040,10 +1040,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       fn();
     }
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+    final rows = <Widget>[
         if (running && _canSend)
           ComposerTrayRow(
               icon: 'stop',
@@ -1068,6 +1065,19 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               label: 'Lanes',
               detail: live > 0 ? '$live running' : null,
               onTap: () => run(_showLanes)),
+    ];
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0)
+            Container(
+                height: 1,
+                margin: EdgeInsets.symmetric(horizontal: S.of(10)),
+                color: AppColors.border),
+          rows[i],
+        ],
       ],
     );
   }
