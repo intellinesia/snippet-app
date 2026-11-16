@@ -322,7 +322,7 @@ class _FileExplorerState extends State<FileExplorer> {
                         !_selecting))
                   Container(
                     height: 52,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    padding: EdgeInsets.symmetric(horizontal: S.of(10)),
                     decoration: BoxDecoration(
                       color: AppColors.surface1,
                       border:
@@ -340,7 +340,7 @@ class _FileExplorerState extends State<FileExplorer> {
                                   ? () => _up(listing!)
                                   : (widget.onClose ??
                                       () => Navigator.pop(context)))),
-                      const SizedBox(width: 4),
+                      SizedBox(width: S.s4),
                       Expanded(
                         child: segs.isEmpty
                             ? Text(widget.title,
@@ -356,12 +356,12 @@ class _FileExplorerState extends State<FileExplorer> {
                                     child: AppIcon('folder',
                                         size: 14, color: AppColors.fg3),
                                   ),
-                                  const SizedBox(width: 4),
+                                  SizedBox(width: S.s4),
                                   for (var i = 0; i < segs.length; i++) ...[
                                     if (i > 0)
                                       Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 3),
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: S.of(3)),
                                         child: AppIcon('chevron-right',
                                             size: 11, color: AppColors.fg4),
                                       ),
@@ -381,12 +381,12 @@ class _FileExplorerState extends State<FileExplorer> {
                                 ]),
                               ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: S.s8),
                       if (_selecting) ...[
                         Text('${_selected.length} selected',
                             style: sans(12,
                                 tabular: true, color: AppColors.accent)),
-                        const SizedBox(width: 8),
+                        SizedBox(width: S.s8),
                         IconBtn('trash',
                             size: 28,
                             iconSize: 14,
@@ -409,8 +409,8 @@ class _FileExplorerState extends State<FileExplorer> {
                             onTap: () => widget.onNewChat!(listing.path),
                             borderRadius: BorderRadius.circular(R.xs),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 9, vertical: 4),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: S.of(9), vertical: S.s4),
                               decoration: BoxDecoration(
                                 color: AppColors.accentBg,
                                 borderRadius: BorderRadius.circular(R.xs),
@@ -421,7 +421,7 @@ class _FileExplorerState extends State<FileExplorer> {
                                   children: [
                                     AppIcon('plus',
                                         size: 11, color: AppColors.accent),
-                                    const SizedBox(width: 4),
+                                    SizedBox(width: S.s4),
                                     Text('New chat here',
                                         style: sans(11,
                                             weight: W.label,
@@ -430,7 +430,7 @@ class _FileExplorerState extends State<FileExplorer> {
                             ),
                           ),
                         if (listing != null) ...[
-                          const SizedBox(width: 4),
+                          SizedBox(width: S.s4),
                           IconBtn('git-branch',
                               size: 28,
                               iconSize: 14,
@@ -519,14 +519,14 @@ class _FileExplorerState extends State<FileExplorer> {
                       backgroundColor: Colors.transparent,
                       color: AppColors.accent)
                 else
-                  const SizedBox(height: 2),
+                  SizedBox(height: S.s2),
                 Expanded(
                   child: listing == null && _dirError == null
                       ? Center(child: DelayedSpinner(size: 22))
                       : listing == null
                           ? Center(
                               child: Padding(
-                                  padding: const EdgeInsets.all(24),
+                                  padding: EdgeInsets.all(S.s24),
                                   child: Text(_dirError ?? '',
                                       textAlign: TextAlign.center,
                                       style: TS.meta())))
@@ -594,7 +594,7 @@ class _FileExplorerState extends State<FileExplorer> {
               onTap: () => _up(listing)),
         if (entries.isEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: S.s40),
+            padding: EdgeInsets.only(top: S.s40),
             child: Text(
                 _filter.isEmpty
                     ? 'This folder is empty.'
@@ -634,7 +634,7 @@ class _FileExplorerState extends State<FileExplorer> {
       return const SizedBox.shrink();
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(S.s8, S.s4, M.gutter, S.s4),
+      padding: EdgeInsets.fromLTRB(S.s8, S.s4, M.gutter, S.s4),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           Expanded(
@@ -649,7 +649,7 @@ class _FileExplorerState extends State<FileExplorer> {
                     borderRadius: BorderRadius.circular(R.sm),
                     onTap: () => _go(crumbs[i].$2, forward: false),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                           horizontal: S.s6, vertical: S.s8),
                       child: Text(crumbs[i].$1,
                           style: TS
@@ -664,17 +664,17 @@ class _FileExplorerState extends State<FileExplorer> {
         ]),
         if (_searching || _filter.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(S.s6, S.s4, 0, S.s4),
+            padding: EdgeInsets.fromLTRB(S.s6, S.s4, 0, S.s4),
             child: Container(
               height: M.minTarget,
-              padding: const EdgeInsets.symmetric(horizontal: S.s12),
+              padding: EdgeInsets.symmetric(horizontal: S.s12),
               decoration: BoxDecoration(
                 color: AppColors.raised,
                 borderRadius: BorderRadius.circular(R.md),
               ),
               child: Row(children: [
                 AppIcon('search', size: 16, color: AppColors.fg4),
-                const SizedBox(width: S.s8),
+                SizedBox(width: S.s8),
                 Expanded(
                   child: TextField(
                     controller: _filterCtl,
@@ -830,11 +830,11 @@ class _Row extends StatelessWidget {
           // otherwise.
           height: kMobile ? M.rowHeight : 42,
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: kMobile ? M.rowPadH : 14),
+            padding: EdgeInsets.symmetric(horizontal: kMobile ? M.rowPadH : S.of(14)),
             child: Row(children: [
               if (selecting) ...[
                 _checkbox(selected),
-                const SizedBox(width: 11)
+                SizedBox(width: S.of(11))
               ],
               // A plain glyph, as on desktop: the filled tiles made every row
               // a card and halved how many fit on a phone screen.
@@ -856,7 +856,7 @@ class _Row extends StatelessWidget {
                               color: muted ? AppColors.fg3 : AppColors.fg1))),
               if (git) ...[
                 const Tag('git', tone: Tone.ok, icon: 'git-branch'),
-                const SizedBox(width: S.s8),
+                SizedBox(width: S.s8),
               ],
               if (chevron)
                 AppIcon('chevron-right', size: 16, color: AppColors.fg4),

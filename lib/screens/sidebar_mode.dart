@@ -51,10 +51,10 @@ class SidebarModeSwitch extends StatelessWidget {
       valueListenable: sidebarAgentsFirst,
       builder: (context, agents, _) => Container(
         height: _cell + 4,
-        padding: const EdgeInsets.all(2),
+        padding: EdgeInsets.all(S.s2),
         decoration: BoxDecoration(
           color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(R.of(9)),
           border: Border.all(color: AppColors.line),
         ),
         child: Stack(children: [
@@ -68,7 +68,7 @@ class SidebarModeSwitch extends StatelessWidget {
               height: _cell,
               decoration: BoxDecoration(
                 color: AppColors.surface3,
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(R.of(7)),
               ),
             ),
           ),

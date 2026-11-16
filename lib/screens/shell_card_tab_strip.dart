@@ -111,8 +111,8 @@ class CardTabChip extends StatelessWidget {
           duration: Motion.quick,
           curve: Motion.enter,
           key: chipKey,
-          margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 3),
-          padding: const EdgeInsets.only(left: 12, right: 6),
+          margin: EdgeInsets.symmetric(vertical: S.of(7), horizontal: S.of(3)),
+          padding: EdgeInsets.only(left: S.s12, right: S.s6),
           decoration: BoxDecoration(
             color: isActive ? AppColors.hover : Colors.transparent,
             borderRadius: BorderRadius.circular(R.sm),
@@ -125,7 +125,7 @@ class CardTabChip extends StatelessWidget {
                     size: 14,
                     color: isActive ? AppColors.accent : AppColors.fg4,
                   ),
-            const SizedBox(width: S.s6),
+            SizedBox(width: S.s6),
             Flexible(
               child: Text(
                 title,
@@ -136,12 +136,12 @@ class CardTabChip extends StatelessWidget {
               ),
             ),
             if (canClose) ...[
-              const SizedBox(width: 4),
+              SizedBox(width: S.s4),
               GestureDetector(
                 onTap: onClose,
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
-                  padding: const EdgeInsets.all(4),
+                  padding: EdgeInsets.all(S.s4),
                   child: AppIcon('x', size: 10, color: AppColors.fg4),
                 ),
               ),
@@ -161,8 +161,8 @@ class CardTabChip extends StatelessWidget {
         curve: Motion.enter,
         key: chipKey,
         width: 220,
-        margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        margin: EdgeInsets.symmetric(horizontal: S.of(3), vertical: S.s4),
+        padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s4),
         decoration: BoxDecoration(
           color: isActive ? AppColors.tint3 : Colors.transparent,
           borderRadius: BorderRadius.circular(R.sm),
@@ -176,7 +176,7 @@ class CardTabChip extends StatelessWidget {
                     size: 14,
                     color: isActive ? AppColors.accent : AppColors.fg4,
                   ),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -202,7 +202,7 @@ class CardTabChip extends StatelessWidget {
               ),
             ),
             if (canClose) ...[
-              const SizedBox(width: 4),
+              SizedBox(width: S.s4),
               GestureDetector(
                 onTap: onClose,
                 behavior: HitTestBehavior.opaque,
@@ -280,7 +280,7 @@ class CardTabStrip extends StatelessWidget {
           child: SingleChildScrollView(
             controller: controller,
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            padding: EdgeInsets.symmetric(horizontal: S.s4, vertical: S.of(3)),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -298,7 +298,7 @@ class CardTabStrip extends StatelessWidget {
                     onClose: () => onCloseTab(i),
                     chipKey: chipKeyFor(tabs[i].key),
                   ),
-                const SizedBox(width: 4),
+                SizedBox(width: S.s4),
                 IconBtn(
                   'plus',
                   size: 28,

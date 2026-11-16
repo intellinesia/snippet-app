@@ -134,7 +134,7 @@ class _PrListPanelState extends State<PrListPanel> {
   Widget _filterChip(String key, String label) {
     final on = _filter == key;
     return Padding(
-      padding: const EdgeInsets.only(right: 4),
+      padding: EdgeInsets.only(right: S.s4),
       child: Material(
         color: on ? AppColors.tint2 : Colors.transparent,
         borderRadius: BorderRadius.circular(R.pill),
@@ -142,7 +142,7 @@ class _PrListPanelState extends State<PrListPanel> {
           onTap: () => _pick(key),
           borderRadius: BorderRadius.circular(R.pill),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(5)),
             child: Text(label,
                 style: sans(13,
                     weight: W.label, color: on ? AppColors.fg1 : AppColors.fg3)),
@@ -157,7 +157,7 @@ class _PrListPanelState extends State<PrListPanel> {
     final (icon, ink) = _prStateIcon(pr);
     final checks = rollup(pr.checks);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+      padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.of(1)),
       child: Material(
         color: selected ? AppColors.tint2 : Colors.transparent,
         borderRadius: BorderRadius.circular(R.md),
@@ -166,14 +166,15 @@ class _PrListPanelState extends State<PrListPanel> {
           borderRadius: BorderRadius.circular(R.md),
           child: Padding(
             padding: widget.showTitle
-                ? const EdgeInsets.fromLTRB(10, 9, 10, 9)
-                : const EdgeInsets.fromLTRB(10, 6, 10, 6),
+                ? EdgeInsets.fromLTRB(S.of(10), S.of( 9)
+                , S.of(10), S.of(9))
+                : EdgeInsets.fromLTRB(S.of(10), S.s6, S.of(10), S.s6),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Padding(
-                padding: const EdgeInsets.only(top: 2),
+                padding: EdgeInsets.only(top: S.s2),
                 child: AppIcon(icon, size: 14, color: ink),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(pr.title,
@@ -181,7 +182,7 @@ class _PrListPanelState extends State<PrListPanel> {
                       overflow: TextOverflow.ellipsis,
                       style: sans(13,
                           weight: W.label, height: 1.35, color: AppColors.fg1)),
-                  SizedBox(height: widget.showTitle ? 4 : 2),
+                  SizedBox(height: widget.showTitle ? S.s4 : S.s2),
                   Row(children: [
                     Flexible(
                       child: Text(
@@ -191,7 +192,7 @@ class _PrListPanelState extends State<PrListPanel> {
                           style: TS.meta(AppColors.fg3)),
                     ),
                     if (checks != ChecksState.none) ...[
-                      const SizedBox(width: 8),
+                      SizedBox(width: S.s8),
                       _prDot(switch (checks) {
                         ChecksState.failing => AppColors.danger,
                         ChecksState.pending => AppColors.run,
@@ -199,11 +200,11 @@ class _PrListPanelState extends State<PrListPanel> {
                       }, size: 6),
                     ],
                     if (pr.reviewDecision == 'APPROVED') ...[
-                      const SizedBox(width: 6),
+                      SizedBox(width: S.s6),
                       AppIcon('check-check', size: 13, color: AppColors.ok),
                     ],
                     if (pr.reviewDecision == 'CHANGES_REQUESTED') ...[
-                      const SizedBox(width: 6),
+                      SizedBox(width: S.s6),
                       AppIcon('alert-circle', size: 12, color: AppColors.danger),
                     ],
                   ]),
@@ -217,7 +218,7 @@ class _PrListPanelState extends State<PrListPanel> {
   }
 
   Widget _label(String text, int count) => Padding(
-        padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
+        padding: EdgeInsets.fromLTRB(S.of(18), S.of(14), S.of(18), S.s6),
         child: Text('$text  $count', style: sans(12, weight: W.label, color: AppColors.fg4)),
       );
 
@@ -248,7 +249,7 @@ class _PrListPanelState extends State<PrListPanel> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (widget.showTitle)
         Padding(
-          padding: const EdgeInsets.fromLTRB(18, 16, 12, 10),
+          padding: EdgeInsets.fromLTRB(S.of(18), S.s16, S.s12, S.of(10)),
           child: Row(children: [
             Expanded(
               child: Text('Pull requests',
@@ -258,17 +259,17 @@ class _PrListPanelState extends State<PrListPanel> {
           ]),
         ),
       Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s8),
         child: Container(
           height: 32,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: EdgeInsets.symmetric(horizontal: S.of(10)),
           decoration: BoxDecoration(
             color: AppColors.tint2,
             borderRadius: BorderRadius.circular(R.md),
           ),
           child: Row(children: [
             AppIcon('search', size: 13, color: AppColors.fg4),
-            const SizedBox(width: 8),
+            SizedBox(width: S.s8),
             Expanded(
               child: TextField(
                 controller: _search,
@@ -287,7 +288,7 @@ class _PrListPanelState extends State<PrListPanel> {
         ),
       ),
       Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+        padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s6),
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(children: [
@@ -314,7 +315,7 @@ class _PrListPanelState extends State<PrListPanel> {
                         child: NotificationListener<ScrollNotification>(
                           onNotification: (n) => prNearEnd(n, _loadMore),
                           child: ListView(
-                            padding: const EdgeInsets.only(bottom: 16),
+                            padding: EdgeInsets.only(bottom: S.s16),
                             children: [
                               ..._rows(visible),
                               if (_next != null)
@@ -689,24 +690,24 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
       _ => s.draft ? ('Draft', 'git-branch', AppColors.fg3) : ('Open', 'git-branch', AppColors.ok),
     };
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 3, 10, 3),
+      padding: EdgeInsets.fromLTRB(S.s8, S.of(3), S.of(10), S.of(3)),
       decoration: BoxDecoration(
         color: ink.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(R.pill),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         AppIcon(icon, size: 12, color: ink),
-        const SizedBox(width: 5),
+        SizedBox(width: S.of(5)),
         Text(label, style: sans(12, weight: W.label, color: ink)),
       ]),
     );
   }
 
   Widget _branch(String name) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        padding: EdgeInsets.symmetric(horizontal: S.of(7), vertical: S.s2),
         decoration: BoxDecoration(
           color: AppColors.tint2,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(R.sm),
         ),
         child: Text(name, style: mono(12, color: AppColors.fg2)),
       );
@@ -715,16 +716,16 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
     final s = pr.summary;
     final pending = _pending.length;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 14, 0),
+      padding: EdgeInsets.fromLTRB(S.s20, S.s16, S.of(14), 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           if (widget.listHidden && widget.onToggleList != null) ...[
             IconBtn('sidebar', size: 30, iconSize: 15, tooltip: 'Show list', onTap: widget.onToggleList),
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
           ],
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: EdgeInsets.only(top: S.s2),
               child: Text.rich(
                 TextSpan(children: [
                   TextSpan(text: s.title, style: sans(19, weight: W.strong, height: 1.3, color: AppColors.fg1)),
@@ -733,7 +734,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: S.s12),
           if (_open)
             FilledButton(
               onPressed: _busy ? null : _review,
@@ -741,13 +742,13 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                 backgroundColor: AppColors.accentFill,
                 foregroundColor: AppColors.accentFg,
                 minimumSize: const Size(0, 32),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                padding: EdgeInsets.symmetric(horizontal: S.of(14)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.sm)),
               ),
               child: Text(pending == 0 ? 'Review' : 'Finish review ($pending)',
                   style: sans(13, weight: W.label, color: AppColors.accentFg)),
             ),
-          const SizedBox(width: 4),
+          SizedBox(width: S.s4),
           Builder(
             builder: (anchor) => IconBtn('more-horizontal',
                 size: 32, iconSize: 16, tooltip: 'More', onTap: _busy ? null : () => _menu(anchor)),
@@ -755,7 +756,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
           if (!widget.listHidden && widget.onToggleList != null)
             IconBtn('sidebar', size: 32, iconSize: 15, tooltip: 'Hide list', onTap: widget.onToggleList),
         ]),
-        const SizedBox(height: 10),
+        SizedBox(height: S.of(10)),
         Wrap(
           spacing: 8,
           runSpacing: 6,
@@ -770,14 +771,14 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
             Text('· opened ${prAgo(pr.createdAt)}', style: TS.meta(AppColors.fg4)),
           ],
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: S.of(14)),
         Row(children: [
           _tabButton(0, 'Conversation', count: pr.timeline.where((e) => e.kind != PrEventKind.commit).length),
           _tabButton(1, 'Commits', count: pr.commits.length),
           _tabButton(2, 'Files changed', count: pr.files.length),
           const Spacer(),
           prSize(s.additions, s.deletions, size: 12.5),
-          const SizedBox(width: 6),
+          SizedBox(width: S.s6),
         ]),
       ]),
     );
@@ -794,8 +795,8 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
         _scrollTo = null;
       }),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(2, 6, 2, 8),
-        margin: const EdgeInsets.only(right: 18),
+        padding: EdgeInsets.fromLTRB(S.s2, S.s6, S.s2, S.s8),
+        margin: EdgeInsets.only(right: S.of(18)),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(color: on ? AppColors.accent : Colors.transparent, width: 2),
@@ -804,9 +805,9 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Text(label, style: sans(13, weight: W.label, color: on ? AppColors.fg1 : AppColors.fg3)),
           if (count != null && count > 0) ...[
-            const SizedBox(width: 6),
+            SizedBox(width: S.s6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              padding: EdgeInsets.symmetric(horizontal: S.s6, vertical: S.of(1)),
               decoration: BoxDecoration(
                 color: AppColors.tint2,
                 borderRadius: BorderRadius.circular(R.pill),
@@ -874,13 +875,13 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
         ),
         ..._timeline(pr),
         if (!wide) ...[
-          const SizedBox(height: 8),
+          SizedBox(height: S.s8),
           side,
         ],
-        const SizedBox(height: 14),
+        SizedBox(height: S.of(14)),
         if (_open || pr.summary.state == 'CLOSED')
           Padding(
-            padding: const EdgeInsets.only(left: 44),
+            padding: EdgeInsets.only(left: S.of(44)),
             child: PrMarkdownComposer(
               controller: _comment,
               minLines: 3,
@@ -907,11 +908,11 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
         onRefresh: _reload,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 40),
+          padding: EdgeInsets.fromLTRB(S.s20, S.of(18), S.s20, S.s40),
           child: wide
               ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Expanded(child: main),
-                  const SizedBox(width: 28),
+                  SizedBox(width: S.of(28)),
                   SizedBox(width: 280, child: side),
                 ])
               : main,
@@ -939,7 +940,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                 child: Center(child: Container(width: 1.5, color: AppColors.surface2)),
               ),
             Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: EdgeInsets.only(top: S.s2),
               child: avatar != null
                   ? prAvatar(avatar, size: 28)
                   : Container(
@@ -952,18 +953,18 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
             ),
           ]),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: S.s12),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.only(bottom: 18),
+            padding: EdgeInsets.only(bottom: S.of(18)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Padding(padding: const EdgeInsets.only(top: 6), child: header),
+              Padding(padding: EdgeInsets.only(top: S.s6), child: header),
               if (body != null) ...[
-                const SizedBox(height: 8),
+                SizedBox(height: S.s8),
                 card
                     ? Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                        padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.s12),
                         decoration: BoxDecoration(
                           color: AppColors.tint1,
                           borderRadius: BorderRadius.circular(R.md),
@@ -996,7 +997,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                 child: Text(e.body,
                     maxLines: 1, overflow: TextOverflow.ellipsis, style: sans(13, color: AppColors.fg2)),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: S.of(10)),
               Text(e.sha.length > 7 ? e.sha.substring(0, 7) : e.sha, style: mono(12, color: AppColors.fg4)),
             ]),
           ));
@@ -1022,8 +1023,8 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                     if (e.body.trim().isNotEmpty)
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                        margin: EdgeInsets.only(bottom: threads.isEmpty ? 0 : 8),
+                        padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.s12),
+                        margin: EdgeInsets.only(bottom: threads.isEmpty ? 0 : S.s8),
                         decoration: BoxDecoration(
                           color: AppColors.tint1,
                           borderRadius: BorderRadius.circular(R.md),
@@ -1034,7 +1035,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                       TextButton.icon(
                         onPressed: () => _showFiles(threads.first.path),
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          padding: EdgeInsets.symmetric(horizontal: S.of(10)),
                           minimumSize: const Size(0, 30),
                           backgroundColor: AppColors.tint1,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.sm)),
@@ -1062,18 +1063,18 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
   }
 
   Widget _sideTitle(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.only(bottom: S.s8),
         child: Text(text, style: sans(12, weight: W.label, color: AppColors.fg4)),
       );
 
   Widget _sideRow(String icon, Color ink, String label, {String detail = '', VoidCallback? onTap}) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(R.sm),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5),
+          padding: EdgeInsets.symmetric(vertical: S.of(5)),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Padding(padding: const EdgeInsets.only(top: 1), child: AppIcon(icon, size: 14, color: ink)),
-            const SizedBox(width: 9),
+            Padding(padding: EdgeInsets.only(top: S.of(1)), child: AppIcon(icon, size: 14, color: ink)),
+            SizedBox(width: S.of(9)),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(label, style: sans(13, color: AppColors.fg1)),
@@ -1107,10 +1108,10 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
       else
         for (final r in reviewers)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: EdgeInsets.symmetric(vertical: S.s4),
             child: Row(children: [
               prAvatar(r, size: 20),
-              const SizedBox(width: 8),
+              SizedBox(width: S.s8),
               Expanded(child: Text(r, style: sans(13, color: AppColors.fg1))),
               switch (reviews[r]) {
                 'APPROVED' => Tooltip(message: 'Approved', child: AppIcon('check', size: 14, color: AppColors.ok)),
@@ -1121,7 +1122,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
               },
             ]),
           ),
-      const SizedBox(height: 20),
+      SizedBox(height: S.s20),
       _sideTitle(checks.isEmpty ? 'Checks' : 'Checks  ${checks.length}'),
       if (checks.isEmpty)
         Text('No checks', style: TS.meta(AppColors.fg4))
@@ -1143,7 +1144,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
             onTap: c.url.isEmpty ? null : () => launchUrl(Uri.parse(c.url), mode: LaunchMode.externalApplication),
           ),
       if (_open) ...[
-        const SizedBox(height: 20),
+        SizedBox(height: S.s20),
         _sideTitle('Merge'),
         if (pr.autoMergeMethod.isEmpty && !s.draft) _sideRow(merge.$1, merge.$2, merge.$3, detail: merge.$4),
         PrMergeBox(
@@ -1152,7 +1153,7 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
           pr: pr,
           status: widget.status,
           onDone: _reload,
-          padding: const EdgeInsets.only(top: 6),
+          padding: EdgeInsets.only(top: S.s6),
         ),
       ],
     ]);
@@ -1211,7 +1212,7 @@ class _DesktopCommitsState extends State<_DesktopCommits> {
         onTap: () => _show(c),
         borderRadius: BorderRadius.circular(R.md),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+          padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.of(10), S.of(10)),
           child: Row(children: [
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1219,11 +1220,11 @@ class _DesktopCommitsState extends State<_DesktopCommits> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: sans(13, weight: W.label, height: 1.35, color: AppColors.fg1)),
-                const SizedBox(height: 3),
+                SizedBox(height: S.of(3)),
                 Text('${c.author} · ${prAgo(c.date)}', style: TS.meta(AppColors.fg4)),
               ]),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: S.of(10)),
             Text(short, style: mono(12, color: AppColors.fg3)),
             IconBtn('copy', size: 26, iconSize: 12, tooltip: 'Copy SHA', onTap: () {
               Clipboard.setData(ClipboardData(text: c.oid));
@@ -1240,11 +1241,11 @@ class _DesktopCommitsState extends State<_DesktopCommits> {
     final files = _files;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
+        padding: EdgeInsets.fromLTRB(S.s20, S.of(14), S.s20, S.s6),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(c.headline, style: sans(15, weight: W.strong, color: AppColors.fg1)),
           if (c.body.trim().isNotEmpty) ...[
-            const SizedBox(height: 6),
+            SizedBox(height: S.s6),
             Text(c.body.trim(), style: sans(13, height: 1.5, color: AppColors.fg3)),
           ],
         ]),
@@ -1257,7 +1258,7 @@ class _DesktopCommitsState extends State<_DesktopCommits> {
                 : CustomScrollView(slivers: [
                     for (final e in files.entries)
                       SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        padding: EdgeInsets.symmetric(horizontal: S.s12),
                         sliver: PrFileDiff(
                           file: PrFile(
                             path: e.key,
@@ -1278,7 +1279,7 @@ class _DesktopCommitsState extends State<_DesktopCommits> {
                           onThreadsChanged: () async {},
                         ),
                       ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 32)),
+                    SliverToBoxAdapter(child: SizedBox(height: S.s32)),
                   ]),
       ),
     ]);
@@ -1288,7 +1289,7 @@ class _DesktopCommitsState extends State<_DesktopCommits> {
   Widget build(BuildContext context) {
     if (widget.commits.isEmpty) return prMessage('No commits.');
     final list = ListView(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
+      padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s24),
       children: [for (final c in widget.commits.reversed) _row(c)],
     );
     if (_open == null) return list;
@@ -1373,7 +1374,7 @@ class _DesktopFilesState extends State<_DesktopFiles> {
     final viewed = files.where((f) => widget.viewed.contains(f.path)).length;
     final pending = widget.pending.length;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 6, 14, 6),
+      padding: EdgeInsets.fromLTRB(S.s20, S.s6, S.of(14), S.s6),
       child: Row(children: [
         SizedBox(
           width: 14,
@@ -1387,12 +1388,12 @@ class _DesktopFilesState extends State<_DesktopFiles> {
                   backgroundColor: AppColors.fg4.withValues(alpha: 0.3),
                 ),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: S.s8),
         Text('$viewed of ${files.length} viewed', style: sans(13, color: AppColors.fg3)),
         if (pending > 0) ...[
-          const SizedBox(width: 12),
+          SizedBox(width: S.s12),
           AppIcon('message', size: 12, color: AppColors.accent),
-          const SizedBox(width: 5),
+          SizedBox(width: S.of(5)),
           Text('$pending pending', style: sans(13, color: AppColors.accent)),
         ],
         const Spacer(),
@@ -1401,7 +1402,7 @@ class _DesktopFilesState extends State<_DesktopFiles> {
             onPressed: () => _jumpMenu(anchor),
             style: TextButton.styleFrom(
               minimumSize: const Size(0, 28),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: EdgeInsets.symmetric(horizontal: S.s8),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.sm)),
             ),
             icon: AppIcon('folder-open', size: 13, color: AppColors.fg3),
@@ -1421,7 +1422,7 @@ class _DesktopFilesState extends State<_DesktopFiles> {
         for (final f in files)
           SliverPadding(
             key: _keys.putIfAbsent(f.path, () => GlobalKey()),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: S.s16),
             sliver: PrFileDiff(
               file: f,
               lines: _parsed[f.path] ?? const [],
@@ -1441,7 +1442,7 @@ class _DesktopFilesState extends State<_DesktopFiles> {
               onThreadsChanged: widget.onChanged,
             ),
           ),
-        const SliverToBoxAdapter(child: SizedBox(height: 40)),
+        SliverToBoxAdapter(child: SizedBox(height: S.s40)),
       ],
     );
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

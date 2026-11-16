@@ -205,18 +205,18 @@ class _RoutingScreenState extends State<RoutingScreen> {
           Builder(
             builder: (anchor) => Material(
               color: Colors.transparent,
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(R.of(15)),
               child: InkWell(
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(R.of(15)),
                 onTap: () => _addFallbackMenu(anchor, key, chosen),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(minWidth: 116),
                   child: IntrinsicWidth(
                     child: Container(
                       height: 30,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: EdgeInsets.symmetric(horizontal: S.s12),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(R.of(15)),
                         border: Border.all(color: AppColors.line),
                       ),
                       child: Row(
@@ -248,18 +248,18 @@ class _RoutingScreenState extends State<RoutingScreen> {
                     : (isPrimary ? 'Primary · tap to edit' : 'Fallback · tap to edit'),
                 child: Material(
                   color: isPrimary ? AppColors.surface2 : Colors.transparent,
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(R.of(15)),
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(R.of(15)),
                     onTap: () => _pillMenu(anchor, key, chosen, i),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(minWidth: 116),
                       child: IntrinsicWidth(
                         child: Container(
                           height: 30,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: EdgeInsets.symmetric(horizontal: S.s12),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(15),
+                            borderRadius: BorderRadius.circular(R.of(15)),
                             border: Border.all(color: AppColors.line),
                           ),
                           child: Row(
@@ -267,7 +267,7 @@ class _RoutingScreenState extends State<RoutingScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               ProviderLogo(p?.provider ?? name, size: 12),
-                              const SizedBox(width: 7),
+                              SizedBox(width: S.of(7)),
                               Text(
                                 name,
                                 style: sans(
@@ -276,7 +276,7 @@ class _RoutingScreenState extends State<RoutingScreen> {
                                 ),
                               ),
                               if (until != null) ...[
-                                const SizedBox(width: 6),
+                                SizedBox(width: S.s6),
                                 Container(
                                   width: 6,
                                   height: 6,
@@ -340,14 +340,14 @@ class _RoutingScreenState extends State<RoutingScreen> {
   Widget _mobileRouteRow(String key, String title, String about) {
     final chosen = _routes[key] ?? const [];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.of(14)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title, style: sans(15, color: AppColors.fg1)),
-          const SizedBox(height: 2),
+          SizedBox(height: S.s2),
           Text(about, style: sans(13, color: AppColors.fg4)),
-          const SizedBox(height: 10),
+          SizedBox(height: S.of(10)),
           _chainWrap(key, chosen),
         ],
       ),
@@ -396,7 +396,7 @@ class _RoutingScreenState extends State<RoutingScreen> {
             );
     } else {
       body = ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+        padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
         children: [
           ListGroup(children: [
             for (final (key, title, about) in _routeDefs)

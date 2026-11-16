@@ -77,7 +77,7 @@ class FileChangesScreen extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(4, 12, 4, 12),
+        padding: EdgeInsets.fromLTRB(S.s4, S.s12, S.s4, S.s12),
         decoration: BoxDecoration(
           border: Border(
             bottom:
@@ -86,7 +86,7 @@ class FileChangesScreen extends StatelessWidget {
         ),
         child: Row(children: [
           FileGlyph(name, size: 18),
-          const SizedBox(width: 14),
+          SizedBox(width: S.of(14)),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,7 +104,7 @@ class FileChangesScreen extends StatelessWidget {
             ),
           ),
           trailing,
-          const SizedBox(width: 8),
+          SizedBox(width: S.s8),
           AppIcon('chevron-right', size: 14, color: AppColors.fg4),
         ]),
       ),
@@ -114,7 +114,7 @@ class FileChangesScreen extends StatelessWidget {
   Widget _delta(int add, int del) =>
       Row(mainAxisSize: MainAxisSize.min, children: [
         Text('+$add', style: mono(13, color: AppColors.ok)),
-        const SizedBox(width: 6),
+        SizedBox(width: S.s6),
         Text('\u2212$del', style: mono(13, color: AppColors.danger)),
       ]);
 
@@ -139,7 +139,7 @@ class FileChangesScreen extends StatelessWidget {
                     title: 'No file changes yet',
                     body: 'Files this session edits show up here.')
                 : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 32),
+                    padding: EdgeInsets.fromLTRB(S.s16, S.s6, S.s16, S.s32),
                     itemCount: total,
                     itemBuilder: (_, i) {
                       if (i >= changes.length) {
@@ -196,9 +196,9 @@ class FileChangeDetail extends StatelessWidget {
     final lines = text.trimRight().split('\n');
     return Container(
       color: bg,
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: EdgeInsets.symmetric(vertical: S.s2),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: EdgeInsets.symmetric(horizontal: S.of(10)),
         child: Text(lines.map((l) => '$sign $l').join('\n'),
             style: codeMono(12, height: 1.55, color: fg)),
       ),
@@ -223,28 +223,28 @@ class FileChangeDetail extends StatelessWidget {
           ],
         ),
       'delete' => Padding(
-          padding: const EdgeInsets.all(14),
+          padding: EdgeInsets.all(S.of(14)),
           child: Text('File deleted', style: sans(14, color: AppColors.danger)),
         ),
       'move' => Padding(
-          padding: const EdgeInsets.all(14),
+          padding: EdgeInsets.all(S.of(14)),
           child: Text('Moved to ${c['to']}',
               style: sans(14, color: AppColors.fg2)),
         ),
       _ => const SizedBox.shrink(),
     };
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: S.s12),
       decoration: BoxDecoration(
         color: kMobile
             ? Color.lerp(AppColors.bg, Colors.black, 0.35)
             : AppColors.tint1,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(R.of(14)),
         border: Border.all(color: AppColors.fg1.withValues(alpha: 0.07)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: EdgeInsets.symmetric(vertical: S.s6),
         child: body,
       ),
     );
@@ -268,7 +268,7 @@ class FileChangeDetail extends StatelessWidget {
           ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 32),
+              padding: EdgeInsets.fromLTRB(S.s16, S.of(10), S.s16, S.s32),
               children: [for (final c in edits) _edit(c)],
             ),
           ),
