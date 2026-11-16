@@ -196,11 +196,6 @@ class RecurringScreenState extends State<RecurringScreen>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'The first run fires immediately, then repeats per the schedule. Minimum interval is 5 minutes. A plan file is reread each fire.',
-                      style: TS.caption(),
-                    ),
-                    SizedBox(height: S.of(14)),
                     AppField(
                         label: 'Title',
                         controller: title,
@@ -284,9 +279,29 @@ class RecurringScreenState extends State<RecurringScreen>
                             iconSize: 16,
                             tooltip: 'Pick file',
                             onTap: pickPlan)),
+                    SizedBox(height: S.s12),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: S.s4),
+                      child: Text(
+                        'The first run fires immediately, then repeats per the schedule. Minimum interval is 5 minutes. A plan file is reread each fire.',
+                        style: TS.caption(),
+                      ),
+                    ),
                     SizedBox(height: S.s16),
-                    Btn('Save',
-                        full: true, onTap: () => Navigator.pop(ctx, true)),
+                    Row(children: [
+                      Expanded(
+                        child: Btn('Cancel',
+                            full: true,
+                            variant: BtnVariant.surface,
+                            onTap: () => Navigator.pop(ctx, false)),
+                      ),
+                      SizedBox(width: S.s12),
+                      Expanded(
+                        child: Btn('Save',
+                            full: true,
+                            onTap: () => Navigator.pop(ctx, true)),
+                      ),
+                    ]),
                   ]);
         },
       ),
@@ -1005,7 +1020,11 @@ class RecurringScreenState extends State<RecurringScreen>
                   : null,
             )
           else if (jobs.isNotEmpty)
-            ListGroup(children: [for (final j in jobs) _jobRow(j)]),
+            kMobile && !widget.pane
+                ? SettingsGroup(
+                    header: 'Scheduled jobs',
+                    children: [for (final j in jobs) _jobRow(j)])
+                : ListGroup(children: [for (final j in jobs) _jobRow(j)]),
         ];
         if (!widget.pane) return PageBody(children: children);
         return ListView(
@@ -1121,7 +1140,7 @@ class RecurringScreenState extends State<RecurringScreen>
     final sub = bits.where((s) => s.isNotEmpty).join(' · ');
     final error = job.lastError?.trim() ?? '';
     final dense = !kMobile;
-    final btn = dense ? 26.0 : 32.0;
+    final btn = dense ? 26.0 : 44.0;
     final ico = dense ? 13.0 : 16.0;
     return Padding(
       padding: dense

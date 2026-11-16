@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../mochi.dart';
 import '../desktop_layout.dart';
 import '../models.dart';
 import '../panel.dart';
@@ -154,48 +155,27 @@ class _WakesScreenState extends State<WakesScreen> {
           ]);
         }
         return page([
-          if (wakes.wakes.isNotEmpty) ...[
-            if (kMobile)
-              const SettingsGroupLabel('Schedules')
-            else
-              const SectionLabel('Schedules'),
-            ListGroup(children: [
+          if (wakes.wakes.isNotEmpty)
+            SettingsGroup(header: 'Schedules', children: [
               for (final w in wakes.wakes) _wakeRow(context, w, agents),
             ]),
-          ],
-          if (warmOn.isEmpty) ...[
-            SizedBox(height: kMobile ? 0 : S.s20),
-            if (kMobile)
-              const SettingsGroupLabel('Keep warm')
-            else
-              const SectionLabel('Keep warm'),
-            Padding(
-              key: const Key('keep-warm-empty'),
-              padding: EdgeInsets.fromLTRB(
-                  kMobile ? S.s16 : S.s4, S.s4, kMobile ? S.s16 : S.s4, 0),
-              child: Text(
-                  'No session is kept warm. A warm session keeps its prompt cache while idle, so the next turn is cheaper.',
-                  style: TS.meta()),
-            ),
-          ],
-          if (warmOn.isNotEmpty) ...[
-            if (wakes.wakes.isNotEmpty) SizedBox(height: kMobile ? 0 : S.s20),
-            if (kMobile)
-              const SettingsGroupLabel('Keep warm')
-            else
-              const SectionLabel('Keep warm'),
-            ListGroup(children: [
-              for (final e in warmOn) _warmRow(context, e, agents),
-            ]),
-            if (warm != null && warm.calls7d > 0)
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                    kMobile ? S.s16 : S.s4, S.s8, kMobile ? S.s16 : S.s4, 0),
-                child: Text(
-                    '${warm.calls7d} warm calls in the last 7 days, ${tokensLabel(warm.cacheReadTokens7d)} tokens read from cache.',
-                    style: TS.meta()),
-              ),
-          ],
+          SettingsGroup(
+            header: 'Keep warm',
+            footer: warm != null && warm.calls7d > 0 && warmOn.isNotEmpty
+                ? '${warm.calls7d} warm calls in the last 7 days, ${tokensLabel(warm.cacheReadTokens7d)} tokens read from cache.'
+                : null,
+            children: [
+              if (warmOn.isEmpty)
+                const SettingsRow(
+                  key: Key('keep-warm-empty'),
+                  label: 'No session is kept warm',
+                  sub:
+                      'A warm session keeps its prompt cache while idle, so the next turn is cheaper.',
+                )
+              else
+                for (final e in warmOn) _warmRow(context, e, agents),
+            ],
+          ),
         ]);
       },
     );
@@ -225,30 +205,31 @@ class _WakesScreenState extends State<WakesScreen> {
                 ? 'overdue'
                 : 'next ${wakeWhen(w.nextRunAt)}';
     final sub = [
-      w.scheduleText.isEmpty ? w.schedule : w.scheduleText,
+      if (w.name != null)
+        name
+      else
+        w.scheduleText.isEmpty ? w.schedule : w.scheduleText,
       if (next.isNotEmpty) next,
     ].join(' · ');
+    final character = agentCharacterFor(w.owner);
     return Builder(
-      builder: (ctx) => ListRow(
+      builder: (ctx) => SettingsRow(
         key: ValueKey('wake-${w.owner}'),
-        title: name,
-        subtitle: w.lastError != null ? '$sub · ${w.lastError}' : sub,
-        leading: kMobile
-            ? V5IconTile('calendar-clock',
-                color: w.enabled ? AppColors.fg2 : AppColors.fg4)
-            : AppIcon('calendar-clock',
-                size: 19, color: w.enabled ? AppColors.fg3 : AppColors.fg4),
-        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (w.lastStatus != null)
-            Container(
+        label: w.name ?? name,
+        sub: w.lastError != null ? '$sub · ${w.lastError}' : sub,
+        leading: character != null
+            ? AgentCharacter(character, size: 30)
+            : V5IconTile('calendar-clock',
+                color: w.enabled ? AppColors.fg2 : AppColors.fg4),
+        trailing: w.lastStatus == null
+            ? null
+            : Container(
                 width: 7,
                 height: 7,
                 decoration: BoxDecoration(
                     color: wakeStatusColor(w.lastStatus),
                     shape: BoxShape.circle)),
-          SizedBox(width: S.s6),
-          Text(w.ownerKind, style: TS.meta()),
-        ]),
+        chevron: true,
         onTap: () => _open(ctx, w.owner, name, agents),
       ),
     );
@@ -263,34 +244,65 @@ class _WakesScreenState extends State<WakesScreen> {
             'Untitled conversation')
         : _name(e.owner, agents);
     final reason = e.reason;
+    final warmed = e.lastWarmAt == null
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(e.lastWarmAt! * 1000);
     final sub = [
-      if (session) 'Conversation',
       if (reason != null)
         reason == 'quiet hours'
             ? 'Paused for quiet hours'
             : '${reason[0].toUpperCase()}${reason.substring(1)}'
-      else if (e.lastWarmAt != null)
-        'Warmed ${wakeWhen(e.lastWarmAt!)}'
-      else
+      else ...[
         'Every ${e.intervalMinutes} min',
+        if (warmed != null)
+          'Warmed ${warmed.hour.toString().padLeft(2, '0')}:${warmed.minute.toString().padLeft(2, '0')}',
+      ],
     ].join(' · ');
     return Builder(
-      builder: (ctx) => ListRow(
+      builder: (ctx) => SettingsRow(
         key: ValueKey('warm-${e.owner}'),
-        title: name,
-        subtitle: sub,
-        leading: kMobile
-            ? const V5IconTile('gauge')
-            : AppIcon('gauge', size: 19, color: AppColors.fg3),
-        trailing: e.warms > 0
-            ? Text('${e.warms} warm${e.warms == 1 ? '' : 's'}',
-                style: TS.meta())
-            : null,
+        label: name,
+        sub: sub,
+        leading: session
+            ? null
+            : const V5IconTile('gauge'),
+        trailing: session
+            ? GestureDetector(
+                key: ValueKey('warm-open-${e.owner}'),
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _openConversation(e, name),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: kMobile ? 44 : 32),
+                  child: Center(
+                    widthFactor: 1,
+                    child: Text('Open conversation', style: TS.meta()),
+                  ),
+                ),
+              )
+            : (e.warms > 0
+                ? Text('${e.warms} warm${e.warms == 1 ? '' : 's'}',
+                    style: TS.meta())
+                : null),
         onTap: session
             ? () => unawaited(_sessionWarmMenu(ctx, e, name))
             : () => _open(ctx, e.owner, name, agents),
       ),
     );
+  }
+
+  void _openConversation(KeepWarmEntry e, String name) {
+    final id = e.sessionId.isNotEmpty ? e.sessionId : e.owner;
+    final tab = openSessionInTab;
+    if (!kMobile && tab != null) {
+      tab(widget.client, id, name);
+      return;
+    }
+    unawaited(presentScreen(context,
+        builder: (_, close) => SessionScreen(
+            client: widget.client,
+            sessionId: id,
+            title: name,
+            onMenu: close)));
   }
 
   Future<void> _sessionWarmMenu(
@@ -308,21 +320,7 @@ class _WakesScreenState extends State<WakesScreen> {
               danger: true),
         ]);
     if (!mounted || picked == null) return;
-    final id = e.sessionId.isNotEmpty ? e.sessionId : e.owner;
-    if (picked == 'open') {
-      final tab = openSessionInTab;
-      if (!kMobile && tab != null) {
-        tab(widget.client, id, name);
-        return;
-      }
-      unawaited(presentScreen(context,
-          builder: (_, close) => SessionScreen(
-              client: widget.client,
-              sessionId: id,
-              title: name,
-              onMenu: close)));
-      return;
-    }
+    if (picked == 'open') return _openConversation(e, name);
     try {
       await widget.client.setKeepWarm(e.owner, enabled: false);
     } catch (err) {
