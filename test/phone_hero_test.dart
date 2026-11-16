@@ -179,7 +179,8 @@ void main() {
         'next_wake_at': _sec(DateTime(2026, 11, 17, 9, 0)),
       }),
     ], opened: opened));
-    expect(find.text('Moss · Staging deploy, plan 4/6'), findsOneWidget);
+    expect(find.text('Moss · Staging deploy'), findsOneWidget);
+    expect(find.textContaining('Step 4 of 6 · Health checks'), findsOneWidget);
     expect(find.text('11m'), findsOneWidget);
     expect(find.text('Next: Sol, X check-in, 17:00'), findsOneWidget);
     expect(find.text('in 9 h'), findsOneWidget);

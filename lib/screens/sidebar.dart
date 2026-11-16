@@ -1066,37 +1066,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     var n = 0;
     final pinned = _pinnedSessions(sorted);
     final pinnedIds = {for (final s in pinned) s.id};
-    Widget liveCard(SessionInfo s, {bool pinned = false}) => Appear(
-          key: ValueKey('chat-${s.id}'),
-          index: n++,
-          since: _chatsShownAt,
-          child: LiveSessionCard(
-            session: s,
-            pinned: pinned,
-            leading: _agentBadge(s),
-            onDecide: widget.client == null ? null : _decideHero,
-            onReviewPr: s.pr?.state == 'open' && widget.client != null
-                ? () => _reviewSessionPr(s)
-                : null,
-            onMergePr: s.pr?.state == 'open' && widget.client != null
-                ? () => _mergeSessionPr(s)
-                : null,
-            onTap: () => _selecting
-                ? _toggleSelected(s.id)
-                : widget.onOpenSession(s.id, s.title, s.profile),
-            onLongPress: () =>
-                _selecting ? _toggleSelected(s.id) : _sessionActions(s),
-          ),
-        );
     if (pinned.isNotEmpty) {
       out.add(MobileSectionLabel('Pinned',
           icon: 'pin', count: pinned.length, top: 2));
       bool isLive(SessionInfo s) =>
           !filtering && (sessionNeedsYou(s) || sessionCameBack(s) || sessionIsActive(s.status));
-      for (final s in pinned) {
-        if (isLive(s)) out.add(liveCard(s, pinned: true));
-      }
-      final rest = [for (final s in pinned) if (!isLive(s)) s];
+      final rest = [...pinned.where(isLive), ...pinned.where((s) => !isLive(s))];
       if (rest.isNotEmpty) {
         out.add(Appear(
           key: const ValueKey('folder-pinned'),
@@ -1137,9 +1112,20 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       if (rows.isEmpty) return;
       out.add(MobileSectionLabel(label, top: top));
       top = 18;
-      for (final s in rows) {
-        out.add(liveCard(s));
-      }
+      // Same rows as the folders; detail (plans, lanes, asks) lives in the hero.
+      out.add(Appear(
+        key: ValueKey('live-$label'),
+        index: n++,
+        since: _chatsShownAt,
+        child: MobileGroupCard(children: [
+          for (var i = 0; i < rows.length; i++)
+            _listRow(rows[i],
+                above: i > 0 ? rows[i - 1] : null,
+                below: i + 1 < rows.length ? rows[i + 1] : null,
+                divider: i + 1 < rows.length,
+                showProject: true),
+        ]),
+      ));
     }
 
     liveSection('Needs you', needs);
@@ -1396,7 +1382,13 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   Widget _agentBadge(SessionInfo s) {
     final agent = s.displayAgentId?.trim() ?? '';
     if (agent.isNotEmpty) {
-      return AgentMochi(agent, size: kMobile ? 20.0 : 17.0);
+      // The moving character is the working signal; rows carry no plan text.
+      final state = sessionNeedsYou(s)
+          ? AgentCharacterState.needs
+          : sessionIsActive(s.status)
+              ? AgentCharacterState.working
+              : AgentCharacterState.idle;
+      return AgentMochi(agent, size: kMobile ? 20.0 : 17.0, state: state);
     }
     final profile = s.profile ?? '';
     final provider = profile.isEmpty ? null : _profileProviders[profile];

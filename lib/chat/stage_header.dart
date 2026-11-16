@@ -95,8 +95,8 @@ class StageHeader extends StatelessWidget {
   Widget _chip() {
     final hasSub = subtitle != null && subtitle!.isNotEmpty;
     final chip = Container(
-      constraints:
-          BoxConstraints(minHeight: compact ? 28 : 44, maxWidth: compact ? 420 : 280),
+      // Sized by its lines: a lone name makes a short pill.
+      constraints: BoxConstraints(maxWidth: compact ? 420 : 280),
       padding: EdgeInsets.symmetric(
           horizontal: compact ? S.s12 : S.s16, vertical: compact ? S.s4 : S.s6),
       decoration: BoxDecoration(
@@ -134,7 +134,12 @@ class StageHeader extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: chip,
+        // The pill can be short; the touch target stays 44 on phones.
+        child: compact
+            ? chip
+            : ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 44),
+                child: Center(widthFactor: 1, child: chip)),
       ),
     );
   }

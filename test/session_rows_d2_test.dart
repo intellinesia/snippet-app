@@ -220,7 +220,8 @@ void main() {
       ),
     ));
 
-    expect(find.text('plan 3/5 · 14m'), findsOneWidget);
+    // Plan progress moved to the home hero; the row only shows working dots.
+    expect(find.text('plan 3/5 · 14m'), findsNothing);
     expect(find.text('PR #280 · checks passing'), findsOneWidget);
     expect(find.text('wakes Mon 08:00'), findsOneWidget);
     } finally {

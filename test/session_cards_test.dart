@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:snippet/agent_character.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/models.dart';
@@ -111,12 +112,8 @@ void main() {
       await _pump(tester, const Size(390, 700), TargetPlatform.android);
       expect(find.byType(SessionGroupHeader), findsNothing);
       expect(find.widgetWithText(MobileSectionLabel, 'Needs you'), findsOneWidget);
-      expect(find.byType(LiveSessionCard), findsNWidgets(2));
-      expect(
-          find.descendant(
-              of: find.byType(LiveSessionCard),
-              matching: find.text('snippet-mobile')),
-          findsNWidgets(2));
+      expect(find.byType(LiveSessionCard), findsNothing);
+      expect(find.text('snippet-mobile'), findsNWidgets(2));
       expect(find.text('~/code/snippet-mobile'), findsNothing);
       expect(find.widgetWithText(MobileSectionLabel, 'snippet-service'),
           findsOneWidget);
@@ -234,9 +231,10 @@ void main() {
       expect(
           find.descendant(of: workingRow, matching: find.byType(WorkingDots)),
           findsOneWidget);
+      // The dots and the moving character say it; no "Working" or plan text.
       expect(
           find.descendant(of: workingRow, matching: find.text('Working')),
-          findsOneWidget);
+          findsNothing);
       expect(
           find.descendant(of: workingRow, matching: find.text('10m')),
           findsNothing);
@@ -283,16 +281,14 @@ void main() {
             _s('a', 'Needs input chat', 'waiting_for_input', agentId: 'scout'),
           ]);
       expect(find.byType(SessionGroupHeader), findsNothing);
-      final card = find.byType(LiveSessionCard);
-      expect(card, findsOneWidget);
-
-      expect(find.descendant(of: card, matching: find.text('Needs input · Scout')),
-          findsOneWidget);
+      final row = find.byType(SessionListRow);
+      expect(row, findsOneWidget);
+      expect(find.byType(LiveSessionCard), findsNothing);
 
       final mochi = tester.widget<AgentMochi>(
-          find.descendant(of: card, matching: find.byType(AgentMochi)));
-      expect(mochi.size, 36);
-      expect(mochi.badge, '?');
+          find.descendant(of: row, matching: find.byType(AgentMochi)));
+      expect(mochi.agentId, 'scout');
+      expect(mochi.state, AgentCharacterState.needs);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

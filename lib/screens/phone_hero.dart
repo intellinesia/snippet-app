@@ -135,12 +135,18 @@ class _PhoneHeroState extends State<PhoneHero> {
     return prs.firstOrNull;
   }
 
-  SessionInfo? _running() {
+  /// Running sessions following a plan, newest first; the hero is where their
+  /// progress shows, not the chat header or the session list.
+  List<SessionInfo> _running() {
     final run = _live
-        .where((s) => s.running && s.plan != null && s.plan!.total > 0)
+        .where((s) =>
+            s.running &&
+            ((s.plan != null && s.plan!.total > 0) ||
+                (s.goal?.ongoing ?? false) ||
+                (s.lanes?.running ?? 0) > 0))
         .toList()
       ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
-    return run.firstOrNull;
+    return run.take(2).toList();
   }
 
   SessionInfo? _nextWake() {
@@ -159,7 +165,7 @@ class _PhoneHeroState extends State<PhoneHero> {
     final wake = _nextWake();
     final lines = <Widget>[
       if (pr != null) _prLine(pr),
-      if (run != null) _runLine(run),
+      for (final r in run) _runLine(r),
       if (wake != null) _wakeLine(wake),
     ];
     if (stage.isEmpty && top == null && lines.isEmpty) {
@@ -466,29 +472,70 @@ class _PhoneHeroState extends State<PhoneHero> {
   }
 
   Widget _runLine(SessionInfo s) {
-    final plan = s.plan!;
     final owner = s.displayAgentId ?? 'snippet';
     final title = s.title.trim().isEmpty ? '(untitled)' : s.title.trim();
-    final text = '${_name(owner)} · $title, ${sessionStepLabel(plan)}';
-    final since = sessionDuration(plan.stepStartedAt ?? s.runningSince);
+    final plan = s.plan != null && s.plan!.total > 0 ? s.plan : null;
+    final total = plan?.total ?? 0;
+    final finished = plan != null && plan.current == null && plan.done >= total;
+    final parts = <String>[];
+    final goal = s.goal;
+    if (goal != null && goal.ongoing && goal.text.trim().isNotEmpty) {
+      parts.add('${goal.paused ? 'Goal paused' : 'Goal'} · ${goal.text.trim()}');
+    }
+    if (plan != null) {
+      final stepNum = finished ? total : (plan.done + 1).clamp(1, total);
+      final step = plan.current?.trim() ?? '';
+      final where = finished ? 'Plan done' : 'Step $stepNum of $total';
+      parts.add(step.isEmpty || finished || parts.isNotEmpty ? where : '$where · $step');
+    }
+    final lanes = s.lanes?.running ?? 0;
+    if (lanes > 0) parts.add(lanes == 1 ? '1 lane' : '$lanes lanes');
+    final detail = parts.isEmpty ? 'Working' : parts.join(' · ');
+    final since = sessionDuration(plan?.stepStartedAt ?? s.runningSince);
+    final tint = heroAgentColor(owner);
+    final label = '${_name(owner)}, $title, $detail';
     return _line(
       s,
       [
         _avatar(owner, 24, AgentCharacterState.working),
         SizedBox(width: S.s8),
         Expanded(
-          child: Text(text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(13, color: AppColors.fg1)),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: S.s4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(children: [
+                  Expanded(
+                    child: Text('${_name(owner)} · $title',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13, color: AppColors.fg1)),
+                  ),
+                  if (since.isNotEmpty) ...[
+                    SizedBox(width: S.s8),
+                    Text(since, style: mono(12, color: AppColors.fg3)),
+                  ],
+                ]),
+                SizedBox(height: S.s2),
+                Text(detail,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(12, color: AppColors.fg3)),
+                if (plan != null) SizedBox(height: S.s6),
+                if (plan != null)
+                  _PlanBar(
+                      done: finished ? total : plan.done,
+                      total: total,
+                      color: tint),
+              ],
+            ),
+          ),
         ),
-        if (since.isNotEmpty) ...[
-          SizedBox(width: S.s8),
-          Text(since, style: mono(12, color: AppColors.fg3)),
-          SizedBox(width: S.s4),
-        ],
+        SizedBox(width: S.s4),
       ],
-      text,
+      label,
     );
   }
 
@@ -523,6 +570,35 @@ class _PhoneHeroState extends State<PhoneHero> {
       ],
       text,
     );
+  }
+}
+
+/// Plan progress as one segment per step: done steps filled, the rest faint.
+class _PlanBar extends StatelessWidget {
+  const _PlanBar({required this.done, required this.total, required this.color});
+
+  final int done;
+  final int total;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = total.clamp(1, 12);
+    final filled = total <= 12 ? done : (done * 12 / total).round();
+    return Row(children: [
+      for (var i = 0; i < n; i++) ...[
+        if (i > 0) const SizedBox(width: 3),
+        Expanded(
+          child: Container(
+            height: 3,
+            decoration: BoxDecoration(
+              color: i < filled ? color : AppColors.fg1.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+      ],
+    ]);
   }
 }
 

@@ -414,19 +414,11 @@ class SessionListRow extends StatelessWidget {
     final branch = s.branch?.trim() ?? '';
     final attn = needsYou ? sessionAttentionState(s) : null;
     final noRepo = !showProject && branch.isEmpty && !s.isGit;
-    final plan = !settled && !needsYou && s.plan != null && s.plan!.total > 0
-        ? s.plan
-        : null;
-    final stepSince = plan != null
-        ? sessionDuration(plan.stepStartedAt ?? (working ? s.runningSince : null))
-        : '';
-    final lanesText = !settled ? sessionLanesLabel(s.lanes) : null;
     final pr = !settled ? s.pr : null;
     final wakeText = !settled && !working && !needsYou
         ? sessionWakeLabel(s.nextWakeAt)
         : null;
-    final hasExtraLine =
-        pr != null || lanesText != null || plan?.current != null || wakeText != null;
+    final hasExtraLine = pr != null || wakeText != null;
     final cameBackSummary =
         sessionCameBack(s) ? (s.resultSummary?.trim() ?? '') : '';
     final hasMeta = showProject ||
@@ -438,7 +430,7 @@ class SessionListRow extends StatelessWidget {
 
     final stateLabel = attn?.label ??
         (working
-            ? (plan != null ? sessionStepLabel(plan) : 'Working')
+            ? 'Working'
             : settled
                 ? 'Settled'
                 : null);
@@ -480,15 +472,6 @@ class SessionListRow extends StatelessWidget {
                   if (renameField == null && working) ...[
                     SizedBox(width: S.s8),
                     const WorkingDots(),
-                    SizedBox(width: S.of(5)),
-                    Text(
-                        plan != null
-                            ? (stepSince.isEmpty
-                                ? sessionStepLabel(plan)
-                                : '${sessionStepLabel(plan)} · $stepSince')
-                            : 'Working',
-                        maxLines: 1,
-                        style: (kMobile ? TS.meta : TS.caption)(AppColors.accent)),
                   ] else if (renameField == null && timeText.isNotEmpty) ...[
                     SizedBox(width: S.s8),
                     Text(timeText,
@@ -584,16 +567,6 @@ class SessionListRow extends StatelessWidget {
                     onMerge: onMergePr,
                     mobile: kMobile,
                   )
-                else if (lanesText != null)
-                  Text(lanesText,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TS.meta(AppColors.fg3))
-                else if (plan?.current != null)
-                  Text(plan!.current!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TS.meta(AppColors.fg3))
                 else if (wakeText != null)
                   Text(wakeText,
                       maxLines: 1,

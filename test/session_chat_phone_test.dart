@@ -113,7 +113,9 @@ void main() {
       ],
     });
     expect(find.byType(StageHeader), findsOneWidget);
-    expect(find.text('Rook · Run the goldens · plan 4/5'), findsOneWidget);
+    // Working shows as the moving character; the plan lives in the home hero.
+    expect(find.text('Rook'), findsOneWidget);
+    expect(find.textContaining('plan 4/5'), findsNothing);
     expect(find.text('2 lanes'), findsOneWidget);
     // Empty composer: the send button is Stop, so no separate Interrupt.
     expect(find.text('Interrupt'), findsNothing);

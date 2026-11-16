@@ -500,19 +500,15 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     final needsYou =
         s?.pendingQuestion != null || s?.status == 'waiting_for_input';
     final working = s?.status == 'running';
-    final plan = me.plan != null && me.plan!.total > 0 ? me.plan : null;
-    final step = plan?.current?.trim() ?? '';
+    // Working shows as the moving character; plan progress lives in the home hero.
     final state = needsYou
         ? 'waiting on you'
-        : working
-            ? (step.isNotEmpty ? step : 'working')
-            : s?.status == 'in_review'
-                ? 'in review'
-                : '';
+        : s?.status == 'in_review'
+            ? 'in review'
+            : '';
     final subtitle = [
       agent,
       if (state.isNotEmpty) state,
-      if (plan != null && !needsYou) sessionStepLabel(plan),
     ].join(' · ');
     final lanes = s?.lanes.where((l) => l.running).length ?? 0;
     return SizedBox(
@@ -533,7 +529,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
             ],
             title: _title.isEmpty ? 'Session' : _title,
             subtitle: subtitle,
-            subtitleDot: working && !needsYou ? AppColors.run : null,
             onTap: () => _openActionsDrawer(s),
             below: lanes > 0
                 ? StagePill(

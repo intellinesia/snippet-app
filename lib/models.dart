@@ -320,6 +320,9 @@ class SessionInfo {
   final int? nextWakeAt;
   final SessionPr? pr;
 
+  /// An active or paused /goal; older daemons omit it.
+  final GoalInfo? goal;
+
   /// The folder a person knows this session by: the project, not the
   /// generated worktree directory.
   String get projectFolder => originFolder ?? folder;
@@ -394,6 +397,9 @@ class SessionInfo {
         nextWakeAt = (j['next_wake_at'] as num?)?.toInt(),
         pr = j['pr'] is Map
             ? SessionPr.fromJson((j['pr'] as Map).cast<String, dynamic>())
+            : null,
+        goal = j['goal'] is Map
+            ? GoalInfo.fromJson((j['goal'] as Map).cast<String, dynamic>())
             : null;
 
   SessionInfo _copy({String? title, String? status, int? seenAt}) =>
@@ -429,6 +435,7 @@ class SessionInfo {
         lanes: lanes,
         nextWakeAt: nextWakeAt,
         pr: pr,
+        goal: goal,
       );
 
   SessionInfo withTitle(String title) => _copy(title: title);
@@ -472,6 +479,7 @@ class SessionInfo {
     this.lanes,
     this.nextWakeAt,
     this.pr,
+    this.goal,
   });
 }
 

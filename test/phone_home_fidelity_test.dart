@@ -202,10 +202,10 @@ void main() {
       // The hero's top card and the list section each carry a "Needs you" label.
       expect(find.text('Needs you'), findsNWidgets(2));
 
-      // The Now section holds all 3 attention sessions as live cards.
+      // The Now section holds all 3 attention sessions as ordinary rows.
       final nowLabel = find.widgetWithText(MobileSectionLabel, 'Needs you');
       expect(nowLabel, findsOneWidget);
-      expect(find.byType(LiveSessionCard), findsNWidgets(3));
+      expect(find.byType(LiveSessionCard), findsNothing);
 
       // alpha and beta have no remaining sessions, so no folder sections.
       expect(find.widgetWithText(MobileSectionLabel, 'alpha'), findsNothing);
@@ -216,29 +216,17 @@ void main() {
       expect(gammaHeader, findsOneWidget);
       expect(find.descendant(of: gammaHeader, matching: find.text('1')),
           findsOneWidget);
-      expect(find.byType(SessionListRow), findsOneWidget);
-      expect(
-          find.descendant(
-              of: find.byType(SessionListRow),
-              matching: find.text('Normal gamma')),
-          findsOneWidget);
-      expect(
-          find.descendant(
-              of: find.byType(LiveSessionCard),
-              matching: find.text('Normal gamma')),
-          findsNothing);
+      expect(find.byType(SessionListRow), findsNWidgets(4));
+      expect(find.text('Normal gamma'), findsOneWidget);
 
       expect(find.textContaining('Question'), findsWidgets);
       expect(find.textContaining('In review'), findsWidgets);
       expect(find.textContaining('Needs input'), findsWidgets);
 
-      // Project tags appear on live cards.
+      // Project tags appear on the Needs you rows.
       expect(find.text('alpha'), findsOneWidget);
       expect(find.text('beta'), findsOneWidget);
-      expect(
-          find.descendant(
-              of: find.byType(LiveSessionCard), matching: find.text('gamma')),
-          findsOneWidget);
+      expect(find.text('gamma'), findsNWidgets(2));
 
       // Every session has an owner, so rows show the owner's avatar rather
       // than the provider mark.
