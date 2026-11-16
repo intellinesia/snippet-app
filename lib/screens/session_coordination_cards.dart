@@ -5,6 +5,8 @@ import '../transcript_card.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../chat/chat_card.dart';
+import '../chat/signal_row.dart';
+import '../mochi.dart';
 import 'mission_control/mission_control_state.dart'
     show
         QuietWakeRun,
@@ -460,82 +462,45 @@ class _AutonomousRoundCardState extends State<AutonomousRoundCard> {
       ('Scheduled', r.scheduled),
     ].where((s) => s.$2.isNotEmpty).toList();
     final items = [for (final s in sections) ...s.$2.map(_plain)];
-    final summary = [
-      if (r.firstRound) 'switched on',
-      if (r.due.isNotEmpty) '${r.due.length} due',
-      if (r.changed.isNotEmpty) '${r.changed.length} changed',
-      if (r.open.isNotEmpty) '${r.open.length} open',
-      if (r.due.isEmpty && r.changed.isEmpty && r.open.isEmpty) 'nothing new',
-    ].join(' · ');
-    final meta = TranscriptCard.metaSize;
+    final summary = r.firstRound
+        ? 'Automated wakes switched on'
+        : r.due.isNotEmpty
+            ? '${r.due.length} due'
+            : r.changed.isNotEmpty
+                ? '${r.changed.length} changed'
+                : 'nothing new';
     final body = TranscriptCard.bodyStyle;
-    final more = items.length > 1;
-    final content = Padding(
-      padding: kMobile
-          ? EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.of(9)
-          )
-          : EdgeInsets.fromLTRB(S.s12, S.s6, S.s12, S.of(7)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(children: [
-            AppIcon('activity',
-                size: 12,
-                color: r.due.isNotEmpty ? AppColors.run : AppColors.fg3),
-            SizedBox(width: S.s6),
-            Expanded(
-              child: Text('Automated wake · $summary',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(meta, color: AppColors.fg3)),
-            ),
-            SizedBox(width: S.s8),
-            Text(_roundTime(r.time), style: sans(meta, color: AppColors.fg4)),
-          ]),
-          if (items.isNotEmpty && !_open)
+    final shown = r.due.isNotEmpty
+        ? r.due.first
+        : r.changed.isNotEmpty
+            ? r.changed.first
+            : '';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SignalRow(
+          icon: 'clock',
+          tone: r.due.isNotEmpty ? SignalTone.run : SignalTone.neutral,
+          text: 'Woke on schedule \u00b7 $summary',
+          sub: shown.isEmpty ? null : _plain(shown),
+          time: _roundTime(r.time),
+          onTap: items.isEmpty ? null : () => setState(() => _open = !_open),
+        ),
+        if (_open)
+          for (final (label, list) in sections) ...[
             Padding(
-              padding: EdgeInsets.only(left: S.of(18), top: S.s2),
-              child: Text.rich(
-                TextSpan(children: [
-                  TextSpan(text: items.first),
-                  if (more)
-                    TextSpan(
-                        text: '  +${items.length - 1}',
-                        style: body.copyWith(color: AppColors.fg4)),
-                ]),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: body,
-              ),
+              padding: EdgeInsets.only(left: S.of(28), top: S.s4),
+              child: Text(label,
+                  style: sans(TranscriptCard.metaSize,
+                      weight: W.label, color: AppColors.fg4)),
             ),
-          if (_open)
-            for (final (label, list) in sections) ...[
+            for (final item in list)
               Padding(
-                padding: EdgeInsets.only(left: S.of(18), top: S.s4),
-                child: Text(label,
-                    style: sans(meta, weight: W.label, color: AppColors.fg4)),
+                padding: EdgeInsets.only(left: S.of(28), top: S.s2),
+                child: SelectableText(_plain(item), style: body),
               ),
-              for (final item in list)
-                Padding(
-                  padding: EdgeInsets.only(left: S.of(18), top: S.s2),
-                  child: SelectableText(_plain(item), style: body),
-                ),
-            ],
-        ],
-      ),
-    );
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: S.of(3)),
-      child: Material(
-        color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(R.card),
-        clipBehavior: Clip.antiAlias,
-        child: items.isEmpty
-            ? content
-            : InkWell(
-                onTap: () => setState(() => _open = !_open), child: content),
-      ),
+          ],
+      ],
     );
   }
 }
@@ -567,61 +532,33 @@ class _QuietWakesRowState extends State<QuietWakesRow> {
   Widget build(BuildContext context) {
     final wakes = widget.run.wakes;
     final meta = TranscriptCard.metaSize;
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: S.of(3)),
-      child: Material(
-        color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(R.card),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SignalRow(
+          icon: 'clock',
+          text: wakes.length == 1
+              ? 'Woke on schedule \u00b7 nothing new'
+              : 'Woke ${wakes.length} times \u00b7 nothing new',
+          time: _span,
           onTap: () => setState(() => _open = !_open),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 40),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
+        ),
+        if (_open)
+          for (final wake in wakes)
+            Padding(
+              padding: EdgeInsets.only(left: S.of(28), top: S.s4, bottom: S.s4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(children: [
-                    AppIcon('activity', size: 12, color: AppColors.fg3),
-                    SizedBox(width: S.s6),
-                    Expanded(
-                      child: Text(
-                          wakes.length == 1
-                              ? 'Quiet wake'
-                              : '${wakes.length} quiet wakes',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(meta, color: AppColors.fg3)),
-                    ),
-                    SizedBox(width: S.s8),
-                    Text(_span, style: sans(meta, color: AppColors.fg4)),
-                    SizedBox(width: S.s4),
-                    AppIcon(_open ? 'chevron-down' : 'chevron-right',
-                        size: 12, color: AppColors.fg4),
-                  ]),
-                  if (_open)
-                    for (final wake in wakes)
-                      Padding(
-                        padding: EdgeInsets.only(left: S.of(18), top: S.s8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(_roundTime(wake.time),
-                                style: sans(meta, color: AppColors.fg4)),
-                            SizedBox(height: S.s2),
-                            SelectableText(_plain(wake.reply),
-                                style: TranscriptCard.bodyStyle),
-                          ],
-                        ),
-                      ),
+                  Text(_roundTime(wake.time),
+                      style: sans(meta, color: AppColors.fg4)),
+                  SizedBox(height: S.s2),
+                  SelectableText(_plain(wake.reply),
+                      style: TranscriptCard.bodyStyle),
                 ],
               ),
             ),
-          ),
-        ),
-      ),
+      ],
     );
   }
 }
@@ -661,6 +598,9 @@ class AgentMessageCard extends StatelessWidget {
     required this.body,
     required this.outbound,
     this.laneTitle,
+    this.meId,
+    this.meName,
+    this.time,
   });
 
   final String agentId;
@@ -668,22 +608,116 @@ class AgentMessageCard extends StatelessWidget {
   final bool outbound;
   final String? laneTitle;
 
+  /// This session's own agent, for the "Me to Them" label.
+  final String? meId;
+  final String? meName;
+  final String? time;
+
   @override
   Widget build(BuildContext context) {
     final lane = agentId.startsWith('lane ');
-    final given = laneTitle?.trim() ?? '';
-    final laneName = given.isNotEmpty
-        ? given
-        : (lane ? agentId.substring(5).trim() : agentId);
-    final who = lane ? 'Lane · $laneName' : agentId;
-    return _ThreadCard(
-      icon: outbound ? 'send' : (lane ? 'message' : 'corner-down-right'),
-      tone: outbound ? Tone.neutral : Tone.accent,
-      kind: outbound
-          ? 'To ${lane ? who : agentId}'
-          : (lane ? who : 'Message from $agentId'),
-      status: outbound ? 'Sent' : null,
-      body: body,
+    if (lane) {
+      final given = laneTitle?.trim() ?? '';
+      final laneName = given.isNotEmpty ? given : agentId.substring(5).trim();
+      return _ThreadCard(
+        icon: outbound ? 'send' : 'message',
+        tone: outbound ? Tone.neutral : Tone.accent,
+        kind: outbound ? 'To Lane \u00b7 $laneName' : 'Lane \u00b7 $laneName',
+        status: outbound ? 'Sent' : null,
+        body: body,
+      );
+    }
+    return AgentNamesBuilder(builder: (context, names) {
+      final them = agentDisplayName(agentId, names);
+      final meKey = meId?.trim() ?? '';
+      final me = (meName?.trim().isNotEmpty ?? false)
+          ? meName!.trim()
+          : (meKey.isEmpty ? '' : agentDisplayName(meKey, names));
+      final env = parseCoordinationEnvelope(body);
+      if (env != null) {
+        final sender = outbound ? (me.isEmpty ? 'You' : me) : them;
+        final sig = envelopeSignal(env, sender);
+        return SignalRow(
+          icon: sig.icon,
+          tone: sig.tone,
+          leading: outbound && meKey.isEmpty
+              ? null
+              : AgentMochi(outbound ? meKey : agentId, size: 20),
+          text: sig.text,
+          sub: sig.sub,
+          time: time,
+        );
+      }
+      return _AgentBubble(
+        id: outbound ? meKey : agentId,
+        label: outbound ? (me.isEmpty ? 'To $them' : '$me to $them') : them,
+        body: body,
+        outbound: outbound,
+      );
+    });
+  }
+}
+
+class _AgentBubble extends StatelessWidget {
+  const _AgentBubble(
+      {required this.id,
+      required this.label,
+      required this.body,
+      required this.outbound});
+
+  final String id;
+  final String label;
+  final String body;
+  final bool outbound;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.only(
+      topLeft: Radius.circular(R.of(18)),
+      topRight: Radius.circular(R.of(18)),
+      bottomLeft: Radius.circular(outbound ? R.of(18) : R.sm),
+      bottomRight: Radius.circular(outbound ? R.sm : R.of(18)),
+    );
+    final bubble = Container(
+      padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
+      decoration: BoxDecoration(
+        color: outbound ? AppColors.accentBg : AppColors.surface2,
+        borderRadius: radius,
+      ),
+      child: CardMarkdownBody(body: body, collapsible: true),
+    );
+    final col = Column(
+      crossAxisAlignment:
+          outbound ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s2),
+          child: Text(label, style: sans(12, color: AppColors.fg3)),
+        ),
+        bubble,
+      ],
+    );
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: S.s4),
+      child: LayoutBuilder(builder: (context, box) {
+        final cap = (box.maxWidth.isFinite ? box.maxWidth * 0.8 : 560.0)
+            .clamp(0.0, 600.0);
+        final avatar =
+            id.isEmpty ? const SizedBox.shrink() : AgentMochi(id, size: 28);
+        return Row(
+          mainAxisAlignment:
+              outbound ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (!outbound) ...[avatar, SizedBox(width: S.s8)],
+            Flexible(
+                child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: cap), child: col)),
+            if (outbound && id.isNotEmpty) ...[SizedBox(width: S.s8), avatar],
+          ],
+        );
+      }),
     );
   }
 }
@@ -787,9 +821,10 @@ class _AmbientTurnCardState extends State<AmbientTurnCard> {
               onTap: _hasDetail ? () => setState(() => _open = !_open) : null,
               child: Container(
                 padding: kMobile
-                    ? EdgeInsets.fromLTRB(S.of(15), S.of(10), S.of(15), S.of(11)
-                    )
-                    : EdgeInsets.fromLTRB(S.of(14), S.of(9), S.of(14), S.of(10)),
+                    ? EdgeInsets.fromLTRB(
+                        S.of(15), S.of(10), S.of(15), S.of(11))
+                    : EdgeInsets.fromLTRB(
+                        S.of(14), S.of(9), S.of(14), S.of(10)),
                 decoration: BoxDecoration(
                   color: AppColors.surface2,
                   borderRadius: kMobile
@@ -882,26 +917,14 @@ class WatchEnvelopeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final error = watch.event == 'error';
     final n = watch.lines.length;
-    final status = error
-        ? 'Failing'
-        : n == 1
-            ? '1 new line'
-            : '$n new lines';
-    return TranscriptCard(
+    final first = watch.lines.isEmpty ? '' : watch.lines.first.trim();
+    return SignalRow(
       icon: error ? 'alert-triangle' : 'eye',
-      tone: error ? Tone.danger : Tone.accent,
-      kind: watch.mode.isEmpty ? 'Watch' : 'Watch · ${watch.mode}',
-      title: watch.name,
-      status: status,
-      body: watch.lines.join('\n'),
-      maxLines: 4,
-      footer: watch.held > 0
-          ? Text('${watch.held} held during quiet hours or the daily cap',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(TranscriptCard.metaSize,
-                  height: 1.35, color: AppColors.fg4))
-          : null,
+      tone: error ? SignalTone.danger : SignalTone.accent,
+      text: error
+          ? '**${watch.name}** is failing'
+          : '**${watch.name}** updated \u00b7 $n new ${n == 1 ? 'line' : 'lines'}',
+      sub: first.length > 100 ? '${first.substring(0, 99)}\u2026' : first,
     );
   }
 }
@@ -911,11 +934,9 @@ class WakeNoteCard extends StatelessWidget {
   final String note;
 
   @override
-  Widget build(BuildContext context) => _ThreadCard(
+  Widget build(BuildContext context) => SignalRow(
         icon: 'clock',
-        tone: Tone.neutral,
-        kind: 'Scheduled wake',
-        status: 'Due',
-        body: note,
+        text: 'Woke on a note it left itself',
+        sub: note,
       );
 }

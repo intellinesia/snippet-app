@@ -49,7 +49,7 @@ void main() {
     await _pump(tester, CollapsedActivity(_rows()));
 
     final summary =
-        find.text('Edited f0.dart and f1.dart · ran echo', findRichText: true);
+        find.text('Edited f0.dart and f1.dart, ran echo', findRichText: true);
     expect(summary, findsOneWidget);
     final text = tester.widget<Text>(find.ancestor(
         of: summary,
@@ -58,8 +58,8 @@ void main() {
     expect(text.style?.color, AppColors.fg3);
     expect(text.style?.fontSize, 14);
 
-    // 14px chevron slot + 8px gap puts the summary at x = 22.
-    expect(tester.getTopLeft(summary).dx, closeTo(22, 0.5));
+    // 16px chevron slot + 8px gap puts the summary at x = 24.
+    expect(tester.getTopLeft(summary).dx, closeTo(24, 0.5));
 
     expect(find.text('Show'), findsNothing);
     expect(find.text('Hide'), findsNothing);
@@ -80,7 +80,7 @@ void main() {
     await _pump(tester, CollapsedActivity(_rows()));
 
     await tester.tap(
-        find.text('Edited f0.dart and f1.dart · ran echo', findRichText: true));
+        find.text('Edited f0.dart and f1.dart, ran echo', findRichText: true));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -89,7 +89,7 @@ void main() {
     expect(find.text('Hide'), findsNothing);
 
     await tester.tap(
-        find.text('Edited f0.dart and f1.dart · ran echo', findRichText: true));
+        find.text('Edited f0.dart and f1.dart, ran echo', findRichText: true));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -97,7 +97,7 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('work summary shows test excerpt when collapsed and command '
+  testWidgets('work summary shows outcome when collapsed and command '
       'duration when expanded', (tester) async {
     _usePhone();
     await _pump(
@@ -134,7 +134,7 @@ void main() {
     );
 
     final summary = find.text(
-      'Read a.dart, edited a.dart · ran flutter test · All tests passed!',
+      'Read a.dart, edited a.dart, ran flutter test passed',
       findRichText: true,
     );
     expect(summary, findsOneWidget);
@@ -144,12 +144,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(DenseToolRow), findsNWidgets(3));
-    await tester.tap(find.text('Ran flutter test test/work_notes_test.dart',
+    await tester.tap(find.text('flutter test test/work_notes_test.dart',
         findRichText: true));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('1.4s'), findsOneWidget);
+    expect(find.text('1.4s'), findsWidgets);
     debugDefaultTargetPlatformOverride = null;
   });
 }

@@ -64,10 +64,10 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('lean continuation shows a divider', (tester) async {
+  testWidgets('lean continuation shows a signal row', (tester) async {
     await tester.pumpWidget(const MaterialApp(
       home: Scaffold(body: SystemRow(step: 'continued_lean', reasoning: '')),
     ));
-    expect(find.textContaining('Continued lean'), findsOneWidget);
+    expect(find.text('Earlier history archived to keep it lean'), findsOneWidget);
   });
 }

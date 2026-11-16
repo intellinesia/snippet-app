@@ -1220,20 +1220,20 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
             icon: 'layers',
             label: 'Lanes',
             detail: runningLanes > 0
-                ? '$runningLanes working in the background'
-                : 'Background work, finished',
+                ? '$runningLanes running'
+                : 'All finished',
             onTap: widget.onLanes),
       if (widget.onWakes != null)
         SessionFaceTile(
             icon: 'calendar-clock',
-            label: 'Wakes and keep warm',
-            detail: 'Scheduled wakes and prompt cache',
+            label: 'Wakes',
+            detail: 'Schedule, keep warm',
             onTap: widget.onWakes!),
       if (widget.onFork != null)
         SessionFaceTile(
             icon: 'git-branch',
-            label: 'Fork from here',
-            detail: 'A new session from this point',
+            label: 'Fork',
+            detail: 'From this point',
             onTap: widget.onFork!),
     ];
 
@@ -1367,12 +1367,12 @@ class SessionFaceTile extends StatelessWidget {
                 AppIcon(icon, size: 17, color: AppColors.accent),
                 SizedBox(height: S.s8),
                 Text(label,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: sans(14, weight: W.label, color: AppColors.fg1)),
                 SizedBox(height: S.s2),
                 Text(detail,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: sans(12, color: AppColors.fg3)),
               ],

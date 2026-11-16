@@ -160,7 +160,7 @@ void main() {
         result: {'data': {'exit_code': 0}},
       ),
     ]);
-    expect(summary, 'Ran 2 commands · edited 3 files');
+    expect(summary, 'Edited 3 files, searched 1 time, ran pwd');
   });
 
   testWidgets('CollapsedActivity collapses consecutive tools and expands in place',
@@ -192,7 +192,7 @@ void main() {
     ));
     await tester.pump();
 
-    final summary = find.text('Edited a.dart · ran echo',
+    final summary = find.text('Edited a.dart, ran echo',
         findRichText: true);
     expect(summary, findsOneWidget);
     expect(find.text('Show'), findsNothing);
@@ -356,7 +356,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(
-          find.text('Edited a.dart, b.dart and c.dart · ran echo',
+          find.text('Edited 3 files, ran echo',
               findRichText: true),
           findsOneWidget);
       expect(find.text('Running flutter analyze', findRichText: true),
@@ -365,7 +365,7 @@ void main() {
       expect(find.text('Show'), findsNothing);
 
       await tester.tap(find.text(
-          'Edited a.dart, b.dart and c.dart · ran echo',
+          'Edited 3 files, ran echo',
           findRichText: true));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));

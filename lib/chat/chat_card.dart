@@ -5,6 +5,29 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
+/// The asking agent's colour for a card's primary button and selections.
+class ChatCardAccent extends InheritedWidget {
+  const ChatCardAccent({super.key, required this.color, required super.child});
+
+  final Color? color;
+
+  static Color of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ChatCardAccent>()?.color ??
+      AppColors.accent;
+
+  static Color inkOf(BuildContext context) {
+    final set =
+        context.dependOnInheritedWidgetOfExactType<ChatCardAccent>()?.color;
+    if (set == null) return AppColors.accentFg;
+    return set.computeLuminance() > 0.45
+        ? const Color(0xFF14141A)
+        : Colors.white;
+  }
+
+  @override
+  bool updateShouldNotify(ChatCardAccent old) => old.color != color;
+}
+
 /// Shared parts for cards that sit in a chat: artifacts, approvals and
 /// questions. One shell, one headline, one quiet meta line, at most one solid
 /// button.
@@ -37,25 +60,25 @@ class ChatCard extends StatelessWidget {
           child: Tactile(
             radius: BorderRadius.circular(R.of(16)),
             child: Container(
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: AppColors.surface1,
-              borderRadius: BorderRadius.circular(R.of(16)),
-              border: Border.all(color: AppColors.lineStrong),
-            ),
-            // Own Material so row hovers paint inside the rounded clip.
-            child: Material(
-              type: MaterialType.transparency,
-              child: Opacity(
-                opacity: dimmed ? 0.85 : 1,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: children,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: AppColors.surface1,
+                borderRadius: BorderRadius.circular(R.of(16)),
+                border: Border.all(color: AppColors.lineStrong),
+              ),
+              // Own Material so row hovers paint inside the rounded clip.
+              child: Material(
+                type: MaterialType.transparency,
+                child: Opacity(
+                  opacity: dimmed ? 0.85 : 1,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: children,
+                  ),
                 ),
               ),
             ),
-          ),
           ),
         ),
       );
@@ -221,9 +244,8 @@ class ChatCardActions extends StatelessWidget {
                   child: Text(link!,
                       textAlign: TextAlign.center,
                       style: sans(13,
-                          color: onLink == null
-                              ? AppColors.fg4
-                              : AppColors.fg3)),
+                          color:
+                              onLink == null ? AppColors.fg4 : AppColors.fg3)),
                 ),
               ),
             ),
@@ -255,9 +277,8 @@ extension on ChatCardActions {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(12,
-                          color: onLink == null
-                              ? AppColors.fg4
-                              : AppColors.fg3)),
+                          color:
+                              onLink == null ? AppColors.fg4 : AppColors.fg3)),
                 ),
               ),
             ),
@@ -286,9 +307,9 @@ class _ChatCardPill extends StatelessWidget {
     final enabled = b.onTap != null && !b.busy;
     final (bg, fg, border) = switch (b.kind) {
       ChatCardButtonKind.primary => (
-          AppColors.accent,
-          AppColors.accentFg,
-          AppColors.accent
+          ChatCardAccent.of(context),
+          ChatCardAccent.inkOf(context),
+          ChatCardAccent.of(context)
         ),
       ChatCardButtonKind.secondary => (
           Colors.transparent,
@@ -318,9 +339,8 @@ class _ChatCardPill extends StatelessWidget {
             child: Container(
               height: h,
               alignment: kMobile ? Alignment.center : null,
-              padding: kMobile
-                  ? null
-                  : const EdgeInsets.symmetric(horizontal: 12),
+              padding:
+                  kMobile ? null : const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: bg,
                 borderRadius: BorderRadius.circular(h / 2),
@@ -388,11 +408,11 @@ class ChatCardPill extends StatelessWidget {
         border: filled
             ? null
             : Border.all(
-                color: neutral ? AppColors.lineStrong : c.withValues(alpha: 0.35)),
+                color:
+                    neutral ? AppColors.lineStrong : c.withValues(alpha: 0.35)),
       ),
       child: Text(text,
-          maxLines: 1,
-          style: sans(12, color: filled ? AppColors.fg2 : c)),
+          maxLines: 1, style: sans(12, color: filled ? AppColors.fg2 : c)),
     );
   }
 }
@@ -425,21 +445,22 @@ class ChatCardOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = ChatCard.pad;
+    final accent = ChatCardAccent.of(context);
     final mark = multi
         ? AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             width: 20,
             height: 20,
             decoration: BoxDecoration(
-              color: selected ? AppColors.accent : Colors.transparent,
+              color: selected ? accent : Colors.transparent,
               borderRadius: BorderRadius.circular(R.sm),
               border: Border.all(
-                  color: selected ? AppColors.accent : AppColors.lineStrong,
-                  width: 1.5),
+                  color: selected ? accent : AppColors.lineStrong, width: 1.5),
             ),
             child: selected
                 ? Center(
-                    child: AppIcon('check', size: 13, color: AppColors.accentFg))
+                    child: AppIcon('check',
+                        size: 13, color: ChatCardAccent.inkOf(context)))
                 : null,
           )
         : AnimatedContainer(
@@ -449,7 +470,7 @@ class ChatCardOption extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                  color: selected ? AppColors.accent : AppColors.lineStrong,
+                  color: selected ? accent : AppColors.lineStrong,
                   width: selected ? 6 : 1.5),
             ),
           );
@@ -594,7 +615,8 @@ class ChatCardFooter extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: divider
-            ? BoxDecoration(border: Border(top: BorderSide(color: AppColors.line)))
+            ? BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.line)))
             : null,
         padding: EdgeInsets.symmetric(horizontal: p, vertical: S.s12),
         child: Row(children: [

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../chat/chat_card.dart';
 import '../chat/decided_card.dart';
+import '../mochi.dart';
 import '../models.dart';
 import '../session_quick_send.dart';
 import '../theme.dart';
@@ -252,9 +253,8 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
       };
     }
     if (raw is Map) {
-      final v = (raw['value'] ?? raw['label'] ?? raw['text'] ?? '')
-          .toString()
-          .trim();
+      final v =
+          (raw['value'] ?? raw['label'] ?? raw['text'] ?? '').toString().trim();
       return v.isEmpty ? const {} : {v};
     }
     final s = '$raw'.trim();
@@ -432,6 +432,16 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
 
   @override
   Widget build(BuildContext context) {
+    final e = widget.event;
+    return ChatCardAccent(
+      color: e.actorKind == 'agent' && e.actorId.isNotEmpty
+          ? agentTintFor(e.actorId)
+          : null,
+      child: Builder(builder: _build),
+    );
+  }
+
+  Widget _build(BuildContext context) {
     final qs = _questions;
     if (qs.isEmpty) return const SizedBox.shrink();
     final st = _resolve();
@@ -455,7 +465,8 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
       final ans = '${decision?['answer'] ?? ''}'.trim();
       return DecidedCard(
         kind: DecidedKind.answered,
-        title: qs.length > 1 ? '${qs.length} questions' : _questionText(qs.first),
+        title:
+            qs.length > 1 ? '${qs.length} questions' : _questionText(qs.first),
         subtitle: ans.isEmpty ? null : ans,
       );
     }
@@ -464,6 +475,19 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     if (answered) {
       final skipped = _wasSkipped(st.answers, st.body);
       return _resolved(qs, st.answers, skipped);
+    }
+    // A relayed question whose session has moved on can no longer be answered.
+    final asker = _session.isEmpty ? null : knownSessions[_session];
+    if (asker != null &&
+        asker.status != 'waiting_for_input' &&
+        asker.attention == null &&
+        !_sending &&
+        _sentAnswers == null) {
+      return DecidedCard(
+        kind: DecidedKind.outdated,
+        title: _questionText(qs.first),
+        subtitle: 'No longer waiting on this',
+      );
     }
     final closed = st.closed || _locked;
     final interactive = !closed && !_sending;
@@ -478,9 +502,8 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
     final canSend = interactive && _allAnswered;
     return ChatCard(children: [
       ChatCardHeader(
-        eyebrow: qs.length > 1
-            ? ChatCardSteps(index: step, total: qs.length)
-            : null,
+        eyebrow:
+            qs.length > 1 ? ChatCardSteps(index: step, total: qs.length) : null,
         title: _questionText(q),
         subtitle: subtitle,
         trailing: closed ? const ChatCardPill('Closed') : null,
@@ -497,13 +520,16 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
             if (step > 0)
               ChatCardButton('Back',
                   kind: ChatCardButtonKind.secondary,
-                  onTap: interactive ? () => setState(() => _step = step - 1) : null),
+                  onTap: interactive
+                      ? () => setState(() => _step = step - 1)
+                      : null),
             if (last)
               ChatCardButton('Send',
                   busy: _sending, onTap: canSend ? _send : null)
             else
               ChatCardButton('Next',
-                  onTap: canNext ? () => setState(() => _step = step + 1) : null),
+                  onTap:
+                      canNext ? () => setState(() => _step = step + 1) : null),
           ],
           link: 'Skip',
           onLink: interactive ? _skip : null,
@@ -613,7 +639,6 @@ class _AgentQuestionsCardState extends State<AgentQuestionsCard> {
   }
 }
 
-
 /// The centred line a relayed-question answer collapses to in the thread, or
 /// null when [e] is an ordinary message. The question card already shows the
 /// answer, so the composed "question\n→ answer" text must not echo as a bubble.
@@ -654,7 +679,11 @@ class QuestionCardV5 extends StatelessWidget {
   Widget build(BuildContext context) {
     final side = meta != null && meta!.isNotEmpty
         ? meta!
-        : (count == null ? '' : count! > 1 ? '$count questions' : '1 of 1');
+        : (count == null
+            ? ''
+            : count! > 1
+                ? '$count questions'
+                : '1 of 1');
     return ChatCard(children: [
       ChatCardHeader(
         title: label,

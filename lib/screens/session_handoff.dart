@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../models.dart';
 import '../mochi.dart';
-import '../platform.dart';
+import '../morph_sheet.dart';
 import '../theme.dart';
 import '../widgets.dart';
+
+// Re-exported so the session part files reach them through this one import.
+export '../morph_sheet.dart' show globalRectOf, lastChipOrigin;
+export 'session_fork.dart' show showForkSheet;
 
 /// "Hand off to" picker: the session's active agents (minus the current
 /// owner), an optional note, and the Hand off button. Works as a phone sheet
@@ -134,19 +138,16 @@ class _SessionHandOffSheetState extends State<SessionHandOffSheet> {
             ),
           )
         else ...[
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 260),
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                for (final a in _agents) _agentRow(a),
-              ],
-            ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
+              for (final a in _agents) _tile(a),
+            ]),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           AppField(
             controller: _note,
-            hint: 'Note for the new owner (optional)',
+            hint: 'Note for ${_pickedName ?? 'the new owner'} (optional)',
             minLines: 1,
             maxLines: 3,
           ),
@@ -155,9 +156,8 @@ class _SessionHandOffSheetState extends State<SessionHandOffSheet> {
             Text(_error!, style: TS.meta(AppColors.danger)),
           ],
           const SizedBox(height: 12),
-          Btn('Hand off',
+          Btn(_pickedName == null ? 'Hand off' : 'Hand to $_pickedName',
               full: true,
-              icon: 'send',
               disabled: _selected == null || _busy,
               onTap: _busy ? null : _handOff),
         ],
@@ -165,42 +165,78 @@ class _SessionHandOffSheetState extends State<SessionHandOffSheet> {
     );
   }
 
-  Widget _agentRow(CoordinationAgent a) {
+  String? get _pickedName =>
+      _agents.where((a) => a.id == _selected).firstOrNull?.displayName;
+
+  /// Character state and the short word under the name; unknown presence
+  /// shows no word.
+  (AgentCharacterState, String?) _stateOf(CoordinationAgent a) {
+    final p = a.presence;
+    if (p == null) return (AgentCharacterState.idle, null);
+    if (p.active) return (AgentCharacterState.working, 'working');
+    final since = p.since;
+    final recent =
+        since != null && DateTime.now().difference(since).inMinutes < 10;
+    return recent
+        ? (AgentCharacterState.idle, 'free')
+        : (AgentCharacterState.sleeping, 'asleep');
+  }
+
+  Widget _tile(CoordinationAgent a) {
     final selected = _selected == a.id;
-    final role = a.capabilities.isEmpty
-        ? (a.kind.isEmpty ? 'agent' : a.kind)
-        : a.capabilities.take(2).join(' · ');
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(
+    final (state, word) = _stateOf(a);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: a.displayName,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: _busy ? null : () => setState(() => _selected = a.id),
         child: Container(
-          constraints: BoxConstraints(minHeight: kMobile ? 56 : 44),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-          child: Row(children: [
-          AgentMochi(a.id, size: kMobile ? 26 : 22),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(a.displayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TS.rowTitle()),
-                Text(role,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TS.meta()),
-              ],
-            ),
+          width: 76,
+          constraints: const BoxConstraints(minHeight: 44),
+          margin: const EdgeInsets.only(right: 8),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.accentBg : Colors.transparent,
+            borderRadius: BorderRadius.circular(R.md),
+            border: Border.all(
+                color: selected ? AppColors.accent : AppColors.border),
           ),
-            if (selected)
-              AppIcon('check', size: 16, color: AppColors.accent),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            AgentMochi(a.id, size: 40, state: state),
+            const SizedBox(height: 6),
+            Text(a.displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(12, weight: W.label, color: AppColors.fg1)),
+            if (word != null)
+              Text(word, style: sans(11, color: AppColors.fg3)),
           ]),
         ),
       ),
     );
   }
 }
+
+/// Opens the hand-off sheet, growing out of [origin] on phones.
+Future<void> showHandOffSheet(
+  BuildContext context, {
+  required DaemonClient client,
+  required String sessionId,
+  String? ownerId,
+  void Function(String name, bool pending)? onHandedOff,
+  Rect? origin,
+}) =>
+    showMorphSheet<void>(
+      context,
+      title: 'Hand off to',
+      subtitle: 'They take this session after the current turn.',
+      origin: origin,
+      builder: (_) => SessionHandOffSheet(
+        client: client,
+        sessionId: sessionId,
+        ownerId: ownerId,
+        onHandedOff: onHandedOff,
+      ),
+    );

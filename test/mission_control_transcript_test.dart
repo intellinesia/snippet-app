@@ -156,10 +156,12 @@ void main() {
         ),
       ),
     ));
-    expect(find.text('2 quiet wakes'), findsOneWidget);
+    expect(find.text('Woke 2 times \u00b7 nothing new', findRichText: true),
+        findsOneWidget);
     expect(find.text('Thu 09:58 to 18:58'), findsOneWidget);
     expect(find.text('Still quiet.'), findsNothing);
-    await tester.tap(find.text('2 quiet wakes'));
+    await tester.tap(
+        find.text('Woke 2 times \u00b7 nothing new', findRichText: true));
     await tester.pump();
     expect(find.text('Still quiet.'), findsOneWidget);
   });

@@ -9,6 +9,21 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     String? pendingKey;
     final eventOccurrences = <String, int>{};
     final laneRowsShown = <String>{}; // spawn cards already emitted (by id)
+    final laneGrouped = <int>{}; // spawn events folded into an earlier card
+    final laneEnds = <String, Map<String, dynamic>>{};
+    for (final e in events) {
+      final kind = e['kind'];
+      if (kind == 'lane_completed' || kind == 'lane_cancelled') {
+        laneEnds[_s(e['id'])] = e;
+      }
+    }
+    String? laneEndStatus(String id) {
+      final end = laneEnds[id];
+      if (end == null) return null;
+      final st = _s(end['status']);
+      if (st.isNotEmpty) return st;
+      return end['kind'] == 'lane_cancelled' ? 'cancelled' : 'completed';
+    }
 
     String eventKey(Map<String, dynamic> event) {
       // Use the stable fields that identify a transcript event instead of
@@ -406,6 +421,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             addEvent(key, NoteLine(voiceNote));
             break;
           }
+          ensureAgentNames(widget.client);
           addEvent(
               key,
               AgentMessageCard(
@@ -413,6 +429,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                 body: _s(e['body']),
                 outbound: e['outbound'] == true,
                 laneTitle: laneTitleFor(_s(e['agent_id'])),
+                meId: _me?.displayAgentId,
+                meName: _meAgentName,
+                time: formatEventTime(e['at'] ?? e['created_at']),
               ));
         case 'model_error':
           endTools(key);
@@ -435,28 +454,72 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             }
             break;
           }
-          addEvent(key,
-              NoteLine(msg, error: true, label: 'Model error', count: count));
+          final firstLine = msg.split('\n').first.trim();
+          final shortMsg = firstLine.length > 90
+              ? '${firstLine.substring(0, 89)}\u2026'
+              : firstLine;
+          addEvent(
+              key,
+              Builder(
+                builder: (ctx) => SignalRow(
+                  icon: 'alert-triangle',
+                  tone: SignalTone.danger,
+                  text: '${shortMsg.isEmpty ? 'Model error' : shortMsg}'
+                      '${count > 1 ? ' \u00d7$count' : ''}',
+                  time: formatEventTime(e['at'] ?? e['created_at']),
+                  action: 'Details',
+                  actionTone: SignalTone.danger,
+                  onAction: () =>
+                      showSignalDetails(ctx, title: 'Model error', body: msg),
+                ),
+              ));
         case 'profile_switched':
           endTools(key);
           addEvent(
               key,
-              NoteLine(
-                  '${_s(e['from'])} hit its usage limit. Continuing on ${_s(e['to'])}.',
-                  icon: 'transfer'));
+              SignalRow(
+                icon: 'transfer',
+                tone: SignalTone.run,
+                text: '**${prettyProfile(_s(e['from']))}** hit its limit'
+                    ' \u00b7 now on **${prettyProfile(_s(e['to']))}**',
+                time: formatEventTime(e['at'] ?? e['created_at']),
+              ));
         case 'session_handoff':
           endTools(key);
+          ensureAgentNames(widget.client);
           addEvent(key, HandoffNotice(event: e));
+        case 'task_dispatched':
+          endTools(key);
+          ensureAgentNames(widget.client);
+          final by = _s(e['by']);
+          final title = _s(e['title']).trim();
+          addEvent(
+              key,
+              AgentNamesBuilder(
+                builder: (_, names) => SignalRow(
+                  icon: 'send',
+                  tone: SignalTone.accent,
+                  leading: by.isEmpty
+                      ? null
+                      : AgentMochi(by.replaceFirst('agent:', ''), size: 20),
+                  text: '**${agentDisplayName(by, names)}** dispatched '
+                      '${title.isEmpty ? 'a task' : '**$title**'}',
+                  time: formatEventTime(e['at'] ?? e['created_at']),
+                ),
+              ));
         case 'limit_wait':
           endTools(key);
           final at = (e['resets_at'] as num?)?.toInt() ?? 0;
           addEvent(
               key,
-              NoteLine(
-                  at > 0
-                      ? 'Waiting for ${_s(e['profile'])} to reset at ${limitLabel(at)}.'
-                      : 'Waiting for ${_s(e['profile'])} to reset.',
-                  icon: 'clock'));
+              SignalRow(
+                icon: 'clock',
+                tone: SignalTone.run,
+                text: at > 0
+                    ? 'Waiting for **${prettyProfile(_s(e['profile']))}** to reset at ${limitLabel(at)}'
+                    : 'Waiting for **${prettyProfile(_s(e['profile']))}** to reset',
+                time: formatEventTime(e['at'] ?? e['created_at']),
+              ));
         case 'limit_reached':
           endTools(key);
           const later = {
@@ -493,20 +556,15 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             addEvent(key, _PlanCard(steps, _s(e['explanation'])));
           }
         case 'system_decision':
-          final watch = _watchArgs(_s(e['step']), _s(e['reasoning']));
-          if (watch != null) {
-            flushPending(key);
-            addToolRow(
-                toolRow(key,
-                    tool: 'monitor', args: watch, result: const {'ok': true}),
-                key);
-            break;
-          }
           endTools(key);
           // Don't render "interrupted" decisions — just noise in the chat.
           if (_s(e['step']) == 'interrupted') break;
-          addEvent(key,
-              SystemRow(step: _s(e['step']), reasoning: _s(e['reasoning'])));
+          addEvent(
+              key,
+              SystemRow(
+                  step: _s(e['step']),
+                  reasoning: _s(e['reasoning']),
+                  time: formatEventTime(e['at'] ?? e['created_at'])));
         case 'turn_changes':
           endTools(key);
           if (isDedicatedMcSession(widget.sessionId)) break;
@@ -565,30 +623,31 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
               Padding(
                 padding: EdgeInsets.symmetric(vertical: S.s6),
                 child: artifactVersion == newestArtifact[artifactId] &&
-                      artifactShowsInline(artifactKind, display)
-                  ? ArtifactInline(
-                      key: ValueKey(
-                          'artifact-inline-$artifactId-$artifactVersion'),
-                      client: widget.client,
-                      session: widget.sessionId,
-                      id: artifactId,
-                      version: artifactVersion,
-                      title: _s(e['title']),
-                      kind: artifactKind,
-                      caption: _s(e['caption']),
-                    )
-                  : ArtifactRow(
-                      client: widget.client,
-                      session: widget.sessionId,
-                      id: artifactId,
-                      version: artifactVersion,
-                      title: _s(e['title']),
-                      kind: artifactKind,
-                      caption: _s(e['caption']),
-                    ),
+                        artifactShowsInline(artifactKind, display)
+                    ? ArtifactInline(
+                        key: ValueKey(
+                            'artifact-inline-$artifactId-$artifactVersion'),
+                        client: widget.client,
+                        session: widget.sessionId,
+                        id: artifactId,
+                        version: artifactVersion,
+                        title: _s(e['title']),
+                        kind: artifactKind,
+                        caption: _s(e['caption']),
+                      )
+                    : ArtifactRow(
+                        client: widget.client,
+                        session: widget.sessionId,
+                        id: artifactId,
+                        version: artifactVersion,
+                        title: _s(e['title']),
+                        kind: artifactKind,
+                        caption: _s(e['caption']),
+                      ),
               ));
         case 'lane_spawned':
           endTools(key);
+          if (laneGrouped.contains(idx)) break;
           final id = _s(e['id']);
           final title = _s(e['title']);
           final retryOf = _s(e['retry_of']).trim();
@@ -599,6 +658,36 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
               (retryOf.isNotEmpty || !laneRowsShown.contains('t:$title'))) {
             laneRowsShown.add(id);
             if (retryOf.isEmpty) laneRowsShown.add('t:$title');
+            // Lanes started in the same turn share one card.
+            final more = <LaneEntry>[];
+            for (var j = idx + 1; j < events.length; j++) {
+              final nk = events[j]['kind'] as String? ?? '';
+              if (nk == 'user_input' ||
+                  nk == 'steer' ||
+                  nk == 'assistant_text') {
+                break;
+              }
+              if (nk != 'lane_spawned') continue;
+              final nid = _s(events[j]['id']);
+              final nt = _s(events[j]['title']);
+              final nr = _s(events[j]['retry_of']).trim();
+              if (laneRowsShown.contains(nid) ||
+                  (nr.isEmpty && laneRowsShown.contains('t:$nt'))) {
+                continue;
+              }
+              laneRowsShown.add(nid);
+              if (nr.isEmpty) laneRowsShown.add('t:$nt');
+              laneGrouped.add(j);
+              more.add(LaneEntry(
+                  title: nt,
+                  live: () => liveLane(nid),
+                  onOpen: () => _openLane(nid),
+                  retryOf: nr.isEmpty ? null : nr,
+                  summary: _s(laneEnds[nid]?['summary']),
+                  status: laneEndStatus(nid),
+                  time: formatEventTime(
+                      events[j]['at'] ?? events[j]['created_at'])));
+            }
             addEvent(
                 key,
                 LaneNotice(
@@ -609,6 +698,10 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                   sessionId: widget.sessionId,
                   sessionProfile: _currentProfile ?? widget.profile,
                   retryOf: retryOf.isEmpty ? null : retryOf,
+                  summary: _s(laneEnds[id]?['summary']),
+                  status: laneEndStatus(id),
+                  time: formatEventTime(e['at'] ?? e['created_at']),
+                  more: more,
                 ));
           }
         case 'lane_cancelled':
@@ -625,6 +718,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                   live: () => liveLane(id),
                   onOpen: () => _openLane(id),
                   summary: _s(e['summary']),
+                  status: laneEndStatus(id),
                   client: widget.client,
                   sessionId: widget.sessionId,
                   sessionProfile: _currentProfile ?? widget.profile,
@@ -1072,24 +1166,23 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
 
   Future<void> _confirmFork(Checkpoint? c, {bool sheet = false}) async {
     final label =
-        c == null ? 'full history' : (c.label.isEmpty ? c.id : c.label);
-    final ok = await confirmAction(
+        c == null ? 'the latest message' : (c.label.isEmpty ? c.id : c.label);
+    final events = _state?.events.length ?? 0;
+    final fromHere = await showForkSheet(
       context,
-      title: 'Fork conversation?',
-      body:
-          'Opens a new session branched at “$label”. This chat stays as-is. Files on disk are shared.',
-      confirmLabel: 'Fork',
-      danger: false,
+      fromLabel: label,
+      totalMessages: events > 0 ? events : null,
+      origin: c == null ? lastChipOrigin : null,
     );
-    if (!ok) return;
-    if (sheet && mounted) Navigator.pop(context);
+    lastChipOrigin = null;
+    if (fromHere == null || !mounted) return;
+    if (sheet) Navigator.pop(context);
+    final cut = fromHere ? c : null;
     try {
       final result = await widget.client.forkSession(
         widget.sessionId,
-        checkpoint: c?.id,
-        eventIndex: c == null && (_state?.events.isNotEmpty ?? false)
-            ? _state!.events.length - 1
-            : null,
+        checkpoint: cut?.id,
+        eventIndex: cut == null && events > 0 ? events - 1 : null,
       );
       final id = result['id']?.toString() ?? '';
       final title = result['title']?.toString() ?? 'fork';
@@ -1148,142 +1241,21 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
       for (final r in widget.rows.whereType<DenseToolRow>())
         ToolStep(tool: r.tool, args: r.args, result: r.result),
     ];
-    final text = workSummary(steps);
-    final summary = text.isEmpty ? 'Activity' : text;
-    final failures = steps.where((s) => !s.running && s.failed).length;
-    final isRunning =
-        widget.running && (steps.isEmpty || steps.any((s) => s.running));
     final open = _open;
-    final style = sans(kMobile ? 14 : 13, color: AppColors.fg3);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _toggle,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: kMobile ? 32 : 24),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: isRunning
-                      ? const _PulseDot()
-                      : AnimatedRotation(
-                          turns: open ? 0.25 : 0,
-                          duration: Motion.fast,
-                          curve: Curves.easeOutCubic,
-                          child: AppIcon('chevron-right',
-                              size: 14, color: AppColors.fg3),
-                        ),
-                ),
-                SizedBox(width: S.s8),
-                Flexible(
-                  child: Text.rich(
-                    TextSpan(children: [
-                      TextSpan(text: summary),
-                      if (failures > 0 && !isRunning)
-                        TextSpan(
-                            text: ' · $failures failed',
-                            style: style.copyWith(color: AppColors.danger)),
-                    ]),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: style,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        WorkLine(
+            steps: steps, running: widget.running, open: open, onTap: _toggle),
         AnimatedSize(
           duration: Motion.fast,
           curve: Curves.easeOutCubic,
           alignment: Alignment.topCenter,
           child: open
-              ? Padding(
-                  padding: EdgeInsets.only(top: S.s4, bottom: S.s6),
-                  child: Padding(
-                    padding: EdgeInsets.only(left: S.of(7)),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border(
-                            left: BorderSide(color: AppColors.border)),
-                      ),
-                      padding: EdgeInsets.only(left: S.s12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          for (var i = 0; i < widget.rows.length; i++) ...[
-                            if (i > 0) SizedBox(height: S.s2),
-                            widget.rows[i],
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                )
+              ? WorkSteps(rows: widget.rows)
               : const SizedBox(width: double.infinity),
         ),
       ],
     );
   }
-}
-
-class _PulseDot extends StatefulWidget {
-  const _PulseDot();
-
-  @override
-  State<_PulseDot> createState() => _PulseDotState();
-}
-
-class _PulseDotState extends State<_PulseDot> {
-  final _c = AmbientLoop(const Duration(milliseconds: 1200), reverse: true);
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _c.bind(context);
-    if (reduceMotion(context)) {
-      _c.stop(at: 0.5);
-    } else {
-      _c.start();
-    }
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: RepaintBoundary(
-        child: FadeTransition(
-          opacity: _c.drive(Tween(begin: 1.0, end: 0.35)),
-          child: AppIcon('chevron-right', size: 14, color: AppColors.accent),
-        ),
-      ),
-    );
-  }
-}
-
-/// Watch events as monitor steps, so they fold into the tool activity.
-Map<String, String>? _watchArgs(String step, String reasoning) {
-  final r = reasoning.trim();
-  switch (step) {
-    case 'watch_added':
-      final m = RegExp(r'^watching "(.*)" \((.*)\)$', dotAll: true).firstMatch(r);
-      return {'action': 'add', 'label': m?.group(1) ?? r, 'path': m?.group(2) ?? ''};
-    case 'watch_removed':
-      final m = RegExp(r'^stopped watching "(.*)"$').firstMatch(r);
-      return {'action': 'remove', 'label': m?.group(1) ?? r};
-    case 'file_watch':
-      final m = RegExp(r'^"(.*?)" — (.*?) grew: ?(.*)$', dotAll: true).firstMatch(reasoning);
-      return {'action': 'fired', 'label': m?.group(1) ?? 'Watched file', 'path': m?.group(2) ?? ''};
-  }
-  return null;
 }

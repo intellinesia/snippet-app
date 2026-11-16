@@ -44,7 +44,15 @@ List<Map<String, dynamic>> normalizeChanges(dynamic args) {
           'path': (c['path'] ?? shared ?? '').toString(),
           'action': action,
           if (find != null) 'find': find.toString(),
-          'with': (pick(c, const ['with', 'new_string', 'new', 'replace', 'replacement']) ?? '').toString(),
+          'with': (pick(c, const [
+                    'with',
+                    'new_string',
+                    'new',
+                    'replace',
+                    'replacement'
+                  ]) ??
+                  '')
+              .toString(),
           if (c['all'] != null) 'all': c['all'],
           if (content != null) 'content': content.toString(),
           if (c['overwrite'] != null) 'overwrite': c['overwrite'],
@@ -105,7 +113,10 @@ String toolVerb(String tool, {required bool running}) {
     'set_session_title' => ('Titled the chat', 'Titling the chat'),
     'ping_user' => ('Pinged you', 'Pinging you'),
     'update_brief' => ('Updated its brief', 'Updating its brief'),
-    'schedule_wake' || 'schedule_followup' => ('Scheduled a wake-up', 'Scheduling a wake-up'),
+    'schedule_wake' || 'schedule_followup' => (
+        'Scheduled a wake-up',
+        'Scheduling a wake-up'
+      ),
     'search_content' => ('Searched', 'Searching'),
     _ => (
         'Used ${toolTitle(tool).toLowerCase()}',
@@ -158,8 +169,8 @@ String toolObject(ToolStep step) {
   if (name == 'change_files') return _changeParts(step, isRunning);
   // A labelled command already reads as a sentence ("Run the network tests"),
   // so it stands alone; "Ran" is only for a bare command line.
-  final coordination = coordinationSentence(name,
-      step.args is Map ? step.args as Map : null, step.data,
+  final coordination = coordinationSentence(
+      name, step.args is Map ? step.args as Map : null, step.data,
       running: isRunning);
   if (coordination != null) return coordination;
   if (name == 'monitor' && step.args is Map) {
@@ -227,8 +238,8 @@ List<FileChange> fileChanges(Iterable<ToolStep> steps) {
       if (kind == FileChangeKind.deleted) change.kind = kind;
       switch (action) {
         case 'replace':
-          final (added, removed) =
-              diffCounts(c['find']?.toString() ?? '', c['with']?.toString() ?? '');
+          final (added, removed) = diffCounts(
+              c['find']?.toString() ?? '', c['with']?.toString() ?? '');
           change.added += added;
           change.removed += removed;
         case 'create':
@@ -242,54 +253,22 @@ List<FileChange> fileChanges(Iterable<ToolStep> steps) {
 String _plural(int n, String one, String many) => n == 1 ? one : many;
 
 String activitySummary(List<ToolStep> steps) {
-  if (steps.isEmpty) return '';
-  if (steps.length == 1) return toolSentence(steps.first);
-  final edited = fileChanges(steps).length;
-  var ran = 0, read = 0, searched = 0, pages = 0, other = 0;
-  for (final s in steps) {
-    switch (toolBaseName(s.tool)) {
-      case 'change_files':
-        break;
-      case 'bash':
-      case 'manage_process':
-        ran++;
-      case 'read_file':
-      case 'view_file':
-      case 'view_image':
-        read++;
-      case 'search_content':
-      case 'web_search':
-        searched++;
-      case 'web_read':
-        pages++;
-      default:
-        other++;
-    }
-  }
-  final changeSteps =
-      steps.where((s) => toolBaseName(s.tool) == 'change_files').length;
-  final parts = [
-    if (read > 0) 'read $read ${_plural(read, 'file', 'files')}',
-    if (ran > 0) 'ran $ran ${_plural(ran, 'command', 'commands')}',
-    if (searched > 0)
-      'searched $searched ${_plural(searched, 'time', 'times')}',
-    if (pages > 0) 'read $pages ${_plural(pages, 'page', 'pages')}',
-    if (changeSteps > 0)
-      edited > 0
-          ? 'edited $edited ${_plural(edited, 'file', 'files')}'
-          : 'made $changeSteps ${_plural(changeSteps, 'change', 'changes')}',
-    if (other > 0)
-      _otherPhrase(other,
-          hasOthers: ran + changeSteps + read + searched + pages > 0),
-  ];
-  final sentence = parts.join(' · ');
-  return '${sentence[0].toUpperCase()}${sentence.substring(1)}';
+  final w = describeWork(steps);
+  if (w.outcome == null) return w.text;
+  return '${w.text} ${w.outcome}';
 }
 
 String _otherPhrase(int n, {required bool hasOthers}) =>
     '$n ${hasOthers ? 'other ' : ''}${_plural(n, 'step', 'steps')}';
 
-const _wrapperCommands = {'env', 'cpu-slot', 'nice', 'nohup', 'time', 'command'};
+const _wrapperCommands = {
+  'env',
+  'cpu-slot',
+  'nice',
+  'nohup',
+  'time',
+  'command'
+};
 const _skipSegments = {'cd', 'export', 'set', 'true', ':'};
 const _singleVerbCommands = {
   'awk',
@@ -566,28 +545,29 @@ String? _commandResultExcerpt(ToolStep step) {
     return _formatPassedFailed(passed, failed);
   }
 
-  final passedFailed = RegExp(r'\b(\d+)\s+passed,\s*(\d+)\s+failed\b',
-          caseSensitive: false)
-      .allMatches(text)
-      .toList();
+  final passedFailed =
+      RegExp(r'\b(\d+)\s+passed,\s*(\d+)\s+failed\b', caseSensitive: false)
+          .allMatches(text)
+          .toList();
   if (passedFailed.isNotEmpty) {
     final m = passedFailed.last;
     return _formatPassedFailed(
         int.parse(m.group(1)!), int.parse(m.group(2)!));
   }
 
-  final failedPassed = RegExp(r'\b(\d+)\s+failed,\s*(\d+)\s+passed\b',
-          caseSensitive: false)
-      .allMatches(text)
-      .toList();
+  final failedPassed =
+      RegExp(r'\b(\d+)\s+failed,\s*(\d+)\s+passed\b', caseSensitive: false)
+          .allMatches(text)
+          .toList();
   if (failedPassed.isNotEmpty) {
     final m = failedPassed.last;
     return _formatPassedFailed(
         int.parse(m.group(2)!), int.parse(m.group(1)!));
   }
 
-  final flutterFail =
-      RegExp(r'\+(\d+)\s+-(\d+):\s+Some tests failed').allMatches(text).toList();
+  final flutterFail = RegExp(r'\+(\d+)\s+-(\d+):\s+Some tests failed')
+      .allMatches(text)
+      .toList();
   if (flutterFail.isNotEmpty) {
     final m = flutterFail.last;
     return _formatPassedFailed(
@@ -598,10 +578,9 @@ String? _commandResultExcerpt(ToolStep step) {
     return 'All tests passed!';
   }
 
-  final pytestMatch =
-      RegExp(r'=+\s*(?:(\d+)\s+failed,\s*)?(\d+)\s+passed\b')
-          .allMatches(text)
-          .toList();
+  final pytestMatch = RegExp(r'=+\s*(?:(\d+)\s+failed,\s*)?(\d+)\s+passed\b')
+      .allMatches(text)
+      .toList();
   if (pytestMatch.isNotEmpty) {
     final m = pytestMatch.last;
     return _formatPassedFailed(
@@ -632,11 +611,13 @@ String? _commandResultExcerpt(ToolStep step) {
   if (rustError != null) return rustError.group(0)!;
 
   if (RegExp(r'FAILURE:\s+Build failed').hasMatch(text) ||
-      RegExp(r'^error:\s+could not compile\b', multiLine: true).hasMatch(text)) {
+      RegExp(r'^error:\s+could not compile\b', multiLine: true)
+          .hasMatch(text)) {
     return 'Build failed';
   }
 
-  final builtMatch = RegExp(r'(?:✓\s*)?Built\s+([^\s(]+)').allMatches(text).toList();
+  final builtMatch =
+      RegExp(r'(?:✓\s*)?Built\s+([^\s(]+)').allMatches(text).toList();
   if (builtMatch.isNotEmpty) {
     return 'Built ${_displayFileName(builtMatch.last.group(1)!)}';
   }
@@ -691,9 +672,8 @@ String workSummary(List<ToolStep> steps) {
           readPaths.add(p.replaceFirst(RegExp(r'/+$'), ''));
         }
       case 'view_file':
-        final p = (args?['AbsolutePath'] ?? args?['path'] ?? '')
-            .toString()
-            .trim();
+        final p =
+            (args?['AbsolutePath'] ?? args?['path'] ?? '').toString().trim();
         if (p.isEmpty) {
           readUnnamed++;
         } else {
@@ -781,15 +761,16 @@ String workSummary(List<ToolStep> steps) {
   }
 
   if (editedPaths.isNotEmpty) {
-    workParts.add('edited ${_joinNames(_disambiguatedNames(editedPaths.toList()))}');
+    workParts
+        .add('edited ${_joinNames(_disambiguatedNames(editedPaths.toList()))}');
   }
   if (createdPaths.isNotEmpty) {
-    workParts
-        .add('created ${_joinNames(_disambiguatedNames(createdPaths.toList()))}');
+    workParts.add(
+        'created ${_joinNames(_disambiguatedNames(createdPaths.toList()))}');
   }
   if (deletedPaths.isNotEmpty) {
-    workParts
-        .add('deleted ${_joinNames(_disambiguatedNames(deletedPaths.toList()))}');
+    workParts.add(
+        'deleted ${_joinNames(_disambiguatedNames(deletedPaths.toList()))}');
   }
   if (movedLabels.isNotEmpty) {
     workParts.add('moved ${_joinNames(movedLabels.toList())}');
@@ -798,7 +779,8 @@ String workSummary(List<ToolStep> steps) {
   if (searchCount == 1 && searchQueries.length == 1) {
     workParts.add('searched for ${_clipQuery(searchQueries.single)}');
   } else if (searchCount > 0) {
-    workParts.add('searched $searchCount ${_plural(searchCount, 'time', 'times')}');
+    workParts
+        .add('searched $searchCount ${_plural(searchCount, 'time', 'times')}');
   }
 
   if (pageCount > 0) {
@@ -835,4 +817,510 @@ String workSummary(List<ToolStep> steps) {
   final sentence = sections.join(' · ');
   if (sentence.isEmpty) return '';
   return '${sentence[0].toUpperCase()}${sentence.substring(1)}';
+}
+
+// ---------------------------------------------------------------------------
+// The work line: what a run of tool calls did, in the agent's terms. Built
+// from tool arguments and results; shell syntax never reaches the sentence.
+// ---------------------------------------------------------------------------
+
+enum CommandKind { test, build, check, search, read, script, other }
+
+class CommandInfo {
+  const CommandInfo(this.label, this.kind);
+
+  /// First program plus its subcommand ("flutter test"), or "a script".
+  final String label;
+  final CommandKind kind;
+
+  bool get verifies =>
+      kind == CommandKind.test ||
+      kind == CommandKind.build ||
+      kind == CommandKind.check;
+}
+
+const _interpreters = {
+  'python',
+  'python3',
+  'node',
+  'ruby',
+  'perl',
+  'bash',
+  'sh',
+  'zsh',
+  'fish',
+  'deno',
+  'bun',
+};
+const _shellWords = {
+  'if',
+  'then',
+  'else',
+  'elif',
+  'fi',
+  'for',
+  'while',
+  'until',
+  'do',
+  'done',
+  'case',
+  'esac',
+  'function',
+  'assert',
+  'import',
+  'from',
+  'print',
+  'def',
+  'return',
+  'EOF',
+  'exit',
+  'trap',
+  'unset',
+  'alias',
+  'source',
+  'eval',
+  'read',
+  'wait',
+};
+const _searchPrograms = {'rg', 'grep', 'find', 'ls', 'tree', 'fd', 'ag'};
+const _readPrograms = {'cat', 'sed', 'head', 'tail', 'nl', 'less', 'wc', 'bat'};
+final _programWord = RegExp(r'^[A-Za-z0-9_.~/+-]+$');
+
+/// The command a bash call is really running: the first program and its
+/// subcommand. Heredoc bodies, `cd`, `export` and inline scripts never count.
+CommandInfo? analyzeCommand(String raw) {
+  var text = raw.replaceAll(_ansiEscape, '');
+  final here = text.indexOf('<<');
+  if (here >= 0) text = text.substring(0, here);
+  for (final segment in _splitShellSegments(text)) {
+    final tokens = _tokenizeCommandHead(segment);
+    var idx = 0;
+    while (idx < tokens.length && _envAssign.hasMatch(tokens[idx])) {
+      idx++;
+    }
+    while (idx + 1 < tokens.length &&
+        _wrapperCommands.contains(_displayFileName(tokens[idx]))) {
+      idx++;
+      while (idx < tokens.length && _envAssign.hasMatch(tokens[idx])) {
+        idx++;
+      }
+    }
+    if (idx >= tokens.length) continue;
+    final program = _displayFileName(tokens[idx]);
+    if (program.isEmpty ||
+        _skipSegments.contains(program) ||
+        _shellWords.contains(program) ||
+        !_programWord.hasMatch(tokens[idx])) {
+      continue;
+    }
+    final rest = tokens.sublist(idx + 1);
+    if (_interpreters.contains(program)) {
+      if (rest.length >= 2 &&
+          rest[0] == '-m' &&
+          _subcommandWord.hasMatch(rest[1])) {
+        return _classify(rest[1], rest.length > 2 ? rest[2] : '');
+      }
+      final script = rest.firstWhere(
+          (t) => RegExp(r'\.(py|js|mjs|ts|rb|pl|sh)$').hasMatch(t),
+          orElse: () => '');
+      return CommandInfo(script.isEmpty ? 'a script' : _displayFileName(script),
+          CommandKind.script);
+    }
+    return _classify(program, rest.isEmpty ? '' : rest.first,
+        third: rest.length > 1 ? rest[1] : '');
+  }
+  return null;
+}
+
+CommandInfo _classify(String program, String second, {String third = ''}) {
+  final single = _singleVerbCommands.contains(program);
+  var label = program;
+  if (!single && second.isNotEmpty && _subcommandWord.hasMatch(second)) {
+    label = '$program $second';
+    if ((second == 'run' || second == 'exec') &&
+        third.isNotEmpty &&
+        _subcommandWord.hasMatch(third)) {
+      label = '$program $third';
+    }
+  }
+  final last = label.split(' ').last;
+  final kind = _searchPrograms.contains(program)
+      ? CommandKind.search
+      : _readPrograms.contains(program)
+          ? CommandKind.read
+          : const {'test', 'tests', 'pytest', 'jest', 'vitest', 'rspec'}
+              .contains(last)
+          ? CommandKind.test
+          : const {'build', 'compile', 'bundle', 'make', 'gradle', 'assemble'}
+                  .contains(last)
+              ? CommandKind.build
+              : const {
+                  'analyze',
+                  'lint',
+                  'check',
+                  'fmt',
+                  'format',
+                  'clippy',
+                  'tsc'
+                }.contains(last)
+                  ? CommandKind.check
+                  : CommandKind.other;
+  return CommandInfo(label, kind);
+}
+
+CommandInfo? stepCommand(ToolStep step) {
+  if (toolBaseName(step.tool) != 'bash') return null;
+  final a = step.args is Map ? step.args as Map : const {};
+  return analyzeCommand((a['command'] ?? '').toString());
+}
+
+String _listNames(Iterable<String> names) {
+  final list = names.toList();
+  if (list.length == 1) return list.single;
+  return '${list.sublist(0, list.length - 1).join(', ')} and ${list.last}';
+}
+
+class WorkSummary {
+  const WorkSummary(this.text,
+      {this.emphasis = const [], this.outcome, this.failed = false});
+
+  /// "Edited phone_hero.dart, ran 3 tests".
+  final String text;
+
+  /// File names inside [text] drawn a step brighter.
+  final List<String> emphasis;
+
+  /// "passed" or "failed" when the results make it clear.
+  final String? outcome;
+  final bool failed;
+}
+
+/// Total time the steps report for themselves, or null when none do.
+Duration? stepsDuration(Iterable<ToolStep> steps) {
+  var ms = 0.0;
+  var known = false;
+  for (final s in steps) {
+    final d = s.data;
+    final v = d?['duration_ms'];
+    final secs = d?['duration_secs'] ?? d?['elapsed_secs'];
+    if (v is num) {
+      ms += v;
+      known = true;
+    } else if (secs is num) {
+      ms += secs * 1000;
+      known = true;
+    }
+  }
+  return known && ms >= 1000 ? Duration(milliseconds: ms.round()) : null;
+}
+
+String formatWorkDuration(Duration d) {
+  final s = d.inMilliseconds / 1000;
+  if (s < 10) return '${s.toStringAsFixed(1)}s';
+  if (s < 60) return '${s.round()}s';
+  final m = d.inMinutes;
+  final rest = (s - m * 60).round();
+  return rest == 0 ? '${m}m' : '${m}m ${rest}s';
+}
+
+/// What a run of steps did, as one sentence plus an outcome word.
+WorkSummary describeWork(List<ToolStep> steps) {
+  if (steps.isEmpty) return const WorkSummary('');
+  final done = steps.where((s) => !s.running).toList();
+  final failures = done.where((s) => s.failed).length;
+  var outcome =
+      failures == 0 ? null : (failures == 1 ? 'failed' : '$failures failed');
+  final emphasis = <String>[];
+
+  String text;
+  if (steps.length == 1) {
+    final s = steps.single;
+    final cmd = stepCommand(s);
+    final label =
+        s.args is Map ? ((s.args as Map)['label'] ?? '').toString().trim() : '';
+    if (toolBaseName(s.tool) == 'bash' && label.isEmpty && cmd != null) {
+      text = s.running ? 'Running ${cmd.label}' : 'Ran ${cmd.label}';
+    } else if (toolBaseName(s.tool) == 'bash' && label.isEmpty) {
+      text = s.running ? 'Running a command' : 'Ran a command';
+    } else {
+      final (verb, object) = toolSentenceParts(s);
+      final shown = switch (toolBaseName(s.tool)) {
+        'read_file' ||
+        'view_file' ||
+        'view_image' =>
+          object.isEmpty ? '' : _displayFileName(object),
+        _ => object,
+      };
+      if (const {'read_file', 'view_file', 'view_image'}
+              .contains(toolBaseName(s.tool)) &&
+          shown.isNotEmpty) {
+        emphasis.add(shown);
+      }
+      text = shown.isEmpty ? verb : '$verb $shown';
+    }
+    if (cmd != null && cmd.verifies && !s.running && failures == 0) {
+      outcome = 'passed';
+    }
+    return WorkSummary(text,
+        emphasis: emphasis, outcome: outcome, failed: failures > 0);
+  }
+
+  final readPaths = <String>{};
+  var readUnnamed = 0, images = 0, searches = 0, pages = 0, other = 0;
+  var scripts = 0, verified = 0;
+  final testLabels = <String>[];
+  final commands = <String>[];
+  for (final s in steps) {
+    final name = toolBaseName(s.tool);
+    final args = s.args is Map ? s.args as Map : const {};
+    switch (name) {
+      case 'read_file':
+      case 'view_file':
+        final p =
+            (args['path'] ?? args['AbsolutePath'] ?? '').toString().trim();
+        p.isEmpty ? readUnnamed++ : readPaths.add(p);
+      case 'view_image':
+        images++;
+      case 'change_files':
+        break;
+      case 'search_content':
+      case 'web_search':
+      case 'search_skills':
+        searches++;
+      case 'web_read':
+        pages++;
+      case 'bash':
+        final c = stepCommand(s);
+        if (c == null) {
+          other++;
+        } else if (c.kind == CommandKind.search) {
+          searches++;
+        } else if (c.kind == CommandKind.read) {
+          readUnnamed++;
+        } else if (c.kind == CommandKind.script) {
+          scripts++;
+        } else {
+          if (c.verifies && !s.running) verified++;
+          if (c.kind == CommandKind.test) {
+            testLabels.add(c.label);
+          } else if (!commands.contains(c.label)) {
+            commands.add(c.label);
+          }
+        }
+      default:
+        other++;
+    }
+  }
+  final parts = <String>[];
+  final totalRead = readPaths.length + readUnnamed;
+  if (totalRead > 0) {
+    if (totalRead <= 2 && readUnnamed == 0) {
+      final names = [for (final p in readPaths) _displayFileName(p)];
+      emphasis.addAll(names);
+      parts.add('read ${_listNames(names)}');
+    } else {
+      parts.add('read $totalRead ${_plural(totalRead, 'file', 'files')}');
+    }
+  }
+  final changes = fileChanges(steps);
+  for (final (kind, verb) in const [
+    (FileChangeKind.edited, 'edited'),
+    (FileChangeKind.created, 'created'),
+    (FileChangeKind.deleted, 'deleted'),
+    (FileChangeKind.moved, 'moved'),
+  ]) {
+    final of = changes.where((c) => c.kind == kind).toList();
+    if (of.isEmpty) continue;
+    if (of.length <= 2) {
+      final names = [for (final c in of) c.name];
+      emphasis.addAll(names);
+      parts.add('$verb ${_listNames(names)}');
+    } else {
+      parts.add('$verb ${of.length} files');
+    }
+  }
+  final failedChanges = steps
+      .where((s) => toolBaseName(s.tool) == 'change_files' && s.failed)
+      .length;
+  if (changes.isEmpty && failedChanges > 0) {
+    parts
+        .add('tried $failedChanges ${_plural(failedChanges, 'edit', 'edits')}');
+  }
+  if (images > 0) {
+    parts.add('viewed $images ${_plural(images, 'image', 'images')}');
+  }
+  if (searches > 0) {
+    parts.add('searched $searches ${_plural(searches, 'time', 'times')}');
+  }
+  if (pages > 0) {
+    parts.add('read $pages ${_plural(pages, 'page', 'pages')}');
+  }
+  if (testLabels.isNotEmpty) {
+    parts.add(testLabels.length == 1
+        ? 'ran ${testLabels.single}'
+        : 'ran ${testLabels.length} tests');
+  }
+  if (commands.isNotEmpty) {
+    parts.add(commands.length <= 2
+        ? 'ran ${commands.join(' and ')}'
+        : 'ran ${commands.length} commands');
+  }
+  if (scripts > 0) {
+    parts.add(scripts == 1 ? 'ran a script' : 'ran $scripts scripts');
+  }
+  if (other > 0) {
+    parts.add(
+        '$other ${parts.isEmpty ? '' : 'other '}${_plural(other, 'step', 'steps')}');
+  }
+  if (outcome == null && verified > 0 && done.length == steps.length) {
+    outcome = 'passed';
+  }
+  text = parts.join(', ');
+  if (text.isEmpty) text = 'Activity';
+  text = '${text[0].toUpperCase()}${text.substring(1)}';
+  return WorkSummary(text,
+      emphasis: emphasis, outcome: outcome, failed: failures > 0);
+}
+
+/// The line shown while a step is still running: what is happening now.
+String liveStepText(ToolStep step) {
+  final label = step.args is Map
+      ? ((step.args as Map)['label'] ?? '').toString().trim()
+      : '';
+  final cmd = stepCommand(step);
+  if (label.isEmpty && cmd != null) return 'Running ${cmd.label}';
+  final (verb, object) = toolSentenceParts(step, running: true);
+  final name = toolBaseName(step.tool);
+  final shown = const {'read_file', 'view_file', 'view_image'}.contains(name) &&
+          object.isNotEmpty
+      ? _displayFileName(object)
+      : object;
+  return shown.isEmpty ? verb : '$verb $shown';
+}
+
+/// The file or command a step touched, for the expanded step list.
+String stepTarget(ToolStep step) {
+  final name = toolBaseName(step.tool);
+  final a = step.args is Map ? step.args as Map : const {};
+  String tail(String p) {
+    final parts = p.split('/').where((e) => e.isNotEmpty).toList();
+    return parts.length <= 3
+        ? p
+        : '…/${parts.sublist(parts.length - 3).join('/')}';
+  }
+
+  switch (name) {
+    case 'read_file':
+    case 'view_image':
+    case 'present_file':
+      return tail((a['path'] ?? '').toString());
+    case 'view_file':
+      return tail((a['AbsolutePath'] ?? a['path'] ?? '').toString());
+    case 'change_files':
+      final changes = step.changes;
+      final paths = {for (final c in changes) c['path']?.toString() ?? ''}
+        ..remove('');
+      if (paths.isEmpty) return '';
+      if (paths.length == 1) return tail(paths.single);
+      return '${paths.length} files';
+    case 'bash':
+      final c = analyzeCommand((a['command'] ?? '').toString());
+      final cmd = (a['command'] ?? '').toString();
+      if (c != null && c.kind != CommandKind.script) {
+        final first = cmd.split('<<').first.trim().split('\n').firstWhere(
+            (l) =>
+                l.trim().isNotEmpty &&
+                !RegExp(r'^\s*(cd|export)\b').hasMatch(l),
+            orElse: () => '');
+        final cleaned = first
+            .replaceFirst(RegExp(r'^\s*(cd\s+\S+\s*&&\s*)'), '')
+            .replaceAll(RegExp(r'\b[A-Z_]+=\S+\s+'), '')
+            .replaceFirst(RegExp(r'^\s*cpu-slot\s+'), '')
+            .trim();
+        if (cleaned.isNotEmpty) return cleaned;
+        return c.label;
+      }
+      final label = (a['label'] ?? '').toString().trim();
+      return label.isNotEmpty ? label : (c?.label ?? 'script');
+    default:
+      return toolObject(step);
+  }
+}
+
+enum StepChipTone { neutral, ok, danger }
+
+class StepResultChip {
+  const StepResultChip(this.text, this.tone,
+      {this.added = 0, this.removed = 0});
+  final String text;
+  final StepChipTone tone;
+  final int added;
+  final int removed;
+}
+
+final _passedCount = RegExp(r'(\d+)\s+passed');
+final _failedCount = RegExp(r'(\d+)\s+failed');
+
+/// A small result for a step: a line range, +N -M, "2 passed", "failed".
+StepResultChip? stepChip(ToolStep step) {
+  if (step.running) return null;
+  final name = toolBaseName(step.tool);
+  final a = step.args is Map ? step.args as Map : const {};
+  if (step.failed) {
+    final code = step.exitCode;
+    return StepResultChip(
+        name == 'bash' && code != null && code != 0
+            ? 'failed · exit $code'
+            : 'failed',
+        StepChipTone.danger);
+  }
+  switch (name) {
+    case 'view_image':
+      return const StepResultChip('image', StepChipTone.neutral);
+    case 'change_files':
+      final c = fileChanges([step]);
+      final added = c.fold<int>(0, (n, e) => n + e.added);
+      final removed = c.fold<int>(0, (n, e) => n + e.removed);
+      if (added == 0 && removed == 0) return null;
+      return StepResultChip('+$added −$removed', StepChipTone.neutral,
+          added: added, removed: removed);
+    case 'read_file':
+    case 'view_file':
+      final off = a['offset'] ?? a['start_line'] ?? a['StartLine'];
+      final lim = a['limit'] ?? a['end_line'] ?? a['EndLine'];
+      if (off is num && lim is num) {
+        final end = a.containsKey('limit') ? off + lim : lim;
+        return StepResultChip(
+            '${off.toInt()}-${end.toInt()}', StepChipTone.neutral);
+      }
+      final total = step.data?['total_lines'];
+      return total is num
+          ? StepResultChip('${total.toInt()} lines', StepChipTone.neutral)
+          : null;
+    case 'bash':
+      final cmd = stepCommand(step);
+      if (cmd == null || !cmd.verifies) return null;
+      final raw = [
+        for (final k in const ['stdout', 'output', 'stderr'])
+          (step.data?[k] ?? '').toString(),
+        _commandResultExcerpt(step) ?? '',
+      ].join('\n').replaceAll(_ansiEscape, '');
+      // flutter and dart print "+7 -1:"; pytest and cargo print "7 passed".
+      final flutter = RegExp(r'\+(\d+)(?:\s+~\d+)?(?:\s+-(\d+))?:')
+          .allMatches(raw)
+          .lastOrNull;
+      final p = flutter?.group(1) ?? _passedCount.firstMatch(raw)?.group(1);
+      final f = flutter?.group(2) ?? _failedCount.firstMatch(raw)?.group(1);
+      if (f != null && f != '0') {
+        return StepResultChip(
+            p == null ? '$f failed' : '$p passed, $f failed',
+            StepChipTone.danger);
+      }
+      return StepResultChip(
+          p != null
+              ? '$p passed'
+              : (cmd.kind == CommandKind.test ? 'passed' : 'ok'),
+          StepChipTone.ok);
+  }
+  return null;
 }

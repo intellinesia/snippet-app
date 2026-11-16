@@ -134,7 +134,7 @@ void main() {
     }
   });
 
-  testWidgets('LaneNotice keeps one activity line, Stop, Retry, and retryOf label',
+  testWidgets('LaneNotice offers Open only, with the retryOf label',
       (t) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     try {
@@ -174,12 +174,10 @@ void main() {
       expect(find.text('Retry of lane-0'), findsOneWidget);
       expect(find.text('grep lane'), findsNothing);
       expect(find.text('edit file'), findsNothing);
-      expect(find.widgetWithText(LaneControlButton, 'Stop'), findsOneWidget);
-      expect(find.widgetWithText(LaneControlButton, 'Retry'), findsOneWidget);
-
-      await t.tap(find.widgetWithText(LaneControlButton, 'Retry'));
-      await t.pumpAndSettle();
-      expect(client.retried, [('sess-3', 'lane-x')]);
+      // Stop and Retry live in the lane detail, not the transcript card.
+      expect(find.byType(LaneControlButton), findsNothing);
+      expect(find.text('Open'), findsNWidgets(2));
+      expect(find.text('Cancelled'), findsOneWidget);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

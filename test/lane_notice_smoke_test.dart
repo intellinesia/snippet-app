@@ -24,19 +24,21 @@ Future<void> pump(WidgetTester t, LaneInfo l) async {
 }
 
 void main() {
-  testWidgets('running lane shows thinking plus last action', (t) async {
+  testWidgets('running lane shows its last action and elapsed time', (t) async {
     await pump(t, lane('running', activity: 'Thinking', kind: 'model', log: const [
       LaneActivity(at: '', kind: 'tool_call', text: 'Read listener.rs turn handling'),
       LaneActivity(at: '', kind: 'model', text: 'Thinking'),
     ]));
-    expect(find.text('Thinking'), findsOneWidget);
     expect(find.textContaining('Read listener.rs'), findsOneWidget);
+    expect(find.textContaining('2 min'), findsOneWidget);
+    expect(find.text('Open'), findsOneWidget);
     expect(t.takeException(), isNull);
   });
-  testWidgets('completed lane renders markdown summary', (t) async {
+  testWidgets('completed lane shows the first sentence of its summary', (t) async {
     await pump(t, lane('completed', summary: '## Client audit\n\nRead-only; **no files changed**.'));
     expect(find.textContaining('##'), findsNothing);
-    expect(find.text('done'), findsOneWidget);
+    expect(find.text('Finished · Client audit', findRichText: true),
+        findsOneWidget);
     expect(t.takeException(), isNull);
   });
 }

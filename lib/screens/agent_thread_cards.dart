@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../approval_code.dart';
 import '../chat/chat_card.dart';
+import '../mochi.dart';
 import '../chat/decided_card.dart';
 import '../chat/chat_style.dart';
 import '../media_views.dart';
@@ -415,8 +416,7 @@ Widget _questionCard(
   final kind = (question['kind'] ?? '').toString().trim();
   final choices = _parseChoices(question, kind);
   final effectiveAnswer = answer ?? question['answer'];
-  final tokens =
-      _answerTokens(effectiveAnswer, multi: kind == 'multi_choice');
+  final tokens = _answerTokens(effectiveAnswer, multi: kind == 'multi_choice');
   final hasAnswer = tokens.isNotEmpty;
   var anyMatched = false;
   for (final c in choices) {
@@ -575,7 +575,10 @@ class _TaskCardCache {
   }) {
     final map = _mapFor(context);
     if (!force && map.containsKey(taskId)) return map[taskId]!;
-    final fut = client.getTask(taskId).then<TaskItem?>((t) => t).catchError((_) => null);
+    final fut = client
+        .getTask(taskId)
+        .then<TaskItem?>((t) => t)
+        .catchError((_) => null);
     map[taskId] = fut;
     return fut;
   }
@@ -644,7 +647,8 @@ class _TaskThreadCardState extends State<_TaskThreadCard> {
       TaskStatus.inReview => 'Task in review',
       _ => 'Task \u00b7 ${task.status.label}',
     };
-    final age = _ageLabel(task.updatedAt.isNotEmpty ? task.updatedAt : task.createdAt);
+    final age =
+        _ageLabel(task.updatedAt.isNotEmpty ? task.updatedAt : task.createdAt);
     return age.isEmpty ? base : '$base \u00b7 $age';
   }
 
@@ -693,9 +697,8 @@ class _TaskThreadCardState extends State<_TaskThreadCard> {
       setState(() {
         if (refreshed != null) _task = refreshed;
         _busy = false;
-        _error = e.message.isNotEmpty
-            ? e.message
-            : 'Task is no longer in review.';
+        _error =
+            e.message.isNotEmpty ? e.message : 'Task is no longer in review.';
       });
     } catch (e) {
       if (!mounted) return;
@@ -729,8 +732,7 @@ class _TaskThreadCardState extends State<_TaskThreadCard> {
               selectable: false,
               styleSheet: chatMarkdownStyle(context, mine: false),
               builders: {'pre': PreBlockBuilder()},
-              onTapLink: (txt, href, _) =>
-                  openMarkdownLink(href, context, txt),
+              onTapLink: (txt, href, _) => openMarkdownLink(href, context, txt),
             ),
     );
   }
@@ -946,9 +948,10 @@ class _ToolActivityCardState extends State<_ToolActivityCard> {
       if (edited > 0) 'edited $edited ${edited == 1 ? 'file' : 'files'}',
       if (ran > 0) 'ran $ran ${ran == 1 ? 'command' : 'commands'}',
       if (read > 0) 'read $read ${read == 1 ? 'file' : 'files'}',
-      if (searched > 0) 'searched $searched ${searched == 1 ? 'time' : 'times'}',
+      if (searched > 0)
+        'searched $searched ${searched == 1 ? 'time' : 'times'}',
       if (other > 0)
-        'ran $other ${ (edited + ran + read + searched) > 0 ? 'other ' : ''}${other == 1 ? 'tool' : 'tools'}',
+        'ran $other ${(edited + ran + read + searched) > 0 ? 'other ' : ''}${other == 1 ? 'tool' : 'tools'}',
     ];
     final actor = _displayActor(agentId);
     final count = items.length;
@@ -1075,9 +1078,8 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
 
   @override
   Widget build(BuildContext context) {
-    final summary = _s('summary').isNotEmpty
-        ? _s('summary')
-        : widget.event.body.trim();
+    final summary =
+        _s('summary').isNotEmpty ? _s('summary') : widget.event.body.trim();
     final parsed = ApprovalSummary.parse(summary);
     final tool = _s('tool');
     final from = [
@@ -1122,9 +1124,8 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
       if (_s('task_title').isNotEmpty) _s('task_title'),
       if (_s('session_title').isNotEmpty) _s('session_title'),
     ].join(' \u00b7 ');
-    final counter = total != null && total > 1 && index != null
-        ? '$index of $total'
-        : null;
+    final counter =
+        total != null && total > 1 && index != null ? '$index of $total' : null;
     return Container(
       width: double.infinity,
       margin: EdgeInsets.symmetric(vertical: S.s2),
@@ -1141,8 +1142,7 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
           Row(children: [
             Expanded(
               child: DeskRequestHead(
-                  agentId: widget.agentId,
-                  line: head.isNotEmpty ? head : from),
+                  agentId: widget.agentId, line: head.isNotEmpty ? head : from),
             ),
             if (counter != null) ChatCardPill(counter),
           ]),
@@ -1169,6 +1169,9 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
           ],
           SizedBox(height: S.s12),
           _DeskDecideButtons(
+            agentId: widget.agentId.isNotEmpty
+                ? widget.agentId
+                : widget.event.actorId,
             busy: _busy,
             onDeny: () => _decide(false),
             onApprove: () => _decide(true),
@@ -1183,11 +1186,25 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
 /// desktop.
 class _DeskDecideButtons extends StatelessWidget {
   const _DeskDecideButtons(
-      {required this.busy, required this.onDeny, required this.onApprove});
+      {required this.busy,
+      required this.onDeny,
+      required this.onApprove,
+      this.agentId = ''});
 
+  final String agentId;
   final bool busy;
   final VoidCallback onDeny;
   final VoidCallback onApprove;
+
+  Color? get _tint {
+    return agentId.isEmpty ? null : agentTintFor(agentId);
+  }
+
+  Color get _tintInk {
+    final t = _tint;
+    if (t == null) return AppColors.accentFg;
+    return t.computeLuminance() > 0.45 ? const Color(0xFF14141A) : Colors.white;
+  }
 
   Widget _btn(String label, VoidCallback onTap, {required bool primary}) {
     final h = kMobile ? 44.0 : 30.0;
@@ -1201,13 +1218,12 @@ class _DeskDecideButtons extends StatelessWidget {
           alignment: Alignment.center,
           padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s8 : S.s16),
           decoration: BoxDecoration(
-            color: primary ? AppColors.accent : AppColors.surface3,
+            color: primary ? _tint ?? AppColors.accent : AppColors.surface3,
             borderRadius: BorderRadius.circular(R.card),
           ),
           child: Text(label,
               style: sans(kMobile ? 15 : 13,
-                  weight: W.label,
-                  color: primary ? AppColors.accentFg : AppColors.fg1)),
+                  weight: W.label, color: primary ? _tintInk : AppColors.fg1)),
         ),
       ),
     );

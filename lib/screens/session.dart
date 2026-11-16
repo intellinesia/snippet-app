@@ -22,9 +22,9 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../chat/chat_card.dart';
 import '../chat/stage_header.dart';
+import '../chat/signal_row.dart';
 import 'session_list_row.dart' show sessionStepLabel;
 import '../desktop_look.dart';
-import '../ambient_loop.dart';
 import '../approval_code.dart';
 import '../notification_text.dart';
 import '../api.dart';
@@ -1576,17 +1576,21 @@ class _SessionScreenState extends State<SessionScreen>
                                           ? M.gutter
                                           : (widget.embedded ? 0 : S.s20),
                                       0),
-                                  child: ApprovalBar(
-                                      events: events,
-                                      onSend: _sendDecision,
-                                      agentId: _me?.displayAgentId,
-                                      agentName: _meAgentName,
-                                      stepLabel: _me?.plan != null &&
-                                              _me!.plan!.total > 0
-                                          ? sessionStepLabel(_me!.plan!)
-                                          : null,
-                                      showApproveAll:
-                                          _pendingApprovalTotal(events) > 1),
+                                  child: ChatCardAccent(
+                                    color: agentTintFor(
+                                        _me?.displayAgentId ?? 'snippet'),
+                                    child: ApprovalBar(
+                                        events: events,
+                                        onSend: _sendDecision,
+                                        agentId: _me?.displayAgentId,
+                                        agentName: _meAgentName,
+                                        stepLabel: _me?.plan != null &&
+                                                _me!.plan!.total > 0
+                                            ? sessionStepLabel(_me!.plan!)
+                                            : null,
+                                        showApproveAll:
+                                            _pendingApprovalTotal(events) > 1),
+                                  ),
                                 ),
                               )),
                             if (!widget.readOnly &&
@@ -1606,11 +1610,15 @@ class _SessionScreenState extends State<SessionScreen>
                                       0),
                                   // Keyed by the question set, so a new one
                                   // starts fresh (selection, step, review).
-                                  child: QuestionBar(
-                                      key: ValueKey(
-                                          jsonEncode(s!.pendingQuestion!)),
-                                      question: s.pendingQuestion!,
-                                      onSend: _sendDecision),
+                                  child: ChatCardAccent(
+                                    color: agentTintFor(
+                                        _me?.displayAgentId ?? 'snippet'),
+                                    child: QuestionBar(
+                                        key: ValueKey(
+                                            jsonEncode(s!.pendingQuestion!)),
+                                        question: s.pendingQuestion!,
+                                        onSend: _sendDecision),
+                                  ),
                                 ),
                               )),
                             if (!widget.readOnly && _settled)

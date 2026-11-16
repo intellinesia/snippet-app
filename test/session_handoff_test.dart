@@ -152,7 +152,8 @@ void main() {
     Widget wrap(Widget child) =>
         MaterialApp(theme: buildAppTheme(), home: Scaffold(body: child));
 
-    testWidgets('renders from → to with note and by you', (tester) async {
+    testWidgets('done reads takes over from with the note and who',
+        (tester) async {
       await tester.pumpWidget(wrap(const HandoffNotice(event: {
         'kind': 'session_handoff',
         'from': 'snippet',
@@ -160,12 +161,14 @@ void main() {
         'note': 'take it from here',
         'by': 'human',
       })));
-      expect(find.textContaining('snippet → rook'), findsOneWidget);
-      expect(find.textContaining('take it from here'), findsOneWidget);
-      expect(find.textContaining('by you'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('Rook takes over from Snippet', findRichText: true),
+          findsOneWidget);
+      expect(find.textContaining('"take it from here"'), findsOneWidget);
+      expect(find.textContaining('you'), findsOneWidget);
     });
 
-    testWidgets('pending reads as hands over after this turn',
+    testWidgets('pending reads as takes over after this turn',
         (tester) async {
       await tester.pumpWidget(wrap(const HandoffNotice(event: {
         'kind': 'session_handoff',
@@ -173,7 +176,9 @@ void main() {
         'to': 'rook',
         'pending': true,
       })));
-      expect(find.text('Hands to rook after this turn'), findsOneWidget);
+      expect(find.text('Rook takes over after this turn', findRichText: true),
+          findsOneWidget);
+      expect(find.text('Cancel'), findsNothing);
     });
   });
 
@@ -202,7 +207,7 @@ void main() {
       await tester.enterText(
           find.byType(TextField), 'finish the migration');
       client.result = {'session': 's1', 'pending': true};
-      await tester.tap(find.text('Hand off'));
+      await tester.tap(find.text('Hand to Rook'));
       await tester.pumpAndSettle();
       expect(client.calls, [('s1', 'rook', 'finish the migration')]);
       expect(handed, 'Rook');

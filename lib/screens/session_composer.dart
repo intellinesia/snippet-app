@@ -919,7 +919,40 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                   if (kMobile && _showsQuickActions)
                     ValueListenableBuilder<TextEditingValue>(
                       valueListenable: _input,
-                      builder: (_, __, ___) => _quickActions(running),
+                      builder: (_, __, ___) => Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Opaque enough that transcript text never shows
+                          // between the chips; fades in above the row.
+                          Positioned(
+                            left: -M.gutter,
+                            right: -M.gutter,
+                            top: 0,
+                            bottom: 0,
+                            child: ColoredBox(
+                                color: AppColors.bg.withValues(alpha: .92)),
+                          ),
+                          Positioned(
+                            left: -M.gutter,
+                            right: -M.gutter,
+                            top: -16,
+                            height: 16,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    AppColors.bg.withValues(alpha: 0),
+                                    AppColors.bg.withValues(alpha: .92),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          _quickActions(running),
+                        ],
+                      ),
                     ),
                   if (_heldQueue.isNotEmpty) _queuedCard(),
                   if (_attachments.isNotEmpty) _attachmentBar(),
@@ -955,12 +988,16 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   /// Hand off and Fork from here above the composer; Interrupt joins them only
   /// while a turn runs and the send button is queueing instead of stopping.
   Widget _quickActions(bool running) {
-    Widget chip(String icon, String label, VoidCallback onTap) => Semantics(
+    Widget chip(String icon, String label, void Function(Rect?) onTap) =>
+        Builder(builder: (cctx) => Semantics(
           button: true,
           label: label,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: onTap,
+            onTap: () {
+              lastChipOrigin = globalRectOf(cctx);
+              onTap(lastChipOrigin);
+            },
             child: Container(
               height: 44,
               alignment: Alignment.center,
@@ -980,17 +1017,26 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               ),
             ),
           ),
-        );
+        ));
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(children: [
         if (running && _canSend) ...[
-          chip('stop', 'Interrupt', () => _send({'kind': 'interrupt'})),
+          chip('stop', 'Interrupt', (_) => _send({'kind': 'interrupt'})),
           SizedBox(width: S.s8),
         ],
-        chip('arrow-right', 'Hand off', _showHandOff),
+        chip(
+            'arrow-right',
+            'Hand off',
+            (r) => showHandOffSheet(context,
+                client: widget.client,
+                sessionId: widget.sessionId,
+                origin: r,
+                onHandedOff: (name, pending) => _toast(pending
+                    ? 'Hands to $name after this turn'
+                    : 'Handed to $name'))),
         SizedBox(width: S.s8),
-        chip('git-branch', 'Fork from here', () => _confirmFork(null)),
+        chip('git-branch', 'Fork from here', (_) => _confirmFork(null)),
       ]),
     );
   }

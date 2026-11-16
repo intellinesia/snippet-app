@@ -8,21 +8,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'ambient_loop.dart';
+import 'chat/signal_row.dart';
 import 'api.dart' show DaemonClient;
 import 'crew_widgets.dart' show AgentProviderMark;
 import 'mochi.dart';
-import 'motion.dart' show Shimmer;
-import 'screens/session_coordination_cards.dart' show CardMarkdownBody;
 import 'models.dart';
 import 'platform.dart';
 import 'theme.dart';
 import 'tool_activity.dart';
 import 'tool_views.dart';
-import 'transcript_card.dart';
 import 'widgets.dart';
 
 double get _sentenceSize => kMobile ? 14 : 13;
-double get _objectSize => kMobile ? 13 : 12;
 
 enum _NodeState { ok, failed, running, neutral }
 
@@ -145,19 +142,204 @@ _NodeState _nodeFor(ToolStep step) {
   return _NodeState.ok;
 }
 
-Widget _sentence(String verb, String object) => Text.rich(
-      TextSpan(children: [
-        TextSpan(
-            text: verb,
-            style: sans(_sentenceSize, height: 1.4, color: AppColors.fg2)),
-        if (object.isNotEmpty)
-          TextSpan(
-              text: ' $object',
-              style: sans(_objectSize, height: 1.4, color: AppColors.fg1)),
-      ]),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+/// Inside an expanded work line: steps draw as a target and a result chip.
+class StepScope extends InheritedWidget {
+  const StepScope({super.key, required super.child});
+
+  static bool active(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<StepScope>() != null;
+
+  @override
+  bool updateShouldNotify(StepScope old) => false;
+}
+
+/// The summary sentence with file names a step brighter and the outcome word
+/// in its own colour.
+List<InlineSpan> workSpans(WorkSummary w, TextStyle base) {
+  final spans = <InlineSpan>[];
+  final text = w.text;
+  var pos = 0;
+  final hits = <(int, String)>[];
+  for (final name in w.emphasis.toSet()) {
+    if (name.isEmpty) continue;
+    var from = 0;
+    while (true) {
+      final i = text.indexOf(name, from);
+      if (i < 0) break;
+      hits.add((i, name));
+      from = i + name.length;
+    }
+  }
+  hits.sort((x, y) => x.$1.compareTo(y.$1));
+  for (final (i, name) in hits) {
+    if (i < pos) continue;
+    if (i > pos) spans.add(TextSpan(text: text.substring(pos, i)));
+    spans.add(TextSpan(text: name, style: base.copyWith(color: AppColors.fg2)));
+    pos = i + name.length;
+  }
+  if (pos < text.length) spans.add(TextSpan(text: text.substring(pos)));
+  final outcome = w.outcome;
+  if (outcome != null) {
+    spans.add(TextSpan(
+        text: ' $outcome',
+        style:
+            base.copyWith(color: w.failed ? AppColors.danger : AppColors.ok)));
+  }
+  return spans;
+}
+
+class _RunSpinner extends StatefulWidget {
+  const _RunSpinner();
+
+  @override
+  State<_RunSpinner> createState() => _RunSpinnerState();
+}
+
+class _RunSpinnerState extends State<_RunSpinner> {
+  final _c = AmbientLoop(const Duration(milliseconds: 900));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _c.bind(context);
+    if (reduceMotion(context)) {
+      _c.stop(at: 0);
+    } else {
+      _c.start();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: RepaintBoundary(
+          child: RotationTransition(
+            turns: _c,
+            child: SizedBox.square(
+              dimension: 12,
+              child: CustomPaint(
+                painter: _SpinnerPainter(AppColors.run, AppColors.runBg),
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+class _SpinnerPainter extends CustomPainter {
+  const _SpinnerPainter(this.head, this.track);
+  final Color head;
+  final Color track;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = (Offset.zero & size).deflate(1);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = track;
+    canvas.drawArc(rect, 0, 6.2832, false, paint);
+    canvas.drawArc(rect, -1.5708, 1.5708, false, paint..color = head);
+  }
+
+  @override
+  bool shouldRepaint(_SpinnerPainter old) =>
+      old.head != head || old.track != track;
+}
+
+/// One muted line for a run of tool calls: what the work did, an outcome word
+/// and its duration. Running, it names the live step.
+class WorkLine extends StatelessWidget {
+  const WorkLine({
+    super.key,
+    required this.steps,
+    required this.running,
+    required this.open,
+    required this.onTap,
+  });
+
+  final List<ToolStep> steps;
+  final bool running;
+  final bool open;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    Theme.of(context);
+    final live = steps.where((s) => s.running).toList();
+    final isRunning = running && live.isNotEmpty;
+    final style = sans(kMobile ? 14 : 13, height: 1.4, color: AppColors.fg3);
+    final work = describeWork(steps);
+    final spans = isRunning
+        ? <InlineSpan>[
+            TextSpan(
+                text: liveStepText(live.last),
+                style: style.copyWith(color: AppColors.fg2))
+          ]
+        : workSpans(work, style);
+    final took = isRunning ? null : stepsDuration(steps);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: kMobile ? 32 : 26),
+        child: Row(children: [
+          SizedBox(
+            width: 16,
+            child: isRunning
+                ? const _RunSpinner()
+                : Center(
+                    child: AnimatedRotation(
+                      turns: open ? 0.25 : 0,
+                      duration: Motion.fast,
+                      curve: Curves.easeOutCubic,
+                      child: AppIcon('chevron-right',
+                          size: 14, color: AppColors.fg4),
+                    ),
+                  ),
+          ),
+          SizedBox(width: S.s8),
+          Expanded(
+            child: Text.rich(TextSpan(children: spans),
+                maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+          ),
+          if (took != null) ...[
+            SizedBox(width: S.s8),
+            Text(formatWorkDuration(took),
+                style: mono(12, color: AppColors.fg4)),
+          ],
+        ]),
+      ),
     );
+  }
+}
+
+/// The indented step list under an open work line: a 1px rule on the left.
+class WorkSteps extends StatelessWidget {
+  const WorkSteps({super.key, required this.rows});
+  final List<Widget> rows;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.only(left: S.of(7), top: S.s2, bottom: S.s4),
+        child: Container(
+          decoration: BoxDecoration(
+              border: Border(left: BorderSide(color: AppColors.border2))),
+          padding: EdgeInsets.only(left: S.of(14)),
+          child: StepScope(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: rows,
+            ),
+          ),
+        ),
+      );
+}
 
 class DenseToolRow extends StatefulWidget {
   final String tool;
@@ -199,11 +381,45 @@ class _DenseToolRowState extends State<DenseToolRow> {
     final step =
         ToolStep(tool: widget.tool, args: widget.args, result: widget.result);
     final canExpand = toolHasDetail(step);
-    final (verb, object) = toolSentenceParts(step);
-    final changes = fileChanges([step]);
-    final added = changes.fold<int>(0, (n, c) => n + c.added);
-    final removed = changes.fold<int>(0, (n, c) => n + c.removed);
     final open = _open && canExpand;
+    final asStep = StepScope.active(context);
+    final Widget line;
+    if (asStep) {
+      final chip = stepChip(step);
+      final target = stepTarget(step);
+      line = Row(children: [
+        SizedBox(
+            width: 16, child: _Node(_nodeFor(step), icon: toolIcon(step.tool))),
+        SizedBox(width: S.s8),
+        Expanded(
+          child: Text(target.isEmpty ? toolSentence(step) : target,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: codeMono(12, height: 1.4, color: AppColors.fg2)),
+        ),
+        if (chip != null) ...[SizedBox(width: S.s8), _ResultChip(chip)],
+      ]);
+    } else {
+      final base = sans(_sentenceSize, height: 1.4, color: AppColors.fg3);
+      final work = describeWork([step]);
+      final spans = step.running
+          ? <InlineSpan>[TextSpan(text: liveStepText(step))]
+          : workSpans(work, base);
+      final took = step.running ? null : stepsDuration([step]);
+      line = Row(children: [
+        SizedBox(
+            width: 16, child: _Node(_nodeFor(step), icon: toolIcon(step.tool))),
+        SizedBox(width: S.s8),
+        Expanded(
+          child: Text.rich(TextSpan(children: spans),
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: base),
+        ),
+        if (took != null) ...[
+          SizedBox(width: S.s8),
+          Text(formatWorkDuration(took), style: mono(12, color: AppColors.fg4)),
+        ],
+      ]);
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -212,22 +428,7 @@ class _DenseToolRowState extends State<DenseToolRow> {
           onTap: canExpand ? _toggle : null,
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: kMobile ? 32 : 26),
-            child: Row(children: [
-              SizedBox(
-                  width: 16,
-                  child: _Node(_nodeFor(step), icon: toolIcon(step.tool))),
-              SizedBox(width: S.s8),
-              Flexible(child: _sentence(verb, object)),
-              if (added > 0) ...[
-                SizedBox(width: S.s8),
-                Text('+$added', style: sans(_objectSize, color: AppColors.ok)),
-              ],
-              if (removed > 0) ...[
-                SizedBox(width: S.s6),
-                Text('−$removed',
-                    style: sans(_objectSize, color: AppColors.danger)),
-              ],
-            ]),
+            child: line,
           ),
         ),
         AnimatedSize(
@@ -242,6 +443,36 @@ class _DenseToolRowState extends State<DenseToolRow> {
               : const SizedBox(width: double.infinity),
         ),
       ],
+    );
+  }
+}
+
+class _ResultChip extends StatelessWidget {
+  const _ResultChip(this.chip);
+  final StepResultChip chip;
+
+  @override
+  Widget build(BuildContext context) {
+    final (bg, fg) = switch (chip.tone) {
+      StepChipTone.ok => (AppColors.okBg, AppColors.ok),
+      StepChipTone.danger => (AppColors.dangerBg, AppColors.danger),
+      StepChipTone.neutral => (AppColors.surface2, AppColors.fg3),
+    };
+    final style = mono(11, color: fg);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
+      child: chip.added > 0 || chip.removed > 0
+          ? Text.rich(TextSpan(children: [
+              TextSpan(
+                  text: '+${chip.added}',
+                  style: style.copyWith(color: AppColors.ok)),
+              TextSpan(
+                  text: ' −${chip.removed}',
+                  style: style.copyWith(color: AppColors.danger)),
+            ]))
+          : Text(chip.text, style: style),
     );
   }
 }
@@ -354,8 +585,8 @@ class _StepDetailState extends State<_StepDetail> {
   }
 }
 
-/// A run of tool steps hanging off one thin line. Up to [_directLimit] steps
-/// show directly; a longer run shows a summary and its last step.
+/// A run of tool steps. Up to [_directLimit] steps show directly; a longer run
+/// shows one work line that opens into the step list.
 class ToolRun extends StatefulWidget {
   final List<Widget> rows;
   final bool running;
@@ -391,58 +622,16 @@ class _ToolRunState extends State<ToolRun> {
     ];
     final long = rows.length > _directLimit;
     final open = _open;
-    final List<Widget> shown = !long || open ? rows : [rows.last];
-    final failures = steps.where((s) => !s.running && s.failed).length;
-    final summaryNode = widget.running && steps.any((s) => s.running)
-        ? _NodeState.running
-        : failures > 0
-            ? _NodeState.failed
-            : _NodeState.neutral;
     return Padding(
       padding: EdgeInsets.symmetric(vertical: S.s4),
-      child: Stack(children: [
-        Positioned(
-          left: 7.5,
-          top: 14,
-          bottom: 14,
-          width: 1,
-          child: ColoredBox(color: AppColors.border2),
-        ),
-        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          if (long)
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _toggle,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: kMobile ? 32 : 26),
-                child: Row(children: [
-                  SizedBox(
-                      width: 16, child: _Node(summaryNode, icon: 'layers')),
-                  SizedBox(width: S.s8),
-                  Flexible(
-                    child: Text(activitySummary(steps),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(_sentenceSize,
-                            height: 1.4, color: AppColors.fg2)),
-                  ),
-                  if (failures > 0) ...[
-                    SizedBox(width: S.s8),
-                    Text('$failures failed',
-                        style: sans(_objectSize, color: AppColors.danger)),
-                  ],
-                  SizedBox(width: S.s6),
-                  AnimatedRotation(
-                    turns: open ? 0.25 : 0,
-                    duration: Motion.fast,
-                    child: AppIcon('chevron-right',
-                        size: 12, color: AppColors.fg4),
-                  ),
-                ]),
-              ),
-            ),
-          ...shown,
-        ]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (long)
+          WorkLine(
+              steps: steps,
+              running: widget.running,
+              open: open,
+              onTap: _toggle),
+        if (!long) ...rows else if (open) WorkSteps(rows: rows),
       ]),
     );
   }
@@ -620,6 +809,31 @@ class _LaneControlButtonState extends State<LaneControlButton> {
   }
 }
 
+/// One lane inside a [LaneNotice] card.
+class LaneEntry {
+  const LaneEntry({
+    required this.title,
+    required this.live,
+    required this.onOpen,
+    this.summary,
+    this.retryOf,
+    this.status,
+    this.time,
+  });
+
+  final String title;
+  final LaneInfo? Function() live;
+  final VoidCallback onOpen;
+  final String? summary;
+  final String? retryOf;
+
+  /// How the lane ended, from its completed or cancelled event, for when the
+  /// live lane is gone from the snapshot.
+  final String? status;
+  final String? time;
+}
+
+/// Lanes started in one turn: one card, one row per lane, one quiet Open.
 class LaneNotice extends StatefulWidget {
   final String title;
   final LaneInfo? Function() live;
@@ -629,6 +843,11 @@ class LaneNotice extends StatefulWidget {
   final String? sessionId;
   final String? sessionProfile;
   final String? retryOf;
+
+  /// Further lanes started alongside this one.
+  final List<LaneEntry> more;
+  final String? status;
+  final String? time;
 
   const LaneNotice({
     super.key,
@@ -640,10 +859,35 @@ class LaneNotice extends StatefulWidget {
     this.sessionId,
     this.sessionProfile,
     this.retryOf,
+    this.more = const [],
+    this.status,
+    this.time,
   });
 
   @override
   State<LaneNotice> createState() => _LaneNoticeState();
+}
+
+/// "3 min", "42 s", "1 h 5 min".
+String laneElapsed(LaneInfo? lane, {DateTime? now}) {
+  final started = DateTime.tryParse(lane?.startedAt ?? '');
+  if (started == null) return '';
+  final d = (now ?? DateTime.now()).toUtc().difference(started.toUtc());
+  if (d.inMinutes < 1) return '${d.inSeconds < 0 ? 0 : d.inSeconds} s';
+  if (d.inHours < 1) return '${d.inMinutes} min';
+  return '${d.inHours} h ${d.inMinutes % 60} min';
+}
+
+/// The first sentence of a lane summary, plain text.
+String laneFirstSentence(String summary, [int max = 90]) {
+  final plain = summary
+      .replaceAll(RegExp(r'[#*`>_]+'), '')
+      .split('\n')
+      .map((l) => l.trim())
+      .firstWhere((l) => l.isNotEmpty, orElse: () => '');
+  final m = RegExp(r'^(.+?[.!?])(\s|$)').firstMatch(plain);
+  final one = m?.group(1) ?? plain;
+  return one.length <= max ? one : '${one.substring(0, max - 1)}\u2026';
 }
 
 class _LaneNoticeState extends State<LaneNotice> {
@@ -655,196 +899,210 @@ class _LaneNoticeState extends State<LaneNotice> {
     super.dispose();
   }
 
-  String _elapsed(LaneInfo? lane) {
-    final started = DateTime.tryParse(lane?.startedAt ?? '');
-    if (started == null) return 'Running';
-    final d = DateTime.now().toUtc().difference(started.toUtc());
-    if (d.inMinutes < 1) return '${d.inSeconds}s';
-    if (d.inHours < 1) return '${d.inMinutes}m';
-    return '${d.inHours}h ${d.inMinutes % 60}m';
+  String _live(LaneInfo? lane) {
+    var now = lane?.activity?.trim() ?? '';
+    if (lane?.activityKind == 'model' || now.isEmpty) {
+      now = '';
+      for (final a in (lane?.activityLog ?? const <LaneActivity>[]).reversed) {
+        if (a.kind == 'tool_call' && a.text.trim().isNotEmpty) {
+          now = a.text.trim();
+          break;
+        }
+      }
+    }
+    return now.replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  Widget _row(LaneEntry e) {
+    final lane = e.live();
+    final state = lane?.status ?? e.status ?? '';
+    final running = lane?.running ?? false;
+    final failed = state == 'failed';
+    final completed = state == 'completed' || state == 'done';
+    final cancelled = state == 'cancelled';
+    final title =
+        e.title.trim().isNotEmpty ? e.title.trim() : (lane?.title.trim() ?? '');
+    final summary = (e.summary?.trim().isNotEmpty == true
+        ? e.summary!.trim()
+        : lane?.summary?.trim() ?? '');
+    final agent = lane?.agent?.trim() ?? '';
+    final small = sans(kMobile ? 13 : 12, height: 1.35, color: AppColors.fg3);
+    final List<InlineSpan> status;
+    if (running) {
+      final now = _live(lane);
+      final took = laneElapsed(lane);
+      status = [
+        TextSpan(
+            text: [now.isEmpty ? 'Working' : now, if (took.isNotEmpty) took]
+                .join(' \u00b7 ')),
+      ];
+    } else if (failed) {
+      final why = lane?.error?.trim() ?? '';
+      status = [
+        TextSpan(
+            text: 'Failed', style: small.copyWith(color: AppColors.danger)),
+        if (why.isNotEmpty) TextSpan(text: ' \u00b7 ${laneFirstSentence(why)}'),
+      ];
+    } else if (completed) {
+      final line = laneFirstSentence(summary);
+      status = [
+        TextSpan(text: line.isEmpty ? 'Finished' : 'Finished \u00b7 $line')
+      ];
+    } else if (cancelled) {
+      status = const [TextSpan(text: 'Cancelled')];
+    } else if (state == 'paused') {
+      status = const [TextSpan(text: 'Paused')];
+    } else {
+      status = [TextSpan(text: lane == null ? '' : 'Queued')];
+    }
+    final retryOf = e.retryOf?.trim() ?? '';
+    final tile = kMobile ? 32.0 : 28.0;
+    return Semantics(
+      button: true,
+      label:
+          '$title, ${status.map((s) => s.toPlainText()).join()}. Open the lane.',
+      onTap: e.onOpen,
+      child: InkWell(
+        onTap: e.onOpen,
+        borderRadius: BorderRadius.circular(R.md),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: kMobile ? 52 : 40),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: S.s4),
+            child: Row(children: [
+              Container(
+                width: tile,
+                height: tile,
+                decoration: BoxDecoration(
+                    color: AppColors.surface2,
+                    borderRadius: BorderRadius.circular(8)),
+                alignment: Alignment.center,
+                child: agent.isNotEmpty
+                    ? AgentMochi(agent,
+                        size: kMobile ? 24 : 20,
+                        state: running
+                            ? AgentCharacterState.working
+                            : failed
+                                ? AgentCharacterState.needs
+                                : AgentCharacterState.done)
+                    : AppIcon('layers', size: 16, color: AppColors.fg3),
+              ),
+              SizedBox(width: S.s12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(title.isEmpty ? 'Lane' : title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(kMobile ? 15 : 14,
+                            weight: W.label,
+                            height: 1.3,
+                            color: AppColors.fg1)),
+                    if (retryOf.isNotEmpty)
+                      Text('Retry of $retryOf',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(12, color: AppColors.fg4)),
+                    Row(children: [
+                      if (running) ...[
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                              color: AppColors.run, shape: BoxShape.circle),
+                        ),
+                        SizedBox(width: S.s6),
+                      ],
+                      Expanded(
+                        child: Text.rich(TextSpan(children: status),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: small),
+                      ),
+                    ]),
+                  ],
+                ),
+              ),
+              SizedBox(width: S.s8),
+              Container(
+                height: kMobile ? 32 : 28,
+                padding: EdgeInsets.symmetric(horizontal: S.s12),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    color: AppColors.surface2,
+                    borderRadius: BorderRadius.circular(10)),
+                child: Text('Open',
+                    style: sans(13, weight: W.label, color: AppColors.fg1)),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final lane = widget.live();
-    final running = lane?.running ?? false;
-    if (running && _tick == null) {
+    Theme.of(context);
+    final entries = [
+      LaneEntry(
+          title: widget.title,
+          live: widget.live,
+          onOpen: widget.onOpen,
+          summary: widget.summary,
+          retryOf: widget.retryOf,
+          status: widget.status,
+          time: widget.time),
+      ...widget.more,
+    ];
+    final anyRunning = entries.any((e) => e.live()?.running ?? false);
+    if (anyRunning && _tick == null) {
       _tick = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() {});
       });
-    } else if (!running && _tick != null) {
+    } else if (!anyRunning && _tick != null) {
       _tick!.cancel();
       _tick = null;
     }
-    final state = lane?.status ?? '';
-    final failed = state == 'failed';
-    final paused = state == 'paused';
-    final completed = state == 'completed' || state == 'done';
-    final summary = widget.summary?.trim().isNotEmpty == true
-        ? widget.summary!.trim()
-        : lane?.summary?.trim() ?? '';
-    final agent = lane?.agent?.trim() ?? '';
-    final profile = lane?.profile?.trim().isNotEmpty == true
-        ? lane!.profile!.trim()
-        : widget.sessionProfile?.trim() ?? '';
-    final narrow = MediaQuery.sizeOf(context).width < 360;
-    final title = widget.title.trim().isNotEmpty
-        ? widget.title.trim()
-        : lane?.title.trim() ?? '';
-    final statusText = running
-        ? (_elapsed(lane) == 'Running' ? 'running' : 'running · ${_elapsed(lane)}')
-        : failed
-            ? 'failed'
-            : completed
-                ? 'done'
-                : paused
-                    ? 'paused'
-                    : lane == null
-                        ? ''
-                        : state == 'cancelled'
-                            ? 'cancelled'
-                            : 'queued';
-    final statusColor = running
-        ? AppColors.run
-        : failed
-            ? AppColors.danger
-            : completed
-                ? AppColors.ok
-                : AppColors.fg4;
-    final small = TranscriptCard.metaSize;
-    final whoText = [
-      if (agent.isNotEmpty) laneAgentName(agent),
-      if (profile.isNotEmpty) profile,
-    ].join(' · ');
-    final who = whoText.isEmpty
-        ? null
-        : Row(mainAxisSize: MainAxisSize.min, children: [
-            if (agent.isNotEmpty)
-              AgentMochi(agent,
-                  size: 16,
-                  state: running
-                      ? AgentCharacterState.working
-                      : failed
-                          ? AgentCharacterState.needs
-                          : AgentCharacterState.done)
-            else if (widget.client != null)
-              AgentProviderMark(
-                  client: widget.client!,
-                  profile: profile,
-                  size: 12,
-                  orActive: true),
-            SizedBox(width: S.s4),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: narrow ? 64 : 120),
-              child: Text(whoText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(small - 1, color: AppColors.fg3)),
-            ),
-          ]);
-    final header = Row(children: [
-      Container(
-        width: 6,
-        height: 6,
-        decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
-      ),
-      SizedBox(width: S.s8),
-      Expanded(
-        child: Text(title.isEmpty ? 'Lane' : title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: sans(TranscriptCard.titleSize,
-                weight: W.label, height: 1.3, color: AppColors.fg1)),
-      ),
-      if (who != null) ...[SizedBox(width: S.s8), Flexible(flex: 0, child: who)],
-      if (statusText.isNotEmpty) ...[
-        SizedBox(width: S.s8),
-        Text(statusText,
-            style: sans(small - 1, weight: W.label, color: statusColor)),
-      ],
-    ]);
-    Widget? body;
-    if (running) {
-      body = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(children: [
-            AppIcon('terminal', size: 12, color: AppColors.fg4),
-            SizedBox(width: S.s6),
-            Expanded(child: _LaneActivityLine(lane: lane, size: small - 1)),
-          ]),
-        ],
-      );
-    } else if (failed && (lane?.error?.trim().isNotEmpty ?? false)) {
-      body = Text(lane!.error!.trim(),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: sans(small, height: 1.4, color: AppColors.danger));
-    } else if (summary.isNotEmpty) {
-      body = CardMarkdownBody(
-          body: summary, preview: MarkdownPreview.plain(summary));
-    }
-    final retryOf = widget.retryOf?.trim() ?? '';
-    final showControl = widget.client != null &&
-        widget.sessionId != null &&
-        lane != null &&
-        (running || lane.retryable);
-    final pad = kMobile
-        ? EdgeInsets.fromLTRB(S.s12, S.of(10.0), S.s12, showControl ? 0 : S.of(10.0))
-        : EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.s8);
-    final footer = Row(children: [
-      Text('View details', style: sans(small - 1, color: AppColors.fg4)),
-      const Spacer(),
-      if (showControl)
-        LaneControlButton(
-          client: widget.client!,
-          sessionId: widget.sessionId!,
-          lane: lane,
-          quiet: true,
-        ),
-    ]);
-    return Semantics(
-      button: true,
-      label:
-          '$title${agent.isEmpty ? '' : ', $agent'}${profile.isEmpty ? '' : ', on $profile'}, $statusText. Open the lane.',
-      onTap: widget.onOpen,
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: S.of(3)),
-        child: Material(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(R.card),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: widget.onOpen,
-            child: Padding(
-              padding: pad,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  header,
-                  if (retryOf.isNotEmpty)
-                    Padding(
-                      padding: EdgeInsets.only(left: S.of(14.0), top: S.s2),
-                      child: Text(
-                        'Retry of $retryOf',
-                        style: sans(small - 1, color: AppColors.fg4),
-                      ),
-                    ),
-                  if (body != null)
-                    Padding(
-                      padding: EdgeInsets.only(left: S.of(14.0), top: S.s4),
-                      child: body,
-                    ),
-                  Padding(
-                    padding: EdgeInsets.only(
-                        left: S.of(14.0), top: showControl ? 0 : S.s6),
-                    child: footer,
+    final n = entries.length;
+    final header = n == 1
+        ? ((widget.retryOf?.trim().isNotEmpty ?? false)
+            ? 'Retried a lane'
+            : 'Started a lane')
+        : 'Split ${const {
+              2: 'two',
+              3: 'three',
+              4: 'four',
+              5: 'five'
+            }[n] ?? '$n'} lanes';
+    final time =
+        entries.first.time ?? formatEventTime(entries.first.live()?.startedAt);
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: S.of(3)),
+      child: Material(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(R.card),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: EdgeInsets.all(kMobile ? S.s12 : S.s8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(S.s4, S.s2, S.s4, S.s4),
+                child: Row(children: [
+                  Expanded(
+                    child: Text(header, style: sans(13, color: AppColors.fg3)),
                   ),
-                ],
+                  if (time != null)
+                    Text(time, style: mono(12, color: AppColors.fg4)),
+                ]),
               ),
-            ),
+              for (final e in entries) _row(e),
+            ],
           ),
         ),
       ),
@@ -858,55 +1116,6 @@ String laneAgentName(String id) => id
     .map((w) => w[0].toUpperCase() + w.substring(1))
     .join(' ');
 
-class _LaneActivityLine extends StatelessWidget {
-  final LaneInfo? lane;
-  final double size;
-  const _LaneActivityLine({required this.lane, required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    final current = lane?.activity?.trim() ?? '';
-    final thinking = lane?.activityKind == 'model' || current.isEmpty;
-    String last = '';
-    if (thinking) {
-      for (final a in (lane?.activityLog ?? const <LaneActivity>[]).reversed) {
-        if (a.kind == 'tool_call' && a.text.trim().isNotEmpty) {
-          last = a.text.trim();
-          break;
-        }
-      }
-    }
-    final now = thinking ? 'Thinking' : current;
-    final style = mono(size, height: 1.4, color: AppColors.fg2);
-    return AnimatedSwitcher(
-      duration: Motion.fast,
-      layoutBuilder: (cur, prev) => Stack(
-          alignment: Alignment.centerLeft,
-          children: [...prev, if (cur != null) cur]),
-      child: Row(
-        key: ValueKey('$now|$last'),
-        children: [
-          Flexible(
-            flex: last.isEmpty ? 1 : 0,
-            child: Shimmer(
-              color: AppColors.fg2,
-              child: Text(now.replaceAll(RegExp(r'\s+'), ' '),
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
-            ),
-          ),
-          if (last.isNotEmpty)
-            Expanded(
-              child: Text('  ·  $last',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: style.copyWith(color: AppColors.fg4)),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Styled system rows: watches, goals, compaction, generic decisions — each
 // recognizable at a glance instead of identical grey notes.
@@ -915,7 +1124,11 @@ class _LaneActivityLine extends StatelessWidget {
 class SystemRow extends StatelessWidget {
   final String step;
   final String reasoning;
-  const SystemRow({super.key, required this.step, required this.reasoning});
+
+  /// When it happened, already formatted (HH:MM), if the event says.
+  final String? time;
+  const SystemRow(
+      {super.key, required this.step, required this.reasoning, this.time});
 
   @override
   Widget build(BuildContext context) {
@@ -926,7 +1139,10 @@ class SystemRow extends StatelessWidget {
       return _SystemDivider(label: 'context compacted');
     }
     if (step == 'continued_lean') {
-      return _SystemDivider(label: 'continued lean · earlier history archived');
+      return SignalRow(
+          icon: 'archive',
+          text: 'Earlier history archived to keep it lean',
+          time: time);
     }
     if (step == 'idle_memory_save') {
       return _SystemDivider(label: 'saved memory while you were away');
@@ -993,18 +1209,19 @@ class SystemRow extends StatelessWidget {
       case 'watch_added':
         final m = RegExp(r'^watching "(.*)" \((.*)\)$', dotAll: true)
             .firstMatch(reasoning.trim());
-        return _WatchLine(
-          verb: 'Watching',
-          subject: m?.group(1) ?? reasoning,
-          path: m?.group(2),
+        return SignalRow(
+          icon: 'eye',
+          tone: SignalTone.accent,
+          text: 'Watching **${m?.group(1) ?? reasoning.trim()}**',
+          time: time,
         );
       case 'watch_removed':
         final m =
             RegExp(r'^stopped watching "(.*)"$').firstMatch(reasoning.trim());
-        return _WatchLine(
-          verb: 'Stopped watching',
-          subject: m?.group(1) ?? reasoning,
-          muted: true,
+        return SignalRow(
+          icon: 'eye',
+          text: 'Stopped watching **${m?.group(1) ?? reasoning.trim()}**',
+          time: time,
         );
       case 'file_watch':
         final m = RegExp(r'^"(.*?)" — (.*?) grew: ?(.*)$', dotAll: true)
@@ -1013,6 +1230,7 @@ class SystemRow extends StatelessWidget {
           subject: m?.group(1) ?? 'Watched file',
           path: m?.group(2) ?? '',
           preview: (m?.group(3) ?? reasoning).trim(),
+          time: time,
         );
       case 'interrupted':
         return Padding(
@@ -1047,53 +1265,6 @@ class SystemRow extends StatelessWidget {
   }
 }
 
-class _WatchLine extends StatelessWidget {
-  const _WatchLine({
-    required this.verb,
-    required this.subject,
-    this.path,
-    this.muted = false,
-  });
-
-  final String verb;
-  final String subject;
-  final String? path;
-  final bool muted;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasPath = path != null && path!.isNotEmpty;
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: S.s4),
-      child: Row(children: [
-        Flexible(
-          child: Text.rich(
-            TextSpan(children: [
-              TextSpan(
-                  text: verb,
-                  style: TS.ui(muted ? AppColors.fg4 : AppColors.fg2)),
-              TextSpan(
-                  text: ' $subject',
-                  style: TS.ui(muted ? AppColors.fg4 : AppColors.fg3)),
-            ]),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        if (hasPath && !muted) ...[
-          SizedBox(width: S.s8),
-          Flexible(
-            child: Text(path!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TS.meta(AppColors.fg4)),
-          ),
-        ],
-      ]),
-    );
-  }
-}
-
 /// What a watched file's new lines say: the readable lines, and the exit code
 /// when the command appended a `__DONE__ exit=N` style sentinel.
 ({List<String> lines, int? exit}) _readWatchPreview(String preview) {
@@ -1115,11 +1286,15 @@ class _WatchLine extends StatelessWidget {
 
 class _WatchFired extends StatefulWidget {
   const _WatchFired(
-      {required this.subject, required this.path, required this.preview});
+      {required this.subject,
+      required this.path,
+      required this.preview,
+      this.time});
 
   final String subject;
   final String path;
   final String preview;
+  final String? time;
 
   @override
   State<_WatchFired> createState() => _WatchFiredState();
@@ -1132,42 +1307,31 @@ class _WatchFiredState extends State<_WatchFired> {
   Widget build(BuildContext context) {
     final read = _readWatchPreview(widget.preview);
     final exit = read.exit;
-    final status = switch (exit) {
-      null => 'updated',
-      0 => 'finished · exit 0',
-      _ => 'failed · exit $exit',
+    final (text, tone, icon) = switch (exit) {
+      null => ('**${widget.subject}** updated', SignalTone.accent, 'eye'),
+      0 => ('**${widget.subject}** finished', SignalTone.ok, 'check'),
+      _ => (
+          '**${widget.subject}** failed \u00b7 exit $exit',
+          SignalTone.danger,
+          'alert-triangle'
+        ),
     };
     final canExpand = read.lines.isNotEmpty;
+    final tail = canExpand ? read.lines.last.trim() : '';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
+        SignalRow(
+          icon: icon,
+          tone: tone,
+          text: text,
+          sub: tail.length > 100 ? '${tail.substring(0, 99)}\u2026' : tail,
+          time: widget.time,
           onTap: canExpand ? () => setState(() => _open = !_open) : null,
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: S.s4),
-            child: Row(children: [
-              Expanded(
-                child: Text.rich(
-                  TextSpan(children: [
-                    TextSpan(text: widget.subject, style: TS.ui(AppColors.fg2)),
-                    TextSpan(text: '  $status', style: TS.meta(AppColors.fg4)),
-                  ]),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (canExpand) ...[
-                SizedBox(width: S.s6),
-                AppIcon(_open ? 'chevron-down' : 'chevron-right',
-                    size: 12, color: AppColors.fg4),
-              ],
-            ]),
-          ),
         ),
         if (_open && canExpand)
           Padding(
-            padding: EdgeInsets.fromLTRB(0, S.s2, 0, S.s8),
+            padding: EdgeInsets.fromLTRB(S.of(28), S.s2, 0, S.s8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1283,44 +1447,105 @@ class QuietAside extends StatelessWidget {
       Opacity(opacity: 0.55, child: ThinkingMarkdown(data: text));
 }
 
-/// One-line `session_handoff` transcript notice: both agents' avatars, the
-/// note, and whether it is queued behind the running turn.
+/// A `session_handoff` in the transcript. Done: a boundary where the new
+/// owner's character rises in over a "takes over from" line and the note.
+/// Queued: a centred signal row until the running turn ends.
 class HandoffNotice extends StatelessWidget {
   final Map<String, dynamic> event;
   const HandoffNotice({super.key, required this.event});
 
   @override
   Widget build(BuildContext context) {
+    Theme.of(context);
     final from = '${event['from'] ?? ''}'.trim();
     final to = '${event['to'] ?? ''}'.trim();
     final note = '${event['note'] ?? ''}'.trim();
-    final byYou = '${event['by'] ?? ''}' == 'human';
+    final by = '${event['by'] ?? ''}'.trim();
     final pending = event['pending'] == true;
-    final target = to.isEmpty ? 'agent' : to;
-    final text = pending
-        ? 'Hands to $target after this turn'
-        : '${from.isEmpty ? 'snippet' : from} → $target'
-            '${note.isEmpty ? '' : ' · $note'}'
-            '${byYou ? ' · by you' : ''}';
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (from.isNotEmpty) AgentMochi(from, size: 14),
-        if (from.isNotEmpty && to.isNotEmpty) ...[
-          const SizedBox(width: 4),
-          AppIcon('arrow-right', size: 11, color: AppColors.fg4),
-          const SizedBox(width: 4),
-        ],
-        if (to.isNotEmpty) AgentMochi(to, size: 14),
-        if (from.isNotEmpty || to.isNotEmpty) const SizedBox(width: 6),
-        Flexible(
-          child: Text(text,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: sans(kMobile ? 13 : 13,
-                  height: 1.4, color: AppColors.fg3)),
+    return AgentNamesBuilder(builder: (context, names) {
+      final toName = to.isEmpty ? 'Another agent' : agentDisplayName(to, names);
+      if (pending) {
+        return SignalRow(
+          icon: 'arrow-right',
+          center: true,
+          text: '**$toName** takes over after this turn',
+        );
+      }
+      final fromName =
+          from.isEmpty ? 'the last agent' : agentDisplayName(from, names);
+      final time = formatEventTime(event['at'] ?? event['created_at']);
+      final byLabel = by.isEmpty
+          ? ''
+          : (by == 'human' ? 'you' : agentDisplayName(by, names));
+      final who =
+          [if (byLabel.isNotEmpty) byLabel, if (time != null) time].join(', ');
+      final quote = [
+        if (note.isNotEmpty) '"$note"',
+        if (who.isNotEmpty) '${note.isEmpty ? '' : '\u00b7 '}$who',
+      ].join(' ');
+      final line = sans(kMobile ? 14 : 13, height: 1.4, color: AppColors.fg3);
+      final rule =
+          Expanded(child: Container(height: 1, color: AppColors.border2));
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: S.s12),
+        child: Column(children: [
+          _Rise(
+              child: to.isEmpty
+                  ? const SizedBox(height: 44)
+                  : AgentMochi(to, size: 44)),
+          SizedBox(height: S.s8),
+          Row(children: [
+            rule,
+            Flexible(
+              flex: 0,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: S.s12),
+                child: Text.rich(
+                  TextSpan(
+                    style: line,
+                    children: signalSpans(
+                        '**$toName** takes over from $fromName', line),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+            rule,
+          ]),
+          if (quote.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(top: S.s4),
+              child: Text(quote,
+                  textAlign: TextAlign.center,
+                  style: line.copyWith(
+                      fontStyle: FontStyle.italic, color: AppColors.fg3)),
+            ),
+        ]),
+      );
+    });
+  }
+}
+
+/// Rises in once; stays put under reduced motion.
+class _Rise extends StatelessWidget {
+  const _Rise({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (reduceMotion(context)) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+      child: child,
+      builder: (_, t, child) => Opacity(
+        opacity: t,
+        child: Transform.translate(
+          offset: Offset(0, 8 * (1 - t)),
+          child: Transform.scale(scale: 0.8 + 0.2 * t, child: child),
         ),
-      ]),
+      ),
     );
   }
 }
