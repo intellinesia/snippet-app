@@ -777,6 +777,7 @@ class _SessionScreenState extends State<SessionScreen>
       // Decisions can be retried across reconnects too; give the retry the same
       // idempotency key instead of sending an untracked frame.
       outbound['nonce'] ??= _nextNonce();
+      outbound['via'] ??= 'app';
       setState(() => _pendingDecision = outbound);
       _decisionGiveUp?.cancel();
       _decisionGiveUp = Timer(const Duration(seconds: 15), () {
