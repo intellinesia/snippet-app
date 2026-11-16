@@ -106,7 +106,7 @@ class _PhoneHeroState extends State<PhoneHero> {
     // The stage always shows the team; with nothing open, the agents themselves.
     if (live.isEmpty) {
       if (!widget.idleCast) return const [];
-      live = crew.take(5).toList();
+      live = crew.take(3).toList();
     }
     if (live.length <= 5) return live;
     final keep = ([...live]..sort((a, b) => rank(a).compareTo(rank(b))))
