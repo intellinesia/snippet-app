@@ -998,6 +998,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
         label: label,
         detail: detail,
         value: value,
+        dense: true,
         expandable: id != null,
         open: id != null && _open == id,
         onTap: onTap ?? (id != null ? () => _toggle(id) : null),
@@ -1391,7 +1392,7 @@ class SessionShortcutTile extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
         child: SizedBox(
-          width: 72,
+          width: 64,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Column(children: [
@@ -1399,8 +1400,8 @@ class SessionShortcutTile extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   Container(
-                    width: 52,
-                    height: 52,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: AppColors.surface1,
                       shape: BoxShape.circle,
@@ -1408,7 +1409,7 @@ class SessionShortcutTile extends StatelessWidget {
                           color: AppColors.fg1.withValues(alpha: 0.08)),
                     ),
                     alignment: Alignment.center,
-                    child: AppIcon(icon, size: 21, color: AppColors.fg1),
+                    child: AppIcon(icon, size: 19, color: AppColors.fg1),
                   ),
                   if (count > 0)
                     Positioned(
@@ -1433,11 +1434,11 @@ class SessionShortcutTile extends StatelessWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(13, color: AppColors.fg2)),
+                  style: sans(12, color: AppColors.fg2)),
             ]),
           ),
         ),
