@@ -192,12 +192,12 @@ void main() {
     expect(find.text('Profiles'), findsOneWidget);
     expect(find.text('default'), findsWidgets);
 
-    // Back to Machines, then jump to Wakes via Keep sessions warm.
+    // Back to Machines, then jump to Keep warm via Keep sessions warm.
     await tester.tap(find.text('Machines'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Keep sessions warm'));
     await tester.pumpAndSettle();
-    expect(find.text('Agent schedules and keep-warm.'), findsOneWidget);
+    expect(find.text('Sessions that hold their prompt cache while idle.'), findsOneWidget);
 
     // Close and Escape both invoke onBack.
     await tester.tap(find.byTooltip('Close'));

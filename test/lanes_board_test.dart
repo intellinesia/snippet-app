@@ -89,20 +89,20 @@ void main() {
     expect(find.text('Needs you'), findsNothing);
     expect(find.text('Working'), findsOneWidget);
     expect(find.text('Retry'), findsNothing);
-    expect(find.text('1 finished ›'), findsOneWidget);
+    expect(find.text('1 finished'), findsOneWidget);
   });
 
   _phone('finished lanes fold into one row that expands',
       (tester) async {
     await _pump(tester, _all);
-    expect(find.text('2 finished, 1 cancelled ›'), findsOneWidget);
+    expect(find.text('2 finished, 1 cancelled'), findsOneWidget);
     expect(find.text('Transcript meta redesign'), findsNothing);
-    await tester.tap(find.text('2 finished, 1 cancelled ›'));
+    await tester.tap(find.text('2 finished, 1 cancelled'));
     await tester.pump();
     expect(find.text('Transcript meta redesign'), findsOneWidget);
     expect(find.text('Redesign landed.'), findsOneWidget);
     expect(find.text('Transcript meta (first try)'), findsOneWidget);
-    await tester.tap(find.text('2 finished, 1 cancelled ‹'));
+    await tester.tap(find.text('2 finished, 1 cancelled'));
     await tester.pump();
     expect(find.text('Transcript meta redesign'), findsNothing);
   });

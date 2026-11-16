@@ -261,34 +261,13 @@ class GroupRow extends StatelessWidget {
           onTap: onTap,
           onLongPress: onLongPress,
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: M.gutter, vertical: S.s8),
+            padding: EdgeInsets.symmetric(vertical: S.s8),
             child: Row(children: [
               SizedBox.square(
-                dimension: 52,
-                child: Stack(alignment: Alignment.center, children: [
-                  if (unread > 0)
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.accent, width: 2),
-                      ),
-                    ),
-                  if (shown.isEmpty)
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface2,
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: const AppIcon('users', size: 20),
-                    )
-                  else
-                    AgentCluster(ids: agents, size: 48),
-                ]),
+                dimension: 36,
+                child: shown.isEmpty
+                    ? AppIcon('users', size: 20, color: AppColors.fg3)
+                    : AgentCluster(ids: agents, size: 36),
               ),
               SizedBox(width: S.s12),
               Expanded(

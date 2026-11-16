@@ -10,6 +10,7 @@ import 'android_reconciliation.dart';
 import 'platform.dart';
 import 'screens/adaptive_home.dart';
 import 'chat_scene.dart';
+import 'screens/mobile_session_home.dart' show DotGridPref;
 import 'theme.dart';
 import 'widgets.dart';
 import 'response_cache.dart';
@@ -52,6 +53,7 @@ void main() async {
   } catch (_) {}
   try {
     await ChatScene.instance.init();
+    await DotGridPref.instance.init();
   } catch (_) {}
   await Drafts.instance.init();
   await Pins.instance.load();

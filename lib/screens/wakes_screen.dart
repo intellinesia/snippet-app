@@ -17,17 +17,20 @@ import 'agent_wake_panel.dart';
 import 'session.dart';
 import 'shell_nav.dart';
 
-/// Every agent and session wake schedule, with keep-warm status below.
+/// Every agent and session wake schedule, or with [keepWarm] the sessions
+/// kept warm.
 class WakesScreen extends StatefulWidget {
   const WakesScreen({
     super.key,
     required this.client,
     this.embedded = false,
+    this.keepWarm = false,
     this.onBack,
   });
 
   final DaemonClient client;
   final bool embedded;
+  final bool keepWarm;
 
   /// Phone drill-down back action; the screen then draws its own header.
   final VoidCallback? onBack;
@@ -98,12 +101,14 @@ class _WakesScreenState extends State<WakesScreen> {
   Widget build(BuildContext context) {
     Theme.of(context);
     final desk = !kMobile && widget.embedded && widget.onBack == null;
+    final warmPage = widget.keepWarm;
+    final title = warmPage ? 'Keep warm' : 'Wakes';
+    final subtitle = warmPage
+        ? 'Sessions that hold their prompt cache while idle.'
+        : 'When each agent wakes on its own.';
     Widget page(List<Widget> children) => desk
         ? SettingsColumn(children: [
-            const SettingsHeader(
-              title: 'Wakes',
-              subtitle: 'Agent schedules and keep-warm.',
-            ),
+            SettingsHeader(title: title, subtitle: subtitle),
             SizedBox(height: S.s8),
             ...children,
           ])
@@ -128,13 +133,13 @@ class _WakesScreenState extends State<WakesScreen> {
           for (final e in warm?.entries ?? const <KeepWarmEntry>[])
             if (e.enabled) e
         ];
-        if (wakes.wakes.isEmpty && warmOn.isEmpty) {
+        if (!warmPage && wakes.wakes.isEmpty) {
           // One empty state that fills the pane; a scrolling column cannot centre it.
           const empty = EmptyState(
             icon: 'calendar-clock',
             title: 'No wakes yet',
             body:
-                'Schedule an agent or keep a session warm from its actions, under Wakes and keep warm.',
+                'Schedule an agent from its page, under Wakes and reporting.',
           );
           if (!desk) return empty;
           return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -144,10 +149,7 @@ class _WakesScreenState extends State<WakesScreen> {
                 alignment: Alignment.topCenter,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 680),
-                  child: const SettingsHeader(
-                    title: 'Wakes',
-                    subtitle: 'Agent schedules and keep-warm.',
-                  ),
+                  child: SettingsHeader(title: title, subtitle: subtitle),
                 ),
               ),
             ),
@@ -155,12 +157,13 @@ class _WakesScreenState extends State<WakesScreen> {
           ]);
         }
         return page([
-          if (wakes.wakes.isNotEmpty)
+          if (!warmPage)
             SettingsGroup(header: 'Schedules', children: [
               for (final w in wakes.wakes) _wakeRow(context, w, agents),
             ]),
+          if (warmPage)
           SettingsGroup(
-            header: 'Keep warm',
+            header: 'Sessions',
             footer: warm != null && warm.calls7d > 0 && warmOn.isNotEmpty
                 ? '${warm.calls7d} warm calls in the last 7 days, ${tokensLabel(warm.cacheReadTokens7d)} tokens read from cache.'
                 : null,
@@ -185,10 +188,9 @@ class _WakesScreenState extends State<WakesScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (kMobile)
-          SettingsHeader(
-              title: 'Wakes', compact: true, onBack: widget.onBack!)
+          SettingsHeader(title: title, compact: true, onBack: widget.onBack!)
         else
-          NavBackRow(title: 'Wakes', onBack: widget.onBack!),
+          NavBackRow(title: title, onBack: widget.onBack!),
         Expanded(child: child),
       ],
     );

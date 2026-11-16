@@ -56,6 +56,7 @@ class PhoneHero extends StatefulWidget {
     this.onMergePr,
     this.now,
     this.idleCast = true,
+    this.wholeTeam = false,
   });
 
   final List<SessionInfo> sessions;
@@ -73,6 +74,10 @@ class PhoneHero extends StatefulWidget {
   /// Show the agents on stage even when nothing is live (off where a list of
   /// the same agents follows).
   final bool idleCast;
+
+  /// Put every agent on stage, idle ones too, the most urgent in the tallest
+  /// slot (the Agents tab, where the stage is the team).
+  final bool wholeTeam;
 
   @override
   State<PhoneHero> createState() => _PhoneHeroState();
@@ -102,6 +107,7 @@ class _PhoneHeroState extends State<PhoneHero> {
     // Whoever needs you first, then the working ones, then agents standing by
     // with a session open, so the stage reads as the team.
     int rank(CrewEntry e) => e.state.index;
+    if (widget.wholeTeam) return _byHeight(crew, rank);
     var live = crew.where((e) => e.sessions.isNotEmpty).toList();
     // The stage always shows the team; with nothing open, the agents themselves.
     if (live.isEmpty) {
@@ -113,6 +119,31 @@ class _PhoneHeroState extends State<PhoneHero> {
         ([...live]..sort((a, b) => rank(a).compareTo(rank(b)))).take(5).toSet();
     return live.where(keep.contains).toList();
   }
+
+  List<CrewEntry> _byHeight(List<CrewEntry> crew, int Function(CrewEntry) rank) {
+    final ranked = ([...crew]..sort((a, b) => rank(a).compareTo(rank(b))))
+        .take(_patterns.length)
+        .toList();
+    final sizes = _patterns[(ranked.length - 1).clamp(0, _patterns.length - 1)];
+    final slots = [for (var i = 0; i < ranked.length; i++) i]
+      ..sort((a, b) => sizes[b].compareTo(sizes[a]));
+    final out = List<CrewEntry?>.filled(ranked.length, null);
+    for (var i = 0; i < ranked.length; i++) {
+      out[slots[i]] = ranked[i];
+    }
+    return out.cast<CrewEntry>();
+  }
+
+  // Mixed heights packed close, feet on one line, so it reads as a team.
+  static const _patterns = <List<double>>[
+    [66],
+    [66, 54],
+    [54, 68, 58],
+    [52, 68, 60, 46],
+    [46, 58, 68, 54, 44],
+    [44, 56, 68, 60, 50, 42],
+    [40, 50, 60, 68, 56, 46, 40],
+  ];
 
   /// The most urgent ask: approvals before questions, newest first.
   SessionInfo? _top() {
@@ -189,14 +220,7 @@ class _PhoneHeroState extends State<PhoneHero> {
 
   Widget _stageRow(List<CrewEntry> crew) {
     final n = crew.length;
-    // Mixed heights packed close, feet on one line, so it reads as a team.
-    const patterns = <List<double>>[
-      [66],
-      [66, 54],
-      [54, 68, 58],
-      [52, 68, 60, 46],
-      [46, 58, 68, 54, 44],
-    ];
+    const patterns = _patterns;
     final sizes = patterns[(n - 1).clamp(0, patterns.length - 1)];
     double sizeAt(int i) => sizes[i.clamp(0, sizes.length - 1)];
 
@@ -204,14 +228,18 @@ class _PhoneHeroState extends State<PhoneHero> {
       padding: EdgeInsets.only(top: S.s8, bottom: S.s16),
       child: SizedBox(
         height: 68 + 12,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            for (var i = 0; i < n; i++) ...[
-              _stageAgent(crew[i], sizeAt(i)),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.bottomCenter,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              for (var i = 0; i < n; i++) ...[
+                _stageAgent(crew[i], sizeAt(i)),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -234,9 +262,10 @@ class _PhoneHeroState extends State<PhoneHero> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: e.lead == null ? null : () => widget.onOpenSession(e.lead!),
-        // The slot is narrower than the art so neighbours tuck in close.
+        // The slot is narrower than the art so neighbours tuck in close; the
+        // whole team stands apart so a badge is never covered.
         child: SizedBox(
-          width: size * 0.8,
+          width: widget.wholeTeam ? size + S.s6 : size * 0.8,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -276,7 +305,7 @@ class _PhoneHeroState extends State<PhoneHero> {
       builder: (_, __) {
         final character = agentCharacterFor(agentId);
         if (character == null) {
-          return AgentMochi(agentId, size: size, state: state);
+          return AgentMochi(agentId, size: size, state: state, badge: badge);
         }
         return AgentCharacter(character,
             size: size, state: state, staggerKey: agentId, badge: badge);

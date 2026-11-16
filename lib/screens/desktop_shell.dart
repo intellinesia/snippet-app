@@ -1087,7 +1087,13 @@ class _DesktopShellState extends State<DesktopShell>
           SettingsPage.wakes,
           'repeat',
           'Settings: Wakes',
-          ['wake', 'keep warm', 'schedule', 'agents']
+          ['wake', 'schedule', 'agents']
+        ),
+        (
+          SettingsPage.keepWarm,
+          'zap',
+          'Settings: Keep warm',
+          ['keep warm', 'cache', 'warm']
         ),
         (
           SettingsPage.vault,

@@ -239,7 +239,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     widget.onRefreshSessions();
   }
 
-  Widget _phoneHero(List<SessionInfo> sessions, {bool idleCast = true}) {
+  Widget _phoneHero(List<SessionInfo> sessions,
+      {bool idleCast = true, bool wholeTeam = false}) {
     final c = widget.client;
     return PhoneHero(
       sessions: sessions,
@@ -249,6 +250,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       onReviewPr: c == null ? null : _reviewSessionPr,
       onMergePr: c == null ? null : _mergeSessionPr,
       idleCast: idleCast,
+      wholeTeam: wholeTeam,
     );
   }
 
@@ -654,19 +656,27 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         }
         // The agent list lives on the home list; this is one agent's detail.
         final agent = widget.agent;
-        if (agent == null) {
-          return _mobileHomeBody(hasClient, MobileHome.chats, true);
-        }
-        return Padding(
-          padding: EdgeInsets.only(bottom: _scrollBottomPad),
-          child: CoordinationAgentDetail(
-            key: const ValueKey('agent-detail'),
-            agent: agent,
-            client: client,
-            embedded: false,
-            onClose: () => widget.onAgent(null),
+        // The list stays mounted under the detail so coming back is instant.
+        return Stack(fit: StackFit.expand, children: [
+          Offstage(
+            offstage: agent != null,
+            child: TickerMode(
+              enabled: agent == null,
+              child: _mobileHomeBody(hasClient, MobileHome.chats, true),
+            ),
           ),
-        );
+          if (agent != null)
+            Padding(
+              padding: EdgeInsets.only(bottom: _scrollBottomPad),
+              child: CoordinationAgentDetail(
+                key: const ValueKey('agent-detail'),
+                agent: agent,
+                client: client,
+                embedded: false,
+                onClose: () => widget.onAgent(null),
+              ),
+            ),
+        ]);
 
       case MobileHome.settings:
         final client = widget.client;
@@ -772,8 +782,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         heroBuilder: kMobile
             ? (count, needs, working) =>
                 _phoneHero(widget.sessions ?? const <SessionInfo>[],
-                    idleCast: false)
+                    idleCast: false, wholeTeam: true)
             : null,
+        sessions: kMobile ? widget.sessions : null,
         onSearchChanged: (v) => setState(() {
           _agentFilterQuery = v;
           if (_agentSearchCtl.text != v) _agentSearchCtl.text = v;

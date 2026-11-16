@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui' show PointMode;
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 
 import '../ambient_loop.dart';
@@ -723,6 +724,26 @@ class _LiveRingState extends State<LiveRing> {
 }
 
 /// Faint dot grid painted behind the phone home lists.
+/// Whether the phone draws the dotted grid behind its screens; saved per device.
+class DotGridPref extends ValueNotifier<bool> {
+  DotGridPref._() : super(true);
+  static final instance = DotGridPref._();
+  static const _key = 'phone_dot_grid';
+
+  Future<void> init() async {
+    try {
+      value = (await SharedPreferences.getInstance()).getBool(_key) ?? true;
+    } catch (_) {}
+  }
+
+  Future<void> set(bool on) async {
+    value = on;
+    try {
+      await (await SharedPreferences.getInstance()).setBool(_key, on);
+    } catch (_) {}
+  }
+}
+
 class DotField extends StatelessWidget {
   const DotField({super.key, required this.child, this.strength = 0.07});
 
@@ -733,9 +754,16 @@ class DotField extends StatelessWidget {
   final double strength;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-        painter: _DotGridPainter(AppColors.fg1.withValues(alpha: strength)),
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+        valueListenable: DotGridPref.instance,
         child: RepaintBoundary(child: child),
+        builder: (context, on, child) => on
+            ? CustomPaint(
+                painter:
+                    _DotGridPainter(AppColors.fg1.withValues(alpha: strength)),
+                child: child,
+              )
+            : child!,
       );
 }
 

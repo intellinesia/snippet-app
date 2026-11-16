@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../crew_status.dart';
 import '../models.dart';
 import '../pins.dart';
 import '../platform.dart';
@@ -12,6 +13,7 @@ import 'agent_card.dart';
 import 'create_agent_form.dart';
 import 'group_messaging.dart';
 import 'mission_control_card.dart';
+import 'mobile_session_home.dart' show MobileGroupCard;
 import 'shell_nav.dart';
 import '../pull_refresh.dart';
 import '../message_reactions.dart' show isReactionEvent;
@@ -50,7 +52,11 @@ class AgentsSidebarPanel extends StatefulWidget {
     this.bottomPadding,
     this.groupsKey,
     this.heroBuilder,
+    this.sessions,
   });
+
+  /// Phone: live sessions, so rows show who is asking and what they work on.
+  final List<SessionInfo>? sessions;
 
   /// Phone list header built from the agent count and how many need you.
   final Widget Function(int count, int needsYou, int working)? heroBuilder;
@@ -85,6 +91,14 @@ class AgentsSidebarPanel extends StatefulWidget {
   State<AgentsSidebarPanel> createState() => AgentsSidebarPanelState();
 }
 
+/// Last list per daemon, so a remounted panel paints at once and refreshes
+/// quietly.
+final _memo = <String, ({
+  List<CoordinationAgent> agents,
+  Map<String, AgentLastMessage?>? dmLast,
+  AgentLastMessage? mcLast,
+})>{};
+
 class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   List<CoordinationAgent> agents = const [];
   AgentLastMessage? _mcLast;
@@ -111,12 +125,19 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         if (mounted) setState(() {});
       },
     );
-    final cached = widget.client.cachedCoordinationAgents();
-    if (cached != null) {
+    final memo = _memo[widget.client.baseUrl];
+    final cached = memo == null ? widget.client.cachedCoordinationAgents() : null;
+    if (memo != null) {
+      agents = memo.agents;
+      _dmLast = memo.dmLast;
+      _mcLast = memo.mcLast;
+    } else if (cached != null) {
       agents = cached.where((a) => !a.isMissionControl).toList();
       _mcLast =
           cached.where((a) => a.isMissionControl).firstOrNull?.lastMessage;
     }
+    // Seeded rows were already seen; don't replay the entrance.
+    if (agents.isNotEmpty) _shownAt = DateTime.fromMillisecondsSinceEpoch(0);
     refresh();
   }
 
@@ -251,7 +272,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
 
   Future<void> refresh() async {
     _groups.refresh();
-    if (mounted) {
+    if (mounted && agents.isEmpty) {
       setState(() {
         loading = true;
         error = null;
@@ -271,6 +292,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         _mcLast = all.where((a) => a.isMissionControl).firstOrNull?.lastMessage;
         error = null;
       });
+      _remember();
       unawaited(_loadDmLast());
     } catch (e) {
       if (mounted) setState(() => error = '$e');
@@ -278,6 +300,9 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       if (mounted) setState(() => loading = false);
     }
   }
+
+  void _remember() => _memo[widget.client.baseUrl] =
+      (agents: agents, dmLast: _dmLast, mcLast: _mcLast);
 
   /// Agent id to the newest message in your direct thread with it. The
   /// daemon's own preview also counts session turns ("Posted."), which is not
@@ -318,6 +343,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         _dmLast = next;
         agents = [for (final a in agents) a.withLastMessage(next[a.id])];
       });
+      _remember();
     } catch (_) {}
   }
 
@@ -484,8 +510,12 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         }
         return a.name.compareTo(b.name);
       });
-    Widget agentTile(CoordinationAgent a) => AgentCard(
+    Widget agentTile(CoordinationAgent a,
+            {CrewEntry? crew, AgentGroup? group}) =>
+        AgentCard(
           key: ValueKey('agent-card-${a.id}'),
+          crew: crew,
+          group: group,
           client: widget.client,
           agent: a,
           pinned: _isPinnedAgent(a),
@@ -557,115 +587,96 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
         child: ListenableBuilder(
           listenable: widget.client.presence,
           builder: (context, _) {
+            final presence = widget.client.presence;
+            final crew = {
+              for (final e in deriveCrew(
+                  agents,
+                  [
+                    for (final s in widget.sessions ?? const <SessionInfo>[])
+                      if (!s.settled) s
+                  ],
+                  presence: presence))
+                e.agent.id: e,
+            };
+            AgentGroup bucketOf(CoordinationAgent a) =>
+                switch (crew[a.id]?.state) {
+                  CrewState.needsYou => AgentGroup.needsYou,
+                  CrewState.working => AgentGroup.working,
+                  _ => agentGroupFor(a,
+                      presence: presence.presenceForAgentId(a.id)),
+                };
+            Widget tileOf(Object item, AgentGroup bucket) =>
+                item is CoordinationAgent
+                    ? agentTile(item, crew: crew[item.id], group: bucket)
+                    : groupTile(item as GroupSummary);
+            Widget hairline() => Container(height: 1, color: AppColors.line);
             final children = <Widget>[];
-            Widget hairline() => Container(
-                height: 1,
-                margin: EdgeInsets.symmetric(horizontal: M.gutter),
-                color: AppColors.border);
+            var n = 0;
+            void section(String? label, List<Widget> rows) {
+              if (rows.isEmpty) return;
+              if (label != null) {
+                children.add(Padding(
+                  padding: EdgeInsets.fromLTRB(
+                      S.s4, children.isEmpty ? S.s4 : S.s16, S.s4, S.s8),
+                  child: Text(label,
+                      style: sans(12, weight: W.label, color: AppColors.fg4)),
+                ));
+              }
+              children.add(Appear(
+                key: ValueKey('agents-section-${label ?? 'all'}'),
+                index: n++,
+                since: _shownAt,
+                child: MobileGroupCard(children: [
+                  for (var i = 0; i < rows.length; i++) ...[
+                    if (i > 0) hairline(),
+                    rows[i],
+                  ],
+                ]),
+              ));
+            }
+
             if (q.isEmpty) {
+              final hero = widget.heroBuilder;
               final pinnedRows = <Widget>[];
               final buckets = <AgentGroup, List<Widget>>{
                 for (final g in AgentGroup.values) g: <Widget>[],
               };
               // Agents and groups interleave by recency inside each section.
-              var i = 0;
               for (final e in entries) {
                 final item = e.item;
-                final Widget tile;
-                final AgentGroup bucket;
-                if (item is CoordinationAgent) {
-                  tile = agentTile(item);
-                  bucket = agentGroupFor(item,
-                      presence: widget.client.presence
-                          .presenceForAgentId(item.id));
-                } else {
-                  final g = item as GroupSummary;
-                  tile = groupTile(g);
-                  bucket =
-                      g.hasUnread ? AgentGroup.needsYou : AgentGroup.recent;
-                }
-                final wrapped = Appear(
-                    key: ValueKey('appear-${tile.key}-$i'),
-                    index: i++,
-                    since: _shownAt,
-                    child: tile);
-                if (e.pinnedAt != null) {
-                  pinnedRows.add(wrapped);
-                } else {
-                  buckets[bucket]!.add(wrapped);
-                }
+                final bucket = item is CoordinationAgent
+                    ? bucketOf(item)
+                    : (item as GroupSummary).hasUnread
+                        ? AgentGroup.needsYou
+                        : AgentGroup.recent;
+                final tile = tileOf(item, bucket);
+                (e.pinnedAt != null ? pinnedRows : buckets[bucket]!).add(tile);
               }
-              final sectionDefs = <(AgentGroup, String, Color)>[
-                (AgentGroup.needsYou, 'Needs you', AppColors.accent),
-                (AgentGroup.working, 'Working', AppColors.fg3),
-                (AgentGroup.recent, 'Recent', AppColors.fg3),
-              ];
-              final totalRows = pinnedRows.length +
-                  buckets.values.fold(0, (s, l) => s + l.length);
-              var rowCount = 0;
-              if (pinnedRows.isNotEmpty) {
-                children.add(Padding(
-                  padding:
-                      EdgeInsets.fromLTRB(M.gutter, S.of(14), M.gutter, S.s4),
-                  child: Text('Pinned',
-                      style: sans(13, weight: W.label, color: AppColors.fg3)),
-                ));
-                for (final r in pinnedRows) {
-                  children.add(r);
-                  rowCount++;
-                  if (rowCount < totalRows) {
-                    children.add(hairline());
-                  }
-                }
-              }
-              for (final (grp, label, color) in sectionDefs) {
-                final rows = buckets[grp]!;
-                if (rows.isEmpty) continue;
-                if (grp != AgentGroup.recent || pinnedRows.isNotEmpty) {
-                  children.add(Padding(
-                    padding: EdgeInsets.fromLTRB(
-                        M.gutter, S.of(14), M.gutter, S.s4),
-                    child: Text(label,
-                        style: sans(13, weight: W.label, color: color)),
-                  ));
-                }
-                for (final r in rows) {
-                  children.add(r);
-                  rowCount++;
-                  if (rowCount < totalRows) {
-                    children.add(hairline());
-                  }
-                }
-              }
-              final hero = widget.heroBuilder;
               if (hero != null && entries.isNotEmpty) {
-                children.insert(
-                    0,
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: M.gutter),
-                      child: hero(
-                          agents.length,
-                          buckets[AgentGroup.needsYou]!.length,
-                          buckets[AgentGroup.working]!.length),
-                    ));
+                children.add(hero(
+                    agents.length,
+                    buckets[AgentGroup.needsYou]!.length,
+                    buckets[AgentGroup.working]!.length));
               }
+              section('Pinned', pinnedRows);
+              section('Needs you', buckets[AgentGroup.needsYou]!);
+              section('Working', buckets[AgentGroup.working]!);
+              section('Idle', buckets[AgentGroup.recent]!);
             } else {
-              for (var i = 0; i < entries.length; i++) {
-                children.add(row(i));
-                if (i < entries.length - 1) {
-                  children.add(hairline());
-                }
-              }
+              section(null, [
+                for (final e in entries)
+                  tileOf(
+                      e.item,
+                      e.item is CoordinationAgent
+                          ? bucketOf(e.item as CoordinationAgent)
+                          : AgentGroup.recent),
+              ]);
             }
-            if (emptyState != null) {
-              children.add(Padding(
-                  padding: EdgeInsets.symmetric(horizontal: M.gutter),
-                  child: emptyState));
-            }
+            if (emptyState != null) children.add(emptyState);
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.fromLTRB(
-                  0, S.s8, 0, widget.bottomPadding ?? 88),
+                  M.gutter, S.s8, M.gutter, widget.bottomPadding ?? 88),
               children: children,
             );
           },

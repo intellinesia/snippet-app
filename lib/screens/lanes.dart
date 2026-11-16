@@ -17,6 +17,7 @@ import '../mochi.dart';
 import '../transcript.dart'
     show LaneControlButton, LaneWho, laneAgentName;
 import 'mobile_chrome.dart' show MobileBackBar;
+import 'mobile_session_home.dart' show MobileGroupCard;
 import 'session.dart';
 
 /// A focused view of delegated work. The session owns the live state; this
@@ -140,22 +141,32 @@ class _LaneBoardState extends State<LaneBoard> {
         .toList();
     final side = kMobile ? M.gutter : S.s16;
     final children = <Widget>[
-      _summary(lanes.length, completed.length, running),
-      SizedBox(height: S.s8),
-      _strip([
-        for (final _ in completed) _Mark.ok,
-        for (final _ in running) _Mark.run,
-        for (final _ in failed) _Mark.danger,
-        for (final _ in [...paused, ...cancelled]) _Mark.faint,
+      _group([
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: S.s12),
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _summary(lanes.length, completed.length, running),
+                SizedBox(height: S.s12),
+                _strip([
+                  for (final _ in completed) _Mark.ok,
+                  for (final _ in running) _Mark.run,
+                  for (final _ in failed) _Mark.danger,
+                  for (final _ in [...paused, ...cancelled]) _Mark.faint,
+                ]),
+              ]),
+        ),
       ]),
     ];
     void section(String label, List<Widget> rows) {
       if (rows.isEmpty) return;
       children.add(Padding(
-        padding: EdgeInsets.only(top: S.s20, bottom: S.s4),
-        child: Text(label, style: sans(12, color: AppColors.fg4)),
+        padding: EdgeInsets.fromLTRB(S.s4, S.s20, S.s4, S.s8),
+        child: Text(label, style: sans(13, color: AppColors.fg3)),
       ));
-      children.addAll(rows);
+      children.add(_group(rows));
     }
 
     section('Needs you', [
@@ -178,22 +189,28 @@ class _LaneBoardState extends State<LaneBoard> {
             action: _control(l)),
     ]);
     if (completed.isNotEmpty || cancelled.isNotEmpty) {
-      children.add(SizedBox(height: S.s12));
-      children.add(_foldRow(completed.length, cancelled.length));
-      if (_showFinished) {
-        for (final l in completed) {
-          children.add(_row(l, _Mark.ok, _firstSentence(l.summary)));
-        }
-        for (final l in cancelled) {
-          children.add(_row(l, _Mark.faint, _firstSentence(l.summary)));
-        }
-      }
+      section('Finished', [
+        _foldRow(completed.length, cancelled.length),
+        if (_showFinished) ...[
+          for (final l in completed) _row(l, _Mark.ok, _firstSentence(l.summary)),
+          for (final l in cancelled)
+            _row(l, _Mark.faint, _firstSentence(l.summary)),
+        ],
+      ]);
     }
     return ListView(
       padding: EdgeInsets.fromLTRB(side, S.s16, side, S.s32),
       children: children,
     );
   }
+
+  /// One grouped surface with hairlines between rows, as on the agent page.
+  Widget _group(List<Widget> rows) => MobileGroupCard(children: [
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) Container(height: 1, color: AppColors.border),
+          rows[i],
+        ],
+      ]);
 
   Widget _summary(int total, int done, List<LaneInfo> running) {
     String oldest = '';
@@ -278,11 +295,8 @@ class _LaneBoardState extends State<LaneBoard> {
 
   Widget _row(LaneInfo lane, _Mark mark, String sub,
       {bool monoSub = false, Widget? action}) {
-    return DecoratedBox(
+    return KeyedSubtree(
       key: ValueKey('lane-row-${lane.id}'),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.border)),
-      ),
       child: InkWell(
         onTap: () => openLaneView(context, lane,
             client: widget.client,
@@ -332,18 +346,18 @@ class _LaneBoardState extends State<LaneBoard> {
       if (finished > 0) '$finished finished',
       if (cancelled > 0) '$cancelled cancelled',
     ].join(', ');
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.border)),
-      ),
-      child: InkWell(
-        onTap: () => setState(() => _showFinished = !_showFinished),
-        child: Container(
-          constraints: BoxConstraints(minHeight: kMobile ? 44 : 36),
-          alignment: Alignment.centerLeft,
-          child: Text('$label ${_showFinished ? '‹' : '›'}',
-              style: sans(13, color: AppColors.fg3)),
-        ),
+    return InkWell(
+      onTap: () => setState(() => _showFinished = !_showFinished),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: kMobile ? 48 : 36),
+        child: Row(children: [
+          Expanded(
+            child: Text(label,
+                style: sans(kMobile ? 15 : 13, color: AppColors.fg2)),
+          ),
+          AppIcon(_showFinished ? 'chevron-down' : 'chevron-right',
+              size: 16, color: AppColors.fg4),
+        ]),
       ),
     );
   }

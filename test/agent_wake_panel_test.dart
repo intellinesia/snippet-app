@@ -155,10 +155,22 @@ void main() {
       warmState: KeepWarmEntry.fromJson(keepWarmJson()),
     );
     await _pump(tester, WakesScreen(client: c, embedded: true), scroll: false);
-    expect(find.text('Revenue Scout'), findsNWidgets(2));
+    expect(find.text('Revenue Scout'), findsOneWidget);
     expect(find.byKey(const ValueKey('wake-scout')), findsOneWidget);
-    expect(find.byKey(const ValueKey('warm-scout')), findsOneWidget);
+    // Keep warm is its own page now.
+    expect(find.byKey(const ValueKey('warm-scout')), findsNothing);
     expect(find.textContaining('Session was busy'), findsOneWidget);
+  });
+
+  phone('keep warm page lists only warm sessions', (tester) async {
+    final c = FakeWakeClient(
+      wakeState: WakeSchedule.fromJson(wakeJson()),
+      warmState: KeepWarmEntry.fromJson(keepWarmJson()),
+    );
+    await _pump(tester, WakesScreen(client: c, embedded: true, keepWarm: true),
+        scroll: false);
+    expect(find.byKey(const ValueKey('warm-scout')), findsOneWidget);
+    expect(find.byKey(const ValueKey('wake-scout')), findsNothing);
   });
 
   phone('a conversation kept warm shows its title and a readable reason',
@@ -173,7 +185,8 @@ void main() {
     )..sessionList = [
         SessionInfo.fromJson({'id': id, 'title': 'Wave 2 merge'})
       ];
-    await _pump(tester, WakesScreen(client: c, embedded: true), scroll: false);
+    await _pump(tester, WakesScreen(client: c, embedded: true, keepWarm: true),
+        scroll: false);
     expect(find.text('Wave 2 merge'), findsOneWidget);
     expect(find.text('Paused for quiet hours'), findsOneWidget);
     expect(find.textContaining('snippet-mobile-8f8d'), findsNothing);
@@ -189,7 +202,7 @@ void main() {
     expect(c.warmPuts.single['enabled'], isFalse);
   });
 
-  phone('with no schedules and nothing kept warm the empty state shows',
+  phone('with no schedules the empty state shows',
       (tester) async {
     final c = FakeWakeClient();
     await _pump(tester, WakesScreen(client: c, embedded: true), scroll: false);

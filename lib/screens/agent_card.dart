@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../ambient_loop.dart';
 import '../api.dart';
 import '../clock.dart';
+import '../crew_status.dart';
 import '../markdown_preview.dart';
 import '../models.dart';
 import '../pins.dart';
@@ -119,6 +120,12 @@ class AgentCard extends StatefulWidget {
   final bool pinned;
   final VoidCallback? onTogglePin;
 
+  /// Phone: the agent's sessions, for the ask or the work in its line.
+  final CrewEntry? crew;
+
+  /// Phone: the section it sits in, when the list already decided it.
+  final AgentGroup? group;
+
   const AgentCard({
     super.key,
     required this.client,
@@ -129,6 +136,8 @@ class AgentCard extends StatefulWidget {
     this.groupTitles,
     this.pinned = false,
     this.onTogglePin,
+    this.crew,
+    this.group,
   });
 
   @override
@@ -319,13 +328,27 @@ class _AgentCardState extends State<AgentCard> {
           ? widget.agent.tasksIn(keys)
           : _tasks.where((t) => statuses.contains(t.status)).length;
 
-  Widget _agentAvatar(CoordinationAgent agent, double size) => Container(
-        width: size,
-        height: size,
-        decoration: avatarDecoration(size, color: AppColors.surface2),
-        alignment: Alignment.center,
-        child: AgentMochi(agent.id, size: size * 0.58),
-      );
+  /// The ask, else the session it works in, else the last message.
+  String _phoneLine(
+      CoordinationAgent agent, CrewEntry? crew, Presence? presence) {
+    final titles = widget.groupTitles ?? const {};
+    if (crew != null && crew.state != CrewState.standingBy) {
+      final text = cleanAgentStatusText(crew.line, groupTitles: titles);
+      if (crew.state == CrewState.working) return text;
+      final kind = crew.attention?['type'];
+      return kind == 'approval'
+          ? 'Approval: $text'
+          : kind == 'question'
+              ? 'Asked: $text'
+              : 'Waiting on you · $text';
+    }
+    final line =
+        agentStatusLine(agent, presence: presence, groupTitles: titles);
+    if (line == 'No messages yet' && crew?.lead != null) {
+      return cleanAgentStatusText(crew!.line, groupTitles: titles);
+    }
+    return line;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -350,15 +373,22 @@ class _AgentCardState extends State<AgentCard> {
     final metaSize = kMobile ? 13.0 : 11.5;
     if (kMobile) {
       final presence = widget.client.presence.presenceForAgentId(agent.id);
-      final group = agentGroupFor(agent, presence: presence);
-      final ringColor = switch (group) {
-        AgentGroup.needsYou => AppColors.accent,
-        AgentGroup.working => AppColors.fg3,
-        AgentGroup.recent => null,
-      };
-      final status = agentStatusLine(agent,
-          presence: presence, groupTitles: widget.groupTitles ?? const {});
-      final time = agentRowTime(agent.lastMessage?.at);
+      final crew = widget.crew;
+      final group = widget.group ?? agentGroupFor(agent, presence: presence);
+      final status = _phoneLine(agent, crew, presence);
+      final lead = crew?.lead;
+      final time = crew != null && crew.state != CrewState.standingBy && lead != null
+          ? agentRowTime(
+              DateTime.fromMillisecondsSinceEpoch(lead.lastActive * 1000))
+          : agentRowTime(agent.lastMessage?.at);
+      final needs = group == AgentGroup.needsYou;
+      final characterState = !agent.available
+          ? AgentCharacterState.sleeping
+          : needs
+              ? AgentCharacterState.needs
+              : group == AgentGroup.working
+                  ? AgentCharacterState.working
+                  : AgentCharacterState.idle;
       return Pressable(
           kind: PressKind.row,
           child: InkWell(
@@ -374,63 +404,54 @@ class _AgentCardState extends State<AgentCard> {
             },
             child: Opacity(
               opacity: agent.available ? 1 : 0.55,
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                    horizontal: M.gutter, vertical: S.s8),
-                child: Row(children: [
-                  SizedBox.square(
-                    dimension: 52,
-                    child: Center(
-                      child: ringColor == null
-                          ? _agentAvatar(agent, 48)
-                          : Container(
-                              key: const ValueKey('agent-ring'),
-                              width: 52,
-                              height: 52,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border:
-                                    Border.all(color: ringColor, width: 2),
-                              ),
-                              alignment: Alignment.center,
-                              child: _agentAvatar(agent, 48),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: M.minTarget),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: S.s8),
+                  child: Row(children: [
+                    SizedBox.square(
+                      key: ValueKey('agent-avatar-${characterState.name}'),
+                      dimension: 36,
+                      child: AgentMochi(agent.id,
+                          size: 36,
+                          state: characterState,
+                          badge: needs ? '?' : null),
+                    ),
+                    SizedBox(width: S.s12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(children: [
+                            Expanded(
+                              child: Text(name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TS.rowTitle(agent.available
+                                      ? AppColors.fg1
+                                      : AppColors.fg3)),
                             ),
+                            if (_isPinned) ...[
+                              SizedBox(width: S.s6),
+                              AppIcon('pin', size: 12, color: AppColors.fg3),
+                            ],
+                            if (time.isNotEmpty) ...[
+                              SizedBox(width: S.s8),
+                              Text(time, style: TS.meta()),
+                            ],
+                          ]),
+                          SizedBox(height: S.s2),
+                          Text.rich(
+                              markdownPreviewSpan(
+                                  status, sans(13, color: AppColors.fg3)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(width: S.s12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(children: [
-                          Expanded(
-                            child: Text(name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TS.rowTitle(agent.available
-                                    ? AppColors.fg1
-                                    : AppColors.fg3)),
-                          ),
-                          if (_isPinned) ...[
-                            SizedBox(width: S.s6),
-                            AppIcon('pin', size: 12, color: AppColors.fg3),
-                          ],
-                          if (time.isNotEmpty) ...[
-                            SizedBox(width: S.s8),
-                            Text(time, style: TS.meta()),
-                          ],
-                        ]),
-                        SizedBox(height: S.s2),
-                        Text.rich(
-                            markdownPreviewSpan(
-                                status, sans(13, color: AppColors.fg3)),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
-                      ],
-                    ),
-                  ),
-                ]),
+                  ]),
+                ),
               ),
             ),
           ));

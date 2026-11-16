@@ -619,13 +619,8 @@ class AgentMessageCard extends StatelessWidget {
     if (lane) {
       final given = laneTitle?.trim() ?? '';
       final laneName = given.isNotEmpty ? given : agentId.substring(5).trim();
-      return _ThreadCard(
-        icon: outbound ? 'send' : 'message',
-        tone: outbound ? Tone.neutral : Tone.accent,
-        kind: outbound ? 'To Lane \u00b7 $laneName' : 'Lane \u00b7 $laneName',
-        status: outbound ? 'Sent' : null,
-        body: body,
-      );
+      return _LaneMessageRow(
+          lane: laneName, body: body, outbound: outbound, time: time);
     }
     return AgentNamesBuilder(builder: (context, names) {
       final them = agentDisplayName(agentId, names);
@@ -655,6 +650,59 @@ class AgentMessageCard extends StatelessWidget {
         outbound: outbound,
       );
     });
+  }
+}
+
+/// A lane's note to its parent, or the parent's note to it: one quiet line,
+/// the full text on tap. Lanes otherwise live in the header pill and board.
+class _LaneMessageRow extends StatefulWidget {
+  const _LaneMessageRow(
+      {required this.lane,
+      required this.body,
+      required this.outbound,
+      this.time});
+
+  final String lane;
+  final String body;
+  final bool outbound;
+  final String? time;
+
+  @override
+  State<_LaneMessageRow> createState() => _LaneMessageRowState();
+}
+
+class _LaneMessageRowState extends State<_LaneMessageRow> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final body = widget.body.trim();
+    final first = body
+        .replaceAll(RegExp(r'[#*`>_]+'), '')
+        .split('\n')
+        .map((l) => l.trim())
+        .firstWhere((l) => l.isNotEmpty, orElse: () => '');
+    final head = widget.outbound
+        ? 'Told **${widget.lane}**'
+        : '**${widget.lane}**';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SignalRow(
+          icon: 'message',
+          tone: SignalTone.neutral,
+          text: head,
+          sub: _open ? null : first,
+          time: widget.time,
+          onTap: body.isEmpty ? null : () => setState(() => _open = !_open),
+        ),
+        if (_open)
+          Padding(
+            padding: EdgeInsets.fromLTRB(S.of(28), S.s2, 0, S.s8),
+            child: CardMarkdownBody(body: body, collapsible: false),
+          ),
+      ],
+    );
   }
 }
 

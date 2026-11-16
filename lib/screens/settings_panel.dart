@@ -22,7 +22,7 @@ import 'inference_profiles.dart';
 import 'recurring.dart';
 import 'routing_screen.dart';
 import 'mobile_session_home.dart'
-    show LiveSessionCard, MobileSectionLabel;
+    show DotGridPref, LiveSessionCard, MobileSectionLabel;
 import 'session_list_row.dart' show SessionListRow;
 import 'shell_nav.dart';
 import 'usage.dart';
@@ -193,6 +193,7 @@ enum SettingsPage {
   vault,
   scheduled,
   wakes,
+  keepWarm,
   voice,
   webSearch,
   accounts,
@@ -346,6 +347,7 @@ class SettingsPanelState extends State<SettingsPanel> {
         case SettingsPage.appearance:
         case SettingsPage.usage:
         case SettingsPage.wakes:
+        case SettingsPage.keepWarm:
         case SettingsPage.memory:
         case SettingsPage.routing:
         case SettingsPage.voice:
@@ -365,6 +367,7 @@ class SettingsPanelState extends State<SettingsPanel> {
     (SettingsPage.memory, 'book-marked', 'Memory'),
     (SettingsPage.scheduled, 'calendar-clock', 'Scheduled'),
     (SettingsPage.wakes, 'repeat', 'Wakes'),
+    (SettingsPage.keepWarm, 'zap', 'Keep warm'),
     (SettingsPage.vault, 'lock', 'Vault'),
     (SettingsPage.voice, 'mic', 'Voice'),
     (SettingsPage.webSearch, 'globe', 'Web search'),
@@ -687,6 +690,7 @@ class SettingsPanelState extends State<SettingsPanel> {
           ApprovalsRow(client: widget.client),
           _settingsRow('Memory', 'book-marked', page: SettingsPage.memory),
           _settingsRow('Wakes', 'repeat', page: SettingsPage.wakes),
+          _settingsRow('Keep warm', 'zap', page: SettingsPage.keepWarm),
           _settingsRow('Scheduled', 'calendar-clock',
               page: SettingsPage.scheduled),
           _settingsRow('Vault', 'lock',
@@ -800,6 +804,12 @@ class SettingsPanelState extends State<SettingsPanel> {
       SettingsPage.wakes => WakesScreen(
           client: widget.client,
           embedded: true,
+          onBack: back,
+        ),
+      SettingsPage.keepWarm => WakesScreen(
+          client: widget.client,
+          embedded: true,
+          keepWarm: true,
           onBack: back,
         ),
     };
@@ -1418,6 +1428,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
       case SettingsPage.appearance:
       case SettingsPage.usage:
       case SettingsPage.wakes:
+      case SettingsPage.keepWarm:
       case SettingsPage.memory:
       case SettingsPage.routing:
       case SettingsPage.voice:
@@ -1604,6 +1615,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         SettingsPage.vault => 'Vault',
         SettingsPage.scheduled => 'Scheduled',
         SettingsPage.wakes => 'Wakes',
+        SettingsPage.keepWarm => 'Keep warm',
         SettingsPage.voice => 'Voice',
         SettingsPage.webSearch => 'Web search',
         SettingsPage.accounts => 'Accounts',
@@ -1857,7 +1869,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
           title: 'Keep sessions warm',
           subtitle: 'Hold the prompt cache while idle',
           onTap: widget.onSelectPage != null
-              ? () => widget.onSelectPage!(SettingsPage.wakes)
+              ? () => widget.onSelectPage!(SettingsPage.keepWarm)
               : null,
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
             if (warmCount != null) ...[
@@ -2133,6 +2145,8 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
           ),
         SettingsPage.wakes =>
           WakesScreen(client: widget.client, embedded: true),
+        SettingsPage.keepWarm => WakesScreen(
+            client: widget.client, embedded: true, keepWarm: true),
         SettingsPage.scheduled => RecurringScreen(
             key: _recurringKey,
             client: widget.client,
@@ -2168,6 +2182,11 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
       SettingsPage.wakes => WakesScreen(
           client: widget.client,
           embedded: true,
+        ),
+      SettingsPage.keepWarm => WakesScreen(
+          client: widget.client,
+          embedded: true,
+          keepWarm: true,
         ),
       SettingsPage.scheduled => RecurringScreen(
           key: _recurringKey,
@@ -2420,10 +2439,11 @@ class AppearanceScreen extends StatelessWidget {
                     _AppearancePreviewCard(),
                     const SettingsGroupLabel('Home'),
                     const ListGroup(children: [_HomeFirstRow()]),
-                    if (shaderSurfaceSupported) ...[
-                      const SettingsGroupLabel('Background'),
-                      const ListGroup(children: [_ChatSceneRow()]),
-                    ],
+                    const SettingsGroupLabel('Background'),
+                    ListGroup(children: [
+                      const _DotGridRow(),
+                      if (shaderSurfaceSupported) const _ChatSceneRow(),
+                    ]),
                     const SettingsGroupLabel('Palette'),
                     ListGroup(children: paletteChildren),
                     Padding(
@@ -2583,6 +2603,22 @@ class _ChromeOpacityRow extends StatelessWidget {
       },
     );
   }
+}
+
+class _DotGridRow extends StatelessWidget {
+  const _DotGridRow();
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+        valueListenable: DotGridPref.instance,
+        builder: (context, on, _) => SettingsRow(
+          key: const Key('dot-grid'),
+          label: 'Dotted background',
+          sub: 'A faint dot grid behind the home and chat screens',
+          trailing: SettingsSwitch(value: on, onChanged: DotGridPref.instance.set),
+          onTap: () => DotGridPref.instance.set(!on),
+        ),
+      );
 }
 
 class _ChatSceneRow extends StatelessWidget {

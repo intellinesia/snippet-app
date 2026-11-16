@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../mochi.dart';
 import '../models.dart';
 import '../motion.dart';
 import '../motion_routes.dart';
@@ -213,14 +214,14 @@ class _MemoryScreenState extends State<MemoryScreen> {
                     V5SettingsRow(
                       label: scopeTitle(s, s.key),
                       subtitle: scopeStatus(s),
-                      leading: V5IconTile(scopeIcon(s.kind)),
+                      leading: scopeLeading(s, v5: true),
                       onTap: () => _openScopeKey(s.key),
                     )
                   else
                     ListRow(
                       title: scopeTitle(s, s.key),
                       subtitle: scopeStatus(s),
-                      leading: IconTile(scopeIcon(s.kind)),
+                      leading: scopeLeading(s),
                       trailing: AppIcon('chevron-right',
                           size: 15, color: AppColors.fg4),
                       onTap: () => _openScopeKey(s.key),
@@ -341,7 +342,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
             SettingsRow(
               label: scopeTitle(s, s.key),
               sub: scopeStatus(s),
-              leading: IconTile(scopeIcon(s.kind)),
+              leading: scopeLeading(s),
               chevron: true,
               onTap: () => _openScopeKey(s.key),
             ),
@@ -410,6 +411,18 @@ String scopeIcon(String kind) => switch (kind) {
       'agent' => 'agent',
       _ => 'chat-thread',
     };
+
+/// An agent scope shows the agent's character; the rest a kind icon.
+Widget scopeLeading(MemoryScope s, {bool v5 = false}) {
+  if (s.kind == 'agent' && s.key.startsWith('agent:')) {
+    final size = v5 ? 30.0 : 28.0;
+    return SizedBox.square(
+      dimension: size,
+      child: AgentMochi(s.key.substring('agent:'.length), size: size),
+    );
+  }
+  return v5 ? V5IconTile(scopeIcon(s.kind)) : IconTile(scopeIcon(s.kind));
+}
 
 /// "2 hours ago" style, as the status lines read in full words.
 String memoryAgo(int unixSec) {
