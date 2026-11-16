@@ -183,7 +183,6 @@ class LaneDetailCard extends StatefulWidget {
 }
 
 class _LaneDetailCardState extends State<LaneDetailCard> {
-  bool get _expanded => widget.detail;
   LaneInfo? _full;
 
   LaneInfo get lane => _full ?? widget.lane;
@@ -224,6 +223,9 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
     final activity = lane.activity?.trim();
     final summary = lane.summary?.trim();
     final error = lane.error?.trim();
+    if (widget.detail) {
+      return _detailView(context, tone: tone, status: status);
+    }
     final dense = !kMobile;
     final meta = sans(dense ? 12 : 13, color: AppColors.fg4);
     final body = sans(dense ? 13 : 14, height: 1.45, color: AppColors.fg2);
@@ -240,7 +242,7 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(
-          onTap: widget.detail ? null : () => _open(context),
+          onTap: () => _open(context),
           child: Padding(
             padding:
                 EdgeInsets.fromLTRB(S.s12, dense ? S.of(9) : S.s12, S.s12, dense ? S.of(10) : S.s12),
@@ -299,32 +301,187 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
                   ])),
                 if (lane.running && lane.recent.isNotEmpty)
                   indented(LaneRecentOutput(lines: lane.recent), top: 4),
-                if (summary != null && summary.isNotEmpty && !_expanded)
+                if (summary != null && summary.isNotEmpty)
                   indented(
                       MarkdownPreview(data: summary, maxLines: 2, style: body)),
-                if (failed && error != null && error.isNotEmpty && !_expanded)
+                if (failed && error != null && error.isNotEmpty)
                   indented(Text(error,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: body.copyWith(color: AppColors.danger))),
                 if (_controlButton(context) case final ctrl?)
-                  if (!_expanded)
-                    indented(
-                        Row(children: [
-                          Text('View details', style: meta),
-                          const Spacer(),
-                          ctrl,
-                        ]),
-                        top: 8)
-                  else
-                    indented(Row(children: [ctrl]), top: 8)
-                else if (!_expanded)
+                  indented(
+                      Row(children: [
+                        Text('View details', style: meta),
+                        const Spacer(),
+                        ctrl,
+                      ]),
+                      top: 8)
+                else
                   indented(Text('View details', style: meta), top: 8),
-                if (_expanded) indented(_details(context), top: 12),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// The lane page: title and status, then Activity, Summary and the rest as
+  /// grouped cards under quiet section labels.
+  Widget _detailView(BuildContext context,
+      {required Tone tone, required String status}) {
+    final (toneFg, toneBg) = toneColors(tone);
+    final pill = lane.running
+        ? 'In progress'
+        : switch (lane.status) {
+            'failed' => 'Failed',
+            'cancelled' => 'Cancelled',
+            'paused' => 'Paused',
+            _ => 'Done',
+          };
+    final identity = LaneWho(
+        client: widget.client,
+        agent: MediaQuery.sizeOf(context).width < 360 ? null : lane.agent,
+        profile: (lane.profile ?? '').isNotEmpty
+            ? lane.profile
+            : widget.sessionProfile,
+        maxTextWidth: 96);
+    final ctrl = _controlButton(context);
+    final rows = <(String, String)>[
+      for (final e in lane.activityLog) (e.text, _hhmm(e.at)),
+    ];
+    final now = lane.activity?.trim() ?? '';
+    if (now.isNotEmpty && (rows.isEmpty || rows.last.$1 != now)) {
+      rows.add((now, ''));
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(lane.title, style: sans(17, weight: W.title, color: AppColors.fg1)),
+      SizedBox(height: S.s8),
+      Wrap(
+          spacing: S.s8,
+          runSpacing: S.s6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s2),
+              decoration: BoxDecoration(
+                  color: toneBg, borderRadius: BorderRadius.circular(R.pill)),
+              child: Text(pill,
+                  style: sans(12, weight: W.label, color: toneFg)),
+            ),
+            Text(status, style: sans(12, color: AppColors.fg3)),
+            identity,
+          ]),
+      if (ctrl != null) ...[SizedBox(height: S.s12), Row(children: [ctrl])],
+      if (rows.isNotEmpty)
+        _section('Activity · ${rows.length}', [
+          for (var i = 0; i < rows.length; i++)
+            _activityRow(rows[i].$1, rows[i].$2,
+                live: lane.running && i == rows.length - 1),
+        ]),
+      for (final (label, value, danger) in [
+        ('Summary', lane.summary, false),
+        ('Handoff', lane.handoff, false),
+        ('Report', lane.report, false),
+        ('Error', lane.error, true),
+      ])
+        if (value != null && value.trim().isNotEmpty)
+          _section(label, [_textBlock(context, value, danger)],
+              copy: value, danger: danger),
+    ]);
+  }
+
+  String _hhmm(String raw) {
+    final t = DateTime.tryParse(raw)?.toLocal();
+    if (t == null) return '';
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${two(t.hour)}:${two(t.minute)}';
+  }
+
+  Widget _section(String label, List<Widget> children,
+      {String? copy, bool danger = false}) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Padding(
+        padding: EdgeInsets.fromLTRB(S.s4, S.s20, S.s4, S.s6),
+        child: Row(children: [
+          Expanded(
+            child: Text(label,
+                style: sans(13, color: danger ? AppColors.danger : AppColors.fg3)),
+          ),
+          if (copy != null)
+            InkWell(
+              borderRadius: BorderRadius.circular(R.xs),
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: copy));
+                toast(context, 'Copied');
+              },
+              child: Padding(
+                padding: EdgeInsets.all(S.s4),
+                child: Text('Copy', style: sans(12, color: AppColors.fg3)),
+              ),
+            ),
+        ]),
+      ),
+      Container(
+        width: double.infinity,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(R.lg),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+      ),
+    ]);
+  }
+
+  Widget _activityRow(String text, String at, {required bool live}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s6),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(
+          width: 14,
+          height: 20,
+          child: Center(
+            child: live
+                ? Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                        color: AppColors.accent, shape: BoxShape.circle))
+                : AppIcon('check', size: 13, color: toneColors(Tone.ok).$1),
+          ),
+        ),
+        SizedBox(width: S.s8),
+        Expanded(
+          child: Text(text,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: sans(13, height: 20 / 13, color: AppColors.fg1)),
+        ),
+        if (at.isNotEmpty) ...[
+          SizedBox(width: S.s8),
+          Text(at, style: TS.meta()),
+        ],
+      ]),
+    );
+  }
+
+  Widget _textBlock(BuildContext context, String value, bool danger) {
+    final text = sans(kMobile ? 14 : 13, height: 1.45, color: AppColors.fg2);
+    return Padding(
+      padding: EdgeInsets.all(S.s12),
+      child: MarkdownBody(
+        data: value,
+        selectable: true,
+        styleSheet: markdownStyle(context).copyWith(
+          p: danger ? text.copyWith(color: AppColors.danger) : text,
+          listBullet: text,
+          strong: text.copyWith(
+              color: AppColors.fg1, fontWeight: weightFor(W.strong)),
+        ),
+        builders: {'pre': PreBlockBuilder()},
       ),
     );
   }
@@ -342,73 +499,6 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
       client: widget.client,
       sessionId: widget.sessionId,
       liveLanes: widget.liveLanes);
-
-  Widget _details(BuildContext context) {
-    final sections = <Widget>[];
-
-    void addSection(String label, String? value,
-        {required String icon, Tone tone = Tone.neutral}) {
-      if (value == null || value.trim().isEmpty) return;
-      final text = sans(kMobile ? 14 : 12, height: 1.45, color: AppColors.fg2);
-      sections.add(Padding(
-        padding: EdgeInsets.only(bottom: S.s12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Text(label,
-                  style: mono(10,
-                      color: tone == Tone.danger
-                          ? AppColors.danger
-                          : AppColors.fg3)),
-              const Spacer(),
-              InkWell(
-                borderRadius: BorderRadius.circular(R.xs),
-                onTap: () {
-                  Clipboard.setData(ClipboardData(text: value));
-                  toast(context, 'Copied');
-                },
-                child: Padding(
-                  padding: EdgeInsets.all(S.s4),
-                  child: Text('Copy', style: mono(10, color: AppColors.fg3)),
-                ),
-              ),
-            ]),
-            SizedBox(height: S.s4),
-            MarkdownBody(
-              data: value,
-              selectable: true,
-              styleSheet: markdownStyle(context).copyWith(
-                p: tone == Tone.danger
-                    ? text.copyWith(color: AppColors.danger)
-                    : text,
-                listBullet: text,
-                strong: text.copyWith(
-                    color: AppColors.fg1, fontWeight: weightFor(W.strong)),
-              ),
-              builders: {'pre': PreBlockBuilder()},
-            ),
-          ],
-        ),
-      ));
-    }
-
-    addSection('Activity', lane.activity, icon: 'terminal');
-    addSection('Summary', lane.summary, icon: 'file-text');
-    addSection('Handoff', lane.handoff,
-        icon: 'corner-down-right', tone: Tone.accent);
-    addSection('Report', lane.report, icon: 'file-text', tone: Tone.ok);
-    addSection('Error', lane.error, icon: 'alert-triangle', tone: Tone.danger);
-
-    if (lane.activityLog.isNotEmpty) {
-      sections.add(_ActivityHistory(entries: lane.activityLog));
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: sections,
-    );
-  }
 
   String _elapsed(String startedAt) {
     final time = DateTime.tryParse(startedAt);
@@ -464,7 +554,7 @@ class _LaneDetailScreenState extends State<LaneDetailScreen> {
           bottom: false,
           child: Column(children: [
             SnAppBar(
-                title: lane?.title ?? 'Lane details',
+                title: 'Lane details',
                 titleSize: 14,
                 compact: true,
                 onBack: () => Navigator.of(context).pop()),
@@ -484,95 +574,6 @@ class _LaneDetailScreenState extends State<LaneDetailScreen> {
                       ])),
           ])),
     );
-  }
-}
-
-class _ActivityHistory extends StatelessWidget {
-  final List<LaneActivity> entries;
-  const _ActivityHistory({required this.entries});
-
-  @override
-  Widget build(BuildContext context) {
-    final items = entries.reversed.toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Activity · ${entries.length}',
-            style: mono(10, color: AppColors.fg3)),
-        SizedBox(height: S.s8),
-        Column(children: [
-          for (var i = 0; i < items.length; i++)
-            _TimelineEntryRow(
-              entry: items[i],
-              first: i == 0,
-              last: i == items.length - 1,
-            ),
-        ]),
-      ],
-    );
-  }
-}
-
-class _TimelineEntryRow extends StatelessWidget {
-  final LaneActivity entry;
-  final bool first;
-  final bool last;
-
-  const _TimelineEntryRow(
-      {required this.entry, required this.first, required this.last});
-
-  @override
-  Widget build(BuildContext context) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 12,
-            child: Column(children: [
-              Container(
-                margin: EdgeInsets.only(top: S.s6),
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: first ? AppColors.accent : AppColors.fg4,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              if (!last)
-                Expanded(child: Container(width: 1, color: AppColors.line)),
-            ]),
-          ),
-          SizedBox(width: S.s8),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: last ? 0 : S.s12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (entry.kind.isNotEmpty || entry.at.isNotEmpty)
-                    Text(
-                      [
-                        if (entry.kind.isNotEmpty) entry.kind,
-                        if (entry.at.isNotEmpty) _formatTime(entry.at),
-                      ].join(' · '),
-                      style: TS.meta(),
-                    ),
-                  Text(entry.text, style: TS.codeSmall(AppColors.fg2)),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatTime(String raw) {
-    final parsed = DateTime.tryParse(raw)?.toLocal();
-    if (parsed == null) return raw;
-    String two(int v) => v.toString().padLeft(2, '0');
-    return '${two(parsed.hour)}:${two(parsed.minute)}:${two(parsed.second)}';
   }
 }
 

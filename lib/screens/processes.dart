@@ -7,6 +7,7 @@ import '../swr.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../pull_refresh.dart';
+import '../platform.dart';
 
 /// Background processes the agent started (dev servers, tunnels, a browser) via
 /// `bash {background:true}`. Lists them from /bg with a live status, a log tail,
@@ -145,7 +146,26 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
                     child: ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: EdgeInsets.all(S.s16),
-                        children: [for (final p in procs) _row(p)]))),
+                        children: [
+                          Container(
+                            clipBehavior: Clip.antiAlias,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface1,
+                              borderRadius: BorderRadius.circular(R.lg),
+                              border: Border.all(color: AppColors.line),
+                            ),
+                            child: Column(children: [
+                              for (var i = 0; i < procs.length; i++) ...[
+                                if (i > 0)
+                                  Divider(
+                                      height: 1,
+                                      thickness: 1,
+                                      color: AppColors.line),
+                                _row(procs[i]),
+                              ],
+                            ]),
+                          ),
+                        ]))),
         ]),
       ),
     );
@@ -166,68 +186,87 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
             final c? when c.isNotEmpty => 'exited ($c)',
             _ => 'exited',
           };
-    // A finished process previously wore one grey dot and one grey label
-    // whatever the outcome, so `exited (101)` looked exactly like `exited (ok)`
-    // — the same "failure is invisible" defect the tool rows had. Colour now
-    // summarises the outcome: amber live, danger for non-zero/killed, grey for
-    // a clean exit.
-    final tone = running
-        ? Tone.run
-        : failed
-            ? Tone.danger
-            : Tone.neutral;
     final open = _openLogId == id;
+    final dotFg = running
+        ? toneColors(Tone.ok).$1
+        : failed
+            ? AppColors.danger
+            : AppColors.fg4;
     return Padding(
-      padding: EdgeInsets.only(bottom: S.s8),
-      child: Material(
-        color: AppColors.raised,
-        borderRadius: BorderRadius.circular(R.md),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s8, S.s8),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Padding(
-              padding: EdgeInsets.only(right: S.s8),
-              child: Text(cmd,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TS.code(AppColors.fg1)),
-            ),
-            SizedBox(height: S.s8),
-            Row(children: [
-              Tag(statusLabel, tone: tone, dot: !running, live: running),
-              SizedBox(width: S.s8),
-              Text('pid $pid', style: TS.meta()),
-              const Spacer(),
-              TextAction(open ? 'Hide log' : 'Log',
-                  onTap: () => _toggleLog(id)),
-              if (running)
-                TextAction('Stop', onTap: () => _kill(id), danger: true),
-            ]),
-            if (open) ...[
-              SizedBox(height: S.s8),
-              Padding(
-                padding: EdgeInsets.only(right: S.s8, bottom: S.s4),
-                child: Container(
-                  constraints: const BoxConstraints(maxHeight: 240),
-                  width: double.infinity,
-                  padding: EdgeInsets.all(S.s12),
-                  decoration: BoxDecoration(
-                      color: AppColors.canvas,
-                      borderRadius: BorderRadius.circular(R.sm + 2)),
-                  child: _logLoading
-                      ? const Center(child: DelayedSpinner(size: 16))
-                      : SingleChildScrollView(
-                          child: SelectableText(
-                              _log.trim().isEmpty ? '(empty)' : _log,
-                              style: TS.codeSmall(AppColors.fg2))),
-                ),
-              ),
-            ],
-          ]),
-        ),
-      ),
+      padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.s8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: dotFg, shape: BoxShape.circle)),
+          SizedBox(width: S.s8),
+          Expanded(
+            child: Text(cmd,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TS.code(AppColors.fg1)),
+          ),
+        ]),
+        SizedBox(height: S.s6),
+        Row(children: [
+          Expanded(
+            child: Text(running ? 'pid $pid' : statusLabel,
+                style: TS.meta(failed ? AppColors.danger : AppColors.fg3)),
+          ),
+          _ChipBtn(open ? 'Hide log' : 'Log', () => _toggleLog(id)),
+          if (running) ...[
+            SizedBox(width: S.s8),
+            _ChipBtn('Stop', () => _kill(id)),
+          ],
+        ]),
+        if (open) ...[
+          SizedBox(height: S.s8),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 240),
+            width: double.infinity,
+            padding: EdgeInsets.all(S.s12),
+            decoration: BoxDecoration(
+                color: AppColors.canvas,
+                borderRadius: BorderRadius.circular(R.md)),
+            child: _logLoading
+                ? const Center(child: DelayedSpinner(size: 16))
+                : SingleChildScrollView(
+                    child: SelectableText(
+                        _log.trim().isEmpty ? '(empty)' : _log,
+                        style: TS.codeSmall(AppColors.fg2))),
+          ),
+        ],
+      ]),
     );
   }
+}
+
+/// Pill drawn at 30px (28 on desktop) inside a 44px hit area, as in the shots.
+class _ChipBtn extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _ChipBtn(this.label, this.onTap);
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          height: kMobile ? 44 : 32,
+          child: Center(
+            child: Container(
+              height: kMobile ? 30 : 28,
+              padding: EdgeInsets.symmetric(horizontal: S.s12),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                  color: AppColors.surface3,
+                  borderRadius: BorderRadius.circular(R.pill)),
+              child: Text(label,
+                  style: sans(kMobile ? 13 : 12,
+                      weight: W.strong, color: AppColors.fg2)),
+            ),
+          ),
+        ),
+      );
 }
