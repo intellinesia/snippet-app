@@ -736,7 +736,11 @@ class SettingsPanelState extends State<SettingsPanel> {
               compact: true,
               onBack: back,
               actions: [
-                _headerAdd('Add machine', _addMachine),
+                IconBtn('plus',
+                    size: M.minTarget,
+                    iconSize: 18,
+                    tooltip: 'Add machine',
+                    onTap: _addMachine),
               ],
             ),
             Expanded(child: _generalPage(includeNotifications: false)),
@@ -986,7 +990,9 @@ class SettingsPanelState extends State<SettingsPanel> {
   Widget _generalPage({bool includeNotifications = true}) {
     if (_addingMachine) return _addMachinePane();
     return PageBody(children: [
-      if (includeNotifications)
+      if (kMobile)
+        const SettingsGroupLabel('Machines')
+      else
         const SectionLabel('Machines'),
       if (_instances.isEmpty)
         EmptyState(
@@ -1132,8 +1138,9 @@ class SettingsPanelState extends State<SettingsPanel> {
               ),
               SizedBox(width: S.s8),
               if (compact) ...[
-                if (isActive)
-                  AppIcon('check', size: 16, color: AppColors.accent),
+                if (isActive || canConnect)
+                  Text(isActive ? 'Active' : 'Connect',
+                      style: sans(14, color: AppColors.fg3)),
                 _machineMenu(i, connect: canConnect),
               ] else ...[
                 if (isActive)
@@ -1276,36 +1283,6 @@ Future<void> _showMachineMenu(
   if (picked == 'rename') onRename();
   if (picked == 'remove') onRemove();
 }
-
-Future<bool?> _showApprovalsMenu(
-  BuildContext context,
-  BuildContext anchor,
-  bool current,
-) =>
-    showAppMenu<bool>(
-      context,
-      anchor: anchor,
-      below: true,
-      alignEnd: true,
-      minWidth: 260,
-      maxWidth: 320,
-      items: [
-        appMenuRow(
-          value: false,
-          icon: 'check-circle',
-          label: 'Yolo',
-          description: 'Run shell and file edits without asking',
-          selected: !current,
-        ),
-        appMenuRow(
-          value: true,
-          icon: 'shield',
-          label: 'Ask',
-          description: 'Pause for approval on each change',
-          selected: current,
-        ),
-      ],
-    );
 
 /// Shared desktop settings section content used by both [SettingsPanel]
 /// and `DesktopSettingsPage`.
@@ -1854,24 +1831,16 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
       ]),
       SizedBox(height: S.s16),
       _v5Card([
-        Builder(
-          builder: (anchor) => _v5Row(
-            title: 'Approvals',
-            subtitle: 'Ask before running commands',
-            onTap: () async {
-              final current = _manual ?? false;
-              final picked = await _showApprovalsMenu(context, anchor, current);
-              if (picked != null && picked != current) {
-                await _setManual(picked);
-              }
-            },
-            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(_manual == null ? '' : (_manual! ? 'Ask' : 'Yolo'),
-                  style: sans(13, color: AppColors.fg3)),
-              SizedBox(width: S.s6),
-              AppIcon('chevron-down', size: 12, color: AppColors.fg3),
-            ]),
-          ),
+        _v5Row(
+          title: 'Approvals',
+          subtitle: 'Applies to every session on this machine',
+          trailing: _manual == null
+              ? const SizedBox.shrink()
+              : _InlineSeg(
+                  labels: const ['Ask', 'Yolo'],
+                  selected: _manual! ? 0 : 1,
+                  onChanged: (i) => _setManual(i == 0),
+                ),
         ),
         if (kCanNotify)
           _v5Row(
@@ -2324,12 +2293,6 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
     }).catchError((_) {});
   }
 
-  Future<void> _pick(BuildContext anchor) async {
-    final picked =
-        await _showApprovalsMenu(context, anchor, _manual ?? false);
-    if (picked != null) await _apply(picked);
-  }
-
   Future<void> _apply(bool picked) async {
     final current = _manual ?? false;
     if (picked == current || !mounted) return;
@@ -2370,33 +2333,17 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
               ),
       );
     }
-    return Builder(
-      builder: (anchor) => ListRow(
-        title: 'Approvals',
-        subtitle: kMobile ? null : 'Applies to every session on this machine',
-        leading: kMobile
-            ? Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.tint2,
-                  borderRadius: BorderRadius.circular(R.md),
-                ),
-                child: Center(
-                  child: AppIcon('shield-check',
-                      size: 16, color: AppColors.fg2),
-                ),
-              )
-            : AppIcon('shield', size: 19, color: AppColors.fg3),
-        onTap: () => _pick(anchor),
-        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-          Text(manual == null ? '' : (manual ? 'Ask' : 'Yolo'),
-              style: sans(13, color: AppColors.fg3)),
-          SizedBox(width: S.s6),
-          AppIcon(kMobile ? 'chevron-right' : 'chevron-down',
-              size: 14, color: AppColors.fg3),
-        ]),
-      ),
+    return ListRow(
+      title: 'Approvals',
+      subtitle: 'Applies to every session on this machine',
+      leading: AppIcon('shield', size: 19, color: AppColors.fg3),
+      trailing: manual == null
+          ? const SizedBox.shrink()
+          : _InlineSeg(
+              labels: const ['Ask', 'Yolo'],
+              selected: manual ? 0 : 1,
+              onChanged: (i) => _apply(i == 0),
+            ),
     );
   }
 }
