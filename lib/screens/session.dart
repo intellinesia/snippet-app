@@ -63,6 +63,7 @@ import '../composer_strip.dart';
 import '../composer/attachment_preview.dart';
 import '../composer/attachment_tile.dart';
 import '../composer/composer_card.dart';
+import '../composer/composer_tray.dart';
 import '../media_views.dart';
 import '../chat/chat_style.dart' show ChatHeader;
 import 'agent_messaging.dart';
@@ -302,6 +303,8 @@ String? _inboxAgentId(String sessionId) {
 class _SessionScreenState extends State<SessionScreen>
     with WidgetsBindingObserver {
   final Set<Key> _shownRows = {};
+  // Phone composer tray behind the "+" (session actions, hand off, fork).
+  final _tray = ComposerTrayController();
   bool _rowsSeeded = false;
 
   void _setState(VoidCallback fn) {
@@ -1435,6 +1438,7 @@ class _SessionScreenState extends State<SessionScreen>
   @override
   void dispose() {
     _closed = true;
+    _tray.dispose();
     _agentEventsSub?.cancel();
     modelsRevision.removeListener(_loadModel);
     _input.removeListener(_interceptBigPaste);

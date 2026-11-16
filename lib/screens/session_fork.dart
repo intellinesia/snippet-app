@@ -18,18 +18,25 @@ Future<bool?> showForkSheet(
       title: 'Fork this conversation',
       subtitle: 'A new session; this one stays as it is. Files on disk are shared.',
       origin: origin,
-      builder: (_) => _ForkBody(fromLabel: fromLabel, total: totalMessages),
+      builder: (ctx) => SessionForkPanel(
+          fromLabel: fromLabel,
+          total: totalMessages,
+          onChoose: (fromHere) => Navigator.of(ctx).pop(fromHere)),
     );
 
-class _ForkBody extends StatefulWidget {
-  const _ForkBody({required this.fromLabel, this.total});
+/// The two fork choices and the Fork button, embeddable in a sheet or the
+/// phone composer tray. [onChoose] gets true for "From this message".
+class SessionForkPanel extends StatefulWidget {
+  const SessionForkPanel(
+      {super.key, required this.fromLabel, this.total, required this.onChoose});
   final String fromLabel;
   final int? total;
+  final ValueChanged<bool> onChoose;
   @override
-  State<_ForkBody> createState() => _ForkBodyState();
+  State<SessionForkPanel> createState() => _SessionForkPanelState();
 }
 
-class _ForkBodyState extends State<_ForkBody> {
+class _SessionForkPanelState extends State<SessionForkPanel> {
   bool _fromHere = true;
 
   Widget _row(bool value, String title, String sub) {
@@ -102,7 +109,7 @@ class _ForkBodyState extends State<_ForkBody> {
             total == null ? 'All messages' : 'All $total messages'),
         const SizedBox(height: 4),
         Btn('Fork',
-            full: true, onTap: () => Navigator.of(context).pop(_fromHere)),
+            full: true, onTap: () => widget.onChoose(_fromHere)),
       ],
     );
   }

@@ -864,8 +864,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             decoration: ComposerCard.decoration(hint),
           ),
         ),
-        attach:
-            ComposerIconButton('plus', tooltip: 'Attach', onTap: _onAttachTap),
+        attach: _composerPlus(),
         trailing: _inboxAgentId(widget.sessionId) == null ? _modelChip : null,
         mic: kCanRecord
             ? ComposerIconButton(_isRecording ? 'mic-off' : 'mic',
@@ -916,9 +915,10 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (kMobile && _showsQuickActions)
-                    ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: _input,
-                      builder: (_, __, ___) => _quickActions(running),
+                    ListenableBuilder(
+                      listenable: Listenable.merge([_tray, _input]),
+                      builder: (_, __) => ComposerTray(
+                          controller: _tray, child: _trayPage(running)),
                     ),
                   if (_heldQueue.isNotEmpty) _queuedCard(),
                   if (_attachments.isNotEmpty) _attachmentBar(),
@@ -951,60 +951,151 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       !widget.readOnly &&
       _inboxAgentId(widget.sessionId) == null;
 
-  /// Hand off and Fork from here above the composer; Interrupt joins them only
-  /// while a turn runs and the send button is queueing instead of stopping.
-  Widget _quickActions(bool running) {
-    Widget chip(String icon, String label, void Function(Rect?) onTap) =>
-        Builder(builder: (cctx) => Semantics(
-          button: true,
-          label: label,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              lastChipOrigin = globalRectOf(cctx);
-              onTap(lastChipOrigin);
-            },
-            child: Container(
-              height: 44,
-              alignment: Alignment.center,
-              child: Container(
-                height: 30,
-                padding: EdgeInsets.symmetric(horizontal: S.s12),
-                decoration: BoxDecoration(
-                  color: AppColors.surface1,
-                  borderRadius: BorderRadius.circular(R.pill),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  AppIcon(icon, size: 12, color: AppColors.fg3),
-                  SizedBox(width: S.s6),
-                  Text(label, style: sans(12, color: AppColors.fg2)),
-                ]),
-              ),
-            ),
+  /// The composer's "+": on phone sessions with actions it toggles the tray
+  /// (turning 45 degrees to read as a close); elsewhere it attaches directly.
+  Widget _composerPlus() {
+    if (!(kMobile && _showsQuickActions)) {
+      return ComposerIconButton('plus', tooltip: 'Attach', onTap: _onAttachTap);
+    }
+    return TapRegion(
+      groupId: _tray,
+      child: ListenableBuilder(
+        listenable: _tray,
+        builder: (context, _) => Semantics(
+          label: _tray.open ? 'Close actions' : 'Actions',
+          expanded: _tray.open,
+          child: AnimatedRotation(
+            turns: _tray.open ? 0.125 : 0,
+            duration: reduceMotion(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 220),
+            curve: Motion.enter,
+            child: ComposerIconButton('plus',
+                tooltip: 'Actions',
+                onTap: _tray.toggle,
+                color: _tray.open ? AppColors.fg1 : null),
           ),
-        ));
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(children: [
-        if (running && _canSend) ...[
-          chip('stop', 'Interrupt', (_) => _send({'kind': 'interrupt'})),
-          SizedBox(width: S.s8),
-        ],
-        chip(
-            'arrow-right',
-            'Hand off',
-            (r) => showHandOffSheet(context,
+        ),
+      ),
+    );
+  }
+
+  /// The tray's current page: the action list, or the hand-off or fork
+  /// picker swapped in place of it.
+  Widget _trayPage(bool running) {
+    switch (_tray.view) {
+      case 'handoff':
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ComposerTrayHeader(
+                title: 'Hand off to',
+                subtitle: 'They take this session after the current turn.',
+                onBack: _tray.back),
+            Padding(
+              padding: EdgeInsets.fromLTRB(S.of(10), 0, S.of(10), S.of(10)),
+              child: SessionHandOffPanel(
                 client: widget.client,
                 sessionId: widget.sessionId,
-                origin: r,
-                onHandedOff: (name, pending) => _toast(pending
-                    ? 'Hands to $name after this turn'
-                    : 'Handed to $name'))),
-        SizedBox(width: S.s8),
-        chip('git-branch', 'Fork from here', (_) => _confirmFork(null)),
-      ]),
+                onHandedOff: (name, pending) {
+                  _tray.close();
+                  _toast(pending
+                      ? 'Hands to $name after this turn'
+                      : 'Handed to $name');
+                },
+              ),
+            ),
+          ],
+        );
+      case 'fork':
+        final events = _state?.events.length ?? 0;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ComposerTrayHeader(
+                title: 'Fork this conversation',
+                subtitle:
+                    'A new session; this one stays as it is. Files on disk are shared.',
+                onBack: _tray.back),
+            Padding(
+              padding: EdgeInsets.fromLTRB(S.of(10), 0, S.of(10), S.of(10)),
+              child: SessionForkPanel(
+                fromLabel: 'the latest message',
+                total: events > 0 ? events : null,
+                onChoose: (_) {
+                  _tray.close();
+                  _forkFromLatest();
+                },
+              ),
+            ),
+          ],
+        );
+    }
+    final lanes = _state?.lanes ?? const <LaneInfo>[];
+    final live = lanes.where((l) => l.status == 'running').length;
+    void run(VoidCallback fn) {
+      _tray.close();
+      fn();
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (running && _canSend)
+          ComposerTrayRow(
+              icon: 'stop',
+              label: 'Interrupt',
+              onTap: () => run(() => _send({'kind': 'interrupt'}))),
+        ComposerTrayRow(
+            icon: 'paperclip',
+            label: 'Attach',
+            onTap: () => run(_onAttachTap)),
+        ComposerTrayRow(
+            icon: 'arrow-right',
+            label: 'Hand off',
+            detail: 'to another agent',
+            onTap: () => _tray.show('handoff')),
+        ComposerTrayRow(
+            icon: 'git-branch',
+            label: 'Fork from here',
+            onTap: () => _tray.show('fork')),
+        if (lanes.isNotEmpty)
+          ComposerTrayRow(
+              icon: 'layers',
+              label: 'Lanes',
+              detail: live > 0 ? '$live running' : null,
+              onTap: () => run(_showLanes)),
+      ],
     );
+  }
+
+  // Mirrors _confirmFork(null): with no checkpoint both choices cut at the
+  // latest message, so the choice does not change the request.
+  Future<void> _forkFromLatest() async {
+    final events = _state?.events.length ?? 0;
+    try {
+      final result = await widget.client.forkSession(
+        widget.sessionId,
+        eventIndex: events > 0 ? events - 1 : null,
+      );
+      final id = result['id']?.toString() ?? '';
+      final title = result['title']?.toString() ?? 'fork';
+      if (id.isEmpty) {
+        _toast('Fork created but no session id returned');
+        return;
+      }
+      final open = widget.onOpenSession;
+      if (open != null) {
+        open(id, title, widget.profile);
+      } else {
+        _toast('Forked → $title');
+      }
+    } catch (e) {
+      _toast('$e');
+    }
   }
 
   Widget _contextBar() {

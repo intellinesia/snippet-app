@@ -9,12 +9,11 @@ import '../widgets.dart';
 
 // Re-exported so the session part files reach them through this one import.
 export '../morph_sheet.dart' show globalRectOf, lastChipOrigin;
-export 'session_fork.dart' show showForkSheet;
+export 'session_fork.dart' show showForkSheet, SessionForkPanel;
 
-/// "Hand off to" picker: the session's active agents (minus the current
-/// owner), an optional note, and the Hand off button. Works as a phone sheet
-/// or a desktop dialog via `showAppSheet`.
-class SessionHandOffSheet extends StatefulWidget {
+/// "Hand off to" picker as a sheet or dialog body: [SessionHandOffPanel]
+/// that closes its route once the hand-off lands.
+class SessionHandOffSheet extends StatelessWidget {
   const SessionHandOffSheet({
     super.key,
     required this.client,
@@ -35,10 +34,42 @@ class SessionHandOffSheet extends StatefulWidget {
   final void Function(String name, bool pending)? onHandedOff;
 
   @override
-  State<SessionHandOffSheet> createState() => _SessionHandOffSheetState();
+  Widget build(BuildContext context) => SessionHandOffPanel(
+        client: client,
+        sessionId: sessionId,
+        ownerId: ownerId,
+        onHandedOff: (name, pending) {
+          Navigator.pop(context);
+          onHandedOff?.call(name, pending);
+        },
+      );
 }
 
-class _SessionHandOffSheetState extends State<SessionHandOffSheet> {
+/// The hand-off body: the session's active agents (minus the current owner),
+/// an optional note, and the Hand off button. Embeddable anywhere, such as the
+/// phone composer tray; the host decides what happens on success.
+class SessionHandOffPanel extends StatefulWidget {
+  const SessionHandOffPanel({
+    super.key,
+    required this.client,
+    required this.sessionId,
+    this.ownerId,
+    this.onHandedOff,
+  });
+
+  final DaemonClient client;
+  final String sessionId;
+  final String? ownerId;
+
+  /// Called with the target's display name and whether the hand-off is
+  /// pending once the daemon accepts it.
+  final void Function(String name, bool pending)? onHandedOff;
+
+  @override
+  State<SessionHandOffPanel> createState() => _SessionHandOffPanelState();
+}
+
+class _SessionHandOffPanelState extends State<SessionHandOffPanel> {
   final _note = TextEditingController();
   List<CoordinationAgent> _agents = const [];
   String? _selected;
@@ -106,7 +137,6 @@ class _SessionHandOffSheetState extends State<SessionHandOffSheet> {
               ?.displayName ??
           to;
       final pending = res['pending'] == true;
-      Navigator.pop(context);
       widget.onHandedOff?.call(name, pending);
     } catch (e) {
       if (mounted) {

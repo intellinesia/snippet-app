@@ -2374,6 +2374,7 @@ const _lucide = <String, IconData>{
   'user-plus': LucideIcons.userPlus,
   'hash': LucideIcons.hash,
   'chevron-left': LucideIcons.chevronLeft,
+  'paperclip': LucideIcons.paperclip,
   'arrow-left': LucideIcons.arrowLeft,
   'chevron-right': LucideIcons.chevronRight,
   'arrow-right': LucideIcons.arrowRight,

@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/chat/stage_header.dart';
+import 'package:snippet/composer/composer_card.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/session.dart';
 import 'package:snippet/theme.dart';
@@ -72,6 +73,13 @@ Future<_Socket> _pumpSession(WidgetTester tester, Map<String, dynamic> snap,
   return attach;
 }
 
+Future<void> _openTray(WidgetTester tester) async {
+  await tester.tap(find.byWidgetPredicate(
+      (w) => w is ComposerIconButton && w.tooltip == 'Actions'));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+}
+
 void main() {
   testWidgets('a known session opens on its stage header, not the back bar',
       (tester) async {
@@ -117,10 +125,14 @@ void main() {
     expect(find.text('Rook'), findsOneWidget);
     expect(find.textContaining('plan 4/5'), findsNothing);
     expect(find.text('2 lanes'), findsOneWidget);
+    // The session actions live in the composer tray behind the "+".
+    expect(find.text('Hand off'), findsNothing);
+    await _openTray(tester);
     // Empty composer: the send button is Stop, so no separate Interrupt.
     expect(find.text('Interrupt'), findsNothing);
     expect(find.text('Hand off'), findsOneWidget);
     expect(find.text('Fork from here'), findsOneWidget);
+    expect(find.text('2 running'), findsOneWidget);
     expect(find.text('Steer Rook, or queue for later'), findsOneWidget);
     await tester.enterText(find.byType(TextField).last, 'also check 360');
     await tester.pump();
@@ -163,6 +175,7 @@ void main() {
   testWidgets('idle: Hand off and Fork, no Interrupt, hint names the agent',
       (tester) async {
     await _pumpSession(tester, {'status': 'idle', 'events': []});
+    await _openTray(tester);
     expect(find.text('Interrupt'), findsNothing);
     expect(find.text('Hand off'), findsOneWidget);
     expect(find.text('Fork from here'), findsOneWidget);
