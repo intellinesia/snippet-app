@@ -602,7 +602,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
         ? _DockedAgentFrame(
             name: widget.name,
             onClose: widget.onClose,
-            avatar: MochiDisc(id: widget.agentId, size: 64),
+            avatar: AgentDisc(id: widget.agentId, size: 64),
             subtitle: agent?.profile ?? 'Routing default',
             body: _infoTab(ctx),
           )
