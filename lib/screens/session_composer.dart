@@ -418,7 +418,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       },
       child: AnimatedContainer(
         duration: Motion.quick,
-        height: kMobile ? 38 : 32,
+        height: kMobile ? 38 : 26,
         padding: EdgeInsets.only(
             left: images.isNotEmpty ? S.s6 : S.s12, right: S.s4),
         decoration: BoxDecoration(

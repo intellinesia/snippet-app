@@ -616,7 +616,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                 borderRadius: BorderRadius.circular(R.md),
                 onTap: _togglePanel,
                 child: SizedBox.square(
-                  dimension: 30,
+                  dimension: 28,
                   child: Center(
                     child: AppIcon('panel-right',
                         size: 16,
