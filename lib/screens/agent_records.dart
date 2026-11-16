@@ -252,7 +252,20 @@ class AgentActionsState extends State<AgentActions> {
       SettingsRow(
         leading: V5IconTile(icon, color: danger ? AppColors.danger : null),
         label: label,
-        sub: detail,
+        sub: kMobile ? detail : null,
+        labelWidget: kMobile
+            ? null
+            : Row(children: [
+                Text(label,
+                    style: TS.rowTitle(
+                        danger ? AppColors.danger : AppColors.fg1)),
+                SizedBox(width: S.s8),
+                Expanded(
+                    child: Text(detail,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TS.meta())),
+              ]),
         danger: danger,
         chevron: !danger && onTap != null,
         onTap: onTap,
@@ -883,10 +896,12 @@ class _PillChip extends StatelessWidget {
           child: Container(
             height: kMobile ? 30 : 26,
             padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-            alignment: Alignment.center,
-            child: Text(label,
-                style: sans(12,
-                    color: selected ? AppColors.fg1 : AppColors.fg2)),
+            child: Center(
+              widthFactor: 1,
+              child: Text(label,
+                  style: sans(12,
+                      color: selected ? AppColors.fg1 : AppColors.fg2)),
+            ),
           ),
         ),
       );

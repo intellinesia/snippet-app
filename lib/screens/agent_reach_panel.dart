@@ -215,10 +215,19 @@ class _AgentReachPanelState extends State<AgentReachPanel> {
 
   Widget _channel(AgentReach reach, String ch) {
     final state = reach.channel(ch);
+    final quiet =
+        state.quietHours ? 'Held in quiet hours' : 'Delivers in quiet hours';
     return SettingsRow(
       key: Key('quiet-$ch'),
       label: reachChannelLabel(ch),
-      sub: state.quietHours ? 'Held in quiet hours' : 'Delivers in quiet hours',
+      sub: kMobile ? quiet : null,
+      labelWidget: kMobile
+          ? null
+          : Row(children: [
+              Text(reachChannelLabel(ch), style: TS.rowTitle(AppColors.fg1)),
+              SizedBox(width: S.s8),
+              Text(quiet, style: TS.meta()),
+            ]),
       onTap: _saving
           ? null
           : () => _save(channels: {
