@@ -86,18 +86,25 @@ void main() {
     expect(find.byType(StageHeader), findsOneWidget);
     expect(find.text('Rook · Run the goldens · step 4 of 5'), findsOneWidget);
     expect(find.text('2 lanes'), findsOneWidget);
-    expect(find.text('Interrupt'), findsOneWidget);
+    // Empty composer: the send button is Stop, so no separate Interrupt.
+    expect(find.text('Interrupt'), findsNothing);
     expect(find.text('Hand off'), findsOneWidget);
     expect(find.text('Fork from here'), findsOneWidget);
     expect(find.text('Steer Rook, or queue for later'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, 'also check 360');
+    await tester.pump();
+    expect(find.text('Interrupt'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('idle: no quick actions, hint names the agent', (tester) async {
+  testWidgets('idle: Hand off and Fork, no Interrupt, hint names the agent',
+      (tester) async {
     await _pumpSession(tester, {'status': 'idle', 'events': []});
     expect(find.text('Interrupt'), findsNothing);
+    expect(find.text('Hand off'), findsOneWidget);
+    expect(find.text('Fork from here'), findsOneWidget);
     expect(find.text('Message Rook'), findsOneWidget);
     expect(find.textContaining('2 lanes'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());

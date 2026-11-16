@@ -916,7 +916,11 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (kMobile && running && _showsQuickActions) _quickActions(),
+                  if (kMobile && _showsQuickActions)
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _input,
+                      builder: (_, __, ___) => _quickActions(running),
+                    ),
                   if (_heldQueue.isNotEmpty) _queuedCard(),
                   if (_attachments.isNotEmpty) _attachmentBar(),
                   if (_mentionQuery != null && !_isMissionControl)
@@ -948,8 +952,9 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       !widget.readOnly &&
       _inboxAgentId(widget.sessionId) == null;
 
-  /// Interrupt, Hand off and Fork from here, above the composer while running.
-  Widget _quickActions() {
+  /// Hand off and Fork from here above the composer; Interrupt joins them only
+  /// while a turn runs and the send button is queueing instead of stopping.
+  Widget _quickActions(bool running) {
     Widget chip(String icon, String label, VoidCallback onTap) => Semantics(
           button: true,
           label: label,
@@ -979,8 +984,10 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(children: [
-        chip('stop', 'Interrupt', () => _send({'kind': 'interrupt'})),
-        SizedBox(width: S.s8),
+        if (running && _canSend) ...[
+          chip('stop', 'Interrupt', () => _send({'kind': 'interrupt'})),
+          SizedBox(width: S.s8),
+        ],
         chip('arrow-right', 'Hand off', _showHandOff),
         SizedBox(width: S.s8),
         chip('git-branch', 'Fork from here', () => _confirmFork(null)),
