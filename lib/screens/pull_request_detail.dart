@@ -71,6 +71,16 @@ Widget prSize(int add, int del, {double size = 12}) => Text.rich(TextSpan(childr
       TextSpan(text: ' −$del', style: sans(size, color: AppColors.danger)),
     ]));
 
+/// A small tinted status label, as on the pull request list and detail.
+Widget prPill(String text, Color tone) => Container(
+      padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s4),
+      decoration: BoxDecoration(
+        color: tone.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(R.sm),
+      ),
+      child: Text(text, maxLines: 1, style: sans(12, color: tone)),
+    );
+
 Widget prAvatar(String login, {double size = 22}) {
   const tints = [0xFF7C8CF8, 0xFF5BC0A0, 0xFFE0A050, 0xFFD27AA8, 0xFF62A8E0, 0xFFB59A6A];
   final tint = Color(tints[login.codeUnits.fold<int>(0, (a, b) => a + b) % tints.length]);
@@ -886,7 +896,12 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
         child: Text(name, style: mono(12, color: AppColors.accent)),
       );
 
-  Widget _section(String label) => Container(
+  Widget _section(String label) => kMobile
+      ? Padding(
+          padding: EdgeInsets.fromLTRB(S.s20, S.s24, S.s16, S.s8),
+          child: Text(label, style: sans(13, weight: W.label, color: AppColors.fg3)),
+        )
+      : Container(
         width: double.infinity,
         margin: EdgeInsets.only(top: S.of(22)),
         padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s6),
@@ -904,20 +919,42 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
       InkWell(
         onTap: onTap,
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s12),
+          padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: kMobile ? S.s8 : S.s12),
           child: Row(children: [
-            AppIcon(icon, size: 17, color: ink),
+            if (kMobile)
+              Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    color: ink == AppColors.fg2 || ink == AppColors.fg3
+                        ? AppColors.surface3
+                        : ink.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(R.of(10))),
+                child: AppIcon(icon, size: 16, color: ink),
+              )
+            else
+              AppIcon(icon, size: 17, color: ink),
             SizedBox(width: S.s12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(label, style: sans(14, weight: W.label, color: AppColors.fg1)),
+                Text(label, style: sans(kMobile ? 15 : 14, weight: W.label, color: AppColors.fg1)),
                 if (detail.isNotEmpty) Text(detail, style: TS.meta(AppColors.fg3)),
               ]),
             ),
             if (trailing != null) trailing,
+            if (trailing == null && onTap != null && kMobile)
+              AppIcon('chevron-right', size: 14, color: AppColors.fg4),
           ]),
         ),
       );
+
+  Widget _group(List<Widget> children) => kMobile
+      ? Padding(
+          padding: EdgeInsets.symmetric(horizontal: S.s16),
+          child: CardGroupScope(child: ListGroup(children: children)),
+        )
+      : Column(children: children);
 
   List<Widget> _status(PrDetail pr) {
     final s = pr.summary;
@@ -951,14 +988,15 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
       _ => ('clock', AppColors.fg3, 'Checking mergeability', ''),
     };
     return [
-      _row(icon: review.$1, ink: review.$2, label: review.$3, detail: review.$4),
+      if (_open && pr.autoMergeMethod.isEmpty && !s.draft)
+        _row(icon: merge.$1, ink: merge.$2, label: merge.$3, detail: merge.$4),
       _row(
         icon: check.$1,
         ink: check.$2,
         label: check.$3,
         trailing: checks.isEmpty
             ? null
-            : AppIcon(_checksOpen ? 'chevron-up' : 'chevron-down', size: 14, color: AppColors.fg4),
+            : AppIcon(_checksOpen ? 'chevron-up' : (kMobile ? 'chevron-right' : 'chevron-down'), size: 14, color: AppColors.fg4),
         onTap: checks.isEmpty ? null : () => setState(() => _checksOpen = !_checksOpen),
       ),
       if (_checksOpen)
@@ -990,18 +1028,17 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
               ]),
             ),
           ),
-      if (_open && pr.autoMergeMethod.isEmpty && !s.draft)
-        _row(icon: merge.$1, ink: merge.$2, label: merge.$3, detail: merge.$4),
-      if (_open)
-        PrMergeBox(
-          client: widget.client,
-          session: widget.session,
-          pr: pr,
-          status: widget.status,
-          onDone: _load,
-        ),
+      _row(icon: review.$1, ink: review.$2, label: review.$3, detail: review.$4),
     ];
   }
+
+  Widget _mergeBox(PrDetail pr) => PrMergeBox(
+        client: widget.client,
+        session: widget.session,
+        pr: pr,
+        status: widget.status,
+        onDone: _load,
+      );
 
   Widget _timeline(PrDetail pr) {
     final threadsByReview = <String, List<PrThread>>{};
@@ -1172,6 +1209,36 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
   Widget _overview(PrDetail pr) {
     final s = pr.summary;
     final lastCommit = pr.commits.isEmpty ? '' : prAgo(pr.commits.last.date);
+    final openedBy = Row(children: [
+      prAvatar(s.author, size: kMobile ? 28 : 32),
+      SizedBox(width: S.of(10)),
+      Expanded(
+        child: Text.rich(TextSpan(children: [
+          TextSpan(text: s.author, style: sans(14, weight: W.label, color: AppColors.fg1)),
+          TextSpan(
+              text: kMobile ? ' opened this · ${prAgo(pr.createdAt)}' : ' · opened ${prAgo(pr.createdAt)}',
+              style: TS.meta(AppColors.fg3)),
+        ])),
+      ),
+    ]);
+    final files = _row(
+      icon: 'file-code',
+      ink: AppColors.fg2,
+      label: '${pr.files.length} file${pr.files.length == 1 ? '' : 's'}${kMobile ? '' : ' changed'}',
+      detail: [
+        if (kMobile) '+${s.additions} −${s.deletions}',
+        if (_pending.isNotEmpty) '${_pending.length} pending comment${_pending.length == 1 ? '' : 's'}',
+      ].join(' · '),
+      trailing: kMobile ? null : prSize(s.additions, s.deletions, size: 13),
+      onTap: _openFiles,
+    );
+    final commits = _row(
+      icon: 'git-commit',
+      ink: AppColors.fg2,
+      label: '${pr.commits.length} commit${pr.commits.length == 1 ? '' : 's'}',
+      trailing: kMobile ? null : Text(lastCommit, style: TS.meta(AppColors.fg3)),
+      onTap: _openCommits,
+    );
     return ListView(
       padding: EdgeInsets.only(bottom: kMobile ? S.s24 : 96),
       children: [
@@ -1179,54 +1246,74 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
           padding: EdgeInsets.fromLTRB(S.s16, S.s16, S.s16, 0),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(s.title,
-                style: sans(kMobile ? 22 : 20, weight: W.strong, height: 1.25, color: AppColors.fg1)),
+                style: sans(kMobile ? 20 : 20, weight: W.strong, height: 1.25, color: AppColors.fg1)),
             SizedBox(height: S.s12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
+            if (kMobile)
+              Row(children: [
                 _stateBadge(s),
-                _branch(s.head),
-                AppIcon('arrow-right', size: 14, color: AppColors.fg4),
-                _branch(s.base),
-              ],
-            ),
-            SizedBox(height: S.of(18)),
-            Row(children: [
-              prAvatar(s.author, size: 32),
-              SizedBox(width: S.of(10)),
-              Expanded(
-                child: Text.rich(TextSpan(children: [
-                  TextSpan(text: s.author, style: sans(14, weight: W.label, color: AppColors.fg1)),
-                  TextSpan(text: ' · opened ${prAgo(pr.createdAt)}', style: TS.meta(AppColors.fg3)),
-                ])),
+                SizedBox(width: S.s8),
+                Expanded(
+                  child: Text('${s.head} → ${s.base}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mono(12, color: AppColors.fg2)),
+                ),
+              ])
+            else ...[
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _stateBadge(s),
+                  _branch(s.head),
+                  AppIcon('arrow-right', size: 14, color: AppColors.fg4),
+                  _branch(s.base),
+                ],
               ),
-            ]),
-            SizedBox(height: S.s12),
-            _body(pr),
+              SizedBox(height: S.of(18)),
+              openedBy,
+              SizedBox(height: S.s12),
+              _body(pr),
+            ],
           ]),
         ),
-        _section('Changes'),
-        _row(
-          icon: 'file-code',
-          ink: AppColors.fg2,
-          label: '${pr.files.length} file${pr.files.length == 1 ? '' : 's'} changed',
-          detail: _pending.isEmpty ? '' : '${_pending.length} pending comment${_pending.length == 1 ? '' : 's'}',
-          trailing: prSize(s.additions, s.deletions, size: 13),
-          onTap: _openFiles,
-        ),
-        _row(
-          icon: 'git-commit',
-          ink: AppColors.fg2,
-          label: '${pr.commits.length} commit${pr.commits.length == 1 ? '' : 's'}',
-          trailing: Text(lastCommit, style: TS.meta(AppColors.fg3)),
-          onTap: _openCommits,
-        ),
-        _section('Status'),
-        ..._status(pr),
-        _section('Conversation'),
-        _timeline(pr),
+        if (kMobile) ...[
+          _section('Status'),
+          _group(_status(pr)),
+          if (_open) _mergeBox(pr),
+          _section('Changes'),
+          _group([files, commits]),
+          _section('Conversation'),
+          Padding(
+            padding: EdgeInsets.fromLTRB(S.s16, 0, S.s16, S.s8),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              openedBy,
+              SizedBox(height: S.s8),
+              Container(
+                width: double.infinity,
+                margin: EdgeInsets.only(left: S.of(38)),
+                padding: EdgeInsets.all(S.s12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface1,
+                  borderRadius: BorderRadius.circular(R.of(14)),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: _body(pr),
+              ),
+            ]),
+          ),
+          _timeline(pr),
+        ] else ...[
+          _section('Changes'),
+          files,
+          commits,
+          _section('Status'),
+          ..._status(pr),
+          if (_open) _mergeBox(pr),
+          _section('Conversation'),
+          _timeline(pr),
+        ],
       ],
     );
   }
@@ -1313,7 +1400,6 @@ class _PullRequestScreenState extends State<PullRequestScreen> {
           if (kMobile)
             MobileBackBar(
               title: '#${widget.number}',
-              subtitle: widget.status.repo,
               onBack: () => Navigator.maybePop(context),
               trailing: [
                 Builder(
@@ -1520,6 +1606,43 @@ class _PrMergeBoxState extends State<PrMergeBox> {
 
   Widget _mergeButton({required String label, required VoidCallback? onTap}) {
     final enabled = onTap != null && !_busy;
+    if (kMobile && widget.status.mergeMethods.length > 1) {
+      final r = Radius.circular(R.of(12));
+      return Builder(
+        builder: (anchor) => Row(children: [
+          Expanded(
+            child: Material(
+              color: enabled ? AppColors.accentFill : AppColors.tint2,
+              borderRadius: BorderRadius.horizontal(left: r),
+              child: InkWell(
+                onTap: enabled ? onTap : null,
+                child: Container(
+                  height: 40,
+                  alignment: Alignment.center,
+                  child: Text(label,
+                      style: sans(14, weight: W.label, color: enabled ? AppColors.accentFg : AppColors.fg4)),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: S.of(2)),
+          Material(
+            color: enabled ? AppColors.accentFill : AppColors.tint2,
+            borderRadius: BorderRadius.horizontal(right: r),
+            child: InkWell(
+              onTap: _busy ? null : () => _pickMethod(anchor),
+              child: SizedBox(
+                width: 44,
+                height: 40,
+                child: Center(
+                    child: AppIcon('chevron-down',
+                        size: 16, color: enabled ? AppColors.accentFg : AppColors.fg4)),
+              ),
+            ),
+          ),
+        ]),
+      );
+    }
     return Builder(
       builder: (anchor) => GestureDetector(
         onSecondaryTap: _busy ? null : () => _pickMethod(anchor),
@@ -1536,7 +1659,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
                   },
             borderRadius: BorderRadius.circular(kMobile ? R.pill : R.md),
             child: Container(
-              height: kMobile ? 48 : 44,
+              height: kMobile ? 44 : 32,
               alignment: Alignment.center,
               padding: EdgeInsets.symmetric(horizontal: S.of(14)),
               child: Text(label,
@@ -1730,7 +1853,7 @@ class _PrMergeBoxState extends State<PrMergeBox> {
                 : canAuto
                     ? 'It will merge with a ${_short(_method)} once requirements are met.'
                     : 'Merging is disabled until requirements are met.')
-            : 'Merges with a ${_short(_method)} into ${_s.base}.${widget.status.mergeMethods.length > 1 ? ' Long-press to choose another method.' : ''}',
+            : 'Merges with a ${_short(_method)} into ${_s.base}.${widget.status.mergeMethods.length > 1 && !kMobile ? ' Long-press to choose another method.' : ''}',
         style: TS.meta(AppColors.fg4),
       ));
     }
