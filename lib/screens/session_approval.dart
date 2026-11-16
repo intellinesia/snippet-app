@@ -168,7 +168,7 @@ class ApprovalBarState extends State<ApprovalBar> {
     return Row(children: [
       AgentMochi(widget.agentId!, size: 18),
       SizedBox(width: S.s8),
-      Flexible(
+      Expanded(
         child: Text(step == null ? '$name asks' : '$name asks · $step',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
