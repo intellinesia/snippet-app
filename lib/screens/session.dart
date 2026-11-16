@@ -1561,6 +1561,12 @@ class _SessionScreenState extends State<SessionScreen>
                                   child: ApprovalBar(
                                       events: events,
                                       onSend: _sendDecision,
+                                      agentId: _me?.displayAgentId,
+                                      agentName: _meAgentName,
+                                      stepLabel: _me?.plan != null &&
+                                              _me!.plan!.total > 0
+                                          ? sessionStepLabel(_me!.plan!)
+                                          : null,
                                       showApproveAll:
                                           _pendingApprovalTotal(events) > 1),
                                 ),

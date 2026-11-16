@@ -154,9 +154,13 @@ enum ChatCardButtonKind { primary, secondary, danger }
 
 class ChatCardButton {
   const ChatCardButton(this.label,
-      {this.onTap, this.kind = ChatCardButtonKind.primary, this.busy = false});
+      {this.onTap,
+      this.kind = ChatCardButtonKind.primary,
+      this.busy = false,
+      this.icon});
 
   final String label;
+  final IconData? icon;
   final VoidCallback? onTap;
   final ChatCardButtonKind kind;
   final bool busy;
@@ -276,11 +280,22 @@ class _ChatCardPill extends StatelessWidget {
                 border: Border.all(color: border),
               ),
               child: ExcludeSemantics(
-                child: Text(b.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(kMobile ? 15 : 13,
-                        weight: W.strong, color: fg)),
+                child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (b.icon != null) ...[
+                        Icon(b.icon, size: 16, color: fg),
+                        SizedBox(width: S.s6),
+                      ],
+                      Flexible(
+                        child: Text(b.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(kMobile ? 15 : 13,
+                                weight: W.strong, color: fg)),
+                      ),
+                    ]),
               ),
             ),
           ),
