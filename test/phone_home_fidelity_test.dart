@@ -195,7 +195,8 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.byType(SessionGroupHeader), findsNothing);
-      expect(find.text('Needs you'), findsNothing);
+      // The hero's top card carries the one "Needs you" label.
+      expect(find.text('Needs you'), findsOneWidget);
 
       // The Now section holds all 3 attention sessions as live cards.
       final nowLabel = find.widgetWithText(MobileSectionLabel, 'Now');
