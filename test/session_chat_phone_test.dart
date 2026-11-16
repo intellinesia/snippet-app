@@ -128,6 +128,35 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
+  testWidgets('lanes pill counts running lanes only', (tester) async {
+    await _pumpSession(tester, {
+      'status': 'running',
+      'events': [],
+      'lanes': [
+        {'id': 'l1', 'title': 'Goldens', 'status': 'running', 'started_at': ''},
+        {'id': 'l2', 'title': 'Note', 'status': 'completed', 'started_at': ''},
+      ],
+    });
+    expect(find.text('1 lane'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('finished lanes alone show no pill', (tester) async {
+    await _pumpSession(tester, {
+      'status': 'idle',
+      'events': [],
+      'lanes': [
+        {'id': 'l2', 'title': 'Note', 'status': 'completed', 'started_at': ''},
+      ],
+    });
+    expect(find.textContaining('lane'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    debugDefaultTargetPlatformOverride = null;
+  });
+
   testWidgets('idle: Hand off and Fork, no Interrupt, hint names the agent',
       (tester) async {
     await _pumpSession(tester, {'status': 'idle', 'events': []});

@@ -514,7 +514,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       if (state.isNotEmpty) state,
       if (plan != null && !needsYou) sessionStepLabel(plan),
     ].join(' · ');
-    final lanes = s?.lanes.length ?? 0;
+    final lanes = s?.lanes.where((l) => l.running).length ?? 0;
     return SizedBox(
       child: Stack(alignment: Alignment.topCenter, children: [
         Padding(
