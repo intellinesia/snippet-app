@@ -151,21 +151,20 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
         ),
         SizedBox(width: S.s12),
         Expanded(
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                    c.label.trim().isEmpty
-                        ? 'Checkpoint'
-                        : c.label.trim().replaceAll(RegExp(r'\s+'), ' '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(15, color: AppColors.fg1)),
-                Text(sub,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(12, color: AppColors.fg4)),
-              ]),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(
+                c.label.trim().isEmpty
+                    ? 'Checkpoint'
+                    : c.label.trim().replaceAll(RegExp(r'\s+'), ' '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(15, color: AppColors.fg1)),
+            Text(sub,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(12, color: AppColors.fg4)),
+          ]),
         ),
         // The newest checkpoint is the present state, so only Fork applies.
         if (!latest) ...[
@@ -182,9 +181,19 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
   Widget build(BuildContext context) {
     final cps = widget.checkpoints;
     if (cps.isEmpty) {
-      return Padding(
+      final below = widget.below;
+      final empty = Padding(
         padding: EdgeInsets.all(S.s20),
         child: Text('No checkpoints yet.', style: TS.meta()),
+      );
+      if (below == null) return empty;
+      // File changes exist without checkpoints, so keep them reachable.
+      return ListView(
+        shrinkWrap: widget.embedded,
+        physics: widget.embedded ? const NeverScrollableScrollPhysics() : null,
+        padding: EdgeInsets.symmetric(
+            horizontal: widget.embedded ? 0 : (kMobile ? M.gutter : S.s12)),
+        children: [empty, below],
       );
     }
     final side = widget.embedded ? 0.0 : (kMobile ? M.gutter : S.s12);
@@ -200,8 +209,7 @@ class _SessionCheckpointsPanelState extends State<SessionCheckpointsPanel> {
               child: Text('Checkpoints \u00b7 ${cps.length}',
                   style: sans(13, color: AppColors.fg3)),
             ),
-            Text('Files roll back too',
-                style: sans(12, color: AppColors.fg4)),
+            Text('Files roll back too', style: sans(12, color: AppColors.fg4)),
           ]),
         ),
         CardGroupScope(
@@ -388,67 +396,69 @@ class _DeskLanesState extends State<_DeskLanes> {
               liveLanes: () => widget.lanes),
           child: Padding(
             padding: EdgeInsets.fromLTRB(S.s12, S.of(11), S.s12, S.of(11)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Row(children: [
-                AgentMochi(l.agent ?? l.id, size: 18),
-                SizedBox(width: S.of(9)),
-                Expanded(
-                  child: Text(l.title.isEmpty ? 'Lane' : l.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(13, color: AppColors.fg1)),
-                ),
-                Text(status, style: sans(12, color: color)),
-                if (widget.client != null &&
-                    widget.sessionId != null &&
-                    (l.running || l.retryable)) ...[
-                  SizedBox(width: S.s8),
-                  LaneControlButton(
-                    client: widget.client!,
-                    sessionId: widget.sessionId!,
-                    lane: l,
-                  ),
-                ],
-              ]),
-              if (task.isNotEmpty) ...[
-                SizedBox(height: S.of(7)),
-                Text(task,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13, height: 1.45, color: AppColors.fg3)),
-              ],
-              SizedBox(height: S.s8),
-              Row(children: [
-                for (var i = 0; i < 14; i++)
-                  Container(
-                    width: 5,
-                    height: 5,
-                    margin: EdgeInsets.only(right: S.of(3)),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: i < steps
-                          ? color
-                          : AppColors.fg1.withValues(alpha: 0.10),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(children: [
+                    AgentMochi(l.agent ?? l.id, size: 18),
+                    SizedBox(width: S.of(9)),
+                    Expanded(
+                      child: Text(l.title.isEmpty ? 'Lane' : l.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(13, color: AppColors.fg1)),
                     ),
-                  ),
-                const Spacer(),
-                SizedBox(width: S.s8),
-                Flexible(
-                  child: LaneWho(
-                      client: widget.client,
-                      agent: l.agent,
-                      profile: (l.profile ?? '').isNotEmpty
-                          ? l.profile
-                          : widget.sessionProfile,
-                      maxTextWidth: 96),
-                ),
-                if (_elapsed(l.startedAt).isNotEmpty) ...[
-                  SizedBox(width: S.s8),
-                  Text(_elapsed(l.startedAt),
-                      style: mono(11, color: AppColors.fg4)),
-                ],
-              ]),
-            ]),
+                    Text(status, style: sans(12, color: color)),
+                    if (widget.client != null &&
+                        widget.sessionId != null &&
+                        (l.running || l.retryable)) ...[
+                      SizedBox(width: S.s8),
+                      LaneControlButton(
+                        client: widget.client!,
+                        sessionId: widget.sessionId!,
+                        lane: l,
+                      ),
+                    ],
+                  ]),
+                  if (task.isNotEmpty) ...[
+                    SizedBox(height: S.of(7)),
+                    Text(task,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13, height: 1.45, color: AppColors.fg3)),
+                  ],
+                  SizedBox(height: S.s8),
+                  Row(children: [
+                    for (var i = 0; i < 14; i++)
+                      Container(
+                        width: 5,
+                        height: 5,
+                        margin: EdgeInsets.only(right: S.of(3)),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: i < steps
+                              ? color
+                              : AppColors.fg1.withValues(alpha: 0.10),
+                        ),
+                      ),
+                    const Spacer(),
+                    SizedBox(width: S.s8),
+                    Flexible(
+                      child: LaneWho(
+                          client: widget.client,
+                          agent: l.agent,
+                          profile: (l.profile ?? '').isNotEmpty
+                              ? l.profile
+                              : widget.sessionProfile,
+                          maxTextWidth: 96),
+                    ),
+                    if (_elapsed(l.startedAt).isNotEmpty) ...[
+                      SizedBox(width: S.s8),
+                      Text(_elapsed(l.startedAt),
+                          style: mono(11, color: AppColors.fg4)),
+                    ],
+                  ]),
+                ]),
           ),
         ),
       ),
@@ -468,8 +478,7 @@ class _DeskLanesState extends State<_DeskLanes> {
         if (lanes.isEmpty)
           Padding(
             padding: EdgeInsets.fromLTRB(S.s2, 0, S.s2, S.s4),
-            child: Text(
-                'Parallel work this session hands off shows up here.',
+            child: Text('Parallel work this session hands off shows up here.',
                 style: sans(13, height: 1.5, color: AppColors.fg4)),
           )
         else

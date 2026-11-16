@@ -5,6 +5,7 @@ import '../chat_scene.dart';
 import '../api.dart';
 import '../shell_panel.dart';
 import '../media_views.dart';
+import 'file_viewer.dart';
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -249,12 +250,13 @@ class ReadoutChip extends StatelessWidget {
           duration: Motion.quick,
           height: compact ? 26 : 32,
           constraints: compact ? BoxConstraints(maxWidth: width) : null,
-          margin:
-              EdgeInsets.symmetric(horizontal: S.s2, vertical: compact ? S.s6 : S.of(7)),
-          padding: EdgeInsets.fromLTRB(compact ? S.of(9 ) : S.s12, 0, compact ? S.s6 : S.s8, 0),
+          margin: EdgeInsets.symmetric(
+              horizontal: S.s2, vertical: compact ? S.s6 : S.of(7)),
+          padding: EdgeInsets.fromLTRB(
+              compact ? S.of(9) : S.s12, 0, compact ? S.s6 : S.s8, 0),
           decoration: BoxDecoration(
             color: active ? AppColors.surface2 : Colors.transparent,
-            borderRadius: BorderRadius.circular(compact ? R.of(7 ) : R.card),
+            borderRadius: BorderRadius.circular(compact ? R.of(7) : R.card),
           ),
           child: Row(
               mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
@@ -355,12 +357,13 @@ class PaneTabChip extends StatelessWidget {
           duration: Motion.quick,
           height: compact ? 26 : 32,
           constraints: compact ? BoxConstraints(maxWidth: width) : null,
-          margin:
-              EdgeInsets.symmetric(horizontal: S.s2, vertical: compact ? S.s6 : S.of(7)),
-          padding: EdgeInsets.fromLTRB(compact ? S.of(9 ) : S.s12, 0, compact ? S.s6 : S.s8, 0),
+          margin: EdgeInsets.symmetric(
+              horizontal: S.s2, vertical: compact ? S.s6 : S.of(7)),
+          padding: EdgeInsets.fromLTRB(
+              compact ? S.of(9) : S.s12, 0, compact ? S.s6 : S.s8, 0),
           decoration: BoxDecoration(
             color: active ? AppColors.surface2 : Colors.transparent,
-            borderRadius: BorderRadius.circular(compact ? R.of(7 ) : R.card),
+            borderRadius: BorderRadius.circular(compact ? R.of(7) : R.card),
           ),
           child: Row(
               mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
@@ -529,6 +532,24 @@ class RightTabBody extends StatelessWidget {
     this.onDeskInfo,
   });
 
+  // Turn-change paths are workspace-relative; the viewers want absolute ones.
+  void _openChanged(BuildContext context, String rel) {
+    final c = client;
+    if (c == null) return;
+    final ws = state?.workspace ?? '';
+    final full = rel.startsWith('/') || ws.isEmpty
+        ? rel
+        : '${ws.endsWith('/') ? ws : '$ws/'}$rel';
+    final name = rel.split('/').last;
+    if (openFileForViewing(context, client: c, path: full, name: name)) return;
+    final open = onOpenFile;
+    if (open != null) {
+      open(full, name);
+    } else {
+      presentFileOnDesktop(context, client: c, path: full, name: name);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final request = tab.request;
@@ -586,7 +607,9 @@ class RightTabBody extends StatelessWidget {
             final ev = state?.events ?? const <Map<String, dynamic>>[];
             final steps = sessionChangeSteps(ev);
             return FileChangesSection(
-                steps: steps, shell: shellChanges(ev, fileChanges(steps)));
+                steps: steps,
+                shell: shellChanges(ev, fileChanges(steps)),
+                onOpenFile: (rel) => _openChanged(context, rel));
           }),
         ),
       RightPanel.none || RightPanel.files => const SizedBox.shrink(),
