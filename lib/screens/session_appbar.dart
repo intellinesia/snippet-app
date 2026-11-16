@@ -911,7 +911,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         if (!kMobile) {
           presentScreen(context,
               style: PanelStyle.drawer,
-              maxWidth: 560,
+              maxWidth: 760,
               purpose: ShellPanelPurpose.memory,
               originClient: widget.client,
               originSessionId: widget.sessionId,
