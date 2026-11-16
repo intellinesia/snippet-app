@@ -43,6 +43,9 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
   bool _inEditor = false;
   InferenceProfile? _editProfile;
   bool? _keepTaskProfile;
+  // Desktop split view: which profile the editor pane shows.
+  String? _deskSel;
+  bool _deskAdding = false;
   bool get _desk => !kMobile && widget.embedded && widget.onBack == null;
 
   Future<void> _setKeepTaskProfile(bool on) async {
@@ -64,6 +67,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
   void _submitted(InferenceProfile draft, Future<void> save) {
     setState(() {
       _saving[draft.name] = draft;
+      _deskSel = draft.name;
     });
     save.then((_) {
       if (!mounted) return;
@@ -163,6 +167,13 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
         ),
       );
       if (saved == true && mounted) _refresh();
+      return;
+    }
+    if (_desk) {
+      setState(() {
+        _deskSel = p?.name;
+        _deskAdding = p == null;
+      });
       return;
     }
     setState(() {
@@ -389,22 +400,6 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
   }
 
   Widget _deskView() {
-    if (_inEditor) {
-      final editing = _editProfile;
-      return InferenceProfileEditor(
-        client: widget.client,
-        existing: editing,
-        embedded: true,
-        onDelete: editing == null
-            ? null
-            : () async {
-                if (await _confirmDelete(editing)) _closeEditor();
-              },
-        onClose: _closeEditor,
-        onSaved: () => _closeEditor(saved: true),
-        onSubmit: _submitted,
-      );
-    }
     return FutureBuilder<ServerConfig>(
       future: _future,
       builder: (context, snap) {
@@ -441,58 +436,101 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
         final cfg = snap.data;
         final profiles = _withSaving(cfg?.profiles ?? const []);
         final keep = _keepTaskProfile ?? cfg?.keepTaskProfile ?? true;
-        return SettingsColumn(children: [
-          SettingsHeader(
-            title: 'Profiles',
-            subtitle: 'Models and credentials for chats and background work.',
-            actions: [
-              Btn('Add profile',
-                  icon: 'plus', small: true, onTap: () => _edit(null)),
-            ],
-          ),
-          SizedBox(height: S.s8),
-          if (profiles.isEmpty)
-            SettingsGroup(children: [
-              SettingsRow(
-                label: 'No inference profiles yet',
-                sub: 'Add an API key or a local model provider to start sessions.',
-                trailing: Btn('Add profile',
-                    small: true,
-                    variant: BtnVariant.secondary,
-                    onTap: () => _edit(null)),
-              ),
-            ])
-          else ...[
-            SettingsGroup(
-              footer:
-                  'New chats use the active profile. Lanes and background work follow Routing.',
-              children: [
-                for (final p in profiles)
-                  SettingsRow(
-                    label: p.name,
-                    sub: '${p.provider} · ${p.model}',
-                    leading: ProviderLogo(p.provider, size: 16),
-                    onTap: () => _edit(p),
-                    chevron: true,
-                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                      if (!p.usable) const WarnChip(),
-                      if (p.active) ...[
-                        if (!p.usable) SizedBox(width: S.s6),
-                        const Tag('Active', tone: Tone.ok, dot: true),
-                      ],
-                    ]),
-                  ),
-              ],
+        final selected = _deskAdding
+            ? null
+            : (profiles.where((p) => p.name == _deskSel).firstOrNull ??
+                profiles.where((p) => p.active).firstOrNull ??
+                profiles.firstOrNull);
+        return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Container(
+            width: 320,
+            decoration: BoxDecoration(
+              border: Border(right: BorderSide(color: AppColors.line)),
             ),
-            SettingsGroup(children: [
-              SettingsRow(
-                label: "Keep a task's model",
-                sub: 'Chats stay on the model a task used.',
-                trailing:
-                    SettingsSwitch(value: keep, onChanged: _setKeepTaskProfile),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(S.s12, S.s24, S.s12, S.s24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(S.s12, 0, S.s4, S.s12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Profiles',
+                                  style: sans(18,
+                                      weight: W.title, color: AppColors.fg1)),
+                              SizedBox(height: S.s2),
+                              Text(
+                                  'Models and credentials for chats and background work.',
+                                  style: sans(13, color: AppColors.fg3)),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: S.s8),
+                        Btn('Add profile',
+                            icon: 'plus', small: true, onTap: () => _edit(null)),
+                      ],
+                    ),
+                  ),
+                  for (final p in profiles)
+                    _DeskProfileRow(
+                      profile: p,
+                      selected: identical(p, selected),
+                      onTap: () => _edit(p),
+                    ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(S.s12, S.s12, S.s12, S.s12),
+                    child: Text(
+                        'New chats use the active profile. Lanes and background work follow Routing.',
+                        style: sans(12, color: AppColors.fg3)),
+                  ),
+                  SettingsGroup(children: [
+                    SettingsRow(
+                      label: "Keep a task's model",
+                      sub: 'Chats stay on the model a task used.',
+                      trailing: SettingsSwitch(
+                          value: keep, onChanged: _setKeepTaskProfile),
+                    ),
+                  ]),
+                ],
               ),
-            ]),
-          ],
+            ),
+          ),
+          Expanded(
+            child: selected == null && !_deskAdding
+                ? Center(
+                    child: Text('No inference profiles yet',
+                        style: sans(13, color: AppColors.fg3)),
+                  )
+                : InferenceProfileEditor(
+                    key: ValueKey(_deskAdding ? '+new' : selected!.name),
+                    client: widget.client,
+                    existing: selected,
+                    embedded: true,
+                    inSplit: true,
+                    onDelete: selected == null
+                        ? null
+                        : () async {
+                            if (await _confirmDelete(selected)) {
+                              setState(() {
+                                _deskSel = null;
+                                _deskAdding = false;
+                              });
+                            }
+                          },
+                    onClose: () => setState(() => _deskAdding = false),
+                    onSaved: () {
+                      setState(() => _deskAdding = false);
+                      _refresh();
+                    },
+                    onSubmit: _submitted,
+                  ),
+          ),
         ]);
       },
     );
@@ -521,5 +559,63 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
       toast(context, "Couldn't delete ${p.name}: $e", danger: true);
       return false;
     }
+  }
+}
+
+class _DeskProfileRow extends StatelessWidget {
+  const _DeskProfileRow({
+    required this.profile,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final InferenceProfile profile;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = profile;
+    return Padding(
+      padding: EdgeInsets.only(bottom: S.s2),
+      child: HoverSurface(
+        onTap: onTap,
+        selected: selected,
+        radius: R.md,
+        selectedColor: AppColors.surface2,
+        hoverColor: AppColors.fg1.withValues(alpha: 0.035),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s6),
+            child: Row(children: [
+              ProviderLogo(p.provider, size: 16),
+              SizedBox(width: S.s12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(p.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13, weight: W.label, color: AppColors.fg1)),
+                    Text('${p.provider} · ${p.model}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: codeMono(11, color: AppColors.fg3)),
+                  ],
+                ),
+              ),
+              if (!p.usable) ...[SizedBox(width: S.s6), const WarnChip()],
+              if (p.active) ...[
+                SizedBox(width: S.s8),
+                Text('Active', style: sans(12, color: AppColors.fg3)),
+              ],
+            ]),
+          ),
+        ),
+      ),
+    );
   }
 }

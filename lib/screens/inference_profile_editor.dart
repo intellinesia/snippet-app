@@ -64,8 +64,12 @@ class InferenceProfileEditor extends StatefulWidget {
   final void Function(InferenceProfile draft, Future<void> save)? onSubmit;
   final VoidCallback? onDelete;
   final bool detail;
+
+  /// Shown beside the profile list, so the breadcrumb back is redundant.
+  final bool inSplit;
   const InferenceProfileEditor(
       {super.key,
+      this.inSplit = false,
       this.onDelete,
       this.detail = false,
       required this.client,
@@ -669,7 +673,9 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
     ];
     return SettingsColumn(children: [
       SettingsHeader(
-        back: SettingsBack('Profiles', onTap: _dismiss),
+        back: widget.inSplit
+            ? null
+            : SettingsBack('Profiles', onTap: _dismiss),
         title: title,
         subtitle: [
           _providerLabel(_provider),
