@@ -82,12 +82,28 @@ String _folder(String path) {
 
 void _presentRecords(BuildContext host, String title, String agentName,
         Widget Function() view) =>
-    presentScreen(host,
+    openAgentRecordsPage(host, title, agentName, view);
+
+/// Inbox or board as its own page. On a phone it stacks on whatever opened
+/// it, so back returns there.
+void openAgentRecordsPage(BuildContext host, String title, String agentName,
+    Widget Function() view) {
+  if (kMobile) {
+    Navigator.of(host, rootNavigator: true).push<void>(AppPageRoute<void>(
+        builder: (page) => _RecordsPage(
+            title: title,
+            subtitle: agentName,
+            onClose: () => Navigator.of(page).pop(),
+            child: view())));
+    return;
+  }
+  presentScreen(host,
         style: PanelStyle.drawer,
         maxWidth: 720,
         maxHeight: 820,
         builder: (_, close) => _RecordsPage(
             title: title, subtitle: agentName, onClose: close, child: view()));
+}
 
 /// Entries that arrived since the inbox was last opened, as the inbox itself
 /// marks them. Capped at one page.

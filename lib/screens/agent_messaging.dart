@@ -414,8 +414,28 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         client: widget.client,
         agentId: widget.agentId,
         name: widget.agentName,
-        onOpenInbox: () => _setView(AgentView.inbox),
-        onOpenBoard: () => _setView(AgentView.board),
+        // Phone: each opens as a page over the agent page, so back returns
+        // to it instead of leaving the conversation.
+        onOpenInbox: kMobile
+            ? () => openAgentRecordsPage(
+                context,
+                'Inbox',
+                widget.agentName,
+                () => AgentInboxView(
+                    client: widget.client,
+                    agentId: widget.agentId,
+                    agentName: widget.agentName))
+            : () => _setView(AgentView.inbox),
+        onOpenBoard: kMobile
+            ? () => openAgentRecordsPage(
+                context,
+                'Board',
+                widget.agentName,
+                () => AgentBoardView(
+                    client: widget.client,
+                    agentId: widget.agentId,
+                    agentName: widget.agentName))
+            : () => _setView(AgentView.board),
         onOpenDesk: () => openAgentDesk(
             context, widget.client, widget.agentId, widget.agentName),
       ));

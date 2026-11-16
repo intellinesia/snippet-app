@@ -624,7 +624,12 @@ class AgentMessageCard extends StatelessWidget {
     final lane = agentId.startsWith('lane ');
     if (lane) {
       final given = laneTitle?.trim() ?? '';
-      final laneName = given.isNotEmpty ? given : agentId.substring(5).trim();
+      // The daemon names a lane's messages `lane «title»`.
+      final raw = agentId.substring(5).trim();
+      final bare = raw.startsWith('«') && raw.endsWith('»') && raw.length > 1
+          ? raw.substring(1, raw.length - 1).trim()
+          : raw;
+      final laneName = given.isNotEmpty ? given : bare;
       return LaneMessageCard(
         laneTitle: laneName,
         notes: outbound ? const [] : [LaneNote(body: body, at: at)],
@@ -770,8 +775,10 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
     super.dispose();
   }
 
+  // Markup only: underscores stay, they are part of file and symbol names.
   static String _plain(String body) => body
-      .replaceAll(RegExp(r'[#*`>_]+'), '')
+      .replaceAll(RegExp(r'^\s*(#+|>)\s*', multiLine: true), '')
+      .replaceAll(RegExp(r'\*\*|`'), '')
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
 

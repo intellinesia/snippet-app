@@ -11,7 +11,6 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pasteboard/pasteboard.dart';
@@ -20,6 +19,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../chat/anchored_scroll.dart';
 import '../chat/chat_card.dart';
 import '../chat/stage_header.dart';
 import '../chat/signal_row.dart';
@@ -385,7 +385,7 @@ class _SessionScreenState extends State<SessionScreen>
 
   final _input = TextEditingController();
   final _inputFocus = FocusNode();
-  final _scroll = ScrollController();
+  final _scroll = AnchoredScrollController();
 
   /// Owns the mobile end-drawer so the actions panel can close it directly.
   /// `Navigator.pop` does NOT close a drawer, so the closer must be this key.
@@ -785,7 +785,11 @@ class _SessionScreenState extends State<SessionScreen>
   void _sendDecision(Map<String, dynamic> m) {
     final k = m['kind'];
     final outbound = Map<String, dynamic>.from(m);
-    if (k == 'approve' || k == 'approve_all' || k == 'deny' || k == 'answer') {
+    if (k == 'approve' ||
+        k == 'approve_all' ||
+        k == 'approve_rule' ||
+        k == 'deny' ||
+        k == 'answer') {
       // Decisions can be retried across reconnects too; give the retry the same
       // idempotency key instead of sending an untracked frame.
       outbound['nonce'] ??= _nextNonce();
@@ -1409,18 +1413,14 @@ class _SessionScreenState extends State<SessionScreen>
     }
   }
 
-  void _rowResized(RenderBox row, double delta) {
+  // Keeps a resized row in place. Applied inside the same layout pass, so the
+  // list never paints one shifted frame (the flicker on expand).
+  void _rowResized(double delta, double? bottomInViewport) {
     if (_stickToBottom || _userScrolling || delta == 0 || !_scroll.hasClients) {
       return;
     }
-    final viewport = RenderAbstractViewport.maybeOf(row);
-    if (viewport is! RenderBox || !row.attached) return;
-    final viewportTop = (viewport as RenderBox).localToGlobal(Offset.zero).dy;
-    final rowBottom = row.localToGlobal(Offset(0, row.size.height)).dy;
-    if (rowBottom <= viewportTop) return;
-    final pos = _scroll.position;
-    pos.jumpTo(
-        (pos.pixels + delta).clamp(pos.minScrollExtent, pos.maxScrollExtent));
+    if (bottomInViewport != null && bottomInViewport <= 0) return;
+    _scroll.correctBy(delta);
   }
 
   // Send now, or queue for the reconnect flush — never silently drop.
@@ -1793,7 +1793,7 @@ class _SessionScreenState extends State<SessionScreen>
                                                           Alignment.centerLeft,
                                                       child: SizedBox(
                                                         width: double.infinity,
-                                                        child: _RowSizeWatch(
+                                                        child: RowSizeWatch(
                                                           onResize: _rowResized,
                                                           child: Appear(
                                                             enabled: fresh,
@@ -1949,42 +1949,6 @@ class _SessionScreenState extends State<SessionScreen>
             child: guardedScaffold,
           )
         : guardedScaffold;
-  }
-}
-
-class _RowSizeWatch extends SingleChildRenderObjectWidget {
-  const _RowSizeWatch({required this.onResize, super.child});
-
-  final void Function(RenderBox row, double delta) onResize;
-
-  @override
-  _RenderRowSizeWatch createRenderObject(BuildContext context) =>
-      _RenderRowSizeWatch(onResize);
-
-  @override
-  void updateRenderObject(
-          BuildContext context, _RenderRowSizeWatch renderObject) =>
-      renderObject.onResize = onResize;
-}
-
-class _RenderRowSizeWatch extends RenderProxyBox {
-  _RenderRowSizeWatch(this.onResize);
-
-  void Function(RenderBox row, double delta) onResize;
-  double? _height;
-
-  @override
-  void performLayout() {
-    super.performLayout();
-    final height = size.height;
-    final previous = _height;
-    _height = height;
-    if (previous != null && previous != height) {
-      final delta = height - previous;
-      SchedulerBinding.instance.addPostFrameCallback((_) {
-        if (attached) onResize(this, delta);
-      });
-    }
   }
 }
 

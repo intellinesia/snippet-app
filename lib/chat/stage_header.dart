@@ -101,7 +101,8 @@ class StageHeader extends StatelessWidget {
           horizontal: compact ? S.s12 : S.s16, vertical: compact ? S.s4 : S.s6),
       decoration: BoxDecoration(
         color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.card),
+        // Same corner as the transcript cards (lane, approval) beside it.
+        borderRadius: BorderRadius.circular(R.of(14)),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(

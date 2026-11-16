@@ -49,6 +49,19 @@ class QuickApprove extends QuickAction {
       };
 }
 
+/// Approves and grants the request's session allow-rule; the daemon treats it
+/// as a plain approve when the request offered no rule.
+class QuickApproveRule extends QuickAction {
+  const QuickApproveRule({this.via});
+  final String? via;
+  @override
+  Map<String, dynamic> frame(String nonce) => {
+        'kind': 'approve_rule',
+        'nonce': nonce,
+        if (via != null) 'via': via,
+      };
+}
+
 class QuickDeny extends QuickAction {
   const QuickDeny({this.via});
   final String? via;

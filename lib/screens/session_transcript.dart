@@ -426,10 +426,16 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                 idx = j;
               }
             }
-            final laneId = from.substring(5).trim();
+            // The daemon names lanes `lane «title»`; older events use the id.
+            var laneId = from.substring(5).trim();
+            if (laneId.length > 1 &&
+                laneId.startsWith('«') &&
+                laneId.endsWith('»')) {
+              laneId = laneId.substring(1, laneId.length - 1).trim();
+            }
             LaneInfo? lane;
             for (final l in _state?.lanes ?? const <LaneInfo>[]) {
-              if (l.id == laneId) lane = l;
+              if (l.id == laneId || l.title.trim() == laneId) lane = l;
             }
             final given = lane?.title.trim() ?? '';
             final waiting = reply == null &&
@@ -755,7 +761,10 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             .replaceAll(RegExp(r'\s+'), ' ')
             .trim();
     final answer = _s(e['answer']).replaceAll(RegExp(r'\s+'), ' ').trim();
+    final rule = _s(e['rule']).trim();
     final head = switch (outcome) {
+      _ when byRaw == 'rule' => 'Allowed by rule',
+      'approved' when rule.isNotEmpty => '$actor approved · always for $rule',
       'approved' => '$actor approved',
       'approved_all' => '$actor approved all',
       'denied' => '$actor denied',

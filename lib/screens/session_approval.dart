@@ -217,10 +217,15 @@ class ApprovalBarState extends State<ApprovalBar> {
             '' => 'Allow this action?',
             _ => 'Allow ${toolTitle(tool).toLowerCase()}?',
           };
-    final headline = callLabel.isNotEmpty ? callLabel : action;
+    final title = approvalTitle(req?['title']);
+    final headline = title ?? (callLabel.isNotEmpty ? callLabel : action);
+    final reason = '${req?['reason'] ?? ''}'.trim();
+    final ruleLabel = approvalRuleLabel(req?['rule']);
     final isShell = tool == 'bash' || customTool != null;
 
-    final canAlways = widget.showApproveAll &&
+    // The daemon only offers a rule when one is safe, so it needs no gating.
+    final canAlways = ruleLabel == null &&
+        widget.showApproveAll &&
         !isVault &&
         laneName == null &&
         !parsed.newCustomTool;
@@ -229,7 +234,8 @@ class ApprovalBarState extends State<ApprovalBar> {
         ? 'Lane «$laneName»'
         : customTool != null
             ? 'Custom tool'
-            : tool.isEmpty || (callLabel.isEmpty && isKnownTool)
+            : tool.isEmpty ||
+                    ((callLabel.isEmpty || title != null) && isKnownTool)
                 ? null
                 : toolTitle(tool);
 
@@ -243,7 +249,10 @@ class ApprovalBarState extends State<ApprovalBar> {
               children: [
                 ChatCardHeader(
                   title: headline,
-                  subtitle: subtitle,
+                  subtitle: reason.isEmpty ? subtitle : null,
+                  subtitleView: reason.isEmpty
+                      ? null
+                      : ApprovalReason(reason, meta: subtitle),
                   eyebrow: kMobile && widget.agentId != null
                       ? _askRow(req)
                       : null,
@@ -286,8 +295,13 @@ class ApprovalBarState extends State<ApprovalBar> {
                 busy: _sent,
                 onTap: () => _decide({'kind': 'approve'})),
           ],
-          link: canAlways ? 'Always allow' : null,
-          onLink: _sent ? null : () => _decide({'kind': 'approve_all'}),
+          link: ruleLabel != null
+              ? 'Always allow $ruleLabel in this session'
+              : (canAlways ? 'Always allow' : null),
+          onLink: _sent
+              ? null
+              : () => _decide(
+                  {'kind': ruleLabel != null ? 'approve_rule' : 'approve_all'}),
         ),
       ]),
     );

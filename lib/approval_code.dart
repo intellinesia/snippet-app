@@ -2,7 +2,53 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'highlight.dart';
+import 'platform.dart';
 import 'theme.dart';
+
+/// An approval's `title` as a question: `?` is added unless it already ends
+/// in `?`, `.` or `!`. Null when the daemon sent none.
+String? approvalTitle(Object? raw) {
+  final t = '${raw ?? ''}'.trim();
+  if (t.isEmpty) return null;
+  return RegExp(r'[?.!]$').hasMatch(t) ? t : '$t?';
+}
+
+/// The label of the session allow-rule an approval offers, or null.
+String? approvalRuleLabel(Object? raw) {
+  if (raw is! Map) return null;
+  final label = '${raw['label'] ?? ''}'.trim();
+  return label.isEmpty ? null : label;
+}
+
+/// Why the agent asks, under an approval's headline; [meta] keeps the quiet
+/// tool line when there is one.
+class ApprovalReason extends StatelessWidget {
+  const ApprovalReason(this.reason, {super.key, this.meta});
+
+  final String reason;
+  final String? meta;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(reason,
+                style:
+                    sans(kMobile ? 14 : 13, height: 1.4, color: AppColors.fg2)),
+          ),
+          if (meta != null && meta!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(meta!,
+                  style: sans(kMobile ? 13 : 12,
+                      height: 1.4, color: AppColors.fg3)),
+            ),
+        ],
+      );
+}
 
 const _heredocLanguages = {
   'python': 'python',

@@ -11,6 +11,7 @@ import '../glass.dart';
 import '../models.dart';
 import '../mochi.dart';
 import '../platform.dart';
+import '../motion_routes.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../screens/agent_appearance.dart' show showAgentAppearance;
@@ -220,7 +221,7 @@ Future<void> showAgentInfo(
       );
   if (kMobile) {
     return Navigator.of(context, rootNavigator: true).push<void>(
-      MaterialPageRoute(
+      AppPageRoute(
           builder: (ctx) =>
               panel(() => Navigator.of(ctx, rootNavigator: true).pop())),
     );
@@ -377,11 +378,8 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
       widget.agentId == 'mission-control' ||
       (widget.agent?.isMissionControl ?? false);
 
-  void _go(VoidCallback open) {
-    // On the phone the page covers the thread, so it leaves before the view changes.
-    if (!widget.docked && kMobile) _close();
-    open();
-  }
+  // Opens on top of this page, so back returns here.
+  void _go(VoidCallback open) => open();
 
   void _openMemory(BuildContext ctx) {
     final open = widget.onOpenMemory;
@@ -1106,7 +1104,8 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
     final actions = <_CircleAction>[
       if (widget.onOpenTasks != null && !widget.docked)
         _CircleAction('task', 'Tasks', () {
-          if (!widget.docked) _close();
+          // Phone: Tasks stacks on this page, so back returns here.
+          if (!widget.docked && !kMobile) _close();
           widget.onOpenTasks!();
         }),
     ];

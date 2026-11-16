@@ -506,7 +506,14 @@ Widget _approvalCard(CoordinationEvent e, Map<dynamic, dynamic> approval) {
   );
   final statusRaw = (approval['status'] ?? '').toString().trim();
   final (statusLabel, icon) = switch (statusRaw.toLowerCase()) {
-    'approved' || 'allowed' || 'allow' || 'approve' || 'approve_all' => (
+    'approved' ||
+    'allowed' ||
+    'allow' ||
+    'approve' ||
+    'approve_all' ||
+    'approved_rule' ||
+    'approve_rule' =>
+      (
         'Approved',
         'check-circle',
       ),
@@ -1059,14 +1066,16 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
 
   String _s(String k) => '${widget.approval[k] ?? ''}'.trim();
 
-  Future<void> _decide(bool approve) async {
+  Future<void> _decide(bool approve, {bool rule = false}) async {
     setState(() => _busy = true);
     final ok = await quickSend(
       client: widget.client,
       session: _s('session'),
-      action: approve
-          ? const QuickApprove(via: 'desk')
-          : const QuickDeny(via: 'desk'),
+      action: !approve
+          ? const QuickDeny(via: 'desk')
+          : rule
+              ? const QuickApproveRule(via: 'desk')
+              : const QuickApprove(via: 'desk'),
     );
     if (!mounted) return;
     setState(() {
@@ -1105,7 +1114,8 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
     if (outcome.isNotEmpty) {
       final kind = switch (outcome) {
         'outdated' => DecidedKind.outdated,
-        'approved' || 'approved_all' => DecidedKind.approved,
+        'approved' || 'approved_all' || 'approved_rule' =>
+          DecidedKind.approved,
         'denied' => DecidedKind.denied,
         _ => DecidedKind.denied,
       };
@@ -1126,6 +1136,9 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
     ].join(' \u00b7 ');
     final counter =
         total != null && total > 1 && index != null ? '$index of $total' : null;
+    final asked = approvalTitle(widget.approval['title']);
+    final reason = _s('reason');
+    final ruleLabel = approvalRuleLabel(widget.approval['rule']);
     return Container(
       width: double.infinity,
       margin: EdgeInsets.symmetric(vertical: S.s2),
@@ -1147,7 +1160,19 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
             if (counter != null) ChatCardPill(counter),
           ]),
           SizedBox(height: S.s6),
-          if (parsed.shownCommand.isNotEmpty && !isCommand) ...[
+          if (asked != null) ...[
+            Text(asked,
+                style: sans(kMobile ? 15 : 14,
+                    weight: W.strong, height: 1.3, color: AppColors.fg1)),
+            SizedBox(height: reason.isEmpty ? S.s6 : S.s2),
+          ],
+          if (reason.isNotEmpty) ...[
+            Text(reason,
+                style:
+                    sans(kMobile ? 14 : 13, height: 1.4, color: AppColors.fg2)),
+            SizedBox(height: S.s6),
+          ],
+          if (asked == null && parsed.shownCommand.isNotEmpty && !isCommand) ...[
             Text(title, style: sans(kMobile ? 14 : 13, color: AppColors.fg1)),
             SizedBox(height: S.s4),
           ],
@@ -1158,7 +1183,7 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
                 style: codeMono(kMobile ? 13 : 12, color: AppColors.fg1))
           else if (parsed.shownCommand.isNotEmpty)
             ApprovalCode(code: parsed.shownCommand, collapsedLines: 4)
-          else
+          else if (asked == null)
             Text(title, style: sans(kMobile ? 14 : 13, color: AppColors.fg1)),
           if (parsed.secrets.isNotEmpty) ...[
             SizedBox(height: S.s6),
@@ -1180,6 +1205,10 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
             busy: _busy,
             onDeny: () => _decide(false),
             onApprove: () => _decide(true),
+            link: ruleLabel == null
+                ? null
+                : 'Always allow $ruleLabel in this session',
+            onLink: () => _decide(true, rule: true),
           ),
         ],
       ),
@@ -1194,12 +1223,38 @@ class _DeskDecideButtons extends StatelessWidget {
       {required this.busy,
       required this.onDeny,
       required this.onApprove,
-      this.agentId = ''});
+      this.agentId = '',
+      this.link,
+      this.onLink});
 
   final String agentId;
   final bool busy;
   final VoidCallback onDeny;
   final VoidCallback onApprove;
+
+  /// Quiet text action: centred under the buttons on the phone, on the left
+  /// of the row on desktop.
+  final String? link;
+  final VoidCallback? onLink;
+
+  Widget _link() => Semantics(
+        button: true,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: busy ? null : onLink,
+          child: Padding(
+            padding: kMobile
+                ? EdgeInsets.only(top: S.of(10))
+                : const EdgeInsets.only(right: 12),
+            child: Text(link!,
+                textAlign: TextAlign.center,
+                maxLines: kMobile ? 2 : 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(kMobile ? 13 : 12,
+                    color: busy ? AppColors.fg4 : AppColors.fg3)),
+          ),
+        ),
+      );
 
   Color? get _tint {
     return agentId.isEmpty ? null : agentTintFor(agentId);
@@ -1244,13 +1299,23 @@ class _DeskDecideButtons extends StatelessWidget {
     final deny = _btn('Deny', onDeny, primary: false);
     final approve = _btn('Approve', onApprove, primary: true);
     if (kMobile) {
-      return Row(children: [
+      final row = Row(children: [
         Expanded(child: deny),
         SizedBox(width: S.s8),
         Expanded(child: approve),
       ]);
+      if (link == null) return row;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [row, _link()],
+      );
     }
     return Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+      if (link != null)
+        Expanded(
+          child: Align(alignment: Alignment.centerLeft, child: _link()),
+        ),
       deny,
       SizedBox(width: S.s8),
       approve,
