@@ -136,8 +136,7 @@ String? groupActivityStatus(
   }
   final replying = group.replying;
   if (replying.isEmpty) return null;
-  String names(int n) =>
-      replying.take(n).map(nameOf).join(', ');
+  String names(int n) => replying.take(n).map(nameOf).join(', ');
   if (replying.length == 1) return '${nameOf(replying.first)} is replying';
   if (replying.length == 2) {
     return '${nameOf(replying[0])} and ${nameOf(replying[1])} are replying';
@@ -246,8 +245,7 @@ class GroupRow extends StatelessWidget {
       if (group.lead != null) 'lead ${group.lead}',
     ].join(' · ');
     final nameOf = this.nameOf;
-    final status =
-        nameOf == null ? null : groupActivityStatus(group, nameOf);
+    final status = nameOf == null ? null : groupActivityStatus(group, nameOf);
     final sub = status ?? group.preview ?? line;
     final shown = agents.take(4).toList();
     final extra = agents.length - shown.length;
@@ -263,8 +261,7 @@ class GroupRow extends StatelessWidget {
           onTap: onTap,
           onLongPress: onLongPress,
           child: Padding(
-            padding:
-                EdgeInsets.symmetric(horizontal: M.gutter, vertical: S.s8),
+            padding: EdgeInsets.symmetric(horizontal: M.gutter, vertical: S.s8),
             child: Row(children: [
               SizedBox.square(
                 dimension: 52,
@@ -350,8 +347,7 @@ class GroupRow extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   Container(
-                    decoration:
-                        avatarDecoration(32, color: AppColors.surface2),
+                    decoration: avatarDecoration(32, color: AppColors.surface2),
                     alignment: Alignment.center,
                     child: shown.isEmpty
                         ? const AppIcon('users', size: 15)
@@ -406,8 +402,7 @@ class GroupRow extends StatelessWidget {
                   ]),
                   SizedBox(height: S.s2),
                   Text.rich(
-                      markdownPreviewSpan(
-                          sub, sans(11, color: AppColors.fg3)),
+                      markdownPreviewSpan(sub, sans(11, color: AppColors.fg3)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                 ],
@@ -534,7 +529,8 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
         FieldWell(
           minHeight: kMobile ? 48 : 38,
           alignment: Alignment.centerLeft,
-          padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.of(10)),
+          padding:
+              EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.of(10)),
           child: TextField(
             controller: _title,
             autofocus: true,
@@ -1039,7 +1035,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       key: 'group-thread:${widget.group.id}',
       fetch: () => widget.client.groupEventsAll(widget.group.id),
       revalidateOn: (e) =>
-          Swr.coordinationForThread(e, widget.group.id) || e['kind'] == 'session_decision',
+          Swr.coordinationForThread(e, widget.group.id) ||
+          e['kind'] == 'session_decision',
       onChange: _sync,
     );
     _events = _thread.data ?? const [];
@@ -1284,37 +1281,39 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     final hideChrome = widget.embedded;
     return Material(
       color: kMobile ? AppColors.pageCanvas : Colors.transparent,
-      child: _chrome(SafeArea(
-        top: !hideChrome,
-        bottom: false,
-        child: Column(
-          children: [
-            Expanded(
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Positioned.fill(
-                      child: kMobile
-                          ? _body(hideChrome: hideChrome)
-                          : hideChrome
-                          ? _body(hideChrome: hideChrome)
-                          : TopFadeMask(
-                              clear: StageBar.height - 24,
-                              child: _body(hideChrome: hideChrome))),
-                  if (!hideChrome)
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: _header(),
-                    ),
-                ],
-              ),
+      child: _chrome(
+          SafeArea(
+            top: !hideChrome,
+            bottom: false,
+            child: Column(
+              children: [
+                Expanded(
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned.fill(
+                          child: kMobile
+                              ? _body(hideChrome: hideChrome)
+                              : hideChrome
+                                  ? _body(hideChrome: hideChrome)
+                                  : TopFadeMask(
+                                      clear: StageBar.height - 24,
+                                      child: _body(hideChrome: hideChrome))),
+                      if (!hideChrome)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: _header(),
+                        ),
+                    ],
+                  ),
+                ),
+                _composer(),
+              ],
             ),
-            _composer(),
-          ],
-        ),
-      ), hideChrome),
+          ),
+          hideChrome),
     );
   }
 
@@ -1329,8 +1328,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       icon: 'task',
       tooltip: 'Tasks',
       badge: (_openTaskCount ?? 0) > 0 ? _openTaskCount : null,
-      onTap: () => openTasksPage(context, widget.client,
-          agentIds: _groupAgentIds),
+      onTap: () =>
+          openTasksPage(context, widget.client, agentIds: _groupAgentIds),
     );
     final docked = kMobile ? null : ShellRequestScope.maybeOf(context);
     final toggleSide = docked?.sidePanel != null ? docked?.toggleSide : null;
@@ -1338,19 +1337,19 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     final Widget? trailing = toggleSide != null || kMobile
         ? null
         : !kMobile && !widget.embedded && widget.onClose != null
-        ? Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              tasksBtn,
-              SizedBox(width: S.s6),
-              ChatGlassButton(
-                icon: 'x',
-                tooltip: 'Close',
-                onTap: widget.onClose!,
-              ),
-            ],
-          )
-        : tasksBtn;
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  tasksBtn,
+                  SizedBox(width: S.s6),
+                  ChatGlassButton(
+                    icon: 'x',
+                    tooltip: 'Close',
+                    onTap: widget.onClose!,
+                  ),
+                ],
+              )
+            : tasksBtn;
     return ListenableBuilder(
       listenable: widget.client.presence,
       builder: (_, __) => StageBar(
@@ -1366,8 +1365,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             context,
             client: widget.client,
             group: _group,
-            onOpenTasks: () => openTasksPage(context, widget.client,
-                agentIds: _groupAgentIds),
+            onOpenTasks: () =>
+                openTasksPage(context, widget.client, agentIds: _groupAgentIds),
             onChanged: () => unawaited(_reloadGroup()),
           ));
         },
@@ -1530,8 +1529,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     } else if (deliveries is List) {
       for (final item in deliveries) {
         if (item is Map && item['read_at'] != null) {
-          final k =
-              (item['recipient_id'] ?? item['agent_id'] ?? '').toString().trim();
+          final k = (item['recipient_id'] ?? item['agent_id'] ?? '')
+              .toString()
+              .trim();
           if (k.isNotEmpty &&
               k != 'human' &&
               k != 'local' &&
@@ -1807,8 +1807,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     List<ReactionGroup> reactions = const [],
   }) {
     final sys = _systemText(e);
-    final topGap =
-        index == 0 ? 0.0 : (run.first ? ChatColors.groupGap : ChatColors.runGap);
+    final topGap = index == 0
+        ? 0.0
+        : (run.first ? ChatColors.groupGap : ChatColors.runGap);
     if (sys != null) {
       final at = _eventTime(e);
       final time = at == null ? null : _dayTimeStamp(at).$2;
@@ -1868,14 +1869,15 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           if (!mine && run.first)
             ChatSenderName(
               _agentName(e.actorId),
-              indent: ChatBubbleRow.avatarSize + 6,
+              indent: card != null ? 0 : ChatBubbleRow.avatarSize + 6,
             ),
           MessageBubbleInteractive(
             text: e.body,
             mine: mine,
             onReact: (name) => unawaited(_sendReaction(e, name)),
             focusBuilder: (_) => buildContent(),
-            builder: (_, __, bubbleKey) => ChatBubbleRow(
+            builder: (_, __, bubbleKey) => _rowFor(
+              card: card,
               mine: mine,
               avatar: !mine && run.last ? _senderAvatar(e.actorId) : null,
               avatarSlot: !mine && !run.last,
@@ -1924,6 +1926,19 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       ),
     );
   }
+
+  // Cards span the content width like the agent chat's, not a bubble's share.
+  Widget _rowFor({
+    required Widget? card,
+    required bool mine,
+    required Widget? avatar,
+    required bool avatarSlot,
+    required Widget child,
+  }) =>
+      card != null
+          ? child
+          : ChatBubbleRow(
+              mine: mine, avatar: avatar, avatarSlot: avatarSlot, child: child);
 
   Widget _wideCap(Widget child) => kMobile
       ? child
