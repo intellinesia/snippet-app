@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/api.dart';
+import 'package:snippet/models.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/screens/agent_appearance.dart';
 import 'package:snippet/screens/create_agent_form.dart';
@@ -23,6 +24,9 @@ class _Client extends DaemonClient {
     nick = nickname;
     built = character;
   }
+
+  @override
+  Future<List<CoordinationAgent>> coordinationAgents() async => const [];
 
   @override
   Future<void> setAgentCharacter(String agentId, String? character) async {
@@ -123,5 +127,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(agentCharacterFor('rook'), '07');
     await tester.pump(const Duration(seconds: 4));
+
+    c.failSave = false;
+    await tester.tap(find.text('Use default'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(c.saved.last, isNull);
+    expect(agentCharacterFor('rook'), isNull);
+    expect(find.text('Avatar'), findsNothing);
+    expect(find.text('Colour'), findsNothing);
   });
 }

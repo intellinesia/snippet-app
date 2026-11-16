@@ -54,8 +54,8 @@ Future<void> showAgentAppearance(
   );
 }
 
-/// The avatar and colour grids in one panel. Picking either updates live
-/// without closing; [onDone] closes the panel.
+/// The character grid. Picking one saves and updates live without closing;
+/// [onDone] closes the panel.
 class AgentAppearancePicker extends StatelessWidget {
   const AgentAppearancePicker({
     super.key,
@@ -64,31 +64,19 @@ class AgentAppearancePicker extends StatelessWidget {
     required this.onDone,
   });
 
-  static const desktopWidth = 4 * 40.0 + 3 * 2 + 24;
+  static const desktopWidth = 6 * 40.0 + 5 * 6 + 24;
 
   final DaemonClient client;
   final String agentId;
   final VoidCallback onDone;
 
-  Future<void> _pickShape(BuildContext context, MascotShape shape) async {
-    final before = agentShapes.value[agentId];
-    final value = shape == MascotShape.mochi ? null : shape.name;
-    setRememberedAgentShape(agentId, value);
-    try {
-      await client.setAgentShape(agentId, value);
-    } catch (_) {
-      setRememberedAgentShape(agentId, before);
-      if (context.mounted) {
-        toast(context, 'Could not change avatar', danger: true);
-      }
-    }
-  }
-
-  Future<void> _pickCharacter(BuildContext context, String id) async {
+  Future<void> _pickCharacter(BuildContext context, String? id) async {
     final before = agentCharacterFor(agentId);
     setRememberedAgentCharacter(agentId, id);
     try {
       await client.setAgentCharacter(agentId, id);
+      // Clearing resolves to the daemon's stable default, which only a refetch knows.
+      if (id == null) await client.coordinationAgents();
     } catch (_) {
       setRememberedAgentCharacter(agentId, before);
       if (context.mounted) {
@@ -97,129 +85,84 @@ class AgentAppearancePicker extends StatelessWidget {
     }
   }
 
-  Future<void> _pickColor(BuildContext context, Color? color) async {
-    final before = agentColors.value[agentId];
-    final hex = color == null ? null : colorHex(color);
-    setRememberedAgentColor(agentId, hex);
-    try {
-      await client.setAgentColor(agentId, hex);
-    } catch (_) {
-      setRememberedAgentColor(agentId, before);
-      if (context.mounted) {
-        toast(context, 'Could not change colour', danger: true);
-      }
-    }
-  }
-
-  Widget _cell(String label, bool selected, VoidCallback onTap, Widget icon) {
-    final radius = BorderRadius.circular(kMobile ? 12 : 8);
-    return Tooltip(
-      message: label,
-      waitDuration: const Duration(milliseconds: 400),
-      child: Material(
-        color: selected ? AppColors.surface3 : Colors.transparent,
-        borderRadius: radius,
-        child: InkWell(
-          borderRadius: radius,
-          hoverColor: AppColors.surface3,
-          onTap: onTap,
-          child: SizedBox.square(
-            dimension: kMobile ? 56.0 : 40.0,
-            child: Center(child: icon),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<Map<String, String>>(
-      valueListenable: agentShapes,
-      builder: (context, _, __) => ValueListenableBuilder<Map<String, String>>(
-        valueListenable: agentColors,
-        builder: (context, colors, __) => ValueListenableBuilder<Map<String, String>>(
-        valueListenable: agentCharacters,
-        builder: (context, chars, __) {
-          final character = chars[agentId];
-          final color = mochiColorFor(agentId);
-          final shape = mascotShapeFor(agentId);
-          final custom = colors.containsKey(agentId);
-          final icon = kMobile ? 40.0 : 26.0;
-          final gap = kMobile ? 6.0 : 2.0;
+      valueListenable: agentCharacters,
+      builder: (context, chars, _) {
+        final current = chars[agentId];
+        final gap = kMobile ? 8.0 : 6.0;
+        final target = kMobile ? 52.0 : 40.0;
+        final radius = BorderRadius.circular(R.of(kMobile ? 12 : 8));
 
-          final shapeGrid = Wrap(
-            spacing: gap,
-            runSpacing: gap,
-            children: [
-              for (final s in MascotShape.values)
-                _cell(
-                    s.name[0].toUpperCase() + s.name.substring(1),
-                    s == shape,
-                    () => _pickShape(context, s),
-                    MochiIcon(color: color, size: icon, shape: s)),
-            ],
-          );
-
-          final characterGrid = Wrap(
+        final grid = LayoutBuilder(builder: (context, box) {
+          final cols = ((box.maxWidth + gap) / (target + gap)).floor().clamp(1, 12);
+          final cell = (box.maxWidth - (cols - 1) * gap) / cols;
+          return Wrap(
             spacing: gap,
             runSpacing: gap,
             children: [
               for (var i = 1; i <= 36; i++)
-                _cell(
-                    'Character ${i.toString().padLeft(2, '0')}',
-                    i.toString().padLeft(2, '0') == character,
-                    () => _pickCharacter(context, i.toString().padLeft(2, '0')),
-                    AgentCharacter(i.toString().padLeft(2, '0'),
-                        size: icon, staggerKey: '$i')),
+                _cell(i.toString().padLeft(2, '0'), cell, radius, current),
             ],
           );
+        });
 
-          final colourGrid = Wrap(
-            spacing: gap,
-            runSpacing: gap,
+        return Padding(
+          padding: kMobile
+              ? EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s12)
+              : EdgeInsets.all(S.s12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              for (final (label, c) in mochiPalette)
-                _cell(label, c == color, () => _pickColor(context, c),
-                    MochiIcon(color: c, size: icon, shape: shape)),
+              Padding(
+                padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
+                child: Text('Character', style: sans(13, color: AppColors.fg3)),
+              ),
+              grid,
+              SizedBox(height: S.s12),
+              Row(
+                children: [
+                  Btn('Use default',
+                      variant: BtnVariant.ghost,
+                      small: true,
+                      onTap: () => _pickCharacter(context, null)),
+                  const Spacer(),
+                  Btn('Done', small: true, onTap: onDone),
+                ],
+              ),
             ],
-          );
+          ),
+        );
+      },
+    );
+  }
 
-          return Padding(
-            padding: kMobile
-                ? EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s12)
-                : EdgeInsets.all(S.s12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SectionLabel('Character'),
-                SizedBox(height: S.s4),
-                characterGrid,
-                SizedBox(height: S.s16),
-                const SectionLabel('Avatar'),
-                SizedBox(height: S.s4),
-                shapeGrid,
-                SizedBox(height: S.s16),
-                const SectionLabel('Colour'),
-                SizedBox(height: S.s4),
-                colourGrid,
-                SizedBox(height: S.s12),
-                Row(
-                  children: [
-                    if (custom)
-                      Btn('Use default',
-                          variant: BtnVariant.ghost,
-                          small: true,
-                          onTap: () => _pickColor(context, null)),
-                    const Spacer(),
-                    Btn('Done', small: true, onTap: onDone),
-                  ],
-                ),
-              ],
+  Widget _cell(String id, double size, BorderRadius radius, String? current) {
+    final sel = id == current;
+    final tint =
+        CharacterRoster.current?.character(id)?.color ?? AppColors.accent;
+    return Tooltip(
+      message: 'Character $id',
+      waitDuration: const Duration(milliseconds: 400),
+      child: Builder(
+        builder: (context) => GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _pickCharacter(context, id),
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: sel ? tint.withValues(alpha: 0.13) : AppColors.surface2,
+              borderRadius: radius,
+              border: Border.all(
+                  color: sel ? tint : AppColors.lineStrong, width: sel ? 1.5 : 1),
             ),
-          );
-        },
+            child: Center(
+              child: AgentCharacter(id, size: size - 14, staggerKey: id),
+            ),
+          ),
         ),
       ),
     );

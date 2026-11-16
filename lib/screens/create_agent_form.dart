@@ -103,15 +103,18 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
       height: h,
       child: LayoutBuilder(builder: (context, box) {
         // Six cells fill the row; the rest scroll.
-        final cell = (box.maxWidth - 5 * S.s8) / 6;
+        final gap = kMobile ? S.s8 : 6.0;
+        final cell = (box.maxWidth - 5 * gap) / 6;
         return ListView.separated(
         key: const ValueKey('character-picker'),
         scrollDirection: Axis.horizontal,
         itemCount: _characters.length,
-        separatorBuilder: (_, __) => SizedBox(width: S.s8),
+        separatorBuilder: (_, __) => SizedBox(width: gap),
         itemBuilder: (_, i) {
           final id = _characters[i];
           final sel = id == _character;
+          final tint =
+              CharacterRoster.current?.character(id)?.color ?? AppColors.accent;
           return Semantics(
             button: true,
             selected: sel,
@@ -123,14 +126,14 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
               child: Container(
                 width: cell,
                 decoration: BoxDecoration(
-                  color: AppColors.surface2,
+                  color: sel ? tint.withValues(alpha: 0.13) : AppColors.surface2,
                   borderRadius: BorderRadius.circular(R.of(kMobile ? 12 : 8)),
                   border: Border.all(
-                      color: sel ? AppColors.accent : AppColors.lineStrong,
-                      width: sel ? 2 : 1),
+                      color: sel ? tint : AppColors.lineStrong,
+                      width: sel ? 1.5 : 1),
                 ),
                 child: Center(
-                  child: AgentCharacter(id, size: h - 14, staggerKey: id),
+                  child: AgentCharacter(id, size: kMobile ? h - 14 : 26, staggerKey: id),
                 ),
               ),
             ),
@@ -146,7 +149,7 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
     final fs = kMobile ? 15.0 : 13.0;
     final roomy = MediaQuery.sizeOf(context).height >= 700;
     final name = _nickname.text.trim();
-    final stage = roomy ? (kMobile ? 120.0 : 88.0) : 48.0;
+    final stage = roomy ? (kMobile ? 120.0 : 84.0) : 48.0;
     Widget label(String t) => Padding(
           padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s4),
           child: Text(t, style: sans(13, color: AppColors.fg3)),
