@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -93,12 +94,14 @@ class GlassTopFrame extends StatelessWidget {
   /// still reach the oldest row from under the header.
   static const double inset = 52;
   static const double fade = 14;
-  static const _bands = [
-    (0.0, 0.5, 11.0),
-    (0.5, 0.66, 9.0),
-    (0.66, 0.8, 7.0),
-    (0.8, 0.92, 5.0),
-    (0.92, 1.0, 3.0),
+  // (lower edge as a fraction of the height, blur sigma), top band first. Many
+  // small steps on wavy edges, so neither the start nor a step reads as a line.
+  static final List<(double, double)> _bands = [
+    for (var i = 0; i < 14; i++)
+      (
+        0.34 + 0.66 * (i + 1) / 14,
+        0.5 + 10.5 * math.pow(1 - i / 13, 1.6).toDouble(),
+      ),
   ];
 
   @override
@@ -118,24 +121,21 @@ class GlassTopFrame extends StatelessWidget {
             if (edgeBlur)
               // Bands share one backdrop read; overlapping stacked blurs cost a
               // full pass each and were the main source of scroll jank.
-              Positioned.fill(child: LayoutBuilder(builder: (context, c) {
-                final h = c.maxHeight;
-                return Stack(children: [
-                  for (final (from, to, sigma) in _bands)
-                    Positioned(
-                      top: h * from,
-                      left: 0,
-                      right: 0,
-                      height: h * (to - from),
-                      child: ClipRect(
+              Positioned.fill(
+                child: Stack(children: [
+                  for (var i = 0; i < _bands.length; i++)
+                    Positioned.fill(
+                      child: ClipPath(
+                        clipper: _BandClip(i, _bands),
                         child: BackdropFilter.grouped(
-                          filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                          filter: ImageFilter.blur(
+                              sigmaX: _bands[i].$2, sigmaY: _bands[i].$2),
                           child: const SizedBox.expand(),
                         ),
                       ),
                     ),
-                ]);
-              })),
+                ]),
+              ),
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -164,6 +164,66 @@ class GlassTopFrame extends StatelessWidget {
         ? BackdropGroup(child: frame)
         : frame;
   }
+}
+
+/// One frost band: the region between the wavy lower edge of the band above
+/// and its own. Neighbours share an edge, so bands tile without overlap.
+class _BandClip extends CustomClipper<Path> {
+  _BandClip(this.index, this.bands);
+
+  final int index;
+  final List<(double, double)> bands;
+
+  static const _knot = 32.0;
+
+  // Seeded per edge so the contour is irregular but stable across frames.
+  List<double> _knots(int edge, Size size) {
+    final h = size.height;
+    final frac = bands[edge].$1;
+    final amp = h * 0.03;
+    final rnd = math.Random(31 + edge * 977);
+    final n = (size.width / _knot).ceil() + 1;
+    return [
+      for (var k = 0; k <= n; k++)
+        frac >= 1
+            ? h - rnd.nextDouble() * amp * 1.5
+            : (h * frac + (rnd.nextDouble() - 0.5) * 2 * amp).clamp(0.0, h),
+    ];
+  }
+
+  // A smooth curve through the knots: quadratic segments between midpoints.
+  static void _curve(Path p, List<double> ys, {required bool reverse}) {
+    final pts = [
+      for (var k = 0; k < ys.length; k++) Offset(k * _knot, ys[k]),
+    ];
+    final seq = reverse ? pts.reversed.toList() : pts;
+    p.lineTo(seq.first.dx, seq.first.dy);
+    for (var k = 1; k < seq.length - 1; k++) {
+      final mid = Offset((seq[k].dx + seq[k + 1].dx) / 2,
+          (seq[k].dy + seq[k + 1].dy) / 2);
+      p.quadraticBezierTo(seq[k].dx, seq[k].dy, mid.dx, mid.dy);
+    }
+    p.lineTo(seq.last.dx, seq.last.dy);
+  }
+
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    if (index == 0) {
+      path.moveTo(0, 0);
+      path.lineTo(size.width + _knot, 0);
+    } else {
+      final top = _knots(index - 1, size);
+      path.moveTo(0, top.first);
+      _curve(path, top, reverse: false);
+    }
+    _curve(path, _knots(index, size), reverse: true);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(_BandClip old) => old.index != index;
 }
 
 /// Marks content already sitting on frost, so nested [Glass] skips its blur.
