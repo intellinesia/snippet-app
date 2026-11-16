@@ -1405,6 +1405,14 @@ class GroupSummary {
   /// The newest post, as "You: …" or "agent: …"; null when the group is empty.
   final String? preview;
 
+  /// Agents woken for this thread whose reply is still in flight.
+  final List<String> replying;
+
+  /// The task room's turn holder and when it took the turn (unix seconds).
+  /// Groups have no turn holder, so both stay null there.
+  final String? turnAgent;
+  final int? turnSince;
+
   GroupSummary.fromJson(Map<String, dynamic> j)
       : id = j['id'] as String? ?? '',
         title = j['title'] as String? ?? '',
@@ -1418,7 +1426,18 @@ class GroupSummary {
         lastEventAt = j['last_event_at'] as String?,
         unread = (j['unread'] as num?)?.toInt() ?? 0,
         createdAt = j['created_at'] as String? ?? '',
-        preview = _groupPreview(j['last_message']);
+        preview = _groupPreview(j['last_message']),
+        replying = ((j['replying'] as List?) ?? const [])
+            .whereType<String>()
+            .toList(),
+        turnAgent = switch (j['turn']) {
+          final Map t => t['agent'] as String?,
+          _ => null,
+        },
+        turnSince = switch (j['turn']) {
+          final Map t => (t['since'] as num?)?.toInt(),
+          _ => null,
+        };
 
   static String? _groupPreview(Object? m) {
     if (m is! Map) return null;

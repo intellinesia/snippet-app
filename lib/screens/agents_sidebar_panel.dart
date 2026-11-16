@@ -497,6 +497,16 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
           onChanged: refresh,
         );
 
+    String agentName(String id) {
+      for (final a in agents) {
+        if (a.id == id) {
+          final name = a.displayName.trim();
+          return name.isEmpty ? id : name;
+        }
+      }
+      return id;
+    }
+
     Widget groupTile(GroupSummary g) {
       final pinned = _isPinnedGroup(g);
       return GestureDetector(
@@ -508,6 +518,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
           pinned: pinned,
           onTap: () => _openGroup(g),
           onLongPress: () => _groupActions(g),
+          nameOf: agentName,
         ),
       );
     }
