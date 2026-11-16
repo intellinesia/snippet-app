@@ -318,7 +318,7 @@ class AgentActionsState extends State<AgentActions> {
               Text(widget.agentName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(22, weight: W.label, color: AppColors.fg1)),
+                  style: sans(20, weight: W.title, color: AppColors.fg1)),
               if (model != null && model.isNotEmpty)
                 Text(model,
                     maxLines: 1,
@@ -948,16 +948,21 @@ class _Notice extends StatelessWidget {
 }
 
 class _StateTag extends StatelessWidget {
-  const _StateTag(this.label, this.color);
+  const _StateTag(this.label, this.color, {this.neutral = false});
 
   final String label;
   final Color color;
+
+  /// A raised-surface background instead of the colour's 13% tint.
+  final bool neutral;
 
   @override
   Widget build(BuildContext context) => Container(
         padding: EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.13),
+          color: neutral
+              ? AppColors.surface3
+              : color.withValues(alpha: 0.13),
           borderRadius: BorderRadius.circular(R.xs),
         ),
         child: Text(label,
@@ -1465,19 +1470,19 @@ class _AgentBoardViewState extends State<AgentBoardView> {
     return page.entries;
   }
 
-  (String, String, Color, Color) _look(BoardEntry e) => switch (e.kind) {
-        'dispatched' => ('send', 'Dispatched', AppColors.accent, AppColors.accent),
-        'reported' => ('check-circle', 'Reported', AppColors.ok, AppColors.ok),
+  (String, String, Color, bool) _look(BoardEntry e) => switch (e.kind) {
+        'dispatched' => ('send', 'Dispatched', AppColors.fg2, true),
+        'reported' => ('check-circle', 'Reported', AppColors.ok, false),
         'progress' => (
             'activity',
             e.summary.startsWith(_automatic)
                 ? 'Progress, automatic'
                 : 'Progress',
-            AppColors.fg2,
-            AppColors.accent
+            AppColors.accent,
+            false
           ),
-        'noted' => ('file-text', 'Note', AppColors.fg2, AppColors.fg2),
-        _ => ('file-text', e.kind, AppColors.fg2, AppColors.fg2),
+        'noted' => ('file-text', 'Noted', AppColors.fg2, true),
+        _ => ('file-text', e.kind, AppColors.fg2, true),
       };
 
   /// The summary without what the row already says: the automatic prefix, and
@@ -1623,7 +1628,7 @@ class _AgentBoardViewState extends State<AgentBoardView> {
     return _BoardRow(
       time: e.createdAt,
       onTap: () => _open(e),
-      lead: _StateTag(look.$2, look.$4),
+      lead: _StateTag(look.$2, look.$3, neutral: look.$4),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(_plain(_summary(e)),
             maxLines: 3,
