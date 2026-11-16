@@ -361,6 +361,21 @@ extension _SessionScreenSocketExt on _SessionScreenState {
         }
       });
       widget.onMacStatus?.call(next, next.status == 'running');
+      // The turn just landed: if this screen is showing and the app is in
+      // front, the finished result counts as seen for "Came back".
+      if (cur != null &&
+          cur.status == 'running' &&
+          next.status != 'running' &&
+          _live &&
+          !_parked &&
+          !_isMissionControl) {
+        final lc = WidgetsBinding.instance.lifecycleState;
+        if (lc == null ||
+            lc == AppLifecycleState.resumed ||
+            (!kMobile && lc == AppLifecycleState.inactive)) {
+          _postSeen();
+        }
+      }
       if (wire == 'delta') {
         widget.client.deviceEvents.addAttachedToolResults(
           j,

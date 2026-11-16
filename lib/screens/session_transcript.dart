@@ -442,6 +442,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
               NoteLine(
                   '${_s(e['from'])} hit its usage limit. Continuing on ${_s(e['to'])}.',
                   icon: 'transfer'));
+        case 'session_handoff':
+          endTools(key);
+          addEvent(key, HandoffNotice(event: e));
         case 'limit_wait':
           endTools(key);
           final at = (e['resets_at'] as num?)?.toInt() ?? 0;
@@ -720,6 +723,17 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       maxWidth: 360,
       items: [
         appMenuHeading<String>('Inference profile'),
+        appMenuRow<String>(
+          value: '',
+          icon: 'info',
+          label: _modelPin != null
+              ? 'Pinned to $_modelPin'
+              : _modelFollowing != null
+                  ? "Following $_modelFollowing's profile"
+                  : 'Following the default model',
+          description: 'Picking a profile pins it to this session',
+          enabled: false,
+        ),
         for (final p in cfg.profiles)
           appMenuRow<String>(
             value: p.name,
@@ -730,9 +744,13 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           ),
       ],
     );
-    if (picked == null || picked == current) return;
+    if (picked == null || picked.isEmpty || picked == current) return;
     final before = _currentProfile;
-    _setState(() => _currentProfile = picked);
+    _setState(() {
+      _currentProfile = picked;
+      _modelPin = picked;
+      _modelFollowing = null;
+    });
     try {
       await widget.client.setSessionModel(widget.sessionId, picked);
       if (mounted) {

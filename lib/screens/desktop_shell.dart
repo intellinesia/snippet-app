@@ -10,6 +10,7 @@ import '../api.dart';
 import '../github_models.dart';
 import '../swr.dart';
 import '../session_status_updates.dart';
+import '../session_seen.dart';
 import '../command_palette.dart';
 import '../device_events.dart';
 import '../models.dart';
@@ -222,6 +223,7 @@ class _DesktopShellState extends State<DesktopShell>
   Timer? _sessionsTicker;
   bool _appForeground = true;
   StreamSubscription? _eventsSub;
+  StreamSubscription<String>? _seenSub;
   final _liveStatus = SessionStatusUpdates();
 
   /// Which agents are working in each session, as display initials.
@@ -555,6 +557,21 @@ class _DesktopShellState extends State<DesktopShell>
     // reconnect adopts whatever ptys already exist, so live shells never vanish
     // from the strip just because the socket dropped.
     _shells.addListener(_syncGlobalShellTabs);
+    _seenSub = sessionSeenPings.listen(_onSessionSeenPing);
+  }
+
+  /// A session screen marked this session seen: drop it from Came back now
+  /// rather than on the next sessions fetch.
+  void _onSessionSeenPing(String id) {
+    final sessions = _sessions;
+    if (sessions == null || !sessions.any((s) => s.id == id && s.cameBack)) {
+      return;
+    }
+    setState(() {
+      _sessions = [
+        for (final s in sessions) s.id == id ? s.markSeen() : s,
+      ];
+    });
   }
 
   void _onLookChanged() {
@@ -573,6 +590,7 @@ class _DesktopShellState extends State<DesktopShell>
       HardwareKeyboard.instance.removeHandler(_handleGlobalShortcuts);
     }
     _sessionsTicker?.cancel();
+    _seenSub?.cancel();
     _stopEventsWatch();
     ThemeManager.instance.unbindClient(_client);
     _persistTabsDebounce?.cancel();

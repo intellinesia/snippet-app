@@ -129,7 +129,10 @@ void main() {
       expect(find.text('Listening'), findsNothing);
       expect(find.text('2'), findsOneWidget);
 
-      final mcMochi = tester.widget<MochiIcon>(find.byType(MochiIcon));
+      // Rows carry their owner's avatar too, so look inside the dock only.
+      final mcMochi = tester.widget<MochiIcon>(find.descendant(
+          of: find.byType(MissionControlDock),
+          matching: find.byType(MochiIcon)));
       expect(mcMochi.size, 24);
       expect(mcMochi.color, AppColors.ok);
 
@@ -156,6 +159,10 @@ void main() {
 
   testWidgets('cross-project Needs you group renders state labels, project chip, and removes from project groups',
       (tester) async {
+    // The hero pushes the list down; keep every row inside the viewport.
+    tester.view.physicalSize = const Size(800, 1800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
       await tester.pumpWidget(_phoneHarness(sessions: [
@@ -192,7 +199,8 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.byType(SessionGroupHeader), findsNothing);
-      expect(find.text('Needs you'), findsNothing);
+      // The hero's top card carries the one "Needs you" label.
+      expect(find.text('Needs you'), findsOneWidget);
 
       // The Now section holds all 3 attention sessions as live cards.
       final nowLabel = find.widgetWithText(MobileSectionLabel, 'Now');
@@ -234,9 +242,10 @@ void main() {
               of: find.byType(LiveSessionCard), matching: find.text('gamma')),
           findsOneWidget);
 
-      // Phone provider mark uses size 18 inside the 20px box.
-      final logo = tester.widget<ProviderLogo>(find.byType(ProviderLogo));
-      expect(logo.size, 18);
+      // Every session has an owner, so rows show the owner's avatar rather
+      // than the provider mark.
+      expect(find.byType(ProviderLogo), findsNothing);
+      expect(find.byType(AgentMochi), findsWidgets);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
