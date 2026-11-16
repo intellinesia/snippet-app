@@ -47,6 +47,15 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
   String? _branch;
   List<InferenceProfile> _profiles = const [];
   String? _profile;
+
+  /// The owner agent's profile the draft follows by default, and its name for
+  /// the chip label. Null when the agent has none or the user picked a profile.
+  String? _agentProfile;
+  String? _agentName;
+
+  /// Only an explicit pick (or a pinned source session) is sent to the daemon;
+  /// following the agent's profile means omitting `profile`.
+  bool _profileExplicit = false;
   bool _starting = false;
   List<SessionInfo>? _recentPool;
 
@@ -74,15 +83,26 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
   Future<void> _loadProfiles() async {
     try {
       final cfg = await widget.client.getConfig();
+      List<CoordinationAgent> agents = const [];
+      try {
+        agents = await widget.client.coordinationAgents();
+      } catch (_) {}
       if (!mounted) return;
-      final wanted = widget.source?.profile;
+      final owner = widget.source?.displayAgentId ?? 'snippet';
+      final agent = agents.where((a) => a.id == owner).firstOrNull;
+      bool known(String? name) =>
+          name != null && cfg.profiles.any((p) => p.name == name);
+      final pinned = known(widget.source?.profile) ? widget.source!.profile : null;
+      final agentProfile = known(agent?.profile) ? agent!.profile : null;
       setState(() {
         _profiles = cfg.profiles;
-        _profile = wanted != null &&
-                cfg.profiles.any((p) => p.name == wanted)
-            ? wanted
-            : cfg.active ??
-                cfg.profiles.where((p) => p.active).firstOrNull?.name;
+        _profile = pinned ??
+            agentProfile ??
+            cfg.active ??
+            cfg.profiles.where((p) => p.active).firstOrNull?.name;
+        _profileExplicit = pinned != null;
+        _agentProfile = _profileExplicit ? null : agentProfile;
+        _agentName = agent?.displayName;
       });
     } catch (_) {}
   }
@@ -159,7 +179,8 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
     if (text.isEmpty) return;
     setState(() => _starting = true);
     try {
-      await widget.onStart(_folder!, _mode, _profile, text);
+      await widget.onStart(
+        _folder!, _mode, _profileExplicit ? _profile : null, text);
     } catch (e) {
       if (mounted) toast(context, '$e', danger: true);
     } finally {
@@ -186,7 +207,13 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
           ),
       ],
     );
-    if (picked != null && mounted) setState(() => _profile = picked);
+    if (picked != null && mounted) {
+      setState(() {
+        _profile = picked;
+        _profileExplicit = true;
+        _agentProfile = null;
+      });
+    }
   }
 
   Widget _chip(String icon, String label,
@@ -399,7 +426,12 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                                           ProviderLogo(current.provider,
                                               size: 13),
                                           const SizedBox(width: 7),
-                                          Text(current.name,
+                                          Text(
+                                              _agentProfile != null
+                                                  ? "${_agentName ?? 'Agent'}'s profile (${current.name})"
+                                                  : current.name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: sans(13,
                                                   color: AppColors.fg2)),
                                         ]),

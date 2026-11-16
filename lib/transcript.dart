@@ -1103,3 +1103,45 @@ class QuietAside extends StatelessWidget {
   Widget build(BuildContext context) =>
       Opacity(opacity: 0.55, child: ThinkingMarkdown(data: text));
 }
+
+/// One-line `session_handoff` transcript notice: both agents' avatars, the
+/// note, and whether it is queued behind the running turn.
+class HandoffNotice extends StatelessWidget {
+  final Map<String, dynamic> event;
+  const HandoffNotice({super.key, required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    final from = '${event['from'] ?? ''}'.trim();
+    final to = '${event['to'] ?? ''}'.trim();
+    final note = '${event['note'] ?? ''}'.trim();
+    final byYou = '${event['by'] ?? ''}' == 'human';
+    final pending = event['pending'] == true;
+    final target = to.isEmpty ? 'agent' : to;
+    final text = pending
+        ? 'Hands to $target after this turn'
+        : '${from.isEmpty ? 'snippet' : from} → $target'
+            '${note.isEmpty ? '' : ' · $note'}'
+            '${byYou ? ' · by you' : ''}';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (from.isNotEmpty) AgentMochi(from, size: 14),
+        if (from.isNotEmpty && to.isNotEmpty) ...[
+          const SizedBox(width: 4),
+          AppIcon('arrow-right', size: 11, color: AppColors.fg4),
+          const SizedBox(width: 4),
+        ],
+        if (to.isNotEmpty) AgentMochi(to, size: 14),
+        if (from.isNotEmpty || to.isNotEmpty) const SizedBox(width: 6),
+        Flexible(
+          child: Text(text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: sans(kMobile ? 13 : 13,
+                  height: 1.4, color: AppColors.fg3)),
+        ),
+      ]),
+    );
+  }
+}
