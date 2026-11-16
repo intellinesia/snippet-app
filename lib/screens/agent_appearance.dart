@@ -84,6 +84,19 @@ class AgentAppearancePicker extends StatelessWidget {
     }
   }
 
+  Future<void> _pickCharacter(BuildContext context, String id) async {
+    final before = agentCharacterFor(agentId);
+    setRememberedAgentCharacter(agentId, id);
+    try {
+      await client.setAgentCharacter(agentId, id);
+    } catch (_) {
+      setRememberedAgentCharacter(agentId, before);
+      if (context.mounted) {
+        toast(context, 'Could not change character', danger: true);
+      }
+    }
+  }
+
   Future<void> _pickColor(BuildContext context, Color? color) async {
     final before = agentColors.value[agentId];
     final hex = color == null ? null : colorHex(color);
@@ -125,7 +138,10 @@ class AgentAppearancePicker extends StatelessWidget {
       valueListenable: agentShapes,
       builder: (context, _, __) => ValueListenableBuilder<Map<String, String>>(
         valueListenable: agentColors,
-        builder: (context, colors, __) {
+        builder: (context, colors, __) => ValueListenableBuilder<Map<String, String>>(
+        valueListenable: agentCharacters,
+        builder: (context, chars, __) {
+          final character = chars[agentId];
           final color = mochiColorFor(agentId);
           final shape = mascotShapeFor(agentId);
           final custom = colors.containsKey(agentId);
@@ -142,6 +158,20 @@ class AgentAppearancePicker extends StatelessWidget {
                     s == shape,
                     () => _pickShape(context, s),
                     MochiIcon(color: color, size: icon, shape: s)),
+            ],
+          );
+
+          final characterGrid = Wrap(
+            spacing: gap,
+            runSpacing: gap,
+            children: [
+              for (var i = 1; i <= 36; i++)
+                _cell(
+                    'Character ${i.toString().padLeft(2, '0')}',
+                    i.toString().padLeft(2, '0') == character,
+                    () => _pickCharacter(context, i.toString().padLeft(2, '0')),
+                    AgentCharacter(i.toString().padLeft(2, '0'),
+                        size: icon, staggerKey: '$i')),
             ],
           );
 
@@ -163,6 +193,10 @@ class AgentAppearancePicker extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
+                const SectionLabel('Character'),
+                SizedBox(height: S.s4),
+                characterGrid,
+                SizedBox(height: S.s16),
                 const SectionLabel('Avatar'),
                 SizedBox(height: S.s4),
                 shapeGrid,
@@ -186,6 +220,7 @@ class AgentAppearancePicker extends StatelessWidget {
             ),
           );
         },
+        ),
       ),
     );
   }
