@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'platform.dart';
 import 'settings_form.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -40,16 +41,15 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
     // The live step, or the first one not done when none is marked live.
     var cur = st.indexOf(_St.now);
     if (cur < 0 && !finished) cur = st.indexOf(_St.open);
-    final next = cur < 0
-        ? -1
-        : st.indexWhere((s) => s == _St.open, cur + 1);
+    final next = cur < 0 ? -1 : st.indexWhere((s) => s == _St.open, cur + 1);
     final r = Grouped.radiusEnd;
     const ri = Radius.circular(Grouped.radiusInner);
     final head = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => setState(() => _open = !_open),
       child: Container(
-        padding: EdgeInsets.fromLTRB(Grouped.padX, 14, Grouped.padX, 14),
+        padding: EdgeInsets.fromLTRB(
+            Grouped.padX, kMobile ? 14 : 10, Grouped.padX, kMobile ? 14 : 10),
         decoration: BoxDecoration(
           color: Grouped.row,
           borderRadius: BorderRadius.vertical(
@@ -63,8 +63,8 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
             Padding(
               padding: const EdgeInsets.only(top: 1),
               child: finished
-                  ? AppIcon('check-circle', size: 22, color: AppColors.fg3)
-                  : const PlanStepDot(state: 1, size: 22),
+                  ? AppIcon('check-circle', size: _dot, color: AppColors.fg3)
+                  : PlanStepDot(state: 1, size: _dot),
             ),
             SizedBox(width: Grouped.iconGap),
             Expanded(
@@ -75,13 +75,14 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
                       finished
                           ? 'Plan done · $total of $total'
                           : 'Plan ${cur + 1} of $total',
-                      style: sans(14, height: 20 / 14, color: AppColors.fg3)),
+                      style: _meta()),
                   if (!finished && cur >= 0)
                     Text(_text(steps[cur]),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style:
-                            sans(16, height: 22 / 16, color: AppColors.fg1)),
+                        style: kMobile
+                            ? sans(16, height: 22 / 16, color: AppColors.fg1)
+                            : sans(13, height: 18 / 13, color: AppColors.fg1)),
                   SizedBox(height: S.s8),
                   _Segments(st),
                   if (next >= 0) ...[
@@ -89,8 +90,7 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
                     Text('Next: ${_text(steps[next])}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(14,
-                            height: 20 / 14, color: AppColors.fg3)),
+                        style: _meta()),
                   ],
                 ],
               ),
@@ -109,14 +109,13 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
     final rows = <Widget>[
       if (widget.explanation.isNotEmpty)
         Padding(
-          padding:
-              EdgeInsets.fromLTRB(Grouped.padX, 10, Grouped.padX, 12),
-          child: Text(widget.explanation,
-              style: sans(14, height: 20 / 14, color: AppColors.fg3)),
+          padding: EdgeInsets.fromLTRB(Grouped.padX, 10, Grouped.padX, 12),
+          child: Text(widget.explanation, style: _meta()),
         ),
       for (var i = 0; i < total; i++)
         Container(
-          constraints: BoxConstraints(minHeight: i == cur ? 56 : 48),
+          constraints:
+              BoxConstraints(minHeight: kMobile ? (i == cur ? 56 : 48) : 32),
           padding: EdgeInsets.symmetric(horizontal: Grouped.padX, vertical: 8),
           child: Row(children: [
             PlanStepDot(
@@ -128,8 +127,8 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
             SizedBox(width: Grouped.iconGap),
             Expanded(
               child: Text(_text(steps[i]),
-                  style: sans(15,
-                      height: 20 / 15,
+                  style: sans(kMobile ? 15 : 13,
+                      height: kMobile ? 20 / 15 : 18 / 13,
                       color: st[i] == _St.done
                           ? AppColors.fg4
                           : i == cur
@@ -168,9 +167,8 @@ class _Segments extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final live = st.contains(_St.now)
-        ? st.indexOf(_St.now)
-        : st.indexOf(_St.open);
+    final live =
+        st.contains(_St.now) ? st.indexOf(_St.now) : st.indexOf(_St.open);
     return Row(children: [
       for (var i = 0; i < st.length; i++) ...[
         if (i > 0) const SizedBox(width: 3),
@@ -227,3 +225,9 @@ class PlanStepDot extends StatelessWidget {
     );
   }
 }
+
+// Desktop cards run denser than the phone's.
+double get _dot => kMobile ? 22 : 16;
+TextStyle _meta() => kMobile
+    ? sans(14, height: 20 / 14, color: AppColors.fg3)
+    : sans(12, height: 16 / 12, color: AppColors.fg3);
