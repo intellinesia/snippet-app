@@ -1533,72 +1533,135 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       ? child
       : Center(
           child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
+              constraints: const BoxConstraints(maxWidth: 720),
               child: SizedBox(width: double.infinity, child: child)));
 
-  Widget _composerCard() => ComposerCard(
-        text: _input,
-        banner: _replyTo == null
-            ? null
-            : PendingReplyBanner(
-                author: _replyTo!.actorKind == 'human'
-                    ? 'yourself'
-                    : widget.agentName,
-                text: quotePreviewText(_replyTo!.body),
-                onClear: () => setState(() => _replyTo = null),
+  /// Desktop: the same two-row card as the desk, so Chat and Work match.
+  Widget _deskComposerCard() => ListenableBuilder(
+        listenable: Listenable.merge([_input, _attachments]),
+        builder: (_, __) {
+          final canSend =
+              (_input.text.trim().isNotEmpty || _attachments.isNotEmpty) &&
+                  !_sending;
+          return DeskComposerCard(
+            focus: _inputFocus,
+            banner: _replyTo == null
+                ? null
+                : PendingReplyBanner(
+                    author: _replyTo!.actorKind == 'human'
+                        ? 'yourself'
+                        : widget.agentName,
+                    text: quotePreviewText(_replyTo!.body),
+                    onClear: () => setState(() => _replyTo = null),
+                  ),
+            field: CallbackShortcuts(
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.enter): _send,
+                const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+                    _send,
+                const SingleActivator(LogicalKeyboardKey.enter, control: true):
+                    _send,
+              },
+              child: TextField(
+                controller: _input,
+                focusNode: _inputFocus,
+                minLines: 1,
+                maxLines: 10,
+                cursorColor: AppColors.fg1,
+                onSubmitted: (_) => _send(),
+                style: DeskComposerCard.fieldStyle,
+                decoration:
+                    DeskComposerCard.decoration('Message ${widget.agentName}'),
               ),
-        field: CallbackShortcuts(
-          bindings: {
-            const SingleActivator(LogicalKeyboardKey.enter): () {
-              if (!kMobile) _send();
-            },
-            const SingleActivator(LogicalKeyboardKey.enter, meta: true): _send,
-            const SingleActivator(LogicalKeyboardKey.enter, control: true):
-                _send,
-          },
-          child: TextField(
-            controller: _input,
-            focusNode: _inputFocus,
-            minLines: 1,
-            maxLines: 8,
-            cursorColor: AppColors.accent,
-            onSubmitted: (_) {
-              if (!kMobile) _send();
-            },
-            style: TS.body(AppColors.fg1),
-            decoration: ComposerCard.decoration('Message ${widget.agentName}'),
-          ),
-        ),
-        attach: ComposerIconButton(
-          'plus',
-          tooltip: 'Attach',
-          onTap: () => unawaited(_attachments.pickFromSheet(context)),
-        ),
-        mic: kCanRecord
-            ? ComposerIconButton(_voice.isRecording ? 'mic-off' : 'mic',
-                tooltip: 'Record',
-                onTap: () => unawaited(_voice.toggleRecording()),
-                color: _voice.isRecording ? AppColors.danger : null)
-            : null,
-        send: ListenableBuilder(
-          listenable: Listenable.merge([_input, _attachments]),
-          builder: (_, __) {
-            final canSend = (_input.text.trim().isNotEmpty ||
-                    _attachments.isNotEmpty ||
-                    _voice.isActive) &&
-                !_sending;
-            // Mic alone until there is something to send, as in the desk.
-            if (!canSend && !_sending && kCanRecord) {
-              return const SizedBox.shrink();
-            }
-            return ComposerSendButton(
-              enabled: canSend,
-              sending: _sending,
+            ),
+            attach: DeskIconButton('plus',
+                tooltip: 'Attach',
+                onTap: () => unawaited(_attachments.pickFromSheet(context)),
+                iconSize: 16,
+                color: AppColors.fg2),
+            mic: kCanRecord
+                ? DeskIconButton('mic',
+                    tooltip: 'Record',
+                    onTap: () => unawaited(_voice.toggleRecording()))
+                : null,
+            action: DeskActionButton(
+              icon: 'arrow-up',
+              tooltip: 'Send',
+              on: canSend,
+              busy: _sending,
               onTap: canSend ? _send : null,
-            );
-          },
-        ),
+            ),
+          );
+        },
       );
+
+  Widget _composerCard() => !kMobile
+      ? _deskComposerCard()
+      : ComposerCard(
+          text: _input,
+          banner: _replyTo == null
+              ? null
+              : PendingReplyBanner(
+                  author: _replyTo!.actorKind == 'human'
+                      ? 'yourself'
+                      : widget.agentName,
+                  text: quotePreviewText(_replyTo!.body),
+                  onClear: () => setState(() => _replyTo = null),
+                ),
+          field: CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.enter): () {
+                if (!kMobile) _send();
+              },
+              const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+                  _send,
+              const SingleActivator(LogicalKeyboardKey.enter, control: true):
+                  _send,
+            },
+            child: TextField(
+              controller: _input,
+              focusNode: _inputFocus,
+              minLines: 1,
+              maxLines: 8,
+              cursorColor: AppColors.accent,
+              onSubmitted: (_) {
+                if (!kMobile) _send();
+              },
+              style: TS.body(AppColors.fg1),
+              decoration:
+                  ComposerCard.decoration('Message ${widget.agentName}'),
+            ),
+          ),
+          attach: ComposerIconButton(
+            'plus',
+            tooltip: 'Attach',
+            onTap: () => unawaited(_attachments.pickFromSheet(context)),
+          ),
+          mic: kCanRecord
+              ? ComposerIconButton(_voice.isRecording ? 'mic-off' : 'mic',
+                  tooltip: 'Record',
+                  onTap: () => unawaited(_voice.toggleRecording()),
+                  color: _voice.isRecording ? AppColors.danger : null)
+              : null,
+          send: ListenableBuilder(
+            listenable: Listenable.merge([_input, _attachments]),
+            builder: (_, __) {
+              final canSend = (_input.text.trim().isNotEmpty ||
+                      _attachments.isNotEmpty ||
+                      _voice.isActive) &&
+                  !_sending;
+              // Mic alone until there is something to send, as in the desk.
+              if (!canSend && !_sending && kCanRecord) {
+                return const SizedBox.shrink();
+              }
+              return ComposerSendButton(
+                enabled: canSend,
+                sending: _sending,
+                onTap: canSend ? _send : null,
+              );
+            },
+          ),
+        );
 
   Widget _composer() {
     final mq = MediaQuery.of(context);

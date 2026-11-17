@@ -161,7 +161,8 @@ class ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fill = color ?? (mine ? ChatColors.sentIn(context) : ChatColors.received);
+    final fill =
+        color ?? (mine ? ChatColors.sentIn(context) : ChatColors.received);
     final h = kMobile ? 12.0 : 11.0;
     final v = kMobile ? 8.0 : 6.0;
     return ChatBubbleFill(
@@ -169,7 +170,11 @@ class ChatBubble extends StatelessWidget {
       child: Builder(
         builder: (bubbleCtx) => CustomPaint(
           painter: _BubblePainter(
-              color: fill, mine: mine, tail: tail, radius: ChatColors.radius),
+              // Desktop bubbles are plain rounded rects, as in the desk.
+              color: fill,
+              mine: mine,
+              tail: tail && kMobile,
+              radius: ChatColors.radius),
           child: Padding(
             padding: EdgeInsets.fromLTRB(
                 h + (!mine ? _tailW : 0), v, h + (mine ? _tailW : 0), v + 1),
@@ -485,7 +490,8 @@ class ChatHeader extends StatelessWidget {
         radius: BorderRadius.circular(R.pill),
         child: Padding(
           padding: EdgeInsets.symmetric(
-              horizontal: kMobile ? S.of(11) : S.of(10), vertical: kMobile ? S.s4 : S.of(3)),
+              horizontal: kMobile ? S.of(11) : S.of(10),
+              vertical: kMobile ? S.s4 : S.of(3)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Flexible(
               child: Text(title,
@@ -517,7 +523,8 @@ class ChatHeader extends StatelessWidget {
                 height: 40,
                 constraints: const BoxConstraints(minWidth: 40),
                 padding: EdgeInsets.symmetric(
-                    horizontal: backCount != null && backCount! > 0 ? S.s12 : 0),
+                    horizontal:
+                        backCount != null && backCount! > 0 ? S.s12 : 0),
                 alignment: Alignment.center,
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   AppIcon('chevron-left',
@@ -551,7 +558,8 @@ class ChatHeader extends StatelessWidget {
             children: [
               _avatar(),
               Padding(
-                padding: EdgeInsets.only(top: 36.0 - (kMobile ? S.s4 : S.of(3))),
+                padding:
+                    EdgeInsets.only(top: 36.0 - (kMobile ? S.s4 : S.of(3))),
                 child: _pill(),
               ),
             ],
@@ -563,16 +571,15 @@ class ChatHeader extends StatelessWidget {
     final body = SizedBox(
       height: overlap - GlassTopFrame.fade,
       child: Padding(
-          padding: EdgeInsets.fromLTRB(
-              kMobile ? S.s16 : S.s12, kMobile ? S.s4 : S.s8, kMobile ? S.s16 : S.s12, 0),
-          child: Stack(children: [
-            Align(alignment: Alignment.topCenter, child: centre),
-            if (onBack != null || leading != null)
-              Positioned(left: 0, top: 0, child: leading ?? _back()),
-            if (trailing != null)
-              Positioned(right: 0, top: 0, child: trailing!),
-          ]),
-        ),
+        padding: EdgeInsets.fromLTRB(kMobile ? S.s16 : S.s12,
+            kMobile ? S.s4 : S.s8, kMobile ? S.s16 : S.s12, 0),
+        child: Stack(children: [
+          Align(alignment: Alignment.topCenter, child: centre),
+          if (onBack != null || leading != null)
+            Positioned(left: 0, top: 0, child: leading ?? _back()),
+          if (trailing != null) Positioned(right: 0, top: 0, child: trailing!),
+        ]),
+      ),
     );
     if (!kMobile) {
       return SizedBox(
