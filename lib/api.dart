@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
@@ -177,11 +178,16 @@ class DaemonClient {
   /// (file-explorer upload); otherwise a temp path (chat attachment).
   Future<String> uploadFile(List<int> bytes,
       {String? name, String? dir}) async {
-    final body = <String, dynamic>{'data_base64': base64Encode(bytes)};
+    final body = <String, dynamic>{};
     if (name != null && name.isNotEmpty) body['name'] = name;
     if (dir != null && dir.isNotEmpty) body['dir'] = dir;
+    // Encoding a voice note or photo on the UI isolate stalls frames on a phone.
+    String encode() =>
+        jsonEncode({...body, 'data_base64': base64Encode(bytes)});
+    final payload =
+        bytes.length > 256 * 1024 ? await Isolate.run(encode) : encode();
     final r = await _post(_uri('/fs/upload'),
-        headers: _json, body: jsonEncode(body), timeout: _long);
+        headers: _json, body: payload, timeout: _long);
     if (r.statusCode != 200) throw _err('upload', r);
     return (jsonDecode(r.body) as Map<String, dynamic>)['path'] as String;
   }
