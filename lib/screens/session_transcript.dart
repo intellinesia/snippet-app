@@ -140,6 +140,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     ]);
 
     final quietWakes = quietWakeRuns(events);
+    // A plan is drawn once, at its latest update, not once per update.
+    final lastPlan = events.lastIndexWhere((e) => e['kind'] == 'plan_updated');
     final staleStalls = supersededStalls(events);
 
     final resultOf = <int, int>{};
@@ -592,8 +594,11 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           endTools(key);
           final steps =
               (e['steps'] as List? ?? const []).whereType<Map>().toList();
-          if (steps.isNotEmpty) {
-            addEvent(key, _PlanCard(steps, _s(e['explanation'])));
+          if (steps.isNotEmpty && idx == lastPlan) {
+            addEvent(
+                key,
+                PlanProgressCard(
+                    steps: steps, explanation: _s(e['explanation'])));
           }
         case 'system_decision':
           endTools(key);

@@ -47,6 +47,7 @@ import '../tool_views.dart';
 import '../transcript.dart';
 import '../term.dart';
 import '../panel.dart';
+import '../plan_card.dart';
 import '../settings_form.dart';
 import 'session_actions_page.dart';
 import '../share_inbound.dart';
