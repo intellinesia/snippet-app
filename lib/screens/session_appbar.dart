@@ -1303,6 +1303,16 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       builder: (_, close) => ProcessesScreen(
           client: widget.client, sessionId: widget.sessionId, onClose: close));
 
+  /// The chat pane: full width alone, capped to its reading width when it is
+  /// paired with the session panel.
+  Widget _chatPane(bool paired, Widget child) => paired
+      ? Flexible(
+          child: ConstrainedBox(
+              constraints: BoxConstraints(
+                  maxWidth: 740 + 2 * kComposerGutter + 2 * S.s16),
+              child: child))
+      : Expanded(child: child);
+
   Widget _sessionRail(HarnessState? s) {
     final mc = _isMissionControl;
     final open = widget.onOpenRightPanel;

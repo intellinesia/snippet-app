@@ -253,6 +253,7 @@ class _SessionRailState extends State<SessionRail> {
           meta: files.isEmpty ? null : '${files.length}',
           onLabel: widget.onChanges);
     }
+    add('Usage', _usageRows(s));
     add('Next without you', _nextRows());
     return out;
   }
@@ -424,6 +425,37 @@ class _SessionRailState extends State<SessionRail> {
         if (files.length > 5)
           _MoreRow('${files.length - 5} more', widget.onChanges),
       ];
+
+  // Context and limits, moved here from under the composer.
+  List<Widget> _usageRows(HarnessState? s) {
+    if (s == null) return const [];
+    final rows = <Widget>[];
+    if (s.contextWindow > 0 && s.lastPromptTokens > 0) {
+      final pct = (s.lastPromptTokens / s.contextWindow * 100).clamp(0, 100);
+      rows.add(_RailRow(
+          icon: 'gauge',
+          label: 'Context',
+          value: '${pct.round()}% of ${fmtSi(s.contextWindow)}'));
+    }
+    if (s.totalTokens > 0) {
+      rows.add(_RailRow(
+          icon: 'activity',
+          label: 'Tokens',
+          value: [
+            fmtSi(s.totalTokens),
+            if (s.cacheReadTokens > 0) '${fmtSi(s.cacheReadTokens)} cached',
+          ].join(' · ')));
+    }
+    final r = s.rateSecondary;
+    if (r != null && r.isReported && !r.isExpired) {
+      final win = limitWindowLabel(r);
+      rows.add(_RailRow(
+          icon: 'clock',
+          label: win == '7d' ? 'This week' : 'Limit ($win)',
+          value: '${r.usedPercent.clamp(0, 100).round()}% used'));
+    }
+    return rows;
+  }
 
   List<Widget> _nextRows() {
     final goal = widget.state?.goal;

@@ -524,8 +524,8 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   /// is left. Sits under the card so the transcript keeps the full width.
   Widget _goalBanner() => Container(
         margin: EdgeInsets.only(bottom: S.of(10)),
-        padding: EdgeInsets.fromLTRB(
-            S.of(10), kMobile ? S.s4 : S.s8, kMobile ? S.s4 : S.s8, kMobile ? S.s4 : S.s8),
+        padding: EdgeInsets.fromLTRB(S.of(10), kMobile ? S.s4 : S.s8,
+            kMobile ? S.s4 : S.s8, kMobile ? S.s4 : S.s8),
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: AppColors.border)),
         ),
@@ -697,7 +697,8 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       ),
       child: matches.isEmpty
           ? Padding(
-              padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(9)),
+              padding:
+                  EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(9)),
               child: Text(
                   loading
                       ? 'Loading agents…'
@@ -783,8 +784,8 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             cursorColor: AppColors.accent,
             onSubmitted: (_) => _sendMessage(),
             style: ComposerCard.fieldStyle,
-            decoration: ComposerCard.decoration(hint,
-                style: ComposerCard.fieldStyle),
+            decoration:
+                ComposerCard.decoration(hint, style: ComposerCard.fieldStyle),
           ),
         ),
         attach: _composerPlus(),
@@ -851,10 +852,14 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             // Inset from the pane on EVERY layout. Embedded used to be 0, which is
             // why the composer stuck to the sides of the shell.
             padding: EdgeInsets.fromLTRB(
-                kMobile ? M.gutter : (widget.embedded ? kComposerGutter : S.s20),
+                kMobile
+                    ? M.gutter
+                    : (widget.embedded ? kComposerGutter : S.s20),
                 S.s8,
-                kMobile ? M.gutter : (widget.embedded ? kComposerGutter : S.s20),
-                S.of(10 ) + (keyboard > 0 ? S.s8 : mq.padding.bottom)),
+                kMobile
+                    ? M.gutter
+                    : (widget.embedded ? kComposerGutter : S.s20),
+                S.of(10) + (keyboard > 0 ? S.s8 : mq.padding.bottom)),
             child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -885,7 +890,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                           )
                         : _composerCard(running),
                   ),
-                  if (!kMobile) _contextFooter(),
                 ]),
           ),
         ),
@@ -1092,18 +1096,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     );
   }
 
-  Widget _contextFooter() {
-    final s = _state;
-    if (s == null) return const SizedBox.shrink();
-    return SessionContextFooter(
-      contextWindow: s.contextWindow,
-      lastPromptTokens: s.lastPromptTokens,
-      cacheReadTokens: s.cacheReadTokens,
-      totalTokens: s.totalTokens,
-      rateSecondary: s.rateSecondary,
-    );
-  }
-
   // Composer attachment row: image thumbnails and file cards, each with its
   // own remove button and an upload overlay until the file reaches the daemon.
   Widget _attachmentBar() => ComposerAttachmentBar(
@@ -1243,11 +1235,11 @@ class SessionContextBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           _ContextChip(
-              icon: 'terminal',
-              label: '$termCount ${termCount == 1 ? 'terminal' : 'terminals'}',
-              running: termRunning,
-              onTap: onTapTerms,
-            ),
+            icon: 'terminal',
+            label: '$termCount ${termCount == 1 ? 'terminal' : 'terminals'}',
+            running: termRunning,
+            onTap: onTapTerms,
+          ),
         ],
       ),
     );
@@ -1305,123 +1297,4 @@ class _ContextChip extends StatelessWidget {
           ),
         ),
       );
-}
-
-class SessionContextFooter extends StatelessWidget {
-  const SessionContextFooter({
-    super.key,
-    required this.contextWindow,
-    required this.lastPromptTokens,
-    required this.cacheReadTokens,
-    this.totalTokens = 0,
-    this.rateSecondary,
-  });
-
-  final int contextWindow;
-  final int lastPromptTokens;
-  final int cacheReadTokens;
-  final int totalTokens;
-  final RateWindow? rateSecondary;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = <Widget>[];
-    if (contextWindow > 0 && lastPromptTokens > 0) {
-      final frac = (lastPromptTokens / contextWindow).clamp(0.0, 1.0);
-      items.add(_ContextRingStat(
-        fraction: frac,
-        label: '${(frac * 100).round()}% context',
-      ));
-    }
-    if (totalTokens > 0 || cacheReadTokens > 0) {
-      items.add(Text(
-          [
-            if (totalTokens > 0) '${fmtSi(totalTokens)} tokens',
-            if (cacheReadTokens > 0) '${fmtSi(cacheReadTokens)} cached',
-          ].join(' \u00b7 '),
-          style: TS.caption(AppColors.fg4)));
-    }
-    final secondary = rateSecondary;
-    if (secondary != null && secondary.isReported && !secondary.isExpired) {
-      final frac = (secondary.usedPercent / 100).clamp(0.0, 1.0);
-      final pct = secondary.usedPercent.clamp(0, 100).round();
-      final win = limitWindowLabel(secondary);
-      items.add(_ContextRingStat(
-        fraction: frac,
-        label: '$pct% ${win == '7d' ? 'this week' : win}',
-      ));
-    }
-    if (items.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: EdgeInsets.fromLTRB(S.s4, S.s6, S.s4, 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          for (var i = 0; i < items.length; i++) ...[
-            if (i > 0) SizedBox(width: S.s12),
-            items[i],
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ContextRingStat extends StatelessWidget {
-  const _ContextRingStat({required this.fraction, required this.label});
-
-  final double fraction;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox.square(
-            dimension: 11,
-            child: CustomPaint(
-              painter: _ContextRingPainter(
-                fraction: fraction,
-                fill: AppColors.fg3,
-                track: AppColors.surface3,
-              ),
-            ),
-          ),
-          SizedBox(width: S.of(5)),
-          Text(label, style: TS.caption(AppColors.fg4)),
-        ],
-      );
-}
-
-class _ContextRingPainter extends CustomPainter {
-  const _ContextRingPainter({
-    required this.fraction,
-    required this.fill,
-    required this.track,
-  });
-
-  final double fraction;
-  final Color fill;
-  final Color track;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final radius = size.shortestSide / 2;
-    final rect = Rect.fromCircle(center: center, radius: radius);
-    canvas.drawCircle(center, radius, Paint()..color = track);
-    if (fraction > 0) {
-      canvas.drawArc(
-        rect,
-        -math.pi / 2,
-        2 * math.pi * fraction,
-        true,
-        Paint()..color = fill,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_ContextRingPainter old) =>
-      old.fraction != fraction || old.fill != fill || old.track != track;
 }
