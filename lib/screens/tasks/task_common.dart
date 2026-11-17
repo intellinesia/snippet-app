@@ -10,6 +10,7 @@ import '../../theme.dart';
 import '../../widgets.dart';
 import 'create_task_form.dart';
 import 'task_detail_screen.dart';
+import 'task_sheet.dart';
 
 /// The live task list for one machine, shared by every task surface.
 ///
@@ -184,50 +185,7 @@ Future<void> openTaskDetail(
     openTaskInTab!(client, taskId);
     return Future.value();
   }
-  if (kMobile) {
-    return showModalBottomSheet<void>(
-      sheetAnimationStyle: sheetMotion,
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: false,
-      backgroundColor: Colors.transparent,
-      barrierColor: AppColors.scrim,
-      builder: (sheet) {
-        final media = MediaQuery.of(sheet);
-        return SafeArea(
-          top: false,
-          child: SizedBox(
-            height: (media.size.height - media.padding.top) * 0.9,
-            child: Material(
-              color: AppColors.bg,
-              clipBehavior: Clip.antiAlias,
-              borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(R.sheetTop)),
-              child: Column(children: [
-                SizedBox(height: S.s8),
-                Container(
-                  width: 30,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: AppColors.border2,
-                    borderRadius: BorderRadius.circular(R.pill),
-                  ),
-                ),
-                SizedBox(height: S.s4),
-                Expanded(
-                  child: TaskDetailScreen(
-                    client: client,
-                    taskId: taskId,
-                    onClose: () => Navigator.of(sheet).pop(),
-                  ),
-                ),
-              ]),
-            ),
-          ),
-        );
-      },
-    );
-  }
+  if (kMobile) return showTaskSheet(context, client, taskId);
   return presentScreen<void>(
     context,
     style: PanelStyle.drawer,

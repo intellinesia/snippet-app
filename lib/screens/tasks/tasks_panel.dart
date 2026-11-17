@@ -117,7 +117,8 @@ class TasksPanelState extends State<TasksPanel> {
   late TaskFeed _feed = TaskFeed(widget.client, onChange: _sync);
 
   final _search = TextEditingController();
-  bool _searchOpen = true;
+  bool _searchOpen = !kMobile;
+  TaskTab _tab = TaskTab.active;
   DateTime? _shownAt;
   String _query = '';
   Set<TaskStatus> _filter = {};
@@ -553,6 +554,7 @@ class TasksPanelState extends State<TasksPanel> {
         children: [
           if (kMobile && widget.phoneHeader) _phoneHeader(),
           if (!kMobile) _desktopHeader(),
+          if (kMobile) _phoneTabs(),
           if (_searchOpen)
             kMobile
                 ? Padding(
@@ -599,7 +601,7 @@ class TasksPanelState extends State<TasksPanel> {
                       ]),
                     ),
                   ),
-          if (_tasks.isNotEmpty)
+          if (_tasks.isNotEmpty && !kMobile)
             Padding(
               padding: kMobile
                   ? EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, 0)
@@ -616,6 +618,56 @@ class TasksPanelState extends State<TasksPanel> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _complete(TaskItem task) async {
+    final ok = await confirmAction(context,
+        title: 'Mark as done?',
+        body: task.title,
+        confirmLabel: 'Mark done',
+        danger: false);
+    if (!ok || !mounted) return;
+    try {
+      await widget.client.setTaskStatus(task.id, TaskStatus.done);
+      await _feed.refresh();
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+    }
+  }
+
+  Widget _phoneTabs() {
+    Widget tab(String label, TaskTab t) {
+      final on = _tab == t;
+      return GestureDetector(
+        key: ValueKey('tab-${t.name}'),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() {
+          _tab = t;
+          _shownAt = null;
+        }),
+        child: Text(label,
+            style: sans(26,
+                weight: on ? W.label : W.body,
+                spacing: -0.3,
+                color: on ? AppColors.fg1 : AppColors.fg3)),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 12, 0),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        tab('Active', TaskTab.active),
+        const SizedBox(width: 20),
+        tab('Up next', TaskTab.upNext),
+        const Spacer(),
+        IconBtn('search',
+            size: 44,
+            iconSize: 20,
+            tooltip: 'Search tasks',
+            active: _searchOpen,
+            onTap: _toggleSearch),
+      ]),
     );
   }
 
@@ -687,6 +739,8 @@ class TasksPanelState extends State<TasksPanel> {
       onLoadMore: _feed.loadMore,
       sessionFolders: _sessionFolders,
       agentNames: _agentNames,
+      phoneTab: _tab,
+      onComplete: _complete,
       padding: kMobile
           ? EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s16)
           : EdgeInsets.fromLTRB(S.of(10), S.s2, S.of(10), S.s16),

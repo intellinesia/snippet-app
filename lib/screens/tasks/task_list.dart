@@ -29,7 +29,16 @@ class TaskList extends StatelessWidget {
     this.onLoadMore,
     this.sessionFolders,
     this.agentNames,
+    this.phoneTab = TaskTab.active,
+    this.onComplete,
   });
+
+  /// Phone: which of the two tabs' statuses to list (a search or filter
+  /// looks across all of them).
+  final TaskTab phoneTab;
+
+  /// Phone: the checkbox on a row; null leaves the box inert.
+  final Future<void> Function(TaskItem task)? onComplete;
 
   final bool Function(TaskStatus status)? hasMore;
   final Future<void> Function(TaskStatus status)? onLoadMore;
@@ -61,7 +70,88 @@ class TaskList extends StatelessWidget {
 
   /// One grouped surface in board order (no per-status headers: the meta line
   /// carries the status), with each status's "Load more" under it.
+  /// Phone sections: label, statuses in each, in reading order.
+  static const _activeSections = <(String, List<TaskStatus>)>[
+    ('Ready for review', [TaskStatus.inReview]),
+    ('Needs you', [TaskStatus.blocked]),
+    ('Working', [TaskStatus.inProgress]),
+    ('Stopped', [TaskStatus.failed]),
+  ];
+  static const _allSections = <(String, List<TaskStatus>)>[
+    ..._activeSections,
+    ('Up next', [TaskStatus.todo]),
+    ('Done', [TaskStatus.done]),
+    ('Cancelled', [TaskStatus.cancelled]),
+  ];
+
+  bool get _wide => query.trim().isNotEmpty || filter.isNotEmpty;
+
+  List<TaskItem> get _phoneVisible {
+    final allowed = _wide
+        ? TaskStatus.values.toSet()
+        : phoneTab == TaskTab.active
+            ? {for (final s in _activeSections) ...s.$2}
+            : {TaskStatus.todo};
+    return _visible.where((t) => allowed.contains(t.status)).toList();
+  }
+
+  List<Widget> _phoneRows() {
+    final visible = _phoneVisible;
+    if (visible.isEmpty) return const [];
+    final sections = _wide
+        ? _allSections
+        : phoneTab == TaskTab.active
+            ? _activeSections
+            : const [('Up next', [TaskStatus.todo])];
+    DateTime? newest;
+    for (final t in visible) {
+      final at = DateTime.tryParse(t.updatedAt);
+      if (at != null && (newest == null || at.isAfter(newest))) newest = at;
+    }
+    final out = <Widget>[];
+    var first = true;
+    for (final (label, statuses) in sections) {
+      final items = [
+        for (final s in statuses) ...visible.where((t) => t.status == s)
+      ];
+      if (items.isEmpty) continue;
+      out.add(Padding(
+        key: ValueKey('section-$label'),
+        padding: EdgeInsets.fromLTRB(20, first ? 14 : 22, 20, 6),
+        child: Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(label, style: sans(15, color: AppColors.fg2)),
+              const SizedBox(width: 6),
+              Text('${items.length}', style: sans(15, color: AppColors.fg3)),
+              if (first && newest != null) ...[
+                const Spacer(),
+                Text('Updated ${agoLabel(newest)}',
+                    style: sans(14, color: AppColors.fg3)),
+              ],
+            ]),
+      ));
+      first = false;
+      for (final t in items) {
+        out.add(PhoneTaskRow(
+          key: ValueKey('t-${t.id}'),
+          task: t,
+          note: noteForTask(t, tasks),
+          agentName: agentNames?[t.createdById],
+          onTap: () => onOpen(t),
+          onComplete: onComplete == null ? null : () => onComplete!(t),
+        ));
+      }
+      for (final s in statuses) {
+        if (hasMore?.call(s) ?? false) out.add(_loadMore(s));
+      }
+    }
+    return out;
+  }
+
   List<Widget> rows() {
+    if (kMobile) return _phoneRows();
     final visible = _visible;
     if (visible.isEmpty) return const [];
     final ordered = [
@@ -100,11 +190,11 @@ class TaskList extends StatelessWidget {
     ];
   }
 
-  Widget emptyState() => _empty();
+  Widget emptyState() => kMobile ? _emptyPhone() : _empty();
 
   @override
   Widget build(BuildContext context) {
-    final visible = _visible;
+    final visible = kMobile ? _phoneVisible : _visible;
     final pad = padding ??
         (kMobile
             ? EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s24)
@@ -112,7 +202,7 @@ class TaskList extends StatelessWidget {
     if (visible.isEmpty) {
       return PullToRefresh(
         onRefresh: onRefresh,
-        child: ListView(padding: pad, children: [_empty()]),
+        child: ListView(padding: pad, children: [kMobile ? _emptyPhone() : _empty()]),
       );
     }
     return PullToRefresh(
@@ -123,6 +213,20 @@ class TaskList extends StatelessWidget {
         children: rows(),
       ),
     );
+  }
+
+  Widget _emptyPhone() {
+    if (tasks.isNotEmpty && !_wide) {
+      return EmptyState(
+        icon: 'layers',
+        title:
+            phoneTab == TaskTab.active ? 'Nothing active' : 'Nothing up next',
+        body: phoneTab == TaskTab.active
+            ? 'Tasks being worked on or waiting on you show here.'
+            : 'Tasks that have not started show here.',
+      );
+    }
+    return _empty();
   }
 
   Widget _loadMore(TaskStatus status) => TaskLoadMore(
@@ -357,4 +461,133 @@ class _TaskLoadMoreState extends State<TaskLoadMore> {
                 ),
         ),
       );
+}
+
+enum TaskTab { active, upNext }
+
+/// "5 min ago", "2 h ago", "3 d ago".
+String agoLabel(DateTime at) {
+  final d = DateTime.now().difference(at);
+  if (d.inMinutes < 1) return 'just now';
+  if (d.inMinutes < 60) return '${d.inMinutes} min ago';
+  if (d.inHours < 24) return '${d.inHours} h ago';
+  return '${d.inDays} d ago';
+}
+
+/// The phone's task row: a checkbox, the title, and one status line.
+class PhoneTaskRow extends StatelessWidget {
+  const PhoneTaskRow({
+    super.key,
+    required this.task,
+    required this.onTap,
+    this.note,
+    this.agentName,
+    this.onComplete,
+  });
+  final TaskItem task;
+  final TaskNote? note;
+  final String? agentName;
+  final VoidCallback onTap;
+  final VoidCallback? onComplete;
+
+  static const _warn = Color(0xFFD4923C);
+
+  (String, Color) get _status => switch (task.status) {
+        TaskStatus.inReview => ('Ready for review', AppColors.ok),
+        TaskStatus.blocked => ('Blocked', _warn),
+        TaskStatus.inProgress => ('Working', AppColors.accent),
+        TaskStatus.failed => ('Failed', AppColors.danger),
+        TaskStatus.todo => ('To do', AppColors.fg3),
+        TaskStatus.done => ('Done', AppColors.ok),
+        TaskStatus.cancelled => ('Cancelled', AppColors.fg3),
+      };
+
+  String get _note {
+    final who = (agentName ?? '').trim().isNotEmpty
+        ? agentName!.trim()
+        : (task.createdByKind == 'agent' && task.createdById.isNotEmpty
+            ? task.createdById[0].toUpperCase() + task.createdById.substring(1)
+            : '');
+    final line = (note?.line ?? '').trim();
+    final plan = task.workPlan;
+    String? planLine;
+    if (plan.isNotEmpty && task.status == TaskStatus.inProgress) {
+      final cur = plan.indexWhere((s) => s.current);
+      final n = cur >= 0 ? cur + 1 : plan.where((s) => s.done).length;
+      planLine = 'Plan $n of ${plan.length}'
+          '${cur >= 0 ? ' · ${plan[cur].step}' : ''}';
+    }
+    if (task.status == TaskStatus.inReview) {
+      final p = [who, line].where((e) => e.isNotEmpty).join(' · ');
+      if (p.isNotEmpty) return p;
+    }
+    if (planLine != null) return planLine;
+    if (line.isNotEmpty) return line;
+    if (who.isNotEmpty) return who;
+    final at = DateTime.tryParse(task.updatedAt);
+    if (at == null) return '';
+    final ago = agoLabel(at);
+    return ago == 'just now' ? 'Just started' : ago;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final (word, colour) = _status;
+    final finished =
+        const {TaskStatus.done, TaskStatus.cancelled}.contains(task.status);
+    final text = _note;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          GestureDetector(
+            key: ValueKey('check-${task.id}'),
+            behavior: HitTestBehavior.opaque,
+            onTap: onComplete,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(0, 1, 0, 6),
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: finished ? AppColors.fg3 : null,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                      color: finished ? AppColors.fg3 : AppColors.fg4,
+                      width: 1.5),
+                ),
+                child: finished
+                    ? Icon(Icons.check, size: 14, color: AppColors.bg)
+                    : null,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(task.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(17,
+                      weight: W.label,
+                      height: 23 / 17,
+                      color: finished ? AppColors.fg3 : AppColors.fg1)),
+              const SizedBox(height: 2),
+              Text.rich(
+                TextSpan(children: [
+                  TextSpan(text: word, style: TextStyle(color: colour)),
+                  if (text.isNotEmpty) TextSpan(text: ' · $text'),
+                ]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(15, height: 21 / 15, color: AppColors.fg3),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
 }

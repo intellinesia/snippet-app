@@ -253,8 +253,11 @@ void main() {
         home: Scaffold(body: TasksPanel(client: client)),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('Write the docs'), findsOneWidget);
+      expect(find.text('Fix the login bug'), findsOneWidget);
+      expect(find.text('Write the docs'), findsNothing, reason: 'Up next tab');
 
+      await tester.tap(find.byTooltip('Search tasks'));
+      await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'login');
       await tester.pumpAndSettle();
       expect(find.text('Fix the login bug'), findsOneWidget);
