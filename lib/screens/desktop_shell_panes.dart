@@ -72,7 +72,9 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       );
     }
     if (t.isBoard) {
-      return TaskKanban(key: ValueKey('body-${t.key}'), client: t.client);
+      return kMobile
+          ? TaskKanban(key: ValueKey('body-${t.key}'), client: t.client)
+          : TaskBoard(key: ValueKey('body-${t.key}'), client: t.client);
     }
     if (t.isTerminal) {
       if (t.termSessionKey == null) {

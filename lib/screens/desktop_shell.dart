@@ -43,6 +43,7 @@ import 'inbound_share_picker.dart';
 import 'mission_control.dart';
 import 'mission_control/widgets/ambient_stage.dart' show showAmbientStage;
 import 'tasks/task_kanban.dart';
+import 'tasks/task_board.dart';
 import 'mobile_chrome.dart';
 import 'mobile_shell.dart';
 import 'new_session_picker.dart';
