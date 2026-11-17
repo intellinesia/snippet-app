@@ -187,9 +187,9 @@ class WorkLine extends StatelessWidget {
     final live = steps.where((s) => s.running).toList();
     final isRunning = running && live.isNotEmpty;
     final work = describeWork(steps);
-    final titleStyle = sans(kMobile ? 16 : 14,
+    final titleStyle = sans(kMobile ? (Grouped.compact ? 15 : 16) : 14,
         height: kMobile ? 22 / 16 : 20 / 14, color: AppColors.fg2);
-    final subStyle = sans(kMobile ? 14 : 13,
+    final subStyle = sans(kMobile ? (Grouped.compact ? 13 : 14) : 13,
         height: kMobile ? 20 / 14 : 18 / 13, color: AppColors.fg3);
     final title = isRunning
         ? <InlineSpan>[
@@ -236,7 +236,7 @@ class WorkLine extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        constraints: BoxConstraints(minHeight: kMobile ? 64 : 56),
+        constraints: BoxConstraints(minHeight: kMobile ? Grouped.rowMin : 56),
         padding: EdgeInsets.symmetric(
             horizontal: Grouped.padX, vertical: Grouped.padY),
         decoration: BoxDecoration(
@@ -384,12 +384,12 @@ class _DenseToolRowState extends State<DenseToolRow> {
     }
     final radius =
         StepScope.radiusOf(context) ?? _segmentRadius(first: true, last: true);
-    final icon = kMobile ? 20.0 : 18.0;
+    final icon = kMobile ? (Grouped.compact ? 18.0 : 20.0) : 18.0;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: canExpand ? _toggle : null,
       child: Container(
-        constraints: BoxConstraints(minHeight: kMobile ? 52 : 44),
+        constraints: BoxConstraints(minHeight: kMobile ? (Grouped.compact ? 46 : 52) : 44),
         padding: EdgeInsets.symmetric(
             horizontal: Grouped.padX, vertical: kMobile ? 8 : 6),
         decoration: BoxDecoration(color: Grouped.row, borderRadius: radius),
@@ -417,7 +417,7 @@ class _DenseToolRowState extends State<DenseToolRow> {
                     ]),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(kMobile ? 15 : 13, height: 20 / 15),
+                    style: sans(kMobile ? (Grouped.compact ? 14 : 15) : 13, height: 20 / 15),
                   ),
                 ),
                 if (value != null) ...[SizedBox(width: S.s12), value],

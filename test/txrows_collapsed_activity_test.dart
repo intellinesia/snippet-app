@@ -56,10 +56,10 @@ void main() {
         matching: find.byType(Text),
         matchRoot: true));
     expect(text.style?.color, AppColors.fg2);
-    expect(text.style?.fontSize, 16);
+    expect(text.style?.fontSize, 15);
 
-    // 16px padding + 22px glyph + 14px gap puts the title at x = 52.
-    expect(tester.getTopLeft(summary).dx, closeTo(52, 0.5));
+    // 16px padding + 20px glyph + 12px gap puts the title at x = 48.
+    expect(tester.getTopLeft(summary).dx, closeTo(48, 0.5));
     expect(find.textContaining('8 steps', findRichText: true), findsOneWidget);
 
     expect(find.text('Show'), findsNothing);

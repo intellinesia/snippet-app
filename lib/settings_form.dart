@@ -21,16 +21,20 @@ import 'widgets.dart';
 abstract final class Grouped {
   static bool get _phone => kMobile;
 
+  /// One step smaller rows and type on the phone.
+  static bool compact = true;
+  static double _ph(double full, double small) => compact ? small : full;
+
   // Geometry.
   static const double gutter = 12;
-  static double get rowMin => _phone ? 64 : 52;
-  static double get rowMinTwoLine => _phone ? 76 : 60;
+  static double get rowMin => _phone ? _ph(64, 56) : 52;
+  static double get rowMinTwoLine => _phone ? _ph(76, 66) : 60;
   static const double padX = 16;
-  static double get padY => _phone ? 10 : 8;
-  static double get icon => _phone ? 22 : 18;
-  static double get iconGap => _phone ? 14 : 12;
+  static double get padY => _phone ? _ph(10, 8) : 8;
+  static double get icon => _phone ? _ph(22, 20) : 18;
+  static double get iconGap => _phone ? _ph(14, 12) : 12;
   static const double chevron = 16;
-  static double get radiusEnd => _phone ? 20 : 16;
+  static double get radiusEnd => _phone ? _ph(20, 18) : 16;
   static const double radiusInner = 4;
   static const double gap = 2;
   static double get sectionGap => _phone ? 28 : 24;
@@ -49,12 +53,12 @@ abstract final class Grouped {
   // Type: whole-pixel sizes with their line heights.
   static const double pageTitleSize = 17;
   static double get heroSize => _phone ? 24 : 20;
-  static double get titleSize => _phone ? 17 : 15;
-  static double get titleLine => _phone ? 22 : 20;
-  static double get subSize => _phone ? 15 : 13;
-  static double get subLine => _phone ? 20 : 18;
-  static double get valueSize => _phone ? 15 : 13;
-  static double get labelSize => _phone ? 15 : 13;
+  static double get titleSize => _phone ? _ph(17, 16) : 15;
+  static double get titleLine => _phone ? _ph(22, 21) : 20;
+  static double get subSize => _phone ? _ph(15, 14) : 13;
+  static double get subLine => _phone ? _ph(20, 19) : 18;
+  static double get valueSize => _phone ? _ph(15, 14) : 13;
+  static double get labelSize => _phone ? _ph(15, 14) : 13;
   static double get footSize => _phone ? 14 : 13;
   static double get footLine => _phone ? 20 : 18;
 
