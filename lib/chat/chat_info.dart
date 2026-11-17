@@ -398,6 +398,15 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
   void _openAppearance(BuildContext ctx) => showAgentAppearance(
       kMobile ? context : ctx, widget.client, widget.agentId, widget.name);
 
+  /// What the models row holds, so nobody has to open it to find out.
+  static String _modelsLine(CoordinationAgent a) {
+    final tasks = a.profile ?? 'default';
+    final desk = a.deskModel ?? tasks;
+    final ctx = a.maxContextTokens;
+    final c = ctx == null ? 'model window' : '${(ctx / 1000).round()}k';
+    return 'Desk $desk \u00b7 Tasks $tasks \u00b7 Context $c';
+  }
+
   /// The agent page: who it is, then its settings, then where its work lives.
   Widget _groups(BuildContext ctx) {
     final agent = widget.agent;
@@ -420,6 +429,16 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
             footer:
                 kMobile ? 'Long-press the avatar to copy the agent ID.' : null,
             children: [
+              if (agent != null && !mc)
+                AgentPageRow(
+                    label: 'Models and context',
+                    subtitle: _modelsLine(agent),
+                    icon: 'cpu',
+                    onTap: () => showAgentProfileSettings(ctx,
+                        client: widget.client,
+                        agent: agent,
+                        name: widget.name,
+                        onChanged: widget.onChanged)),
               if (mc && widget.onAutonomy != null)
                 AgentPageRow(
                     label: 'Automated wakes',
@@ -450,16 +469,6 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
                       client: widget.client,
                       agentId: widget.agentId,
                       name: widget.name)),
-              if (agent != null && !mc)
-                AgentPageRow(
-                    label: 'Inference profile',
-                    subtitle: 'The model it runs on',
-                    icon: 'cpu',
-                    onTap: () => showAgentProfileSettings(ctx,
-                        client: widget.client,
-                        agent: agent,
-                        name: widget.name,
-                        onChanged: widget.onChanged)),
               if (agent != null && !mc)
                 AgentPageRow(
                     label: 'Nickname',

@@ -25,7 +25,7 @@ String _pageTitle(String action) => switch (action) {
       'memory' => 'Memory',
       'wakes' => 'Wakes',
       'reach' => 'How it reaches you',
-      'model' => 'Inference profile',
+      'model' => 'Models and context',
       'nickname' => 'Nickname',
       _ => 'Appearance',
     };

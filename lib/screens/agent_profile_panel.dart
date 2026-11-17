@@ -25,7 +25,7 @@ Future<void> showAgentProfileSettings(
   final nav = DockedInfoNav.maybeOf(context);
   if (nav != null) {
     nav.push(
-        'Inference profile',
+        'Models and context',
         (_) => AgentProfilePanel(
             client: client,
             agent: agent,
@@ -84,7 +84,7 @@ class AgentProfilePanel extends StatefulWidget {
     this.showTitle = true,
   });
 
-  /// False when the page header already says 'Inference profile'.
+  /// False when the page header already says 'Models and context'.
   final bool showTitle;
   final DaemonClient client;
   final CoordinationAgent agent;
@@ -246,7 +246,7 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (widget.showTitle) _head('Inference profile', icon: 'cpu'),
+        if (widget.showTitle) _head('Models and context', icon: 'cpu'),
         const AgentPageCaption('Tasks run on'),
         SettingsGroup(children: [
           _profile('Routing default', 'Your Routing settings for desks',

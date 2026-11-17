@@ -556,7 +556,7 @@ class AgentActionsState extends State<AgentActions> {
                     : null),
           setting('wakes', 'repeat', 'Wakes and reporting'),
           setting('reach', 'bell', 'How it reaches you'),
-          setting('model', 'cpu', 'Inference profile',
+          setting('model', 'cpu', 'Models and context',
               value: profile.isEmpty ? 'Default' : profile),
           SettingsRow(
               icon: 'star',
@@ -599,7 +599,7 @@ class AgentActionsState extends State<AgentActions> {
     final reach = _setting('reach', 'bell', 'How it reaches you',
         'Notifications and where each kind goes');
     final model = _setting(
-        'model', 'cpu', 'Inference profile', 'The model it runs on');
+        'model', 'cpu', 'Models and context', 'Desk and task models, context length');
     final nickname =
         _setting('nickname', 'edit', 'Nickname', 'What it is called here');
     final appearance = _setting('appearance', 'sparkles', 'Appearance',

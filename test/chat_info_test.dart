@@ -190,7 +190,7 @@ void main() {
     for (final label in [
       'Wakes and reporting',
       'How it reaches you',
-      'Inference profile',
+      'Models and context',
       'Nickname',
       'Appearance',
       'Delete agent',
@@ -259,7 +259,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.text('Revenue Scout'), findsWidgets);
-    expect(find.text('Inference profile'), findsOneWidget);
+    expect(find.text('Models and context'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 

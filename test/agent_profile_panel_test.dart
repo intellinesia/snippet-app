@@ -67,7 +67,7 @@ void main() {
     final c = _ProfileClient();
     await _pump(
         tester, c, _agent(profile: 'claude', deskProfile: 'argon'));
-    expect(find.text('Inference profile'), findsOneWidget);
+    expect(find.text('Models and context'), findsOneWidget);
     expect(find.text('Desk is on argon, moving to claude after this turn'),
         findsOneWidget);
     expect(find.text('Routing default'), findsOneWidget);
