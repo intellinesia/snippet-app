@@ -212,16 +212,19 @@ class _AccountsScreenState extends State<AccountsScreen> {
   String? _addProvider;
   bool _pasteKey = false;
   bool _renaming = false;
-  ({String provider, String id, String label, Map<String, dynamic> result})?
-      _pendingSignIn;
+  ({
+    String provider,
+    String id,
+    String label,
+    Map<String, dynamic> result
+  })? _pendingSignIn;
   final _nameField = TextEditingController();
   final _token = TextEditingController();
   final _label = TextEditingController();
   final _code = TextEditingController();
   String? _addError;
 
-  static final List<String> _providers =
-      List.unmodifiable(_kinds.keys);
+  static final List<String> _providers = List.unmodifiable(_kinds.keys);
 
   Iterable<String> get _displayProviders => [
         ..._providers,
@@ -384,7 +387,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
     await showAppSheet<void>(context,
         title: 'Finish sign-in',
         child: Padding(
-          padding: EdgeInsets.fromLTRB(kMobile ? S.s4 : 0, S.s4, kMobile ? S.s4 : 0, S.s8),
+          padding: EdgeInsets.fromLTRB(
+              kMobile ? S.s4 : 0, S.s4, kMobile ? S.s4 : 0, S.s8),
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
@@ -403,8 +407,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 SizedBox(height: S.s16),
                 if (uri != null)
                   Btn('Open sign-in page',
-                      full: true,
-                      onTap: () => _openExternal(uri)),
+                      full: true, onTap: () => _openExternal(uri)),
                 SizedBox(height: S.s8),
                 Btn('Done',
                     full: true,
@@ -448,6 +451,23 @@ class _AccountsScreenState extends State<AccountsScreen> {
         provider);
   }
 
+  // Order alone keeps skipping a limited account, so the daemon also clears its limit.
+  Future<void> _makePrimary(
+      String provider, List<Account> accounts, int index) async {
+    final reordered = [...accounts];
+    final item = reordered.removeAt(index);
+    reordered.insert(0, item);
+    await _mutate(
+        () => widget.client.updateAccount(provider,
+            order: reordered.map((a) => a.id).toList(),
+            id: item.id,
+            primary: true),
+        provider);
+  }
+
+  static bool _canMakePrimary(Account a, int index) =>
+      !a.active || index > 0 || a.limitedUntil != null;
+
   String _title(String provider) => accountProviderTitle(provider);
 
   bool _canRemove(String provider, Account account) =>
@@ -464,32 +484,31 @@ class _AccountsScreenState extends State<AccountsScreen> {
               icon: 'plus',
               small: true,
               variant: BtnVariant.secondary,
-              disabled: _busy,
-              onTap: () async {
-                final picked = await showAppMenu<String>(
-                  context,
-                  anchor: anchor,
-                  below: true,
-                  alignEnd: true,
-                  minWidth: 240,
-                  maxWidth: 320,
-                  items: [
-                    for (final e in _kinds.entries)
-                      appMenuRow<String>(
-                        value: e.key,
-                        icon: 'provider:${e.key}',
-                        label: e.value.title,
-                        description: e.value.footer,
-                      ),
-                  ],
-                );
-                if (picked == null || !mounted) return;
-                if (kMobile) {
-                  await _add(picked);
-                } else {
-                  _startAdd(picked);
-                }
-              }),
+              disabled: _busy, onTap: () async {
+            final picked = await showAppMenu<String>(
+              context,
+              anchor: anchor,
+              below: true,
+              alignEnd: true,
+              minWidth: 240,
+              maxWidth: 320,
+              items: [
+                for (final e in _kinds.entries)
+                  appMenuRow<String>(
+                    value: e.key,
+                    icon: 'provider:${e.key}',
+                    label: e.value.title,
+                    description: e.value.footer,
+                  ),
+              ],
+            );
+            if (picked == null || !mounted) return;
+            if (kMobile) {
+              await _add(picked);
+            } else {
+              _startAdd(picked);
+            }
+          }),
         ),
       );
 
@@ -567,8 +586,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
       _addError = null;
     });
     try {
-      final result = await widget.client.addAccount(provider,
-          label: label, token: pasted ? token : null);
+      final result = await widget.client
+          .addAccount(provider, label: label, token: pasted ? token : null);
       if (!mounted) return;
       if (pasted) {
         setState(() {
@@ -651,7 +670,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
     setState(() => _renaming = false);
     if (label.isEmpty || label == account.label) return;
     await _mutate(
-        () => widget.client.updateAccount(provider, id: account.id, label: label),
+        () =>
+            widget.client.updateAccount(provider, id: account.id, label: label),
         provider);
   }
 
@@ -765,8 +785,12 @@ class _AccountsScreenState extends State<AccountsScreen> {
   }
 
   Widget _signInPage(
-      ({String provider, String id, String label, Map<String, dynamic> result})
-          pending) {
+      ({
+        String provider,
+        String id,
+        String label,
+        Map<String, dynamic> result
+      }) pending) {
     final uri = _parseUri(pending.result['verification_uri']);
     final needsCode = pending.result['needs_code'] == true ||
         _kinds[pending.provider]?.signIn == _SignIn.linkAndCode;
@@ -784,8 +808,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
         actions: [
           if (uri != null && !needsCode)
             Btn('Open sign-in page',
-                small: true,
-                onTap: () => _openExternal(uri)),
+                small: true, onTap: () => _openExternal(uri)),
           if (needsCode)
             Btn(_busy ? 'Finishing…' : 'Finish',
                 small: true,
@@ -849,13 +872,15 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 size: 28,
                 iconSize: 15,
                 tooltip: 'Move up',
-                onTap: _busy ? null : () => _move(provider, accounts, index, -1)),
+                onTap:
+                    _busy ? null : () => _move(provider, accounts, index, -1)),
           if (index < accounts.length - 1)
             IconBtn('chevron-down',
                 size: 28,
                 iconSize: 15,
                 tooltip: 'Move down',
-                onTap: _busy ? null : () => _move(provider, accounts, index, 1)),
+                onTap:
+                    _busy ? null : () => _move(provider, accounts, index, 1)),
         ],
       ),
       SizedBox(height: S.s8),
@@ -879,13 +904,11 @@ class _AccountsScreenState extends State<AccountsScreen> {
               : Row(mainAxisSize: MainAxisSize.min, children: [
                   Text(name, style: sans(13, color: AppColors.fg2)),
                   SizedBox(width: S.s12),
-                  Btn('Rename',
-                      variant: BtnVariant.surface,
-                      small: true,
+                  Btn('Rename', variant: BtnVariant.surface, small: true,
                       onTap: () {
-                        _nameField.text = account.label;
-                        setState(() => _renaming = true);
-                      }),
+                    _nameField.text = account.label;
+                    setState(() => _renaming = true);
+                  }),
                 ]),
         ),
         SettingsRow(
@@ -894,6 +917,18 @@ class _AccountsScreenState extends State<AccountsScreen> {
           trailing: Tag(account.active ? 'In use' : 'Standby',
               tone: account.active ? Tone.accent : Tone.neutral),
         ),
+        if (_canMakePrimary(account, index))
+          SettingsRow(
+            label: 'Make primary',
+            sub: limited != null
+                ? 'Use this account now, even though its limit was reached.'
+                : 'Move this account to the top and use it now.',
+            trailing: Btn('Make primary',
+                variant: BtnVariant.surface,
+                small: true,
+                disabled: _busy,
+                onTap: () => _makePrimary(provider, accounts, index)),
+          ),
         if (usage?.primary != null || usage?.secondary != null)
           SettingsRow(
             label: 'Usage',
@@ -905,7 +940,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   if (usage?.primary != null)
                     _meter(limitWindowLabel(usage!.primary!), usage.primary!),
                   if (usage?.secondary != null)
-                    _meter(limitWindowLabel(usage!.secondary!), usage.secondary!),
+                    _meter(
+                        limitWindowLabel(usage!.secondary!), usage.secondary!),
                 ]),
           ),
         SettingsRow(
@@ -941,6 +977,11 @@ class _AccountsScreenState extends State<AccountsScreen> {
                           anchor: anchor,
                           minWidth: 180,
                           items: [
+                            if (_canMakePrimary(account, index))
+                              appMenuItem(
+                                  value: 'primary',
+                                  label: 'Make primary',
+                                  icon: 'star'),
                             if (index > 0)
                               appMenuItem(
                                   value: 'up',
@@ -952,9 +993,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                                   label: 'Move down',
                                   icon: 'chevron-down'),
                             appMenuItem(
-                                value: 'rename',
-                                label: 'Rename',
-                                icon: 'edit'),
+                                value: 'rename', label: 'Rename', icon: 'edit'),
                             if (canRemove)
                               appMenuItem(
                                   value: 'remove',
@@ -963,6 +1002,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
                                   danger: true),
                           ]);
                       switch (choice) {
+                        case 'primary':
+                          await _makePrimary(provider, accounts, index);
                         case 'up':
                           await _move(provider, accounts, index, -1);
                         case 'down':
@@ -982,8 +1023,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
     return Padding(
         padding: EdgeInsets.only(top: S.s8),
         child: Row(children: [
-          SizedBox(
-              width: 40, child: Text(label, style: TS.caption())),
+          SizedBox(width: 40, child: Text(label, style: TS.caption())),
           Expanded(
               child: ClipRRect(
                   borderRadius: BorderRadius.circular(R.of(3)),

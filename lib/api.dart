@@ -720,11 +720,15 @@ class DaemonClient {
       _accountPost('remove', {'provider': provider, 'id': id});
 
   Future<Map<String, dynamic>> updateAccount(String provider,
-          {List<String>? order, String? id, String? label}) =>
+          {List<String>? order,
+          String? id,
+          String? label,
+          bool primary = false}) =>
       _accountPost(
           'update',
           {
             if (order != null) 'order': order,
+            if (primary) 'primary': true,
             if (id != null) 'id': id,
             if (label != null) 'label': label
           },
