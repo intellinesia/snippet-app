@@ -120,6 +120,26 @@ void main() {
     await _done(tester);
   });
 
+  testWidgets('swiping the tray down puts it away; a short drag springs back',
+      (tester) async {
+    await _pumpSession(tester, {'status': 'idle', 'events': []});
+    await tester.tap(_plus);
+    await _settle(tester);
+    expect(find.text('Hand off'), findsOneWidget);
+
+    await tester.timedDrag(find.text('Fork from here'), const Offset(0, 30),
+        const Duration(milliseconds: 600));
+    await _settle(tester);
+    await _settle(tester);
+    expect(find.text('Hand off'), findsOneWidget);
+
+    await tester.fling(find.text('Fork from here'), const Offset(0, 200), 1200);
+    await _settle(tester);
+    await _settle(tester);
+    expect(find.text('Hand off'), findsNothing);
+    await _done(tester);
+  });
+
   testWidgets('running with lanes: Interrupt only with a draft, Lanes counts',
       (tester) async {
     await _pumpSession(tester, {

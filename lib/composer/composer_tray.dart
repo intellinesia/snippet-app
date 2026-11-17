@@ -75,6 +75,9 @@ class _ComposerTrayState extends State<ComposerTray>
     ..addListener(_tick);
 
   bool _wasOpen = false;
+  final _sheetKey = GlobalKey();
+  // Release velocity of a swipe, in tray heights per second, for the spring.
+  double? _releaseV;
   Widget? _shown;
   String? _shownView;
 
@@ -107,8 +110,29 @@ class _ComposerTrayState extends State<ComposerTray>
     if (reduceMotion(context)) {
       _k.value = open ? 1 : 0;
     } else {
-      springTo(_k, open ? 1 : 0, _k.velocity,
+      springTo(_k, open ? 1 : 0, _releaseV ?? _k.velocity,
           spring: C7.tray, epsilon: 0.001);
+    }
+    _releaseV = null;
+  }
+
+  double get _sheetHeight =>
+      math.max(1.0, _sheetKey.currentContext?.size?.height ?? 300);
+
+  void _dragUpdate(DragUpdateDetails d) {
+    _k.stop();
+    _k.value = (_k.value - (d.primaryDelta ?? 0) / _sheetHeight)
+        .clamp(0.0, 1.0);
+  }
+
+  void _dragEnd(DragEndDetails d) {
+    final v = -(d.primaryVelocity ?? 0) / _sheetHeight;
+    _releaseV = v;
+    if (v < -1.5 || (_k.value < 0.6 && v < 0.5)) {
+      widget.controller.close();
+    } else {
+      _releaseV = null;
+      springTo(_k, 1, v, spring: C7.tray, epsilon: 0.001);
     }
   }
 
@@ -134,6 +158,7 @@ class _ComposerTrayState extends State<ComposerTray>
       body = const SizedBox.shrink();
     } else {
       final content = Padding(
+        key: _sheetKey,
         padding: EdgeInsets.only(bottom: S.s8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -179,8 +204,14 @@ class _ComposerTrayState extends State<ComposerTray>
             child: Align(
               alignment: Alignment.bottomCenter,
               heightFactor: calm ? (c.open ? 1 : 0) : k,
-              child: _TrayMotion(
-                  k: calm ? 1 : k, calm: calm, child: content),
+              // Swipe down anywhere on the sheet to put it away.
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onVerticalDragUpdate: c.open ? _dragUpdate : null,
+                onVerticalDragEnd: c.open ? _dragEnd : null,
+                child: _TrayMotion(
+                    k: calm ? 1 : k, calm: calm, child: content),
+              ),
             ),
           ),
         ),

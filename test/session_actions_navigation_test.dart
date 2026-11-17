@@ -41,11 +41,11 @@ Future<void> _openActions(WidgetTester tester, TargetPlatform platform) async {
   await _pump(tester);
   await tester.tap(find.text('Action session').first);
   await _pump(tester);
-  expect(find.text('Actions'), findsOneWidget);
+  expect(find.text('Wakes and schedule'), findsOneWidget);
 }
 
 void _sessionUnchanged(WidgetTester tester) {
-  final shell = tester.widget<MobileShell>(find.byType(MobileShell));
+  final shell = tester.widget<MobileShell>(find.byType(MobileShell, skipOffstage: false));
   expect(shell.chatsOpen, isFalse);
   expect(shell.canPopRoute, isTrue);
 }
@@ -86,7 +86,10 @@ void main() {
           expect(find.byTooltip('Tasks'), findsNothing);
           await tester.tap(find.text('Mission Control').first);
           await _pump(tester);
-          expect(find.text('Actions'), findsOneWidget);
+          expect(
+              find.descendant(
+                  of: find.byType(Drawer), matching: find.text('Coordinator')),
+              findsOneWidget);
           expect(find.text('Scheduled'), findsOneWidget);
           expect(
               find.descendant(
@@ -108,7 +111,7 @@ void main() {
     await _openActions(tester, TargetPlatform.android);
     await tester.binding.handlePopRoute();
     await _pump(tester);
-    expect(find.text('Actions'), findsNothing);
+    expect(find.text('Wakes and schedule'), findsNothing);
     _sessionUnchanged(tester);
     await tester.binding.handlePopRoute();
     await _pump(tester);
@@ -124,25 +127,35 @@ void main() {
   for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
     testWidgets('${platform.name} nested action returns to parent before closing', (tester) async {
       await _openActions(tester, platform);
-      await tester.ensureVisible(find.text('Processes'));
+      await tester.ensureVisible(find.text('Workspace'));
+      await tester.tap(find.text('Workspace'));
+      await _pump(tester);
+      expect(find.text('Git'), findsOneWidget);
       await tester.tap(find.text('Processes'));
       await _pump(tester);
       expect(find.byType(ProcessesScreen), findsOneWidget);
-      if (platform == TargetPlatform.android) {
-        await tester.binding.handlePopRoute();
-      } else {
-        await tester.tap(find.descendant(
-          of: find.byType(ProcessesScreen),
-          matching: find.byTooltip('Back'),
-        ));
+      Future<void> back(Finder scope) async {
+        if (platform == TargetPlatform.android) {
+          await tester.binding.handlePopRoute();
+        } else {
+          await tester.tap(find.byTooltip('Back').last);
+        }
+        await _pump(tester);
       }
-      await _pump(tester);
+
+      await back(find.byType(ProcessesScreen));
       expect(find.byType(ProcessesScreen), findsNothing);
-      expect(find.text('Actions'), findsOneWidget);
+      // Back from Processes lands on the Workspace page, not the root.
+      expect(find.text('Git'), findsOneWidget);
+      expect(find.text('Wakes and schedule'), findsNothing);
+      _sessionUnchanged(tester);
+      await back(find.byType(Scaffold).last);
+      expect(find.text('Git'), findsNothing);
+      expect(find.text('Wakes and schedule'), findsOneWidget);
       _sessionUnchanged(tester);
       await tester.binding.handlePopRoute();
       await _pump(tester);
-      expect(find.text('Actions'), findsNothing);
+      expect(find.text('Wakes and schedule'), findsNothing);
       _sessionUnchanged(tester);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();

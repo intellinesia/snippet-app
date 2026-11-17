@@ -1039,6 +1039,8 @@ bool verifyOutputFailed(ToolStep step) {
     for (final k in const ['stdout', 'output', 'output_so_far', 'stderr', 'preview'])
       (step.data?[k] ?? '').toString(),
   ].join('\n').replaceAll(_ansiEscape, '');
+  // Flutter's "+2 -3:" counter survives a grep that drops the summary line.
+  if (RegExp(r'\+\d+(?:\s+~\d+)?\s+-[1-9]\d*:').hasMatch(raw)) return true;
   return _failureMarker.hasMatch(raw);
 }
 

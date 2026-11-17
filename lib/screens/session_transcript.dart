@@ -895,6 +895,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
         onClose: close,
         client: widget.client,
         sessionId: widget.sessionId,
+        sessionTitle: _title,
+        sessionAgentId: _me?.displayAgentId,
+        sessionAgentName: _meAgentName,
       ),
     );
   }

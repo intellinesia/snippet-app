@@ -702,10 +702,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 section('Needs you', buckets[AgentGroup.needsYou]!);
                 section('Working', buckets[AgentGroup.working]!);
                 section('Asleep', buckets[AgentGroup.recent]!);
-                children.add(SizedBox(height: S.s20));
-                children.add(TeamRows(children: [
-                  addRow('new', 'New agent', 'From a starter or your own words'),
-                ]));
+                // The floating + already adds agents and groups.
               }
             } else {
               section(null, [

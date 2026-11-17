@@ -30,7 +30,7 @@ import '../chat/chat_style.dart';
 import '../chat/group_notice.dart';
 import '../chat/stage_bar.dart';
 import '../chat/stage_header.dart';
-import 'agent_card.dart' show agentRowTime;
+import 'agent_card.dart' show TeamRow, agentRowTime;
 import 'agent_questions_card.dart' show questionAnswerSystemLine;
 import 'agent_thread_cards.dart' show agentThreadEventCard;
 import 'tasks/tasks_panel.dart' show openTasksPage, openTaskCountFor;
@@ -252,60 +252,52 @@ class GroupRow extends StatelessWidget {
     if (kMobile) {
       final at = DateTime.tryParse(group.lastEventAt ?? '')?.toLocal();
       final time = agentRowTime(at);
-      return Pressable(
-        kind: PressKind.row,
-        child: InkWell(
-          splashFactory: NoSplash.splashFactory,
-          highlightColor: Colors.transparent,
-          onTap: onTap,
-          onLongPress: onLongPress,
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: S.s8),
-            child: Row(children: [
-              SizedBox.square(
-                dimension: 36,
-                child: shown.isEmpty
-                    ? AppIcon('users', size: 20, color: AppColors.fg3)
-                    : AgentCluster(ids: agents, size: 36),
-              ),
-              SizedBox(width: S.s12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(children: [
-                      Expanded(
-                        child: Text(name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TS.rowTitle(AppColors.fg1)),
-                      ),
-                      if (pinned) ...[
-                        SizedBox(width: S.s6),
-                        AppIcon('pin', size: 12, color: AppColors.fg3),
-                      ],
-                      if (time.isNotEmpty) ...[
-                        SizedBox(width: S.s8),
-                        Text(time, style: TS.meta()),
-                      ],
-                    ]),
-                    SizedBox(height: S.s2),
-                    Text.rich(
-                        markdownPreviewSpan(
-                            sub,
-                            sans(13,
-                                color: unread > 0
-                                    ? AppColors.fg2
-                                    : AppColors.fg3)),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
-                  ],
-                ),
-              ),
-            ]),
+      // Same shape as the agent rows it sits among on the Agents tab.
+      final subStyle = TeamRow.subtitleStyle(unread > 0 ? AppColors.fg2 : null);
+      return TeamRow(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Row(children: [
+          SizedBox.square(
+            dimension: 40,
+            child: shown.isEmpty
+                ? Center(
+                    child: AppIcon('users', size: 22, color: AppColors.fg3))
+                : AgentCluster(ids: agents, size: 40),
           ),
-        ),
+          SizedBox(width: S.of(14)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(children: [
+                  Flexible(
+                    child: Text(name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TeamRow.titleStyle()),
+                  ),
+                  if (pinned) ...[
+                    SizedBox(width: S.s6),
+                    AppIcon('pin', size: 14, color: AppColors.fg3),
+                  ],
+                ]),
+                SizedBox(height: S.of(1)),
+                Row(children: [
+                  Flexible(
+                    child: Text.rich(markdownPreviewSpan(sub, subStyle),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                  if (time.isNotEmpty)
+                    Text(', $time', maxLines: 1, style: subStyle),
+                ]),
+              ],
+            ),
+          ),
+          SizedBox(width: S.s8),
+          AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+        ]),
       );
     }
     return Material(

@@ -13,6 +13,7 @@ import '../widgets.dart';
 import 'mission_control/mission_control_state.dart' show isDedicatedMcSession;
 import 'mobile_chrome.dart';
 import '../chat_scene.dart' show SceneBackdrop;
+import '../chat/signal_row.dart' show agentDisplayName;
 
 /// New-session composer on phones, with folder browsing tucked into a sheet.
 class NewSessionPicker extends StatefulWidget {
@@ -62,7 +63,6 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
   String? _folder;
   String? _homePath;
   RepoWorktrees? _repo;
-  String? _branch;
   WorkspaceMode _mode = WorkspaceMode.worktree;
   Worktree? _existing;
   List<InferenceProfile> _profiles = const [];
@@ -119,8 +119,8 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
       if (!mounted) return;
       setState(() {
         _profiles = cfg.profiles;
-        _profile = cfg.active ??
-            cfg.profiles.where((p) => p.active).firstOrNull?.name;
+        _profile =
+            cfg.active ?? cfg.profiles.where((p) => p.active).firstOrNull?.name;
       });
     } catch (_) {}
   }
@@ -152,13 +152,8 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
     } catch (_) {}
     if (!mounted || run != _repoRun) return;
     final hasRepo = repo?.repo != null;
-    final main = repo == null
-        ? null
-        : repo.worktrees.where((w) => w.path == repo!.repo).firstOrNull ??
-            repo.worktrees.firstOrNull;
     setState(() {
       _repo = hasRepo ? repo : null;
-      _branch = hasRepo ? main?.branch : null;
       _existing = hasRepo ? keepExisting : null;
       if (!hasRepo) {
         _mode = WorkspaceMode.folder;
@@ -173,7 +168,6 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
       _folder = folder;
       _existing = null;
       _repo = null;
-      _branch = null;
     });
     _loadRepo(folder);
   }
@@ -185,8 +179,6 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
     }
     return lastPathSegment(path, ifEmpty: path);
   }
-
-  String get _displayBranch => _existing?.branch ?? _branch ?? '';
 
   Future<void> _openFolderSheet() async {
     final result = await showModalBottomSheet<_FolderPickResult>(
@@ -215,7 +207,8 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
     });
     await _loadRepo(result.folder, keepExisting: result.existing);
     if (mounted) {
-      setState(() => _mode = _repo == null ? WorkspaceMode.folder : result.mode);
+      setState(
+          () => _mode = _repo == null ? WorkspaceMode.folder : result.mode);
     }
   }
 
@@ -291,14 +284,15 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
     );
     if (!mounted || choice == null) return;
     if (choice == 'camera') {
-      final x = await ImagePicker()
-          .pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 2200);
+      final x = await ImagePicker().pickImage(
+          source: ImageSource.camera, imageQuality: 85, maxWidth: 2200);
       if (x != null && mounted) {
-        setState(() => _attachments.add(PickedLocalFile(name: x.name, path: x.path)));
+        setState(() =>
+            _attachments.add(PickedLocalFile(name: x.name, path: x.path)));
       }
     } else if (choice == 'photos') {
-      final xs = await ImagePicker()
-          .pickMultiImage(imageQuality: 85, maxWidth: 2200);
+      final xs =
+          await ImagePicker().pickMultiImage(imageQuality: 85, maxWidth: 2200);
       if (xs.isNotEmpty && mounted) {
         setState(() => _attachments.addAll(
             xs.map((x) => PickedLocalFile(name: x.name, path: x.path))));
@@ -352,8 +346,8 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
     setState(() => _starting = true);
     try {
       if (widget.onStart != null) {
-        await widget.onStart!(
-            folder, mode, _profileExplicit ? _profile : null, text, attachments);
+        await widget.onStart!(folder, mode, _profileExplicit ? _profile : null,
+            text, attachments);
       } else {
         await widget.onOpenFolder(folder, mode);
       }
@@ -371,88 +365,11 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
     final current = _profiles.where((p) => p.name == _profile).firstOrNull;
     final canSend = !_starting &&
         (_input.text.trim().isNotEmpty || _attachments.isNotEmpty);
-    if (kMobile) return _phoneBody(current, canSend);
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      resizeToAvoidBottomInset: true,
-      body: SceneBackdrop(child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(M.gutter, S.of(10), M.gutter, 0),
-              child: Row(children: [
-                RoundBtn(
-                  icon: 'chevron-left',
-                  size: 40,
-                  iconSize: 20,
-                  tooltip: 'Back',
-                  onTap: widget.onClose ?? () => Navigator.maybePop(context),
-                ),
-              ]),
-            ),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, box) => SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(horizontal: M.gutter),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: box.maxHeight,
-                      minWidth: box.maxWidth - 2 * M.gutter,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const AgentMochi('snippet', size: 96),
-                        SizedBox(height: S.of(10)),
-                        Text(
-                          'What are we making?',
-                          textAlign: TextAlign.center,
-                          style: sans(24,
-                              weight: W.body,
-                              spacing: -0.5,
-                              color: AppColors.fg1),
-                        ),
-                        if (_recentFolders.isNotEmpty) ...[
-                          SizedBox(height: S.of(14)),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 6,
-                            runSpacing: 6,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.only(right: S.s2),
-                                child: Text('Recent',
-                                    style: sans(12, color: AppColors.fg4)),
-                              ),
-                              for (final folder in _recentFolders)
-                                _recentFolderChip(folder),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(M.gutter, S.s8, M.gutter, S.s16),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 660),
-                  child: _composerCard(current, canSend),
-                ),
-              ),
-            ),
-          ],
-        ),
-      )),
-    );
+    return _body(current, canSend);
   }
 
-  Widget _phoneBody(InferenceProfile? current, bool canSend) {
+  Widget _body(InferenceProfile? current, bool canSend) {
+    final agent = agentDisplayName('snippet');
     return Scaffold(
       backgroundColor: AppColors.bg,
       resizeToAvoidBottomInset: true,
@@ -465,33 +382,59 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
                 padding: EdgeInsets.fromLTRB(M.gutter, S.of(10), M.gutter, 0),
                 child: Row(children: [
                   RoundBtn(
-                    icon: 'chevron-left',
+                    icon: 'x',
                     size: 40,
                     iconSize: 20,
-                    tooltip: 'Back',
+                    tooltip: 'Close',
                     onTap: widget.onClose ?? () => Navigator.maybePop(context),
                   ),
                 ]),
               ),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(
-                      M.gutter, S.s24, M.gutter, S.s24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.fromLTRB(S.s4, S.of(40), S.s4, S.s16),
-                        child: Text('What are we making?',
-                            style: sans(24,
-                                weight: W.strong,
-                                spacing: -0.3,
-                                color: AppColors.fg2)),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s16),
+                  child: Center(
+                    heightFactor: 1,
+                    child: ConstrainedBox(
+                      constraints:
+                          BoxConstraints(maxWidth: Grouped.contentMaxWidth),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Center(child: AgentMochi('snippet', size: 96)),
+                          SizedBox(height: S.s12),
+                          Text('What are we making?',
+                              textAlign: TextAlign.center,
+                              style: sans(Grouped.heroSize,
+                                  weight: W.strong,
+                                  spacing: -0.3,
+                                  height: kMobile ? 30 / 24 : 26 / 20,
+                                  color: AppColors.fg1)),
+                          SizedBox(height: S.s4),
+                          Text('$agent starts a new session',
+                              textAlign: TextAlign.center,
+                              style: Grouped.subStyle()),
+                          SizedBox(height: 20),
+                          _phoneComposer(),
+                          SizedBox(height: Grouped.sectionGap),
+                          _recentGroup(),
+                          if (current != null) _modelGroup(current),
+                        ],
                       ),
-                      _composerCard(current, canSend),
-                      SizedBox(height: S.s8),
-                      _recentGroup(),
-                    ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(M.gutter, S.s8, M.gutter, S.s12),
+                child: Center(
+                  heightFactor: 1,
+                  child: ConstrainedBox(
+                    constraints:
+                        BoxConstraints(maxWidth: Grouped.contentMaxWidth),
+                    child: _phoneStart(canSend),
                   ),
                 ),
               ),
@@ -501,6 +444,166 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
       ),
     );
   }
+
+  Widget _phoneStart(bool canSend) => Tooltip(
+        message: 'Start',
+        child: Material(
+          color: canSend ? AppColors.accentFill : Grouped.row,
+          borderRadius: BorderRadius.circular(kMobile ? 26 : 22),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(kMobile ? 26 : 22),
+            onTap: canSend ? _start : null,
+            child: SizedBox(
+              height: kMobile ? 52 : 44,
+              child: Center(
+                child: _starting
+                    ? Spinner(size: 18, color: AppColors.accentFg)
+                    : Row(mainAxisSize: MainAxisSize.min, children: [
+                        AppIcon('arrow-up',
+                            size: 20,
+                            color:
+                                canSend ? AppColors.accentFg : AppColors.fg4),
+                        SizedBox(width: S.s8),
+                        Text('Start',
+                            style: sans(kMobile ? 17 : 15,
+                                weight: W.label,
+                                color: canSend
+                                    ? AppColors.accentFg
+                                    : AppColors.fg4)),
+                      ]),
+              ),
+            ),
+          ),
+        ),
+      );
+
+  Widget _phoneChip(String icon, String label, {VoidCallback? onTap}) =>
+      Material(
+        color: Color.alphaBlend(
+            AppColors.fg1.withValues(alpha: 0.06), Grouped.row),
+        borderRadius: BorderRadius.circular(kMobile ? 18 : 16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(kMobile ? 18 : 16),
+          onTap: onTap,
+          child: Container(
+            height: kMobile ? 36 : 32,
+            padding: EdgeInsets.symmetric(horizontal: S.s12),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              AppIcon(icon, size: kMobile ? 18 : 16, color: AppColors.fg2),
+              SizedBox(width: S.s8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 160),
+                child: Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(kMobile ? 15 : 13, color: AppColors.fg2)),
+              ),
+            ]),
+          ),
+        ),
+      );
+
+  Widget _phoneComposer() {
+    final repo = _repo != null;
+    final worktree = _existing == null && _mode == WorkspaceMode.worktree;
+    final existingLabel = _existing == null
+        ? null
+        : (_existing!.branch ??
+            lastPathSegment(_existing!.path, ifEmpty: _existing!.path));
+    return Container(
+      decoration: BoxDecoration(
+        color: Grouped.row,
+        borderRadius: BorderRadius.circular(Grouped.radiusEnd),
+      ),
+      padding: EdgeInsets.fromLTRB(S.s16, S.s16, S.s12, S.s12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _input,
+            focusNode: _focus,
+            minLines: 3,
+            maxLines: 8,
+            cursorColor: AppColors.accent,
+            style: sans(kMobile ? 17 : 15,
+                height: kMobile ? 24 / 17 : 22 / 15, color: AppColors.fg1),
+            decoration: InputDecoration(
+              isCollapsed: true,
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.only(right: S.s4),
+              hintText: 'Ask, build, or type / for commands',
+              hintStyle: sans(kMobile ? 17 : 15,
+                  height: kMobile ? 24 / 17 : 22 / 15, color: AppColors.fg4),
+            ),
+          ),
+          if (_attachments.isNotEmpty) ...[
+            SizedBox(height: S.s8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (var i = 0; i < _attachments.length; i++)
+                  _attachmentChip(i, _attachments[i]),
+              ],
+            ),
+          ],
+          SizedBox(height: S.s12),
+          Row(children: [
+            Expanded(
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _phoneChip('folder', _labelForFolder(_folder),
+                      onTap: _openFolderSheet),
+                  if (repo && existingLabel != null)
+                    Builder(
+                      builder: (anchor) => _phoneChip(
+                          'git-branch', existingLabel,
+                          onTap: () => _pickExisting(anchor)),
+                    )
+                  else if (repo)
+                    _phoneChip(
+                        'git-branch', worktree ? 'New worktree' : 'This folder',
+                        onTap: () => setState(() => _mode = worktree
+                            ? WorkspaceMode.folder
+                            : WorkspaceMode.worktree)),
+                ],
+              ),
+            ),
+            Tooltip(
+              message: 'Add context',
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: _onAttachTap,
+                child: SizedBox(
+                  width: M.minTarget,
+                  height: M.minTarget,
+                  child: Center(
+                      child: AppIcon('plus',
+                          size: kMobile ? 22 : 18, color: AppColors.fg1)),
+                ),
+              ),
+            ),
+          ]),
+        ],
+      ),
+    );
+  }
+
+  Widget _modelGroup(InferenceProfile current) => Builder(
+        builder: (anchor) => SettingsGroup(children: [
+          SettingsRow(
+            label: 'Model',
+            icon: 'cpu',
+            value: current.name,
+            chevron: true,
+            onTap: () => _pickProfile(anchor),
+          ),
+        ]),
+      );
 
   String _shortPath(String path) {
     final home = _homePath;
@@ -511,341 +614,28 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
   }
 
   Widget _recentGroup() {
-    Widget row(String icon, String label, String? sub, VoidCallback onTap) =>
+    final rows = <Widget>[
+      for (final folder in _recentFolders)
         SettingsRow(
-          label: label,
-          sub: sub,
-          leading: V5IconTile(icon),
-          chevron: true,
-          onTap: onTap,
-        );
+          label: _labelForFolder(folder),
+          sub: _shortPath(folder),
+          subMaxLines: 1,
+          icon: 'folder',
+          trailing: folder == _folder && _existing == null
+              ? AppIcon('check', size: Grouped.icon, color: AppColors.fg1)
+              : null,
+          onTap: () => _selectFolder(folder),
+        ),
+      SettingsRow(
+        label: 'Choose folder',
+        icon: 'folder-open',
+        chevron: true,
+        onTap: _openFolderSheet,
+      ),
+    ];
     return SettingsGroup(
-      header: _recentFolders.isEmpty ? null : 'Recent',
-      children: [
-        for (final folder in _recentFolders)
-          row('folder', _labelForFolder(folder), _shortPath(folder),
-              () => _selectFolder(folder)),
-        row('folder-open', 'Choose folder', null, _openFolderSheet),
-      ],
-    );
-  }
-
-  Widget _recentFolderChip(String folder) {
-    final selected = folder == _folder && _existing == null;
-    final radius = BorderRadius.circular(R.of(14));
-    return Material(
-      color: selected ? AppColors.surface2 : Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: radius,
-        side: BorderSide(color: AppColors.border),
-      ),
-      child: InkWell(
-        borderRadius: radius,
-        onTap: () => _selectFolder(folder),
-        child: Container(
-          height: 28,
-          padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 160),
-                child: Text(
-                  _labelForFolder(folder),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(13,
-                      color: selected ? AppColors.fg1 : AppColors.fg3),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _composerCard(InferenceProfile? current, bool canSend) {
-    final showBranch = _repo != null && _displayBranch.isNotEmpty;
-    final hasWorktrees = (_repo?.worktrees.length ?? 0) > 0;
-    final chips = Padding(
-      padding: EdgeInsets.fromLTRB(
-          S.s12, kMobile ? S.s4 : S.of(10), S.s12, kMobile ? S.s8 : 0),
-      child: Wrap(
-        spacing: 6,
-        runSpacing: 4,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          _folderChip(),
-          if (showBranch)
-            Builder(
-              builder: (anchor) => _chip(
-                'git-branch',
-                _displayBranch,
-                onTap: hasWorktrees ? () => _pickExisting(anchor) : null,
-              ),
-            ),
-          if (_repo != null) _worktreeToggle(),
-        ],
-      ),
-    );
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(R.of(kMobile ? 20 : 22)),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (!kMobile) chips,
-          TextField(
-            controller: _input,
-            focusNode: _focus,
-            minLines: 2,
-            maxLines: 6,
-            cursorColor: AppColors.accent,
-            style: sans(16, height: 1.45, color: AppColors.fg1),
-            decoration: InputDecoration(
-              isCollapsed: true,
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s16, S.of(10)),
-              hintText: 'Ask, build, or type / for commands',
-              hintStyle: sans(16, color: AppColors.fg4),
-            ),
-          ),
-          if (kMobile) chips,
-          if (_attachments.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s6),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (var i = 0; i < _attachments.length; i++)
-                    _attachmentChip(i, _attachments[i]),
-                ],
-              ),
-            ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(S.of(10), S.s4, S.of(10), S.of(10)),
-            child: Row(children: [
-              if (kMobile) ...[
-                if (current != null) _modelChip(current),
-                const Spacer(),
-                _plusBtn(),
-                SizedBox(width: S.s6),
-                _startPill(canSend),
-              ] else ...[
-                _plusBtn(),
-                const Spacer(),
-                if (current != null) _modelChip(current),
-                SizedBox(width: S.s6),
-                _startCircle(canSend),
-              ],
-            ]),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  Widget _plusBtn() => Material(
-                color: Colors.transparent,
-                shape: const CircleBorder(),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: _onAttachTap,
-                  child: SizedBox(
-                    width: kMobile ? M.minTarget : 34,
-                    height: kMobile ? M.minTarget : 34,
-                    child: Center(
-                      child: AppIcon('plus', size: 17, color: AppColors.fg3),
-                    ),
-                  ),
-                ),
-              );
-
-  Widget _modelChip(InferenceProfile current) => Builder(
-                  builder: (anchor) => Material(
-                    color: kMobile ? AppColors.surface3 : Colors.transparent,
-                    borderRadius: BorderRadius.circular(R.of(15)),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(R.of(15)),
-                      onTap: () => _pickProfile(anchor),
-                      child: Container(
-                        height: 30,
-                        padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          ProviderLogo(current.provider, size: 13),
-                          SizedBox(width: S.s6),
-                          Text(current.name,
-                              style: sans(13, color: AppColors.fg2)),
-                          SizedBox(width: S.s4),
-                          AppIcon('chevron-down',
-                              size: 11, color: AppColors.fg3),
-                        ]),
-                      ),
-                    ),
-                  ),
-                );
-
-  Widget _startCircle(bool canSend) => Tooltip(
-                message: 'Start',
-                child: Material(
-                  color: canSend ? AppColors.accentFill : AppColors.surface2,
-                  shape: const CircleBorder(),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: canSend ? _start : null,
-                    child: SizedBox(
-                      width: 32,
-                      height: 32,
-                      child: Center(
-                        child: _starting
-                            ? Spinner(size: 14, color: AppColors.accentFg)
-                            : AppIcon(
-                                'arrow-up',
-                                size: 16,
-                                color: canSend
-                                    ? AppColors.accentFg
-                                    : AppColors.fg4,
-                              ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-
-  Widget _startPill(bool canSend) => Tooltip(
-        message: 'Start',
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: canSend ? _start : null,
-          child: SizedBox(
-            height: M.minTarget,
-            child: Center(
-              child: Container(
-                height: 30,
-                padding: EdgeInsets.symmetric(horizontal: S.of(14)),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: canSend ? AppColors.accentFill : AppColors.surface2,
-                  borderRadius: BorderRadius.circular(R.of(15)),
-                ),
-                child: _starting
-                    ? Spinner(size: 14, color: AppColors.accentFg)
-                    : Text('Start',
-                        style: sans(13,
-                            weight: W.label,
-                            color:
-                                canSend ? AppColors.accentFg : AppColors.fg4)),
-              ),
-            ),
-          ),
-        ),
-      );
-
-  Widget _folderChip() => Material(
-        color: kMobile ? AppColors.surface3 : AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.of(15)),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(R.of(15)),
-          onTap: _openFolderSheet,
-          child: Container(
-            height: 30,
-            padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon('folder', size: 13, color: AppColors.fg2),
-              SizedBox(width: S.s6),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 180),
-                child: Text(
-                  _labelForFolder(_folder),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(14, color: AppColors.fg2),
-                ),
-              ),
-              SizedBox(width: S.s4),
-              AppIcon('chevron-down', size: 11, color: AppColors.fg3),
-            ]),
-          ),
-        ),
-      );
-
-  Widget _chip(String icon, String label, {VoidCallback? onTap}) => Material(
-        color: kMobile ? AppColors.surface3 : Colors.transparent,
-        borderRadius: BorderRadius.circular(R.of(15)),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(R.of(15)),
-          onTap: onTap,
-          child: Container(
-            height: 30,
-            padding: EdgeInsets.symmetric(horizontal: S.s8),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon(icon, size: 13, color: AppColors.fg3),
-              SizedBox(width: S.of(5)),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 150),
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(14, color: AppColors.fg3),
-                ),
-              ),
-            ]),
-          ),
-        ),
-      );
-
-  Widget _worktreeToggle() {
-    final on = _mode == WorkspaceMode.worktree;
-    return Material(
-      color: kMobile ? AppColors.surface3 : Colors.transparent,
-      borderRadius: BorderRadius.circular(R.of(15)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(R.of(15)),
-        onTap: () => setState(() {
-          _mode = on ? WorkspaceMode.folder : WorkspaceMode.worktree;
-          if (_mode == WorkspaceMode.worktree) _existing = null;
-        }),
-        child: Container(
-          height: 30,
-          padding: EdgeInsets.symmetric(horizontal: S.s8),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              width: 22,
-              height: 13,
-              padding: EdgeInsets.all(S.s2),
-              alignment: on ? Alignment.centerRight : Alignment.centerLeft,
-              decoration: BoxDecoration(
-                color: on
-                    ? AppColors.accent.withValues(alpha: 0.35)
-                    : AppColors.surface3,
-                borderRadius: BorderRadius.circular(R.of(7)),
-              ),
-              child: Container(
-                width: 9,
-                height: 9,
-                decoration: BoxDecoration(
-                  color: on ? AppColors.accent : AppColors.fg4,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            SizedBox(width: S.s6),
-            Text(
-              'Worktree',
-              style: sans(14, color: on ? AppColors.fg2 : AppColors.fg4),
-            ),
-          ]),
-        ),
-      ),
+      header: _recentFolders.isEmpty ? null : 'Recent folders',
+      children: rows,
     );
   }
 
@@ -1276,6 +1066,28 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
         ],
       );
     }
+    if (kMobile) {
+      return ListView(
+        padding: EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s12),
+        children: [
+          if (dirs.isNotEmpty)
+            GroupedTiles(children: [
+              for (final d in dirs)
+                SettingsRow(
+                  label: d.name,
+                  icon: 'folder',
+                  chevron: true,
+                  onTap: _busy == null ? () => _go(d.path) : null,
+                ),
+            ]),
+          if (dirs.isNotEmpty && files.isNotEmpty) SizedBox(height: S.s12),
+          if (files.isNotEmpty)
+            GroupedTiles(children: [
+              for (final f in files) SettingsRow(label: f.name, icon: 'file'),
+            ]),
+        ],
+      );
+    }
     final rows = <Widget>[
       for (final d in dirs) _folderRow(d),
       if (dirs.isNotEmpty && files.isNotEmpty) SizedBox(height: S.s6),
@@ -1294,8 +1106,8 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
         child: Row(children: [
           SizedBox(
               width: 22,
-              child:
-                  Center(child: AppIcon('file', size: 16, color: AppColors.fg4))),
+              child: Center(
+                  child: AppIcon('file', size: 16, color: AppColors.fg4))),
           SizedBox(width: S.s12),
           Expanded(
             child: Text(e.name,
@@ -1320,8 +1132,8 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
               SizedBox(
                   width: 22,
                   child: Center(
-                      child: AppIcon('folder',
-                          size: 19, color: AppColors.fg3))),
+                      child:
+                          AppIcon('folder', size: 19, color: AppColors.fg3))),
               SizedBox(width: S.s12),
               Expanded(
                 child: Text(e.name,
@@ -1354,8 +1166,8 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
       ]));
 
   Widget _actionBar(double bottomPad) => Container(
-        padding: EdgeInsets.fromLTRB(
-            M.gutter, S.s8, M.gutter, S.of(10 ) + bottomPad),
+        padding:
+            EdgeInsets.fromLTRB(M.gutter, S.s8, M.gutter, S.of(10) + bottomPad),
         decoration: BoxDecoration(
           color: AppColors.bg,
           border: Border(top: BorderSide(color: AppColors.line)),
@@ -1415,11 +1227,17 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
 
   Widget _workspaceChoice() {
     final worktrees = _repo?.worktrees ?? const <Worktree>[];
-    Widget option(String icon, String label, bool selected, VoidCallback? onTap) =>
+    Widget option(
+            String icon, String label, bool selected, VoidCallback? onTap) =>
         Expanded(
           child: Material(
-            color: selected ? AppColors.surface3 : Colors.transparent,
-            borderRadius: BorderRadius.circular(R.of(18)),
+            color: selected
+                ? (kMobile
+                    ? Color.alphaBlend(
+                        AppColors.fg1.withValues(alpha: 0.08), Grouped.row)
+                    : AppColors.surface3)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(R.of(kMobile ? 16 : 18)),
             child: InkWell(
               borderRadius: BorderRadius.circular(R.sm),
               onTap: _busy != null ? null : onTap,
@@ -1428,12 +1246,14 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    AppIcon(icon,
-                        size: 14,
-                        color: onTap == null
-                            ? AppColors.fg4
-                            : (selected ? AppColors.fg1 : AppColors.fg3)),
-                    SizedBox(width: S.s6),
+                    if (!kMobile) ...[
+                      AppIcon(icon,
+                          size: 14,
+                          color: onTap == null
+                              ? AppColors.fg4
+                              : (selected ? AppColors.fg1 : AppColors.fg3)),
+                      SizedBox(width: S.s6),
+                    ],
                     Flexible(
                       child: Text(label,
                           maxLines: 1,
@@ -1454,14 +1274,20 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Works in', style: TS.caption()),
-          SizedBox(height: S.s6),
+          if (kMobile)
+            const SettingsSectionLabel('Works in')
+          else ...[
+            Text('Works in', style: TS.caption()),
+            SizedBox(height: S.s6),
+          ],
           Container(
             padding: EdgeInsets.all(S.s4),
             decoration: BoxDecoration(
-              color: AppColors.surface1,
+              color: kMobile ? Grouped.row : AppColors.surface1,
               borderRadius: BorderRadius.circular(R.of(22)),
-              border: Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
+              border: kMobile
+                  ? null
+                  : Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
             ),
             child: Row(children: [
               option(
@@ -1496,6 +1322,8 @@ class _FolderBrowserSheetState extends State<_FolderBrowserSheet> {
               ),
             ]),
           ),
+          const SettingsFootnote(
+              'A new worktree keeps this session off main until you merge it.'),
         ],
       ),
     );

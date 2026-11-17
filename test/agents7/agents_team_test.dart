@@ -30,8 +30,21 @@ class _Client extends DaemonClient {
   Future<List<CoordinationAgent>> coordinationAgents() async => team;
 
   @override
-  Future<List<GroupSummary>> groups() async => const [];
+  Future<List<GroupSummary>> groups() async =>
+      team.length > 2 ? [_group] : const [];
 }
+
+final _group = GroupSummary.fromJson({
+  'id': 'group:1',
+  'title': 'scrapper bois',
+  'members': [
+    {'kind': 'agent', 'id': 'snippet'},
+    {'kind': 'agent', 'id': 'scout'},
+  ],
+  'preview': 'x-scout: Simon draft: A customer asked us this last month.',
+  'created_at': '2026-11-12T00:00:00Z',
+  'last_event_at': '2026-11-16T11:34:00Z',
+});
 
 CoordinationAgent _agent(String id, String name,
         {String? character, Map<String, int>? tasks, String? last}) =>
@@ -143,7 +156,7 @@ void main() {
     await _unmount(t);
   });
 
-  testWidgets('busy: Working with a plan bar, Asleep, then New agent',
+  testWidgets('busy: Working with a plan bar, Asleep, no New agent row',
       (t) async {
     await _pump(t, [
       _agent('snippet', 'Rook', character: '01'),
@@ -157,8 +170,9 @@ void main() {
     expect(find.text('Asleep'), findsOneWidget);
     expect(find.byKey(const ValueKey('agent-plan-bar')), findsOneWidget);
     expect(find.textContaining('step 3 of 5'), findsOneWidget);
-    expect(find.text('New agent'), findsOneWidget);
-    expect(find.text('From a starter or your own words'), findsOneWidget);
+    // The floating + adds agents; the list carries no add row.
+    expect(find.text('New agent'), findsNothing);
+    expect(find.text('scrapper bois'), findsOneWidget);
     expect(find.text('Add an agent'), findsNothing);
     await _shot(t, 'agents-a-busy');
     await _unmount(t);

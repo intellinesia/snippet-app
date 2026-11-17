@@ -128,16 +128,16 @@ void main() {
       (tester) async {
     final res = await _pump(tester, _FakeDaemon(repo: true));
     expect(find.text('What are we making?'), findsOneWidget);
-    expect(find.text('Worktree'), findsOneWidget);
-    expect(find.text('main'), findsOneWidget);
+    // Works in sits as a chip under the prompt.
+    expect(find.text('New worktree'), findsOneWidget);
     await sendPrompt(tester, 'Build it');
     expect(res.opened.single, ('/code/app', WorkspaceMode.worktree));
   });
 
-  testWidgets('the folder itself can be chosen via Worktree toggle',
+  testWidgets('the folder itself can be chosen via the Works in chip',
       (tester) async {
     final res = await _pump(tester, _FakeDaemon(repo: true));
-    await tester.tap(find.text('Worktree'));
+    await tester.tap(find.text('New worktree'));
     await tester.pumpAndSettle();
     await sendPrompt(tester, 'Work in folder');
     expect(res.opened.single, ('/code/app', WorkspaceMode.folder));
@@ -162,8 +162,8 @@ void main() {
 
   testWidgets('outside a repo there is nothing to choose', (tester) async {
     final res = await _pump(tester, _FakeDaemon(repo: false));
-    expect(find.text('Worktree'), findsNothing);
-    expect(find.text('main'), findsNothing);
+    expect(find.text('New worktree'), findsNothing);
+    expect(find.text('This folder'), findsNothing);
     await sendPrompt(tester, 'Hello');
     expect(res.opened.single, ('/code/app', WorkspaceMode.folder));
   });
@@ -182,7 +182,7 @@ void main() {
       ],
     );
     await _pump(tester, client);
-    expect(find.text('Recent'), findsOneWidget);
+    expect(find.text('Recent folders'), findsOneWidget);
     expect(find.text('snippet-service'), findsOneWidget);
     expect(find.text('technoxi'), findsOneWidget);
     expect(find.text('snippet-mobile-wave2'), findsOneWidget);

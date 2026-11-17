@@ -48,6 +48,7 @@ import '../transcript.dart';
 import '../term.dart';
 import '../panel.dart';
 import '../settings_form.dart';
+import 'session_actions_page.dart';
 import '../share_inbound.dart';
 import '../session_seen.dart';
 import '../widgets.dart';
@@ -204,6 +205,9 @@ class SessionScreen extends StatefulWidget {
   /// tabs, the session list, and the status bar in sync.
   final void Function(String title)? onTitle;
 
+  /// Called after the session is deleted from its Actions.
+  final VoidCallback? onDeleted;
+
   /// True only while this mobile session is the visible phone surface. The shell
   /// keeps its session mounted behind Chats for the return animation, but an
   /// inactive session must never intercept Android back from the Chats home.
@@ -243,7 +247,8 @@ class SessionScreen extends StatefulWidget {
       this.mobileActive = true,
       this.readOnly = false,
       this.banner,
-      this.onTitle});
+      this.onTitle,
+      this.onDeleted});
   @override
   State<SessionScreen> createState() => _SessionScreenState();
 }
@@ -300,6 +305,8 @@ String? _inboxAgentId(String sessionId) {
 
 class _SessionScreenState extends State<SessionScreen>
     with WidgetsBindingObserver {
+  Map<String, String> _profileProviders = const {};
+
   final Set<Key> _shownRows = {};
   // Phone composer tray behind the "+" (session actions, hand off, fork).
   final _tray = ComposerTrayController();

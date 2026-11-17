@@ -524,7 +524,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
       toast(context, 'Agent ID copied');
     }
 
-    if (kMobile) {
+    if (kMobile || !widget.docked) {
       return Semantics(
         label: '${widget.name}, $sub',
         excludeSemantics: true,
@@ -743,7 +743,7 @@ class AgentPageRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final phone = kMobile;
-    if (phone && !checked && !selected) {
+    if (!checked && !selected) {
       return SettingsRow(
         label: label,
         sub: subtitle,
@@ -1208,6 +1208,28 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
 
   Widget _frame() {
     final title = _group.title.trim().isEmpty ? 'Group' : _group.title.trim();
+    final count = '${_group.members.length} '
+        '${_group.members.length == 1 ? 'member' : 'members'}';
+    if (kMobile && !widget.docked) {
+      // Same page as an agent's: back circle, plate hero, grouped rows.
+      return _AgentPageFrame(
+        title: '',
+        onBack: _close,
+        actions: [_EditPill(onTap: _busy ? null : _rename)],
+        children: [
+          Padding(
+            padding: EdgeInsets.only(bottom: S.s16),
+            child: SettingsHero(
+              avatar: AgentCluster(
+                  ids: _group.agentIds, size: Grouped.avatarCharacter),
+              name: title,
+              sub: count,
+            ),
+          ),
+          _phoneInfo(),
+        ],
+      );
+    }
     final actions = <_CircleAction>[
       if (widget.onOpenTasks != null && !widget.docked && !kMobile)
         _CircleAction('task', 'Tasks', () {

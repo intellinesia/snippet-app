@@ -207,37 +207,6 @@ class ComposerBareButton extends StatelessWidget {
   }
 }
 
-/// The line above the pill while the agent runs and a draft is ready.
-class ComposerRunHint extends StatelessWidget {
-  const ComposerRunHint({super.key, this.onSteer});
-
-  final VoidCallback? onSteer;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(S.s6, 0, S.s6, S.s6),
-      child: Row(children: [
-        Expanded(
-          child: Text('Queues after this step',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(13, height: 18 / 13, color: AppColors.fg3)),
-        ),
-        Semantics(
-          button: true,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onSteer,
-            child: Text('Hold send to steer now',
-                style: sans(13, height: 18 / 13, color: AppColors.accent)),
-          ),
-        ),
-      ]),
-    );
-  }
-}
-
 /// The flat Duet pill every composer state sits in.
 class ComposerPillSurface extends StatelessWidget {
   const ComposerPillSurface(

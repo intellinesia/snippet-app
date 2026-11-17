@@ -867,18 +867,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                     _mentionList(),
                   if (!kMobile) _contextBar(),
                   if (top != null) top,
-                  if (running &&
-                      !_isRecording &&
-                      _recordingPath == null)
-                    ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: _input,
-                      builder: (_, __, ___) => _hasDraft
-                          ? ComposerRunHint(
-                              onSteer: _canSend
-                                  ? () => _sendMessage(steer: true)
-                                  : null)
-                          : const SizedBox.shrink(),
-                    ),
                   Swap(
                     stateKey: (_isRecording || _recordingPath != null)
                         ? 'recorder'

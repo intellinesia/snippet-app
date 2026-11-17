@@ -174,14 +174,21 @@ Future<void> openAgentActions(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              MobileBackBar(
-                title: agentName,
-                onBack: () => Navigator.of(page).pop(),
-                onTitleTap: () {},
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                    Grouped.gutter, 8, Grouped.gutter, 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: GroupedCircleButton(
+                      icon: 'chevron-left',
+                      tooltip: 'Back',
+                      onTap: () => Navigator.of(page).pop()),
+                ),
               ),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, S.of(28)),
+                  padding: EdgeInsets.fromLTRB(
+                      Grouped.gutter, 0, Grouped.gutter, S.of(28)),
                   child: AgentActions(
                     client: client,
                     agentId: agentId,
@@ -201,7 +208,43 @@ Future<void> openAgentActions(
       ),
     ));
   }
-  return Future.value();
+  return presentScreen<void>(context,
+      style: PanelStyle.drawer,
+      maxWidth: 460,
+      builder: (ctx, close) => Material(
+            color: AppColors.pageBg,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                      Grouped.gutter, 8, Grouped.gutter, 0),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: GroupedCircleButton(
+                        icon: 'x', tooltip: 'Close', onTap: close),
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                        Grouped.gutter, 0, Grouped.gutter, S.of(28)),
+                    child: AgentActions(
+                      client: client,
+                      agentId: agentId,
+                      agentName: agentName,
+                      host: ctx,
+                      views: views,
+                      onDeleted: () {
+                        close();
+                        onDeleted?.call();
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ));
 }
 
 /// The agent's actions as rows. With [onAction] each row reports its name
@@ -242,6 +285,8 @@ class AgentActions extends StatefulWidget {
 
 class AgentActionsState extends State<AgentActions> {
   CoordinationAgent? _agent;
+  int? _unread;
+  int? _memoryEntries;
 
   @override
   void initState() {
@@ -251,6 +296,18 @@ class AgentActionsState extends State<AgentActions> {
       setState(
           () => _agent = all.where((a) => a.id == widget.agentId).firstOrNull);
     }).catchError((_) {});
+    if (widget.onAction == null && widget.views) {
+      agentInboxUnread(widget.client, widget.agentId).then((n) {
+        if (mounted) setState(() => _unread = n);
+      }).catchError((_) {});
+      widget.client.memoryScopes().then((all) {
+        final mine =
+            all.where((m) => m.key == 'agent:${widget.agentId}').firstOrNull;
+        if (mounted && mine != null) {
+          setState(() => _memoryEntries = mine.entries);
+        }
+      }).catchError((_) {});
+    }
   }
 
   void _run(void Function(BuildContext) action, [String? name]) {
@@ -347,8 +404,190 @@ class AgentActionsState extends State<AgentActions> {
     );
   }
 
+  Widget _sheetRow(BuildContext ctx, String label, String? value,
+          VoidCallback run) =>
+      SettingsRow(
+          label: label,
+          value: value,
+          chevron: true,
+          onTap: () {
+            Navigator.of(ctx).pop();
+            run();
+          });
+
+  void _nameAndAppearance() {
+    final agent = _agent;
+    if (agent == null) return;
+    showAppSheet<void>(
+      context,
+      title: 'Name and appearance',
+      child: Builder(
+        builder: (ctx) => SettingsGroup(children: [
+          _sheetRow(
+              ctx,
+              'Nickname',
+              agent.displayName,
+              () => _run(
+                  (h) => runCrewAgentAction(h, 'nickname',
+                      client: widget.client,
+                      agent: agent,
+                      onDeleted: widget.onDeleted),
+                  'nickname')),
+          _sheetRow(
+              ctx,
+              'Appearance',
+              null,
+              () => _run(
+                  (h) => runCrewAgentAction(h, 'appearance',
+                      client: widget.client, agent: agent),
+                  'appearance')),
+        ]),
+      ),
+    );
+  }
+
+  Widget _pageBuild() {
+    final client = widget.client;
+    final id = widget.agentId;
+    final name = widget.agentName;
+    final agent = _agent;
+    final profile = (agent?.profile ?? '').trim();
+    final inbox = _unread;
+    final presence = agent?.presence;
+    final open = agent?.taskCounts == null
+        ? null
+        : agent!.tasksIn({'in_progress', 'todo'});
+    final mem = _memoryEntries;
+    String? plural(int? n, String one, String many) =>
+        n == null ? null : '$n ${n == 1 ? one : many}';
+    final tiles = <Widget>[
+      _WorkTile(
+          icon: 'inbox',
+          label: 'Inbox',
+          sub: inbox == null
+              ? null
+              : inbox == 0
+                  ? 'Nothing new'
+                  : '$inbox new',
+          accent: (inbox ?? 0) > 0,
+          onTap: () => _openRecords(
+              'inbox',
+              'Inbox',
+              () => AgentInboxView(
+                  client: client, agentId: id, agentName: name))),
+      _WorkTile(
+          icon: 'columns-3',
+          label: 'Board',
+          sub: plural(open, 'open', 'open'),
+          onTap: () => _openRecords(
+              'board',
+              'Board',
+              () => AgentBoardView(
+                  client: client, agentId: id, agentName: name))),
+      _WorkTile(
+          icon: 'message-circle',
+          label: 'Desk',
+          sub: presence == null
+              ? null
+              : presence.active
+                  ? '${presence.state[0].toUpperCase()}${presence.state.substring(1)}'
+                  : 'Idle',
+          onTap: () => _run(
+              (host) => _openSession(host, client, 'inbox-$id', '$name desk'),
+              'desk')),
+      _WorkTile(
+          icon: 'book',
+          label: 'Memory',
+          sub: plural(mem, 'entry', 'entries'),
+          onTap: () => _run(
+              (host) => presentScreen(host,
+                  builder: (_, close) => MemoryScreen(
+                      client: client,
+                      embedded: true,
+                      onBack: close,
+                      initialKey: 'agent:$id')),
+              'memory')),
+    ];
+    SettingsRow setting(String action, String icon, String label,
+            {String? value}) =>
+        SettingsRow(
+          icon: icon,
+          label: label,
+          value: value,
+          chevron: true,
+          onTap: agent == null
+              ? null
+              : () => _run(
+                  (host) => runCrewAgentAction(host, action,
+                      client: client, agent: agent),
+                  action),
+        );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          label: '$name, ${profile.isEmpty ? 'Routing default' : profile}',
+          excludeSemantics: true,
+          child: Padding(
+            padding: EdgeInsets.only(bottom: S.s16),
+            child: SettingsHero(
+              plate: false,
+              avatar: AgentMochi(id, size: Grouped.avatarCharacter),
+              name: name,
+              sub: profile.isEmpty ? 'Routing default' : profile,
+            ),
+          ),
+        ),
+        if (widget.views)
+          Padding(
+            padding: EdgeInsets.only(bottom: Grouped.sectionGap),
+            child: _TileGrid(tiles: tiles),
+          ),
+        SettingsGroup(header: 'Settings', children: [
+          if (!widget.views)
+            SettingsRow(
+                icon: 'book',
+                label: 'Memory',
+                sub: 'What this agent remembers',
+                chevron: true,
+                onTap: () => tiles[3] is _WorkTile
+                    ? (tiles[3] as _WorkTile).onTap()
+                    : null),
+          setting('wakes', 'repeat', 'Wakes and reporting'),
+          setting('reach', 'bell', 'How it reaches you'),
+          setting('model', 'cpu', 'Inference profile',
+              value: profile.isEmpty ? 'Default' : profile),
+          SettingsRow(
+              icon: 'star',
+              label: 'Name and appearance',
+              value: agent?.displayName ?? name,
+              chevron: true,
+              onTap: agent == null ? null : _nameAndAppearance),
+        ]),
+        SettingsGroup(children: [
+          SettingsRow(
+            icon: 'trash',
+            label: 'Delete agent',
+            sub: 'Removes its identity and notes',
+            danger: true,
+            onTap: agent == null
+                ? null
+                : () => _run(
+                    (host) => runCrewAgentAction(host, 'delete',
+                        client: client,
+                        agent: agent,
+                        onDeleted: widget.onDeleted),
+                    'delete'),
+          ),
+        ]),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.onAction == null) return _pageBuild();
     final client = widget.client;
     final id = widget.agentId;
     final name = widget.agentName;
@@ -418,6 +657,87 @@ class AgentActionsState extends State<AgentActions> {
       ],
     );
   }
+}
+
+/// The 2x2 work tiles: [Grouped.gap] apart, round only at the outer corners.
+class _TileGrid extends StatelessWidget {
+  const _TileGrid({required this.tiles});
+  final List<Widget> tiles;
+
+  @override
+  Widget build(BuildContext context) {
+    final end = Radius.circular(R.of(Grouped.radiusEnd));
+    final inner = Radius.circular(R.of(Grouped.radiusInner));
+    BorderRadius corner(int i) => BorderRadius.only(
+        topLeft: i == 0 ? end : inner,
+        topRight: i == 1 ? end : inner,
+        bottomLeft: i == 2 ? end : inner,
+        bottomRight: i == 3 ? end : inner);
+    Widget cell(int i) => Expanded(
+        child: GroupedTile(radius: corner(i), child: tiles[i]));
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      IntrinsicHeight(
+        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          cell(0),
+          const SizedBox(width: Grouped.gap),
+          cell(1),
+        ]),
+      ),
+      const SizedBox(height: Grouped.gap),
+      IntrinsicHeight(
+        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          cell(2),
+          const SizedBox(width: Grouped.gap),
+          cell(3),
+        ]),
+      ),
+    ]);
+  }
+}
+
+class _WorkTile extends StatelessWidget {
+  const _WorkTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.sub,
+    this.accent = false,
+  });
+
+  final String icon;
+  final String label;
+  final String? sub;
+  final bool accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+              Grouped.padX, 14, Grouped.padX, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SettingsIcon(icon, color: accent ? AppColors.accent : null),
+              const SizedBox(height: 14),
+              Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Grouped.titleStyle()),
+              if (sub != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(sub!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Grouped.subStyle()),
+                ),
+            ],
+          ),
+        ),
+      );
 }
 
 /// An inbox or board on its own page, under a session-style bar.

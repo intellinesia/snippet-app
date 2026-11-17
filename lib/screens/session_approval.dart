@@ -945,10 +945,26 @@ class _SessionActionsPanel extends StatefulWidget {
   final VoidCallback? onHandOff;
   final VoidCallback? onFork;
   final Widget? header;
+
+  /// The Actions page layout: hero, grouped rows and drill-in pages.
+  final bool page;
+
+  /// Deletes the session; null hides the danger group.
+  final VoidCallback? onDelete;
+  final String? ownAgent;
+  final String? ownProfile;
+
+  /// Profile name to provider, for the lane provider icons.
+  final Map<String, String> providers;
   const _SessionActionsPanel({
     required this.session,
     this.onFork,
     this.header,
+    this.page = false,
+    this.onDelete,
+    this.ownAgent,
+    this.ownProfile,
+    this.providers = const {},
     required this.onSetGoal,
     required this.onCancelGoal,
     required this.onResumeGoal,
@@ -986,6 +1002,7 @@ class _SessionActionsPanel extends StatefulWidget {
 
 class _SessionActionsPanelState extends State<_SessionActionsPanel> {
   String? _open;
+  ({String title, Widget Function(BuildContext, VoidCallback) body})? _sub;
   late bool? _auto = widget.autoSettle;
   late String? _resume = widget.resumeMode;
   late final TextEditingController _goalCtl = TextEditingController();
@@ -1165,8 +1182,244 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
     );
   }
 
+
+  /// A drill-in: a pushed page on phones (so back steps out one level), the
+  /// panel's own content on desktop where a popover has no route stack.
+  void _drill(BuildContext context, String title,
+      Widget Function(BuildContext, VoidCallback) body) {
+    if (kMobile) {
+      pushActionsSubPage(context, title: title, body: body);
+    } else {
+      setState(() => _sub = (title: title, body: body));
+    }
+  }
+
+  /// Leaves a drill-in page, then runs an action that closes the whole panel.
+  void _leave(VoidCallback back, VoidCallback action) {
+    if (kMobile) back();
+    action();
+  }
+
+  SettingsRow _prow(String icon, String label, String? sub, VoidCallback? onTap,
+          {String? value, bool accent = false, bool danger = false}) =>
+      SettingsRow(
+        icon: icon,
+        label: label,
+        sub: sub,
+        value: value,
+        accent: accent,
+        danger: danger,
+        chevron: !danger,
+        onTap: onTap,
+      );
+
+  Widget _pageBuild(BuildContext context) {
+    final s = widget.session;
+    final goal = s?.goal;
+    final goalOn = (goal?.ongoing ?? false) && goal != null;
+    final lanes = s?.lanes ?? const <LaneInfo>[];
+    final running = lanes.where((l) => l.running).length;
+    final counts = s?.counts ?? const SessionCounts();
+    final sub = _sub;
+    if (sub != null && !kMobile) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                Grouped.padX, Grouped.padX, Grouped.padX, 8),
+            child: Row(children: [
+              GroupedCircleButton(
+                  icon: 'chevron-left',
+                  tooltip: 'Back',
+                  onTap: () => setState(() => _sub = null)),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: Text(sub.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Grouped.pageTitleStyle())),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Grouped.padX),
+            child: sub.body(context, () => setState(() => _sub = null)),
+          ),
+        ],
+      );
+    }
+
+    final now = <Widget>[
+      if (!widget.hideGoal && lanes.isNotEmpty)
+        SettingsRow(
+            icon: 'layers',
+            label: 'Lanes',
+            subWidget: LaneSub(
+                text: laneSummary(lanes, ownAgent: widget.ownAgent),
+                providers:
+                    laneProviders(lanes, widget.providers, widget.ownProfile)),
+            value: running > 0 ? '$running running' : 'All finished',
+            chevron: true,
+            onTap: widget.onLanes),
+      if (!widget.hideGoal)
+        goalOn
+            ? _prow('goal', 'Goal', goal.text,
+                () => _drill(context, 'Goal', (_, back) => SessionGoalPage(
+                    goal: goal,
+                    onSet: widget.onSetGoal,
+                    onCancel: widget.onCancelGoal,
+                    onResume: widget.onResumeGoal,
+                    onDone: back)),
+                value: goal.paused ? 'Paused' : 'Working')
+            : _prow(
+                'goal',
+                'Set a goal',
+                'Something to work toward on its own',
+                () => _drill(context, 'Set a goal', (_, back) => SessionGoalPage(
+                    goal: null,
+                    onSet: widget.onSetGoal,
+                    onCancel: widget.onCancelGoal,
+                    onResume: widget.onResumeGoal,
+                    onDone: back)),
+                accent: true),
+      if (widget.onAutonomy != null)
+        _prow('activity', 'Automated wakes',
+            'Keeps the work moving while you are away', widget.onAutonomy),
+      if (widget.onTasks != null)
+        _prow('task', 'Tasks', 'Work on the board and its reviews',
+            widget.onTasks),
+    ];
+    final session = <Widget>[
+      if (widget.onHandOff != null)
+        _prow('transfer', 'Hand off', 'Pass this session to another agent',
+            widget.onHandOff),
+      if (widget.onFork != null)
+        _prow('git-fork', 'Fork from here', 'A new session; this one stays',
+            widget.onFork),
+      if (widget.onWakes != null)
+        _prow('calendar-clock', 'Wakes and schedule',
+            'Wake times, keep warm, recurring jobs', widget.onWakes),
+      _prow('scheduled', 'Scheduled', 'Recurring jobs on this machine',
+          widget.onRecurring),
+    ];
+    final auto = _auto;
+    final resume = _resume;
+    final behaviour = [
+      if (auto != null && widget.onAutoSettle != null)
+        'Auto-settle ${auto ? 'on' : 'off'}',
+      if (resume != null && widget.onResumeMode != null)
+        'cold resume ${_modeLabel(resume).toLowerCase()}s',
+    ];
+    final more = <Widget>[
+      if (!widget.hideWorkspace)
+        _prow(
+            'folder',
+            'Workspace',
+            [
+              if (widget.onFileChanges != null) 'Changes',
+              'Git',
+              'files',
+              if (!widget.hideShell) 'shell',
+              'processes',
+            ].join(', '), () {
+          _drill(context, 'Workspace', (_, back) => _workspace(counts, back));
+        }),
+      _prow('history', 'History', [
+          if (!widget.hideCheckpoints) 'Checkpoints',
+          'memory',
+          'compact',
+        ].join(', '), () {
+          _drill(context, 'History', (_, back) => _history(back));
+        }),
+      if (behaviour.isNotEmpty)
+        _prow('sliders', 'Behaviour', behaviour.join(' \u00b7 '), () {
+          _drill(
+              context,
+              'Behaviour',
+              (_, __) => SessionBehaviourPage(
+                    auto: _auto,
+                    resume: _resume,
+                    onAuto: widget.onAutoSettle == null
+                        ? null
+                        : (v) {
+                            setState(() => _auto = v);
+                            widget.onAutoSettle!(v);
+                          },
+                    onResume: widget.onResumeMode == null
+                        ? null
+                        : (m) {
+                            setState(() => _resume = m);
+                            widget.onResumeMode!(m);
+                          },
+                  ));
+        }),
+    ];
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.header != null)
+          Padding(
+              padding: EdgeInsets.only(bottom: Grouped.sectionGap - 8),
+              child: widget.header!),
+        SettingsGroup(header: now.isEmpty ? null : 'Now', children: now),
+        SettingsGroup(header: 'Session', children: session),
+        SettingsGroup(header: 'More', children: more),
+        if (widget.onDelete != null)
+          SettingsGroup(children: [
+            _prow('trash', 'Delete session',
+                'Removes the chat; the workspace stays', widget.onDelete,
+                danger: true),
+          ]),
+      ],
+    );
+  }
+
+  Widget _workspace(SessionCounts counts, VoidCallback back) => SettingsGroup(
+        children: [
+          if (widget.onFileChanges != null)
+            _prow(
+                'file-code',
+                'Changes',
+                widget.fileChangeCount == 0
+                    ? 'Nothing edited yet'
+                    : '${widget.fileChangeCount} file${widget.fileChangeCount == 1 ? '' : 's'} changed in this session',
+                widget.onFileChanges),
+          _prow('git-branch', 'Git', 'Branch, commits and diffs',
+              widget.onGit,
+              value: counts.changedFiles > 0 ? '${counts.changedFiles}' : null),
+          _prow('folder', 'Files', 'Browse the workspace', widget.onFiles),
+          _prow('layers', 'Shared', 'Files the agent shared',
+              widget.onDeliverables),
+          if (widget.onPullRequests != null)
+            _prow('git-commit', 'Pull requests', 'Open on this repository',
+                widget.onPullRequests,
+                value: counts.openPrs > 0 ? '${counts.openPrs}' : null),
+          if (!widget.hideShell)
+            _prow('terminal', 'Shell', 'A terminal in the workspace',
+                () => _leave(back, widget.onTerm)),
+          _prow('processes', 'Processes', 'What is running here',
+              widget.onProcesses,
+              value: counts.processes > 0 ? '${counts.processes}' : null),
+        ],
+      );
+
+  Widget _history(VoidCallback back) => SettingsGroup(children: [
+        if (!widget.hideCheckpoints)
+          _prow('history', 'Checkpoints',
+              'Restore the workspace to an earlier point',
+              widget.onCheckpoints),
+        _prow('book-marked', 'Memory', 'What this session remembers',
+            widget.onMemory),
+        _prow('minimize', 'Compact history',
+            'Summarise older turns to free context',
+            () => _leave(back, widget.onCompact)),
+      ]);
+
   @override
   Widget build(BuildContext context) {
+    if (widget.page) return _pageBuild(context);
     final s = widget.session;
     final goalOn = (s?.goal?.ongoing ?? false) && s?.goal != null;
     final runningLanes = s?.lanes.where((l) => l.running).length ?? 0;

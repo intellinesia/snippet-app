@@ -1101,7 +1101,47 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     }
   }
 
+  Future<void> _loadProviders() async {
+    if (_profileProviders.isNotEmpty) return;
+    try {
+      final cfg = await widget.client.getConfig();
+      if (!mounted) return;
+      _setState(() => _profileProviders = {
+            for (final p in cfg.profiles) p.name: p.provider,
+          });
+    } catch (_) {}
+  }
+
+  /// Same confirm as the desktop shell rail, then back to the home list.
+  Future<void> _deleteSession(void Function(VoidCallback) close) async {
+    final name = _title.trim().isEmpty ? '(untitled session)' : _title.trim();
+    final ok = await confirmAction(
+      context,
+      title: 'Delete session?',
+      body:
+          '$name\n\nPermanently removes the conversation. The folder and its files are untouched.',
+      confirmLabel: 'Delete',
+    );
+    if (!ok || !mounted) return;
+    try {
+      await widget.client.deleteSession(widget.sessionId);
+    } catch (e) {
+      if (mounted) toast(context, "Couldn't delete: $e", danger: true);
+      return;
+    }
+    if (!mounted) return;
+    close(() {
+      final done = widget.onDeleted;
+      if (done != null) {
+        done();
+      } else {
+        Navigator.of(context).maybePop();
+      }
+    });
+  }
+
   void _openActions(HarnessState? s, {BuildContext? anchor}) {
+    _loadProviders();
     void run(VoidCallback f) {
       Navigator.pop(context);
       f();
@@ -1109,8 +1149,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
 
     if (!kMobile && anchor != null) {
       showAnchoredPanel<void>(anchor,
-          width: 340,
-          maxHeight: 640,
+          width: 380,
+          maxHeight: 680,
           alignRight: true,
           child: SingleChildScrollView(child: _actionsPanel(s, run)));
       return;
@@ -1137,20 +1177,36 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     final agentName = (_meAgentName ?? '').trim().isEmpty
         ? agentId
         : _meAgentName!.trim();
+    final changedCount = fileChanges(changeSteps).length + shell.length;
     return _SessionActionsPanel(
       session: s,
-      header: me == null || _isMissionControl
+      page: true,
+      ownAgent: agentId,
+      ownProfile: widget.profile,
+      providers: _profileProviders,
+      header: SettingsHero(
+        plate: false,
+        avatar: AgentMochi(_isMissionControl ? 'mission-control' : agentId,
+            size: Grouped.avatarCharacter),
+        name: _title.isEmpty ? 'Session' : _title,
+        sub: _isMissionControl
+            ? 'Coordinator'
+            : [
+                agentName,
+                if ((me?.branch ?? '').trim().isNotEmpty) me!.branch!.trim(),
+                if (changedCount > 0)
+                  '$changedCount file${changedCount == 1 ? '' : 's'} changed',
+              ].join(' \u00b7 '),
+      ),
+      onDelete: _isMissionControl ||
+              widget.readOnly ||
+              _inboxAgentId(widget.sessionId) != null
           ? null
-          : SessionActionsHeader(
-              agentId: agentId,
-              title: _title.isEmpty ? 'Session' : _title,
-              agentName: agentName,
-              branch: me.branch,
-            ),
+          : () => _deleteSession(run),
       onFork: widget.readOnly || _isMissionControl
           ? null
           : () => run(() => _confirmFork(null)),
-      fileChangeCount: fileChanges(changeSteps).length + shell.length,
+      fileChangeCount: changedCount,
       onFileChanges: () => navigate!(() => Navigator.of(context).push(
           AppPageRoute<void>(
               builder: (_) => FileChangesScreen(
@@ -1355,6 +1411,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   /// composer keyboard left open underneath makes the slide look broken.
   void _openActionsDrawer(HarnessState? s) {
     FocusManager.instance.primaryFocus?.unfocus();
+    _loadProviders();
     _scaffoldKey.currentState?.openEndDrawer();
   }
 
@@ -1372,7 +1429,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       f();
     }
 
-    final title = _title.isEmpty ? 'Session' : _title;
     return Drawer(
       width: MediaQuery.sizeOf(context).width,
       backgroundColor: AppColors.bg,
@@ -1381,16 +1437,21 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            MobileBackBar(
-              title: _me == null || _isMissionControl ? title : 'Actions',
-              subtitle: _me == null || _isMissionControl ? 'Actions' : '',
-              onTitleTap: () {},
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  Grouped.gutter, 8, Grouped.gutter, 0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: GroupedCircleButton(
+                    icon: 'x',
+                    tooltip: 'Close',
+                    onTap: () => _scaffoldKey.currentState?.closeEndDrawer()),
+              ),
             ),
-            SizedBox(height: S.s8),
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter,
-                    S.of(28 ) + MediaQuery.paddingOf(context).bottom),
+                padding: EdgeInsets.fromLTRB(Grouped.gutter, 0, Grouped.gutter,
+                    S.of(28) + MediaQuery.paddingOf(context).bottom),
                 child: _actionsPanel(s, run, navigate: (action) => action()),
               ),
             ),

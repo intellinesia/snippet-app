@@ -46,12 +46,11 @@ void main() {
 
     await tester.tap(find.text('Feature session').first);
     await _pump(tester);
-    expect(find.text('Actions'), findsOneWidget);
-    expect(find.text('Wakes'), findsOneWidget);
-    expect(find.text('Schedule, keep warm'), findsOneWidget);
+    expect(find.text('Wakes and schedule'), findsOneWidget);
+    expect(find.text('Wake times, keep warm, recurring jobs'), findsOneWidget);
     expect(find.text('Automated wakes'), findsNothing);
 
-    await tester.tap(find.text('Wakes'));
+    await tester.tap(find.text('Wakes and schedule'));
     await _pump(tester);
     final panel =
         tester.widget<AgentWakePanel>(find.byType(AgentWakePanel));

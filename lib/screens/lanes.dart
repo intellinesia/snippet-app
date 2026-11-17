@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../ambient_loop.dart';
 import '../api.dart';
 import '../media_views.dart';
 import '../models.dart';
@@ -14,10 +13,9 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../crew_widgets.dart' show AgentProviderMark;
 import '../mochi.dart';
+import '../settings_form.dart';
 import '../transcript.dart'
-    show LaneControlButton, LaneWho, laneAgentName;
-import 'mobile_chrome.dart' show MobileBackBar;
-import 'mobile_session_home.dart' show MobileGroupCard;
+    show LaneControlButton, LaneWho, laneAgentName, laneElapsed;
 import 'session.dart';
 
 /// A focused view of delegated work. The session owns the live state; this
@@ -27,6 +25,9 @@ class LanesScreen extends StatefulWidget {
   final VoidCallback? onClose;
   final DaemonClient? client;
   final String? sessionId;
+  final String? sessionTitle;
+  final String? sessionAgentId;
+  final String? sessionAgentName;
 
   const LanesScreen({
     super.key,
@@ -34,6 +35,9 @@ class LanesScreen extends StatefulWidget {
     this.onClose,
     this.client,
     this.sessionId,
+    this.sessionTitle,
+    this.sessionAgentId,
+    this.sessionAgentName,
   });
 
   @override
@@ -72,9 +76,8 @@ class _LanesScreenState extends State<LanesScreen> {
         bottom: false,
         child: Column(children: [
           if (kMobile)
-            MobileBackBar(
-              title: 'Delegated lanes',
-              keepBack: true,
+            LanesHeader(
+              subtitle: widget.sessionTitle,
               onBack: widget.onClose ?? () => Navigator.pop(context),
             )
           else
@@ -90,11 +93,14 @@ class _LanesScreenState extends State<LanesScreen> {
                     icon: 'layers',
                     title: 'No delegated lanes',
                     body: 'Parallel agent work will appear here when started.')
-                : LaneBoard(
+                : LanesByAgent(
                     lanes: lanes,
                     liveLanes: widget.liveLanes,
                     client: widget.client,
-                    sessionId: widget.sessionId),
+                    sessionId: widget.sessionId,
+                    sessionAgentId: widget.sessionAgentId,
+                    sessionAgentName: widget.sessionAgentName,
+                  ),
           ),
         ]),
       ),
@@ -102,274 +108,406 @@ class _LanesScreenState extends State<LanesScreen> {
   }
 }
 
-/// The lanes panel as a board: a summary and status strip, then what needs
-/// the user, then live work, then finished lanes folded into one row.
-class LaneBoard extends StatefulWidget {
-  final List<LaneInfo> lanes;
-  final List<LaneInfo> Function()? liveLanes;
-  final DaemonClient? client;
-  final String? sessionId;
+/// Phone header: 40px back circle, centred title and the session as a muted
+/// subtitle. SettingsHeader's compact form has no subtitle line.
+class LanesHeader extends StatelessWidget {
+  const LanesHeader({super.key, this.subtitle, required this.onBack});
+  final String? subtitle;
+  final VoidCallback onBack;
 
-  const LaneBoard({
+  @override
+  Widget build(BuildContext context) {
+    final sub = (subtitle ?? '').trim();
+    return SizedBox(
+      height: Grouped.headerHeight + (sub.isEmpty ? 0 : 8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: Grouped.gutter),
+        child: Stack(alignment: Alignment.center, children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 56),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text('Lanes',
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  style: Grouped.pageTitleStyle()),
+              if (sub.isNotEmpty)
+                Text(sub,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: sans(13, color: AppColors.fg3)),
+            ]),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: GroupedCircleButton(
+                icon: 'chevron-left', tooltip: 'Back', onTap: onBack),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _AgentGroup {
+  _AgentGroup(this.id, this.name);
+  final String id;
+  final String name;
+  final lanes = <LaneInfo>[];
+}
+
+int _rank(LaneInfo l) => switch (l.status) {
+      'failed' || 'paused' => 0,
+      'running' => 1,
+      'cancelled' => 3,
+      _ => 2,
+    };
+
+bool _needs(LaneInfo l) => l.status == 'failed' || l.status == 'paused';
+
+/// Lanes grouped by the agent running them, the session's own first. Loads
+/// the inference profiles once so each row can show its provider.
+class LanesByAgent extends StatefulWidget {
+  const LanesByAgent({
     super.key,
     required this.lanes,
     this.liveLanes,
     this.client,
     this.sessionId,
+    this.sessionAgentId,
+    this.sessionAgentName,
   });
 
+  final List<LaneInfo> lanes;
+  final List<LaneInfo> Function()? liveLanes;
+  final DaemonClient? client;
+  final String? sessionId;
+  final String? sessionAgentId;
+  final String? sessionAgentName;
+
   @override
-  State<LaneBoard> createState() => _LaneBoardState();
+  State<LanesByAgent> createState() => _LanesByAgentState();
 }
 
-enum _Mark { ok, run, danger, faint }
+class _LanesByAgentState extends State<LanesByAgent> {
+  var _profiles = const <String, InferenceProfile>{};
 
-class _LaneBoardState extends State<LaneBoard> {
-  bool _showFinished = false;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_profiles.isEmpty) _load();
+  }
+
+  Future<void> _load() async {
+    final client = widget.client ?? DaemonScope.maybeOf(context);
+    if (client == null) return;
+    try {
+      final cfg = await client.getConfig();
+      if (mounted) {
+        setState(() => _profiles = {for (final p in cfg.profiles) p.name: p});
+      }
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) => _AgentLanesView(
+        lanes: widget.lanes,
+        liveLanes: widget.liveLanes,
+        client: widget.client,
+        sessionId: widget.sessionId,
+        sessionAgentId: widget.sessionAgentId,
+        sessionAgentName: widget.sessionAgentName,
+        profiles: _profiles,
+      );
+}
+
+class _AgentLanesView extends StatelessWidget {
+  const _AgentLanesView({
+    required this.profiles,
+    required this.lanes,
+    this.liveLanes,
+    this.client,
+    this.sessionId,
+    this.sessionAgentId,
+    this.sessionAgentName,
+  });
+
+  final List<LaneInfo> lanes;
+  final List<LaneInfo> Function()? liveLanes;
+  final DaemonClient? client;
+  final String? sessionId;
+  final String? sessionAgentId;
+  final String? sessionAgentName;
+  final Map<String, InferenceProfile> profiles;
+
+  String get _ownId => sessionAgentId ?? '';
+  String get _ownName =>
+      sessionAgentName ??
+      (_ownId.isEmpty ? 'This session' : laneAgentName(_ownId));
+
+  List<_AgentGroup> _groups() {
+    final byId = <String, _AgentGroup>{};
+    for (final l in lanes) {
+      final raw = (l.agent ?? '').trim();
+      final id = raw.isEmpty ? _ownId : raw;
+      byId
+          .putIfAbsent(
+              id,
+              () =>
+                  _AgentGroup(id, id == _ownId ? _ownName : laneAgentName(id)))
+          .lanes
+          .add(l);
+    }
+    final out = byId.values.toList();
+    out.sort(
+        (a, b) => (a.id == _ownId ? 0 : 1).compareTo(b.id == _ownId ? 0 : 1));
+    for (final g in out) {
+      g.lanes.sort((a, b) => _rank(a).compareTo(_rank(b)));
+    }
+    return out;
+  }
+
+  String _caption(_AgentGroup g) {
+    final needs = g.lanes.where(_needs).length;
+    if (needs > 0) return '${g.name} · $needs needs you';
+    final working = g.lanes.where((l) => l.running).length;
+    final cancelled = g.lanes.where((l) => l.status == 'cancelled').length;
+    final done = g.lanes.length - working - cancelled;
+    final parts = [
+      if (working > 0) '$working working',
+      if (done > 0) '$done done',
+      if (cancelled > 0) '$cancelled cancelled',
+    ];
+    return '${g.name} · ${parts.join(', ')}';
+  }
+
+  String? _footnote(List<_AgentGroup> groups) {
+    if (groups.length < 2) return null;
+    final others = groups.where((g) => g.id != _ownId).toList();
+    final names = others.map((g) => g.name).toList();
+    final who = names.length == 1
+        ? names.first
+        : '${names.sublist(0, names.length - 1).join(', ')} and ${names.last}';
+    final what = others.length == 1 && others.first.lanes.length == 1
+        ? 'handed ${others.first.lanes.first.title.trim()} to $who'
+        : 'handed work to $who';
+    final hold = !lanes.any((l) => l.running)
+        ? (kMobile ? ' Tap a lane to open it.' : ' Click a lane to open it.')
+        : kMobile
+            ? ' Tap a lane to watch it; press and hold a working lane to stop it.'
+            : ' Click a lane to watch it, or use Stop to end it.';
+    return '$_ownName split this work and $what.$hold';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final lanes = widget.lanes;
-    final running = lanes.where((l) => l.running).toList();
-    final failed = lanes.where((l) => l.status == 'failed').toList();
-    final paused = lanes.where((l) => l.status == 'paused').toList();
-    final cancelled = lanes.where((l) => l.status == 'cancelled').toList();
-    final completed = lanes
-        .where((l) =>
-            !l.running &&
-            !const ['failed', 'paused', 'cancelled'].contains(l.status))
-        .toList();
-    final side = kMobile ? M.gutter : S.s16;
-    final children = <Widget>[
-      _group([
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: S.s12),
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _summary(lanes.length, completed.length, running),
-                SizedBox(height: S.s12),
-                _strip([
-                  for (final _ in completed) _Mark.ok,
-                  for (final _ in running) _Mark.run,
-                  for (final _ in failed) _Mark.danger,
-                  for (final _ in [...paused, ...cancelled]) _Mark.faint,
-                ]),
-              ]),
-        ),
-      ]),
-    ];
-    void section(String label, List<Widget> rows) {
-      if (rows.isEmpty) return;
-      children.add(Padding(
-        padding: EdgeInsets.fromLTRB(S.s4, S.s20, S.s4, S.s8),
-        child: Text(label, style: sans(13, color: AppColors.fg3)),
-      ));
-      children.add(_group(rows));
-    }
-
-    section('Needs you', [
-      for (final l in failed)
-        _row(l, _Mark.danger, _firstSentence(l.error ?? l.summary),
-            action: _control(l)),
-      for (final l in paused)
-        _row(l, _Mark.faint, 'Paused at its time limit'),
-    ]);
-    section('Working', [
-      for (final l in running)
-        _row(
-            l,
-            _Mark.run,
-            [
-              if ((l.activity ?? '').trim().isNotEmpty) l.activity!.trim(),
-              _elapsed(l.startedAt),
-            ].where((s) => s.isNotEmpty).join(' · '),
-            monoSub: true,
-            action: _control(l)),
-    ]);
-    if (completed.isNotEmpty || cancelled.isNotEmpty) {
-      section('Finished', [
-        _foldRow(completed.length, cancelled.length),
-        if (_showFinished) ...[
-          for (final l in completed) _row(l, _Mark.ok, _firstSentence(l.summary)),
-          for (final l in cancelled)
-            _row(l, _Mark.faint, _firstSentence(l.summary)),
-        ],
-      ]);
-    }
+    final groups = _groups();
+    final foot = _footnote(groups);
     return ListView(
-      padding: EdgeInsets.fromLTRB(side, S.s16, side, S.s32),
-      children: children,
-    );
-  }
-
-  /// One grouped surface with hairlines between rows, as on the agent page.
-  Widget _group(List<Widget> rows) => MobileGroupCard(children: [
-        for (var i = 0; i < rows.length; i++) ...[
-          if (i > 0) Container(height: 1, color: AppColors.border),
-          rows[i],
-        ],
-      ]);
-
-  Widget _summary(int total, int done, List<LaneInfo> running) {
-    String oldest = '';
-    if (running.isNotEmpty) {
-      final starts = running
-          .map((l) => DateTime.tryParse(l.startedAt))
-          .whereType<DateTime>()
-          .toList()
-        ..sort();
-      if (starts.isNotEmpty) oldest = _elapsed(starts.first.toIso8601String());
-    }
-    final right = running.isEmpty
-        ? ''
-        : [
-            '${running.length} running',
-            if (oldest.isNotEmpty) oldest,
-          ].join(' · ');
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
+      padding: const EdgeInsets.fromLTRB(Grouped.gutter, 8, Grouped.gutter, 32),
       children: [
-        Expanded(
-          child: Text('$done of $total done',
-              style: sans(20, weight: W.title, color: AppColors.fg1)),
-        ),
-        if (right.isNotEmpty)
-          Text(right, style: mono(12, color: AppColors.fg3)),
+        for (var i = 0; i < groups.length; i++)
+          SettingsGroup(
+            header: _caption(groups[i]),
+            footer: i == groups.length - 1 ? foot : null,
+            children: [
+              for (final l in groups[i].lanes)
+                _row(context, l, groups[i],
+                    tagFinished:
+                        groups[i].lanes.any((x) => x.running || _needs(x))),
+            ],
+          ),
       ],
     );
   }
 
-  /// One segment per lane; past 12 lanes each status keeps its share.
-  Widget _strip(List<_Mark> marks) {
-    const cap = 12;
-    var segs = marks;
-    if (marks.length > cap) {
-      final counts = {
-        for (final m in _Mark.values) m: marks.where((x) => x == m).length,
-      };
-      final share = {
-        for (final m in _Mark.values)
-          m: counts[m]! == 0
-              ? 0
-              : (counts[m]! * cap / marks.length).floor().clamp(1, cap),
-      };
-      var left = cap - share.values.fold(0, (a, b) => a + b);
-      final present = _Mark.values.where((m) => counts[m]! > 0).toList()
-        ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
-      for (var i = 0; left > 0; i = (i + 1) % present.length, left--) {
-        share[present[i]] = share[present[i]]! + 1;
+  Widget _row(BuildContext context, LaneInfo lane, _AgentGroup group,
+      {required bool tagFinished}) {
+    final c = client ?? DaemonScope.maybeOf(context);
+    final session = sessionId ?? lane.trimmedIn;
+    final canAct = c != null && session != null;
+    final failed = lane.status == 'failed';
+    final tone = _needs(lane)
+        ? AppColors.danger
+        : lane.running
+            ? AppColors.fg1
+            : lane.status == 'cancelled'
+                ? AppColors.fg4
+                : AppColors.ok;
+    final lead = Stack(clipBehavior: Clip.none, children: [
+      AgentMochi(group.id.isEmpty ? 'snippet' : group.id,
+          size: Grouped.leadCharacter,
+          state: lane.running
+              ? AgentCharacterState.working
+              : failed
+                  ? AgentCharacterState.needs
+                  : AgentCharacterState.done),
+      Positioned(
+        right: -4,
+        bottom: -1,
+        child: Container(
+          key: ValueKey('lane-badge-${lane.id}'),
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+              color: tone,
+              shape: BoxShape.circle,
+              border: Border.all(color: Grouped.row, width: 2)),
+        ),
+      ),
+    ]);
+
+    final provider = profiles[(lane.profile ?? '').trim()];
+    final mark = provider == null || provider.provider.isEmpty
+        ? null
+        : provider;
+    String? tag;
+    Color tagColor = AppColors.fg3;
+    var rest = '';
+    var subLines = 1;
+    String? value;
+    Widget? trailing;
+    final text = _firstSentence(lane.summary);
+    if (failed) {
+      subLines = 2;
+      tag = 'Failed';
+      tagColor = AppColors.danger;
+      rest = _firstSentence(lane.error ?? lane.summary);
+      if (canAct) {
+        trailing = _RetryPill(client: c, session: session, lane: lane);
       }
-      for (; left < 0; left++) {
-        share[present.first] = share[present.first]! - 1;
+    } else if (lane.status == 'paused') {
+      rest = 'Paused at its time limit';
+    } else if (lane.running) {
+      final act = (lane.activity ?? '').trim();
+      rest = act.isEmpty ? 'Working' : act;
+      value = laneElapsed(lane);
+      if (!kMobile && canAct) {
+        trailing = LaneControlButton(
+            client: c, sessionId: session, lane: lane, quiet: true);
       }
-      segs = [
-        for (final m in _Mark.values)
-          for (var i = 0; i < share[m]!; i++) m,
-      ];
+    } else if (lane.status == 'cancelled') {
+      tag = 'Cancelled';
+      rest = text;
+    } else if (tagFinished) {
+      tag = 'Finished';
+      tagColor = AppColors.ok;
+      rest = text;
+    } else {
+      rest = text;
     }
-    return Row(children: [
-      for (var i = 0; i < segs.length; i++) ...[
-        if (i > 0) SizedBox(width: S.of(3)),
-        Expanded(
-          child: Container(
-            height: 4,
-            decoration: BoxDecoration(
-              color: _markColor(segs[i]),
-              borderRadius: BorderRadius.circular(2),
+    final plain = tag == null && mark == null;
+    final subWidget = plain
+        ? null
+        : Text.rich(
+            TextSpan(children: [
+              if (mark != null)
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Tooltip(
+                      message: '${mark.name} \u00b7 ${mark.model}',
+                      child: AppIcon('provider:${mark.provider}', size: 15),
+                    ),
+                  ),
+                ),
+              if (tag != null)
+                TextSpan(
+                    text: tag,
+                    style: TextStyle(
+                        color: tag == 'Cancelled' ? AppColors.fg3 : tagColor)),
+              if (rest.isNotEmpty)
+                TextSpan(text: '${tag == null ? '' : ' \u00b7 '}$rest'),
+            ]),
+            maxLines: subLines,
+            overflow: TextOverflow.ellipsis,
+            style: Grouped.subStyle(),
+          );
+    return KeyedSubtree(
+      key: ValueKey('lane-row-${lane.id}'),
+      child: SettingsRow(
+        label: lane.title,
+        sub: plain ? rest : null,
+        subWidget: subWidget,
+        subMaxLines: subLines,
+        leading: lead,
+        value: value,
+        trailing: trailing,
+        chevron: trailing == null,
+        onTap: () => openLaneView(context, lane,
+            client: client, sessionId: sessionId, liveLanes: liveLanes),
+        onLongPress: lane.running && canAct
+            ? () => _stop(context, c, session, lane)
+            : null,
+      ),
+    );
+  }
+
+  Future<void> _stop(BuildContext context, DaemonClient client, String session,
+      LaneInfo lane) async {
+    final ok = await confirmAction(context,
+        title: 'Stop this lane?',
+        body: lane.title.trim().isEmpty ? 'Stop this lane?' : lane.title.trim(),
+        confirmLabel: 'Stop',
+        danger: true);
+    if (!ok || !context.mounted) return;
+    try {
+      await client.cancelLane(session, lane.id);
+    } catch (e) {
+      if (context.mounted) toast(context, '$e', danger: true);
+    }
+  }
+}
+
+class _RetryPill extends StatefulWidget {
+  const _RetryPill(
+      {required this.client, required this.session, required this.lane});
+  final DaemonClient client;
+  final String session;
+  final LaneInfo lane;
+
+  @override
+  State<_RetryPill> createState() => _RetryPillState();
+}
+
+class _RetryPillState extends State<_RetryPill> {
+  bool _busy = false;
+
+  Future<void> _retry() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await widget.client.retryLane(widget.session, widget.lane.id);
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Opacity(
+        opacity: _busy ? 0.5 : 1,
+        child: Semantics(
+          button: true,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _retry,
+            child: Container(
+              height: kMobile ? 44 : 32,
+              padding: EdgeInsets.symmetric(horizontal: kMobile ? 18 : 14),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(22)),
+              child: Text('Retry',
+                  style: sans(kMobile ? 15 : 13,
+                      weight: FontWeight.w600, color: AppColors.accentFg)),
             ),
           ),
         ),
-      ],
-    ]);
-  }
-
-  Color _markColor(_Mark m) => switch (m) {
-        _Mark.ok => AppColors.ok,
-        _Mark.run => AppColors.run,
-        _Mark.danger => AppColors.danger,
-        _Mark.faint => AppColors.fg4.withValues(alpha: 0.45),
-      };
-
-  Widget _row(LaneInfo lane, _Mark mark, String sub,
-      {bool monoSub = false, Widget? action}) {
-    return KeyedSubtree(
-      key: ValueKey('lane-row-${lane.id}'),
-      child: InkWell(
-        onTap: () => openLaneView(context, lane,
-            client: widget.client,
-            sessionId: widget.sessionId,
-            liveLanes: widget.liveLanes),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: kMobile ? 44 : 36),
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: kMobile ? S.of(10) : S.s6),
-            child: Row(children: [
-              _LaneMark(mark: mark, color: _markColor(mark)),
-              SizedBox(width: S.of(10)),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(lane.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(kMobile ? 15 : 13,
-                            weight: W.label, color: AppColors.fg1)),
-                    if (sub.isNotEmpty)
-                      Padding(
-                        padding: EdgeInsets.only(top: S.s2),
-                        child: Text(sub,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: monoSub
-                                ? mono(12, color: AppColors.fg3)
-                                : sans(kMobile ? 13 : 12,
-                                    color: AppColors.fg3)),
-                      ),
-                  ],
-                ),
-              ),
-              if (action != null) ...[SizedBox(width: S.s8), action],
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _foldRow(int finished, int cancelled) {
-    final label = [
-      if (finished > 0) '$finished finished',
-      if (cancelled > 0) '$cancelled cancelled',
-    ].join(', ');
-    return InkWell(
-      onTap: () => setState(() => _showFinished = !_showFinished),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: kMobile ? 48 : 36),
-        child: Row(children: [
-          Expanded(
-            child: Text(label,
-                style: sans(kMobile ? 15 : 13, color: AppColors.fg2)),
-          ),
-          AppIcon(_showFinished ? 'chevron-down' : 'chevron-right',
-              size: 16, color: AppColors.fg4),
-        ]),
-      ),
-    );
-  }
-
-  Widget? _control(LaneInfo lane) {
-    final client = widget.client ?? DaemonScope.maybeOf(context);
-    final sessionId = widget.sessionId ?? lane.trimmedIn;
-    if (client == null || sessionId == null) return null;
-    if (!lane.running && !lane.retryable) return null;
-    return LaneControlButton(
-        client: client, sessionId: sessionId, lane: lane, quiet: true);
-  }
+      );
 }
 
 String _firstSentence(String? raw) {
@@ -380,120 +518,6 @@ String _firstSentence(String? raw) {
       .trim();
   final end = RegExp(r'[.!?](\s|$)').firstMatch(text);
   return end == null ? text : text.substring(0, end.start + 1);
-}
-
-String _elapsed(String startedAt) {
-  final time = DateTime.tryParse(startedAt);
-  if (time == null) return '';
-  final delta = DateTime.now().toUtc().difference(time.toUtc());
-  if (delta.inSeconds < 60) return '${delta.inSeconds.clamp(0, 59)}s';
-  if (delta.inMinutes < 60) return '${delta.inMinutes}m';
-  return '${delta.inHours}h ${delta.inMinutes % 60}m';
-}
-
-/// The 14px status mark leading a board row; the run ring turns unless
-/// motion is reduced.
-class _LaneMark extends StatefulWidget {
-  final _Mark mark;
-  final Color color;
-  const _LaneMark({required this.mark, required this.color});
-
-  @override
-  State<_LaneMark> createState() => _LaneMarkState();
-}
-
-class _LaneMarkState extends State<_LaneMark> {
-  final _spin = AmbientLoop(const Duration(milliseconds: 1000));
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _spin.bind(context);
-    _sync();
-  }
-
-  @override
-  void didUpdateWidget(covariant _LaneMark oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _sync();
-  }
-
-  void _sync() {
-    if (widget.mark == _Mark.run && !reduceMotion(context)) {
-      _spin.start();
-    } else {
-      _spin.stop(at: 0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _spin.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final paint = CustomPaint(
-      size: const Size.square(14),
-      painter: _MarkPainter(widget.mark, widget.color),
-    );
-    return SizedBox.square(
-      dimension: 14,
-      child: widget.mark == _Mark.run
-          ? RepaintBoundary(
-              child: RotationTransition(turns: _spin, child: paint))
-          : paint,
-    );
-  }
-}
-
-class _MarkPainter extends CustomPainter {
-  const _MarkPainter(this.mark, this.color);
-  final _Mark mark;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final c = size.center(Offset.zero);
-    final stroke = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    switch (mark) {
-      case _Mark.run:
-        final rect = (Offset.zero & size).deflate(1.5);
-        canvas.drawArc(rect, 0, 6.2832, false,
-            stroke
-              ..strokeWidth = 2
-              ..color = color.withValues(alpha: 0.2));
-        canvas.drawArc(rect, -1.5708, 4.712, false, stroke..color = color);
-      case _Mark.ok:
-        canvas.drawCircle(c, size.width / 2, Paint()..color = color);
-        final tick = Path()
-          ..moveTo(size.width * 0.29, size.height * 0.52)
-          ..lineTo(size.width * 0.44, size.height * 0.67)
-          ..lineTo(size.width * 0.72, size.height * 0.37);
-        canvas.drawPath(
-            tick,
-            stroke
-              ..strokeWidth = 1.6
-              ..strokeJoin = StrokeJoin.round
-              ..color = AppColors.bg);
-      case _Mark.danger:
-        canvas.drawCircle(c, size.width / 2 - 1, Paint()..color = color);
-      case _Mark.faint:
-        canvas.drawCircle(
-            c,
-            size.width / 2 - 1,
-            stroke
-              ..strokeWidth = 1.5
-              ..color = AppColors.fg4);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_MarkPainter old) =>
-      old.mark != mark || old.color != color;
 }
 
 List<Widget> laneSections(List<LaneInfo> lanes,

@@ -37,6 +37,15 @@ void main() {
     expect(stepChip(s)!.tone, StepChipTone.danger);
   });
 
+  test('grep-filtered flutter output fails the group header too', () {
+    final s = bash(
+        'cd app; CPU_SLOT_WAIT=3600 cpu-slot flutter test test/a_test.dart 2>&1 | grep -E "Expected|All tests"',
+        stdout: 'Expected: exactly one\n00:02 +2 -3: recent row [E]\n');
+    expect(verifyOutputFailed(s), isTrue);
+    expect(describeWork([s]).failed, isTrue);
+    expect(describeWork([s]).outcome, isNot('passed'));
+  });
+
   test('a clean run still passes', () {
     final s = bash('flutter test', stdout: '00:03 +12: All tests passed!\n');
     expect(verifyOutputFailed(s), isFalse);
