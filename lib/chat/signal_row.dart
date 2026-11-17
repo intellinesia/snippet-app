@@ -162,9 +162,9 @@ class SignalRow extends StatelessWidget {
       ],
     );
     final padded = Padding(
-      padding: EdgeInsets.symmetric(vertical: S.s4),
+      padding: EdgeInsets.symmetric(vertical: kMobile ? S.s4 : S.s2),
       child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: kMobile ? 28 : 24),
+        constraints: BoxConstraints(minHeight: kMobile ? 28 : 20),
         child: center ? Center(child: row) : row,
       ),
     );

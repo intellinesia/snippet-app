@@ -409,7 +409,7 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
       ..sort((a, b) => (b.completedAt ?? b.updatedAt)
           .compareTo(a.completedAt ?? a.updatedAt));
     if (done.isEmpty) return null;
-    return _Section('Came back', meta: '${done.length}', children: [
+    return _Section('Completed', meta: '${done.length}', children: [
       for (final t in done.take(3))
         _Row(
           icon: 'check',

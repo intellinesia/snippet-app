@@ -9,6 +9,7 @@ import '../tool_activity.dart';
 import 'file_changes.dart' show sessionChangeSteps;
 import 'lanes.dart' show openLaneView;
 import '../mochi.dart' show AgentMochi;
+import '../platform.dart';
 import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
@@ -704,16 +705,37 @@ class _SessionRailState extends State<SessionRail> {
       if (row.isNotEmpty) row.add(const SizedBox(width: 2));
       row.add(cell(c.$1, c.$2, (_) => c.$3?.call(), on: _openAction == c.$4));
     }
-    if (more.isNotEmpty || w.onDelete != null) {
+    // Desktop has room for the extras as a second row; delete lives in the
+    // sidebar and tab menus there.
+    final row2 = <Widget>[];
+    if (!kMobile) {
+      // PRs already have a home in the sidebar on desktop.
+      for (final m in more.where((m) => m.$2 != 'Pull requests')) {
+        if (row2.isNotEmpty) row2.add(const SizedBox(width: 2));
+        // Short names fit five cells; they match the sidebar's words.
+        final short = switch (m.$2) {
+          'Shared files' => 'Shared',
+          'Processes' => 'Jobs',
+          'Scheduled' => 'Wakes',
+          final l => l,
+        };
+        row2.add(cell(m.$1, short, (_) => m.$3?.call()));
+      }
+    } else if (more.isNotEmpty || w.onDelete != null) {
       if (row.isNotEmpty) row.add(const SizedBox(width: 2));
       row.add(cell('more-horizontal', 'More', (ctx) => _openMore(ctx, more)));
     }
+    if (row.isEmpty && row2.isEmpty) return const SizedBox.shrink();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(R.of(12)),
-          child: Row(children: row),
+          child: Column(children: [
+            if (row.isNotEmpty) Row(children: row),
+            if (row.isNotEmpty && row2.isNotEmpty) const SizedBox(height: 2),
+            if (row2.isNotEmpty) Row(children: row2),
+          ]),
         ),
       ),
       AnimatedSize(

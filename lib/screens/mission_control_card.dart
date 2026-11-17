@@ -225,7 +225,7 @@ class _MissionControlCardState extends State<MissionControlCard> {
                     stats.needsYou > 0 ? AppColors.run : AppColors.fg1),
                 if (stats.cameBack != null) ...[
                   const SizedBox(width: 2),
-                  _statCell('came back', stats.cameBack!, AppColors.fg1,
+                  _statCell('completed', stats.cameBack!, AppColors.fg1,
                       tip: 'Tasks finished in the last 7 days'),
                 ],
               ]),

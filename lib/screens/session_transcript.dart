@@ -1275,7 +1275,7 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
 bool _isRestartNote(String s) => s.trim().startsWith('Snippet restarted while');
 
 /// The gap between any two transcript items.
-double get transcriptGap => kMobile ? 12 : 14;
+double get transcriptGap => kMobile ? 12 : 10;
 
 DateTime? _eventTime(Map e) {
   final v = e['at'] ?? e['created_at'];

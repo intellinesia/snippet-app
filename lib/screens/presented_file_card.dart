@@ -7,6 +7,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'file_viewer.dart';
+import '../settings_form.dart' show Grouped;
 
 /// A file the agent handed over with `present_file`: a card on a phone and a
 /// compact line on desktop, opening the file, with a download button.
@@ -121,30 +122,70 @@ class PresentedFileCard extends StatelessWidget {
           ? MediaRow(
               icon: _icon,
               name: _name,
-              detail:
-                  [_kindLabel, if (caption.isNotEmpty) caption].join(' · '),
+              detail: [_kindLabel, if (caption.isNotEmpty) caption].join(' · '),
               grouped: true,
               onTap: () => _open(context),
               trailing: _downloadButton(context),
             )
-          : ChatCard(children: [
-              ChatCardFooter(
-                title: _name,
-                meta: [_kindLabel, if (caption.isNotEmpty) caption].join(' · '),
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                      color: AppColors.surface3,
-                      borderRadius: BorderRadius.circular(R.card)),
-                  child: AppIcon(_icon, size: 20, color: AppColors.fg2),
-                ),
-                trailing: _downloadButton(context),
-                divider: false,
-                onTap: () => _open(context),
+          : !kMobile
+              ? _deskRow(context)
+              : ChatCard(children: [
+                  ChatCardFooter(
+                    title: _name,
+                    meta: [_kindLabel, if (caption.isNotEmpty) caption]
+                        .join(' · '),
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                          color: AppColors.surface3,
+                          borderRadius: BorderRadius.circular(R.card)),
+                      child: AppIcon(_icon, size: 20, color: AppColors.fg2),
+                    ),
+                    trailing: _downloadButton(context),
+                    divider: false,
+                    onTap: () => _open(context),
+                  ),
+                ]),
+    );
+  }
+
+  /// Desktop: one 44px row in the tool rows' language, not a big card.
+  Widget _deskRow(BuildContext context) {
+    final meta = [_kindLabel, if (caption.isNotEmpty) caption].join(' · ');
+    final radius = BorderRadius.circular(R.of(13));
+    return Material(
+      color: Grouped.row,
+      borderRadius: radius,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _open(context),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: EdgeInsets.fromLTRB(Grouped.padX, 6, 8, 6),
+          child: Row(children: [
+            AppIcon(_icon, size: 16, color: AppColors.fg2),
+            SizedBox(width: Grouped.iconGap),
+            Expanded(
+              child: Text.rich(
+                TextSpan(children: [
+                  TextSpan(text: _name, style: TextStyle(color: AppColors.fg1)),
+                  if (meta.isNotEmpty)
+                    TextSpan(
+                        text: '  $meta',
+                        style: TextStyle(color: AppColors.fg4)),
+                ]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(13, height: 20 / 13),
               ),
-            ]),
+            ),
+            SizedBox(width: S.s8),
+            _downloadButton(context),
+          ]),
+        ),
+      ),
     );
   }
 
