@@ -28,23 +28,21 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     }
   }
 
-  Future<void> _sendMessage() async {
-    if (_input.text.trim().isNotEmpty || _attachments.isNotEmpty) {
-      HapticFeedback.lightImpact();
-    }
+  /// [steer] sends into the running turn now instead of queueing after it.
+  Future<void> _sendMessage({bool steer = false}) async {
     // The composer can be triggered by both the send button and keyboard submit;
     // serialize the entire async path so a rapid double tap cannot create two
     // distinct nonces and two server turns.
     if (_sendingMessage) return;
     _sendingMessage = true;
     try {
-      await _sendMessageOnce();
+      await _sendMessageOnce(steer: steer);
     } finally {
       _sendingMessage = false;
     }
   }
 
-  Future<void> _sendMessageOnce() async {
+  Future<void> _sendMessageOnce({bool steer = false}) async {
     // Audio can be sent directly from the composer: stop the live take, upload
     // it through the normal attachment path, then continue with the same send.
     if (_sendingAudio) return;
@@ -83,7 +81,15 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     final msg = markers.isEmpty ? t : (t.isEmpty ? markers : '$t\n\n$markers');
     final nonce = _nextNonce();
     _setState(() {
-      if (running) {
+      if (running && steer) {
+        // Steer rides the queue: hold it, then pull it into the turn at once.
+        final item = QueuedInput(id: _nextNonce(), text: msg);
+        _queueHidden.add(item.id);
+        _send({'kind': 'queue', 'value': item, 'nonce': nonce});
+        final steerNonce = _nextNonce();
+        _trackPending(msg, steerNonce);
+        _send({'kind': 'steer_queued', 'value': item.id, 'nonce': steerNonce});
+      } else if (running) {
         // Hold on the daemon so TUI/app/desktop all see the same queue.
         final item = QueuedInput(id: _nextNonce(), text: msg);
         _optimisticQueuedBase[item.id] =
@@ -241,12 +247,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   void _cancelQueuedAt(int visible) {
     if (visible < 0 || visible >= _heldQueue.length) return;
     final item = _heldQueue[visible];
-    _setState(() {
-      _hideQueuedAt(visible);
-      if (_heldQueue.length <= 1) {
-        _hoveredQueuedIndex = null;
-      }
-    });
+    _setState(() => _hideQueuedAt(visible));
     _send({'kind': 'unqueue', 'value': item.id, 'nonce': _nextNonce()});
   }
 
@@ -275,10 +276,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   }
 
   void _cancelAllQueued() {
-    _setState(() {
-      _queueHidden.addAll(_heldQueue.map((item) => item.id));
-      _hoveredQueuedIndex = null;
-    });
+    _setState(() => _queueHidden.addAll(_heldQueue.map((item) => item.id)));
     _send({'kind': 'drop_queued'});
   }
 
@@ -291,9 +289,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       _queueHidden.add(item.id);
       _optimisticQueued.removeWhere((queued) => queued.id == item.id);
       _trackPending(item.text, nonce);
-      if (_heldQueue.length <= 1) {
-        _hoveredQueuedIndex = null;
-      }
     });
     _send({'kind': 'steer_queued', 'value': item.id, 'nonce': nonce});
     _armAckWatchdog();
@@ -309,54 +304,16 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   Widget _queuedCard() {
     final queue = _heldQueue;
     if (queue.isEmpty) return const SizedBox.shrink();
-    final count = queue.length;
-
-    Widget textAction(String label, VoidCallback onTap, Color color) =>
-        GestureDetector(
-          onTap: onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding:
-                EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
-            child: Text(label, style: sans(12, color: color)),
-          ),
-        );
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: S.s6),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (count > 1)
-            Padding(
-              padding: EdgeInsets.only(bottom: S.s4),
-              child: Row(children: [
-                SizedBox(width: S.s6),
-                Text('$count queued', style: sans(12, color: AppColors.fg4)),
-                const Spacer(),
-                textAction('Clear', _cancelAllQueued, AppColors.fg4),
-                textAction('Send all', _steerAllQueued, AppColors.accent),
-              ]),
-            ),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 156),
-            child: ListView.separated(
-              shrinkWrap: true,
-              padding: EdgeInsets.zero,
-              itemCount: count,
-              separatorBuilder: (_, __) => SizedBox(height: S.s4),
-              itemBuilder: (_, qi) => _queuedItemRow(qi, queue[qi]),
-            ),
-          ),
-        ],
-      ),
+    return ComposerQueueList(
+      entries: [
+        for (var i = 0; i < queue.length; i++) _queuedEntry(i, queue[i]),
+      ],
+      onClear: _cancelAllQueued,
+      onSendAll: _steerAllQueued,
     );
   }
 
-  Widget _queuedItemRow(int qi, QueuedInput item) {
-    final isHovered = _hoveredQueuedIndex == qi;
-    final showActions = kMobile || isHovered;
+  ComposerQueueEntry _queuedEntry(int qi, QueuedInput item) {
     final text = _queuedText(item.text);
     final counts = _queuedAttachCounts(item.text);
     final images = _queuedImagePaths(item.text);
@@ -370,106 +327,65 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                 : 'Attachment');
     final dpr = MediaQuery.devicePixelRatioOf(context);
     Widget thumb(String path) => Container(
-          width: 22,
-          height: 22,
-          margin: EdgeInsets.only(right: S.of(3)),
+          width: 28,
+          height: 28,
+          margin: EdgeInsets.only(right: S.s4),
           decoration: BoxDecoration(
             color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(R.of(5)),
-            border: Border.all(color: AppColors.line),
+            borderRadius: BorderRadius.circular(R.of(6)),
           ),
           clipBehavior: Clip.antiAlias,
           child: Image(
             image: ResizeImage(widget.client.imageProvider(path),
-                width: (22 * dpr).round()),
+                width: (28 * dpr).round()),
             fit: BoxFit.cover,
             gaplessPlayback: true,
             errorBuilder: (_, __, ___) =>
-                Center(child: AppIcon('image', size: 11, color: AppColors.fg4)),
+                Center(child: AppIcon('image', size: 13, color: AppColors.fg4)),
           ),
         );
-
-    Widget iconAction(String icon, String tip, VoidCallback onTap,
-            {Color? color}) =>
-        Tooltip(
-          message: tip,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: SizedBox.square(
-              dimension: kMobile ? 36 : 24,
-              child: Center(
-                  child:
-                      AppIcon(icon, size: 13, color: color ?? AppColors.fg4)),
-            ),
-          ),
-        );
-
-    return MouseRegion(
-      onEnter: (_) {
-        if (_hoveredQueuedIndex != qi) {
-          _setState(() => _hoveredQueuedIndex = qi);
-        }
-      },
-      onExit: (_) {
-        if (_hoveredQueuedIndex == qi) {
-          _setState(() => _hoveredQueuedIndex = null);
-        }
-      },
-      child: AnimatedContainer(
-        duration: Motion.quick,
-        height: kMobile ? 46 : 26,
-        padding: EdgeInsets.only(
-            left: images.isNotEmpty ? S.s6 : S.s12, right: S.s4),
-        decoration: BoxDecoration(
-          color: isHovered ? AppColors.raised : AppColors.surface1,
-          borderRadius: BorderRadius.circular(kMobile ? R.card : R.pill),
-          border: Border.all(color: AppColors.line),
-        ),
-        child: Row(children: [
-          if (images.isEmpty && kMobile)
-            Text('Queued', style: sans(12, color: AppColors.fg3))
-          else if (images.isEmpty)
-            AppIcon('clock', size: 12, color: AppColors.fg4)
-          else ...[
-            for (final path in images.take(3)) thumb(path),
-            if (images.length > 3)
-              Text('+${images.length - 3}',
-                  style: sans(11, tabular: true, color: AppColors.fg4)),
-          ],
-          SizedBox(width: S.s8),
-          Expanded(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style:
-                  sans(13, color: text.isEmpty ? AppColors.fg3 : AppColors.fg2),
-            ),
-          ),
-          if (others > 0) ...[
-            SizedBox(width: S.s6),
-            AttachmentPill(audio: counts.$1, images: 0, files: counts.$3),
-          ],
-          AnimatedOpacity(
-            opacity: showActions ? 1 : 0,
-            duration: Motion.quick,
-            child: IgnorePointer(
-              ignoring: !showActions,
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                iconAction('edit', 'Edit', () => _editQueuedAt(qi)),
-                iconAction('x', 'Remove', () => _cancelQueuedAt(qi)),
-              ]),
-            ),
-          ),
-          if (_state?.status == 'running' && !kMobile)
-            iconAction('stop', 'Interrupt and send',
-                () => _interruptAndSendQueuedAt(qi)),
-          iconAction('arrow-up', 'Send now', () => _steerQueuedAt(qi),
-              color: AppColors.accent),
-        ]),
-      ),
+    return ComposerQueueEntry(
+      label: label,
+      muted: text.isEmpty,
+      lead: images.isEmpty
+          ? null
+          : Row(mainAxisSize: MainAxisSize.min, children: [
+              for (final path in images.take(3)) thumb(path),
+              if (images.length > 3)
+                Text('+${images.length - 3}',
+                    style: sans(12, tabular: true, color: AppColors.fg4)),
+            ]),
+      extra: others > 0
+          ? AttachmentPill(audio: counts.$1, images: 0, files: counts.$3)
+          : null,
+      onSend: () => _steerQueuedAt(qi),
+      onMore: (anchor) => _queuedMore(qi, anchor),
     );
+  }
+
+  Future<void> _queuedMore(int qi, BuildContext anchor) async {
+    final running = _state?.status == 'running';
+    final pick = await showAppMenu<String>(
+      context,
+      anchor: anchor,
+      alignEnd: true,
+      items: [
+        appMenuItem(value: 'edit', icon: 'edit', label: 'Edit'),
+        if (running)
+          appMenuItem(
+              value: 'interrupt', icon: 'stop', label: 'Interrupt and send'),
+        appMenuItem(value: 'remove', icon: 'x', label: 'Remove', danger: true),
+      ],
+    );
+    if (!mounted) return;
+    switch (pick) {
+      case 'edit':
+        _editQueuedAt(qi);
+      case 'interrupt':
+        _interruptAndSendQueuedAt(qi);
+      case 'remove':
+        _cancelQueuedAt(qi);
+    }
   }
 
   // Clean text for a held/pending message (markers stripped). Attachments
@@ -860,33 +776,56 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             maxLines: 8,
             cursorColor: AppColors.accent,
             onSubmitted: (_) => _sendMessage(),
-            style: TS.body(AppColors.fg1),
-            decoration: ComposerCard.decoration(hint),
+            style: ComposerCard.fieldStyle,
+            decoration: ComposerCard.decoration(hint,
+                style: ComposerCard.fieldStyle),
           ),
         ),
         attach: _composerPlus(),
-        trailing: _inboxAgentId(widget.sessionId) == null ? _modelChip : null,
-        mic: kCanRecord
-            ? ComposerIconButton(_isRecording ? 'mic-off' : 'mic',
-                tooltip: 'Record',
-                onTap: _onMicTap,
-                color: _isRecording ? AppColors.danger : null)
+        // The phone tray carries the model; the desktop pill keeps it inline.
+        trailing: !(kMobile && _showsQuickActions) &&
+                _inboxAgentId(widget.sessionId) == null
+            ? _modelChip
             : null,
         send: ValueListenableBuilder<TextEditingValue>(
           valueListenable: _input,
-          builder: (_, __, ___) {
-            final queue = running && _canSend;
-            final stop = running && !queue;
-            return ComposerSendButton(
-                enabled: stop || _canSend,
-                stop: stop,
-                onTap: stop
-                    ? () => _send({'kind': 'interrupt'})
-                    : (_canSend ? _sendMessage : null));
-          },
+          builder: (_, __, ___) => _composerAction(running),
         ),
       ),
     );
+  }
+
+  bool get _hasDraft =>
+      _input.text.trim().isNotEmpty || _attachments.isNotEmpty;
+
+  /// The pill's trailing control: one button that is mic, send or stop, with
+  /// a bare mic beside stop so voice stays one tap away while the agent runs.
+  Widget _composerAction(bool running) {
+    final draft = _hasDraft;
+    final action = draft
+        ? ComposerAction.send
+        : running
+            ? ComposerAction.stop
+            : kCanRecord
+                ? ComposerAction.mic
+                : ComposerAction.send;
+    final morph = ComposerMorphButton(
+      action: action,
+      enabled: action != ComposerAction.send || _canSend,
+      busy: _sendingAudio,
+      onTap: switch (action) {
+        ComposerAction.stop => () => _send({'kind': 'interrupt'}),
+        ComposerAction.mic => _onMicTap,
+        ComposerAction.send => _canSend ? () => _sendMessage() : null,
+      },
+      onLongPress: running && _canSend ? () => _sendMessage(steer: true) : null,
+    );
+    if (!(running && !draft && kCanRecord)) return morph;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      ComposerBareButton('mic', label: 'Record', onTap: _onMicTap),
+      const SizedBox(width: 4),
+      morph,
+    ]);
   }
 
   Widget _inputBar(bool running, {Widget? top}) {
@@ -918,7 +857,9 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                     ListenableBuilder(
                       listenable: Listenable.merge([_tray, _input]),
                       builder: (_, __) => ComposerTray(
-                          controller: _tray, child: _trayPage(running)),
+                          controller: _tray,
+                          bleed: M.gutter,
+                          child: _trayPage(running)),
                     ),
                   if (_heldQueue.isNotEmpty) _queuedCard(),
                   if (_attachments.isNotEmpty) _attachmentBar(),
@@ -926,6 +867,18 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                     _mentionList(),
                   if (!kMobile) _contextBar(),
                   if (top != null) top,
+                  if (running &&
+                      !_isRecording &&
+                      _recordingPath == null)
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _input,
+                      builder: (_, __, ___) => _hasDraft
+                          ? ComposerRunHint(
+                              onSteer: _canSend
+                                  ? () => _sendMessage(steer: true)
+                                  : null)
+                          : const SizedBox.shrink(),
+                    ),
                   Swap(
                     stateKey: (_isRecording || _recordingPath != null)
                         ? 'recorder'
@@ -960,22 +913,29 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     return TapRegion(
       groupId: _tray,
       child: ListenableBuilder(
-        listenable: _tray,
-        builder: (context, _) => Semantics(
-          label: _tray.open ? 'Close actions' : 'Actions',
-          expanded: _tray.open,
-          child: AnimatedRotation(
-            turns: _tray.open ? 0.125 : 0,
-            duration: reduceMotion(context)
-                ? Duration.zero
-                : const Duration(milliseconds: 220),
-            curve: Motion.enter,
-            child: ComposerIconButton('plus',
-                tooltip: 'Actions',
-                onTap: _tray.toggle,
-                color: _tray.open ? AppColors.fg1 : null),
-          ),
-        ),
+        listenable: Listenable.merge([_tray, _tray.progress]),
+        builder: (context, _) {
+          final k = _tray.progress.value;
+          final t = k.clamp(0.0, 1.0);
+          return Semantics(
+            label: _tray.open ? 'Close actions' : 'Actions',
+            expanded: _tray.open,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: C7.rowHi.withValues(alpha: t),
+              ),
+              child: AnimatedRotation(
+                turns: 0.125 * k,
+                duration: Duration.zero,
+                child: ComposerIconButton('plus',
+                    tooltip: 'Actions',
+                    onTap: _tray.toggle,
+                    color: Color.lerp(AppColors.fg2, AppColors.fg1, t)),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1040,43 +1000,65 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       fn();
     }
 
-    final rows = <Widget>[
-        if (running && _canSend)
+    final agent = (_meAgentName ?? '').trim();
+    final heading = [if (agent.isNotEmpty) agent, if (_title.isNotEmpty) _title]
+        .join(' \u00b7 ');
+    final groups = <Widget>[
+      if (running && _canSend)
+        ComposerGroup(children: [
           ComposerTrayRow(
               icon: 'stop',
               label: 'Interrupt',
+              subtitle: 'Stop this step, then send',
               onTap: () => run(() => _send({'kind': 'interrupt'}))),
+        ]),
+      ComposerGroup(children: [
         ComposerTrayRow(
-            icon: 'paperclip',
-            label: 'Attach',
-            onTap: () => run(_onAttachTap)),
+            icon: 'camera', label: 'Camera', onTap: () => run(_pickCamera)),
+        ComposerTrayRow(
+            icon: 'image', label: 'Photos', onTap: () => run(_pickPhotos)),
+        ComposerTrayRow(
+            icon: 'paperclip', label: 'Files', onTap: () => run(_pickFiles)),
+      ]),
+      ComposerGroup(children: [
         ComposerTrayRow(
             icon: 'arrow-right',
             label: 'Hand off',
-            detail: 'to another agent',
+            subtitle: 'To another agent, after this turn',
+            chevron: true,
             onTap: () => _tray.show('handoff')),
         ComposerTrayRow(
             icon: 'git-branch',
             label: 'Fork from here',
+            subtitle: 'A new session; this one stays',
+            chevron: true,
             onTap: () => _tray.show('fork')),
         if (lanes.isNotEmpty)
           ComposerTrayRow(
               icon: 'layers',
               label: 'Lanes',
-              detail: live > 0 ? '$live running' : null,
+              value: live > 0 ? '$live running' : null,
+              chevron: true,
               onTap: () => run(_showLanes)),
+      ]),
+      ComposerGroup(children: [
+        ComposerTrayRow(
+            icon: _modelProvider == null ? 'cpu' : 'provider:$_modelProvider',
+            label: 'Model',
+            value: _modelLabel ?? 'Auto',
+            chevron: true,
+            onTap: () => run(() => _switchModel(context))),
+      ]),
     ];
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (var i = 0; i < rows.length; i++) ...[
-          if (i > 0)
-            Container(
-                height: 1,
-                margin: EdgeInsets.symmetric(horizontal: S.of(10)),
-                color: AppColors.border),
-          rows[i],
+        if (heading.isNotEmpty)
+          ComposerTrayItem(index: 0, child: ComposerTrayHeading(heading)),
+        for (var i = 0; i < groups.length; i++) ...[
+          if (i > 0) SizedBox(height: S.s12),
+          ComposerTrayItem(index: i + 1, child: groups[i]),
         ],
       ],
     );

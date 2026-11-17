@@ -34,7 +34,6 @@ import 'agent_card.dart' show agentRowTime;
 import 'agent_questions_card.dart' show questionAnswerSystemLine;
 import 'agent_thread_cards.dart' show agentThreadEventCard;
 import 'tasks/tasks_panel.dart' show openTasksPage, openTaskCountFor;
-import 'mobile_session_home.dart' show DotField;
 import '../chat_scene.dart' show SceneBackdrop;
 
 /// An `@token` in a group message: the boundary keeps `mail@fable` from
@@ -1243,15 +1242,13 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     return null;
   }
 
-  // Scene and dots sit outside the SafeArea so the header frost can reach
+  // The scene sits outside the SafeArea so the header frost can reach
   // up behind the status bar, as on the session screen.
   Widget _chrome(Widget body, bool hideChrome) => kMobile
       ? SceneBackdrop(
-          child: DotField.chat(
-            child: StatusInset(
-                top: hideChrome ? 0 : MediaQuery.paddingOf(context).top,
-                child: body),
-          ),
+          child: StatusInset(
+              top: hideChrome ? 0 : MediaQuery.paddingOf(context).top,
+              child: body),
         )
       : body;
 

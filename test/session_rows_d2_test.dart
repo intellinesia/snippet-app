@@ -220,8 +220,8 @@ void main() {
       ),
     ));
 
-    // Plan progress moved to the home hero; the row only shows working dots.
-    expect(find.text('plan 3/5 · 14m'), findsNothing);
+    // A busy row shows its plan step under the metadata, above the PR line.
+    expect(find.text('Step 3 of 5 · Wire PR cache'), findsOneWidget);
     expect(find.text('PR #280 · checks passing'), findsOneWidget);
     expect(find.text('wakes Mon 08:00'), findsOneWidget);
     } finally {

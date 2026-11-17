@@ -2,8 +2,12 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
+import 'package:flutter/rendering.dart';
 
 import 'chat_scene.dart';
+import 'gesture_physics.dart';
+import 'morph_sheet.dart' show AppSheetRoute;
 import 'platform.dart';
 import 'theme.dart';
 
@@ -33,11 +37,15 @@ class AppPageRoute<T> extends PageRoute<T> {
     super.fullscreenDialog,
     super.allowSnapshotting = true,
     super.barrierDismissible = false,
+    this.backSwipe = true,
   }) {
     assert(opaque);
   }
 
   final WidgetBuilder builder;
+
+  /// Off for screens that must not be dismissed by a drag.
+  final bool backSwipe;
 
   @override
   final bool maintainState;
@@ -45,6 +53,28 @@ class AppPageRoute<T> extends PageRoute<T> {
   static const Duration _phoneForward = Duration(milliseconds: 340);
   static const Duration _phoneReverse = Duration(milliseconds: 260);
   static const Duration _reducedDuration = Duration(milliseconds: 150);
+
+  /// Push, pop and back-swipe settle on phones (zeta 0.95, about 380ms).
+  static const SpringDescription pageSpring =
+      SpringDescription(mass: 1, stiffness: 380, damping: 37);
+
+  static Simulation _pageSim(double from, double to, double velocity) =>
+      SpringSimulation(pageSpring, from, to, velocity,
+          snapToEnd: true,
+          tolerance: const Tolerance(distance: 0.001, velocity: 0.01));
+
+  bool get _springs => kMobile && !_reducedMotion;
+
+  // Finger velocity handed from a committed back swipe to the pop spring.
+  double _popVelocity = 0;
+
+  @override
+  TickerFuture didPush() {
+    final linear = super.didPush();
+    final c = controller;
+    if (!_springs || c == null) return linear;
+    return c.animateWith(_pageSim(c.value, 1, 0));
+  }
 
   bool get _reducedMotion {
     final ctx = navigator?.context;
@@ -70,7 +100,14 @@ class AppPageRoute<T> extends PageRoute<T> {
   @override
   bool didPop(T? result) {
     controller?.reverseDuration = reverseTransitionDuration;
-    return super.didPop(result);
+    final popped = super.didPop(result);
+    final c = controller;
+    final v = _popVelocity;
+    _popVelocity = 0;
+    if (_springs && c != null && !c.isDismissed) {
+      c.animateBackWith(_pageSim(c.value, 0, v));
+    }
+    return popped;
   }
 
   @override
@@ -95,10 +132,9 @@ class AppPageRoute<T> extends PageRoute<T> {
   ) {
     if (child == null) return null;
     if (reduceMotion(context)) return child;
-    final linear = Navigator.maybeOf(context)?.userGestureInProgress ?? false;
     return _AppOutgoingTransition(
       secondaryAnimation: secondaryAnimation,
-      linear: linear,
+      linear: true,
       child: child,
     );
   }
@@ -106,6 +142,8 @@ class AppPageRoute<T> extends PageRoute<T> {
   @override
   bool canTransitionTo(TransitionRoute<dynamic> nextRoute) {
     if (nextRoute is PageRoute && nextRoute.fullscreenDialog) return false;
+    // The sheet scales this page back through its delegated transition.
+    if (nextRoute is AppSheetRoute) return kMobile;
     if (!nextRoute.opaque) return false;
     if (!kMobile) {
       return nextRoute is AppPageRoute ||
@@ -159,27 +197,28 @@ class AppPageRoute<T> extends PageRoute<T> {
             child,
           );
     }
-    final gesturedChild = _EdgeBackDetector<T>(
-      enabledCallback: () => popGestureEnabled,
+    final gesturedChild = _BackSwipeDetector<T>(
+      enabledCallback: () => popGestureEnabled && backSwipe,
       onStartPopGesture: () => _BackGestureController<T>(
         navigator: navigator!,
         controller: controller!,
         getIsActive: () => isActive,
         getIsCurrent: () => isCurrent,
+        springs: () => _springs,
+        setPopVelocity: (v) => _popVelocity = v,
       ),
       child: child,
     );
     if (reduceMotion(context)) {
       return FadeTransition(opacity: animation, child: gesturedChild);
     }
-    final outgoingLinear =
-        Navigator.maybeOf(context)?.userGestureInProgress ?? false;
+    // The spring is the curve; easing on top would distort it.
     return _AppOutgoingTransition(
       secondaryAnimation: secondaryAnimation,
-      linear: outgoingLinear,
+      linear: true,
       child: _AppIncomingTransition(
         primaryAnimation: animation,
-        linear: popGestureInProgress,
+        linear: true,
         child: gesturedChild,
       ),
     );
@@ -270,10 +309,10 @@ class _AppOutgoingTransition extends StatefulWidget {
 class _AppOutgoingTransitionState extends State<_AppOutgoingTransition> {
   static final Animatable<Offset> _parallaxTween = Tween<Offset>(
     begin: Offset.zero,
-    end: const Offset(-0.3, 0.0),
+    end: const Offset(-0.25, 0.0),
   );
   static final Animatable<double> _scrimTween =
-      Tween<double>(begin: 0.0, end: 0.18);
+      Tween<double>(begin: 0.0, end: 0.24);
 
   CurvedAnimation? _curve;
   late Animation<Offset> _position;
@@ -338,12 +377,74 @@ class _AppOutgoingTransitionState extends State<_AppOutgoingTransition> {
 }
 
 const double _kBackEdgeWidth = 20.0;
-const double _kMinFlingVelocity = 1.0;
-const double _kDismissFraction = 1.0 / 3.0;
-const Duration _kSettleDuration = Duration(milliseconds: 260);
+const double _kBackSlop = 8.0;
+const double _kBackAxisRatio = 1.2;
+const double _kProjectSeconds = 0.2;
+const double _kFlickBack = 200.0;
 
-class _EdgeBackDetector<T> extends StatefulWidget {
-  const _EdgeBackDetector({
+/// Wrap a horizontal gesture surface (swipe actions, sliders) so a page back
+/// swipe that starts on it leaves it alone. Scrollables and horizontal
+/// GestureDetectors already yield without this.
+class BackSwipeYield extends SingleChildRenderObjectWidget {
+  const BackSwipeYield({super.key, this.enabled = true, super.child});
+
+  final bool enabled;
+
+  @override
+  RenderBackSwipeYield createRenderObject(BuildContext context) =>
+      RenderBackSwipeYield(enabled);
+
+  @override
+  void updateRenderObject(
+          BuildContext context, RenderBackSwipeYield renderObject) =>
+      renderObject.enabled = enabled;
+}
+
+class RenderBackSwipeYield extends RenderProxyBox {
+  RenderBackSwipeYield(this.enabled);
+  bool enabled;
+
+  // Listed in the hit path even over empty space, without absorbing the hit.
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    final hit = super.hitTest(result, position: position);
+    if (!hit && enabled && size.contains(position)) {
+      result.add(BoxHitTestEntry(this, position));
+    }
+    return hit;
+  }
+}
+
+/// Claims a rightward drag (leftward in RTL) once it travels 8px and is
+/// clearly horizontal, so vertical scrolling keeps every diagonal-ish drag.
+class _BackSwipeRecognizer extends HorizontalDragGestureRecognizer {
+  _BackSwipeRecognizer({super.debugOwner});
+
+  TextDirection direction = TextDirection.ltr;
+  Offset _travel = Offset.zero;
+
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    _travel = Offset.zero;
+    super.addAllowedPointer(event);
+  }
+
+  @override
+  void handleEvent(PointerEvent event) {
+    if (event is PointerMoveEvent) _travel += event.delta;
+    super.handleEvent(event);
+  }
+
+  @override
+  bool hasSufficientGlobalDistanceToAccept(
+      PointerDeviceKind pointerDeviceKind, double? deviceTouchSlop) {
+    final dx = direction == TextDirection.rtl ? -_travel.dx : _travel.dx;
+    return dx > _kBackSlop && dx > _kBackAxisRatio * _travel.dy.abs();
+  }
+}
+
+class _BackSwipeDetector<T> extends StatefulWidget {
+  const _BackSwipeDetector({
     required this.enabledCallback,
     required this.onStartPopGesture,
     required this.child,
@@ -354,17 +455,17 @@ class _EdgeBackDetector<T> extends StatefulWidget {
   final Widget child;
 
   @override
-  State<_EdgeBackDetector<T>> createState() => _EdgeBackDetectorState<T>();
+  State<_BackSwipeDetector<T>> createState() => _BackSwipeDetectorState<T>();
 }
 
-class _EdgeBackDetectorState<T> extends State<_EdgeBackDetector<T>> {
+class _BackSwipeDetectorState<T> extends State<_BackSwipeDetector<T>> {
   _BackGestureController<T>? _controller;
-  late final HorizontalDragGestureRecognizer _recognizer;
+  late final _BackSwipeRecognizer _recognizer;
 
   @override
   void initState() {
     super.initState();
-    _recognizer = HorizontalDragGestureRecognizer(debugOwner: this)
+    _recognizer = _BackSwipeRecognizer(debugOwner: this)
       ..onStart = _handleDragStart
       ..onUpdate = _handleDragUpdate
       ..onEnd = _handleDragEnd
@@ -389,10 +490,38 @@ class _EdgeBackDetectorState<T> extends State<_EdgeBackDetector<T>> {
         TextDirection.ltr => value,
       };
 
-  void _handlePointerDown(PointerDownEvent event) {
-    if (widget.enabledCallback()) {
-      _recognizer.addPointer(event);
+  bool _inEdge(RenderBox box, Offset local) {
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final media = MediaQuery.paddingOf(context);
+    final strip = math.max(rtl ? media.right : media.left, _kBackEdgeWidth);
+    return rtl ? local.dx >= box.size.width - strip : local.dx <= strip;
+  }
+
+  // Anything under the finger that owns horizontal drags, or edits text, wins.
+  bool _yields(RenderBox box, Offset local) {
+    final result = BoxHitTestResult();
+    box.hitTest(result, position: local);
+    for (final entry in result.path) {
+      final t = entry.target;
+      if (t == box) break;
+      if (t is RenderEditable) return true;
+      if (t is RenderBackSwipeYield && t.enabled) return true;
+      if (t is RenderSemanticsGestureHandler &&
+          t.onHorizontalDragUpdate != null) {
+        return true;
+      }
     }
+    return false;
+  }
+
+  void _handlePointerDown(PointerDownEvent event) {
+    if (!widget.enabledCallback()) return;
+    final box = context.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return;
+    final local = box.globalToLocal(event.position);
+    if (!_inEdge(box, local) && _yields(box, local)) return;
+    _recognizer.direction = Directionality.of(context);
+    _recognizer.addPointer(event);
   }
 
   void _handleDragStart(DragStartDetails details) {
@@ -414,37 +543,21 @@ class _EdgeBackDetectorState<T> extends State<_EdgeBackDetector<T>> {
     if (c == null) return;
     c.dragEnd(
       w > 0 ? _toLogical(details.velocity.pixelsPerSecond.dx / w) : 0.0,
+      w,
     );
   }
 
   void _handleDragCancel() {
-    _controller?.dragEnd(0.0);
+    _controller?.dragEnd(0.0, context.size?.width ?? 0);
     _controller = null;
   }
 
   @override
-  Widget build(BuildContext context) {
-    final inset = switch (Directionality.of(context)) {
-      TextDirection.rtl => MediaQuery.paddingOf(context).right,
-      TextDirection.ltr => MediaQuery.paddingOf(context).left,
-    };
-    return Stack(
-      fit: StackFit.passthrough,
-      children: [
-        widget.child,
-        PositionedDirectional(
-          start: 0.0,
-          width: math.max(inset, _kBackEdgeWidth),
-          top: 0.0,
-          bottom: 0.0,
-          child: Listener(
-            onPointerDown: _handlePointerDown,
-            behavior: HitTestBehavior.translucent,
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => Listener(
+        onPointerDown: _handlePointerDown,
+        behavior: HitTestBehavior.translucent,
+        child: widget.child,
+      );
 }
 
 class _BackGestureController<T> {
@@ -453,6 +566,8 @@ class _BackGestureController<T> {
     required this.controller,
     required this.getIsActive,
     required this.getIsCurrent,
+    required this.springs,
+    required this.setPopVelocity,
   }) {
     navigator.didStartUserGesture();
   }
@@ -461,42 +576,44 @@ class _BackGestureController<T> {
   final NavigatorState navigator;
   final ValueGetter<bool> getIsActive;
   final ValueGetter<bool> getIsCurrent;
+  final ValueGetter<bool> springs;
+  final ValueSetter<double> setPopVelocity;
 
   void dragUpdate(double delta) {
     controller.value -= delta;
   }
 
-  void dragEnd(double velocity) {
+  /// [velocity] is in page widths per second, positive toward dismissal.
+  void dragEnd(double velocity, double width) {
     final isCurrent = getIsCurrent();
-    final bool animateForward;
+    final bool stay;
     if (!isCurrent) {
-      animateForward = getIsActive();
-    } else if (velocity.abs() >= _kMinFlingVelocity) {
-      animateForward = velocity <= 0;
+      stay = getIsActive();
     } else {
-      animateForward = controller.value >= (1.0 - _kDismissFraction);
+      final projected = controller.value - velocity * _kProjectSeconds;
+      stay = velocity * width <= -_kFlickBack || projected >= 0.5;
     }
 
-    if (animateForward) {
-      controller.animateTo(
-        1.0,
-        duration: _kSettleDuration,
-        curve: Curves.easeOutCubic,
-      );
+    if (stay) {
+      if (springs()) {
+        springTo(controller, 1, -velocity,
+            spring: AppPageRoute.pageSpring, epsilon: 0.001);
+      } else {
+        controller.animateTo(1, duration: AppPageRoute._reducedDuration);
+      }
     } else {
-      if (isCurrent) navigator.pop();
-      if (controller.isAnimating) {
-        controller.animateBack(
-          0.0,
-          duration: _kSettleDuration,
-          curve: Curves.easeOutCubic,
-        );
+      setPopVelocity(-velocity);
+      if (isCurrent) {
+        navigator.pop();
+      } else if (controller.isAnimating && springs()) {
+        controller.animateBackWith(AppPageRoute._pageSim(controller.value, 0, -velocity));
       }
     }
 
     if (controller.isAnimating) {
       late AnimationStatusListener listener;
-      listener = (_) {
+      listener = (status) {
+        if (status.isAnimating) return;
         navigator.didStopUserGesture();
         controller.removeStatusListener(listener);
       };
@@ -504,5 +621,65 @@ class _BackGestureController<T> {
     } else {
       navigator.didStopUserGesture();
     }
+  }
+}
+
+/// Shared element for a list row to its chat header: wrap the avatar and the
+/// title with the same two tags on both pages, e.g.
+/// `AppHero(tag: 'session-avatar-$id', child: avatar)` and
+/// `AppHero.title(tag: 'session-title-$id', from: 17, to: 15, child: Text(..))`.
+/// The flight is a straight line, rides the route spring, and scrubs with the
+/// back swipe.
+class AppHero extends StatelessWidget {
+  const AppHero({super.key, required this.tag, required this.child})
+      : _from = null,
+        _to = null;
+
+  /// A text hero whose font size flies from [from] to [to] and back.
+  const AppHero.title({
+    super.key,
+    required this.tag,
+    required this.child,
+    required double from,
+    required double to,
+  })  : _from = from,
+        _to = to;
+
+  final Object tag;
+  final Widget child;
+  final double? _from;
+  final double? _to;
+
+  static Tween<Rect?> _rect(Rect? begin, Rect? end) =>
+      RectTween(begin: begin, end: end);
+
+  @override
+  Widget build(BuildContext context) {
+    final from = _from, to = _to;
+    return Hero(
+      tag: tag,
+      transitionOnUserGestures: true,
+      createRectTween: _rect,
+      flightShuttleBuilder: from == null || to == null
+          ? null
+          : (context, animation, direction, fromCtx, toCtx) {
+              final push = direction == HeroFlightDirection.push;
+              final a = push ? from : to;
+              final b = push ? to : from;
+              return AnimatedBuilder(
+                animation: animation,
+                builder: (context, _) {
+                  final base = DefaultTextStyle.of(toCtx).style;
+                  return DefaultTextStyle(
+                    style: base.copyWith(
+                        fontSize: a + (b - a) * animation.value),
+                    child: Material(
+                        type: MaterialType.transparency, child: child),
+                  );
+                },
+              );
+            },
+      child: child,
+    );
   }
 }

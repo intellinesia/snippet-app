@@ -1,3 +1,4 @@
+import 'motion_routes.dart' show BackSwipeYield;
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
@@ -90,7 +91,8 @@ Map<String, List<ReactionGroup>> groupMessageReactions(
     final actors = byName.putIfAbsent(name, () => <String>{});
     final actor = '${e.actorKind}:${e.actorId.isEmpty ? e.eventId : e.actorId}';
     if (e.payload['removed'] == true) {
-      actors.removeWhere((a) => a == actor || (e.actorKind == 'human' && a.startsWith('human:')));
+      actors.removeWhere((a) =>
+          a == actor || (e.actorKind == 'human' && a.startsWith('human:')));
     } else {
       actors.add(actor);
     }
@@ -387,8 +389,9 @@ class MessageSelectionArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final holder =
-        context.dependOnInheritedWidgetOfExactType<_MessageMenuScope>()?.selection;
+    final holder = context
+        .dependOnInheritedWidgetOfExactType<_MessageMenuScope>()
+        ?.selection;
     return SelectionArea(
       onSelectionChanged: holder == null
           ? null
@@ -421,7 +424,8 @@ Future<void> showMessageContextMenu(
       if (onReply != null)
         appMenuItem(value: 'reply', icon: 'reply', label: 'Reply'),
       if (selection.trim().isNotEmpty)
-        appMenuItem(value: 'copy-selection', icon: 'copy', label: 'Copy selection'),
+        appMenuItem(
+            value: 'copy-selection', icon: 'copy', label: 'Copy selection'),
       if (text.trim().isNotEmpty)
         appMenuItem(value: 'copy', icon: 'copy', label: 'Copy message'),
     ],
@@ -501,7 +505,8 @@ class MessageActionsView extends StatelessWidget {
         children: [
           if (preview.isNotEmpty)
             Container(
-              padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.of(10)),
+              padding:
+                  EdgeInsets.symmetric(horizontal: S.s12, vertical: S.of(10)),
               decoration: BoxDecoration(
                 color: AppColors.surface2,
                 borderRadius: BorderRadius.circular(R.lg),
@@ -564,7 +569,8 @@ class MessageActionsView extends StatelessWidget {
               ],
             ),
             SizedBox(height: S.s12),
-            Text('More', style: sans(12, weight: W.label, color: AppColors.fg3)),
+            Text('More',
+                style: sans(12, weight: W.label, color: AppColors.fg3)),
             SizedBox(height: S.s8),
             LayoutBuilder(builder: (context, c) {
               final cols = (c.maxWidth / 76).floor().clamp(3, 6);
@@ -658,7 +664,8 @@ class MessageBubbleInteractive extends StatefulWidget {
   final ValueChanged<String>? onReact;
   final WidgetBuilder? focusBuilder;
   final Widget Function(
-      BuildContext context, VoidCallback openActions, GlobalKey bubbleKey) builder;
+          BuildContext context, VoidCallback openActions, GlobalKey bubbleKey)
+      builder;
 
   @override
   State<MessageBubbleInteractive> createState() =>
@@ -853,7 +860,8 @@ class _MessageBubbleInteractiveState extends State<MessageBubbleInteractive>
         ],
       ),
     );
-    if (kMobile) return detector;
+    // Bubbles keep swipe-to-reply; back swipe still works from the edge and gaps.
+    if (kMobile) return canSwipe ? BackSwipeYield(child: detector) : detector;
     return _MessageMenuScope(
       selection: _selection,
       child: Listener(
@@ -943,7 +951,9 @@ class _SwipeRightReplyRecognizer extends HorizontalDragGestureRecognizer {
 void showReactionPeople(BuildContext context, List<ReactionGroup> reactions) {
   showAppSheet(context,
       title: 'Reactions',
-      subtitle: reactions.any((r) => r.mine) ? 'Tap your reaction to remove it' : null,
+      subtitle: reactions.any((r) => r.mine)
+          ? 'Tap your reaction to remove it'
+          : null,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         for (final r in reactions)
           Padding(

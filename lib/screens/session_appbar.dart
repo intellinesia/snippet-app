@@ -548,13 +548,18 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     final agent = (_meAgentName ?? '').trim().isEmpty ? agentId : _meAgentName!;
     final needsYou =
         s?.pendingQuestion != null || s?.status == 'waiting_for_input';
-    final working = s?.status == 'running';
-    // Working shows as the moving character; plan progress lives in the home hero.
+    // Lanes still running keep the session working while its own turn idles.
+    final working = s?.status == 'running' ||
+        (s?.lanes ?? const <LaneInfo>[]).any((l) => l.running);
+    final plan = me.plan;
+    final step = plan != null && plan.total > 0 && plan.done < plan.total
+        ? 'step ${(plan.done + 1).clamp(1, plan.total)} of ${plan.total}'
+        : '';
     final state = needsYou
         ? 'waiting on you'
         : s?.status == 'in_review'
             ? 'in review'
-            : '';
+            : step;
     final subtitle = [
       agent,
       if (state.isNotEmpty) state,

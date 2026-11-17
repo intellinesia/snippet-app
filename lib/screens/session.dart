@@ -59,7 +59,6 @@ import 'session_rail.dart';
 import 'pull_requests.dart';
 import '../github_models.dart';
 import 'presented_file_card.dart';
-import '../composer_strip.dart';
 import '../composer/attachment_preview.dart';
 import '../composer/attachment_tile.dart';
 import '../composer/composer_card.dart';
@@ -81,7 +80,6 @@ import 'action_list.dart';
 import '../glass.dart' show GlassTopFrame, TopFadeMask;
 import 'mobile_chrome.dart';
 import 'mobile_voice_page.dart' show startMobileVoice;
-import 'mobile_session_home.dart' show DotField;
 import 'session_panels.dart';
 import 'session_coordination_cards.dart';
 import 'session_handoff.dart';
@@ -433,7 +431,6 @@ class _SessionScreenState extends State<SessionScreen>
   final Map<String, String> _optimisticQueuedNonce = {};
   // Queue IDs hidden after a local cancel/steer until the daemon confirms them.
   final Set<String> _queueHidden = {};
-  int? _hoveredQueuedIndex;
   // Messages sent to the daemon but not yet echoed back as events — shown
   // optimistically (faint) so they don't vanish during the round-trip.
   final List<String> _pending = [];
@@ -1509,7 +1506,7 @@ class _SessionScreenState extends State<SessionScreen>
       : _buildScreen(context);
 
   Widget _chatBackdrop(Widget body) =>
-      kMobile ? SceneBackdrop(child: DotField.chat(child: body)) : body;
+      kMobile ? SceneBackdrop(child: body) : body;
 
   Widget _buildScreen(BuildContext context) {
     // Depend on Theme so this rebuilds when the user switches palettes.

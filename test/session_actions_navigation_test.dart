@@ -14,9 +14,11 @@ import 'package:snippet/theme.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+// The first pump only starts the ticker; the page spring settles in ~450ms.
 Future<void> _pump(WidgetTester tester) async {
-  await tester.pump(const Duration(milliseconds: 400));
-  await tester.pump(const Duration(milliseconds: 400));
+  for (var i = 0; i < 3; i++) {
+    await tester.pump(const Duration(milliseconds: 400));
+  }
 }
 
 Future<void> _openActions(WidgetTester tester, TargetPlatform platform) async {

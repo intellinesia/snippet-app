@@ -876,6 +876,9 @@ class Pressable extends StatefulWidget {
   /// the start of a scroll never flinches.
   final Duration delay;
 
+  /// Long-press targets: a still hold lifts the surface before the menu opens.
+  final bool lift;
+
   const Pressable({
     super.key,
     required this.child,
@@ -885,17 +888,24 @@ class Pressable extends StatefulWidget {
     this.radius = 0,
     this.haptic = false,
     this.delay = Duration.zero,
+    this.lift = false,
   });
 
-  static const _pressIn = Duration(milliseconds: 80);
+  static const _pressIn = Duration(milliseconds: 90);
+  static const _pressOut = Duration(milliseconds: 220);
   static const _down = SpringDescription(mass: 1, stiffness: 1100, damping: 66);
   static const _spring =
-      SpringDescription(mass: 1, stiffness: 520, damping: 24);
+      SpringDescription(mass: 1, stiffness: 600, damping: 40);
+  static const _liftSpring =
+      SpringDescription(mass: 1, stiffness: 520, damping: 36);
+  static const _liftDelay = Duration(milliseconds: 420);
+  static const liftScale = 1.03;
 
   static double scaleFor(PressKind kind) => switch (kind) {
-        PressKind.button => kMobile ? 0.96 : 0.98,
+        PressKind.button => 0.98,
         PressKind.card => 0.98,
-        PressKind.row => 1.0,
+        // Desktop rows only tint; a pointer click should not shrink a list.
+        PressKind.row => kMobile ? 0.98 : 1.0,
       };
 
   @override
@@ -906,9 +916,13 @@ class _PressableState extends State<Pressable> with TickerProviderStateMixin {
   late final AnimationController _scale = AnimationController(
       vsync: this, value: 1, lowerBound: 0.5, upperBound: 1.5);
   late final AnimationController _tint = AnimationController(
-      vsync: this, duration: Pressable._pressIn, reverseDuration: Motion.quick);
+      vsync: this,
+      duration: Pressable._pressIn,
+      reverseDuration: Pressable._pressOut,
+      upperBound: 2);
   Offset? _origin;
   Timer? _hold;
+  Timer? _liftTimer;
   bool _down = false;
 
   bool get _tints => widget.kind != PressKind.button;
@@ -924,6 +938,19 @@ class _PressableState extends State<Pressable> with TickerProviderStateMixin {
         if (mounted && _down) _show();
       });
     }
+    if (widget.lift && kMobile) {
+      _liftTimer = Timer(Pressable._liftDelay, () {
+        if (mounted && _down) _lift();
+      });
+    }
+  }
+
+  void _lift() {
+    if (!reduceMotion(context)) {
+      springTo(_scale, Pressable.liftScale, _scale.velocity,
+          spring: Pressable._liftSpring, epsilon: 0.001);
+    }
+    if (_tints) _tint.animateTo(2, duration: Pressable._pressIn);
   }
 
   void _show() {
@@ -932,18 +959,19 @@ class _PressableState extends State<Pressable> with TickerProviderStateMixin {
     if (!reduceMotion(context) && to < 1) {
       springTo(_scale, to, 0, spring: Pressable._down, epsilon: 0.001);
     }
-    if (_tints) _tint.forward();
+    if (_tints) _tint.animateTo(1, duration: Pressable._pressIn);
   }
 
   void _release() {
     _hold?.cancel();
+    _liftTimer?.cancel();
     if (!_down) return;
     _down = false;
     if (_scale.value != 1) {
       final v = _scale.velocity;
       springTo(_scale, 1, v, spring: Pressable._spring, epsilon: 0.001);
     }
-    if (_tints) _tint.reverse();
+    if (_tints) _tint.animateBack(0, duration: Pressable._pressOut);
   }
 
   void _move(PointerMoveEvent e) {
@@ -962,6 +990,7 @@ class _PressableState extends State<Pressable> with TickerProviderStateMixin {
   @override
   void dispose() {
     _hold?.cancel();
+    _liftTimer?.cancel();
     _scale.dispose();
     _tint.dispose();
     super.dispose();
@@ -979,7 +1008,7 @@ class _PressableState extends State<Pressable> with TickerProviderStateMixin {
               animation: _tint,
               builder: (_, __) => DecoratedBox(
                 decoration: BoxDecoration(
-                  color: AppColors.fg1.withValues(alpha: 0.06 * _tint.value),
+                  color: AppColors.fg1.withValues(alpha: 0.05 * _tint.value),
                   borderRadius: BorderRadius.circular(widget.radius),
                 ),
               ),
@@ -1002,6 +1031,74 @@ class _PressableState extends State<Pressable> with TickerProviderStateMixin {
       ),
     );
   }
+}
+
+/// Opens [child] downward on a spring with the top edge fixed. Content stays
+/// hidden for the first quarter of the growth, then fades in; on collapse it
+/// fades by the square of the height so it is gone before the box closes.
+class SpringExpand extends StatefulWidget {
+  const SpringExpand({super.key, required this.open, required this.child});
+
+  final bool open;
+  final Widget child;
+
+  static const spring = SpringDescription(mass: 1, stiffness: 320, damping: 34);
+
+  @override
+  State<SpringExpand> createState() => _SpringExpandState();
+}
+
+class _SpringExpandState extends State<SpringExpand>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController.unbounded(vsync: this, value: widget.open ? 1 : 0);
+
+  @override
+  void didUpdateWidget(SpringExpand old) {
+    super.didUpdateWidget(old);
+    if (old.open == widget.open) return;
+    final to = widget.open ? 1.0 : 0.0;
+    if (reduceMotion(context)) {
+      _c.value = to;
+    } else {
+      springTo(_c, to, _c.velocity,
+          spring: SpringExpand.spring, epsilon: 0.001);
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _c,
+        child: widget.child,
+        builder: (context, child) {
+          final h = _c.value.clamp(0.0, 1.0);
+          if (h == 0 && !widget.open) {
+            return const SizedBox(width: double.infinity);
+          }
+          final fade = widget.open
+              ? ((h - 0.25) / 0.75).clamp(0.0, 1.0)
+              : h * h;
+          return ClipRect(
+            child: Align(
+              alignment: Alignment.topCenter,
+              heightFactor: h,
+              child: Opacity(
+                opacity: fade,
+                child: Transform.translate(
+                  offset: Offset(0, widget.open ? -4 * (1 - fade) : 0),
+                  child: child,
+                ),
+              ),
+            ),
+          );
+        },
+      );
 }
 
 /// Grows and shrinks [child] with its content visible while the size eases.
@@ -1116,6 +1213,7 @@ class _HoverSurfaceState extends State<HoverSurface> {
       child: Pressable(
         kind: PressKind.row,
         radius: widget.radius,
+        lift: widget.onLongPress != null,
         enabled: widget.onTap != null || widget.onLongPress != null,
         child: Tactile(
           radius: r,

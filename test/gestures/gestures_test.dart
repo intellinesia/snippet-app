@@ -101,20 +101,16 @@ void main() {
       expect(sideX(t), closeTo(0, .5));
     });
 
-    testWidgets('left swipe on Sessions pulls and opens Agents', (t) async {
+    // Sessions <-> Agents paging now lives in HomePager (test/pager); the
+    // shell must not also page or open Mission on these drags.
+    testWidgets('left swipe on Sessions is left to the home pager', (t) async {
       await t.pumpWidget(shell());
       await t.pump(const Duration(milliseconds: 400));
-      final g = await t.startGesture(const Offset(300, 300));
-      await g.moveBy(const Offset(-30, 0));
-      await g.moveBy(const Offset(-170, 0));
-      await t.pump();
-      expect(sideX(t), lessThan(0));
-      expect(sideX(t), greaterThan(-80));
-      await g.up();
+      await t.fling(find.byKey(const Key('side')), const Offset(-200, 0), 1500);
       await t.pumpAndSettle();
       expect(sideX(t), closeTo(0, .5));
       expect(swiped, 0);
-      expect(went, MobileHome.agents);
+      expect(went, isNull);
     });
 
     testWidgets('short slow left drag stays on Sessions', (t) async {
@@ -127,18 +123,13 @@ void main() {
       expect(sideX(t), closeTo(0, .5));
     });
 
-    testWidgets('right swipe on Agents returns to Sessions', (t) async {
+    testWidgets('right swipe on Agents is left to the home pager', (t) async {
       await t.pumpWidget(shell(home: MobileHome.agents));
       await t.pump(const Duration(milliseconds: 400));
       await t.fling(find.byKey(const Key('side')), const Offset(80, 0), 1500);
       await t.pumpAndSettle();
-      expect(went, MobileHome.chats);
-      expect(swiped, 0);
-
-      went = null;
-      await t.fling(find.byKey(const Key('side')), const Offset(-80, 0), 1500);
-      await t.pumpAndSettle();
       expect(went, isNull);
+      expect(swiped, 0);
     });
   });
 

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'platform.dart';
 import 'theme.dart';
 import 'screens/action_list.dart' show ActionGroup, ActionRow;
+import 'settings_form.dart' show GroupedTiles;
 import 'widgets.dart'
     show AppIcon, PressKind, Pressable, StatusDot;
 
@@ -410,6 +411,9 @@ class ListGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = kMobile && CardGroupScope.of(context);
+    if (card) {
+      return GroupedTiles(children: [if (header != null) header!, ...children]);
+    }
     final column = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -427,17 +431,6 @@ class ListGroup extends StatelessWidget {
         ],
       ],
     );
-    if (card) {
-      return Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(R.of(14)),
-          border: Border.all(color: AppColors.line),
-        ),
-        child: Material(color: Colors.transparent, child: column),
-      );
-    }
     if (kMobile) {
       return FlatGroupScope(
         child: Material(color: Colors.transparent, child: column),

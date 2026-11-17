@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'platform.dart';
 import 'glass.dart';
+import 'morph_sheet.dart' show showSpringSheet;
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -71,7 +72,8 @@ class _AppFieldState extends State<AppField> {
       ],
       AnimatedContainer(
         duration: Motion.quick,
-        padding: EdgeInsets.symmetric(horizontal: kMobile ? S.of(14) : S.of(11)),
+        padding:
+            EdgeInsets.symmetric(horizontal: kMobile ? S.of(14) : S.of(11)),
         constraints: BoxConstraints(minHeight: kMobile ? 48 : 34),
         decoration: BoxDecoration(
           color: AppColors.surface1,
@@ -107,7 +109,8 @@ class _AppFieldState extends State<AppField> {
                       : sans(13, color: AppColors.fg1),
               decoration: InputDecoration(
                 isCollapsed: true,
-                contentPadding: EdgeInsets.symmetric(vertical: kMobile ? S.s8 : S.s8),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: kMobile ? S.s8 : S.s8),
                 border: InputBorder.none,
                 hintText: widget.hint,
                 hintStyle: kMobile
@@ -172,8 +175,8 @@ class _DialogFrame extends StatelessWidget {
           child: Material(
             type: MaterialType.transparency,
             child: Padding(
-              padding:
-                  EdgeInsets.fromLTRB(S.s20, S.s16, onClose == null ? S.s20 : S.s12, S.s16),
+              padding: EdgeInsets.fromLTRB(
+                  S.s20, S.s16, onClose == null ? S.s20 : S.s12, S.s16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -201,7 +204,8 @@ class _DialogFrame extends StatelessWidget {
                   SizedBox(height: S.of(10)),
                   Flexible(
                     child: Padding(
-                      padding: EdgeInsets.only(right: onClose == null ? 0 : S.s8),
+                      padding:
+                          EdgeInsets.only(right: onClose == null ? 0 : S.s8),
                       child: child,
                     ),
                   ),
@@ -287,7 +291,8 @@ Future<bool> confirmAction(
     result = await showDialog<bool>(
       context: context,
       barrierColor: AppColors.modalScrim,
-      builder: (ctx) => ModalGlass(child: _DialogFrame(
+      builder: (ctx) => ModalGlass(
+          child: _DialogFrame(
         title: title,
         icon: danger ? 'alert-triangle' : null,
         iconColor: AppColors.danger,
@@ -330,7 +335,8 @@ Future<String?> promptText(BuildContext context,
     return showDialog<String>(
       context: context,
       barrierColor: AppColors.modalScrim,
-      builder: (_) => ModalGlass(child: _DialogFrame(title: title, maxWidth: 380, child: field)),
+      builder: (_) => ModalGlass(
+          child: _DialogFrame(title: title, maxWidth: 380, child: field)),
     );
   }
   return showAppSheet<String>(context, title: title, child: field);
@@ -594,7 +600,8 @@ Future<T?> showAppSheet<T>(BuildContext context,
     return showDialog<T>(
       context: context,
       barrierColor: AppColors.modalScrim,
-      builder: (ctx) => ModalGlass(child: _DialogFrame(
+      builder: (ctx) => ModalGlass(
+          child: _DialogFrame(
         title: title,
         maxWidth: maxWidth,
         maxHeight: maxHeight,
@@ -606,79 +613,61 @@ Future<T?> showAppSheet<T>(BuildContext context,
       )),
     );
   }
-  return showModalBottomSheet<T>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    barrierColor: AppColors.glassScrim,
-    isScrollControlled: true,
-    useSafeArea: false,
-    sheetAnimationStyle: sheetMotion,
-    builder: (sheetContext) {
+  return showSpringSheet<T>(
+    context,
+    builder: (sheetContext, scroll) {
       final media = MediaQuery.of(sheetContext);
-      final keyboard = media.viewInsets.bottom;
-      // Lift the whole sheet above the keyboard. Padding the *inside* of a
-      // pinned-to-bottom sheet just grew a blank band under the field while
-      // the keyboard still covered the inputs.
-      final aboveKeyboard = media.size.height - keyboard;
-      final available = aboveKeyboard * 0.92;
+      // The route lifts the sheet above the keyboard itself.
+      final available = (media.size.height - media.viewInsets.bottom) * 0.92;
       final limit = available < maxHeight ? available : maxHeight;
-      return Padding(
-        padding: EdgeInsets.only(bottom: keyboard),
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          heightFactor: 1,
-          child: Material(
-            type: MaterialType.transparency,
-            child: AppSheetSurface(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: limit),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  if (subtitle != null &&
-                      title.isNotEmpty &&
-                      !ShellPanelRoot.inPanel(sheetContext))
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(
-                          M.gutter, S.s4, M.gutter, S.s4),
-                      child: Column(children: [
-                        Text(title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TS.rowTitle()),
-                        if (subtitle.isNotEmpty)
-                          Text(subtitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: TS.meta()),
-                      ]),
-                    )
-                  else if (title.isNotEmpty &&
-                      !ShellPanelRoot.inPanel(sheetContext))
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(
-                          M.gutter, S.s4, M.gutter, S.s8),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TS.sectionTitle()),
-                      ),
-                    ),
-                  Flexible(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter,
-                          S.s12 + media.padding.bottom),
-                      child: SurfaceScope(
-                          group:
-                              kMobile ? Colors.transparent : AppColors.overlay,
-                          child: child),
-                    ),
+      return Material(
+        type: MaterialType.transparency,
+        child: AppSheetSurface(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: limit),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              if (subtitle != null &&
+                  title.isNotEmpty &&
+                  !ShellPanelRoot.inPanel(sheetContext))
+                Padding(
+                  padding: EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s4),
+                  child: Column(children: [
+                    Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TS.rowTitle()),
+                    if (subtitle.isNotEmpty)
+                      Text(subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TS.meta()),
+                  ]),
+                )
+              else if (title.isNotEmpty &&
+                  !ShellPanelRoot.inPanel(sheetContext))
+                Padding(
+                  padding: EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, S.s8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TS.sectionTitle()),
                   ),
-                ]),
+                ),
+              Flexible(
+                child: SingleChildScrollView(
+                  controller: scroll,
+                  padding: EdgeInsets.fromLTRB(
+                      M.gutter, S.s4, M.gutter, S.s12 + media.padding.bottom),
+                  child: SurfaceScope(
+                      group: kMobile ? Colors.transparent : AppColors.overlay,
+                      child: child),
+                ),
               ),
-            ),
+            ]),
           ),
         ),
       );

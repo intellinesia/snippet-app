@@ -19,7 +19,6 @@ import '../widgets.dart';
 import 'artifact_grid.dart';
 import 'file_viewer.dart';
 import 'mobile_chrome.dart';
-import 'presented_file_card.dart';
 
 const _textExts = {
   'txt', 'log', 'md', 'json', 'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf',
@@ -1632,11 +1631,6 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
     });
   }
 
-  Widget _section(String label) => Padding(
-        padding: EdgeInsets.fromLTRB(0, S.of(18), 0, S.s6),
-        child: Text(label, style: TS.meta(AppColors.fg3)),
-      );
-
   @override
   Widget build(BuildContext context) {
     final artifacts = _artifacts;
@@ -1662,7 +1656,9 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
                 ),
               ),
             ),
-          if (!ShellPanelRoot.inPanel(context))
+          if (kMobile && !ShellPanelRoot.inPanel(context))
+            _SheetHeader(onDone: widget.onClose)
+          else if (!ShellPanelRoot.inPanel(context))
           Container(
             padding: EdgeInsets.fromLTRB(S.s16, kMobile ? S.s8 : S.s12, S.s8, S.of(10)),
             child: Row(children: [
@@ -1697,37 +1693,74 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
                             files: files,
                             onOpenFileTab: widget.onOpenFileTab,
                           )
-                        : ListView(
-                            padding: EdgeInsets.fromLTRB(S.s16, 0, S.s16, S.s32),
-                            children: [
-                              if (artifacts.isNotEmpty) ...[
-                                _section('Artifacts · ${artifacts.length}'),
-                                for (final a in artifacts)
-                                  ArtifactRow(
-                                    client: widget.client,
-                                    session: widget.session,
-                                    id: a.id,
-                                    version: a.latest?.n ?? 1,
-                                    title: a.title,
-                                    kind: a.kind,
-                                    caption: a.caption,
-                                  ),
-                              ],
-                              if (files.isNotEmpty) ...[
-                                _section('Files · ${files.length}'),
-                                for (final f in files)
-                                  PresentedFileCard(
-                                    client: widget.client,
-                                    path: f.path,
-                                    caption: f.caption,
-                                    onOpenFileTab: widget.onOpenFileTab,
-                                  ),
-                              ],
-                            ],
+                        : ArtifactCollection(
+                            client: widget.client,
+                            session: widget.session,
+                            artifacts: artifacts,
+                            files: files,
+                            onOpenFileTab: widget.onOpenFileTab,
                           ),
           ),
         ]),
       ),
     );
   }
+}
+
+/// Phone sheet header: centred title with a Done pill.
+class _SheetHeader extends StatelessWidget {
+  const _SheetHeader({this.onDone});
+
+  final VoidCallback? onDone;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: SizedBox(
+          height: 40,
+          child: Row(children: [
+            const SizedBox(width: 72),
+            Expanded(
+              child: Text('Artifacts and files',
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(17,
+                      weight: FontWeight.w600, color: AppColors.fg1)),
+            ),
+            SizedBox(
+              width: 72,
+              child: onDone == null
+                  ? null
+                  : Align(
+                      alignment: Alignment.centerRight,
+                      child: Semantics(
+                        button: true,
+                        child: GestureDetector(
+                          key: const ValueKey('deliverables-done'),
+                          behavior: HitTestBehavior.opaque,
+                          onTap: onDone,
+                          child: Container(
+                            height: 36,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface3,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: AppColors.lineStrong),
+                            ),
+                            child: Center(
+                              widthFactor: 1,
+                              child: Text('Done',
+                                  style: sans(15,
+                                      weight: FontWeight.w500,
+                                      color: AppColors.fg1)),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+          ]),
+        ),
+      );
 }

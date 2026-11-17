@@ -71,6 +71,21 @@ String sessionStepLabel(SessionPlan plan) {
   return 'plan $stepNum/${plan.total}';
 }
 
+/// "Step 2 of 4 · Integrate lanes · 2 lanes" for a busy session, or null.
+String? sessionProgressLabel(SessionInfo s) {
+  final parts = <String>[];
+  final plan = s.plan;
+  if (plan != null && plan.total > 0 && plan.done < plan.total) {
+    final step = (plan.done + 1).clamp(1, plan.total);
+    parts.add('Step $step of ${plan.total}');
+    final current = plan.current?.trim() ?? '';
+    if (current.isNotEmpty) parts.add(current);
+  }
+  final lanes = s.lanes?.running ?? 0;
+  if (lanes > 0) parts.add(lanes == 1 ? '1 lane' : '$lanes lanes');
+  return parts.isEmpty ? null : parts.join(' · ');
+}
+
 String sessionDuration(int? unixSec) {
   if (unixSec == null || unixSec <= 0) return '';
   final secs = unixSec > 100000000000 ? unixSec ~/ 1000 : unixSec;
@@ -392,7 +407,7 @@ class SessionListRow extends StatelessWidget {
     final s = session;
     final settled = s.settled;
     final needsYou = sessionNeedsYou(s);
-    final working = !settled && !needsYou && sessionIsActive(s.status);
+    final working = !settled && !needsYou && sessionBusy(s);
     final untitled = s.title.trim().isEmpty;
     final title = untitled ? '(untitled)' : s.title;
     final left = settled ? settledDaysLeft(s) : null;
@@ -418,7 +433,9 @@ class SessionListRow extends StatelessWidget {
     final wakeText = !settled && !working && !needsYou
         ? sessionWakeLabel(s.nextWakeAt)
         : null;
-    final hasExtraLine = pr != null || wakeText != null;
+    final progressText = working ? sessionProgressLabel(s) : null;
+    final hasExtraLine =
+        progressText != null || pr != null || wakeText != null;
     final cameBackSummary =
         sessionCameBack(s) ? (s.resultSummary?.trim() ?? '') : '';
     final hasMeta = showProject ||
@@ -560,6 +577,13 @@ class SessionListRow extends StatelessWidget {
               if (hasExtraLine) ...[
                 const SizedBox(height: 2),
                 // Keep desktop rows compact: at most one extra line below metadata.
+                if (progressText != null)
+                  Text(progressText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TS.meta(AppColors.fg3)),
+                if (progressText != null && pr != null)
+                  const SizedBox(height: 2),
                 if (pr != null)
                   SessionPrActionRow(
                     pr: pr,
@@ -567,7 +591,7 @@ class SessionListRow extends StatelessWidget {
                     onMerge: onMergePr,
                     mobile: kMobile,
                   )
-                else if (wakeText != null)
+                else if (wakeText != null && progressText == null)
                   Text(wakeText,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

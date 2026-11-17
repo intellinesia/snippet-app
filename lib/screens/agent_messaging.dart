@@ -36,7 +36,6 @@ import 'agent_questions_card.dart';
 import 'agent_records.dart';
 import 'agent_thread_cards.dart';
 import 'agent_view_switcher.dart';
-import 'mobile_session_home.dart' show DotField;
 import '../chat_scene.dart' show SceneBackdrop;
 
 /// Pick one agent from the directory, as an anchored DROPDOWN.
@@ -933,15 +932,13 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     });
   }
 
-  // Scene and dots sit outside the SafeArea so the header frost can reach
+  // The scene sits outside the SafeArea so the header frost can reach
   // up behind the status bar, as on the session screen.
   Widget _chrome(Widget body, bool hideChrome) => kMobile
       ? SceneBackdrop(
-          child: DotField.chat(
-            child: StatusInset(
-                top: hideChrome ? 0 : MediaQuery.paddingOf(context).top,
-                child: body),
-          ),
+          child: StatusInset(
+              top: hideChrome ? 0 : MediaQuery.paddingOf(context).top,
+              child: body),
         )
       : body;
 

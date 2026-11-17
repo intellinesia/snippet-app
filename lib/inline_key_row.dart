@@ -14,6 +14,7 @@ class InlineKeyRow extends StatefulWidget {
     required this.onSave,
     this.busy = false,
     this.optional = false,
+    this.icon,
   });
   final String label;
   final bool keySet;
@@ -21,6 +22,9 @@ class InlineKeyRow extends StatefulWidget {
   final Future<void> Function(String key) onSave;
   final bool busy;
   final bool optional;
+
+  /// Leading glyph name for the grouped row.
+  final String? icon;
 
   @override
   State<InlineKeyRow> createState() => _InlineKeyRowState();
@@ -49,27 +53,14 @@ class _InlineKeyRowState extends State<InlineKeyRow> {
   @override
   Widget build(BuildContext context) {
     if (!_editing) {
-      final status = Text(widget.keySet ? 'Set' : 'Not set',
-          style: sans(kMobile ? 15 : 13,
-              color: widget.keySet || widget.optional
-                  ? AppColors.fg3
-                  : AppColors.danger));
-      return SettingsRow(
+      return SettingsPickerRow<void>(
         label: widget.label,
-        onTap: widget.busy ? null : () => setState(() => _editing = true),
-        trailing: kMobile
-            ? status
-            : Row(mainAxisSize: MainAxisSize.min, children: [
-                status,
-                SizedBox(width: S.s12),
-                Btn(widget.keySet ? 'Replace' : 'Add key',
-                    small: true,
-                    variant: BtnVariant.secondary,
-                    onTap: widget.busy
-                        ? null
-                        : () => setState(() => _editing = true)),
-              ]),
-        chevron: kMobile,
+        icon: widget.icon,
+        value: widget.keySet ? 'Set' : 'Not set',
+        valueColor:
+            widget.keySet || widget.optional ? null : AppColors.danger,
+        enabled: !widget.busy,
+        onTap: () => setState(() => _editing = true),
       );
     }
     return Padding(

@@ -55,6 +55,7 @@ Future<void> _loadBundledFonts() async {
   };
   for (final pkg in const [
     ('packages/lucide_icons_flutter/lucide', 'packages/lucide_icons_flutter/assets/lucide.ttf'),
+    ('packages/lucide_icons_flutter/Lucide300', 'packages/lucide_icons_flutter/assets/build_font/LucideVariable-w300.ttf'),
     ('packages/hugeicons/HugeIconsStrokeRounded', 'packages/hugeicons/assets/fonts/HugeIcons-Stroke-Rounded.otf'),
   ]) {
     try {

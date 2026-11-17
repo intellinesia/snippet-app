@@ -382,79 +382,106 @@ class _AgentCardState extends State<AgentCard> {
               DateTime.fromMillisecondsSinceEpoch(lead.lastActive * 1000))
           : agentRowTime(agent.lastMessage?.at);
       final needs = group == AgentGroup.needsYou;
+      final busy = group == AgentGroup.working;
       final characterState = !agent.available
           ? AgentCharacterState.sleeping
           : needs
               ? AgentCharacterState.needs
-              : group == AgentGroup.working
+              : busy
                   ? AgentCharacterState.working
-                  : AgentCharacterState.idle;
-      return Pressable(
-          kind: PressKind.row,
-          child: InkWell(
-            splashFactory: NoSplash.splashFactory,
-            highlightColor: Colors.transparent,
-            onTap: () {
-              tapHaptic();
-              widget.onOpen();
-            },
-            onLongPress: () {
-              holdHaptic();
-              _actions(null);
-            },
-            child: Opacity(
-              opacity: agent.available ? 1 : 0.55,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: M.minTarget),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: S.s8),
-                  child: Row(children: [
-                    SizedBox.square(
-                      key: ValueKey('agent-avatar-${characterState.name}'),
-                      dimension: 36,
-                      child: AgentMochi(agent.id,
-                          size: 36,
-                          state: characterState,
-                          badge: needs ? '?' : null),
+                  : AgentCharacterState.sleeping;
+      final plan = busy ? lead?.plan : null;
+      final hasPlan = plan != null && plan.total > 0;
+      final step = hasPlan ? (plan.done + 1).clamp(1, plan.total) : 0;
+      final sub = [
+        status,
+        if (hasPlan && !status.contains(' of ${plan.total}'))
+          'step $step of ${plan.total}',
+      ].join(' · ');
+      final subStyle = TeamRow.subtitleStyle();
+      return TeamRow(
+        tall: hasPlan,
+        onTap: () {
+          tapHaptic();
+          widget.onOpen();
+        },
+        onLongPress: () {
+          holdHaptic();
+          _actions(null);
+        },
+        child: Opacity(
+          opacity: agent.available ? 1 : 0.55,
+          child: Row(children: [
+            SizedBox.square(
+              key: ValueKey('agent-avatar-${characterState.name}'),
+              dimension: 40,
+              child: AgentMochi(agent.id,
+                  size: 40, state: characterState, badge: needs ? '?' : null),
+            ),
+            SizedBox(width: S.of(14)),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(children: [
+                    Flexible(
+                      child: Text(name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TeamRow.titleStyle(agent.available
+                              ? AppColors.fg1
+                              : AppColors.fg3)),
                     ),
-                    SizedBox(width: S.s12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(children: [
-                            Expanded(
-                              child: Text(name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TS.rowTitle(agent.available
-                                      ? AppColors.fg1
-                                      : AppColors.fg3)),
-                            ),
-                            if (_isPinned) ...[
-                              SizedBox(width: S.s6),
-                              AppIcon('pin', size: 12, color: AppColors.fg3),
-                            ],
-                            if (time.isNotEmpty) ...[
-                              SizedBox(width: S.s8),
-                              Text(time, style: TS.meta()),
-                            ],
-                          ]),
-                          SizedBox(height: S.s2),
-                          Text.rich(
-                              markdownPreviewSpan(
-                                  status, sans(13, color: AppColors.fg3)),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
-                        ],
+                    if (_isPinned) ...[
+                      SizedBox(width: S.s6),
+                      AppIcon('pin', size: 14, color: AppColors.fg3),
+                    ],
+                  ]),
+                  SizedBox(height: S.of(1)),
+                  Row(children: [
+                    if (busy) ...[
+                      Container(
+                        key: const ValueKey('agent-working-dot'),
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: AppColors.accent,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      SizedBox(width: S.of(7)),
+                    ],
+                    Flexible(
+                      child: Text.rich(markdownPreviewSpan(sub, subStyle),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                    if (time.isNotEmpty && !busy)
+                      Text(', $time', maxLines: 1, style: subStyle),
+                  ]),
+                  if (hasPlan) ...[
+                    SizedBox(height: S.s6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: SizedBox(
+                        height: 3,
+                        child: LinearProgressIndicator(
+                          key: const ValueKey('agent-plan-bar'),
+                          value: (plan.done / plan.total).clamp(0.0, 1.0),
+                          backgroundColor: AppColors.surface1,
+                          color: AppColors.accent,
+                        ),
                       ),
                     ),
-                  ]),
-                ),
+                  ],
+                ],
               ),
             ),
-          ));
+            SizedBox(width: S.s8),
+            AppIcon('chevron-right', size: 16, color: AppColors.fg4),
+          ]),
+        ),
+      );
     }
     final deskTime = agentRowTime(last?.at);
     final ring = agent.available && working > 0;
@@ -636,4 +663,78 @@ class _RingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_RingPainter old) => old.color != color;
+}
+
+/// Phone grouped rows: each row its own surface on the page, 2px apart, the
+/// group rounded 20 at its ends and 4 inside.
+class TeamRows extends StatelessWidget {
+  const TeamRows({super.key, required this.children});
+
+  final List<Widget> children;
+
+  static const ends = 20.0;
+  static const inner = 4.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = children.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < n; i++) ...[
+          if (i > 0) const SizedBox(height: 2),
+          ClipRRect(
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(i == 0 ? ends : inner),
+              bottom: Radius.circular(i == n - 1 ? ends : inner),
+            ),
+            child: ColoredBox(color: TeamRow.surface, child: children[i]),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// One row inside [TeamRows]: min 64 (76 when tall), padding 12/16.
+class TeamRow extends StatelessWidget {
+  const TeamRow({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.onLongPress,
+    this.tall = false,
+  });
+
+  final Widget child;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final bool tall;
+
+  static Color get surface => AppColors.surface3;
+
+  static TextStyle titleStyle([Color? c]) =>
+      sans(17, height: 22 / 17, color: c ?? AppColors.fg1);
+
+  static TextStyle subtitleStyle([Color? c]) =>
+      sans(15, height: 20 / 15, color: c ?? AppColors.fg3);
+
+  @override
+  Widget build(BuildContext context) => Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          splashFactory: NoSplash.splashFactory,
+          highlightColor: AppColors.hover,
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: tall ? 76 : 64),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Align(alignment: Alignment.centerLeft, child: child),
+            ),
+          ),
+        ),
+      );
 }

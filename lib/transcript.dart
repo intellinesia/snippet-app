@@ -432,11 +432,9 @@ class _DenseToolRowState extends State<DenseToolRow> {
             child: line,
           ),
         ),
-        AnimatedSize(
-          duration: Motion.fast,
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: open
+        SpringExpand(
+          open: open,
+          child: canExpand
               ? Padding(
                   padding: EdgeInsets.fromLTRB(S.s24, S.s2, 0, S.s8),
                   child: _StepDetail(step: step),
@@ -632,7 +630,10 @@ class _ToolRunState extends State<ToolRun> {
               running: widget.running,
               open: open,
               onTap: _toggle),
-        if (!long) ...rows else if (open) WorkSteps(rows: rows),
+        if (!long)
+          ...rows
+        else
+          SpringExpand(open: open, child: WorkSteps(rows: rows)),
       ]),
     );
   }

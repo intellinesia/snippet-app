@@ -156,7 +156,7 @@ void main() {
     );
     expect(find.text('Palette'), findsOneWidget);
     expect(find.text('PALETTE'), findsNothing);
-    expect(tester.getSize(find.byType(SettingsHeader)).height, 44);
+    expect(tester.getSize(find.byType(SettingsHeader)).height, 56);
     // The home preview and scene picker push Typography below the fold.
     await tester.dragUntilVisible(find.text('Typography'),
         find.byType(Scrollable).first, const Offset(0, -200));
@@ -177,7 +177,7 @@ void main() {
           'Which model does each kind of work, and who steps in when it hits a limit.'),
       findsNothing,
     );
-    expect(tester.getSize(find.byType(SettingsHeader)).height, 44);
+    expect(tester.getSize(find.byType(SettingsHeader)).height, 56);
     expect(find.text('Mission Control'), findsOneWidget);
   });
 }

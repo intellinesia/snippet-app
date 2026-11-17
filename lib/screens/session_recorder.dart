@@ -312,8 +312,9 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
         ? null
         : (_playbackPosition.inMilliseconds / total.inMilliseconds)
             .clamp(0.0, 1.0);
-    return DesktopRecorderStrip(
+    return ComposerVoicePill(
       recording: _isRecording,
+      sending: _sendingAudio,
       time: time,
       wave: LiveRecordingWave(
           buffer: _waveform, live: _isRecording, progress: progress),

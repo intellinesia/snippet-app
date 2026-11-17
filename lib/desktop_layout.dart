@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'settings_form.dart';
 import 'theme.dart';
-import 'widgets.dart';
 
 class MasterDetail extends StatelessWidget {
   const MasterDetail({
@@ -138,44 +138,37 @@ class SettingsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (compact) {
+      // Design language v7: 56 tall, 40 back circle, centred 17/600 title.
       return SizedBox(
-        height: 44,
+        height: Grouped.headerHeight,
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: S.s4),
-          child: Row(children: [
-            Tooltip(
-              message: 'Back',
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onBack ?? () => Navigator.maybePop(context),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                      color: AppColors.surface2, shape: BoxShape.circle),
-                  child: Center(
-                    child: AppIcon('chevron-left',
-                        size: 20, color: AppColors.fg1),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(width: S.s12),
-            Expanded(
+          padding: const EdgeInsets.symmetric(horizontal: Grouped.gutter),
+          child: Stack(alignment: Alignment.center, children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 56),
               child: Text(
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(17, weight: W.label, color: AppColors.fg1),
+                textAlign: TextAlign.center,
+                style: Grouped.pageTitleStyle(),
               ),
             ),
-            ...actions,
+            Row(children: [
+              GroupedCircleButton(
+                icon: 'chevron-left',
+                tooltip: 'Back',
+                onTap: onBack ?? () => Navigator.maybePop(context),
+              ),
+              const Spacer(),
+              ...actions,
+            ]),
           ]),
         ),
       );
     }
     return Padding(
-      padding: EdgeInsets.only(bottom: S.s8),
+      padding: const EdgeInsets.fromLTRB(0, 4, 0, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -185,13 +178,13 @@ class SettingsHeader extends StatelessWidget {
               child: Text(title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TS.pageTitle()),
+                  style: sans(24, weight: FontWeight.w600, color: AppColors.fg1)),
             ),
             for (final a in actions) ...[SizedBox(width: S.s8), a],
           ]),
           if (subtitle != null && subtitle!.isNotEmpty) ...[
             SizedBox(height: S.s4),
-            Text(subtitle!, style: TS.ui(AppColors.fg3)),
+            Text(subtitle!, style: Grouped.subStyle()),
           ],
         ],
       ),
@@ -205,13 +198,14 @@ class SettingsColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Left-aligned beside the settings nav; the right inset clears the close button.
+    // Design language v7: one centred column, 680 wide with its padding.
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(S.s24, S.s20, S.of(56), S.s32),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
       child: Align(
-        alignment: Alignment.topLeft,
+        alignment: Alignment.topCenter,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
+          constraints:
+              const BoxConstraints(maxWidth: Grouped.contentMaxWidth - 48),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: children,

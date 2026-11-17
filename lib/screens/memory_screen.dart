@@ -164,7 +164,8 @@ class _MemoryScreenState extends State<MemoryScreen> {
     if (widget.embedded) {
       // Inside a shell pane the pane's own tint shows through, like Files.
       final page = kMobile ||
-          (widget.initialKey != null && ShellPanelScope.maybeOf(context) == null);
+          (widget.initialKey != null &&
+              ShellPanelScope.maybeOf(context) == null);
       return Material(
         color: page ? AppColors.paneBg : Colors.transparent,
         child: page ? SafeArea(bottom: false, child: scoped) : scoped,
@@ -188,7 +189,11 @@ class _MemoryScreenState extends State<MemoryScreen> {
     }
     _shownAt ??= DateTime.now();
     final global = scopes.where((s) => s.kind == 'global').toList();
-    final projects = scopes.where((s) => s.kind == 'project').toList()
+    final projects = scopes
+        .where((s) =>
+            s.kind == 'project' &&
+            !RegExp(r'^(-tmp|lane-ro-dirty-)').hasMatch(s.label))
+        .toList()
       ..sort((a, b) => (b.lastCommitAt ?? 0).compareTo(a.lastCommitAt ?? 0));
     final agents = scopes.where((s) => s.kind == 'agent').toList()
       ..sort((a, b) => a.label.compareTo(b.label));
@@ -239,11 +244,12 @@ class _MemoryScreenState extends State<MemoryScreen> {
       child: PageBody(
         children: [
           Padding(
-              padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s16),
-              child: Text(
-                  'What your agents remember, kept as files in git. Agents write it as they work, and it is consolidated in the background.',
-                  style: sans(13, height: 19 / 13, color: AppColors.fg3)),
-            ),
+            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s16),
+            child: Text(
+                'What your agents remember, kept as files in git. Agents write it as they work, and it is consolidated in the background.',
+                style: sans(kMobile ? 15 : 13,
+                    height: kMobile ? 20 / 15 : 19 / 13, color: AppColors.fg3)),
+          ),
           group('', global),
           group('Projects', projects),
           group('Agents', agents),
@@ -326,7 +332,11 @@ class _MemoryScreenState extends State<MemoryScreen> {
       ]);
     }
     final global = scopes.where((s) => s.kind == 'global').toList();
-    final projects = scopes.where((s) => s.kind == 'project').toList()
+    final projects = scopes
+        .where((s) =>
+            s.kind == 'project' &&
+            !RegExp(r'^(-tmp|lane-ro-dirty-)').hasMatch(s.label))
+        .toList()
       ..sort((a, b) => (b.lastCommitAt ?? 0).compareTo(a.lastCommitAt ?? 0));
     final agents = scopes.where((s) => s.kind == 'agent').toList()
       ..sort((a, b) => a.label.compareTo(b.label));
@@ -662,10 +672,10 @@ class _ScopeViewState extends State<_ScopeView> {
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.fg3,
                   minimumSize: kMobile ? const Size(0, 30) : const Size(0, 28),
-                  padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s6 : S.s8),
-                  tapTargetSize: kMobile
-                      ? null
-                      : MaterialTapTargetSize.shrinkWrap,
+                  padding:
+                      EdgeInsets.symmetric(horizontal: kMobile ? S.s6 : S.s8),
+                  tapTargetSize:
+                      kMobile ? null : MaterialTapTargetSize.shrinkWrap,
                 ),
                 icon: AppIcon('chevron-left', size: 14, color: AppColors.fg3),
                 label: Text(_trail[_trail.length - 2],

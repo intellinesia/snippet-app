@@ -17,6 +17,7 @@ import 'agents_sidebar_panel.dart';
 import 'mission_control.dart';
 import 'mission_control/coordination_agent_detail.dart';
 import 'settings_panel.dart';
+import 'mobile_shell.dart' show HomePager, HomePagerScope;
 import 'shell_models.dart';
 import 'shell_nav.dart';
 import 'session_list_row.dart';
@@ -175,19 +176,22 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   final Set<MobileHome> _mountedHomes = <MobileHome>{};
   AnimationController? _homeAnimC;
   AnimationController get _homeAnim => _homeAnimC ??= AnimationController(
-    vsync: this,
-    duration: Motion.fast,
-    value: 1.0,
-  )..addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted && _prevHome != null) {
-        setState(() {
-          if (_prevHome == MobileHome.settings || _prevHome == MobileHome.tasks) {
-            _mountedHomes.remove(_prevHome);
+        vsync: this,
+        duration: Motion.fast,
+        value: 1.0,
+      )..addStatusListener((status) {
+          if (status == AnimationStatus.completed &&
+              mounted &&
+              _prevHome != null) {
+            setState(() {
+              if (_prevHome == MobileHome.settings ||
+                  _prevHome == MobileHome.tasks) {
+                _mountedHomes.remove(_prevHome);
+              }
+              _prevHome = null;
+            });
           }
-          _prevHome = null;
         });
-      }
-    });
 
   Map<String, String> _profileProviders = const {};
   String? _providersFor;
@@ -261,7 +265,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     Pins.instance.addListener(_onDrafts);
     if (kMobile) ChatScene.instance.addListener(_onDrafts);
     _loadProviders();
-    _mountedHomes.add(_currentHome);
+    _mountedHomes.add(_slot(_currentHome));
     if (kMobile) _loadHeroAgents();
     if (!kMobile) sidebarAgentsFirst.addListener(_onAgentsList);
     if (widget.mobileHome != MobileHome.settings) {
@@ -284,10 +288,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         _lastMainHome = oldWidget.mobileHome;
       }
       if (kMobile) _loadHeroAgents();
-      if (widget.mobileHome != _currentHome) {
+      if (_slot(widget.mobileHome) == _slot(_currentHome)) {
+        _currentHome = widget.mobileHome;
+      } else if (widget.mobileHome != _currentHome) {
         _prevHome = _currentHome;
         _currentHome = widget.mobileHome;
-        _mountedHomes.add(_currentHome);
+        _mountedHomes.add(_slot(_currentHome));
         final reduced = reduceMotion(context);
         final settingsPush = _currentHome == MobileHome.settings;
         final settingsPop = _prevHome == MobileHome.settings;
@@ -427,9 +433,13 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             icon: 'plus', small: true, onTap: widget.onAddInstance),
       );
 
+  /// Sessions and Agents share one pager layer; everything else is its own.
+  static MobileHome _slot(MobileHome h) =>
+      h == MobileHome.agents ? MobileHome.chats : h;
+
   Widget _buildMobileHomeStack(bool hasClient) {
-    final prev = _prevHome;
-    final curr = _currentHome;
+    final prev = _prevHome == null ? null : _slot(_prevHome!);
+    final curr = _slot(_currentHome);
     final ordered = <MobileHome>[
       for (final h in MobileHome.values)
         if (_mountedHomes.contains(h) && h != prev && h != curr) h,
@@ -448,7 +458,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       for (final h in ordered)
         h: KeyedSubtree(
           key: ValueKey('mobile-${h.name}'),
-          child: _mobileHomeBody(hasClient, h),
+          child: h == MobileHome.chats
+              ? _mobilePair(hasClient)
+              : _mobileHomeBody(hasClient, h),
         ),
     };
     final reduced = reduceMotion(context);
@@ -583,6 +595,65 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     );
   }
 
+  /// Sessions and Agents under one top bar, paged 1:1 by the finger. An open
+  /// agent detail covers the pair.
+  Widget _mobilePair(bool hasClient) {
+    final client = widget.client;
+    final agent = widget.agent;
+    final main = widget.mobileHome == MobileHome.settings ||
+            widget.mobileHome == MobileHome.tasks
+        ? _lastMainHome
+        : widget.mobileHome;
+    final onAgents = main == MobileHome.agents;
+    final inDetail = widget.mobileHome == MobileHome.agents && agent != null;
+    Widget list(bool agents) => !hasClient
+        ? _mobileUnavailable(agents
+            ? 'Add a machine to see its agents.'
+            : 'Add a machine to begin.')
+        : agents && !_selecting
+            ? _agentList(client!, mirror: true)
+            : _sessionList();
+    return Stack(fit: StackFit.expand, children: [
+      Offstage(
+        offstage: inDetail,
+        child: TickerMode(
+          enabled: !inDetail,
+          child: HomePagerScope(
+            page: onAgents ? 1 : 0,
+            onPage: (p) => widget
+                .onMobileHome(p == 1 ? MobileHome.agents : MobileHome.chats),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _mobileChatsHeader(hasClient,
+                    title: onAgents ? 'Agents' : 'Sessions',
+                    agents: onAgents,
+                    agentsMirror: onAgents),
+                Expanded(
+                  child: _selecting
+                      ? list(false)
+                      : HomePager(sessions: list(false), agents: list(true)),
+                ),
+                if (_selecting) _mobileSelectionActions(),
+              ],
+            ),
+          ),
+        ),
+      ),
+      if (inDetail && client != null)
+        Padding(
+          padding: EdgeInsets.only(bottom: _scrollBottomPad),
+          child: CoordinationAgentDetail(
+            key: const ValueKey('agent-detail'),
+            agent: agent,
+            client: client,
+            embedded: false,
+            onClose: () => widget.onAgent(null),
+          ),
+        ),
+    ]);
+  }
+
   /// The phone home body for the destination the bar currently selects.
   ///
   /// Each destination gets the whole surface below the bar. Chats keeps a head
@@ -594,8 +665,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     switch (destination) {
       case MobileHome.chats:
         final showAgents = agentsMirror;
-        return DotField(
-          child: Column(
+        return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _mobileChatsHeader(
@@ -613,7 +683,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             ),
             if (_selecting) _mobileSelectionActions(),
           ],
-        ),
         );
 
       case MobileHome.tasks:
@@ -695,69 +764,69 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         return Padding(
           padding: EdgeInsets.only(bottom: _scrollBottomPad),
           child: AnimatedSwitcher(
-          duration: Motion.base,
-          switchInCurve: Motion.enter,
-          switchOutCurve: Motion.exit,
-          transitionBuilder: (child, anim) {
-            final isDetail = child.key == const ValueKey('settings-detail');
-            final dx = isDetail ? 0.08 : -0.08;
-            return FadeTransition(
-              opacity: anim,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: Offset(dx, 0),
-                  end: Offset.zero,
-                ).animate(anim),
-                child: child,
-              ),
-            );
-          },
-          child: section != null
-              ? SettingsPanel(
-                  key: const ValueKey('settings-detail'),
-                  client: client,
-                  instances: widget.instances,
-                  active: widget.active,
-                  onRemove: widget.onRemoveInstance,
-                  onSelect: widget.onSelectInstance,
-                  onRename: widget.onRenameInstance,
-                  section: section,
-                  onSection: widget.onSettingsSection,
-                  onClose: () => widget.onSettingsSection(null),
-                  embedded: true,
-                  createOnOpen:
-                      _pendingSettingsCreate == section ? section : null,
-                  onCreateHandled: () =>
-                      setState(() => _pendingSettingsCreate = null),
-                )
-              : Column(
-                  key: const ValueKey('settings-root'),
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _mobileSettingsHeader(),
-                    Expanded(
-                      child: SettingsPanel(
-                        key: _mobileSettingsKey,
-                        client: client,
-                        instances: widget.instances,
-                        active: widget.active,
-                        onRemove: widget.onRemoveInstance,
-                        onSelect: widget.onSelectInstance,
-                        onRename: widget.onRenameInstance,
-                        section: widget.settingsSection,
-                        onSection: widget.onSettingsSection,
-                        onClose: () {
-                          if (widget.onSettingsClose != null) {
-                            widget.onSettingsClose!();
-                          } else {
-                            widget.onMobileHome(_lastMainHome);
-                          }
-                        },
-                        embedded: true,
-                      ),
-                    ),
-                  ],
+            duration: Motion.base,
+            switchInCurve: Motion.enter,
+            switchOutCurve: Motion.exit,
+            transitionBuilder: (child, anim) {
+              final isDetail = child.key == const ValueKey('settings-detail');
+              final dx = isDetail ? 0.08 : -0.08;
+              return FadeTransition(
+                opacity: anim,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: Offset(dx, 0),
+                    end: Offset.zero,
+                  ).animate(anim),
+                  child: child,
                 ),
+              );
+            },
+            child: section != null
+                ? SettingsPanel(
+                    key: const ValueKey('settings-detail'),
+                    client: client,
+                    instances: widget.instances,
+                    active: widget.active,
+                    onRemove: widget.onRemoveInstance,
+                    onSelect: widget.onSelectInstance,
+                    onRename: widget.onRenameInstance,
+                    section: section,
+                    onSection: widget.onSettingsSection,
+                    onClose: () => widget.onSettingsSection(null),
+                    embedded: true,
+                    createOnOpen:
+                        _pendingSettingsCreate == section ? section : null,
+                    onCreateHandled: () =>
+                        setState(() => _pendingSettingsCreate = null),
+                  )
+                : Column(
+                    key: const ValueKey('settings-root'),
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _mobileSettingsHeader(),
+                      Expanded(
+                        child: SettingsPanel(
+                          key: _mobileSettingsKey,
+                          client: client,
+                          instances: widget.instances,
+                          active: widget.active,
+                          onRemove: widget.onRemoveInstance,
+                          onSelect: widget.onSelectInstance,
+                          onRename: widget.onRenameInstance,
+                          section: widget.settingsSection,
+                          onSection: widget.onSettingsSection,
+                          onClose: () {
+                            if (widget.onSettingsClose != null) {
+                              widget.onSettingsClose!();
+                            } else {
+                              widget.onMobileHome(_lastMainHome);
+                            }
+                          },
+                          embedded: true,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         );
     }
@@ -780,9 +849,10 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         bottomPadding: _scrollBottomPad,
         groupsKey: mirror ? 'groups-mirror' : null,
         heroBuilder: kMobile
-            ? (count, needs, working) =>
-                _phoneHero(widget.sessions ?? const <SessionInfo>[],
-                    idleCast: false, wholeTeam: true)
+            ? (count, needs, working) => _phoneHero(
+                widget.sessions ?? const <SessionInfo>[],
+                idleCast: false,
+                wholeTeam: true)
             : null,
         sessions: kMobile ? widget.sessions : null,
         onSearchChanged: (v) => setState(() {
@@ -854,8 +924,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   Widget _mobileDock(bool hasClient) {
     final agents = widget.mobileHome == MobileHome.agents;
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-          M.gutter, S.s12, M.gutter, S.s12 + MediaQuery.viewPaddingOf(context).bottom),
+      padding: EdgeInsets.fromLTRB(M.gutter, S.s12, M.gutter,
+          S.s12 + MediaQuery.viewPaddingOf(context).bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -935,24 +1005,22 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             onTap: () => setState(() => _settledOpen = !_settledOpen),
             child: Container(
               height: kMobile ? M.minTarget : 32,
-              padding:
-                  EdgeInsets.fromLTRB(kMobile ? 0 : S.of(10), 0, kMobile ? 0 : S.of(10), 0),
+              padding: EdgeInsets.fromLTRB(
+                  kMobile ? 0 : S.of(10), 0, kMobile ? 0 : S.of(10), 0),
               child: Row(children: [
                 Text('Settled',
                     style: TS.label(kMobile ? AppColors.fg3 : AppColors.fg4)),
                 SizedBox(width: S.s8),
                 Text('${rows.length}',
-                    style: kMobile
-                        ? TS.meta()
-                        : mono(11, color: AppColors.fg4)),
+                    style:
+                        kMobile ? TS.meta() : mono(11, color: AppColors.fg4)),
                 const Spacer(),
                 AnimatedRotation(
                   turns: open ? 0.25 : 0,
                   duration: Motion.base,
                   curve: Curves.easeOutCubic,
                   child: AppIcon('chevron-right',
-                      size: 13,
-                      color: kMobile ? AppColors.fg3 : AppColors.fg4),
+                      size: 13, color: kMobile ? AppColors.fg3 : AppColors.fg4),
                 ),
               ]),
             ),
@@ -1047,7 +1115,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             for (var i = 0; i < split.settled.length; i++)
               _listRow(split.settled[i],
                   above: i > 0 ? split.settled[i - 1] : null,
-                  below: i + 1 < split.settled.length ? split.settled[i + 1] : null,
+                  below: i + 1 < split.settled.length
+                      ? split.settled[i + 1]
+                      : null,
                   divider: kMobile && i + 1 < split.settled.length),
           ],
         ),
@@ -1060,8 +1130,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       onRefresh: () async => widget.onRefreshSessions(),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(
-            M.gutter, S.s4, M.gutter, _scrollBottomPad),
+        padding:
+            EdgeInsets.fromLTRB(M.gutter, S.s4, M.gutter, _scrollBottomPad),
         children: children,
       ),
     );
@@ -1081,8 +1151,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       out.add(MobileSectionLabel('Pinned',
           icon: 'pin', count: pinned.length, top: 2));
       bool isLive(SessionInfo s) =>
-          !filtering && (sessionNeedsYou(s) || sessionCameBack(s) || sessionIsActive(s.status));
-      final rest = [...pinned.where(isLive), ...pinned.where((s) => !isLive(s))];
+          !filtering &&
+          (sessionNeedsYou(s) || sessionCameBack(s) || sessionBusy(s));
+      final rest = [
+        ...pinned.where(isLive),
+        ...pinned.where((s) => !isLive(s))
+      ];
       if (rest.isNotEmpty) {
         out.add(Appear(
           key: const ValueKey('folder-pinned'),
@@ -1105,17 +1179,21 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     ];
     final needs = filtering
         ? const <SessionInfo>[]
-        : [for (final s in remaining) if (sessionNeedsYou(s)) s];
+        : [
+            for (final s in remaining)
+              if (sessionNeedsYou(s)) s
+          ];
     final cameBack = filtering
         ? const <SessionInfo>[]
-        : [for (final s in remaining) if (sessionCameBack(s)) s];
+        : [
+            for (final s in remaining)
+              if (sessionCameBack(s)) s
+          ];
     final running = filtering
         ? const <SessionInfo>[]
         : [
             for (final s in remaining)
-              if (!sessionNeedsYou(s) &&
-                  !sessionCameBack(s) &&
-                  sessionIsActive(s.status))
+              if (!sessionNeedsYou(s) && !sessionCameBack(s) && sessionBusy(s))
                 s,
           ];
     var top = pinned.isEmpty ? 2.0 : 18.0;
@@ -1170,7 +1248,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           for (var i = 0; i < rows.length; i++)
             _listRow(rows[i],
                 above: i > 0 ? rows[i - 1] : null,
-                below: i + 1 < rows.length ? rows[i + 1] : null, divider: i + 1 < rows.length),
+                below: i + 1 < rows.length ? rows[i + 1] : null,
+                divider: i + 1 < rows.length),
         ]),
       ));
     }
@@ -1202,7 +1281,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                   AppIcon('archive', size: 16, color: AppColors.fg3),
                   SizedBox(width: S.s12),
                   Expanded(
-                      child: Text('Settled', style: TS.rowTitle(AppColors.fg2))),
+                      child:
+                          Text('Settled', style: TS.rowTitle(AppColors.fg2))),
                   Text('${rows.length}', style: TS.meta()),
                   SizedBox(width: S.s6),
                   AnimatedRotation(
@@ -1224,13 +1304,13 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             for (var i = 0; i < rows.length; i++)
               _listRow(rows[i],
                   above: i > 0 ? rows[i - 1] : null,
-                  below: i + 1 < rows.length ? rows[i + 1] : null, divider: i + 1 < rows.length),
+                  below: i + 1 < rows.length ? rows[i + 1] : null,
+                  divider: i + 1 < rows.length),
           ]),
         ),
       ]),
     );
   }
-
 
   /// Rows under their project's header, with cross-project Needs you first on
   /// phone when not filtering.
@@ -1294,9 +1374,10 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             key: ValueKey('chat-${needsYouRows[i].id}'),
             index: n++,
             since: _chatsShownAt,
-            child: _listRow(needsYouRows[i],
-     above: i > 0 ? needsYouRows[i - 1] : null,
-     below: i + 1 < needsYouRows.length ? needsYouRows[i + 1] : null,
+            child: _listRow(
+              needsYouRows[i],
+              above: i > 0 ? needsYouRows[i - 1] : null,
+              below: i + 1 < needsYouRows.length ? needsYouRows[i + 1] : null,
               divider: kMobile && i + 1 < needsYouRows.length,
               showProject: true,
             ),
@@ -1313,13 +1394,14 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             key: ValueKey('chat-${cameBackRows[i].id}'),
             index: n++,
             since: _chatsShownAt,
-            child: _listRow(cameBackRows[i],
-     above: i > 0 ? cameBackRows[i - 1] : null,
-     below: i + 1 < cameBackRows.length ? cameBackRows[i + 1] : null,
-                divider: kMobile && i + 1 < cameBackRows.length,
-                showProject: true,
-              ),
-            ));
+            child: _listRow(
+              cameBackRows[i],
+              above: i > 0 ? cameBackRows[i - 1] : null,
+              below: i + 1 < cameBackRows.length ? cameBackRows[i + 1] : null,
+              divider: kMobile && i + 1 < cameBackRows.length,
+              showProject: true,
+            ),
+          ));
         }
       }
     } else {
@@ -1335,7 +1417,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         ? 0
         : s.status == 'waiting_for_input'
             ? 0
-            : sessionIsActive(s.status)
+            : sessionBusy(s)
                 ? 1
                 : 2;
     final keys = byFolder.keys.toList();
@@ -1364,8 +1446,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           index: n++,
           since: _chatsShownAt,
           child: _listRow(rows[i],
-     above: i > 0 ? rows[i - 1] : null,
-     below: i + 1 < rows.length ? rows[i + 1] : null, divider: kMobile && i + 1 < rows.length),
+              above: i > 0 ? rows[i - 1] : null,
+              below: i + 1 < rows.length ? rows[i + 1] : null,
+              divider: kMobile && i + 1 < rows.length),
         ));
       }
     }
@@ -1396,7 +1479,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       // The moving character is the working signal; rows carry no plan text.
       final state = sessionNeedsYou(s)
           ? AgentCharacterState.needs
-          : sessionIsActive(s.status)
+          : sessionBusy(s)
               ? AgentCharacterState.working
               : AgentCharacterState.idle;
       return AgentMochi(agent, size: kMobile ? 20.0 : 17.0, state: state);
@@ -1432,8 +1515,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       joinBelow: checked && below != null && _selected.contains(below.id),
       draft: !renaming && _hasDraft(s),
       pinned: _isPinnedSession(s),
-      divider:
-          divider && !(below != null && _selected.contains(below.id)),
+      divider: divider && !(below != null && _selected.contains(below.id)),
       showProject: showProject,
       renameField: renaming ? _inlineRenameField(s, compact: !kMobile) : null,
       leading: _agentBadge(s),
@@ -1484,7 +1566,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                 for (var i = 0; i < rows.length; i++)
                   _listRow(rows[i],
                       above: i > 0 ? rows[i - 1] : null,
-                      below: i + 1 < rows.length ? rows[i + 1] : null, divider: kMobile && i + 1 < rows.length),
+                      below: i + 1 < rows.length ? rows[i + 1] : null,
+                      divider: kMobile && i + 1 < rows.length),
               ],
             ),
           ),
@@ -1513,7 +1596,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             border: Border.all(color: AppColors.line),
           ),
           child: Row(children: [
-            _segCell('Sessions', !agentsFirst,
+            _segCell(
+                'Sessions',
+                !agentsFirst,
                 const ValueKey('sidebar-mode-sessions'),
                 () => setSidebarAgentsFirst(false)),
             SizedBox(width: S.s2),
@@ -1549,8 +1634,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
               ),
               alignment: Alignment.center,
               child: Text(label,
-                  style: sans(12,
-                      color: on ? AppColors.fg1 : AppColors.fg4)),
+                  style: sans(12, color: on ? AppColors.fg1 : AppColors.fg4)),
             ),
           ),
         ),
@@ -1569,8 +1653,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           Expanded(
             child: Text('Search', style: sans(12, color: AppColors.fg4)),
           ),
-          Text(kMacOS ? '⌘K' : 'Ctrl+K',
-              style: mono(11, color: AppColors.fg4)),
+          Text(kMacOS ? '⌘K' : 'Ctrl+K', style: mono(11, color: AppColors.fg4)),
         ]),
       );
     }
@@ -1584,8 +1667,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           child: TextField(
             controller: ctl,
             focusNode: focus,
-            onChanged: (v) => setState(() =>
-                agentsFirst ? _agentFilterQuery = v : _filterQuery = v),
+            onChanged: (v) => setState(
+                () => agentsFirst ? _agentFilterQuery = v : _filterQuery = v),
             style: sans(12, color: AppColors.fg1),
             decoration: InputDecoration(
               isCollapsed: true,
@@ -1598,8 +1681,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         if (ctl.text.isNotEmpty)
           IconBtn('x', size: 20, iconSize: 10, tooltip: 'Clear', onTap: () {
             ctl.clear();
-            setState(() =>
-                agentsFirst ? _agentFilterQuery = '' : _filterQuery = '');
+            setState(
+                () => agentsFirst ? _agentFilterQuery = '' : _filterQuery = '');
           }),
       ]),
     );
@@ -1648,8 +1731,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     final mc = all.where((s) => isDedicatedMcSession(s.id)).firstOrNull;
     _chatsShownAt ??= DateTime.now();
     final rows = _groupedRows(list, attentionFirst: true);
-    final agentsFirst =
-        sidebarAgentsFirst.value && hasClient && _desktopAgentsAvailable(context);
+    final agentsFirst = sidebarAgentsFirst.value &&
+        hasClient &&
+        _desktopAgentsAvailable(context);
     final sessionsBody =
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Expanded(

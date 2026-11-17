@@ -391,7 +391,8 @@ void main() {
       expect(find.text('Ship it'), findsOneWidget);
 
       await t.tap(find.text('🚀'));
-      await _pumpFrames(t);
+      // The spring sheet takes ~600ms to leave.
+      await _pumpFrames(t, 12);
 
       expect(client.sent.single['reaction'], '🚀');
       expect(find.byType(MessageReactionGrid), findsNothing);

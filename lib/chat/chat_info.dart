@@ -22,7 +22,8 @@ import 'agent_cluster.dart';
 import '../screens/agent_profile_panel.dart' show showAgentProfileSettings;
 import '../desktop_layout.dart' show SettingsHeader;
 import '../screens/memory_screen.dart' show MemoryScreen;
-import '../settings_form.dart' show SettingsGroup;
+import '../settings_form.dart'
+    show Grouped, SettingsGroup, SettingsHero, SettingsRow;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Lets rows inside a docked [AgentInfoPanel] push a nested page instead of
@@ -415,66 +416,62 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
             ),
           ]),
         const AgentPageCaption('Agent'),
-        SettingsGroup(children: [
-          if (mc && widget.onAutonomy != null)
-            AgentPageRow(
-                label: 'Automated wakes',
-                subtitle: 'What wakes it without you',
-                icon: 'activity',
-                onTap: widget.onAutonomy),
-          if (mc && widget.onScheduled != null)
-            AgentPageRow(
-                label: 'Scheduled',
-                subtitle: 'Recurring goals and messages',
-                icon: 'scheduled',
-                onTap: widget.onScheduled),
-          if (!mc)
-            AgentPageRow(
-                label: 'Wakes and reporting',
-                subtitle: 'When it wakes and who it tells',
-                icon: 'repeat',
-                onTap: () => showAgentWakeSettings(ctx,
-                    client: widget.client,
-                    owner: widget.agentId,
-                    name: widget.name,
-                    onChanged: widget.onChanged)),
-          AgentPageRow(
-              label: 'How it reaches you',
-              subtitle: 'Notifications and where each kind goes',
-              icon: 'bell',
-              onTap: () => showAgentReachSettings(ctx,
-                  client: widget.client,
-                  agentId: widget.agentId,
-                  name: widget.name)),
-          if (agent != null && !mc)
-            AgentPageRow(
-                label: 'Inference profile',
-                subtitle: 'The model it runs on',
-                icon: 'cpu',
-                onTap: () => showAgentProfileSettings(ctx,
-                    client: widget.client,
-                    agent: agent,
-                    name: widget.name,
-                    onChanged: widget.onChanged)),
-          if (agent != null && !mc)
-            AgentPageRow(
-                label: 'Nickname',
-                subtitle: 'What it is called here',
-                icon: 'edit',
-                onTap: () => _editNickname(ctx)),
-          AgentPageRow(
-              label: 'Appearance',
-              subtitle: 'Avatar and colour across the app',
-              iconData: LucideIcons.star,
-              onTap: () => _openAppearance(ctx)),
-          if (agent != null && !mc)
-            AgentPageRow(
-                label: 'Delete agent',
-                subtitle: 'Removes its identity and notes',
-                icon: 'trash',
-                danger: true,
-                onTap: () => _deleteAgent(ctx)),
-        ]),
+        SettingsGroup(
+            footer:
+                kMobile ? 'Long-press the avatar to copy the agent ID.' : null,
+            children: [
+              if (mc && widget.onAutonomy != null)
+                AgentPageRow(
+                    label: 'Automated wakes',
+                    subtitle: 'What wakes it without you',
+                    icon: 'activity',
+                    onTap: widget.onAutonomy),
+              if (mc && widget.onScheduled != null)
+                AgentPageRow(
+                    label: 'Scheduled',
+                    subtitle: 'Recurring goals and messages',
+                    icon: 'scheduled',
+                    onTap: widget.onScheduled),
+              if (!mc)
+                AgentPageRow(
+                    label: 'Wakes and reporting',
+                    subtitle: 'When it wakes and who it tells',
+                    icon: 'repeat',
+                    onTap: () => showAgentWakeSettings(ctx,
+                        client: widget.client,
+                        owner: widget.agentId,
+                        name: widget.name,
+                        onChanged: widget.onChanged)),
+              AgentPageRow(
+                  label: 'How it reaches you',
+                  subtitle: 'Notifications and where each kind goes',
+                  icon: 'bell',
+                  onTap: () => showAgentReachSettings(ctx,
+                      client: widget.client,
+                      agentId: widget.agentId,
+                      name: widget.name)),
+              if (agent != null && !mc)
+                AgentPageRow(
+                    label: 'Inference profile',
+                    subtitle: 'The model it runs on',
+                    icon: 'cpu',
+                    onTap: () => showAgentProfileSettings(ctx,
+                        client: widget.client,
+                        agent: agent,
+                        name: widget.name,
+                        onChanged: widget.onChanged)),
+              if (agent != null && !mc)
+                AgentPageRow(
+                    label: 'Nickname',
+                    subtitle: 'What it is called here',
+                    icon: 'edit',
+                    onTap: () => _editNickname(ctx)),
+              AgentPageRow(
+                  label: 'Appearance',
+                  subtitle: 'Avatar and colour across the app',
+                  iconData: LucideIcons.star,
+                  onTap: () => _openAppearance(ctx)),
+            ]),
         const AgentPageCaption('Work'),
         SettingsGroup(children: [
           if (widget.onOpenInbox != null)
@@ -501,6 +498,16 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
               iconData: LucideIcons.book,
               onTap: () => _openMemory(ctx)),
         ]),
+        // Destructive last, in its own group, away from everyday rows.
+        if (agent != null && !mc)
+          SettingsGroup(children: [
+            AgentPageRow(
+                label: 'Delete agent',
+                subtitle: 'Removes its identity and notes',
+                icon: 'trash',
+                danger: true,
+                onTap: () => _deleteAgent(ctx)),
+          ]),
       ],
     );
   }
@@ -512,6 +519,26 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
         : ((agent?.profile ?? '').trim().isNotEmpty
             ? agent!.profile!.trim()
             : 'Routing default');
+    void copyId() {
+      Clipboard.setData(ClipboardData(text: widget.agentId));
+      toast(context, 'Agent ID copied');
+    }
+
+    if (kMobile) {
+      return Semantics(
+        label: '${widget.name}, $sub',
+        excludeSemantics: true,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: S.s16),
+          child: SettingsHero(
+            avatar: AgentMochi(widget.agentId, size: Grouped.avatarCharacter),
+            name: widget.name,
+            sub: sub,
+            onLongPress: copyId,
+          ),
+        ),
+      );
+    }
     return Semantics(
       label: '${widget.name}, $sub',
       excludeSemantics: true,
@@ -553,7 +580,8 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
   @override
   Widget build(BuildContext context) {
     Widget root(BuildContext ctx) => _AgentPageFrame(
-          title: widget.name,
+          // On phones the centred hero carries the name.
+          title: kMobile ? '' : widget.name,
           onBack: widget.docked || !kMobile ? null : _close,
           onClose: widget.docked || !kMobile ? widget.onClose : null,
           children: [_hero(), _groups(ctx)],
@@ -665,8 +693,10 @@ class AgentPageCaption extends StatelessWidget {
             : EdgeInsets.fromLTRB(S.s2, S.s2, S.s2, S.s4),
         child: Semantics(
           header: true,
-          child:
-              Text(text, style: sans(kMobile ? 13 : 12, color: AppColors.fg3)),
+          child: Text(text,
+              style: kMobile
+                  ? Grouped.labelStyle()
+                  : sans(12, color: AppColors.fg3)),
         ),
       );
 }
@@ -713,6 +743,20 @@ class AgentPageRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final phone = kMobile;
+    if (phone && !checked && !selected) {
+      return SettingsRow(
+        label: label,
+        sub: subtitle,
+        subMaxLines: 1,
+        icon: icon,
+        iconData: iconData,
+        value: value,
+        trailing: trailing,
+        onTap: onTap,
+        danger: danger,
+        chevron: trailing == null && (chevron ?? (onTap != null && !danger)),
+      );
+    }
     final labelColor = danger ? AppColors.danger : AppColors.fg1;
     final hasIcon = icon != null || iconData != null;
     final tileSize = phone ? 30.0 : 22.0;
@@ -1077,7 +1121,70 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
     );
   }
 
+  /// Phones: language A, the grouped rows of the settings pages.
+  Widget _phoneInfo() {
+    final tasks = widget.onOpenTasks;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (tasks != null)
+          SettingsGroup(children: [
+            SettingsRow(
+                label: 'Tasks', icon: 'task', chevron: true, onTap: tasks),
+          ]),
+        SettingsGroup(
+          header: 'Members',
+          footer: 'Long-press a member to remove them from the group.',
+          children: [
+            for (final m in _group.members)
+              SettingsRow(
+                label: _name(m.id, m.kind),
+                sub: m.isHuman
+                    ? null
+                    : (m.id == _group.lead ? 'Lead' : 'Member'),
+                leading: m.isAgent
+                    // Icon-wide slot so names line up with the icon rows.
+                    ? SizedBox.square(
+                        dimension: Grouped.icon,
+                        child: OverflowBox(
+                            maxWidth: Grouped.icon + 10,
+                            maxHeight: Grouped.icon + 10,
+                            child: AgentMochi(m.id, size: Grouped.icon + 10)))
+                    : null,
+                icon: m.isHuman ? 'user' : null,
+                onLongPress: _busy || m.isHuman
+                    ? null
+                    : () => _update(() => widget.client
+                        .updateGroup(_group.id, removeMembers: [m.id])),
+              ),
+            SettingsRow(
+              label: 'Lead',
+              icon: 'crown',
+              value: _leadName() ?? 'None',
+              chevron: true,
+              onTap: _busy ? null : _pickLead,
+            ),
+            SettingsRow(
+              label: 'Add member',
+              icon: 'user-plus',
+              accent: true,
+              onTap: _busy ? null : _pickAdd,
+            ),
+          ],
+        ),
+        SettingsGroup(children: [
+          SettingsRow(
+              label: 'Delete group',
+              icon: 'trash',
+              danger: true,
+              onTap: _deleteGroup),
+        ]),
+      ],
+    );
+  }
+
   Widget _infoTab() {
+    if (kMobile && !widget.docked) return _phoneInfo();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1102,7 +1209,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   Widget _frame() {
     final title = _group.title.trim().isEmpty ? 'Group' : _group.title.trim();
     final actions = <_CircleAction>[
-      if (widget.onOpenTasks != null && !widget.docked)
+      if (widget.onOpenTasks != null && !widget.docked && !kMobile)
         _CircleAction('task', 'Tasks', () {
           // Phone: Tasks stacks on this page, so back returns here.
           if (!widget.docked && !kMobile) _close();
@@ -1117,7 +1224,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
       status: Text(
           '${_group.members.length} '
           '${_group.members.length == 1 ? 'member' : 'members'}',
-          style: sans(13, color: AppColors.fg3)),
+          style: kMobile ? Grouped.subStyle() : sans(13, color: AppColors.fg3)),
       actions: actions,
       tabs: const [],
       tab: 0,

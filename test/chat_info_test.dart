@@ -178,8 +178,8 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    // The page title and the hero both carry the name.
-    expect(find.text('Revenue Scout'), findsNWidgets(2));
+    // On phones only the centred hero carries the name.
+    expect(find.text('Revenue Scout'), findsOneWidget);
     for (final label in ['Inbox', 'Board', 'Desk session', 'Memory']) {
       expect(find.text(label), findsOneWidget, reason: label);
     }

@@ -103,20 +103,20 @@ void main() {
 
     await tester.tap(_plus);
     await _settle(tester);
-    expect(find.text('Attach'), findsOneWidget);
+    expect(find.text('Files'), findsOneWidget);
     expect(find.text('Hand off'), findsOneWidget);
-    expect(find.text('to another agent'), findsOneWidget);
+    expect(find.text('To another agent, after this turn'), findsOneWidget);
     expect(find.text('Fork from here'), findsOneWidget);
     expect(find.text('Lanes'), findsNothing);
     expect(find.text('Interrupt'), findsNothing);
     final turn = tester.widget<AnimatedRotation>(find.ancestor(
         of: _plus, matching: find.byType(AnimatedRotation)));
-    expect(turn.turns, 0.125);
+    expect(turn.turns, closeTo(0.125, 0.001));
 
     await tester.tap(_plus);
     await _settle(tester);
     expect(find.text('Hand off'), findsNothing);
-    expect(find.text('Attach'), findsNothing);
+    expect(find.text('Files'), findsNothing);
     await _done(tester);
   });
 
@@ -141,7 +141,7 @@ void main() {
     expect(find.text('Interrupt'), findsOneWidget);
     // Interrupt sits at the top of the list.
     expect(tester.getTopLeft(find.text('Interrupt')).dy,
-        lessThan(tester.getTopLeft(find.text('Attach')).dy));
+        lessThan(tester.getTopLeft(find.text('Files')).dy));
     await _done(tester);
   });
 
@@ -153,7 +153,7 @@ void main() {
     await tester.tap(find.text('Hand off'));
     await _settle(tester);
     expect(find.text('Hand off to'), findsOneWidget);
-    expect(find.text('Attach'), findsNothing);
+    expect(find.text('Files'), findsNothing);
     // No sheet: the picker lives in the tray, not a new route.
     expect(find.byType(BottomSheet), findsNothing);
     expect(find.text('Moss'), findsOneWidget);
@@ -167,7 +167,7 @@ void main() {
         matching: find.byType(InkWell)));
     await _settle(tester);
     expect(find.text('Hand off to'), findsNothing);
-    expect(find.text('Attach'), findsOneWidget);
+    expect(find.text('Files'), findsOneWidget);
     await _done(tester);
   });
 

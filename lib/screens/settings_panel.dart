@@ -21,8 +21,7 @@ import 'add_instance.dart';
 import 'inference_profiles.dart';
 import 'recurring.dart';
 import 'routing_screen.dart';
-import 'mobile_session_home.dart'
-    show DotGridPref, LiveSessionCard, MobileSectionLabel;
+import 'mobile_session_home.dart' show LiveSessionCard, MobileSectionLabel;
 import 'session_list_row.dart' show SessionListRow;
 import 'shell_nav.dart';
 import 'usage.dart';
@@ -161,8 +160,8 @@ class _MachineListState extends State<MachineList> {
           widget.onAdd();
         },
         child: Padding(
-          padding: EdgeInsets.fromLTRB(
-              S.s12, kMobile ? S.of(14 ) : S.s8, S.s12, kMobile ? S.of(14 ) : S.s8),
+          padding: EdgeInsets.fromLTRB(S.s12, kMobile ? S.of(14) : S.s8, S.s12,
+              kMobile ? S.of(14) : S.s8),
           child: Row(children: [
             SizedBox(
               width: kMobile ? 8 : 16,
@@ -413,11 +412,11 @@ class SettingsPanelState extends State<SettingsPanel> {
       if (mounted) setState(() => _vaultCount = names.length);
     } catch (_) {}
     try {
-      final week =
-          await client.getUsage(since: DateTime.now().subtract(const Duration(days: 7)));
+      final week = await client.getUsage(
+          since: DateTime.now().subtract(const Duration(days: 7)));
       if (mounted) {
-        setState(() =>
-            _usageTokens = week.providers.fold<int>(0, (n, p) => n + p.totalTokens));
+        setState(() => _usageTokens =
+            week.providers.fold<int>(0, (n, p) => n + p.totalTokens));
       }
     } catch (_) {}
     try {
@@ -431,7 +430,7 @@ class SettingsPanelState extends State<SettingsPanel> {
             .where((s) =>
                 !s.settled &&
                 s.status != 'waiting_for_input' &&
-                sessionIsActive(s.status))
+                sessionBusy(s))
             .length);
       }
     } catch (_) {}
@@ -555,7 +554,8 @@ class SettingsPanelState extends State<SettingsPanel> {
                           ),
                         ),
                         Padding(
-                          padding: EdgeInsets.fromLTRB(S.of(18), S.of(10), S.s16, S.s16),
+                          padding: EdgeInsets.fromLTRB(
+                              S.of(18), S.of(10), S.s16, S.s16),
                           child: Row(children: [
                             Container(
                               width: 7,
@@ -607,65 +607,54 @@ class SettingsPanelState extends State<SettingsPanel> {
     );
   }
 
-  /// Phone settings HOME.
-  ///
-  /// The 32px rounded tile every settings row leads with (v5 `.pgi .ico`).
-  Widget _settingsIconTile(String icon, {Color? color}) => Container(
-        width: 30,
-        height: 30,
-        decoration: BoxDecoration(
-          color: AppColors.tint2,
-          borderRadius: BorderRadius.circular(R.md),
-        ),
-        child: Center(
-          child: AppIcon(icon, size: 16, color: color ?? AppColors.fg2),
-        ),
-      );
-
-  /// One v5 settings row: icon tile, label, optional right-hand value, chevron.
+  /// One phone settings row: bare icon, title, optional value, chevron.
   Widget _settingsRow(
     String label,
     String icon, {
     String? value,
     SettingsPage? page,
   }) =>
-      _V5SettingsRow(
+      SettingsRow(
         label: label,
-        leading: _settingsIconTile(icon),
+        icon: icon,
         value: value,
+        chevron: true,
         onTap: page == null ? null : () => widget.onSection?.call(page),
       );
 
-  /// v5 `.plb`: a quiet 13px group caption, indented past the card edge.
-  Widget _settingsGroupLabel(String text) => Padding(
-        padding: EdgeInsets.fromLTRB(S.s20, S.s16, 0, S.s6),
-        child: Text(text, style: sans(13, color: AppColors.fg3)),
-      );
-
+  /// Phone settings HOME, in design language v7 grouped rows.
   Widget _mobileSettingsHome() {
     final active = widget.active;
     final tm = ThemeManager.instance;
     final name = active?.label.trim() ?? '';
     final live = _liveCount;
     return ListView(
-      padding: EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40),
+      padding: EdgeInsets.fromLTRB(Grouped.gutter, S.s8, Grouped.gutter, S.s40),
       children: [
-        ListGroup(children: [
-          _V5SettingsRow(
+        SettingsGroup(children: [
+          SettingsRow(
             label: name.isEmpty ? 'No machine yet' : name,
-            subtitle: active == null
-                ? 'Add one to begin'
-                : 'Connected${live == null ? '' : ' · $live live'}',
+            sub: active == null ? 'Add one to begin' : null,
+            subWidget: active == null
+                ? null
+                : Text.rich(
+                    TextSpan(children: [
+                      TextSpan(
+                          text: 'Connected',
+                          style: Grouped.subStyle(AppColors.ok)),
+                      if (live != null) TextSpan(text: ' · $live live'),
+                    ]),
+                    style: Grouped.subStyle(),
+                  ),
             leading: _SettingsTile(null,
-                iconData: LucideIcons.laptop, ok: active != null),
+                iconData: LucideIcons.laptop300, ok: active != null),
+            chevron: true,
             onTap: () => widget.onSection?.call(SettingsPage.general),
           ),
         ]),
-        _settingsGroupLabel('Models'),
-        ListGroup(children: [
+        SettingsGroup(header: 'Models', children: [
           _settingsRow('Inference profiles', 'cpu',
-              page: SettingsPage.models,
-              value: _profileCount?.toString()),
+              page: SettingsPage.models, value: _profileCount?.toString()),
           _settingsRow('Routing', 'route', page: SettingsPage.routing),
           _settingsRow('Accounts', 'users', page: SettingsPage.accounts),
           _settingsRow('Usage', 'gauge',
@@ -674,42 +663,47 @@ class SettingsPanelState extends State<SettingsPanel> {
                   ? null
                   : '${fmtSi(_usageTokens!)} this week'),
         ]),
-        _settingsGroupLabel('Agents'),
-        ListGroup(children: [
-          ApprovalsRow(client: widget.client),
-          _settingsRow('Memory', 'book-marked', page: SettingsPage.memory),
-          _settingsRow('Wakes', 'repeat', page: SettingsPage.wakes),
-          _settingsRow('Keep warm', 'zap', page: SettingsPage.keepWarm),
-          _settingsRow('Scheduled', 'calendar-clock',
-              page: SettingsPage.scheduled),
-          _settingsRow('Vault', 'lock',
-              page: SettingsPage.vault,
-              value: _vaultCount?.toString()),
-          _settingsRow('Web search', 'globe', page: SettingsPage.webSearch),
-          _settingsRow('Voice', 'mic',
-              page: SettingsPage.voice,
-              value: _ambientOn == null
-                  ? null
-                  : _ambientOn!
-                      ? 'Listening'
-                      : 'Off'),
-        ]),
-        _settingsGroupLabel('This device'),
+        SettingsGroup(
+          header: 'Agents',
+          footer: 'Approvals apply to every session on this machine.',
+          children: [
+            ApprovalsRow(client: widget.client),
+            _settingsRow('Memory', 'book-marked', page: SettingsPage.memory),
+            _settingsRow('Wakes', 'repeat', page: SettingsPage.wakes),
+            _settingsRow('Keep warm', 'zap', page: SettingsPage.keepWarm),
+            _settingsRow('Scheduled', 'calendar-clock',
+                page: SettingsPage.scheduled),
+            _settingsRow('Vault', 'lock',
+                page: SettingsPage.vault, value: _vaultCount?.toString()),
+            _settingsRow('Web search', 'globe', page: SettingsPage.webSearch),
+            _settingsRow('Voice', 'mic',
+                page: SettingsPage.voice,
+                value: _ambientOn == null
+                    ? null
+                    : _ambientOn!
+                        ? 'Listening'
+                        : 'Off'),
+          ],
+        ),
         ListenableBuilder(
           listenable: ThemeManager.instance,
           builder: (context, _) {
             final accent = tm.customAccent;
-            return ListGroup(children: [
-              _settingsRow(
-                'Theme and accent',
-                'sliders',
-                page: SettingsPage.appearance,
-                value: accent == null
-                    ? tm.baseTheme.label
-                    : '${tm.baseTheme.label} · ${accent.name}',
-              ),
-              if (kCanNotify) _notifRow(),
-            ]);
+            return SettingsGroup(
+              header: 'This device',
+              footer: 'Theme, accent and fonts are saved on this device.',
+              children: [
+                _settingsRow(
+                  'Theme and accent',
+                  'sliders',
+                  page: SettingsPage.appearance,
+                  value: accent == null
+                      ? tm.baseTheme.label
+                      : '${tm.baseTheme.label} · ${accent.name}',
+                ),
+                if (kCanNotify) _notifRow(),
+              ],
+            );
           },
         ),
       ],
@@ -866,7 +860,8 @@ class SettingsPanelState extends State<SettingsPanel> {
     final newName = _renameController.text.trim();
     setState(() => _renamingUrl = null);
     if (newName.isEmpty) return;
-    await _saveInstances((items) => _renameStoredInstance(items, inst, newName));
+    await _saveInstances(
+        (items) => _renameStoredInstance(items, inst, newName));
     widget.onRename?.call(inst, newName);
   }
 
@@ -929,8 +924,8 @@ class SettingsPanelState extends State<SettingsPanel> {
                 },
                 borderRadius: BorderRadius.circular(R.sm),
                 child: Padding(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: S.s12, vertical: S.s6),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s6),
                   child: Row(children: [
                     AppIcon(icon,
                         size: 14,
@@ -1047,7 +1042,8 @@ class SettingsPanelState extends State<SettingsPanel> {
                   style: mono(13, color: AppColors.fg1)),
               trailing: IconBtn('copy',
                   size: 26, iconSize: 13, tooltip: 'Copy command', onTap: () {
-                Clipboard.setData(const ClipboardData(text: 'snippet serve --enable'));
+                Clipboard.setData(
+                    const ClipboardData(text: 'snippet serve --enable'));
                 toast(context, 'Copied');
               }),
             ),
@@ -1120,80 +1116,81 @@ class SettingsPanelState extends State<SettingsPanel> {
             ? () => _selectInstance(i)
             : null,
         child: Padding(
-        padding: EdgeInsets.fromLTRB(compact ? S.of(14 ) : S.s12, S.s8, S.s4, S.s8),
-        child: Row(
-          children: [
-            if (compact)
-              _SettingsTile(null, iconData: LucideIcons.laptop, ok: isActive)
-            else
-              IconTile('server', tone: isActive ? Tone.ok : Tone.neutral),
-            SizedBox(width: S.s12),
-            if (isRenaming) ...[
-              Expanded(
-                child: InlineEditField(
-                  controller: _renameController,
-                  hint: 'Machine name',
-                  commitOnTapOutside: false,
-                  showActions: true,
-                  onSubmit: () => _commitRename(i),
-                  onCancel: () => setState(() => _renamingUrl = null),
+          padding:
+              EdgeInsets.fromLTRB(compact ? S.of(14) : S.s12, S.s8, S.s4, S.s8),
+          child: Row(
+            children: [
+              if (compact)
+                _SettingsTile(null, iconData: LucideIcons.laptop, ok: isActive)
+              else
+                IconTile('server', tone: isActive ? Tone.ok : Tone.neutral),
+              SizedBox(width: S.s12),
+              if (isRenaming) ...[
+                Expanded(
+                  child: InlineEditField(
+                    controller: _renameController,
+                    hint: 'Machine name',
+                    commitOnTapOutside: false,
+                    showActions: true,
+                    onSubmit: () => _commitRename(i),
+                    onCancel: () => setState(() => _renamingUrl = null),
+                  ),
                 ),
-              ),
-            ] else ...[
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(i.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TS.rowTitle()),
-                    SizedBox(height: S.s2),
-                    Text(hostOf(i.url),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TS.codeSmall()),
-                  ],
-                ),
-              ),
-              SizedBox(width: S.s8),
-              if (compact) ...[
-                _machineMenu(i, connect: canConnect),
               ] else ...[
-                if (isActive)
-                  const Tag('Active', tone: Tone.ok, dot: true)
-                else if (canConnect)
-                  TextAction('Connect', onTap: () => _selectInstance(i)),
-                SizedBox(width: S.s4),
-                IconBtn('edit',
-                    size: 30,
-                    iconSize: 16,
-                    tooltip: 'Rename machine',
-                    onTap: () => _startRename(i)),
-                IconBtn('trash',
-                    size: 30,
-                    iconSize: 16,
-                    tooltip: 'Remove machine',
-                    onTap: () => _confirmRemove(i)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(i.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TS.rowTitle()),
+                      SizedBox(height: S.s2),
+                      Text(hostOf(i.url),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TS.codeSmall()),
+                    ],
+                  ),
+                ),
+                SizedBox(width: S.s8),
+                if (compact) ...[
+                  _machineMenu(i, connect: canConnect),
+                ] else ...[
+                  if (isActive)
+                    const Tag('Active', tone: Tone.ok, dot: true)
+                  else if (canConnect)
+                    TextAction('Connect', onTap: () => _selectInstance(i)),
+                  SizedBox(width: S.s4),
+                  IconBtn('edit',
+                      size: 30,
+                      iconSize: 16,
+                      tooltip: 'Rename machine',
+                      onTap: () => _startRename(i)),
+                  IconBtn('trash',
+                      size: 30,
+                      iconSize: 16,
+                      tooltip: 'Remove machine',
+                      onTap: () => _confirmRemove(i)),
+                ],
               ],
             ],
-          ],
+          ),
         ),
-      ),
       ),
     );
   }
 
   Widget _notifRow() {
     if (kMobile) {
-      return _V5SettingsRow(
+      return SettingsRow(
         label: 'Notifications',
-        subtitle: 'When a chat needs you or finishes',
-        leading: _settingsIconTile('bell'),
+        sub: 'When a chat needs you or finishes',
+        icon: 'bell',
         onTap: _notifBusy ? null : () => _toggleNotif(!_notif),
         trailing: _notifBusy
             ? const DelayedSpinner(size: 18)
-            : AppSwitch(on: _notif, onChanged: _toggleNotif),
+            : SettingsSwitch(value: _notif, onChanged: _toggleNotif),
       );
     }
     return Padding(
@@ -1316,6 +1313,7 @@ class SettingsSectionView extends StatefulWidget {
     this.onAdd,
     this.onSelectPage,
     this.onBack,
+    this.onClose,
     this.v5Desktop = false,
   });
 
@@ -1329,7 +1327,13 @@ class SettingsSectionView extends StatefulWidget {
   final void Function(Instance)? onAdd;
   final ValueChanged<SettingsPage>? onSelectPage;
   final VoidCallback? onBack;
+
+  /// Desktop: a close circle at the end of a plain page's header.
+  final VoidCallback? onClose;
   final bool v5Desktop;
+
+  /// Pages laid out as one column under a [SettingsHeader].
+  static const plainPages = SettingsSectionViewState._plainPages;
 
   @override
   State<SettingsSectionView> createState() => SettingsSectionViewState();
@@ -1455,7 +1459,8 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     }
   }
 
-  Future<void> _saveInstances(void Function(List<Instance> items) change) async {
+  Future<void> _saveInstances(
+      void Function(List<Instance> items) change) async {
     final items = await _updateStoredInstances(change);
     if (!mounted) return;
     setState(() => _instances
@@ -1473,8 +1478,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   Future<void> _pingMachines() async {
     for (final i in _instances) {
       final isActive = i.url == widget.active?.url;
-      final client =
-          isActive ? widget.client : DaemonClient(i.url, i.token);
+      final client = isActive ? widget.client : DaemonClient(i.url, i.token);
       client.health().then((ok) {
         if (mounted && _health[i.url] != ok) {
           setState(() => _health[i.url] = ok);
@@ -1581,7 +1585,8 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     final newName = _renameController.text.trim();
     setState(() => _renamingUrl = null);
     if (newName.isEmpty) return;
-    await _saveInstances((items) => _renameStoredInstance(items, inst, newName));
+    await _saveInstances(
+        (items) => _renameStoredInstance(items, inst, newName));
     widget.onRename?.call(inst, newName);
   }
 
@@ -1644,9 +1649,8 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
       return HeaderAction('Add machine', onTap: _openConnectDialog);
     }
     return switch (page) {
-      SettingsPage.general => _addingMachine
-          ? null
-          : HeaderAction('Add machine', onTap: _addMachine),
+      SettingsPage.general =>
+        _addingMachine ? null : HeaderAction('Add machine', onTap: _addMachine),
       SettingsPage.models => _modelsEditing
           ? null
           : HeaderAction('Add profile',
@@ -2032,9 +2036,8 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
       };
 
   Widget? _mobilePageAction(SettingsPage page) => switch (page) {
-        SettingsPage.general => _addingMachine
-            ? null
-            : _headerAdd('Add machine', _addMachine),
+        SettingsPage.general =>
+          _addingMachine ? null : _headerAdd('Add machine', _addMachine),
         SettingsPage.models => _modelsEditing
             ? null
             : _headerAdd(
@@ -2186,8 +2189,8 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
           ),
         SettingsPage.wakes =>
           WakesScreen(client: widget.client, embedded: true),
-        SettingsPage.keepWarm => WakesScreen(
-            client: widget.client, embedded: true, keepWarm: true),
+        SettingsPage.keepWarm =>
+          WakesScreen(client: widget.client, embedded: true, keepWarm: true),
         SettingsPage.scheduled => RecurringScreen(
             key: _recurringKey,
             client: widget.client,
@@ -2283,7 +2286,12 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
               ? SettingsBack(widget.v5Desktop ? 'Machines' : 'General',
                   onTap: _closeAddMachine)
               : null,
-          actions: [if (action != null) action],
+          actions: [
+            if (action != null) action,
+            if (widget.onClose != null)
+              GroupedCircleButton(
+                  icon: 'x', tooltip: 'Close', onTap: widget.onClose),
+          ],
         ),
         SizedBox(height: S.s16),
         ..._plainBody(page),
@@ -2399,8 +2407,7 @@ class _ApprovalsRowState extends State<ApprovalsRow> {
   }
 }
 
-/// The 30px rounded tile a phone settings row leads with; [ok] tints it for
-/// the machine this app is connected to.
+/// A phone settings row's bare icon; [ok] tints it for the connected machine.
 class _SettingsTile extends StatelessWidget {
   const _SettingsTile(this.icon, {this.iconData, this.ok = false});
   final String? icon;
@@ -2408,22 +2415,8 @@ class _SettingsTile extends StatelessWidget {
   final bool ok;
 
   @override
-  Widget build(BuildContext context) {
-    final color = ok ? AppColors.ok : AppColors.fg2;
-    return Container(
-      width: 30,
-      height: 30,
-      decoration: BoxDecoration(
-        color: ok ? AppColors.ok.withValues(alpha: 0.13) : AppColors.tint2,
-        borderRadius: BorderRadius.circular(R.md),
-      ),
-      child: Center(
-        child: iconData != null
-            ? Icon(iconData, size: 17, color: color)
-            : AppIcon(icon!, size: 16, color: color),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      SettingsIcon(icon, iconData: iconData, color: ok ? AppColors.ok : null);
 }
 
 /// The Approvals menu: Ask or Yolo for every session on this machine. A bottom
@@ -2531,11 +2524,10 @@ class AppearanceScreen extends StatelessWidget {
                     _AppearancePreviewCard(),
                     const SettingsGroupLabel('Home'),
                     const ListGroup(children: [_HomeFirstRow()]),
-                    const SettingsGroupLabel('Background'),
-                    ListGroup(children: [
-                      const _DotGridRow(),
-                      if (shaderSurfaceSupported) const _ChatSceneRow(),
-                    ]),
+                    if (shaderSurfaceSupported) ...[
+                      const SettingsGroupLabel('Background'),
+                      const ListGroup(children: [_ChatSceneRow()]),
+                    ],
                     const SettingsGroupLabel('Palette'),
                     ListGroup(children: paletteChildren),
                     Padding(
@@ -2643,7 +2635,8 @@ class _TactileRow extends StatelessWidget {
         label: 'Tactile surfaces',
         sub: 'Soft highlights on raised controls, inset wells for fields',
         onTap: () => look.setTactile(!look.tactile),
-        trailing: SettingsSwitch(value: look.tactile, onChanged: look.setTactile),
+        trailing:
+            SettingsSwitch(value: look.tactile, onChanged: look.setTactile),
       ),
     );
   }
@@ -2659,58 +2652,46 @@ class _ChromeOpacityRow extends StatelessWidget {
       listenable: look,
       builder: (context, _) {
         final v = look.chromeOpacity;
-        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          SettingsRow(
-            label: 'Sidebar opacity',
-            sub: v == null
-                ? 'Default. Lower it to let a scene or the desktop show through the sidebar and panes.'
-                : '${(v * 100).round()}%',
-            trailing: v == null
-                ? null
-                : TextButton(
-                    onPressed: () => look.setChromeOpacity(null),
-                    child: const Text('Reset')),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(S.of(14), 0, S.of(14), S.s8),
-            child: SliderTheme(
-              data: SliderThemeData(
-                trackHeight: 3,
-                activeTrackColor: AppColors.accent,
-                inactiveTrackColor: AppColors.surface3,
-                thumbColor: AppColors.accent,
-                overlayColor: AppColors.accentBg,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SettingsRow(
+                label: 'Sidebar opacity',
+                sub: v == null
+                    ? 'Default. Lower it to let a scene or the desktop show through the sidebar and panes.'
+                    : '${(v * 100).round()}%',
+                trailing: v == null
+                    ? null
+                    : TextButton(
+                        onPressed: () => look.setChromeOpacity(null),
+                        child: const Text('Reset')),
               ),
-              child: Slider(
-                key: const Key('chrome-opacity'),
-                value: v ?? 0.92,
-                onChanged: (x) => look.setChromeOpacity(x, persist: false),
-                onChangeEnd: look.setChromeOpacity,
+              Padding(
+                padding: EdgeInsets.fromLTRB(S.of(14), 0, S.of(14), S.s8),
+                child: SliderTheme(
+                  data: SliderThemeData(
+                    trackHeight: 3,
+                    activeTrackColor: AppColors.accent,
+                    inactiveTrackColor: AppColors.surface3,
+                    thumbColor: AppColors.accent,
+                    overlayColor: AppColors.accentBg,
+                    thumbShape:
+                        const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    overlayShape:
+                        const RoundSliderOverlayShape(overlayRadius: 14),
+                  ),
+                  child: Slider(
+                    key: const Key('chrome-opacity'),
+                    value: v ?? 0.92,
+                    onChanged: (x) => look.setChromeOpacity(x, persist: false),
+                    onChangeEnd: look.setChromeOpacity,
+                  ),
+                ),
               ),
-            ),
-          ),
-        ]);
+            ]);
       },
     );
   }
-}
-
-class _DotGridRow extends StatelessWidget {
-  const _DotGridRow();
-
-  @override
-  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
-        valueListenable: DotGridPref.instance,
-        builder: (context, on, _) => SettingsRow(
-          key: const Key('dot-grid'),
-          label: 'Dotted background',
-          sub: 'A faint dot grid behind the home and chat screens',
-          trailing: SettingsSwitch(value: on, onChanged: DotGridPref.instance.set),
-          onTap: () => DotGridPref.instance.set(!on),
-        ),
-      );
 }
 
 class _ChatSceneRow extends StatelessWidget {
@@ -2933,8 +2914,8 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
 
   void _step(double delta) {
     if (!_scroll.hasClients) return;
-    final target = (_scroll.offset + delta)
-        .clamp(0.0, _scroll.position.maxScrollExtent);
+    final target =
+        (_scroll.offset + delta).clamp(0.0, _scroll.position.maxScrollExtent);
     _scroll.animateTo(
       target,
       duration: Motion.base,
@@ -3054,16 +3035,14 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                 separatorBuilder: (_, __) => SizedBox(width: S.of(10)),
                 itemBuilder: (context, i) {
                   final item = items[i];
-                  final compiled = allPresets
-                      .where((p) => p.name == item.id)
-                      .firstOrNull;
+                  final compiled =
+                      allPresets.where((p) => p.name == item.id).firstOrNull;
                   final bg = compiled?.bg ?? item.preview.bg;
                   final surface1 = compiled?.surface1 ?? item.preview.surface1;
                   final fg1 = compiled?.fg1 ?? item.preview.fg1;
-                  final fg2 =
-                      compiled?.fg2 ?? fg1.withValues(alpha: 0.82);
-                  final surface3 = compiled?.surface3 ??
-                      Color.lerp(surface1, fg1, 0.10)!;
+                  final fg2 = compiled?.fg2 ?? fg1.withValues(alpha: 0.82);
+                  final surface3 =
+                      compiled?.surface3 ?? Color.lerp(surface1, fg1, 0.10)!;
                   final border2 =
                       compiled?.border2 ?? fg1.withValues(alpha: 0.16);
                   final accent = compiled?.accent ?? item.preview.accent;
@@ -3092,7 +3071,8 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                         children: [
                           Container(
                             height: 82,
-                            padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
+                            padding: EdgeInsets.fromLTRB(
+                                S.s12, S.of(10), S.s12, S.of(10)),
                             decoration: BoxDecoration(
                               color: bg,
                               borderRadius: BorderRadius.circular(R.card),
@@ -3122,7 +3102,8 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                                           horizontal: S.s6, vertical: S.of(3)),
                                       decoration: BoxDecoration(
                                         color: surface3,
-                                        borderRadius: BorderRadius.circular(R.xs),
+                                        borderRadius:
+                                            BorderRadius.circular(R.xs),
                                       ),
                                       child: Text(
                                         '~/',
@@ -3140,7 +3121,8 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                                       height: 22,
                                       decoration: BoxDecoration(
                                         color: accent,
-                                        borderRadius: BorderRadius.circular(R.xs),
+                                        borderRadius:
+                                            BorderRadius.circular(R.xs),
                                       ),
                                     ),
                                   ],
@@ -3240,8 +3222,8 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
 
   void _step(double delta) {
     if (!_scroll.hasClients) return;
-    final target = (_scroll.offset + delta)
-        .clamp(0.0, _scroll.position.maxScrollExtent);
+    final target =
+        (_scroll.offset + delta).clamp(0.0, _scroll.position.maxScrollExtent);
     _scroll.animateTo(
       target,
       duration: Motion.base,
@@ -3326,7 +3308,8 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                         children: [
                           Container(
                             height: 76,
-                            padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
+                            padding: EdgeInsets.fromLTRB(
+                                S.s12, S.of(10), S.s12, S.of(10)),
                             decoration: BoxDecoration(
                               color: AppColors.bg,
                               borderRadius: BorderRadius.circular(R.card),
@@ -3586,8 +3569,7 @@ class _AppearancePreviewCard extends StatelessWidget {
               ])),
             ),
             const MobileSectionLabel('Pinned', top: 14),
-            LiveSessionCard(
-                session: live, pinned: true, onTap: null),
+            LiveSessionCard(session: live, pinned: true, onTap: null),
             SessionListRow(
                 session: row, onTap: null, showProject: true, divider: false),
           ],
@@ -3609,7 +3591,7 @@ class _AppearancePreviewCard extends StatelessWidget {
       );
 }
 
-/// v5 `.pgi`: a 46px row, 30px tile, 15px label, 15px muted value, chevron.
+/// A phone settings row; [SettingsRow] with a chevron unless [trailing] is set.
 class _V5SettingsRow extends StatelessWidget {
   const _V5SettingsRow({
     required this.label,
@@ -3628,52 +3610,15 @@ class _V5SettingsRow extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final v = value;
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 46),
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-              horizontal: leading == null ? S.of(14) : S.s4, vertical: S.s8),
-          child: Row(children: [
-            if (leading != null) ...[leading!, SizedBox(width: S.s12)],
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(15, color: AppColors.fg1)),
-                  if (subtitle != null && subtitle!.isNotEmpty)
-                    Text(subtitle!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(12, color: AppColors.fg3)),
-                ],
-              ),
-            ),
-            if (v != null && v.isNotEmpty) ...[
-              SizedBox(width: S.s8),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 150),
-                child: Text(v,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13, color: AppColors.fg3)),
-              ),
-            ],
-            SizedBox(width: S.s6),
-            trailing ??
-                AppIcon('chevron-right', size: 14, color: AppColors.fg3),
-          ]),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SettingsRow(
+        label: label,
+        leading: leading,
+        value: value,
+        sub: subtitle,
+        trailing: trailing,
+        onTap: onTap,
+        chevron: trailing == null,
+      );
 }
 
 /// Desktop "Connect a machine" dialog over the Machines page: the command to

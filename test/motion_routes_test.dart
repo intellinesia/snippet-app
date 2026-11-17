@@ -63,8 +63,12 @@ void main() {
       }
     });
 
-    testWidgets('pops on an edge drag past 1/3 threshold', (t) async {
+    testWidgets('pops on an edge drag past half the width', (t) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      // Release projects velocity and pops past half the width, as on a phone.
+      t.view.devicePixelRatio = 1;
+      t.view.physicalSize = const Size(390, 844);
+      addTearDown(t.view.reset);
       try {
         await pushSecond(t);
         await t.pumpAndSettle();
@@ -107,6 +111,10 @@ void main() {
 
     testWidgets('pops on fast fling from left edge', (t) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      // Release projects velocity and pops past half the width, as on a phone.
+      t.view.devicePixelRatio = 1;
+      t.view.physicalSize = const Size(390, 844);
+      addTearDown(t.view.reset);
       try {
         await pushSecond(t);
         await t.pumpAndSettle();
@@ -325,33 +333,14 @@ void main() {
           ),
         );
 
-    testWidgets('Sessions <-> Agents crossfades with 8px slide and Settings pushes/pops from right',
+    testWidgets('Settings pushes and pops from the right',
         (t) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       try {
         await t.pumpWidget(buildSidebar(MobileHome.chats));
         await t.pumpAndSettle();
 
-        // Chats -> Agents: incoming Agents slides from +8px -> 0.
-        await t.pumpWidget(buildSidebar(MobileHome.agents));
-        await t.pump();
-        await t.pump(const Duration(milliseconds: 60));
-        final agentsDx =
-            t.getTopLeft(find.byKey(const ValueKey('mobile-agents'))).dx;
-        expect(agentsDx, greaterThan(0));
-        expect(agentsDx, lessThanOrEqualTo(8.0));
-        await t.pumpAndSettle();
-
-        // Agents -> Chats: incoming Chats slides from -8px -> 0.
-        await t.pumpWidget(buildSidebar(MobileHome.chats));
-        await t.pump();
-        await t.pump(const Duration(milliseconds: 60));
-        final chatsDx =
-            t.getTopLeft(find.byKey(const ValueKey('mobile-chats'))).dx;
-        expect(chatsDx, lessThan(0));
-        expect(chatsDx, greaterThanOrEqualTo(-8.0));
-        await t.pumpAndSettle();
-
+        // Sessions <-> Agents now pages with the finger (test/pager).
         // Chats -> Settings: Settings slides in from right (> 50px mid-flight).
         await t.pumpWidget(buildSidebar(MobileHome.settings));
         await t.pump();

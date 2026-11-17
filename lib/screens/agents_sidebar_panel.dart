@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -11,9 +12,9 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'agent_card.dart';
 import 'create_agent_form.dart';
+import '../mochi.dart';
 import 'group_messaging.dart';
 import 'mission_control_card.dart';
-import 'mobile_session_home.dart' show MobileGroupCard;
 import 'shell_nav.dart';
 import '../pull_refresh.dart';
 import '../message_reactions.dart' show isReactionEvent;
@@ -32,12 +33,17 @@ Future<bool?> showCreateAgentDialog(
   BuildContext context,
   DaemonClient client, {
   BuildContext? anchorContext,
+  String? initialPrompt,
+  String? initialCharacter,
 }) =>
     showSidePopover<bool>(context,
         anchorContext: anchorContext,
         title: 'New agent',
         popoverKey: const ValueKey('create-agent-popover'),
-        child: CreateAgentForm(client: client));
+        child: CreateAgentForm(
+            client: client,
+            initialPrompt: initialPrompt,
+            initialCharacter: initialCharacter));
 
 class AgentsSidebarPanel extends StatefulWidget {
   const AgentsSidebarPanel({
@@ -364,9 +370,12 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   Future<void> openCreateAgent([BuildContext? btnCtx]) =>
       _openCreateAgent(btnCtx ?? context);
 
-  Future<void> _openCreateAgent(BuildContext btnCtx) async {
+  Future<void> _openCreateAgent(BuildContext btnCtx,
+      {String? prompt, String? character}) async {
     final submitted = await showCreateAgentDialog(context, widget.client,
-        anchorContext: btnCtx);
+        anchorContext: btnCtx,
+        initialPrompt: prompt,
+        initialCharacter: character);
     if (!mounted || submitted != true) return;
     toast(context, 'Building agent — researching your description…');
     await _awaitNewAgent();
@@ -579,7 +588,9 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
               )
             : q.isNotEmpty
                 ? const _EmptySearch()
-                : _EmptyTeam();
+                : kMobile
+                    ? null
+                    : _EmptyTeam();
 
     if (kMobile) {
       return PullToRefresh(
@@ -609,34 +620,39 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 item is CoordinationAgent
                     ? agentTile(item, crew: crew[item.id], group: bucket)
                     : groupTile(item as GroupSummary);
-            Widget hairline() => Container(height: 1, color: AppColors.line);
             final children = <Widget>[];
             var n = 0;
-            void section(String? label, List<Widget> rows) {
-              if (rows.isEmpty) return;
-              if (label != null) {
-                children.add(Padding(
+            void label(String text) => children.add(Padding(
                   padding: EdgeInsets.fromLTRB(
-                      S.s4, children.isEmpty ? S.s4 : S.s16, S.s4, S.s8),
-                  child: Text(label,
-                      style: sans(12, weight: W.label, color: AppColors.fg4)),
+                      0, children.isEmpty ? S.s8 : S.s20, 0, S.s8),
+                  child: Text(text, style: TeamRow.subtitleStyle()),
                 ));
-              }
+            void section(String? text, List<Widget> rows) {
+              if (rows.isEmpty) return;
+              if (text != null) label(text);
               children.add(Appear(
-                key: ValueKey('agents-section-${label ?? 'all'}'),
+                key: ValueKey('agents-section-${text ?? 'all'}'),
                 index: n++,
                 since: _shownAt,
-                child: MobileGroupCard(children: [
-                  for (var i = 0; i < rows.length; i++) ...[
-                    if (i > 0) hairline(),
-                    rows[i],
-                  ],
-                ]),
+                child: TeamRows(children: rows),
               ));
             }
 
+            Widget addRow(String key, String title, String sub,
+                    {String? prompt, String? character}) =>
+                Builder(
+                  builder: (ctx) => _AddAgentRow(
+                    key: ValueKey('agents-add-$key'),
+                    title: title,
+                    subtitle: sub,
+                    onTap: busy
+                        ? null
+                        : () => _openCreateAgent(ctx,
+                            prompt: prompt, character: character),
+                  ),
+                );
+
             if (q.isEmpty) {
-              final hero = widget.heroBuilder;
               final pinnedRows = <Widget>[];
               final buckets = <AgentGroup, List<Widget>>{
                 for (final g in AgentGroup.values) g: <Widget>[],
@@ -652,16 +668,45 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 final tile = tileOf(item, bucket);
                 (e.pinnedAt != null ? pinnedRows : buckets[bucket]!).add(tile);
               }
-              if (hero != null && entries.isNotEmpty) {
-                children.add(hero(
-                    agents.length,
-                    buckets[AgentGroup.needsYou]!.length,
-                    buckets[AgentGroup.working]!.length));
+              // Option A drops the stage; the hero only fronts a one-agent team.
+              final starter = agents.length <= 1 && groups.isEmpty;
+              if (starter && (agents.isNotEmpty || !loading)) {
+                final only = agents.firstOrNull;
+                children.add(only == null
+                    ? const _NoAgentsHero()
+                    : _TeamHero(
+                        agent: only,
+                        group: bucketOf(only),
+                        onOpen: () => widget.onOpenAgent?.call(only),
+                      ));
+                section('Your team', [
+                  ...pinnedRows,
+                  for (final b in AgentGroup.values) ...buckets[b]!,
+                ]);
+                label('Add an agent');
+                children.add(TeamRows(children: [
+                  for (final st in agentStarters.take(2))
+                    addRow(st.title, st.title, st.summary,
+                        prompt: st.prompt, character: st.character),
+                  addRow('own', 'Describe your own',
+                      'Or pick from ${agentStarters.length} starters'),
+                ]));
+                children.add(Padding(
+                  padding: EdgeInsets.fromLTRB(0, S.s8, S.s16, 0),
+                  child: Text(
+                      'Each agent keeps its own memory, character and sessions.',
+                      style: sans(14, height: 19 / 14, color: AppColors.fg3)),
+                ));
+              } else {
+                section('Pinned', pinnedRows);
+                section('Needs you', buckets[AgentGroup.needsYou]!);
+                section('Working', buckets[AgentGroup.working]!);
+                section('Asleep', buckets[AgentGroup.recent]!);
+                children.add(SizedBox(height: S.s20));
+                children.add(TeamRows(children: [
+                  addRow('new', 'New agent', 'From a starter or your own words'),
+                ]));
               }
-              section('Pinned', pinnedRows);
-              section('Needs you', buckets[AgentGroup.needsYou]!);
-              section('Working', buckets[AgentGroup.working]!);
-              section('Idle', buckets[AgentGroup.recent]!);
             } else {
               section(null, [
                 for (final e in entries)
@@ -869,4 +914,156 @@ class _CreateMenu extends StatelessWidget {
           ),
         ],
       );
+}
+
+/// The one agent of a fresh team, large, above the list.
+class _TeamHero extends StatelessWidget {
+  const _TeamHero({required this.agent, required this.group, this.onOpen});
+
+  final CoordinationAgent agent;
+  final AgentGroup group;
+  final VoidCallback? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final name =
+        agent.displayName.trim().isEmpty ? agent.id : agent.displayName.trim();
+    final (state, word) = !agent.available
+        ? (AgentCharacterState.sleeping, 'paused')
+        : switch (group) {
+            AgentGroup.needsYou => (AgentCharacterState.needs, 'needs you'),
+            AgentGroup.working => (AgentCharacterState.working, 'working'),
+            AgentGroup.recent => (AgentCharacterState.sleeping, 'asleep'),
+          };
+    return Semantics(
+      button: onOpen != null,
+      label: '$name, your agent, $word',
+      child: GestureDetector(
+        key: const ValueKey('agents-team-hero'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onOpen,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(0, S.s12, 0, S.s4),
+          child: Column(children: [
+            SizedBox.square(
+              dimension: 80,
+              child: AgentMochi(agent.id, size: 80, state: state),
+            ),
+            SizedBox(height: S.s8),
+            Text(name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(20,
+                    weight: FontWeight.w600,
+                    height: 26 / 20,
+                    color: AppColors.fg1)),
+            Text('Your agent · $word', style: TeamRow.subtitleStyle()),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// No agents at all (the default one was deleted): say so, then the starters.
+class _NoAgentsHero extends StatelessWidget {
+  const _NoAgentsHero();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        key: const ValueKey('agents-empty-hero'),
+        padding: EdgeInsets.fromLTRB(0, S.s24, 0, S.s4),
+        child: Column(children: [
+          SizedBox.square(
+            dimension: 80,
+            child: CustomPaint(
+              painter: _DashedCircle(AppColors.border2),
+              child: Center(
+                  child: AppIcon('plus', size: 22, color: AppColors.fg3)),
+            ),
+          ),
+          SizedBox(height: S.s8),
+          Text('No agents yet',
+              style: sans(20,
+                  weight: FontWeight.w600,
+                  height: 26 / 20,
+                  color: AppColors.fg1)),
+          Text('Start from one below, or describe your own.',
+              textAlign: TextAlign.center,
+              style: TeamRow.subtitleStyle()),
+        ]),
+      );
+}
+
+/// An "Add an agent" row: title, line, and a dashed plus on the right.
+class _AddAgentRow extends StatelessWidget {
+  const _AddAgentRow({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => TeamRow(
+        onTap: onTap,
+        child: Row(children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TeamRow.titleStyle()),
+                SizedBox(height: S.of(1)),
+                Text(subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TeamRow.subtitleStyle()),
+              ],
+            ),
+          ),
+          SizedBox(width: S.of(14)),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.fg1.withValues(alpha: 0.06)),
+            child: Center(
+                child: AppIcon('plus', size: 18, color: AppColors.fg2)),
+          ),
+        ]),
+      );
+}
+
+class _DashedCircle extends CustomPainter {
+  _DashedCircle(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final r = size.shortestSide / 2 - 0.75;
+    final c = size.center(Offset.zero);
+    final dashes = (2 * math.pi * r / 6).floor();
+    final step = 2 * math.pi / dashes;
+    for (var i = 0; i < dashes; i++) {
+      canvas.drawArc(Rect.fromCircle(center: c, radius: r), i * step,
+          step * 0.55, false, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedCircle old) => old.color != color;
 }

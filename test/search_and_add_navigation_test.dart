@@ -213,7 +213,10 @@ void main() {
       await tester.tap(find.byTooltip('New agent or group'));
       await tester.pumpAndSettle();
       expect(find.text('New group'), findsOneWidget);
-      await tester.tap(find.text('New agent'));
+      // The list's own New agent row sits under the menu; tap the menu item.
+      final newAgent = find.byKey(const ValueKey('create-agent'));
+      expect(newAgent, findsOneWidget);
+      await tester.tap(newAgent);
       await tester.pumpAndSettle();
       expect(find.byType(CreateAgentForm), findsOneWidget);
       // Phone sheets have no close X; tapping the scrim dismisses.

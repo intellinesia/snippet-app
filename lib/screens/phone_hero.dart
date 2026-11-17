@@ -11,6 +11,7 @@ import '../notification_text.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'session_list_row.dart';
+import 'shell_nav.dart' show sessionBusy;
 
 /// The agent's character colour, for the approval card and the stage.
 Color heroAgentColor(String agentId) {
@@ -211,7 +212,7 @@ class _PhoneHeroState extends State<PhoneHero> {
   List<SessionInfo> _running() {
     final run = _live
         .where((s) =>
-            s.running &&
+            sessionBusy(s) &&
             ((s.plan != null && s.plan!.total > 0) ||
                 (s.goal?.ongoing ?? false) ||
                 (s.lanes?.running ?? 0) > 0))

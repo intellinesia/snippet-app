@@ -1,4 +1,6 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 
 import '../gesture_physics.dart';
@@ -69,10 +71,6 @@ class _MobileShellState extends State<MobileShell>
   double _base = 0;
   double _raw = 0;
   double? _commitVelocity;
-  // Sideways swipe between the Sessions and Agents lists; null until decided.
-  bool? _homeDrag;
-  double _homeDx = 0;
-  double _homePull = 0;
 
   bool get _chatsVisible => widget.chatsOpen || !widget.hasActiveTab;
   double get _exitX => widget.missionPair ? 1.0 : -1.0;
@@ -127,7 +125,8 @@ class _MobileShellState extends State<MobileShell>
   DateTime? _swipeNavAt;
   DateTime? _systemBackAt;
   static bool _recent(DateTime? t) =>
-      t != null && DateTime.now().difference(t) < const Duration(milliseconds: 600);
+      t != null &&
+      DateTime.now().difference(t) < const Duration(milliseconds: 600);
 
   /// [onCommit] runs when the drag carries far or fast enough to switch.
   void _dragEnd(double velocityPx, double width, VoidCallback onCommit,
@@ -277,14 +276,7 @@ class _MobileShellState extends State<MobileShell>
                       enabled: chatsVisible || _v.value < 1.0,
                       child: SceneBackdrop(
                         child: SafeArea(
-                          child: AnimatedSlide(
-                            offset: Offset(_homePull, 0),
-                            duration: _homeDrag == true
-                                ? Duration.zero
-                                : const Duration(milliseconds: 220),
-                            curve: Curves.easeOutCubic,
-                            child: sidebar,
-                          ),
+                          child: sidebar,
                         ),
                       ),
                     ),
@@ -299,8 +291,8 @@ class _MobileShellState extends State<MobileShell>
                           final vc = _v.value.clamp(0.0, 1.0);
                           return vc > 0
                               ? ColoredBox(
-                                  color: Colors.black
-                                      .withValues(alpha: 0.18 * vc))
+                                  color:
+                                      Colors.black.withValues(alpha: 0.18 * vc))
                               : const SizedBox.expand();
                         },
                       ),
@@ -348,53 +340,11 @@ class _MobileShellState extends State<MobileShell>
             ? onSwipeToMission
             : null)
         : (missionPair ? onSwipeToSessions : null);
-    final onAgents = mobileHome == MobileHome.agents;
-    final homeSwipe = chatsVisible &&
-        !drilledDown &&
-        (mobileHome == MobileHome.chats || onAgents);
-    // Sessions -> Agents is a left swipe, Agents -> Sessions a right one.
-    final homeSign = onAgents ? 1.0 : -1.0;
+    void start() => _dragStart();
+    void delta(double dx, double w) => _dragUpdate(dx, w);
+    void end(double v, double w) => _dragEnd(v, w, swipe!);
 
-    void start() {
-      _homeDrag = null;
-      _homeDx = 0;
-      _dragStart();
-    }
-
-    void delta(double dx, double w) {
-      if (dx == 0 && _homeDrag == null) return;
-      _homeDrag ??= homeSwipe && dx * homeSign > 0;
-      if (_homeDrag!) {
-        _homeDx += dx;
-        final pull = rubberBand(_homeDx.abs() / w, .35) * 0.5;
-        setState(() => _homePull = _homeDx > 0 ? pull : -pull);
-      } else if (swipe != null) {
-        _dragUpdate(dx, w);
-      }
-    }
-
-    void end(double v, double w) {
-      if (_homeDrag == true) {
-        final passed = dragDismisses(
-            distance: _homeDx * homeSign,
-            velocity: v * homeSign,
-            distanceThreshold: 64,
-            velocityThreshold: 500);
-        setState(() {
-          _homeDrag = null;
-          _homePull = 0;
-        });
-        if (passed) {
-          HapticFeedback.selectionClick();
-          onMobileHome(onAgents ? MobileHome.chats : MobileHome.agents);
-        }
-        return;
-      }
-      _homeDrag = null;
-      if (swipe != null) _dragEnd(v, w, swipe);
-    }
-
-    final body = swipe != null || homeSwipe
+    final body = swipe != null
         ? _PairSwipe(onStart: start, onDelta: delta, onEnd: end, child: shell)
         : shell;
 
@@ -475,5 +425,224 @@ class _EdgeSwipeBack extends StatelessWidget {
       onHorizontalDragEnd: (d) => onEnd(d.primaryVelocity ?? 0, width),
       onHorizontalDragCancel: () => onEnd(0, width),
     );
+  }
+}
+
+/// Drives the Sessions | Agents pager: 0 is Sessions, 1 is Agents. The finger
+/// moves it 1:1 (rubber-banded past the ends); release projects 200 ms of
+/// velocity and settles on a 1/500/44 spring.
+class HomePagerController extends ChangeNotifier {
+  HomePagerController({
+    required TickerProvider vsync,
+    int initial = 0,
+    this.onCommit,
+  })  : _page = initial,
+        _c = AnimationController.unbounded(vsync: vsync, value: initial * 1.0) {
+    _c.addListener(notifyListeners);
+  }
+
+  static const SpringDescription spring =
+      SpringDescription(mass: 1, stiffness: 500, damping: 44);
+
+  final AnimationController _c;
+  int _page;
+  bool _dragging = false;
+
+  /// Called once per committed change, after the selection haptic.
+  ValueChanged<int>? onCommit;
+
+  int get page => _page;
+  bool get dragging => _dragging;
+
+  /// Fractional page, 0..1 (may overshoot slightly while rubber-banding).
+  double get position => _c.value;
+
+  void _settle(int to, double velocity) {
+    _c.animateWith(SpringSimulation(spring, _c.value, to.toDouble(), velocity,
+        snapToEnd: true,
+        tolerance: const Tolerance(distance: 0.001, velocity: 0.01)));
+  }
+
+  /// Moves to [page] without a drag (tap on the indicator, external change).
+  void animateTo(int page) {
+    if (_dragging) return;
+    _page = page;
+    _settle(page, 0);
+  }
+
+  void dragStart() {
+    _c.stop();
+    _dragging = true;
+  }
+
+  void dragUpdate(double dx, double width) {
+    if (width <= 0) return;
+    var v = _c.value - dx / width;
+    if (v < 0) v = -rubberBand(-v, .35);
+    if (v > 1) v = 1 + rubberBand(v - 1, .35);
+    _c.value = v;
+  }
+
+  void dragEnd(double velocityPx, double width) {
+    if (!_dragging) return;
+    _dragging = false;
+    if (width <= 0) return;
+    final v = -velocityPx / width;
+    final projected = _c.value + v * 0.2;
+    final to = projected.round().clamp(0, 1);
+    if (to != _page) {
+      _page = to;
+      HapticFeedback.selectionClick();
+      onCommit?.call(to);
+    }
+    _settle(to, v);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+}
+
+/// Owns a [HomePagerController] and shares it with the pager body and the top
+/// bar indicator below it. [page] is the selected page (0 or 1); [onPage] fires
+/// when a drag commits.
+class HomePagerScope extends StatefulWidget {
+  const HomePagerScope({
+    super.key,
+    required this.page,
+    required this.onPage,
+    required this.child,
+  });
+
+  final int page;
+  final ValueChanged<int> onPage;
+  final Widget child;
+
+  static HomePagerController? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<_HomePagerInherited>()
+      ?.notifier;
+
+  @override
+  State<HomePagerScope> createState() => _HomePagerScopeState();
+}
+
+class _HomePagerScopeState extends State<HomePagerScope>
+    with SingleTickerProviderStateMixin {
+  late final HomePagerController _ctl = HomePagerController(
+      vsync: this, initial: widget.page, onCommit: (p) => widget.onPage(p));
+
+  @override
+  void didUpdateWidget(HomePagerScope old) {
+    super.didUpdateWidget(old);
+    if (widget.page != _ctl.page && !_ctl.dragging) {
+      if (reduceMotion(context)) {
+        _ctl._c.value = widget.page.toDouble();
+        _ctl._page = widget.page;
+      } else {
+        _ctl.animateTo(widget.page);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      _HomePagerInherited(notifier: _ctl, child: widget.child);
+}
+
+class _HomePagerInherited extends InheritedNotifier<HomePagerController> {
+  const _HomePagerInherited({required super.notifier, required super.child});
+}
+
+/// The two home bodies side by side, dragged 1:1 under the finger. Needs a
+/// [HomePagerScope] above it.
+class HomePager extends StatelessWidget {
+  const HomePager({super.key, required this.sessions, required this.agents});
+
+  final Widget sessions;
+  final Widget agents;
+
+  @override
+  Widget build(BuildContext context) {
+    final ctl = HomePagerScope.maybeOf(context);
+    if (ctl == null) return sessions;
+    return LayoutBuilder(builder: (context, box) {
+      final w = box.maxWidth;
+      return RawGestureDetector(
+        behavior: HitTestBehavior.translucent,
+        gestures: {
+          _EdgeYieldDrag: GestureRecognizerFactoryWithHandlers<_EdgeYieldDrag>(
+            () => _EdgeYieldDrag(ctl),
+            (r) => r
+              ..onStart = ((_) => ctl.dragStart())
+              ..onUpdate = ((d) => ctl.dragUpdate(d.delta.dx, w))
+              ..onEnd = ((d) => ctl.dragEnd(d.primaryVelocity ?? 0, w))
+              ..onCancel = (() => ctl.dragEnd(0, w)),
+          ),
+        },
+        child: ClipRect(
+          child: AnimatedBuilder(
+            animation: ctl,
+            builder: (context, _) {
+              final p = ctl.position;
+              return Stack(fit: StackFit.expand, children: [
+                Offstage(
+                  offstage: p >= 1,
+                  child: Transform.translate(
+                      offset: Offset(-p * w, 0), child: sessions),
+                ),
+                Offstage(
+                  offstage: p <= 0,
+                  child: Transform.translate(
+                      offset: Offset((1 - p) * w, 0), child: agents),
+                ),
+              ]);
+            },
+          ),
+        ),
+      );
+    });
+  }
+}
+
+/// Horizontal drag that backs off when it would only pull past an end of the
+/// pager, so an outer swipe (Mission Control) can take it.
+class _EdgeYieldDrag extends HorizontalDragGestureRecognizer {
+  _EdgeYieldDrag(this.ctl);
+
+  final HomePagerController ctl;
+  double _dx = 0;
+  bool _decided = false;
+
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    _dx = 0;
+    _decided = false;
+    super.addAllowedPointer(event);
+  }
+
+  @override
+  void handleEvent(PointerEvent event) {
+    if (!_decided && event is PointerMoveEvent) {
+      _dx += event.delta.dx;
+      if (_dx.abs() > 4) {
+        _decided = true;
+        final atStart = ctl.position <= 0.001 && _dx > 0;
+        final atEnd = ctl.position >= 0.999 && _dx < 0;
+        if (atStart || atEnd) {
+          resolve(GestureDisposition.rejected);
+          stopTrackingPointer(event.pointer);
+          return;
+        }
+      }
+    }
+    super.handleEvent(event);
   }
 }

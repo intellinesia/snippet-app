@@ -50,9 +50,15 @@ Future<void> _close(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('a work session composer shows the model picker', (tester) async {
+  testWidgets('a work session carries the model picker in its tray',
+      (tester) async {
     await _open(tester, 'conv-42');
-    expect(_modelChips(tester), isNotEmpty);
+    // Phones keep the pill clean; the model sits in the + tray.
+    expect(_modelChips(tester), isEmpty);
+    await tester.tap(find.byWidgetPredicate(
+        (w) => w is ComposerIconButton && w.tooltip == 'Actions'));
+    await _pump(tester);
+    expect(find.text('Model'), findsOneWidget);
     await _close(tester);
   });
 

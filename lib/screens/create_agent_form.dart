@@ -17,10 +17,49 @@ import '../widgets.dart';
 /// The prompt field is deliberately the whole form. The daemon takes only
 /// `{prompt}` and derives name, handle and capabilities itself, so
 /// exposing those as inputs would offer controls it ignores.
+/// Starter agents offered by the form and the phone Agents tab.
+const agentStarters =
+    <({String title, String summary, String prompt, String character})>[
+  (
+    title: 'Code reviewer',
+    summary: 'Reads pull requests and flags risks',
+    prompt:
+        'A code reviewer that reads pull requests, flags risks and suggests fixes without pushing.',
+    character: '05'
+  ),
+  (
+    title: 'Release manager',
+    summary: 'Builds, tests and ships releases',
+    prompt:
+        'A release manager that builds, tests and ships releases, and writes the notes.',
+    character: '09'
+  ),
+  (
+    title: 'Research scout',
+    summary: 'Searches the web and summarises, with sources',
+    prompt:
+        'A research scout that searches the web and summarises what matters, with sources.',
+    character: '03'
+  ),
+  (
+    title: 'Docs writer',
+    summary: 'Keeps the README and guides in step with the code',
+    prompt:
+        'A docs writer that keeps the README and guides in step with the code, in British English.',
+    character: '07'
+  ),
+];
+
 class CreateAgentForm extends StatefulWidget {
-  const CreateAgentForm({super.key, required this.client});
+  const CreateAgentForm(
+      {super.key,
+      required this.client,
+      this.initialPrompt,
+      this.initialCharacter});
 
   final DaemonClient client;
+  final String? initialPrompt;
+  final String? initialCharacter;
 
   @override
   State<CreateAgentForm> createState() => _CreateAgentFormState();
@@ -38,6 +77,12 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
   @override
   void initState() {
     super.initState();
+    _character = widget.initialCharacter ?? _character;
+    final seed = widget.initialPrompt?.trim() ?? '';
+    if (seed.isNotEmpty) {
+      _prompt.text = seed;
+      _lastPrompt = seed;
+    }
     _nickname.addListener(() => setState(() {}));
     _prompt.addListener(_promptChanged);
     CharacterRoster.load().then((r) {
@@ -80,23 +125,8 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
     }
   }
 
-  static const _starters = [
-    (
-      'Code reviewer',
-      'A code reviewer that reads pull requests, flags risks and suggests fixes without pushing.'
-    ),
-    (
-      'Release manager',
-      'A release manager that builds, tests and ships releases, and writes the notes.'
-    ),
-    (
-      'Research scout',
-      'A research scout that searches the web and summarises what matters, with sources.'
-    ),
-    (
-      'Docs writer',
-      'A docs writer that keeps the README and guides in step with the code, in British English.'
-    ),
+  static final _starters = [
+    for (final st in agentStarters) (st.title, st.prompt),
   ];
 
   void _start(String text) {

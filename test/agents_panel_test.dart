@@ -231,8 +231,12 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Builder'), findsOneWidget);
-    await tester.tap(find.text('Builder'));
+    // The team view names the agent in its hero and in its row; tap the row.
+    final agentRow = find.descendant(
+        of: find.byKey(const ValueKey('agent-card-a1')),
+        matching: find.text('Builder'));
+    expect(agentRow, findsOneWidget);
+    await tester.tap(agentRow);
     await tester.pumpAndSettle();
 
     expect(openedAgent, isNotNull);

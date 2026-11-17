@@ -410,37 +410,35 @@ class _VoiceScreenState extends State<VoiceScreen> {
         header: 'Recording',
         footer: 'Snoozing stops automatic recording for a while.',
         children: [
-          SettingsRow(
+          SettingsPickerRow<int>(
             label: 'Snooze',
-            trailing: SettingsPopup<int>(
-              label: _snoozeLabel(r),
-              selected: snoozing ? -1 : 0,
-              items: const [
-                (0, 'Off'),
-                (60, '1 hour'),
-                (240, '4 hours'),
-                (-2, 'Until tomorrow'),
-              ],
-              onSelected: (m) => _recAct(
-                () => widget.client.setRecording(
-                  snoozeMinutes: m == -2 ? _untilTomorrowMinutes() : m,
-                ),
+            icon: 'clock',
+            value: _snoozeLabel(r),
+            selected: snoozing ? -1 : 0,
+            items: const [
+              (0, 'Off'),
+              (60, '1 hour'),
+              (240, '4 hours'),
+              (-2, 'Until tomorrow'),
+            ],
+            onSelected: (m) => _recAct(
+              () => widget.client.setRecording(
+                snoozeMinutes: m == -2 ? _untilTomorrowMinutes() : m,
               ),
             ),
           ),
-          SettingsRow(
+          SettingsPickerRow<int>(
             label: 'Keep recordings',
-            trailing: SettingsPopup<int>(
-              label: _retentionLabel(r.retentionDays),
-              selected: r.retentionDays,
-              items: [
-                for (final d in days.where((d) => d > 0))
-                  (d, _retentionLabel(d)),
-                (0, 'Forever'),
-              ],
-              onSelected: (d) =>
-                  _recAct(() => widget.client.setRecording(retentionDays: d)),
-            ),
+            icon: 'archive',
+            value: _retentionLabel(r.retentionDays),
+            selected: r.retentionDays,
+            items: [
+              for (final d in days.where((d) => d > 0))
+                (d, _retentionLabel(d)),
+              (0, 'Forever'),
+            ],
+            onSelected: (d) =>
+                _recAct(() => widget.client.setRecording(retentionDays: d)),
           ),
         ],
       ),
@@ -538,27 +536,25 @@ class _VoiceScreenState extends State<VoiceScreen> {
       footer:
           'How the microphone treats speech. Mission Control also changes it when you say who is around.',
       children: [
-        SettingsRow(
+        SettingsPickerRow<String>(
           label: 'Profile',
-          sub: sub.isEmpty ? null : sub,
-          trailing: SettingsPopup<String>(
-            label: ambientProfileLabel(t.profile),
-            selected: t.profile,
-            items: [for (final p in profiles) (p, ambientProfileLabel(p))],
-            onSelected: (p) => _setTuning(p),
-          ),
+          detail: sub.isEmpty ? null : sub,
+          icon: 'user',
+          value: ambientProfileLabel(t.profile),
+          selected: t.profile,
+          items: [for (final p in profiles) (p, ambientProfileLabel(p))],
+          onSelected: (p) => _setTuning(p),
         ),
         if (t.profile != 'alone')
-          SettingsRow(
+          SettingsPickerRow<int>(
             label: 'Lasts',
-            sub: hm == null ? null : 'Back to Alone at $hm',
-            trailing: SettingsPopup<int>(
-              label: hm == null ? 'Until changed' : 'Until $hm',
-              selected: hm == null ? 0 : -1,
-              items: [for (final m in lengths) (m, lengthLabel(m))],
-              onSelected: (m) =>
-                  _setTuning(t.profile, minutes: m == 0 ? null : m),
-            ),
+            detail: hm == null ? null : 'Back to Alone at $hm',
+            icon: 'timer',
+            value: hm == null ? 'Until changed' : 'Until $hm',
+            selected: hm == null ? 0 : -1,
+            items: [for (final m in lengths) (m, lengthLabel(m))],
+            onSelected: (m) =>
+                _setTuning(t.profile, minutes: m == 0 ? null : m),
           ),
       ],
     );
@@ -660,6 +656,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
       bool optional = false,
     }) => InlineKeyRow(
       label: label,
+      icon: 'key-round',
       keySet: set,
       hint: hint,
       busy: _busy,
@@ -672,14 +669,13 @@ class _VoiceScreenState extends State<VoiceScreen> {
       'Paste the key from console.deepgram.com',
       (k) => _saveAmbient(deepgramKey: k, done: 'Deepgram key saved'),
     );
-    final regionRow = SettingsRow(
+    final regionRow = SettingsPickerRow<String>(
       label: 'Region',
-      trailing: SettingsPopup<String>(
-        label: hostLabel,
-        selected: a.deepgramHost,
-        items: [for (final h in hosts) (h.$1, h.$2)],
-        onSelected: (h) => _saveAmbient(deepgramHost: h, done: 'Region saved'),
-      ),
+      icon: 'map-pin',
+      value: hostLabel,
+      selected: a.deepgramHost,
+      items: [for (final h in hosts) (h.$1, h.$2)],
+      onSelected: (h) => _saveAmbient(deepgramHost: h, done: 'Region saved'),
     );
     // The Deepgram key and region sit in the first group that uses Deepgram.
     final deepgramRows = [deepgramKey, regionRow];
@@ -689,18 +685,17 @@ class _VoiceScreenState extends State<VoiceScreen> {
         header: 'Listening',
         footer: 'Keys stay on the server. Replies need a Deepgram or Rime key.',
         children: [
-          SettingsRow(
+          SettingsPickerRow<String>(
             label: 'Speech recognition',
-            trailing: SettingsPopup<String>(
-              label: flux ? 'Deepgram Flux' : 'AssemblyAI',
-              selected: a.stt,
-              items: const [
-                ('assemblyai', 'AssemblyAI'),
-                ('flux', 'Deepgram Flux'),
-              ],
-              onSelected: (v) =>
-                  _saveAmbient(stt: v, done: 'Speech recognition saved'),
-            ),
+            icon: 'ear',
+            value: flux ? 'Deepgram Flux' : 'AssemblyAI',
+            selected: a.stt,
+            items: const [
+              ('assemblyai', 'AssemblyAI'),
+              ('flux', 'Deepgram Flux'),
+            ],
+            onSelected: (v) =>
+                _saveAmbient(stt: v, done: 'Speech recognition saved'),
           ),
           if (flux)
             ...deepgramRows
@@ -717,105 +712,100 @@ class _VoiceScreenState extends State<VoiceScreen> {
       SettingsGroup(
         header: 'Replies',
         children: [
-          SettingsRow(
+          SettingsPickerRow<String>(
             label: 'Reply voice',
-            trailing: SettingsPopup<String>(
-              label: rime ? 'Rime' : 'Deepgram',
-              selected: a.ttsProvider,
-              items: const [('deepgram', 'Deepgram'), ('rime', 'Rime')],
-              onSelected: (v) => _saveAmbient(
-                ttsProvider: v,
-                done: v == 'rime'
-                    ? 'Replies now use Rime'
-                    : 'Replies now use Deepgram',
-              ),
+            icon: 'audio-lines',
+            value: rime ? 'Rime' : 'Deepgram',
+            selected: a.ttsProvider,
+            items: const [('deepgram', 'Deepgram'), ('rime', 'Rime')],
+            onSelected: (v) => _saveAmbient(
+              ttsProvider: v,
+              done: v == 'rime'
+                  ? 'Replies now use Rime'
+                  : 'Replies now use Deepgram',
             ),
           ),
           if (rime) ...[
-            SettingsRow(
+            SettingsPickerRow<String>(
               label: 'Rime model',
-              trailing: SettingsPopup<String>(
-                label: a.rimeModel == 'coda' ? 'Coda' : 'Mist v3 (fastest)',
-                selected: a.rimeModel,
-                items: const [
-                  ('mistv3', 'Mist v3 (fastest)'),
-                  ('coda', 'Coda'),
-                ],
-                onSelected: (m) => _saveAmbient(
-                  rimeModel: m,
-                  rimeVoice: m == 'coda' ? 'lyra' : 'cove',
-                  done: 'Rime model saved',
-                ),
+              icon: 'cpu',
+              value: a.rimeModel == 'coda' ? 'Coda' : 'Mist v3 (fastest)',
+              selected: a.rimeModel,
+              items: const [
+                ('mistv3', 'Mist v3 (fastest)'),
+                ('coda', 'Coda'),
+              ],
+              onSelected: (m) => _saveAmbient(
+                rimeModel: m,
+                rimeVoice: m == 'coda' ? 'lyra' : 'cove',
+                done: 'Rime model saved',
               ),
             ),
-            SettingsRow(
+            SettingsPickerRow<void>(
               label: 'Voice',
-              trailing: _VoiceButton(
-                label: a.rimeVoice.isEmpty
-                    ? 'Choose'
-                    : a.rimeVoice[0].toUpperCase() + a.rimeVoice.substring(1),
-                onTap: _busy
-                    ? null
-                    : () async {
-                        final list = await rimeVoices(a.rimeModel);
-                        if (!mounted) return;
-                        if (list.isEmpty) {
-                          toast(
-                            context,
-                            "Couldn't load the Rime voice list",
-                            danger: true,
-                          );
-                          return;
-                        }
-                        final v = await showVoicePicker(
+              icon: 'mic',
+              value: a.rimeVoice.isEmpty
+                  ? 'Choose'
+                  : a.rimeVoice[0].toUpperCase() + a.rimeVoice.substring(1),
+              onTap: _busy
+                  ? null
+                  : () async {
+                      final list = await rimeVoices(a.rimeModel);
+                      if (!mounted) return;
+                      if (list.isEmpty) {
+                        toast(
                           context,
-                          title: 'Rime voice',
-                          voices: list,
-                          selected: a.rimeVoice,
+                          "Couldn't load the Rime voice list",
+                          danger: true,
                         );
-                        if (v != null && mounted) {
-                          await _saveAmbient(rimeVoice: v, done: 'Voice saved');
-                        }
-                      },
-              ),
+                        return;
+                      }
+                      final v = await showVoicePicker(
+                        context,
+                        title: 'Rime voice',
+                        voices: list,
+                        selected: a.rimeVoice,
+                      );
+                      if (v != null && mounted) {
+                        await _saveAmbient(rimeVoice: v, done: 'Voice saved');
+                      }
+                    },
             ),
           ] else if (a.ttsVoices.isNotEmpty)
-            SettingsRow(
+            SettingsPickerRow<void>(
               label: 'Voice',
-              trailing: _VoiceButton(
-                label: voice?.name ?? a.ttsVoice,
-                onTap: _busy
-                    ? null
-                    : () async {
-                        final v = await showVoicePicker(
-                          context,
-                          title: 'Deepgram voice',
-                          voices: [
-                            for (final t in a.ttsVoices)
-                              PickVoice(
-                                t.model,
-                                t.name,
-                                sub: '${t.accent} · ${t.gender.toLowerCase()}',
-                                group: t.gender,
-                              ),
-                          ],
-                          selected: a.ttsVoice,
-                        );
-                        if (v != null && mounted) {
-                          await _saveAmbient(ttsVoice: v, done: 'Voice saved');
-                        }
-                      },
-              ),
+              icon: 'mic',
+              value: voice?.name ?? a.ttsVoice,
+              onTap: _busy
+                  ? null
+                  : () async {
+                      final v = await showVoicePicker(
+                        context,
+                        title: 'Deepgram voice',
+                        voices: [
+                          for (final t in a.ttsVoices)
+                            PickVoice(
+                              t.model,
+                              t.name,
+                              sub: '${t.accent} · ${t.gender.toLowerCase()}',
+                              group: t.gender,
+                            ),
+                        ],
+                        selected: a.ttsVoice,
+                      );
+                      if (v != null && mounted) {
+                        await _saveAmbient(ttsVoice: v, done: 'Voice saved');
+                      }
+                    },
             ),
-          SettingsRow(
+          SettingsPickerRow<int>(
             label: 'Speech speed',
-            trailing: SettingsPopup<int>(
-              label: _speedLabel(a.ttsSpeed),
-              selected: a.ttsSpeed,
-              items: [for (final s in speeds) (s, _speedLabel(s))],
-              onSelected: (s) =>
-                  _saveAmbient(ttsSpeed: s, done: 'Speech speed saved'),
-            ),
+            icon: 'gauge',
+            value: _speedLabel(a.ttsSpeed),
+            selected: a.ttsSpeed,
+            items: [for (final s in speeds) (s, _speedLabel(s))],
+            onSelected: (s) =>
+                _saveAmbient(ttsSpeed: s, done: 'Speech speed saved'),
           ),
           if (rime)
             key(
@@ -831,27 +821,19 @@ class _VoiceScreenState extends State<VoiceScreen> {
       if (_tuning != null) _attentionGroup(_tuning!),
       SettingsGroup(
         children: [
-          SettingsRow(
+          SettingsPickerRow<void>(
             label: 'Wake phrases',
-            trailing: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 180),
-              child: Text(
-                  a.wakePhrases.isEmpty ? 'None' : a.wakePhrases.join(', '),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TS.meta()),
-            ),
-            chevron: true,
+            icon: 'message-circle',
+            value: a.wakePhrases.isEmpty ? 'None' : a.wakePhrases.join(', '),
             onTap: () => _editPhrases(a),
           ),
-          SettingsRow(
+          SettingsPickerRow<int>(
             label: 'Ends after silence',
-            trailing: SettingsPopup<int>(
-              label: _lengthLabel(a.conversationTimeoutSecs),
-              selected: a.conversationTimeoutSecs,
-              items: [for (final s in timeouts) (s, _lengthLabel(s))],
-              onSelected: (s) => _saveAmbient(timeout: s),
-            ),
+            icon: 'timer',
+            value: _lengthLabel(a.conversationTimeoutSecs),
+            selected: a.conversationTimeoutSecs,
+            items: [for (final s in timeouts) (s, _lengthLabel(s))],
+            onSelected: (s) => _saveAmbient(timeout: s),
           ),
         ],
       ),
@@ -904,19 +886,19 @@ class _VoiceScreenState extends State<VoiceScreen> {
         children: [
           SettingsRow(
             label: 'Voice notes',
+            icon: 'mic',
             trailing: SettingsSwitch(
               value: v.enabled,
               onChanged: _busy ? null : (on) => _save(enabled: on),
             ),
           ),
-          SettingsRow(
+          SettingsPickerRow<int>(
             label: 'Longest note',
-            trailing: SettingsPopup<int>(
-              label: _lengthLabel(v.maxSeconds),
-              selected: v.maxSeconds,
-              items: [for (final s in lengths) (s, _lengthLabel(s))],
-              onSelected: (s) => _save(maxSeconds: s),
-            ),
+            icon: 'clock',
+            value: _lengthLabel(v.maxSeconds),
+            selected: v.maxSeconds,
+            items: [for (final s in lengths) (s, _lengthLabel(s))],
+            onSelected: (s) => _save(maxSeconds: s),
           ),
         ],
       ),
@@ -964,7 +946,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
     } else {
       body = ListView(
         padding: kMobile
-            ? EdgeInsets.fromLTRB(S.s16, S.s8, S.s16, S.s40)
+            ? EdgeInsets.fromLTRB(Grouped.gutter, S.s8, Grouped.gutter, S.s40)
             : EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, S.s40),
         children: _groups(v),
       );
@@ -988,31 +970,4 @@ class _VoiceScreenState extends State<VoiceScreen> {
     }
     return child;
   }
-}
-
-class _VoiceButton extends StatelessWidget {
-  const _VoiceButton({required this.label, required this.onTap});
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: kMobile ? Colors.transparent : AppColors.surface2,
-    borderRadius: BorderRadius.circular(R.of(7)),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(R.of(7)),
-      onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(label, style: sans(kMobile ? 15 : 13, color: AppColors.fg2)),
-            SizedBox(width: S.s6),
-            AppIcon('chevron-right', size: 14, color: AppColors.fg3),
-          ],
-        ),
-      ),
-    ),
-  );
 }

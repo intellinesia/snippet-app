@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../api.dart';
 import '../models.dart';
 import '../platform.dart';
+import '../settings_form.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'settings_panel.dart';
@@ -54,7 +55,7 @@ const List<(String, List<_NavEntry>)> _groups = [
         page: SettingsPage.general,
         label: 'Machines',
         icon: null,
-        iconData: LucideIcons.laptop,
+        iconData: LucideIcons.laptop300,
       ),
     ],
   ),
@@ -193,7 +194,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                width: 224,
+                width: Grouped.sidebarWidth,
                 decoration: BoxDecoration(
                   color: AppColors.tint1,
                   border: Border(right: borderSide),
@@ -202,21 +203,18 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Padding(
-                      padding: EdgeInsets.fromLTRB(S.of(18), S.of(18), S.of(18), S.s6),
-                      child: Text('Settings',
-                          style: sans(16, weight: W.title, color: AppColors.fg1)),
+                      padding: const EdgeInsets.fromLTRB(24, 26, 24, 4),
+                      child: Text('Settings', style: Grouped.pageTitleStyle()),
                     ),
                     Expanded(
                       child: ListView(
-                        padding: EdgeInsets.fromLTRB(
-                            S.s8, 0, S.s8, S.s12),
+                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                         children: [
                           for (final (group, entries) in _groups) ...[
                             Padding(
-                              padding: EdgeInsets.fromLTRB(
-                                  S.of(10), S.of(14), S.of(10), S.s4),
+                              padding: const EdgeInsets.fromLTRB(12, 16, 12, 6),
                               child: Text(group,
-                                  style: sans(12, color: AppColors.fg4)),
+                                  style: sans(13, color: Grouped.label)),
                             ),
                             for (final entry in entries)
                               _NavRow(
@@ -246,10 +244,13 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                     onSelect: widget.onSelect,
                     onAdd: widget.onAdd,
                     onSelectPage: _selectSection,
+                    onClose: widget.onBack,
                     v5Desktop: true,
                   ),
                     ),
                   ),
+                  // Plain pages put their close circle in the page header.
+                  if (!SettingsSectionView.plainPages.contains(_section))
                   Positioned(
                     top: 10,
                     right: 10,
@@ -282,35 +283,30 @@ class _NavRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = selected ? AppColors.fg1 : AppColors.fg3;
+    final iconColor = selected ? AppColors.fg1 : Grouped.iconColor;
+    final radius = R.of(12);
     return Padding(
       padding: EdgeInsets.only(bottom: S.s2),
       child: HoverSurface(
         onTap: onTap,
         selected: selected,
-        radius: R.md,
-        selectedColor: AppColors.tint2,
+        radius: radius,
+        selectedColor: Grouped.row,
         hoverColor: AppColors.fg1.withValues(alpha: 0.035),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 34),
+        child: SizedBox(
+          height: Grouped.navRowHeight,
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s6),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(children: [
-              if (entry.iconData != null)
-                Icon(entry.iconData, size: 16, color: iconColor)
-              else
-                AppIcon(entry.icon!, size: 16, color: iconColor),
-              SizedBox(width: S.of(10)),
+              SettingsIcon(entry.icon,
+                  iconData: entry.iconData, color: iconColor),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   entry.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(
-                    14,
-                    weight: selected ? W.label : W.body,
-                    color: selected ? AppColors.fg1 : AppColors.fg2,
-                  ),
+                  style: sans(15, color: AppColors.fg1),
                 ),
               ),
             ]),

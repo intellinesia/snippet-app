@@ -1,6 +1,7 @@
 import 'mobile_chrome.dart';
 import 'package:flutter/material.dart';
 
+import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -48,6 +49,10 @@ Color toneColor(ShellTone tone) => switch (tone) {
 
 /// True while a conversation is actively working. Drives the pulse animation.
 bool sessionIsActive(String? status) => status == 'running';
+
+/// Working, counting lanes still running while the session's own turn is idle.
+bool sessionBusy(SessionInfo s) =>
+    sessionIsActive(s.status) || (s.lanes?.running ?? 0) > 0;
 
 /// The one colour for a conversation-state icon.
 ///

@@ -52,6 +52,14 @@ Future<T?> presentScreen<T>(
         ))
         .then((value) => value as T?);
   }
+  if (kMobile) {
+    // A page, not a dialog, so it gets the back swipe and the page spring.
+    return Navigator.of(context, rootNavigator: true).push<T>(AppPageRoute<T>(
+      backSwipe: dismissible,
+      builder: (ctx) =>
+          _phonePage(builder(ctx, () => Navigator.of(ctx).pop())),
+    ));
+  }
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: dismissible,
@@ -133,7 +141,7 @@ Future<T?> showModal<T>(
   final windowWidth = view.physicalSize.width / view.devicePixelRatio;
   if (windowWidth < kDesktopBreakpoint) {
     return Navigator.of(context)
-        .push<T>(AppPageRoute<T>(builder: (_) => child));
+        .push<T>(AppPageRoute<T>(builder: (_) => _phonePage(child)));
   }
   return showGeneralDialog<T>(
     context: context,
@@ -163,6 +171,13 @@ Future<T?> showModal<T>(
     },
   );
 }
+
+/// A presented phone page keeps clear of the status bar even when the screen
+/// has no SafeArea or app bar of its own; inner SafeAreas then see no inset.
+Widget _phonePage(Widget child) => ColoredBox(
+      color: AppColors.bg,
+      child: SafeArea(bottom: false, child: child),
+    );
 
 // Wide presentations (right drawer / centered dialog) sit on surface1 like
 // every other popover, with the hosted Scaffolds re-based onto the same

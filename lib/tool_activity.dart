@@ -1023,11 +1023,32 @@ String formatWorkDuration(Duration d) {
   return rest == 0 ? '${m}m' : '${m}m ${rest}s';
 }
 
+final _failureMarker = RegExp(
+    r'Some tests failed|test result: FAILED|error: test failed|Tests? failed\b|^FAIL(?:ED)?\b|\b[1-9]\d*\s+(?:failed|failing|errors?)\b',
+    multiLine: true);
+
+/// Whether a finished test or check step's output reports failures. A piped
+/// or wrapped command (`| tail`, `cpu-slot`) exits 0 even when tests fail.
+bool verifyOutputFailed(ToolStep step) {
+  if (step.running) return false;
+  final cmd = stepCommand(step);
+  if (cmd == null || !cmd.verifies) return false;
+  final excerpt = _commandResultExcerpt(step) ?? '';
+  if (RegExp(r'\b[1-9]\d*\s+failed\b').hasMatch(excerpt)) return true;
+  final raw = [
+    for (final k in const ['stdout', 'output', 'output_so_far', 'stderr', 'preview'])
+      (step.data?[k] ?? '').toString(),
+  ].join('\n').replaceAll(_ansiEscape, '');
+  return _failureMarker.hasMatch(raw);
+}
+
+bool _stepFailed(ToolStep s) => s.failed || verifyOutputFailed(s);
+
 /// What a run of steps did, as one sentence plus an outcome word.
 WorkSummary describeWork(List<ToolStep> steps) {
   if (steps.isEmpty) return const WorkSummary('');
   final done = steps.where((s) => !s.running).toList();
-  final failures = done.where((s) => s.failed).length;
+  final failures = done.where(_stepFailed).length;
   var outcome =
       failures == 0 ? null : (failures == 1 ? 'failed' : '$failures failed');
   final emphasis = <String>[];
@@ -1309,12 +1330,23 @@ StepResultChip? stepChip(ToolStep step) {
       final flutter = RegExp(r'\+(\d+)(?:\s+~\d+)?(?:\s+-(\d+))?:')
           .allMatches(raw)
           .lastOrNull;
-      final p = flutter?.group(1) ?? _passedCount.firstMatch(raw)?.group(1);
-      final f = flutter?.group(2) ?? _failedCount.firstMatch(raw)?.group(1);
+      // The excerpt sums every cargo block, so a later failure is not hidden.
+      final excerpt = _commandResultExcerpt(step) ?? '';
+      final p = _passedCount.firstMatch(excerpt)?.group(1) ??
+          flutter?.group(1) ??
+          _passedCount.firstMatch(raw)?.group(1);
+      final f = _failedCount.firstMatch(excerpt)?.group(1) ??
+          flutter?.group(2) ??
+          _failedCount.allMatches(raw).map((m) => m.group(1)).lastWhere(
+              (n) => n != '0',
+              orElse: () => null);
       if (f != null && f != '0') {
         return StepResultChip(
             p == null ? '$f failed' : '$p passed, $f failed',
             StepChipTone.danger);
+      }
+      if (verifyOutputFailed(step)) {
+        return const StepResultChip('failed', StepChipTone.danger);
       }
       return StepResultChip(
           p != null

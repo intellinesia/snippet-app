@@ -1,8 +1,4 @@
-import 'dart:typed_data';
-import 'dart:ui' show PointMode;
-
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 
 import '../ambient_loop.dart';
@@ -13,6 +9,7 @@ import '../notification_text.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'mobile_chrome.dart';
+import 'mobile_shell.dart' show HomePagerScope;
 import 'phone_hero.dart' show heroAgentColor;
 import 'session_list_row.dart';
 
@@ -70,8 +67,7 @@ class _MobileHomeTopBarState extends State<MobileHomeTopBar> {
                 ? Row(key: const ValueKey('search'), children: [
                     Expanded(child: _field()),
                     SizedBox(width: S.s8),
-                    RoundBtn(
-                        icon: 'x', tooltip: 'Close search', onTap: _close),
+                    RoundBtn(icon: 'x', tooltip: 'Close search', onTap: _close),
                   ])
                 : Row(key: const ValueKey('tabs'), children: [
                     Expanded(child: _segment()),
@@ -89,18 +85,58 @@ class _MobileHomeTopBarState extends State<MobileHomeTopBar> {
         ),
       );
 
-  Widget _segment() => Container(
-        height: 40,
-        padding: EdgeInsets.all(S.of(3)),
-        decoration: BoxDecoration(
-          color: AppColors.tint2,
-          borderRadius: BorderRadius.circular(R.pill),
+  Widget _segment() {
+    final ctl = HomePagerScope.maybeOf(context);
+    final selected = widget.agents ? 1.0 : 0.0;
+    return Container(
+      height: 40,
+      padding: EdgeInsets.all(S.of(3)),
+      decoration: BoxDecoration(
+        color: AppColors.tint2,
+        borderRadius: BorderRadius.circular(R.pill),
+      ),
+      child: Stack(children: [
+        Positioned.fill(
+          child: LayoutBuilder(builder: (context, box) {
+            final p = (ctl?.position ?? selected).clamp(0.0, 1.0);
+            final w = box.maxWidth / 2;
+            return Align(
+              alignment: Alignment.centerLeft,
+              child: Transform.translate(
+                offset: Offset(p * w, 0),
+                child: Container(
+                  key: const ValueKey('home-indicator'),
+                  width: w,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface3,
+                    borderRadius: BorderRadius.circular(R.pill),
+                  ),
+                ),
+              ),
+            );
+          }),
         ),
-        child: Row(children: [
-          _seg('Sessions', !widget.agents, widget.onSessions),
-          _seg('Agents', widget.agents, widget.onAgents),
+        Row(children: [
+          _seg('Sessions', !widget.agents, () {
+            if (ctl != null) {
+              ctl.animateTo(0);
+              ctl.onCommit?.call(0);
+            } else {
+              widget.onSessions();
+            }
+          }),
+          _seg('Agents', widget.agents, () {
+            if (ctl != null) {
+              ctl.animateTo(1);
+              ctl.onCommit?.call(1);
+            } else {
+              widget.onAgents();
+            }
+          }),
         ]),
-      );
+      ]),
+    );
+  }
 
   Widget _seg(String label, bool on, VoidCallback onTap) => Expanded(
         child: Semantics(
@@ -115,17 +151,12 @@ class _MobileHomeTopBarState extends State<MobileHomeTopBar> {
                     HapticFeedback.selectionClick();
                     onTap();
                   },
-            child: AnimatedContainer(
+            child: AnimatedDefaultTextStyle(
               duration: Motion.fast,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: on ? AppColors.surface3 : Colors.transparent,
-                borderRadius: BorderRadius.circular(R.pill),
-              ),
-              child: Text(label,
-                  style: sans(14,
-                      weight: on ? W.label : W.body,
-                      color: on ? AppColors.fg1 : AppColors.fg3)),
+              style: sans(14,
+                  weight: on ? W.label : W.body,
+                  color: on ? AppColors.fg1 : AppColors.fg3),
+              child: Center(child: Text(label)),
             ),
           ),
         ),
@@ -196,7 +227,8 @@ class MissionControlDock extends StatelessWidget {
                 LiveRing(
                   live: live,
                   child: RoundBtn(
-                    tooltip: live ? 'Mission Control, voice on' : 'Mission Control',
+                    tooltip:
+                        live ? 'Mission Control, voice on' : 'Mission Control',
                     size: 44,
                     bare: true,
                     badgeCount: badgeCount,
@@ -357,7 +389,8 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
         _ => pr.state == 'draft' ? 'Draft' : 'Open',
       };
 
-  Widget _statusLine({required Widget lead, required String text, Color? ink}) =>
+  Widget _statusLine(
+          {required Widget lead, required String text, Color? ink}) =>
       Row(children: [
         SizedBox(width: 18, child: Center(child: lead)),
         SizedBox(width: S.s8),
@@ -411,7 +444,8 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
         ? s.plan
         : null;
     final att = s.attention ?? const <String, dynamic>{};
-    final isApproval = needsYou && att['type'] == 'approval' && approvalOf(att) != null;
+    final isApproval =
+        needsYou && att['type'] == 'approval' && approvalOf(att) != null;
     final isQuestion = '${att['type'] ?? ''}'.toLowerCase() == 'question';
     final canDecide = isApproval && widget.onDecide != null;
     final pr = s.pr;
@@ -446,7 +480,8 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
       status = _statusLine(
         lead: AppIcon(isApproval || isQuestion ? 'key' : 'message',
             size: 16, color: AppColors.fg3),
-        text: LiveSessionCard._attentionText(s) ?? sessionAttentionState(s).label,
+        text:
+            LiveSessionCard._attentionText(s) ?? sessionAttentionState(s).label,
       );
     } else if (cameBack) {
       final files = s.shownChanges?.files ?? 0;
@@ -463,8 +498,11 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
         lead: Container(
             width: 8,
             height: 8,
-            decoration: BoxDecoration(color: AppColors.ok, shape: BoxShape.circle)),
-        text: plan?.current?.trim().isNotEmpty == true ? plan!.current!.trim() : 'Working',
+            decoration:
+                BoxDecoration(color: AppColors.ok, shape: BoxShape.circle)),
+        text: plan?.current?.trim().isNotEmpty == true
+            ? plan!.current!.trim()
+            : 'Working',
       );
     }
 
@@ -479,7 +517,8 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
             badge: needsYou ? '?' : null)
         : (widget.leading == null
             ? null
-            : SizedBox.square(dimension: 36, child: Center(child: widget.leading)));
+            : SizedBox.square(
+                dimension: 36, child: Center(child: widget.leading)));
 
     return Padding(
       padding: EdgeInsets.only(bottom: S.of(10)),
@@ -548,7 +587,8 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
                             ),
                             if (branch.isNotEmpty) ...[
                               SizedBox(width: S.s8),
-                              AppIcon('git-branch', size: 12, color: AppColors.fg3),
+                              AppIcon('git-branch',
+                                  size: 12, color: AppColors.fg3),
                               SizedBox(width: S.s4),
                               Flexible(
                                 child: Text(branch,
@@ -574,7 +614,8 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
                         decoration: BoxDecoration(
                             color: AppColors.surface3, shape: BoxShape.circle),
                         child: Center(
-                            child: AppIcon('layers', size: 11, color: AppColors.fg3)),
+                            child: AppIcon('layers',
+                                size: 11, color: AppColors.fg3)),
                       ),
                       SizedBox(width: S.s8),
                       Expanded(
@@ -602,24 +643,31 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
                     SizedBox(height: S.s12),
                     Row(children: [
                       Expanded(
-                          child: _button('Deny', _busy ? null : () => _decide(false))),
+                          child: _button(
+                              'Deny', _busy ? null : () => _decide(false))),
                       SizedBox(width: S.s8),
                       Expanded(
                           flex: 2,
-                          child: _button('Approve', _busy ? null : () => _decide(true),
+                          child: _button(
+                              'Approve', _busy ? null : () => _decide(true),
                               icon: 'check', color: colour, ink: _ink(colour))),
                     ]),
-                  ] else if (cameBack && openPr && widget.onReviewPr != null) ...[
+                  ] else if (cameBack &&
+                      openPr &&
+                      widget.onReviewPr != null) ...[
                     SizedBox(height: S.s12),
                     Row(children: [
                       Expanded(
-                          child: _button('Review', widget.onReviewPr, icon: 'eye')),
+                          child: _button('Review', widget.onReviewPr,
+                              icon: 'eye')),
                       if (widget.onMergePr != null) ...[
                         SizedBox(width: S.s8),
                         Expanded(
                             flex: 2,
                             child: _button('Merge', widget.onMergePr,
-                                icon: 'pull-request', color: colour, ink: _ink(colour))),
+                                icon: 'pull-request',
+                                color: colour,
+                                ink: _ink(colour))),
                       ],
                     ]),
                   ] else if (!needsYou && !cameBack && pr != null) ...[
@@ -721,89 +769,4 @@ class _LiveRingState extends State<LiveRing> {
       },
     );
   }
-}
-
-/// Faint dot grid painted behind the phone home lists.
-/// Whether the phone draws the dotted grid behind its screens; saved per device.
-class DotGridPref extends ValueNotifier<bool> {
-  DotGridPref._() : super(true);
-  static final instance = DotGridPref._();
-  static const _key = 'phone_dot_grid';
-
-  Future<void> init() async {
-    try {
-      value = (await SharedPreferences.getInstance()).getBool(_key) ?? true;
-    } catch (_) {}
-  }
-
-  Future<void> set(bool on) async {
-    value = on;
-    try {
-      await (await SharedPreferences.getInstance()).setBool(_key, on);
-    } catch (_) {}
-  }
-}
-
-class DotField extends StatelessWidget {
-  const DotField({super.key, required this.child, this.strength = 0.07});
-
-  /// Faint enough to sit behind a chat transcript.
-  const DotField.chat({super.key, required this.child}) : strength = 0.06;
-
-  final Widget child;
-  final double strength;
-
-  @override
-  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
-        valueListenable: DotGridPref.instance,
-        child: RepaintBoundary(child: child),
-        builder: (context, on, child) => on
-            ? CustomPaint(
-                painter:
-                    _DotGridPainter(AppColors.fg1.withValues(alpha: strength)),
-                child: child,
-              )
-            : child!,
-      );
-}
-
-class _DotGridPainter extends CustomPainter {
-  _DotGridPainter(this.color);
-
-  final Color color;
-
-  static Size? _size;
-  static Float32List? _points;
-
-  // One point batch instead of thousands of circles; Impeller redraws it every frame.
-  static Float32List _grid(Size size) {
-    if (size == _size && _points != null) return _points!;
-    const step = 12.0;
-    int count(double extent) => ((extent - step / 2) / step).ceil().clamp(0, 1 << 16);
-    final cols = count(size.width), rows = count(size.height);
-    final out = Float32List(cols * rows * 2);
-    var i = 0;
-    for (var r = 0; r < rows; r++) {
-      for (var c = 0; c < cols; c++) {
-        out[i++] = step / 2 + c * step;
-        out[i++] = step / 2 + r * step;
-      }
-    }
-    _size = size;
-    return _points = out;
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRawPoints(
-        PointMode.points,
-        _grid(size),
-        Paint()
-          ..color = color
-          ..strokeWidth = 1.8
-          ..strokeCap = StrokeCap.round);
-  }
-
-  @override
-  bool shouldRepaint(_DotGridPainter old) => old.color != color;
 }
