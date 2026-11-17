@@ -178,7 +178,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
         if (working)
           Positioned(
             left: 4,
-            top: 7,
+            top: 12.5,
             child: Container(
               width: 5,
               height: 5,
@@ -186,37 +186,40 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
                   BoxDecoration(color: AppColors.run, shape: BoxShape.circle),
             ),
           ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(S.of(10), 0, S.s8, 0),
-          child: Row(children: [
-            _icon(status, working),
-            SizedBox(width: S.of(7)),
-            Expanded(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(12.5,
-                    color: active
-                        ? AppColors.fg1
-                        : (_hover ? AppColors.fg2 : AppColors.fg3)),
-              ),
-            ),
-            if (closable)
-              Opacity(
-                opacity: showClose ? 1 : 0,
-                child: GestureDetector(
-                  onTap: showClose ? widget.onClose : null,
-                  behavior: HitTestBehavior.opaque,
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: Center(
-                        child: AppIcon('x', size: 11, color: AppColors.fg4)),
-                  ),
+        // Fill the cell so the row centres vertically.
+        Positioned.fill(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(S.of(working ? 13 : 10), 0, S.s8, 0),
+            child: Row(children: [
+              _icon(status, working),
+              SizedBox(width: S.of(7)),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12.5,
+                      color: active
+                          ? AppColors.fg1
+                          : (_hover ? AppColors.fg2 : AppColors.fg3)),
                 ),
               ),
-          ]),
+              if (closable)
+                Opacity(
+                  opacity: showClose ? 1 : 0,
+                  child: GestureDetector(
+                    onTap: showClose ? widget.onClose : null,
+                    behavior: HitTestBehavior.opaque,
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: Center(
+                          child: AppIcon('x', size: 11, color: AppColors.fg4)),
+                    ),
+                  ),
+                ),
+            ]),
+          ),
         ),
       ]),
       width: widget.width,

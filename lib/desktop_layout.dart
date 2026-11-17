@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'platform.dart';
 import 'settings_form.dart';
 import 'theme.dart';
 
@@ -178,7 +179,8 @@ class SettingsHeader extends StatelessWidget {
               child: Text(title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(24, weight: FontWeight.w600, color: AppColors.fg1)),
+                  style: sans(kMobile ? 24 : 18,
+                      weight: FontWeight.w600, color: AppColors.fg1)),
             ),
             for (final a in actions) ...[SizedBox(width: S.s8), a],
           ]),
@@ -199,10 +201,13 @@ class SettingsColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Design language v7: one centred column, 680 wide with its padding.
+    // Desktop sits at the top left of the dialog page; centring left wide gutters.
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+      padding: kMobile
+          ? const EdgeInsets.fromLTRB(24, 24, 24, 40)
+          : const EdgeInsets.fromLTRB(28, 18, 28, 32),
       child: Align(
-        alignment: Alignment.topCenter,
+        alignment: kMobile ? Alignment.topCenter : Alignment.topLeft,
         child: ConstrainedBox(
           constraints:
               const BoxConstraints(maxWidth: Grouped.contentMaxWidth - 48),

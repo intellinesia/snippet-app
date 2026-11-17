@@ -185,7 +185,8 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
         initialPage: _section,
       );
     }
-    final borderSide = BorderSide(color: AppColors.line.withValues(alpha: 0.65));
+    final borderSide =
+        BorderSide(color: AppColors.line.withValues(alpha: 0.65));
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.escape): widget.onBack,
@@ -209,7 +210,8 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                       child: Text('Settings',
-                          style: sans(17, weight: FontWeight.w600, color: AppColors.fg1)),
+                          style: sans(14,
+                              weight: FontWeight.w600, color: AppColors.fg1)),
                     ),
                     Expanded(
                       child: ListView(
@@ -238,32 +240,22 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                 child: Stack(children: [
                   Positioned.fill(
                     child: ColoredBox(
-                  color: kMobile ? AppColors.pageCanvas : Colors.transparent,
-                  child: SettingsSectionView(
-                    client: widget.client,
-                    instances: widget.instances,
-                    active: widget.active,
-                    page: _section,
-                    onRemove: widget.onRemove,
-                    onRename: widget.onRename,
-                    onSelect: widget.onSelect,
-                    onAdd: widget.onAdd,
-                    onSelectPage: _selectSection,
-                    onClose: widget.onBack,
-                    v5Desktop: true,
-                  ),
+                      color:
+                          kMobile ? AppColors.pageCanvas : Colors.transparent,
+                      child: SettingsSectionView(
+                        client: widget.client,
+                        instances: widget.instances,
+                        active: widget.active,
+                        page: _section,
+                        onRemove: widget.onRemove,
+                        onRename: widget.onRename,
+                        onSelect: widget.onSelect,
+                        onAdd: widget.onAdd,
+                        onSelectPage: _selectSection,
+                        onClose: widget.onBack,
+                        v5Desktop: true,
+                      ),
                     ),
-                  ),
-                  // Plain pages put their close circle in the page header.
-                  if (!SettingsSectionView.plainPages.contains(_section))
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: IconBtn('x',
-                        size: 32,
-                        iconSize: 16,
-                        tooltip: 'Close',
-                        onTap: widget.onBack),
                   ),
                 ]),
               ),

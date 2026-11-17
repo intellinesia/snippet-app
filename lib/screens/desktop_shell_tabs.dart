@@ -598,37 +598,24 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     _syncPage();
   }
 
-  /// Opens the session's workspace tab, focusing the existing one if present.
+  /// Opens the session's workspace as a top-level tab, focusing an existing one.
   void _openWorkspaceTab(DaemonClient client, String url, String sessionId,
       String project, String path) {
-    final pane = _focusedPane;
-    final group = _activeGroupKeyFor(pane) ?? _activeTab?.key;
-    if (group == null) return;
     final existing = _tabs.indexWhere((t) =>
         t.isWorkspace &&
         t.instanceUrl == url &&
         t.workspaceSession == sessionId);
-    _setState(() {
-      if (existing >= 0) {
-        final t = _tabs[existing];
-        t
-          ..pane = pane
-          ..groupSessionKey = group;
-        _dockAux(pane, t.key);
-      } else {
-        _tabs.add(_ShellTab.workspace(
-          client: client,
-          instanceUrl: url,
-          session: sessionId,
-          project: project,
-          path: path,
-        )
-          ..pane = pane
-          ..groupSessionKey = group);
-        _dockAux(pane, _tabs.last.key);
-      }
-    });
-    _syncPage();
+    _openMainTab(
+        existing >= 0
+            ? null
+            : _ShellTab.workspace(
+                client: client,
+                instanceUrl: url,
+                session: sessionId,
+                project: project,
+                path: path,
+              ),
+        existing);
   }
 
   void _closeTabByKey(String key) {

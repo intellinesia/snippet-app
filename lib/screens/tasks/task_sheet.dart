@@ -7,6 +7,8 @@ import '../../api.dart';
 import '../../markdown_preview.dart';
 import '../../models.dart';
 import '../../panel.dart' show presentScreen;
+import '../../platform.dart';
+import '../../shell_panel.dart' show openSessionInTab;
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../session.dart' show SessionScreen;
@@ -150,6 +152,11 @@ class _TaskSheetState extends State<TaskSheet> {
   void _openSession() {
     final id = sessionId;
     if (id == null) return;
+    final tab = openSessionInTab;
+    if (!kMobile && tab != null) {
+      tab(widget.client, id, agent.isEmpty ? 'Session' : agent);
+      return;
+    }
     presentScreen(context,
         builder: (_, close) => SessionScreen(
             client: widget.client,

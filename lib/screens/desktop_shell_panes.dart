@@ -182,7 +182,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       t.isTerminal ||
       t.isFile ||
       t.isDiff ||
-      t.isWorkspace ||
       (kMobile && t.isBoard) ||
       t.isTask;
 

@@ -2194,7 +2194,8 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
               : null,
           actions: [
             if (action != null) action,
-            if (widget.onClose != null)
+            // The desktop dialog closes on Esc or a click outside.
+            if (widget.onClose != null && !widget.v5Desktop)
               GroupedCircleButton(
                   icon: 'x', tooltip: 'Close', onTap: widget.onClose),
           ],

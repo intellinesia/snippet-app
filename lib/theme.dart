@@ -1869,7 +1869,7 @@ class R {
   static ThemeShapeTokens get _shape => ThemeManager.instance.resolved.shape;
   // Desktop is squarer than the phone: one scale for every themed radius.
   static double get _scale =>
-      math.max(0.0, _shape.radiusScale) * (kMobile ? 1.0 : 0.6);
+      math.max(0.0, _shape.radiusScale) * (kMobile ? 1.0 : 0.85);
 
   static double get xs => _shape.radii.xs * _scale;
   static double get sm => _shape.radii.sm * _scale;

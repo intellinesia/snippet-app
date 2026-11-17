@@ -6,7 +6,7 @@ import '../widgets.dart';
 
 /// Desktop composer surfaces: one calm card, pinned cards above it. The phone
 /// keeps the pill in composer_card.dart.
-const double _kCardRadius = 12;
+const double _kCardRadius = 18;
 
 BoxDecoration _cardDecoration({bool focus = false}) => BoxDecoration(
       color: AppColors.surface1,
@@ -30,9 +30,12 @@ class DeskButton extends StatefulWidget {
     this.padding = EdgeInsets.zero,
     this.border,
     this.tooltip,
+    this.radius,
   });
 
   final Widget child;
+  /// Corner radius; null keeps the small default.
+  final double? radius;
   final VoidCallback? onTap;
   final Color? fill;
   final Color? hoverFill;
@@ -68,7 +71,7 @@ class _DeskButtonState extends State<DeskButton> {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(R.of(6)),
+            borderRadius: BorderRadius.circular(widget.radius ?? R.of(6)),
             border: widget.border == null
                 ? null
                 : Border.fromBorderSide(widget.border!),
@@ -148,6 +151,7 @@ class DeskActionButton extends StatelessWidget {
     }
     return DeskButton(
       size: 30,
+      radius: 15,
       fill: fill,
       hoverFill: on || soft || danger ? fill.withValues(alpha: 0.85) : fill,
       tooltip: tooltip,

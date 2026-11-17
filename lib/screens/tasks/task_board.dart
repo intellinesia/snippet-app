@@ -7,6 +7,8 @@ import '../../api.dart';
 import '../../mochi.dart';
 import '../../models.dart';
 import '../../panel.dart' show presentScreen;
+import '../../platform.dart';
+import '../../shell_panel.dart' show openSessionInTab;
 import '../../theme.dart';
 import '../../widgets.dart';
 import '../list_search_field.dart';
@@ -437,6 +439,11 @@ class _TaskListViewState extends State<TaskListView> {
   }
 
   void _openSession(TaskItem t) {
+    final tab = openSessionInTab;
+    if (!kMobile && tab != null) {
+      tab(widget.client, t.sessionId, _sessions[t.sessionId]?.title ?? t.title);
+      return;
+    }
     presentScreen(context,
         builder: (_, close) => SessionScreen(
             client: widget.client,

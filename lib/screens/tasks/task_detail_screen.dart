@@ -13,6 +13,7 @@ import '../../theme.dart';
 import '../../widgets.dart';
 import '../../mochi.dart';
 import '../../panel.dart' show presentScreen;
+import '../../shell_panel.dart' show openSessionInTab;
 import '../mobile_chrome.dart';
 import '../agent_records.dart' show BoardLog;
 import '../session.dart' show SessionScreen;
@@ -515,6 +516,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 child: TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
+                    final tab = openSessionInTab;
+                    if (!kMobile && tab != null) {
+                      tab(widget.client, t.sessionId, t.agentId);
+                      return;
+                    }
                     presentScreen(context,
                         builder: (_, close) => SessionScreen(
                             client: widget.client,
