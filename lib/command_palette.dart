@@ -682,10 +682,10 @@ class _PaletteState extends State<_Palette> {
         hint(const ['↑', '↓'], 'move'),
         hint(const ['↵'], 'open'),
         hint(const ['esc'], 'close'),
-        const Spacer(),
-        Flexible(
+        Expanded(
           child: Text('Type to search tabs, chats, files, PRs, tasks, agents',
               maxLines: 1,
+              textAlign: TextAlign.right,
               overflow: TextOverflow.ellipsis,
               style: sans(11.5, color: AppColors.fg4)),
         ),

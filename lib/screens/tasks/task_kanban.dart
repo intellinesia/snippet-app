@@ -669,14 +669,14 @@ class _TaskCardState extends State<_TaskCard> {
                 if (isAgent) ...[
                   AgentMochi(t.createdById, size: 14),
                   const SizedBox(width: 6),
-                  Flexible(
+                  Expanded(
                     child: Text(agentLabel,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: sans(11.5, color: AppColors.fg3)),
                   ),
-                ],
-                const Spacer(),
+                ] else
+                  const Spacer(),
                 if (age.isNotEmpty)
                   Text(age,
                       style: sans(11.5,

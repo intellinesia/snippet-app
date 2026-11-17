@@ -293,7 +293,8 @@ class _SessionTermViewState extends State<SessionTermView> {
         final used = basis.fold<double>(0, (a, b) => a + b) + gap * 3;
         final free = math.max(0.0, box.maxWidth - used);
         final growSum = grow.fold<double>(0, (a, b) => a + b);
-        double w(int i) => (basis[i] + free * grow[i] / growSum).floorToDouble();
+        double w(int i) =>
+            (basis[i] + free * grow[i] / growSum).floorToDouble();
         return Row(children: [
           _group(w(0), [
             _key('esc', () => _sendKey(TerminalKey.escape)),
@@ -354,10 +355,13 @@ class _SessionTermViewState extends State<SessionTermView> {
               ),
             ),
             child: keys[i].$2 == null
-                ? _key(keys[i].$1, () => setState(() {
-                      _alt = !_alt;
-                      _more = false;
-                    }), on: _alt)
+                ? _key(
+                    keys[i].$1,
+                    () => setState(() {
+                          _alt = !_alt;
+                          _more = false;
+                        }),
+                    on: _alt)
                 : _key(keys[i].$1, () => _sendKey(keys[i].$2!)),
           ),
       ]),
@@ -409,7 +413,8 @@ class _SessionTermViewState extends State<SessionTermView> {
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Text('Restart',
-                    style: sans(13, weight: W.label, color: AppColors.accentFg)),
+                    style:
+                        sans(13, weight: W.label, color: AppColors.accentFg)),
               ),
             ),
           ),
@@ -493,19 +498,22 @@ class _SessionTermViewState extends State<SessionTermView> {
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
       child: Row(children: [
-        if (cwd.isNotEmpty)
-          Flexible(
-            child: Text(cwd,
-                maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
-          ),
-        if (branch.isNotEmpty) ...[
-          if (cwd.isNotEmpty) const SizedBox(width: 12),
-          Flexible(
-            child: Text(branch,
-                maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
-          ),
-        ],
-        const Spacer(),
+        Expanded(
+          child: Row(children: [
+            if (cwd.isNotEmpty)
+              Flexible(
+                child: Text(cwd,
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+              ),
+            if (branch.isNotEmpty) ...[
+              if (cwd.isNotEmpty) const SizedBox(width: 12),
+              Flexible(
+                child: Text(branch,
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+              ),
+            ],
+          ]),
+        ),
         if (_lastC > 0 && _lastR > 0) Text('$_lastC × $_lastR', style: style),
       ]),
     );
@@ -520,7 +528,10 @@ class _SessionTermViewState extends State<SessionTermView> {
         const Spacer(),
         if (widget.onNew != null)
           IconBtn('plus',
-              size: 28, iconSize: 14, tooltip: 'New shell', onTap: widget.onNew),
+              size: 28,
+              iconSize: 14,
+              tooltip: 'New shell',
+              onTap: widget.onNew),
         IconBtn('x',
             size: 28, iconSize: 14, tooltip: 'Close', onTap: widget.onClose),
       ]),

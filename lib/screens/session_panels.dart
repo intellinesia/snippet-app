@@ -461,6 +461,7 @@ class _DeskLanesState extends State<_DeskLanes> {
                     const Spacer(),
                     SizedBox(width: S.s8),
                     Flexible(
+                      flex: 0,
                       child: LaneWho(
                           client: widget.client,
                           agent: l.agent,

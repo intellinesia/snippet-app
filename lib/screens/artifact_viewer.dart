@@ -1236,28 +1236,32 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
       decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: AppColors.border))),
       child: Row(children: [
-        Flexible(
-          child: Text(a?.title ?? 'Artifact',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(14, weight: W.strong, color: AppColors.fg1)),
+        // Expanded, not Flexible + Spacer: that pair splits the row and strands the controls mid-way.
+        Expanded(
+          child: Row(children: [
+            Flexible(
+              child: Text(a?.title ?? 'Artifact',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(14, weight: W.strong, color: AppColors.fg1)),
+            ),
+            if (a != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                height: 20,
+                padding: const EdgeInsets.symmetric(horizontal: 7),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    color: AppColors.surface3,
+                    borderRadius: BorderRadius.circular(R.of(5))),
+                child: Text(_artifactKindLabel(a.kind),
+                    style: sans(11.5, color: AppColors.fg2)),
+              ),
+            ],
+            const SizedBox(width: 8),
+            _versionButton(),
+          ]),
         ),
-        if (a != null) ...[
-          const SizedBox(width: 8),
-          Container(
-            height: 20,
-            padding: const EdgeInsets.symmetric(horizontal: 7),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-                color: AppColors.surface3,
-                borderRadius: BorderRadius.circular(R.of(5))),
-            child: Text(_artifactKindLabel(a.kind),
-                style: sans(11.5, color: AppColors.fg2)),
-          ),
-        ],
-        const SizedBox(width: 8),
-        _versionButton(),
-        const Spacer(),
         if (_hasSource) ...[_sourceSeg(), const SizedBox(width: 6)],
         IconBtn('external-link',
             size: 28,

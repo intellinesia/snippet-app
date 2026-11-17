@@ -1763,26 +1763,30 @@ class TermDockBar extends StatelessWidget {
     return SizedBox(
       height: 40,
       child: Row(children: [
-        Flexible(
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            shrinkWrap: true,
-            padding: const EdgeInsets.only(left: 12, right: 4),
-            itemCount: tabs.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 4),
-            itemBuilder: (_, n) => _DockTab(
-              title: tabs[n].title,
-              dot: tabs[n].dot,
-              selected: n == focus,
-              onTap: () => onSelect(n),
-              onRename: () => onRename(n),
-              onClose: () => onClose(n),
+        // A Flexible beside a Spacer only gets half the row; Expanded pins actions to the edge.
+        Expanded(
+          child: Row(children: [
+            Flexible(
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                shrinkWrap: true,
+                padding: const EdgeInsets.only(left: 12, right: 4),
+                itemCount: tabs.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 4),
+                itemBuilder: (_, n) => _DockTab(
+                  title: tabs[n].title,
+                  dot: tabs[n].dot,
+                  selected: n == focus,
+                  onTap: () => onSelect(n),
+                  onRename: () => onRename(n),
+                  onClose: () => onClose(n),
+                ),
+              ),
             ),
-          ),
+            IconBtn('plus',
+                size: 26, iconSize: 13, tooltip: 'New terminal', onTap: onNew),
+          ]),
         ),
-        IconBtn('plus',
-            size: 26, iconSize: 13, tooltip: 'New terminal', onTap: onNew),
-        const Spacer(),
         ...actions,
         const SizedBox(width: 8),
       ]),

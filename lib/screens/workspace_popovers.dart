@@ -807,13 +807,12 @@ class _GitPopoverState extends State<GitPopover> {
           child: Row(children: [
             AppIcon('git-branch', size: 14, color: AppColors.fg2),
             const SizedBox(width: 8),
-            Flexible(
+            Expanded(
               child: Text(st.branch.isEmpty ? 'HEAD' : st.branch,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: mono(12.5, weight: W.strong, color: AppColors.fg1)),
             ),
-            const Spacer(),
             if (st.ahead > 0)
               Text('${st.ahead} ahead of origin',
                   style: sans(12, color: AppColors.fg3)),

@@ -48,6 +48,7 @@ class SessionChatHeader extends StatelessWidget {
           AgentMochi(agentId, size: 22),
           const SizedBox(width: 10),
           Flexible(
+            flex: 100,
             child: onTitleTap == null
                 ? name
                 : GestureDetector(

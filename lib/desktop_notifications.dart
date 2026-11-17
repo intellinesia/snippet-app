@@ -231,26 +231,29 @@ class _DesktopNotificationCardState extends State<DesktopNotificationCard> {
     final header = Row(children: [
       AgentMochi(_agentOf(p), size: 18),
       SizedBox(width: S.s8),
-      Flexible(
-        child: Text(title.isEmpty ? 'Snippet' : title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: sans(13, weight: W.title, color: AppColors.fg1)),
-      ),
-      if (tag != null) ...[
-        SizedBox(width: S.s8),
-        Container(
-          height: 18,
-          padding: const EdgeInsets.symmetric(horizontal: 7),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: tag.$2.withValues(alpha: .13),
-            borderRadius: BorderRadius.circular(R.xs),
+      Expanded(
+        child: Row(children: [
+          Flexible(
+            child: Text(title.isEmpty ? 'Snippet' : title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(13, weight: W.title, color: AppColors.fg1)),
           ),
-          child: Text(tag.$1, style: sans(11, color: tag.$2)),
-        ),
-      ],
-      const Spacer(),
+          if (tag != null) ...[
+            SizedBox(width: S.s8),
+            Container(
+              height: 18,
+              padding: const EdgeInsets.symmetric(horizontal: 7),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: tag.$2.withValues(alpha: .13),
+                borderRadius: BorderRadius.circular(R.xs),
+              ),
+              child: Text(tag.$1, style: sans(11, color: tag.$2)),
+            ),
+          ],
+        ]),
+      ),
       if (ago.isNotEmpty && !widget.toast)
         Text(ago, style: sans(11, color: AppColors.fg4)),
       if (widget.onClose != null)

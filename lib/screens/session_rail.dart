@@ -800,14 +800,14 @@ class _RailGroupState extends State<_RailGroup> {
           Text(w.label, style: sans(12, weight: W.label, color: AppColors.fg3)),
           if (w.meta != null) ...[
             const SizedBox(width: 8),
-            Flexible(
+            Expanded(
               child: Text(w.meta!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: sans(12, color: AppColors.fg4, tabular: true)),
             ),
-          ],
-          const Spacer(),
+          ] else
+            const Spacer(),
           if (w.link != null && w.onLabel != null)
             InkWell(
               onTap: w.onLabel,
