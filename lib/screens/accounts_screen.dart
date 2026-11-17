@@ -76,15 +76,114 @@ const Map<String, _AccountKind> _kinds = {
 String accountProviderTitle(String provider) =>
     _kinds[provider]?.title ?? provider;
 
-/// "5-hour window 42%", the wording the Usage page uses for the same windows.
-String _windowUse(RateWindow r) {
-  final name = switch (limitWindowLabel(r)) {
-    '5h' => '5-hour window',
-    '7d' => 'Weekly window',
-    '30d' => 'Monthly window',
-    final other => other,
-  };
-  return '$name ${r.usedPercent.clamp(0, 100).round()}%';
+/// One meter per distinct usage window. Providers sometimes report the same
+/// window twice (Devin), so equal label and percent collapse to one; equal
+/// labels with different lengths are named by their real length.
+List<({String label, RateWindow window})> _usageWindows(AccountUsage? usage) {
+  final all = [
+    if (usage?.primary != null) usage!.primary!,
+    if (usage?.secondary != null) usage!.secondary!,
+  ];
+  String name(RateWindow r) => switch (limitWindowLabel(r)) {
+        '5h' => '5 hours',
+        '7d' => 'Week',
+        '30d' => 'Month',
+        final other => other,
+      };
+  String span(RateWindow r) {
+    final m = r.windowMinutes;
+    if (m >= 1440 && m % 1440 == 0) return '${m ~/ 1440} days';
+    if (m >= 60 && m % 60 == 0) return '${m ~/ 60} hours';
+    return m > 0 ? '$m min' : name(r);
+  }
+
+  if (all.length == 2 && name(all[0]) == name(all[1])) {
+    if (all[0].windowMinutes != all[1].windowMinutes) {
+      return [for (final r in all) (label: span(r), window: r)];
+    }
+    if (all[0].usedPercent.round() == all[1].usedPercent.round()) {
+      return [(label: name(all[0]), window: all[0])];
+    }
+  }
+  return [for (final r in all) (label: name(r), window: r)];
+}
+
+/// "Back in 31m" from the relative part of [rateResetLabel].
+String _backIn(int limitedUntil) {
+  final rel = rateResetLabel(limitedUntil)?.split(' · ').first;
+  if (rel == null) return 'Limit reached';
+  final when = rel.replaceFirst('resets ', '');
+  return when == 'in 0m' ? 'Back in a moment' : 'Back $when';
+}
+
+/// One usage window: label, rounded track, percent.
+class _UsageMeter extends StatelessWidget {
+  const _UsageMeter({required this.label, required this.percent});
+  final String label;
+  final double percent;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = percent.clamp(0, 100).toDouble();
+    final fill = p >= 100
+        ? AppColors.danger
+        : p >= 85
+            ? const Color(0xFFD4923C)
+            : AppColors.accent;
+    return Row(children: [
+      SizedBox(
+          width: 56, child: Text(label, style: sans(13, color: AppColors.fg3))),
+      Expanded(
+          child: ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                  value: p / 100,
+                  minHeight: 6,
+                  backgroundColor: AppColors.surface3,
+                  color: fill))),
+      SizedBox(
+          width: 48,
+          child: Text('${p.round()}%',
+              textAlign: TextAlign.right,
+              style: sans(13, color: AppColors.fg3).copyWith(
+                  fontFeatures: const [FontFeature.tabularFigures()]))),
+    ]);
+  }
+}
+
+/// Name on the left, state on the right.
+Widget _accountTop(String name, Account account) {
+  final limited = account.limitedUntil;
+  return Padding(
+    padding: const EdgeInsets.only(top: 4),
+    child: Row(children: [
+      Expanded(
+          child: Text(name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(17, color: AppColors.fg1))),
+      if (limited != null || account.active) ...[
+        const SizedBox(width: 12),
+        Text(limited != null ? _backIn(limited) : 'In use',
+            style: sans(14,
+                color: limited != null ? AppColors.danger : AppColors.accent)),
+      ],
+    ]),
+  );
+}
+
+Widget? _accountMeters(AccountUsage? usage) {
+  final ws = _usageWindows(usage);
+  if (ws.isEmpty) return null;
+  return Padding(
+    padding: const EdgeInsets.only(top: 10, bottom: 4),
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      for (var i = 0; i < ws.length; i++) ...[
+        if (i > 0) const SizedBox(height: 8),
+        _UsageMeter(label: ws[i].label, percent: ws[i].window.usedPercent),
+      ],
+    ]),
+  );
 }
 
 class AccountsScreen extends StatefulWidget {
@@ -595,18 +694,10 @@ class _AccountsScreenState extends State<AccountsScreen> {
 
   Widget _listRow(String provider, Account account) {
     final name = account.label.isEmpty ? account.id : account.label;
-    final usage = account.usage;
-    final parts = <String>[
-      if (usage?.primary != null) _windowUse(usage!.primary!),
-      if (usage?.secondary != null) _windowUse(usage!.secondary!),
-    ];
     return SettingsRow(
       label: name,
-      sub: parts.isEmpty ? null : parts.join(' · '),
-      trailing: account.limitedUntil != null || account.active
-          ? Text(account.limitedUntil != null ? 'Limit reached' : 'In use',
-              style: sans(12, color: AppColors.fg3))
-          : null,
+      labelWidget: _accountTop(name, account),
+      subWidget: _accountMeters(account.usage),
       onTap: () => _selectKey('$provider/${account.id}'),
     );
   }
@@ -836,26 +927,12 @@ class _AccountsScreenState extends State<AccountsScreen> {
   Widget _row(String provider, List<Account> accounts, int index) {
     final account = accounts[index];
     final name = account.label.isEmpty ? account.id : account.label;
-    final limited = account.limitedUntil;
-    final limitedLabel = limited == null ? null : rateResetLabel(limited);
-    final usage = account.usage;
     final canRemove = _canRemove(provider, account);
-    final parts = <String>[
-      if (usage?.primary != null) _windowUse(usage!.primary!),
-      if (usage?.secondary != null) _windowUse(usage!.secondary!),
-      if (limitedLabel != null) limitedLabel,
-    ];
     return Builder(
-        builder: (anchor) => V5SettingsRow(
+        builder: (anchor) => SettingsRow(
               label: name,
-              subtitle: parts.isEmpty ? null : parts.join(' · '),
-              value: limited != null
-                  ? 'Limit reached'
-                  : account.active
-                      ? 'In use'
-                      : null,
-              chevron: false,
-              trailing: const SizedBox.shrink(),
+              labelWidget: _accountTop(name, account),
+              subWidget: _accountMeters(account.usage),
               // The row is the menu: order, rename and remove.
               onTap: _busy
                   ? null

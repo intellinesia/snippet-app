@@ -60,15 +60,17 @@ void main() {
     expect(find.text('Primary · set in profiles'), findsOneWidget);
   });
 
-  testWidgets('accounts name each rate window in words',
+  testWidgets('accounts show a meter per rate window',
       variant: TargetPlatformVariant.only(TargetPlatform.linux), (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(_host(AccountsScreen(client: _Daemon(), embedded: true)));
     await tester.pumpAndSettle();
-    expect(find.textContaining('5-hour window 42%'), findsOneWidget);
-    expect(find.textContaining('Weekly window 18%'), findsOneWidget);
+    expect(find.text('5 hours'), findsOneWidget);
+    expect(find.text('42%'), findsOneWidget);
+    expect(find.text('Week'), findsOneWidget);
+    expect(find.text('18%'), findsOneWidget);
   });
 
   testWidgets('approvals sheet returns the chosen mode',
