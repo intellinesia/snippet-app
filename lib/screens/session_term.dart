@@ -178,9 +178,12 @@ class _ChurningStatusState extends State<_ChurningStatus> {
       return Padding(
         padding: const EdgeInsets.only(top: 2, bottom: 6),
         child: Row(children: [
-          const SizedBox(width: 3),
-          RunSpinner(size: 10, color: AppColors.accent),
-          const SizedBox(width: 13),
+          SizedBox(
+              width: 20,
+              child: Center(
+                  child: AgentMochi(widget.agentId,
+                      size: 18, state: AgentCharacterState.working))),
+          const SizedBox(width: 8),
           SwapText(_verb, maxLines: 1, style: sans(12.5, color: AppColors.fg2)),
           const SizedBox(width: 8),
           Text(_elapsed,
