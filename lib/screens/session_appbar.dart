@@ -1588,15 +1588,21 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         : running
             ? 'running'
             : (s?.status ?? 'idle');
+    // Only live states earn a pill; finished or idle shows nothing.
+    final live = status == 'running' ||
+        status == 'needs_you' ||
+        status == 'waiting_for_input';
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      SessionStatusPill(
-          status: mc && !running ? 'idle' : status,
-          startedAt: DateTime.tryParse(s?.turnStartedAt ?? '')),
-      Container(
-          width: 1,
-          height: 18,
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          color: AppColors.lineStrong),
+      if (live) ...[
+        SessionStatusPill(
+            status: status,
+            startedAt: DateTime.tryParse(s?.turnStartedAt ?? '')),
+        Container(
+            width: 1,
+            height: 18,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            color: AppColors.lineStrong),
+      ],
       if (actions) ...[
         if (mc)
           _mcHeaderActions(s)
