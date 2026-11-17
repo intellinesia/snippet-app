@@ -247,11 +247,11 @@ Future<void> showGroupInfo(
         onClose: close,
       );
   if (kMobile) {
+    // A page like the agent's info, not a sheet: same push, same back swipe.
     return Navigator.of(context, rootNavigator: true).push<void>(
-      _InfoSheetRoute(
-          builder: (ctx) => _PhoneSheet(
-              child:
-                  panel(() => Navigator.of(ctx, rootNavigator: true).pop()))),
+      AppPageRoute(
+          builder: (ctx) =>
+              panel(() => Navigator.of(ctx, rootNavigator: true).pop())),
     );
   }
   return _showDesktopInfo(context, panel);
@@ -2028,174 +2028,8 @@ class AgentPageButton extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Phone sheet route and desktop dialog
+// Desktop dialog
 // ---------------------------------------------------------------------------
-
-/// A non-opaque full-height route: the chat stays visible under a 30px blur
-/// and a dark tint, and the sheet slides up on [sheetMotion].
-class _InfoSheetRoute extends PageRoute<void> {
-  _InfoSheetRoute({required this.builder});
-
-  final WidgetBuilder builder;
-
-  @override
-  bool get opaque => false;
-
-  @override
-  Color? get barrierColor => null;
-
-  @override
-  String? get barrierLabel => null;
-
-  @override
-  bool get maintainState => true;
-
-  @override
-  Duration get transitionDuration =>
-      sheetMotion.duration ?? const Duration(milliseconds: 320);
-
-  @override
-  Duration get reverseTransitionDuration =>
-      sheetMotion.reverseDuration ?? const Duration(milliseconds: 220);
-
-  @override
-  Widget buildPage(BuildContext context, Animation<double> animation,
-          Animation<double> secondaryAnimation) =>
-      builder(context);
-
-  @override
-  Widget buildTransitions(
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
-    final curved = CurvedAnimation(
-        parent: animation,
-        curve: sheetMotion.curve ?? Curves.easeOutCubic,
-        reverseCurve: sheetMotion.reverseCurve ?? Curves.easeOutCubic.flipped);
-    if (reduceMotion(context)) {
-      return FadeTransition(opacity: curved, child: child);
-    }
-    return SlideTransition(
-      position:
-          Tween(begin: const Offset(0, 1), end: Offset.zero).animate(curved),
-      child: child,
-    );
-  }
-}
-
-/// Frosted chat backdrop plus drag-down dismissal for the phone sheet.
-class _PhoneSheet extends StatefulWidget {
-  const _PhoneSheet({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_PhoneSheet> createState() => _PhoneSheetState();
-}
-
-class _PhoneSheetState extends State<_PhoneSheet>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _settle =
-      AnimationController(vsync: this, duration: Motion.base);
-  Animation<double>? _settleAnim;
-  double _drag = 0;
-  bool _dragging = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _settle.addStatusListener((s) {
-      if (s == AnimationStatus.completed && mounted) {
-        setState(() {
-          _settleAnim = null;
-          _drag = 0;
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _settle.dispose();
-    super.dispose();
-  }
-
-  void _settleBack() {
-    if (_drag <= 0) return;
-    final from = _drag;
-    _settleAnim = Tween(begin: from, end: 0.0)
-        .animate(CurvedAnimation(parent: _settle, curve: Motion.exit));
-    _settle.forward(from: 0);
-  }
-
-  void _dragUpdate(double dy) {
-    if (_settle.isAnimating) _settle.stop();
-    setState(() {
-      _settleAnim = null;
-      _dragging = true;
-      _drag = (_drag + dy).clamp(0.0, 400.0);
-    });
-  }
-
-  void _dragEnd(double velocity) {
-    setState(() => _dragging = false);
-    if (_drag > 96 || velocity > 650) {
-      Navigator.of(context).maybePop();
-      return;
-    }
-    _settleBack();
-  }
-
-  bool _onScroll(ScrollNotification n) {
-    if (n is OverscrollNotification) {
-      // Pulling down past the top edge drags the sheet with the finger.
-      final pull = -n.overscroll;
-      if (pull > 0 && n.metrics.pixels <= 0) {
-        _dragUpdate(pull);
-        if (_drag > 120) Navigator.of(context).maybePop();
-      }
-    } else if (n is ScrollEndNotification && !_dragging && _drag > 0) {
-      _settleBack();
-    }
-    return false;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final offset = _dragging ? _drag : (_settleAnim?.value ?? 0.0);
-    return Stack(children: [
-      Positioned.fill(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-          child: Container(color: Colors.black.withValues(alpha: 0.3)),
-        ),
-      ),
-      Positioned.fill(
-        child: SafeArea(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onVerticalDragStart: (_) => setState(() => _dragging = true),
-            onVerticalDragUpdate: (d) => _dragUpdate(d.delta.dy),
-            onVerticalDragEnd: (d) => _dragEnd(d.primaryVelocity ?? 0),
-            onVerticalDragCancel: () {
-              setState(() => _dragging = false);
-              _settleBack();
-            },
-            child: NotificationListener<ScrollNotification>(
-              onNotification: _onScroll,
-              child: Transform.translate(
-                offset: Offset(0, offset),
-                child: widget.child,
-              ),
-            ),
-          ),
-        ),
-      ),
-    ]);
-  }
-}
 
 Future<void> _showDesktopInfo(
     BuildContext context, Widget Function(VoidCallback) panel) {
