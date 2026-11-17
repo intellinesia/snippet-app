@@ -1289,51 +1289,47 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         for (final s in unpinned)
           if (sessionCameBack(s)) s,
       ];
+      final runningRows = kMobile
+          ? const <SessionInfo>[]
+          : [
+              for (final s in unpinned)
+                if (!sessionNeedsYou(s) &&
+                    !sessionCameBack(s) &&
+                    sessionBusy(s))
+                  s,
+            ];
+      final runningIds = {for (final s in runningRows) s.id};
       groupedSource = [
         for (final s in unpinned)
-          if (!sessionNeedsYou(s) && !sessionCameBack(s)) s,
+          if (!sessionNeedsYou(s) &&
+              !sessionCameBack(s) &&
+              !runningIds.contains(s.id))
+            s,
       ];
-      if (needsYouRows.isNotEmpty) {
-        out.add(SessionGroupHeader(
-          'Needs you',
-          count: needsYouRows.length,
-          needsYou: true,
-        ));
-        for (var i = 0; i < needsYouRows.length; i++) {
+      void group(String label, List<SessionInfo> rows,
+          {bool needsYou = false}) {
+        if (rows.isEmpty) return;
+        out.add(
+            SessionGroupHeader(label, count: rows.length, needsYou: needsYou));
+        for (var i = 0; i < rows.length; i++) {
           out.add(Appear(
-            key: ValueKey('chat-${needsYouRows[i].id}'),
+            key: ValueKey('chat-${rows[i].id}'),
             index: n++,
             since: _chatsShownAt,
             child: _listRow(
-              needsYouRows[i],
-              above: i > 0 ? needsYouRows[i - 1] : null,
-              below: i + 1 < needsYouRows.length ? needsYouRows[i + 1] : null,
-              divider: kMobile && i + 1 < needsYouRows.length,
+              rows[i],
+              above: i > 0 ? rows[i - 1] : null,
+              below: i + 1 < rows.length ? rows[i + 1] : null,
+              divider: kMobile && i + 1 < rows.length,
               showProject: true,
             ),
           ));
         }
       }
-      if (cameBackRows.isNotEmpty) {
-        out.add(SessionGroupHeader(
-          'Came back',
-          count: cameBackRows.length,
-        ));
-        for (var i = 0; i < cameBackRows.length; i++) {
-          out.add(Appear(
-            key: ValueKey('chat-${cameBackRows[i].id}'),
-            index: n++,
-            since: _chatsShownAt,
-            child: _listRow(
-              cameBackRows[i],
-              above: i > 0 ? cameBackRows[i - 1] : null,
-              below: i + 1 < cameBackRows.length ? cameBackRows[i + 1] : null,
-              divider: kMobile && i + 1 < cameBackRows.length,
-              showProject: true,
-            ),
-          ));
-        }
-      }
+
+      group('Needs you', needsYouRows, needsYou: true);
+      group('Running', runningRows);
+      group('Came back', cameBackRows);
     } else {
       groupedSource = unpinned;
     }
@@ -1455,6 +1451,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       onMore: kMobile || isDedicatedMcSession(s.id)
           ? null
           : (p) => _sessionActions(s, position: p),
+      onDecide: kMobile || widget.client == null
+          ? null
+          : (ok) => quickSend(
+              client: widget.client!,
+              session: s.id,
+              action: ok ? const QuickApprove() : const QuickDeny()),
       onReviewPr: s.pr?.state == 'open' && widget.client != null
           ? () => _reviewSessionPr(s)
           : null,

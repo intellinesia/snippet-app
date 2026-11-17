@@ -5,6 +5,8 @@ import '../api.dart';
 import '../glass.dart';
 import '../models.dart';
 import '../settings_form.dart';
+import '../tool_activity.dart';
+import 'file_changes.dart' show sessionChangeSteps;
 import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
@@ -152,9 +154,7 @@ class _SessionRailState extends State<SessionRail> {
     final mc = widget.isMissionControl;
     final r = await Future.wait<Object?>([
       mc ? Future.value(null) : _try(c.gitStatus(id)),
-      mc || ws.isEmpty
-          ? Future.value(null)
-          : _try(c.sessions(folder: ws)),
+      mc || ws.isEmpty ? Future.value(null) : _try(c.sessions(folder: ws)),
       mc ? Future.value(null) : _try(c.bgList(id)),
       _try(c.wake(id)),
       _try(c.keepWarmFor(id)),
@@ -229,147 +229,214 @@ class _SessionRailState extends State<SessionRail> {
     );
   }
 
+  // Round 5 session card: what the session is doing, not what you can do to it.
+  // Actions live behind the header's "more" menu.
   List<Widget> _groups() {
-    final groups = <List<Widget>>[];
-    final labels = <String>[];
-    void add(String label, List<Widget> rows) {
-      if (rows.isEmpty) return;
-      labels.add(label);
-      groups.add(rows);
-    }
-
     final mc = widget.isMissionControl;
     final s = widget.state;
-    if (!mc) {
-      add('Workspace', _workspace());
-      add('Running', _running());
+    final out = <Widget>[_header()];
+    void add(String label, List<Widget> rows,
+        {String? meta, VoidCallback? onLabel}) {
+      if (rows.isEmpty) return;
+      out.add(_RailGroup(
+          label: label, meta: meta, onLabel: onLabel, children: rows));
     }
-    add('Autonomy', _autonomy());
-    add('Model', _model());
+
     if (!mc) {
-      add('Task', _taskRows());
-      add('History', _history(s));
+      final plan = _plan(s);
+      if (plan != null) {
+        final done = plan.where((p) => _stepState(p) == 2).length;
+        add('Plan', _planRows(plan), meta: '$done of ${plan.length} done');
+      }
+      add('Lanes', _laneRows(s), onLabel: widget.onLanes);
+      final files = fileChanges(sessionChangeSteps(s?.events ?? const []));
+      add('Changes', _changeRows(files),
+          meta: files.isEmpty ? null : '${files.length}',
+          onLabel: widget.onChanges);
     }
-    return [
-      for (var i = 0; i < groups.length; i++)
-        _RailGroup(
-          label: labels[i],
-          trailing: i == 0
-              ? _RailToggle(
-                  tooltip: 'Hide session rail',
-                  small: true,
-                  onTap: () => setSessionRailCollapsed(true))
-              : null,
-          first: i == 0,
-          children: groups[i],
-        ),
-    ];
+    add('Next without you', _nextRows());
+    return out;
   }
 
-  List<Widget> _workspace() {
-    final info = _info;
+  Widget _header() {
+    final ws = _info?.folder ?? widget.state?.workspace ?? '';
     final git = _git;
-    final c = info?.shownChanges;
     final branch = (git?.ok ?? false) && git!.branch.isNotEmpty
         ? git.branch
-        : info?.branch;
-    final ahead = git?.ahead ?? 0;
-    final dirty = git == null ? 0 : git.files.length;
+        : (_info?.branch ?? '');
+    final where = [
+      if (ws.isNotEmpty) lastPathSegment(ws),
+      if (branch.isNotEmpty) branch,
+    ].join(' · ');
+    final t = _task;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 8, 4),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Text(widget.isMissionControl ? 'Mission Control' : 'Session',
+              style: sans(13, weight: W.label, color: AppColors.fg1)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(where,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: mono(11, color: AppColors.fg4)),
+          ),
+          _RailToggle(
+              tooltip: 'Hide session panel',
+              small: true,
+              onTap: () => setSessionRailCollapsed(true)),
+        ]),
+        if (t != null && widget.onOpenTask != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: _RailRow(
+              icon: 'task',
+              label: t.title,
+              value: t.workPlan.isEmpty
+                  ? t.status.label
+                  : '${t.workPlan.where((p) => p.done).length} of ${t.workPlan.length}',
+              chevron: true,
+              onTap: () => widget.onOpenTask!(t.id),
+            ),
+          ),
+      ]),
+    );
+  }
+
+  static List<Map>? _plan(HarnessState? s) {
+    final events = s?.events ?? const <Map<String, dynamic>>[];
+    for (var i = events.length - 1; i >= 0; i--) {
+      final e = events[i];
+      if (e['type'] != 'plan_updated') continue;
+      final steps = (e['steps'] as List? ?? const []).whereType<Map>().toList();
+      return steps.isEmpty ? null : steps;
+    }
+    return null;
+  }
+
+  static int _stepState(Map step) => switch (step['status']?.toString()) {
+        'done' || 'completed' => 2,
+        'in_progress' => 1,
+        _ => 0,
+      };
+
+  List<Widget> _planRows(List<Map> plan) => [
+        for (final p in plan)
+          SizedBox(
+            height: 26,
+            child: Row(children: [
+              SizedBox(
+                width: 16,
+                child: Center(
+                  child: switch (_stepState(p)) {
+                    2 => AppIcon('check', size: 13, color: AppColors.ok),
+                    1 => Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                            color: AppColors.accent, shape: BoxShape.circle)),
+                    _ => Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border:
+                                Border.all(color: AppColors.fg4, width: 1.2))),
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(p['step']?.toString() ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13,
+                        color: switch (_stepState(p)) {
+                          2 => AppColors.fg3,
+                          1 => AppColors.fg1,
+                          _ => AppColors.fg3,
+                        })),
+              ),
+              if (_stepState(p) == 1)
+                Text('now', style: sans(11, color: AppColors.fg4)),
+            ]),
+          ),
+      ];
+
+  List<Widget> _laneRows(HarnessState? s) {
+    final lanes = [...?s?.lanes];
+    lanes.sort((a, b) => (b.running ? 1 : 0) - (a.running ? 1 : 0));
     return [
-      if (widget.onChanges != null)
-        _RailRow(
-          icon: 'file-code',
-          label: 'Changes',
-          valueWidget: c == null || (c.added == 0 && c.removed == 0)
-              ? null
-              : Row(mainAxisSize: MainAxisSize.min, children: [
-                  Text('+${c.added}',
-                      style: sans(13, color: AppColors.ok, tabular: true)),
-                  SizedBox(width: S.of(5)),
-                  Text('-${c.removed}',
-                      style:
-                          sans(13, color: AppColors.danger, tabular: true)),
-                ]),
-          onTap: widget.onChanges,
+      for (final l in lanes.take(4))
+        _InfoRow(
+          icon: l.running ? 'activity' : (l.status == 'failed' ? 'x' : 'check'),
+          title: l.title.isEmpty ? l.id : l.title,
+          sub: l.running
+              ? ((l.activity ?? '').trim().isEmpty
+                  ? 'Running'
+                  : 'Running · ${l.activity!.trim()}')
+              : l.status == 'failed'
+                  ? 'Failed'
+                  : 'Finished',
+          live: l.running,
+          onTap: widget.onLanes,
         ),
-      if (info != null && info.inWorktree)
-        _RailRow(
-            icon: 'worktree',
-            label: 'Worktree',
-            value: lastPathSegment(info.folder)),
-      if (branch != null && branch.isNotEmpty)
-        _RailRow(
-            icon: 'git-branch',
-            label: branch,
-            chevron: widget.onGit != null,
-            onTap: widget.onGit),
-      if (widget.onGit != null && git != null)
-        _RailRow(
-          icon: 'upload',
-          label: 'Commit and push',
-          value: ahead > 0
-              ? '$ahead ahead'
-              : dirty > 0
-                  ? '$dirty changed'
-                  : null,
-          onTap: widget.onGit,
-        ),
-      if (widget.github == true && widget.onPullRequests != null)
-        _RailRow(
-            icon: 'git-commit',
-            label: 'Pull requests',
-            chevron: true,
-            onTap: widget.onPullRequests),
+      if (lanes.length > 4)
+        _MoreRow('${lanes.length - 4} more', widget.onLanes),
     ];
   }
 
-  List<Widget> _running() {
-    final lanes = widget.state?.lanes ?? const <LaneInfo>[];
-    final working = lanes.where((l) => l.running).length;
-    return [
-      if (lanes.isNotEmpty && widget.onLanes != null)
-        _RailRow(
-            icon: 'layers',
-            label: 'Lanes',
-            value: working > 0 ? '$working working' : '${lanes.length}',
-            chevron: true,
-            onTap: widget.onLanes),
-      if (widget.onProcesses != null)
-        _RailRow(
-            icon: 'processes',
-            label: 'Processes',
-            value: _procs == null ? null : '$_procs',
-            chevron: true,
-            onTap: widget.onProcesses),
-      if (widget.onShell != null)
-        _RailRow(
-            icon: 'terminal',
-            label: 'Shell',
-            chevron: true,
-            onTap: widget.onShell),
-    ];
-  }
+  List<Widget> _changeRows(List<FileChange> files) => [
+        for (final f in files.take(5))
+          InkWell(
+            onTap: widget.onChanges,
+            borderRadius: BorderRadius.circular(6),
+            hoverColor: AppColors.surface2,
+            child: SizedBox(
+              height: 26,
+              child: Row(children: [
+                AppIcon('file', size: 13, color: AppColors.fg4),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(f.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: mono(12, color: AppColors.fg2)),
+                ),
+                if (f.added > 0)
+                  Text('+${f.added}',
+                      style: sans(11, color: AppColors.ok, tabular: true)),
+                if (f.removed > 0) ...[
+                  const SizedBox(width: 4),
+                  Text('-${f.removed}',
+                      style: sans(11, color: AppColors.danger, tabular: true)),
+                ],
+              ]),
+            ),
+          ),
+        if (files.length > 5)
+          _MoreRow('${files.length - 5} more', widget.onChanges),
+      ];
 
-  List<Widget> _autonomy() {
+  List<Widget> _nextRows() {
     final goal = widget.state?.goal;
     final goalOn = goal?.ongoing ?? false;
     final wake = _wake;
-    final mode = widget.resumeMode;
     return [
+      if (goalOn)
+        _RailRow(
+          icon: 'goal',
+          label: 'Goal',
+          value: goal!.paused ? 'Paused' : 'Working',
+          onTap: widget.onGoal,
+        ),
       if (widget.isMissionControl && widget.onAutonomy != null)
         _RailRow(
             icon: 'repeat',
             label: 'Automated wakes',
             chevron: true,
             onTap: widget.onAutonomy),
-      if (!widget.isMissionControl)
-        _RailRow(
-          icon: 'goal',
-          label: goalOn ? 'Goal' : 'Set a goal',
-          value: goalOn ? (goal!.paused ? 'Paused' : 'Working') : null,
-          chevron: !goalOn,
-          onTap: widget.onGoal,
-        ),
       _RailRow(
         icon: 'scheduled',
         label: 'Wakes',
@@ -389,128 +456,49 @@ class _SessionRailState extends State<SessionRail> {
           trailing: SettingsSwitch(value: _warm!, onChanged: _setWarm),
           onTap: () => _setWarm(!_warm!),
         ),
-      if (!widget.isMissionControl)
-        _RailRow(
-          icon: 'clock',
-          label: 'Cold resume',
-          value: switch (mode) {
-            'lean' => 'Lean',
-            'full' => 'Full',
-            _ => 'Ask',
-          },
-          onTap: widget.onCycleResume,
-        ),
     ];
   }
-
-  List<Widget> _model() {
-    final s = widget.state;
-    final ctx = s != null && s.contextWindow > 0 && s.lastPromptTokens > 0
-        ? (s.lastPromptTokens / s.contextWindow * 100).clamp(0, 100).round()
-        : null;
-    final cached = s != null && s.lastPromptTokens > 0 && s.cacheReadTokens > 0
-        ? (s.cacheReadTokens / s.lastPromptTokens * 100).clamp(0, 100).round()
-        : null;
-    return [
-      _RailRow(
-        icon: 'cpu',
-        label: widget.profileLabel,
-        height: ctx != null && cached != null ? 44 : 32,
-        trailing: ctx == null
-            ? null
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  _stat('Context', '$ctx%'),
-                  if (cached != null) _stat('Cached', '$cached%'),
-                ],
-              ),
-        chevron: true,
-        onTap: widget.onModel,
-      ),
-    ];
-  }
-
-  Widget _stat(String k, String v) => Text.rich(
-        TextSpan(children: [
-          TextSpan(text: '$k  ', style: sans(11, color: AppColors.fg4)),
-          TextSpan(text: v, style: sans(11, color: AppColors.fg2, tabular: true)),
-        ]),
-        maxLines: 1,
-      );
-
-  List<Widget> _taskRows() {
-    final t = _task;
-    if (t == null || widget.onOpenTask == null) return const [];
-    final plan = t.workPlan;
-    final done = plan.where((p) => p.done).length;
-    return [
-      _RailRow(
-        icon: 'task',
-        label: t.title,
-        value: plan.isEmpty ? t.status.label : '$done of ${plan.length}',
-        chevron: true,
-        onTap: () => widget.onOpenTask!(t.id),
-      ),
-    ];
-  }
-
-  List<Widget> _history(HarnessState? s) => [
-        if (widget.onCheckpoints != null)
-          _RailRow(
-              icon: 'history',
-              label: 'Checkpoints',
-              value: '${s?.checkpoints.length ?? 0}',
-              chevron: true,
-              onTap: widget.onCheckpoints),
-        if (widget.onMemory != null)
-          _RailRow(
-              icon: 'brain',
-              label: 'Memory',
-              chevron: true,
-              onTap: widget.onMemory),
-      ];
 }
 
 class _RailGroup extends StatelessWidget {
   const _RailGroup({
     required this.label,
     required this.children,
-    this.trailing,
-    this.first = false,
+    this.meta,
+    this.onLabel,
   });
   final String label;
+  final String? meta;
+  final VoidCallback? onLabel;
   final List<Widget> children;
-  final Widget? trailing;
-  final bool first;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: S.of(10)),
-      padding: EdgeInsets.symmetric(vertical: S.s8),
-      decoration: BoxDecoration(
-        border: first
-            ? null
-            : Border(
-                top: BorderSide(color: AppColors.fg1.withValues(alpha: 0.06))),
-      ),
+    final head = SizedBox(
+      height: 24,
+      child: Row(children: [
+        Text(label, style: sans(13, weight: W.label, color: AppColors.fg1)),
+        if (meta != null) ...[
+          const SizedBox(width: 8),
+          Text(meta!, style: sans(12, color: AppColors.fg4, tabular: true)),
+        ],
+        const Spacer(),
+        if (onLabel != null)
+          AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+      ]),
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 8, 12, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(S.s2, 0, 0, S.s4),
-            child: SizedBox(
-              height: 18,
-              child: Row(children: [
-                Expanded(
-                    child: Text(label,
-                        style: sans(12, color: AppColors.fg4))),
-                if (trailing != null) trailing!,
-              ]),
-            ),
-          ),
+          onLabel == null
+              ? head
+              : InkWell(
+                  onTap: onLabel,
+                  borderRadius: BorderRadius.circular(6),
+                  child: head),
+          const SizedBox(height: 2),
           ...children,
         ],
       ),
@@ -518,51 +506,122 @@ class _RailGroup extends StatelessWidget {
   }
 }
 
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.icon,
+    required this.title,
+    required this.sub,
+    this.live = false,
+    this.onTap,
+  });
+  final String icon;
+  final String title;
+  final String sub;
+  final bool live;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      hoverColor: AppColors.surface2,
+      child: SizedBox(
+        height: 40,
+        child: Row(children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            alignment: Alignment.center,
+            child: AppIcon(icon,
+                size: 13, color: live ? AppColors.accent : AppColors.fg3),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13, color: AppColors.fg1)),
+                Text(sub,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(11, color: AppColors.fg4)),
+              ],
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _MoreRow extends StatelessWidget {
+  const _MoreRow(this.label, this.onTap);
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: SizedBox(
+          height: 24,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(label, style: sans(12, color: AppColors.fg4)),
+          ),
+        ),
+      );
+}
+
 class _RailRow extends StatelessWidget {
   const _RailRow({
     required this.icon,
     required this.label,
     this.value,
-    this.valueWidget,
     this.trailing,
     this.chevron = false,
     this.onTap,
-    this.height = 32,
   });
   final String icon;
   final String label;
   final String? value;
-  final Widget? valueWidget;
   final Widget? trailing;
   final bool chevron;
   final VoidCallback? onTap;
-  final double height;
 
   @override
   Widget build(BuildContext context) {
-    final v = valueWidget ??
-        (value == null
-            ? null
-            : Text(value!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(13, color: AppColors.fg4, tabular: true)));
+    final v = (value == null
+        ? null
+        : Text(value!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: sans(12, color: AppColors.fg4, tabular: true)));
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(R.md),
       hoverColor: AppColors.surface2,
       child: SizedBox(
-        height: height,
+        height: 30,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: S.s2),
           child: Row(children: [
-            AppIcon(icon, size: 16, color: AppColors.fg2),
+            AppIcon(icon, size: 14, color: AppColors.fg3),
             SizedBox(width: S.of(10)),
             Expanded(
               child: Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(14, color: AppColors.fg1)),
+                  style: sans(13, color: AppColors.fg2)),
             ),
             if (v != null) ...[
               SizedBox(width: S.s8),
@@ -592,7 +651,8 @@ class _RailToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon = AppIcon('sidebar', size: small ? 14 : 16, color: AppColors.fg3);
+    final icon =
+        AppIcon('sidebar', size: small ? 14 : 16, color: AppColors.fg3);
     return Tooltip(
       message: tooltip,
       child: InkWell(
@@ -605,7 +665,8 @@ class _RailToggle extends StatelessWidget {
                 height: 28,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(R.md),
-                  border: Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
+                  border:
+                      Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
                 ),
                 alignment: Alignment.center,
                 child: icon,

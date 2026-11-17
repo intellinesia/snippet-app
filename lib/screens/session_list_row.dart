@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../ambient_loop.dart';
 import '../models.dart';
+import '../notification_text.dart' show approvalOf;
 import '../platform.dart';
 import '../settled_sessions.dart';
 import '../composer/composer_pill.dart' show C7;
@@ -378,6 +379,7 @@ class SessionListRow extends StatelessWidget {
     this.onMergePr,
     this.onTogglePin,
     this.onMore,
+    this.onDecide,
   });
 
   final SessionInfo session;
@@ -409,6 +411,9 @@ class SessionListRow extends StatelessWidget {
   /// Desktop hover actions: pin and the existing right-click menu.
   final VoidCallback? onTogglePin;
   final void Function(Offset position)? onMore;
+
+  /// Desktop inline Deny / Approve for a pending tool approval.
+  final void Function(bool approve)? onDecide;
 
   @override
   Widget build(BuildContext context) {
@@ -615,17 +620,29 @@ class SessionListRow extends StatelessWidget {
       ],
     );
 
-    // Round 5 density: one 32px line, the status inline after the title.
-    final compact = !kMobile && !hasExtraLine && cameBackSummary.isEmpty;
+    // One 32px line on desktop; the title takes width first, meta gets the rest.
+    final compact = !kMobile;
+    final approval = needsYou ? approvalOf(s.attention) : null;
     Widget compactContent(bool hover) {
-      final statusStyle = sans(12, color: AppColors.fg4);
-      final place = showProject
-          ? projectLabel(s)
-          : branch.isNotEmpty
-              ? branch
-              : noRepo
-                  ? 'No git repo'
-                  : '';
+      final plan = s.plan;
+      final planRunning = working && plan != null && plan.total > 0;
+      final String meta;
+      if (attn != null) {
+        meta = approval != null
+            ? approval.headline('${s.attention?['tool'] ?? ''}')
+            : attn.label;
+      } else if (planRunning && plan.done < plan.total) {
+        meta = 'step ${(plan.done + 1).clamp(1, plan.total)} of ${plan.total}';
+      } else if (pr != null) {
+        meta = 'PR #${pr.number}';
+      } else if (showProject) {
+        meta = projectLabel(s);
+      } else if (branch.isNotEmpty) {
+        meta = branch;
+      } else {
+        meta = '';
+      }
+      final metaStyle = sans(12, color: AppColors.fg4);
       Widget action(String icon, String tip, VoidCallback? tap) => Tooltip(
             message: tip,
             child: GestureDetector(
@@ -638,56 +655,74 @@ class SessionListRow extends StatelessWidget {
                       child: AppIcon(icon, size: 16, color: AppColors.fg3))),
             ),
           );
-      return Row(children: [
+      Widget diffText() => Row(mainAxisSize: MainAxisSize.min, children: [
+            if (diff!.added > 0)
+              Text('+${compactCount(diff.added)}',
+                  maxLines: 1, style: sans(12, color: AppColors.ok)),
+            if (diff.added > 0 && diff.removed > 0) const SizedBox(width: 3),
+            if (diff.removed > 0)
+              Text('-${compactCount(diff.removed)}',
+                  maxLines: 1, style: sans(12, color: AppColors.danger)),
+          ]);
+      final titleW = renameField ??
+          Text(title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(13,
+                  weight: settled || untitled ? W.body : W.label,
+                  color: settled || untitled ? AppColors.fg3 : AppColors.fg1));
+      final line = Row(children: [
         if (leading != null) ...[
           SizedBox(width: 20, height: 20, child: Center(child: leading)),
           const SizedBox(width: 8),
         ],
         Expanded(
-            child: Row(children: [
-          Flexible(
-            flex: 4,
-            child: renameField ??
-                Text(title,
+          child: LayoutBuilder(builder: (context, c) {
+            final titleStyle = sans(13,
+                weight: settled || untitled ? W.body : W.label,
+                color: AppColors.fg1);
+            final pinW = pinned && renameField == null ? 17.0 : 0.0;
+            Widget? tail;
+            if (renameField == null) {
+              if (meta.isNotEmpty) {
+                tail = Text(meta,
                     maxLines: 1,
+                    softWrap: false,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(13,
-                        weight: settled || untitled ? W.body : W.label,
-                        color: settled || untitled
-                            ? AppColors.fg3
-                            : AppColors.fg1)),
-          ),
-          if (pinned && renameField == null) ...[
-            const SizedBox(width: 6),
-            AppIcon('pin', size: 11, color: AppColors.fg3),
-          ],
-          if (renameField == null) ...[
-            if (attn != null) ...[
-              const SizedBox(width: 8),
-              _StateLabel(state: attn),
-            ],
-            if (place.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              Flexible(
-                flex: 1,
-                child: Text(place,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: statusStyle),
-              ),
-            ],
-            if (diff != null) ...[
-              const SizedBox(width: 6),
-              if (diff.added > 0)
-                Text('+${compactCount(diff.added)}',
-                    maxLines: 1, style: sans(12, color: AppColors.ok)),
-              if (diff.added > 0 && diff.removed > 0) const SizedBox(width: 3),
-              if (diff.removed > 0)
-                Text('-${compactCount(diff.removed)}',
-                    maxLines: 1, style: sans(12, color: AppColors.danger)),
-            ],
-          ],
-        ])),
+                    style: attn != null
+                        ? sans(12, color: AppColors.run)
+                        : metaStyle);
+              } else if (diff != null) {
+                tail = diffText();
+              }
+            }
+            // The title gets width first; meta takes what is left, or goes.
+            final measured = TextPainter(
+                text: TextSpan(text: title, style: titleStyle),
+                maxLines: 1,
+                textDirection: TextDirection.ltr)
+              ..layout();
+            final titleW0 =
+                renameField == null ? measured.width + 1 : c.maxWidth;
+            final room = c.maxWidth - pinW - titleW0 - 8;
+            final showTail = tail != null && room >= 40;
+            return Row(children: [
+              Flexible(child: titleW),
+              if (pinned && renameField == null) ...[
+                const SizedBox(width: 6),
+                AppIcon('pin', size: 11, color: AppColors.fg3),
+              ],
+              if (showTail) ...[
+                const SizedBox(width: 8),
+                SizedBox(
+                    width: room,
+                    child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: ClipRect(child: tail))),
+              ],
+            ]);
+          }),
+        ),
         // Fixed slot so hovering swaps meta for actions without reflowing the row.
         if (renameField == null)
           SizedBox(
@@ -718,6 +753,37 @@ class SessionListRow extends StatelessWidget {
                 ]),
             ]),
           ),
+      ]);
+      if (approval == null || onDecide == null || renameField != null) {
+        return line;
+      }
+      Widget chip(String label, bool ok) => GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => onDecide!(ok),
+            child: Container(
+              height: 22,
+              padding: const EdgeInsets.symmetric(horizontal: 9),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: ok ? AppColors.fg1 : AppColors.surface2,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Text(label,
+                  style: sans(11.5,
+                      weight: W.label,
+                      color: ok ? AppColors.bg : AppColors.fg2)),
+            ),
+          );
+      return Column(mainAxisSize: MainAxisSize.min, children: [
+        line,
+        Padding(
+          padding: EdgeInsets.only(left: leading != null ? 28 : 0, top: 3),
+          child: Row(children: [
+            chip('Deny', false),
+            const SizedBox(width: 6),
+            chip('Approve', true),
+          ]),
+        ),
       ]);
     }
 
