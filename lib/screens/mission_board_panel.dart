@@ -141,7 +141,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         'blocked' => ('Blocked', AppColors.danger, AppColors.dangerBg),
         'done' => ('Done', AppColors.ok, AppColors.okBg),
         _ when t.planTotal > 0 => (
-            'Step ${t.planDone.clamp(1, t.planTotal)} of ${t.planTotal}',
+            'Plan ${t.planDone.clamp(1, t.planTotal)} of ${t.planTotal}',
             AppColors.run,
             AppColors.runBg
           ),

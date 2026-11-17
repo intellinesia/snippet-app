@@ -396,7 +396,7 @@ class _AgentCardState extends State<AgentCard> {
       final sub = [
         status,
         if (hasPlan && !status.contains(' of ${plan.total}'))
-          'step $step of ${plan.total}',
+          'plan $step of ${plan.total}',
       ].join(' · ');
       final subStyle = TeamRow.subtitleStyle();
       return TeamRow(

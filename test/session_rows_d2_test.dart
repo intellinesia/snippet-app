@@ -221,7 +221,7 @@ void main() {
     ));
 
     // A busy row shows its plan step under the metadata, above the PR line.
-    expect(find.text('Step 3 of 5 · Wire PR cache'), findsOneWidget);
+    expect(find.text('Plan 3 of 5 · Wire PR cache'), findsOneWidget);
     expect(find.text('PR #280 · checks passing'), findsOneWidget);
     expect(find.text('wakes Mon 08:00'), findsOneWidget);
     } finally {

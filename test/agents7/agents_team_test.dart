@@ -169,7 +169,7 @@ void main() {
     expect(find.text('Working'), findsOneWidget);
     expect(find.text('Asleep'), findsOneWidget);
     expect(find.byKey(const ValueKey('agent-plan-bar')), findsOneWidget);
-    expect(find.textContaining('step 3 of 5'), findsOneWidget);
+    expect(find.textContaining('plan 3 of 5'), findsOneWidget);
     // The floating + adds agents; the list carries no add row.
     expect(find.text('New agent'), findsNothing);
     expect(find.text('scrapper bois'), findsOneWidget);

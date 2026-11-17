@@ -38,7 +38,7 @@ void main() {
       'plan': {'done': 1, 'total': 4, 'current': 'Integrate'},
       'lanes': {'running': 1, 'items': []},
     });
-    expect(sessionProgressLabel(s), 'Step 2 of 4 · Integrate · 1 lane');
+    expect(sessionProgressLabel(s), 'Plan 2 of 4 · Integrate · 1 lane');
   });
 
   test('a finished plan shows no step', () {

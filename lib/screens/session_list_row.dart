@@ -71,13 +71,13 @@ String sessionStepLabel(SessionPlan plan) {
   return 'plan $stepNum/${plan.total}';
 }
 
-/// "Step 2 of 4 · Integrate lanes · 2 lanes" for a busy session, or null.
+/// "Plan 2 of 4 · Integrate lanes · 2 lanes" for a busy session, or null.
 String? sessionProgressLabel(SessionInfo s) {
   final parts = <String>[];
   final plan = s.plan;
   if (plan != null && plan.total > 0 && plan.done < plan.total) {
     final step = (plan.done + 1).clamp(1, plan.total);
-    parts.add('Step $step of ${plan.total}');
+    parts.add('Plan $step of ${plan.total}');
     final current = plan.current?.trim() ?? '';
     if (current.isNotEmpty) parts.add(current);
   }

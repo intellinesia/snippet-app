@@ -99,7 +99,7 @@ void main() {
     expect(find.text('Needs review'), findsWidgets);
     expect(find.text('In flight'), findsOneWidget);
     expect(find.text('Done today'), findsOneWidget);
-    expect(find.text('Step 2 of 4'), findsOneWidget);
+    expect(find.text('Plan 2 of 4'), findsOneWidget);
     expect(find.text('3 active'), findsOneWidget);
     await t.tap(find.text('Review'));
     expect(opened, ['s1']);

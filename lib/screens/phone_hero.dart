@@ -646,7 +646,7 @@ class _PhoneHeroState extends State<PhoneHero> {
     if (plan != null) {
       final stepNum = finished ? total : (plan.done + 1).clamp(1, total);
       final step = plan.current?.trim() ?? '';
-      final where = finished ? 'Plan done' : 'Step $stepNum of $total';
+      final where = finished ? 'Plan done' : 'Plan $stepNum of $total';
       parts.add(step.isEmpty || finished || parts.isNotEmpty ? where : '$where · $step');
     }
     final lanes = s.lanes?.running ?? 0;

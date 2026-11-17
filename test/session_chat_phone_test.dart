@@ -122,7 +122,7 @@ void main() {
     });
     expect(find.byType(StageHeader), findsOneWidget);
     // Working shows as the moving character; the subtitle names the step.
-    expect(find.text('Rook · step 4 of 5'), findsOneWidget);
+    expect(find.text('Rook · plan 4 of 5'), findsOneWidget);
     expect(find.textContaining('plan 4/5'), findsNothing);
     expect(find.text('2 lanes'), findsOneWidget);
     // The session actions live in the composer tray behind the "+".

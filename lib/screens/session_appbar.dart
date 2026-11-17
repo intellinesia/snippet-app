@@ -553,7 +553,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         (s?.lanes ?? const <LaneInfo>[]).any((l) => l.running);
     final plan = me.plan;
     final step = plan != null && plan.total > 0 && plan.done < plan.total
-        ? 'step ${(plan.done + 1).clamp(1, plan.total)} of ${plan.total}'
+        ? 'plan ${(plan.done + 1).clamp(1, plan.total)} of ${plan.total}'
         : '';
     final state = needsYou
         ? 'waiting on you'
