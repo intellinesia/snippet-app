@@ -80,7 +80,7 @@ class ComposerQueueList extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(6, 4, 6, 6),
               child: Row(children: [
                 Expanded(
-                  child: Text('$n queued · sent in order after this step',
+                  child: Text('$n queued · sent in order when this turn ends',
                       maxLines: 2,
                       style: sans(14, height: 19 / 14, color: AppColors.fg3)),
                 ),
@@ -126,7 +126,7 @@ class ComposerQueueList extends StatelessWidget {
                       height: 20 / 15,
                       color: e.muted ? AppColors.fg3 : AppColors.fg1)),
               if (n == 1)
-                Text('Queued · goes after this step',
+                Text('Queued · sent when this turn ends',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: sans(13, height: 17 / 13, color: AppColors.fg3)),
