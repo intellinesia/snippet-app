@@ -633,7 +633,7 @@ class SessionListRow extends StatelessWidget {
               onTap: tap,
               child: SizedBox(
                   width: 24,
-                  height: 24,
+                  height: 22,
                   child: Center(
                       child: AppIcon(icon, size: 16, color: AppColors.fg3))),
             ),
@@ -688,25 +688,36 @@ class SessionListRow extends StatelessWidget {
             ],
           ],
         ])),
+        // Fixed slot so hovering swaps meta for actions without reflowing the row.
         if (renameField == null)
-          if (hover && !selecting) ...[
-            if (onTogglePin != null)
-              action('pin', pinned ? 'Unpin' : 'Pin', onTogglePin),
-            if (onMore != null)
-              Builder(
-                builder: (ctx) => action('more-horizontal', 'More', () {
-                  final box = ctx.findRenderObject() as RenderBox;
-                  onMore!(box.localToGlobal(Offset(0, box.size.height)));
-                }),
+          SizedBox(
+            width: 56,
+            height: 22,
+            child: Stack(alignment: Alignment.centerRight, children: [
+              Visibility.maintain(
+                visible: !(hover && !selecting),
+                child: working
+                    ? const WorkingDots()
+                    : Text(timeText,
+                        maxLines: 1,
+                        overflow: TextOverflow.fade,
+                        softWrap: false,
+                        style: sans(11, color: timeColor, tabular: true)),
               ),
-          ] else if (working) ...[
-            const SizedBox(width: 8),
-            const WorkingDots(),
-          ] else if (timeText.isNotEmpty) ...[
-            const SizedBox(width: 8),
-            Text(timeText,
-                maxLines: 1, style: sans(11, color: timeColor, tabular: true)),
-          ],
+              if (hover && !selecting)
+                Row(mainAxisSize: MainAxisSize.min, children: [
+                  if (onTogglePin != null)
+                    action('pin', pinned ? 'Unpin' : 'Pin', onTogglePin),
+                  if (onMore != null)
+                    Builder(
+                      builder: (ctx) => action('more-horizontal', 'More', () {
+                        final box = ctx.findRenderObject() as RenderBox;
+                        onMore!(box.localToGlobal(Offset(0, box.size.height)));
+                      }),
+                    ),
+                ]),
+            ]),
+          ),
       ]);
     }
 

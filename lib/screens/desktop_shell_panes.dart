@@ -122,8 +122,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       onTogglePanel: _togglePanel,
       onDeskInfo: t.isMissionControl ? _showAgentInfo : null,
       deskActions: primary
-          ? () => Row(
-              mainAxisSize: MainAxisSize.min, children: _headerTools(t))
+          ? () => Row(mainAxisSize: MainAxisSize.min, children: _headerTools(t))
           : null,
       key: ValueKey('body-${t.key}'),
       client: t.client,
@@ -424,8 +423,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         contextWindow: mcState?.contextWindow ?? 0,
         onCompact: mc ? () => _dispatchSessionAction('compact') : null,
         onAutonomy: mc ? () => _dispatchSessionAction('autonomy') : null,
-        onScheduled:
-            mc ? () => _toggleRightPanel(RightPanel.recurring) : null,
+        onScheduled: mc ? () => _toggleRightPanel(RightPanel.recurring) : null,
         client: tab.client,
         agent: agent,
         onHide: _togglePanel,
@@ -844,7 +842,15 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         SizedBox(width: S.s6),
         _TbBtn(icon: 'list', tooltip: 'Tasks', onTap: _openTasksTab),
         SizedBox(width: S.s6),
-        _TbBtn(icon: 'square-pen', tooltip: 'New session', onTap: _newSessionFlow),
+        ValueListenableBuilder<bool>(
+          valueListenable: sidebarAgentsFirst,
+          builder: (_, agents, __) => Builder(
+            builder: (ctx) => _TbBtn(
+                icon: 'plus',
+                tooltip: agents ? 'New agent or group' : 'New session',
+                onTap: () => SidebarState.openNew(ctx, _newSessionFlow)),
+          ),
+        ),
         SizedBox(width: S.of(10)),
       ]),
     );
@@ -924,9 +930,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           SizedBox(width: S.s2),
         ],
         _TbBtn(
-            icon: 'settings',
-            tooltip: 'Settings',
-            onTap: _openShellSettings),
+            icon: 'settings', tooltip: 'Settings', onTap: _openShellSettings),
       ]),
     );
   }

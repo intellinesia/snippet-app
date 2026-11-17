@@ -143,6 +143,20 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       GlobalKey<AgentsSidebarPanelState>();
   bool _selecting = false;
   static bool _settledOpen = false;
+
+  // The desktop title bar's one "new" button reaches the mounted sidebar here.
+  static SidebarState? _desktop;
+
+  /// New session, or the new agent/group menu when the sidebar shows agents.
+  static void openNew(BuildContext anchor, VoidCallback fallback) {
+    final st = _desktop;
+    if (st == null || !st.mounted || !sidebarAgentsFirst.value) {
+      fallback();
+      return;
+    }
+    st._agentsPanelKey.currentState?.openCreateMenu(anchor, above: false);
+  }
+
   final Set<String> _selected = {};
 
   /// Phone search: a filter field at the top of each tab.
@@ -264,6 +278,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    if (!kMobile) _desktop = this;
     Drafts.instance.addListener(_onDrafts);
     Pins.instance.addListener(_onDrafts);
     if (kMobile) ChatScene.instance.addListener(_onDrafts);
@@ -343,6 +358,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
   @override
   void dispose() {
+    if (identical(_desktop, this)) _desktop = null;
     sidebarAgentsFirst.removeListener(_onAgentsList);
     Drafts.instance.removeListener(_onDrafts);
     Pins.instance.removeListener(_onDrafts);
@@ -1528,19 +1544,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                     agentsAvailable ? () => setSidebarAgentsFirst(true) : null),
               ]),
             ),
-          ),
-          const SizedBox(width: 8),
-          Builder(
-            builder: (btnCtx) => IconBtn('plus',
-                size: 32,
-                iconSize: 16,
-                tooltip: agentsFirst ? 'New agent or group' : 'New session',
-                onTap: widget.client == null
-                    ? null
-                    : agentsFirst
-                        ? () => _agentsPanelKey.currentState
-                            ?.openCreateMenu(btnCtx, above: false)
-                        : widget.onNewSession),
           ),
         ]),
         const SizedBox(height: 8),
