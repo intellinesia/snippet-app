@@ -232,7 +232,7 @@ void main() {
       }
     });
 
-    testWidgets('slides session in from right and edge-swipes back past 1/3',
+    testWidgets('slides session in from right and swipes back past half',
         (t) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       try {
@@ -276,7 +276,7 @@ void main() {
         await t.pumpAndSettle();
         expect(t.getTopLeft(find.byKey(const Key('tab'))).dx, closeTo(0, 0.5));
 
-        // Drag below 1/3 cancels.
+        // A slow drag short of half springs back.
         await t.timedDragFrom(
           const Offset(8, 300),
           const Offset(200, 0),
@@ -285,12 +285,14 @@ void main() {
         await t.pumpAndSettle();
         expect(chatsOpen, isFalse);
 
-        // Drag past 1/3 commits pop back to chats.
-        final g = await t.startGesture(const Offset(8, 300));
-        await g.moveBy(const Offset(160, 0));
-        await g.moveBy(const Offset(160, 0));
+        // Past half commits, and the swipe may start mid-page.
+        final g = await t.startGesture(const Offset(200, 300));
+        await g.moveBy(const Offset(20, 0));
+        await g.moveBy(const Offset(220, 0));
+        await g.moveBy(const Offset(220, 0));
         await t.pump();
-        expect(t.getTopLeft(find.byKey(const Key('tab'))).dx, closeTo(320, 2));
+        expect(t.getTopLeft(find.byKey(const Key('tab'))).dx,
+            closeTo(460 - 8, 10));
         await g.up();
         await t.pumpAndSettle();
         expect(chatsOpen, isTrue);

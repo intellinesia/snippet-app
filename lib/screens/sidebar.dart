@@ -25,6 +25,7 @@ import 'sidebar_mobile.dart';
 import 'tasks/tasks_panel.dart';
 import '../pull_refresh.dart';
 import '../motion.dart';
+import '../page_stack.dart';
 import '../mochi.dart';
 import '../ambient/controller.dart';
 import '../chat_scene.dart' show ChatScene;
@@ -171,7 +172,10 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   final FocusNode _desktopChatsSearchFocus = FocusNode();
 
   MobileHome _lastMainHome = MobileHome.chats;
-  late MobileHome _currentHome = widget.mobileHome;
+  // Settings rides over the main homes as a page, so it is never current here.
+  late MobileHome _currentHome = widget.mobileHome == MobileHome.settings
+      ? MobileHome.chats
+      : widget.mobileHome;
   MobileHome? _prevHome;
   final Set<MobileHome> _mountedHomes = <MobileHome>{};
   AnimationController? _homeAnimC;
@@ -184,8 +188,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
               mounted &&
               _prevHome != null) {
             setState(() {
-              if (_prevHome == MobileHome.settings ||
-                  _prevHome == MobileHome.tasks) {
+              if (_prevHome == MobileHome.tasks) {
                 _mountedHomes.remove(_prevHome);
               }
               _prevHome = null;
@@ -288,22 +291,17 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         _lastMainHome = oldWidget.mobileHome;
       }
       if (kMobile) _loadHeroAgents();
-      if (_slot(widget.mobileHome) == _slot(_currentHome)) {
+      if (widget.mobileHome == MobileHome.settings) {
+        // Shown by the page stack over whatever home is current.
+      } else if (_slot(widget.mobileHome) == _slot(_currentHome)) {
         _currentHome = widget.mobileHome;
       } else if (widget.mobileHome != _currentHome) {
         _prevHome = _currentHome;
         _currentHome = widget.mobileHome;
         _mountedHomes.add(_slot(_currentHome));
-        final reduced = reduceMotion(context);
-        final settingsPush = _currentHome == MobileHome.settings;
-        final settingsPop = _prevHome == MobileHome.settings;
-        _homeAnim.duration = reduced
+        _homeAnim.duration = reduceMotion(context)
             ? const Duration(milliseconds: 150)
-            : settingsPush
-                ? const Duration(milliseconds: 340)
-                : settingsPop
-                    ? const Duration(milliseconds: 260)
-                    : Motion.fast;
+            : Motion.fast;
         _homeAnim.forward(from: 0.0);
       }
     }
@@ -446,14 +444,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       if (prev != null && _mountedHomes.contains(prev)) prev,
       if (_mountedHomes.contains(curr)) curr,
     ];
-    if (prev != null && prev == MobileHome.settings && ordered.length >= 2) {
-      final iCurr = ordered.indexOf(curr);
-      final iPrev = ordered.indexOf(prev);
-      if (iCurr >= 0 && iPrev >= 0 && iPrev < iCurr) {
-        ordered[iCurr] = prev;
-        ordered[iPrev] = curr;
-      }
-    }
     final bodies = <MobileHome, Widget>{
       for (final h in ordered)
         h: KeyedSubtree(
@@ -464,33 +454,42 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         ),
     };
     final reduced = reduceMotion(context);
-    return AnimatedBuilder(
+    final homes = AnimatedBuilder(
       animation: _homeAnim,
       builder: (context, _) {
-        final t = _homeAnim.value;
-        final settingsPush = prev != null && curr == MobileHome.settings;
-        final settingsPop = prev == MobileHome.settings;
-        final curved = (settingsPush || settingsPop)
-            ? Curves.easeOutCubic.transform(t)
-            : Motion.enter.transform(t);
+        final curved = Motion.enter.transform(_homeAnim.value);
         return Stack(
           fit: StackFit.expand,
           children: [
             for (final h in ordered)
-              _homeLayer(
-                h,
-                body: bodies[h]!,
-                prev: prev,
-                curr: curr,
-                curved: curved,
-                reduced: reduced,
-                settingsPush: settingsPush,
-                settingsPop: settingsPop,
-              ),
+              _homeLayer(h,
+                  body: bodies[h]!,
+                  prev: prev,
+                  curr: curr,
+                  curved: curved,
+                  reduced: reduced),
           ],
         );
       },
     );
+    return PhonePageStack(
+      onBack: _closeSettings,
+      page: widget.mobileHome == MobileHome.settings
+          ? KeyedSubtree(
+              key: const ValueKey('mobile-settings'),
+              child: _mobileHomeBody(hasClient, MobileHome.settings),
+            )
+          : null,
+      base: homes,
+    );
+  }
+
+  void _closeSettings() {
+    if (widget.onSettingsClose != null) {
+      widget.onSettingsClose!();
+    } else {
+      widget.onMobileHome(_lastMainHome);
+    }
   }
 
   Widget _homeLayer(
@@ -500,94 +499,31 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     required MobileHome curr,
     required double curved,
     required bool reduced,
-    required bool settingsPush,
-    required bool settingsPop,
   }) {
     final active = h == curr || (prev != null && h == prev);
-    var offstage = !active;
-    var ignoring = h != curr;
-    var fractionalDx = 0.0;
     var dx = 0.0;
     var opacity = 1.0;
-    var scrimAlpha = 0.0;
-    var opaqueBg = false;
-
     if (active && prev != null) {
-      if (settingsPush) {
-        if (h == curr) {
-          opaqueBg = true;
-          if (reduced) {
-            opacity = curved;
-          } else {
-            fractionalDx = 1.0 - curved;
-          }
-        } else {
-          if (reduced) {
-            opacity = 1.0 - curved;
-          } else {
-            fractionalDx = -0.3 * curved;
-            scrimAlpha = 0.18 * curved;
-          }
-        }
-      } else if (settingsPop) {
-        final p = 1.0 - curved;
-        if (h == prev) {
-          opaqueBg = true;
-          if (reduced) {
-            opacity = p;
-          } else {
-            fractionalDx = 1.0 - p;
-          }
-        } else {
-          if (reduced) {
-            opacity = curved;
-          } else {
-            fractionalDx = -0.3 * p;
-            scrimAlpha = 0.18 * p;
-          }
-        }
+      final dir = curr.index > prev.index ? 1.0 : -1.0;
+      if (h == curr) {
+        opacity = curved;
+        if (!reduced) dx = dir * 8.0 * (1.0 - curved);
       } else {
-        final dir = curr.index > prev.index ? 1.0 : -1.0;
-        if (h == curr) {
-          opacity = curved;
-          if (!reduced) dx = dir * 8.0 * (1.0 - curved);
-        } else {
-          opacity = 1.0 - curved;
-          if (!reduced) dx = -dir * 8.0 * curved;
-        }
+        opacity = 1.0 - curved;
+        if (!reduced) dx = -dir * 8.0 * curved;
       }
     }
-
     return KeyedSubtree(
       key: ValueKey('mobile-layer-${h.name}'),
       child: Offstage(
-        offstage: offstage,
+        offstage: !active,
         child: IgnorePointer(
-          ignoring: ignoring,
-          child: FractionalTranslation(
-            translation: Offset(fractionalDx, 0),
-            child: Transform.translate(
-              offset: Offset(dx, 0),
-              child: Opacity(
-                opacity: opacity.clamp(0.0, 1.0),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    ColoredBox(
-                      color: opaqueBg ? AppColors.bg : Colors.transparent,
-                      child: RepaintBoundary(child: body),
-                    ),
-                    if (scrimAlpha > 0)
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: ColoredBox(
-                            color: Colors.black.withValues(alpha: scrimAlpha),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+          ignoring: h != curr,
+          child: Transform.translate(
+            offset: Offset(dx, 0),
+            child: Opacity(
+              opacity: opacity.clamp(0.0, 1.0),
+              child: RepaintBoundary(child: body),
             ),
           ),
         ),
@@ -613,45 +549,44 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         : agents && !_selecting
             ? _agentList(client!, mirror: true)
             : _sessionList();
-    return Stack(fit: StackFit.expand, children: [
-      Offstage(
-        offstage: inDetail,
-        child: TickerMode(
-          enabled: !inDetail,
-          child: HomePagerScope(
-            page: onAgents ? 1 : 0,
-            onPage: (p) => widget
-                .onMobileHome(p == 1 ? MobileHome.agents : MobileHome.chats),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _mobileChatsHeader(hasClient,
-                    title: onAgents ? 'Agents' : 'Sessions',
-                    agents: onAgents,
-                    agentsMirror: onAgents),
-                Expanded(
-                  child: _selecting
-                      ? list(false)
-                      : HomePager(sessions: list(false), agents: list(true)),
-                ),
-                if (_selecting) _mobileSelectionActions(),
-              ],
+    return PhonePageStack(
+      onBack: () => widget.onAgent(null),
+      base: HomePagerScope(
+        page: onAgents ? 1 : 0,
+        onPage: (p) =>
+            widget.onMobileHome(p == 1 ? MobileHome.agents : MobileHome.chats),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _mobileChatsHeader(hasClient,
+                title: onAgents ? 'Agents' : 'Sessions',
+                agents: onAgents,
+                agentsMirror: onAgents),
+            Expanded(
+              child: _selecting
+                  ? list(false)
+                  : HomePager(sessions: list(false), agents: list(true)),
             ),
-          ),
+            if (_selecting) _mobileSelectionActions(),
+          ],
         ),
       ),
-      if (inDetail && client != null)
-        Padding(
-          padding: EdgeInsets.only(bottom: _scrollBottomPad),
-          child: CoordinationAgentDetail(
-            key: const ValueKey('agent-detail'),
-            agent: agent,
-            client: client,
-            embedded: false,
-            onClose: () => widget.onAgent(null),
-          ),
-        ),
-    ]);
+      page: inDetail && client != null
+          ? KeyedSubtree(
+              key: ValueKey('agent-page-${agent.id}'),
+              child: Padding(
+                padding: EdgeInsets.only(bottom: _scrollBottomPad),
+                child: CoordinationAgentDetail(
+                  key: const ValueKey('agent-detail'),
+                  agent: agent,
+                  client: client,
+                  embedded: false,
+                  onClose: () => widget.onAgent(null),
+                ),
+              ),
+            )
+          : null,
+    );
   }
 
   /// The phone home body for the destination the bar currently selects.
@@ -763,25 +698,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         final section = widget.settingsSection;
         return Padding(
           padding: EdgeInsets.only(bottom: _scrollBottomPad),
-          child: AnimatedSwitcher(
-            duration: Motion.base,
-            switchInCurve: Motion.enter,
-            switchOutCurve: Motion.exit,
-            transitionBuilder: (child, anim) {
-              final isDetail = child.key == const ValueKey('settings-detail');
-              final dx = isDetail ? 0.08 : -0.08;
-              return FadeTransition(
-                opacity: anim,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: Offset(dx, 0),
-                    end: Offset.zero,
-                  ).animate(anim),
-                  child: child,
-                ),
-              );
-            },
-            child: section != null
+          child: PhonePageStack(
+            onBack: () => widget.onSettingsSection(null),
+            page: section != null
                 ? SettingsPanel(
                     key: const ValueKey('settings-detail'),
                     client: client,
@@ -799,34 +718,29 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                     onCreateHandled: () =>
                         setState(() => _pendingSettingsCreate = null),
                   )
-                : Column(
-                    key: const ValueKey('settings-root'),
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _mobileSettingsHeader(),
-                      Expanded(
-                        child: SettingsPanel(
-                          key: _mobileSettingsKey,
-                          client: client,
-                          instances: widget.instances,
-                          active: widget.active,
-                          onRemove: widget.onRemoveInstance,
-                          onSelect: widget.onSelectInstance,
-                          onRename: widget.onRenameInstance,
-                          section: widget.settingsSection,
-                          onSection: widget.onSettingsSection,
-                          onClose: () {
-                            if (widget.onSettingsClose != null) {
-                              widget.onSettingsClose!();
-                            } else {
-                              widget.onMobileHome(_lastMainHome);
-                            }
-                          },
-                          embedded: true,
-                        ),
-                      ),
-                    ],
+                : null,
+            base: Column(
+              key: const ValueKey('settings-root'),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _mobileSettingsHeader(),
+                Expanded(
+                  child: SettingsPanel(
+                    key: _mobileSettingsKey,
+                    client: client,
+                    instances: widget.instances,
+                    active: widget.active,
+                    onRemove: widget.onRemoveInstance,
+                    onSelect: widget.onSelectInstance,
+                    onRename: widget.onRenameInstance,
+                    section: null,
+                    onSection: widget.onSettingsSection,
+                    onClose: _closeSettings,
+                    embedded: true,
                   ),
+                ),
+              ],
+            ),
           ),
         );
     }

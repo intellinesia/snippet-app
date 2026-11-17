@@ -62,8 +62,7 @@ void main() {
             onMobileHome: (h) => went = h,
             onCloseChats: () {},
             missionPair: home == MobileHome.chats,
-            onSwipeToMission: () => swiped++,
-            onSwipeToSessions: () {},
+            onSwipeToSessions: () => swiped++,
           ),
         );
     double sideX(WidgetTester t) =>
@@ -74,21 +73,22 @@ void main() {
       went = null;
     });
 
-    testWidgets('sidebar tracks the finger 1:1 and fast short fling commits',
-        (t) async {
+    // Mission opens only from the bottom bar, never by swiping Sessions.
+    testWidgets('right swipe on Sessions does not open Mission', (t) async {
       await t.pumpWidget(shell());
       await t.pump(const Duration(milliseconds: 400));
       final g = await t.startGesture(const Offset(200, 300));
       await g.moveBy(const Offset(30, 0));
       await g.moveBy(const Offset(20, 0));
       await t.pump();
-      expect(sideX(t), closeTo(50, 1.5));
+      expect(sideX(t), closeTo(0, .5));
       await g.up();
       await t.pumpAndSettle();
 
-      await t.fling(find.byKey(const Key('side')), const Offset(50, 0), 1500);
+      await t.fling(find.byKey(const Key('side')), const Offset(200, 0), 1500);
       await t.pumpAndSettle();
-      expect(swiped, 1);
+      expect(swiped, 0);
+      expect(sideX(t), closeTo(0, .5));
     });
 
     testWidgets('slow short drag springs back without committing', (t) async {

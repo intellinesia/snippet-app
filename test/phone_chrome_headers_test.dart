@@ -123,6 +123,7 @@ void main() {
       await tester.tap(find.byTooltip('Mission Control').first);
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
 
       expect(tester.widget<MobileShell>(find.byType(MobileShell)).chatsOpen,
           isFalse);

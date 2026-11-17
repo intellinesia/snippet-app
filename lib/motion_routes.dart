@@ -382,6 +382,38 @@ const double _kBackAxisRatio = 1.2;
 const double _kProjectSeconds = 0.2;
 const double _kFlickBack = 200.0;
 
+/// Whether [local] sits in the leading-edge strip where a back swipe always wins.
+bool backSwipeInEdge(BuildContext context, RenderBox box, Offset local) {
+  final rtl = Directionality.of(context) == TextDirection.rtl;
+  final media = MediaQuery.paddingOf(context);
+  final strip = math.max(rtl ? media.right : media.left, _kBackEdgeWidth);
+  return rtl ? local.dx >= box.size.width - strip : local.dx <= strip;
+}
+
+/// Anything under the finger that owns horizontal drags, or edits text, wins
+/// over a back swipe that starts mid-page.
+bool backSwipeYields(RenderBox box, Offset local) {
+  final result = BoxHitTestResult();
+  box.hitTest(result, position: local);
+  for (final entry in result.path) {
+    final t = entry.target;
+    if (t == box) break;
+    if (t is RenderEditable) return true;
+    if (t is RenderBackSwipeYield && t.enabled) return true;
+    if (t is RenderSemanticsGestureHandler &&
+        t.onHorizontalDragUpdate != null) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Release rule shared by every page back swipe: [position] is 1 when the
+/// page is fully shown, [velocity] in widths per second toward dismissal.
+bool backSwipeStays(double position, double velocity, double width) =>
+    velocity * width <= -_kFlickBack ||
+    position - velocity * _kProjectSeconds >= 0.5;
+
 /// Wrap a horizontal gesture surface (swipe actions, sliders) so a page back
 /// swipe that starts on it leaves it alone. Scrollables and horizontal
 /// GestureDetectors already yield without this.
@@ -417,8 +449,8 @@ class RenderBackSwipeYield extends RenderProxyBox {
 
 /// Claims a rightward drag (leftward in RTL) once it travels 8px and is
 /// clearly horizontal, so vertical scrolling keeps every diagonal-ish drag.
-class _BackSwipeRecognizer extends HorizontalDragGestureRecognizer {
-  _BackSwipeRecognizer({super.debugOwner});
+class BackSwipeRecognizer extends HorizontalDragGestureRecognizer {
+  BackSwipeRecognizer({super.debugOwner});
 
   TextDirection direction = TextDirection.ltr;
   Offset _travel = Offset.zero;
@@ -460,12 +492,12 @@ class _BackSwipeDetector<T> extends StatefulWidget {
 
 class _BackSwipeDetectorState<T> extends State<_BackSwipeDetector<T>> {
   _BackGestureController<T>? _controller;
-  late final _BackSwipeRecognizer _recognizer;
+  late final BackSwipeRecognizer _recognizer;
 
   @override
   void initState() {
     super.initState();
-    _recognizer = _BackSwipeRecognizer(debugOwner: this)
+    _recognizer = BackSwipeRecognizer(debugOwner: this)
       ..onStart = _handleDragStart
       ..onUpdate = _handleDragUpdate
       ..onEnd = _handleDragEnd
@@ -490,36 +522,14 @@ class _BackSwipeDetectorState<T> extends State<_BackSwipeDetector<T>> {
         TextDirection.ltr => value,
       };
 
-  bool _inEdge(RenderBox box, Offset local) {
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-    final media = MediaQuery.paddingOf(context);
-    final strip = math.max(rtl ? media.right : media.left, _kBackEdgeWidth);
-    return rtl ? local.dx >= box.size.width - strip : local.dx <= strip;
-  }
-
-  // Anything under the finger that owns horizontal drags, or edits text, wins.
-  bool _yields(RenderBox box, Offset local) {
-    final result = BoxHitTestResult();
-    box.hitTest(result, position: local);
-    for (final entry in result.path) {
-      final t = entry.target;
-      if (t == box) break;
-      if (t is RenderEditable) return true;
-      if (t is RenderBackSwipeYield && t.enabled) return true;
-      if (t is RenderSemanticsGestureHandler &&
-          t.onHorizontalDragUpdate != null) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   void _handlePointerDown(PointerDownEvent event) {
     if (!widget.enabledCallback()) return;
     final box = context.findRenderObject();
     if (box is! RenderBox || !box.hasSize) return;
     final local = box.globalToLocal(event.position);
-    if (!_inEdge(box, local) && _yields(box, local)) return;
+    if (!backSwipeInEdge(context, box, local) && backSwipeYields(box, local)) {
+      return;
+    }
     _recognizer.direction = Directionality.of(context);
     _recognizer.addPointer(event);
   }
@@ -590,8 +600,7 @@ class _BackGestureController<T> {
     if (!isCurrent) {
       stay = getIsActive();
     } else {
-      final projected = controller.value - velocity * _kProjectSeconds;
-      stay = velocity * width <= -_kFlickBack || projected >= 0.5;
+      stay = backSwipeStays(controller.value, velocity, width);
     }
 
     if (stay) {
@@ -606,7 +615,8 @@ class _BackGestureController<T> {
       if (isCurrent) {
         navigator.pop();
       } else if (controller.isAnimating && springs()) {
-        controller.animateBackWith(AppPageRoute._pageSim(controller.value, 0, -velocity));
+        controller.animateBackWith(
+            AppPageRoute._pageSim(controller.value, 0, -velocity));
       }
     }
 
@@ -671,10 +681,10 @@ class AppHero extends StatelessWidget {
                 builder: (context, _) {
                   final base = DefaultTextStyle.of(toCtx).style;
                   return DefaultTextStyle(
-                    style: base.copyWith(
-                        fontSize: a + (b - a) * animation.value),
-                    child: Material(
-                        type: MaterialType.transparency, child: child),
+                    style:
+                        base.copyWith(fontSize: a + (b - a) * animation.value),
+                    child:
+                        Material(type: MaterialType.transparency, child: child),
                   );
                 },
               );

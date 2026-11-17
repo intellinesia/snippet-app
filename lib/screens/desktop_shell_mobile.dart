@@ -68,22 +68,6 @@ extension _DesktopShellMobileExt on _DesktopShellState {
     });
   }
 
-  void _goMission() {
-    final h = _mobileRouteHistory;
-    if (h.length > 1) {
-      final prev = h[h.length - 2];
-      final idx = prev.sessionTabIndex;
-      if (prev.inSession &&
-          idx != null &&
-          idx < _tabs.length &&
-          _tabs[idx].isMissionControl) {
-        _handleMobileBack();
-        return;
-      }
-    }
-    _openMissionControlTab();
-  }
-
   void _goMobileHome(MobileHome home,
       {SettingsPage? section, CoordinationAgent? agent}) {
     FocusManager.instance.primaryFocus?.unfocus();
@@ -162,7 +146,6 @@ extension _DesktopShellMobileExt on _DesktopShellState {
           _mobileHome == MobileHome.chats &&
           !_mobileDrilledDown,
       onSwipeToSessions: () => _goMobileHome(MobileHome.chats),
-      onSwipeToMission: _goMission,
       canPopRoute: _mobileRouteHistory.length > 1,
       onPopRoute: () {
         _handleMobileBack();

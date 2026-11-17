@@ -4,6 +4,8 @@ import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 
 import '../gesture_physics.dart';
+import '../motion_routes.dart' show AppPageRoute, backSwipeStays;
+import '../page_stack.dart';
 import '../glass.dart' show StatusInset;
 import '../theme.dart';
 import 'shell_models.dart';
@@ -25,7 +27,6 @@ class MobileShell extends StatefulWidget {
   final VoidCallback? onPopRoute;
   final bool missionPair;
   final VoidCallback? onSwipeToSessions;
-  final VoidCallback? onSwipeToMission;
 
   const MobileShell({
     super.key,
@@ -43,7 +44,6 @@ class MobileShell extends StatefulWidget {
     this.onPopRoute,
     this.missionPair = false,
     this.onSwipeToSessions,
-    this.onSwipeToMission,
   });
 
   @override
@@ -84,19 +84,12 @@ class _MobileShellState extends State<MobileShell>
     final velocity = _commitVelocity;
     _commitVelocity = null;
     final reduced = reduceMotion(context);
-    if (velocity != null && !reduced) {
-      springTo(_v, to, velocity, epsilon: 0.001);
-    } else if (reduced) {
+    if (reduced) {
       _v.animateTo(to,
           duration: const Duration(milliseconds: 150), curve: Curves.linear);
-    } else if (widget.missionPair) {
-      _v.animateTo(to, duration: Motion.base, curve: Motion.enter);
     } else {
-      _v.animateTo(
-        to,
-        duration: Duration(milliseconds: _chatsVisible ? 260 : 340),
-        curve: Curves.easeOutCubic,
-      );
+      springTo(_v, to, velocity ?? 0,
+          spring: AppPageRoute.pageSpring, epsilon: 0.001);
     }
   }
 
@@ -130,7 +123,9 @@ class _MobileShellState extends State<MobileShell>
 
   /// [onCommit] runs when the drag carries far or fast enough to switch.
   void _dragEnd(double velocityPx, double width, VoidCallback onCommit,
-      {double? distanceThreshold, double? velocityThreshold}) {
+      {double? distanceThreshold,
+      double? velocityThreshold,
+      bool projected = false}) {
     final here = _chatsVisible ? 0.0 : 1.0;
     final toward = _chatsVisible ? 1.0 : 0.0;
     final vel = velocityPx / width * _exitX;
@@ -138,14 +133,18 @@ class _MobileShellState extends State<MobileShell>
     final moved = (_v.value - here) * dir;
     final vThresh = velocityThreshold ?? 600;
     final vAlong = vel * dir * width;
-    if (vAlong > -vThresh &&
-        dragDismisses(
-            distance: moved * width,
-            velocity: vAlong,
-            distanceThreshold: distanceThreshold ?? 80,
-            velocityThreshold: vThresh)) {
+    final commit = projected
+        ? !backSwipeStays(1 - moved, vAlong / width, width)
+        : vAlong > -vThresh &&
+            dragDismisses(
+                distance: moved * width,
+                velocity: vAlong,
+                distanceThreshold: distanceThreshold ?? 80,
+                velocityThreshold: vThresh);
+    if (commit) {
       if (_recent(_systemBackAt)) {
-        springTo(_v, _chatsVisible ? 0.0 : 1.0, vel, epsilon: 0.001);
+        springTo(_v, _chatsVisible ? 0.0 : 1.0, vel,
+            spring: AppPageRoute.pageSpring, epsilon: 0.001);
         return;
       }
       _swipeNavAt = DateTime.now();
@@ -155,10 +154,11 @@ class _MobileShellState extends State<MobileShell>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_commitVelocity == null || !mounted) return;
         _commitVelocity = null;
-        springTo(_v, here, vel, epsilon: 0.001);
+        springTo(_v, here, vel,
+            spring: AppPageRoute.pageSpring, epsilon: 0.001);
       });
     } else {
-      springTo(_v, here, vel, epsilon: 0.001);
+      springTo(_v, here, vel, spring: AppPageRoute.pageSpring, epsilon: 0.001);
     }
   }
 
@@ -175,7 +175,6 @@ class _MobileShellState extends State<MobileShell>
     final onPopRoute = widget.onPopRoute;
     final missionPair = widget.missionPair;
     final onSwipeToSessions = widget.onSwipeToSessions;
-    final onSwipeToMission = widget.onSwipeToMission;
     final chatsVisible = _chatsVisible;
     final canPopRoute = widget.canPopRoute;
     final canPop = canPopRoute ??
@@ -206,6 +205,9 @@ class _MobileShellState extends State<MobileShell>
 
     _vEnds = _endsOf(_v.value);
     final reduced = reduceMotion(context);
+    final width = MediaQuery.sizeOf(context).width;
+    final canSwipeBack =
+        !chatsVisible && (onOpenChats != null || onPopRoute != null);
     final chatLayer = activeTabBody == null
         ? null
         : Positioned.fill(
@@ -215,17 +217,24 @@ class _MobileShellState extends State<MobileShell>
                 ignoring: chatsVisible,
                 child: AnimatedBuilder(
                   animation: _v,
-                  child: RepaintBoundary(
-                    child: Material(
-                      color: AppColors.bg,
-                      child: TickerMode(
-                        enabled: _v.value > 0,
-                        child: SceneBackdrop(
-                          child: StatusInset(
-                            top: MediaQuery.paddingOf(context).top,
-                            child: SafeArea(
-                              bottom: false,
-                              child: activeTabBody,
+                  child: PageBackSwipe(
+                    enabled: !missionPair && canSwipeBack,
+                    onStart: _dragStart,
+                    onUpdate: (f) => _dragUpdate(f * width, width),
+                    onEnd: (v, w) =>
+                        _dragEnd(v * w, w, handleBack, projected: true),
+                    child: RepaintBoundary(
+                      child: Material(
+                        color: AppColors.bg,
+                        child: TickerMode(
+                          enabled: _v.value > 0,
+                          child: SceneBackdrop(
+                            child: StatusInset(
+                              top: MediaQuery.paddingOf(context).top,
+                              child: SafeArea(
+                                bottom: false,
+                                child: activeTabBody,
+                              ),
                             ),
                           ),
                         ),
@@ -263,7 +272,9 @@ class _MobileShellState extends State<MobileShell>
                   ? Offset.zero
                   : missionPair
                       ? Offset(_exitX * _v.value, 0)
-                      : Offset(-0.3 * _v.value.clamp(0.0, 1.0), 0),
+                      : Offset(
+                          -PhonePageStack.parallax * _v.value.clamp(0.0, 1.0),
+                          0),
               child: child,
             ),
             child: Stack(
@@ -291,8 +302,8 @@ class _MobileShellState extends State<MobileShell>
                           final vc = _v.value.clamp(0.0, 1.0);
                           return vc > 0
                               ? ColoredBox(
-                                  color:
-                                      Colors.black.withValues(alpha: 0.18 * vc))
+                                  color: Colors.black.withValues(
+                                      alpha: PhonePageStack.dim * vc))
                               : const SizedBox.expand();
                         },
                       ),
@@ -314,7 +325,7 @@ class _MobileShellState extends State<MobileShell>
           sidebarLayer,
           if (chatLayer != null) chatLayer,
         ],
-        if (!chatsVisible && (onOpenChats != null || onPopRoute != null))
+        if (missionPair && canSwipeBack)
           Positioned(
             top: 0,
             bottom: 0,
@@ -335,11 +346,8 @@ class _MobileShellState extends State<MobileShell>
       ]),
     );
 
-    final swipe = chatsVisible
-        ? (mobileHome == MobileHome.chats && !drilledDown
-            ? onSwipeToMission
-            : null)
-        : (missionPair ? onSwipeToSessions : null);
+    // Mission opens only from the bottom bar; swiping back to Sessions stays.
+    final swipe = !chatsVisible && missionPair ? onSwipeToSessions : null;
     void start() => _dragStart();
     void delta(double dx, double w) => _dragUpdate(dx, w);
     void end(double v, double w) => _dragEnd(v, w, swipe!);

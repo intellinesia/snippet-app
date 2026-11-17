@@ -195,6 +195,7 @@ void main() {
       await tester.binding.handlePopRoute();
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
       shell = tester.widget<MobileShell>(find.byType(MobileShell));
       expect(shell.mobileHome, MobileHome.agents);
       expect(find.byType(CoordinationAgentDetail), findsNothing);
