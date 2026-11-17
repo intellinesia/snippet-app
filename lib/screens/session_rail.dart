@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
-import '../glass.dart';
 import '../models.dart';
 import '../settings_form.dart';
 import '../tool_activity.dart';
@@ -12,7 +11,7 @@ import '../wake_models.dart';
 import '../widgets.dart';
 
 const String kSessionRailCollapsedPref = 'session_rail_collapsed';
-const double kSessionRailWidth = 272;
+const double kSessionRailWidth = 288;
 
 /// Chat must keep at least this much room beside the rail.
 const double kSessionRailMinChat = 520;
@@ -22,6 +21,9 @@ const double kSessionRailMinColumn =
     kSessionRailMinChat + kSessionRailWidth + 24;
 
 final ValueNotifier<bool> sessionRailCollapsed = ValueNotifier<bool>(false);
+
+/// The panel as a floating card, for windows too narrow to dock it.
+final ValueNotifier<bool> sessionRailFloating = ValueNotifier<bool>(false);
 bool _railPrefLoaded = false;
 
 Future<void> loadSessionRailPref() async {
@@ -37,8 +39,9 @@ Future<void> setSessionRailCollapsed(bool v) async {
   await p.setBool(kSessionRailCollapsedPref, v);
 }
 
-/// Floating quick-options card beside a session's chat. Reads live state the
-/// session already holds and fetches the few counts it does not.
+/// The session panel: what the session is doing, with its actions at the top.
+/// Reads live state the session already holds and fetches the few counts it
+/// does not.
 class SessionRail extends StatefulWidget {
   const SessionRail({
     super.key,
@@ -52,6 +55,7 @@ class SessionRail extends StatefulWidget {
     required this.onWakes,
     required this.onGoal,
     required this.onCycleResume,
+    this.floating = false,
     this.github,
     this.onChanges,
     this.onGit,
@@ -73,6 +77,9 @@ class SessionRail extends StatefulWidget {
   final bool isMissionControl;
   final String profileLabel;
   final String resumeMode;
+
+  /// Shown as a floating card (narrow window) instead of docked beside the chat.
+  final bool floating;
   final bool? github;
   final VoidCallback onModel;
   final VoidCallback onWakes;
@@ -89,7 +96,7 @@ class SessionRail extends StatefulWidget {
   final VoidCallback? onMemory;
   final void Function(String taskId)? onOpenTask;
 
-  /// Session actions (goal, tools, more) shown beside the panel's title.
+  /// Session actions (goal, terminal, more) shown beside the panel's title.
   final Widget? headerActions;
 
   /// Files and git chips shown under the panel's title.
@@ -101,12 +108,11 @@ class SessionRail extends StatefulWidget {
 
 class _SessionRailState extends State<SessionRail> {
   GitStatus? _git;
-  SessionInfo? _info;
-  int? _procs;
   WakeSchedule? _wake;
   bool _wakeKnown = false;
   bool? _warm;
-  TaskItem? _task;
+  bool? _autonomous;
+  List<TaskItem> _tasks = const [];
   int _gen = 0;
   int _liveGen = 0;
 
@@ -141,16 +147,9 @@ class _SessionRailState extends State<SessionRail> {
     final gen = ++_liveGen;
     final c = widget.client;
     final id = widget.sessionId;
-    final r = await Future.wait<Object?>([
-      _try(c.gitStatus(id)),
-      _try(c.bgList(id)),
-    ]);
+    final git = await _try(c.gitStatus(id)) as GitStatus?;
     if (!mounted || gen != _liveGen) return;
-    final procs = r[1] as List<Map<String, dynamic>>?;
-    setState(() {
-      _git = r[0] as GitStatus? ?? _git;
-      _procs = procs?.where((p) => p['running'] == true).length ?? _procs;
-    });
+    setState(() => _git = git ?? _git);
   }
 
   Future<void> _load() async {
@@ -158,28 +157,23 @@ class _SessionRailState extends State<SessionRail> {
     ++_liveGen;
     final c = widget.client;
     final id = widget.sessionId;
-    final ws = widget.state?.workspace ?? '';
     final mc = widget.isMissionControl;
     final r = await Future.wait<Object?>([
       mc ? Future.value(null) : _try(c.gitStatus(id)),
-      mc || ws.isEmpty ? Future.value(null) : _try(c.sessions(folder: ws)),
-      mc ? Future.value(null) : _try(c.bgList(id)),
       _try(c.wake(id)),
       _try(c.keepWarmFor(id)),
-      mc ? Future.value(null) : _try(c.tasks(status: 'in_progress')),
+      _try(c.tasks(status: 'in_progress')),
+      _try(c.mcAutonomy()),
     ]);
     if (!mounted || gen != _gen) return;
-    final infos = r[1] as List<SessionInfo>?;
-    final tasks = r[5] as List<TaskItem>?;
-    final procs = r[2] as List<Map<String, dynamic>>?;
+    final auto = r[4] as Map<String, dynamic>?;
     setState(() {
       _git = r[0] as GitStatus?;
-      _info = infos?.where((s) => s.id == id).firstOrNull;
-      _procs = procs?.where((p) => p['running'] == true).length;
       _wakeKnown = true;
-      _wake = r[3] as WakeSchedule?;
-      _warm = (r[4] as KeepWarmEntry?)?.enabled ?? false;
-      _task = tasks?.where((t) => t.sessionId == id).firstOrNull;
+      _wake = r[1] as WakeSchedule?;
+      _warm = (r[2] as KeepWarmEntry?)?.enabled ?? false;
+      _tasks = r[3] as List<TaskItem>? ?? const [];
+      _autonomous = auto == null ? null : auto['on'] == true;
     });
   }
 
@@ -193,34 +187,26 @@ class _SessionRailState extends State<SessionRail> {
     }
   }
 
+  Future<void> _stopLane(String lane) async {
+    try {
+      await widget.client.cancelLane(widget.sessionId, lane);
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.floating) return _card(640);
     return ValueListenableBuilder<bool>(
       valueListenable: sessionRailCollapsed,
       builder: (_, collapsed, __) {
         // Hidden: the chat header carries the actions and the show toggle.
         if (collapsed) return const SizedBox.shrink();
-        return SizedBox(
-          width: kSessionRailWidth + 10,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(0, S.s8, S.of(10), S.s12),
+        return LayoutBuilder(
+          builder: (_, box) => Padding(
+            padding: EdgeInsets.fromLTRB(24, 10, 0, S.s12),
             child: Align(
               alignment: Alignment.topCenter,
-              child: Glass(
-                radius: BorderRadius.circular(R.of(14)),
-                tint: AppColors.surface2.withValues(alpha: 0.6),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 720),
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.symmetric(vertical: S.s6),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: _groups(),
-                    ),
-                  ),
-                ),
-              ),
+              child: _card(box.maxHeight - 10 - S.s12),
             ),
           ),
         );
@@ -228,94 +214,134 @@ class _SessionRailState extends State<SessionRail> {
     );
   }
 
-  // Round 5 session card: what the session is doing, not what you can do to it.
-  // Actions live behind the header's "more" menu.
+  Widget _card(double maxHeight) {
+    return Container(
+      width: kSessionRailWidth,
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(R.of(16)),
+        border: Border.all(
+            color: widget.floating ? AppColors.lineStrong : AppColors.line),
+        boxShadow: widget.floating ? overlayShadow : null,
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(R.of(16)),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: _groups(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   List<Widget> _groups() {
     final mc = widget.isMissionControl;
     final s = widget.state;
     final out = <Widget>[_header()];
+    var first = true;
     void add(String label, List<Widget> rows,
-        {String? meta, VoidCallback? onLabel}) {
+        {String? meta, String? link, VoidCallback? onLabel}) {
       if (rows.isEmpty) return;
       out.add(_RailGroup(
-          label: label, meta: meta, onLabel: onLabel, children: rows));
+          label: label,
+          meta: meta,
+          link: link,
+          onLabel: onLabel,
+          divider: !first || !mc,
+          children: rows));
+      first = false;
     }
 
-    if (!mc) {
-      final plan = _plan(s);
-      if (plan != null) {
-        final done = plan.where((p) => _stepState(p) == 2).length;
-        add('Plan', _planRows(plan), meta: '$done of ${plan.length} done');
-      }
-      add('Lanes', _laneRows(s), onLabel: widget.onLanes);
-      final files = fileChanges(sessionChangeSteps(s?.events ?? const []));
-      add('Changes', _changeRows(files),
-          meta: files.isEmpty ? null : '${files.length}',
-          onLabel: widget.onChanges);
+    if (mc) {
+      final n = _tasks.length;
+      add('In flight', _flightRows(),
+          meta: n == 0 ? null : '$n task${n == 1 ? '' : 's'}');
+      add('Autonomy', _autonomyRows());
+      add('Automated wakes', _wakeRows(),
+          link: 'Edit', onLabel: widget.onAutonomy);
+      add('Model', _modelRows(s));
+      return out;
     }
+    final plan = _plan(s);
+    if (plan != null) {
+      final done = plan.where((p) => _stepState(p) == 2).length;
+      add('Plan', _planRows(plan), meta: '$done of ${plan.length} done');
+    }
+    final lanes = [...?s?.lanes];
+    final running = lanes.where((l) => l.running).length;
+    add('Lanes', _laneRows(lanes),
+        meta: running == 0 ? null : '$running running',
+        link: 'All',
+        onLabel: widget.onLanes);
+    final files = fileChanges(sessionChangeSteps(s?.events ?? const []));
+    add('Changes', _changeRows(files),
+        meta: files.isEmpty
+            ? null
+            : '${files.length} file${files.length == 1 ? '' : 's'}',
+        link: 'Review',
+        onLabel: widget.onChanges);
     add('Usage', _usageRows(s));
     add('Next without you', _nextRows());
     return out;
   }
 
   Widget _header() {
-    final ws = _info?.folder ?? widget.state?.workspace ?? '';
-    final git = _git;
-    final branch = (git?.ok ?? false) && git!.branch.isNotEmpty
-        ? git.branch
-        : (_info?.branch ?? '');
-    final where = [
-      if (ws.isNotEmpty) lastPathSegment(ws),
-      if (branch.isNotEmpty) branch,
-    ].join(' · ');
-    final t = _task;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 8, 4),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          Text(widget.isMissionControl ? 'Mission Control' : 'Session',
-              style: sans(13, weight: W.label, color: AppColors.fg1)),
-          const SizedBox(width: 8),
+    final mc = widget.isMissionControl;
+    final t = _tasks.where((t) => t.sessionId == widget.sessionId).firstOrNull;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Container(
+        padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.line))),
+        child: Row(children: [
           Expanded(
-            child: Text(where,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: mono(11, color: AppColors.fg4)),
+            child: Text(mc ? 'Mission Control' : 'Session',
+                style: sans(13, weight: W.label, color: AppColors.fg1)),
           ),
           if (widget.headerActions != null) widget.headerActions!,
-          _RailToggle(
-              tooltip: 'Hide session panel',
-              small: true,
-              onTap: () => setSessionRailCollapsed(true)),
+          IconBtn(widget.floating ? 'x' : 'sidebar',
+              size: 30,
+              iconSize: 15,
+              tooltip: widget.floating ? 'Close' : 'Hide session panel',
+              onTap: () => widget.floating
+                  ? sessionRailFloating.value = false
+                  : setSessionRailCollapsed(true)),
         ]),
-        if (widget.headerChips != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Align(
-                alignment: Alignment.centerLeft, child: widget.headerChips),
+      ),
+      if (widget.headerChips != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 2),
+          child:
+              Align(alignment: Alignment.centerLeft, child: widget.headerChips),
+        ),
+      if (t != null && widget.onOpenTask != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+          child: _RailRow(
+            icon: 'task',
+            label: t.title,
+            value: t.workPlan.isEmpty
+                ? t.status.label
+                : '${t.workPlan.where((p) => p.done).length} of ${t.workPlan.length}',
+            chevron: true,
+            onTap: () => widget.onOpenTask!(t.id),
           ),
-        if (t != null && widget.onOpenTask != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: _RailRow(
-              icon: 'task',
-              label: t.title,
-              value: t.workPlan.isEmpty
-                  ? t.status.label
-                  : '${t.workPlan.where((p) => p.done).length} of ${t.workPlan.length}',
-              chevron: true,
-              onTap: () => widget.onOpenTask!(t.id),
-            ),
-          ),
-      ]),
-    );
+        ),
+    ]);
   }
 
   static List<Map>? _plan(HarnessState? s) {
     final events = s?.events ?? const <Map<String, dynamic>>[];
     for (var i = events.length - 1; i >= 0; i--) {
       final e = events[i];
-      if (e['type'] != 'plan_updated') continue;
+      if (e['kind'] != 'plan_updated') continue;
       final steps = (e['steps'] as List? ?? const []).whereType<Map>().toList();
       return steps.isEmpty ? null : steps;
     }
@@ -330,26 +356,31 @@ class _SessionRailState extends State<SessionRail> {
 
   List<Widget> _planRows(List<Map> plan) => [
         for (final p in plan)
-          SizedBox(
-            height: 26,
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 26),
             child: Row(children: [
               SizedBox(
-                width: 16,
+                width: 14,
                 child: Center(
                   child: switch (_stepState(p)) {
-                    2 => AppIcon('check', size: 13, color: AppColors.ok),
+                    2 => AppIcon('check', size: 12, color: AppColors.fg4),
                     1 => Container(
-                        width: 7,
-                        height: 7,
+                        width: 9,
+                        height: 9,
                         decoration: BoxDecoration(
-                            color: AppColors.accent, shape: BoxShape.circle)),
+                            color: AppColors.accent,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                  color: AppColors.accentBg, spreadRadius: 3)
+                            ])),
                     _ => Container(
-                        width: 8,
-                        height: 8,
+                        width: 9,
+                        height: 9,
                         decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border:
-                                Border.all(color: AppColors.fg4, width: 1.2))),
+                                Border.all(color: AppColors.fg4, width: 1.3))),
                   },
                 ),
               ),
@@ -360,34 +391,57 @@ class _SessionRailState extends State<SessionRail> {
                     overflow: TextOverflow.ellipsis,
                     style: sans(13,
                         color: switch (_stepState(p)) {
-                          2 => AppColors.fg3,
+                          2 => AppColors.fg4,
                           1 => AppColors.fg1,
                           _ => AppColors.fg3,
                         })),
               ),
-              if (_stepState(p) == 1)
-                Text('now', style: sans(11, color: AppColors.fg4)),
             ]),
           ),
       ];
 
-  List<Widget> _laneRows(HarnessState? s) {
-    final lanes = [...?s?.lanes];
+  List<Widget> _laneRows(List<LaneInfo> lanes) {
     lanes.sort((a, b) => (b.running ? 1 : 0) - (a.running ? 1 : 0));
     return [
       for (final l in lanes.take(4))
-        _InfoRow(
-          icon: l.running ? 'activity' : (l.status == 'failed' ? 'x' : 'check'),
-          title: l.title.isEmpty ? l.id : l.title,
-          sub: l.running
-              ? ((l.activity ?? '').trim().isEmpty
-                  ? 'Running'
-                  : 'Running · ${l.activity!.trim()}')
-              : l.status == 'failed'
-                  ? 'Failed'
-                  : 'Finished',
-          live: l.running,
+        InkWell(
           onTap: widget.onLanes,
+          borderRadius: BorderRadius.circular(R.md),
+          hoverColor: AppColors.surface2,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 40),
+            child: Row(children: [
+              _Dot(l.running
+                  ? AppColors.accent
+                  : l.status == 'failed'
+                      ? AppColors.danger
+                      : AppColors.ok),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l.title.isEmpty ? l.id : l.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13, color: AppColors.fg2)),
+                    Text(
+                        l.running
+                            ? ((l.activity ?? '').trim().isEmpty
+                                ? 'Running'
+                                : 'Running · ${l.activity!.trim()}')
+                            : l.status == 'failed'
+                                ? 'Failed'
+                                : 'Finished',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(11.5, color: AppColors.fg4)),
+                  ],
+                ),
+              ),
+              if (l.running) _OutlineButton('Stop', () => _stopLane(l.id)),
+            ]),
+          ),
         ),
       if (lanes.length > 4)
         _MoreRow('${lanes.length - 4} more', widget.onLanes),
@@ -398,27 +452,20 @@ class _SessionRailState extends State<SessionRail> {
         for (final f in files.take(5))
           InkWell(
             onTap: widget.onChanges,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(R.md),
             hoverColor: AppColors.surface2,
             child: SizedBox(
               height: 26,
               child: Row(children: [
-                AppIcon('file', size: 13, color: AppColors.fg4),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(f.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: mono(12, color: AppColors.fg2)),
-                ),
+                Expanded(child: _PathText(f.path)),
                 if (f.added > 0)
-                  Text('+${f.added}',
-                      style: sans(11, color: AppColors.ok, tabular: true)),
-                if (f.removed > 0) ...[
-                  const SizedBox(width: 4),
-                  Text('-${f.removed}',
-                      style: sans(11, color: AppColors.danger, tabular: true)),
-                ],
+                  Text('+${f.added}', style: mono(11, color: AppColors.ok)),
+                SizedBox(
+                  width: 30,
+                  child: Text('−${f.removed}',
+                      textAlign: TextAlign.right,
+                      style: mono(11, color: AppColors.danger)),
+                ),
               ]),
             ),
           ),
@@ -432,27 +479,19 @@ class _SessionRailState extends State<SessionRail> {
     final rows = <Widget>[];
     if (s.contextWindow > 0 && s.lastPromptTokens > 0) {
       final pct = (s.lastPromptTokens / s.contextWindow * 100).clamp(0, 100);
-      rows.add(_RailRow(
-          icon: 'gauge',
-          label: 'Context',
-          value: '${pct.round()}% of ${fmtSi(s.contextWindow)}'));
+      rows.add(_UsageRow('Context', '${pct.round()}%', pct / 100,
+          detail: 'of ${fmtSi(s.contextWindow)}'));
     }
     if (s.totalTokens > 0) {
-      rows.add(_RailRow(
-          icon: 'activity',
-          label: 'Tokens',
-          value: [
-            fmtSi(s.totalTokens),
-            if (s.cacheReadTokens > 0) '${fmtSi(s.cacheReadTokens)} cached',
-          ].join(' · ')));
+      rows.add(_UsageRow('Tokens', fmtSi(s.totalTokens), null));
     }
     final r = s.rateSecondary;
     if (r != null && r.isReported && !r.isExpired) {
       final win = limitWindowLabel(r);
-      rows.add(_RailRow(
-          icon: 'clock',
-          label: win == '7d' ? 'This week' : 'Limit ($win)',
-          value: '${r.usedPercent.clamp(0, 100).round()}% used'));
+      final pct = r.usedPercent.clamp(0, 100);
+      rows.add(_UsageRow(win == '7d' ? 'This week' : 'Limit ($win)',
+          '${pct.round()}%', pct / 100,
+          warn: pct >= 70));
     }
     return rows;
   }
@@ -469,11 +508,11 @@ class _SessionRailState extends State<SessionRail> {
           value: goal!.paused ? 'Paused' : 'Working',
           onTap: widget.onGoal,
         ),
-      if (widget.isMissionControl && widget.onAutonomy != null)
+      if (_autonomous != null && widget.onAutonomy != null)
         _RailRow(
-            icon: 'repeat',
+            icon: 'activity',
             label: 'Automated wakes',
-            chevron: true,
+            value: _autonomous! ? 'On' : 'Off',
             onTap: widget.onAutonomy),
       _RailRow(
         icon: 'scheduled',
@@ -489,12 +528,119 @@ class _SessionRailState extends State<SessionRail> {
       ),
       if (_warm != null)
         _RailRow(
-          icon: 'activity',
+          icon: 'timer',
           label: 'Keep warm',
           trailing: SettingsSwitch(value: _warm!, onChanged: _setWarm),
           onTap: () => _setWarm(!_warm!),
         ),
     ];
+  }
+
+  // Mission Control panel.
+  List<Widget> _flightRows() => [
+        for (final t in _tasks.take(6))
+          InkWell(
+            onTap: widget.onOpenTask == null
+                ? null
+                : () => widget.onOpenTask!(t.id),
+            borderRadius: BorderRadius.circular(R.md),
+            hoverColor: AppColors.surface2,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 40),
+              child: Row(children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(t.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(13, color: AppColors.fg2)),
+                      Text(
+                          [
+                            t.status.label,
+                            if ((t.currentStep ?? '').isNotEmpty)
+                              t.currentStep!,
+                          ].join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(11.5, color: AppColors.fg4)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _Dot(AppColors.accent),
+              ]),
+            ),
+          ),
+      ];
+
+  List<Widget> _autonomyRows() => [
+        _RailRow(
+          icon: 'repeat',
+          label: 'Cold resume',
+          value: switch (widget.resumeMode) {
+            'lean' => 'Lean',
+            'full' => 'Full',
+            _ => 'Ask',
+          },
+          onTap: widget.onCycleResume,
+        ),
+      ];
+
+  List<Widget> _wakeRows() {
+    final wake = _wake;
+    return [
+      if (_autonomous != null)
+        _RailRow(
+            icon: 'activity',
+            label: 'Automated wakes',
+            value: _autonomous! ? 'On' : 'Off',
+            onTap: widget.onAutonomy),
+      _RailRow(
+        icon: 'scheduled',
+        label: 'Wakes',
+        value: !_wakeKnown
+            ? null
+            : wake == null
+                ? 'None'
+                : wake.enabled
+                    ? wake.scheduleText
+                    : 'Paused',
+        onTap: widget.onWakes,
+      ),
+    ];
+  }
+
+  List<Widget> _modelRows(HarnessState? s) {
+    final rows = <Widget>[
+      InkWell(
+        onTap: widget.onModel,
+        borderRadius: BorderRadius.circular(R.md),
+        child: Container(
+          height: 30,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(R.md)),
+          child: Row(children: [
+            Expanded(
+              child: Text(widget.profileLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13, color: AppColors.fg1)),
+            ),
+            AppIcon('chevron-down', size: 12, color: AppColors.fg4),
+          ]),
+        ),
+      ),
+      const SizedBox(height: 4),
+    ];
+    if (s != null && s.contextWindow > 0 && s.lastPromptTokens > 0) {
+      final pct = (s.lastPromptTokens / s.contextWindow * 100).clamp(0, 100);
+      rows.add(_UsageRow('Context', '${pct.round()}%', pct / 100));
+    }
+    return rows;
   }
 }
 
@@ -503,30 +649,38 @@ class _RailGroup extends StatelessWidget {
     required this.label,
     required this.children,
     this.meta,
+    this.link,
     this.onLabel,
+    this.divider = true,
   });
   final String label;
   final String? meta;
+  final String? link;
   final VoidCallback? onLabel;
+  final bool divider;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
     final head = SizedBox(
-      height: 24,
+      height: 20,
       child: Row(children: [
-        Text(label, style: sans(13, weight: W.label, color: AppColors.fg1)),
+        Text(label, style: sans(12, weight: W.label, color: AppColors.fg3)),
         if (meta != null) ...[
           const SizedBox(width: 8),
           Text(meta!, style: sans(12, color: AppColors.fg4, tabular: true)),
         ],
         const Spacer(),
-        if (onLabel != null)
+        if (link != null) Text(link!, style: sans(11.5, color: AppColors.fg4)),
+        if (onLabel != null && link != null)
           AppIcon('chevron-right', size: 12, color: AppColors.fg4),
       ]),
     );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 12, 4),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+      decoration: BoxDecoration(
+          border:
+              divider ? Border(top: BorderSide(color: AppColors.line)) : null),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -534,9 +688,9 @@ class _RailGroup extends StatelessWidget {
               ? head
               : InkWell(
                   onTap: onLabel,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(R.sm),
                   child: head),
-          const SizedBox(height: 2),
+          const SizedBox(height: 6),
           ...children,
         ],
       ),
@@ -544,61 +698,102 @@ class _RailGroup extends StatelessWidget {
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.icon,
-    required this.title,
-    required this.sub,
-    this.live = false,
-    this.onTap,
-  });
-  final String icon;
-  final String title;
-  final String sub;
-  final bool live;
-  final VoidCallback? onTap;
+class _Dot extends StatelessWidget {
+  const _Dot(this.color);
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+      width: 6,
+      height: 6,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle));
+}
+
+class _OutlineButton extends StatelessWidget {
+  const _OutlineButton(this.label, this.onTap);
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(R.sm),
+        child: Container(
+          height: 24,
+          padding: const EdgeInsets.symmetric(horizontal: 9),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(R.sm),
+            border: Border.all(color: AppColors.lineStrong),
+          ),
+          child: Text(label, style: sans(12, color: AppColors.fg2)),
+        ),
+      );
+}
+
+/// Directory dimmed, file name bright, one line.
+class _PathText extends StatelessWidget {
+  const _PathText(this.path);
+  final String path;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      hoverColor: AppColors.surface2,
-      child: SizedBox(
-        height: 40,
-        child: Row(children: [
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: AppColors.surface2,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            alignment: Alignment.center,
-            child: AppIcon(icon,
-                size: 13, color: live ? AppColors.accent : AppColors.fg3),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13, color: AppColors.fg1)),
-                Text(sub,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(11, color: AppColors.fg4)),
-              ],
-            ),
-          ),
-        ]),
-      ),
+    final i = path.lastIndexOf('/');
+    return Text.rich(
+      TextSpan(children: [
+        if (i >= 0)
+          TextSpan(
+              text: path.substring(0, i + 1),
+              style: mono(12, color: AppColors.fg4)),
+        TextSpan(
+            text: i >= 0 ? path.substring(i + 1) : path,
+            style: mono(12, color: AppColors.fg2)),
+      ]),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
+}
+
+class _UsageRow extends StatelessWidget {
+  const _UsageRow(this.label, this.value, this.fraction,
+      {this.detail, this.warn = false});
+  final String label;
+  final String value;
+  final double? fraction;
+  final String? detail;
+  final bool warn;
+
+  @override
+  Widget build(BuildContext context) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        SizedBox(
+          height: 28,
+          child: Row(children: [
+            Text(label, style: sans(13, color: AppColors.fg2)),
+            const Spacer(),
+            Text(value, style: mono(12, color: AppColors.fg3, tabular: true)),
+          ]),
+        ),
+        if (fraction != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: SizedBox(
+                height: 4,
+                child: Stack(children: [
+                  Positioned.fill(child: ColoredBox(color: AppColors.surface3)),
+                  FractionallySizedBox(
+                    widthFactor: fraction!.clamp(0.0, 1.0),
+                    child:
+                        ColoredBox(color: warn ? AppColors.run : AppColors.fg3),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+      ]);
 }
 
 class _MoreRow extends StatelessWidget {
@@ -609,7 +804,7 @@ class _MoreRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(R.sm),
         child: SizedBox(
           height: 24,
           child: Align(
@@ -638,77 +833,40 @@ class _RailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final v = (value == null
-        ? null
-        : Text(value!,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: sans(12, color: AppColors.fg4, tabular: true)));
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(R.md),
       hoverColor: AppColors.surface2,
       child: SizedBox(
         height: 30,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: S.s2),
-          child: Row(children: [
-            AppIcon(icon, size: 14, color: AppColors.fg3),
-            SizedBox(width: S.of(10)),
-            Expanded(
-              child: Text(label,
+        child: Row(children: [
+          AppIcon(icon, size: 14, color: AppColors.fg4),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(13, color: AppColors.fg2)),
+          ),
+          if (value != null) ...[
+            const SizedBox(width: 8),
+            Flexible(
+              flex: 0,
+              child: Text(value!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(13, color: AppColors.fg2)),
+                  style: sans(12, color: AppColors.fg4, tabular: true)),
             ),
-            if (v != null) ...[
-              SizedBox(width: S.s8),
-              Flexible(flex: 0, child: v),
-            ],
-            if (trailing != null) ...[
-              SizedBox(width: S.s8),
-              trailing!,
-            ],
-            if (chevron) ...[
-              SizedBox(width: S.s6),
-              AppIcon('chevron-right', size: 12, color: AppColors.fg4),
-            ],
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-class _RailToggle extends StatelessWidget {
-  const _RailToggle(
-      {required this.tooltip, required this.onTap, this.small = false});
-  final String tooltip;
-  final VoidCallback onTap;
-  final bool small;
-
-  @override
-  Widget build(BuildContext context) {
-    final icon =
-        AppIcon('sidebar', size: small ? 14 : 16, color: AppColors.fg3);
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(R.md),
-        child: small
-            ? Padding(padding: EdgeInsets.all(S.s2), child: icon)
-            : Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(R.md),
-                  border:
-                      Border.all(color: AppColors.fg1.withValues(alpha: 0.08)),
-                ),
-                alignment: Alignment.center,
-                child: icon,
-              ),
+          ],
+          if (trailing != null) ...[
+            const SizedBox(width: 8),
+            trailing!,
+          ],
+          if (chevron) ...[
+            const SizedBox(width: 6),
+            AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+          ],
+        ]),
       ),
     );
   }

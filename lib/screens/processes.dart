@@ -120,18 +120,40 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
       body: SafeArea(
         bottom: false,
         child: Column(children: [
-          SnAppBar(
-            title: 'Processes',
-            titleSize: 14,
-            compact: true,
-            onBack: widget.onClose ?? () => Navigator.pop(context),
-          ),
+          if (kMobile)
+            SnAppBar(
+              title: 'Processes',
+              titleSize: 14,
+              compact: true,
+              onBack: widget.onClose ?? () => Navigator.pop(context),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 12, 8),
+              child: Row(children: [
+                Text('Processes',
+                    style: sans(20,
+                        weight: FontWeight.w600, color: AppColors.fg1)),
+                const SizedBox(width: 8),
+                if (procs.isNotEmpty)
+                  Text('${procs.length}',
+                      style: mono(11, color: AppColors.fg4)),
+                const Spacer(),
+                IconBtn('x',
+                    size: 28,
+                    iconSize: 14,
+                    tooltip: 'Close',
+                    onTap: widget.onClose ?? () => Navigator.pop(context)),
+              ]),
+            ),
           if (_loading)
             const Expanded(child: Center(child: DelayedSpinner()))
           else if (_error != null)
             Expanded(
                 child: EmptyState(
-                    icon: 'alert-triangle', title: "Couldn't load", body: _error!))
+                    icon: 'alert-triangle',
+                    title: "Couldn't load",
+                    body: _error!))
           else if (procs.isEmpty)
             const Expanded(
                 child: EmptyState(
@@ -152,7 +174,9 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
                             decoration: BoxDecoration(
                               color: AppColors.surface1,
                               borderRadius: BorderRadius.circular(R.lg),
-                              border: Border.all(color: AppColors.line),
+                              border: kMobile
+                                  ? Border.all(color: AppColors.line)
+                                  : null,
                             ),
                             child: Column(children: [
                               for (var i = 0; i < procs.length; i++) ...[
@@ -205,19 +229,31 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
             child: Text(cmd,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TS.code(AppColors.fg1)),
+                style: kMobile
+                    ? TS.code(AppColors.fg1)
+                    : mono(12.5, color: AppColors.fg1)),
           ),
+          if (!kMobile) ...[
+            _ChipBtn(open ? 'Hide log' : 'Log', () => _toggleLog(id)),
+            if (running) ...[
+              SizedBox(width: S.s6),
+              _ChipBtn('Stop', () => _kill(id), danger: true),
+            ],
+          ],
         ]),
-        SizedBox(height: S.s6),
+        SizedBox(height: kMobile ? S.s6 : 0),
         Row(children: [
+          if (!kMobile) const SizedBox(width: 16),
           Expanded(
-            child: Text(running ? 'pid $pid' : statusLabel,
+            child: Text(running ? 'running · pid $pid' : statusLabel,
                 style: TS.meta(failed ? AppColors.danger : AppColors.fg3)),
           ),
-          _ChipBtn(open ? 'Hide log' : 'Log', () => _toggleLog(id)),
-          if (running) ...[
-            SizedBox(width: S.s8),
-            _ChipBtn('Stop', () => _kill(id)),
+          if (kMobile) ...[
+            _ChipBtn(open ? 'Hide log' : 'Log', () => _toggleLog(id)),
+            if (running) ...[
+              SizedBox(width: S.s8),
+              _ChipBtn('Stop', () => _kill(id)),
+            ],
           ],
         ]),
         if (open) ...[
@@ -227,7 +263,7 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
             width: double.infinity,
             padding: EdgeInsets.all(S.s12),
             decoration: BoxDecoration(
-                color: AppColors.canvas,
+                color: kMobile ? AppColors.canvas : AppColors.bg,
                 borderRadius: BorderRadius.circular(R.md)),
             child: _logLoading
                 ? const Center(child: DelayedSpinner(size: 16))
@@ -246,7 +282,8 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
 class _ChipBtn extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
-  const _ChipBtn(this.label, this.onTap);
+  final bool danger;
+  const _ChipBtn(this.label, this.onTap, {this.danger = false});
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -261,10 +298,12 @@ class _ChipBtn extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                   color: AppColors.surface3,
-                  borderRadius: BorderRadius.circular(R.pill)),
+                  borderRadius:
+                      BorderRadius.circular(kMobile ? R.pill : R.of(6))),
               child: Text(label,
                   style: sans(kMobile ? 13 : 12,
-                      weight: W.strong, color: AppColors.fg2)),
+                      weight: kMobile ? W.strong : null,
+                      color: danger ? AppColors.danger : AppColors.fg2)),
             ),
           ),
         ),

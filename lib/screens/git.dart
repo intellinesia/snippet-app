@@ -438,7 +438,8 @@ class _GitScreenState extends State<GitScreen> {
                         st.branch.isEmpty ? '(no branch)' : st.branch,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: codeMono(kMobile ? 13 : 12, color: AppColors.fg1),
+                        style:
+                            codeMono(kMobile ? 13 : 12, color: AppColors.fg1),
                       ),
                     ),
                     SizedBox(width: S.s4),
@@ -586,7 +587,7 @@ class _GitScreenState extends State<GitScreen> {
           ]),
         ),
         CardGroupScope(
-          child: ListGroup(children: [
+            child: ListGroup(children: [
           for (final f in expanded ? files : files.take(_collapsedLimit))
             _fileItem(f, staged: staged),
           if (!expanded)
@@ -615,7 +616,8 @@ class _GitScreenState extends State<GitScreen> {
           child: InkWell(
             onTap: () => _openDiff(f),
             child: Padding(
-              padding: EdgeInsets.fromLTRB(S.s12, kMobile ? 0 : S.s2, S.s4, kMobile ? 0 : S.s2),
+              padding: EdgeInsets.fromLTRB(
+                  S.s12, kMobile ? 0 : S.s2, S.s4, kMobile ? 0 : S.s2),
               child: Row(children: [
                 Container(
                   width: kMobile ? 22 : 20,
@@ -1051,11 +1053,11 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
         oldLine = int.parse(match.group(1)!);
         newLine = int.parse(match.group(2)!);
         final context = match.group(3)!.trim();
-        if (inHunk || context.isNotEmpty) {
+        if (!kMobile || inHunk || context.isNotEmpty) {
           result.add(_DiffLineData(
             oldLine: null,
             newLine: null,
-            text: context,
+            text: kMobile ? context : raw,
             type: _DiffLineType.hunk,
           ));
         }
@@ -1165,7 +1167,9 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
     ]);
 
     if (widget.embedded) {
-      return kMobile ? ColoredBox(color: AppColors.pageCanvas, child: body) : body;
+      return kMobile
+          ? ColoredBox(color: AppColors.pageCanvas, child: body)
+          : body;
     }
     return Scaffold(
       backgroundColor: kMobile ? AppColors.pageCanvas : Colors.transparent,
@@ -1212,7 +1216,7 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
     )..layout();
     final width = painter.width;
     painter.dispose();
-    return width + (kMobile ? _gutterWidth + 40 : 108);
+    return width + (kMobile ? _gutterWidth + 40 : 116);
   }
 
   double _measureGutter() {
@@ -1225,6 +1229,21 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
   }
 
   Widget _renderDiffLine(_DiffLineData line) {
+    if (line.type == _DiffLineType.hunk && !kMobile) {
+      return Container(
+        width: double.infinity,
+        height: 28,
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.only(left: 12),
+        alignment: Alignment.centerLeft,
+        color: AppColors.accentBg,
+        child: Text(line.text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: codeMono(11.5,
+                weight: FontWeight.w400, color: AppColors.accent)),
+      );
+    }
     if (line.type == _DiffLineType.hunk) {
       return Container(
         width: double.infinity,
@@ -1302,44 +1321,36 @@ class _GitFileDiffViewState extends State<GitFileDiffView> {
     return Container(
       width: double.infinity,
       color: bg,
-      padding: EdgeInsets.symmetric(vertical: S.of(0.5)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Old line number gutter
           SizedBox(
-            width: 34,
-            child: Text(
-              oldStr,
-              textAlign: TextAlign.right,
-              style: codeMono(11, color: gutterFg),
+            width: 44,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: Text(oldStr,
+                  textAlign: TextAlign.right,
+                  style: codeMono(12, height: 20 / 12, color: gutterFg)),
             ),
           ),
-          SizedBox(width: S.s6),
-          // New line number gutter
           SizedBox(
-            width: 34,
-            child: Text(
-              newStr,
-              textAlign: TextAlign.right,
-              style: codeMono(11, color: gutterFg),
+            width: 40,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: Text(newStr,
+                  textAlign: TextAlign.right,
+                  style: codeMono(12, height: 20 / 12, color: gutterFg)),
             ),
           ),
-          // Sign (+ / - / space)
           SizedBox(
-            width: 18,
-            child: Text(
-              sign,
-              textAlign: TextAlign.center,
-              style: codeMono(12, weight: W.label, color: fg),
-            ),
+            width: 16,
+            child: Text(sign, style: codeMono(12, height: 20 / 12, color: fg)),
           ),
-          // Code content
           Padding(
-            padding: EdgeInsets.only(right: S.s16),
+            padding: const EdgeInsets.only(right: 16),
             child: Text(
               line.text.isEmpty ? ' ' : line.text,
-              style: codeMono(12, height: 1.4, color: fg),
+              style: codeMono(12, height: 20 / 12, color: fg),
             ),
           ),
         ],

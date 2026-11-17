@@ -356,3 +356,295 @@ class AgentSidePanel extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Desktop docked-panel primitives (round 17). Mockup pixels go through [pr] so
+// the theme's radius scale still applies.
+// ---------------------------------------------------------------------------
+
+double pr(double px) => R.of(px / 0.6);
+
+/// The floating card a docked panel lives in: surface1, hairline, 14px corners.
+class PanelCard extends StatelessWidget {
+  const PanelCard({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.only(top: S.s12, right: S.s8, bottom: S.s12),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Material(
+            color: AppColors.surface1,
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(pr(14)),
+              side: BorderSide(color: AppColors.line),
+            ),
+            child: child,
+          ),
+        ),
+      );
+}
+
+/// The 44px bar: optional back, a title, then icon buttons on the right.
+class PanelBar extends StatelessWidget {
+  const PanelBar({
+    super.key,
+    required this.title,
+    this.onBack,
+    this.actions = const [],
+  });
+  final String title;
+  final VoidCallback? onBack;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: 44,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(S.s8, 0, S.s8, 0),
+          child: Row(children: [
+            if (onBack != null)
+              PanelBarButton('chevron-left', 'Back', onBack)
+            else
+              SizedBox(width: S.s4),
+            Expanded(
+              child: Text(title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13, weight: W.strong, color: AppColors.fg1)),
+            ),
+            ...actions,
+          ]),
+        ),
+      );
+}
+
+class PanelBarButton extends StatelessWidget {
+  const PanelBarButton(this.icon, this.tooltip, this.onTap, {super.key});
+  final String icon;
+  final String tooltip;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: tooltip,
+        child: InkResponse(
+          onTap: onTap,
+          radius: 15,
+          child: SizedBox(
+            width: 28,
+            height: 28,
+            child: Center(child: AppIcon(icon, size: 15, color: AppColors.fg3)),
+          ),
+        ),
+      );
+}
+
+/// Rows on their own soft surfaces, 2px apart, large radius at the group ends.
+class PanelGroup extends StatelessWidget {
+  const PanelGroup({super.key, required this.children, this.top = 0});
+  final List<Widget> children;
+  final double top;
+
+  @override
+  Widget build(BuildContext context) {
+    final big = Radius.circular(pr(10));
+    final small = Radius.circular(pr(3));
+    final n = children.length;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(S.s8, top, S.s8, S.s8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < n; i++) ...[
+            if (i > 0) const SizedBox(height: 2),
+            Material(
+              color: AppColors.surface2,
+              clipBehavior: Clip.antiAlias,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+                  topLeft: i == 0 ? big : small,
+                  topRight: i == 0 ? big : small,
+                  bottomLeft: i == n - 1 ? big : small,
+                  bottomRight: i == n - 1 ? big : small,
+                ),
+              ),
+              child: children[i],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// One row's content; the surface and corners come from [PanelGroup].
+class PanelRow extends StatelessWidget {
+  const PanelRow({
+    super.key,
+    required this.label,
+    this.sub,
+    this.icon,
+    this.leading,
+    this.value,
+    this.trailing,
+    this.onTap,
+    this.chevron = false,
+    this.danger = false,
+    this.minHeight = 36,
+  });
+  final String label;
+  final String? sub;
+  final String? icon;
+  final Widget? leading;
+  final String? value;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final bool chevron;
+  final bool danger;
+  final double minHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = danger ? AppColors.danger : AppColors.fg3;
+    final row = ConstrainedBox(
+      constraints: BoxConstraints(minHeight: minHeight),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(7)),
+        child: Row(children: [
+          if (leading != null) ...[leading!, SizedBox(width: S.of(10))],
+          if (leading == null && icon != null) ...[
+            SizedBox(
+                width: 16,
+                child: Center(child: AppIcon(icon!, size: 15, color: tint))),
+            SizedBox(width: S.of(10)),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13.5,
+                        color: danger ? AppColors.danger : AppColors.fg1)),
+                if (sub != null && sub!.isNotEmpty)
+                  Text(sub!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, color: AppColors.fg4)),
+              ],
+            ),
+          ),
+          if (value != null && value!.isNotEmpty) ...[
+            SizedBox(width: S.s8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 140),
+              child: Text(value!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12.5, color: AppColors.fg3, tabular: true)),
+            ),
+          ],
+          if (trailing != null) ...[SizedBox(width: S.s8), trailing!],
+          if (chevron) ...[
+            SizedBox(width: S.s6),
+            AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+          ],
+        ]),
+      ),
+    );
+    if (onTap == null) return row;
+    return InkWell(
+      onTap: onTap,
+      hoverColor: AppColors.surface3.withValues(alpha: 0.5),
+      child: row,
+    );
+  }
+}
+
+class PanelRadio extends StatelessWidget {
+  const PanelRadio({super.key, required this.on});
+  final bool on;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 16,
+        height: 16,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+              color: on ? AppColors.fg1 : AppColors.lineStrong, width: 1.4),
+        ),
+        child: on
+            ? Container(
+                width: 8,
+                height: 8,
+                decoration:
+                    BoxDecoration(color: AppColors.fg1, shape: BoxShape.circle),
+              )
+            : null,
+      );
+}
+
+/// A small segmented control: one chosen cell on surface3.
+class PanelSegments extends StatelessWidget {
+  const PanelSegments({
+    super.key,
+    required this.labels,
+    required this.index,
+    required this.onSelect,
+  });
+  final List<String> labels;
+  final int index;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(pr(8)),
+          border: Border.all(color: AppColors.lineStrong),
+        ),
+        child: Row(children: [
+          for (var i = 0; i < labels.length; i++)
+            Expanded(
+              flex: 30 + labels[i].length * 10,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onSelect(i),
+                child: Container(
+                  height: 22,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: i == index ? AppColors.surface3 : null,
+                    borderRadius: BorderRadius.circular(pr(6)),
+                  ),
+                  child: Text(labels[i],
+                      maxLines: 1,
+                      style: sans(12,
+                          color: i == index ? AppColors.fg1 : AppColors.fg3)),
+                ),
+              ),
+            ),
+        ]),
+      );
+}
+
+class PanelFootnote extends StatelessWidget {
+  const PanelFootnote(this.text, {super.key, this.top = 0});
+  final String text;
+  final double top;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.fromLTRB(S.of(18), top, S.of(18), S.s8),
+        child:
+            Text(text, style: sans(11.5, color: AppColors.fg4, height: 1.45)),
+      );
+}

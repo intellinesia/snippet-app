@@ -4,13 +4,19 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../chat/chat_info.dart'
-    show AgentPageCaption, AgentPageRow, DockedInfoNav, dockedPromptText;
+    show
+        AgentPageCaption,
+        AgentPageRow,
+        DockedInfoNav,
+        dockedPick,
+        dockedPromptText;
 import '../settings_form.dart' show SettingsGroup, SettingsSwitch;
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
+import 'agent_panel.dart';
 
 /// Inference profile, desk model and context length for one agent, in a
 /// popover on desktop and a sheet on phones.
@@ -212,6 +218,120 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
         onTap: onTap,
       );
 
+  Widget _radioRow(String label, String? sub, bool on, VoidCallback onTap) =>
+      PanelRow(
+        label: label,
+        sub: sub,
+        leading: PanelRadio(on: on),
+        minHeight: 46,
+        onTap: onTap,
+      );
+
+  Future<void> _pickDeskPage(ServerConfig cfg) async {
+    final picked = await dockedPick<String>(
+      context,
+      title: 'Desk runs on',
+      selected: _desk ?? _work,
+      options: [for (final p in cfg.profiles) (p.name, p.name, 'cpu')],
+      fallback: () async => null,
+    );
+    if (picked != null) _pickDesk(picked);
+  }
+
+  static const _presets = [null, 128000, 200000, 400000];
+
+  Widget _desktop(ServerConfig cfg, String? statusLine) {
+    final inPanel = DockedInfoNav.maybeOf(context) != null;
+    final ctxIndex = _context == null
+        ? 0
+        : (_presets.indexOf(_context).clamp(-1, 3) >= 0
+            ? _presets.indexOf(_context)
+            : 4);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PanelFootnote(
+            '${widget.name}. The order is session pin, then this profile, '
+            'then Routing, then the active profile.'),
+        PanelGroup(children: [
+          _radioRow('Routing default', 'Your Routing settings for desks',
+              _work == null, () => _pickWork(null)),
+          for (final p in cfg.profiles)
+            _radioRow(p.name, '${p.provider} \u00b7 ${p.model}',
+                p.name == _work, () => _pickWork(p.name)),
+        ]),
+        PanelGroup(top: S.s4, children: [
+          PanelRow(
+            label: 'Separate desk model',
+            sub: 'Keep the desk on its own model while tasks use the one above',
+            minHeight: 44,
+            trailing:
+                SettingsSwitch(value: _separate, onChanged: _toggleSeparate),
+            onTap: () => _toggleSeparate(!_separate),
+          ),
+          if (_separate && inPanel)
+            PanelRow(
+              label: 'Desk runs on',
+              value: _desk ?? _work ?? 'Routing default',
+              chevron: true,
+              onTap: () => _pickDeskPage(cfg),
+            ),
+          if (_separate && !inPanel)
+            for (final p in cfg.profiles)
+              _radioRow(p.name, '${p.provider} \u00b7 ${p.model}',
+                  p.name == _desk, () => _pickDesk(p.name)),
+        ]),
+        if (statusLine != null) PanelFootnote(statusLine),
+        PanelGroup(top: S.s4, children: [
+          Padding(
+            padding:
+                EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(12)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Compact above', style: sans(13.5, color: AppColors.fg1)),
+                Text('Smaller ceilings compact sooner and cost less per turn',
+                    style: sans(12, color: AppColors.fg4)),
+                SizedBox(height: S.of(10)),
+                PanelSegments(
+                  labels: const [
+                    'Model window',
+                    '128k',
+                    '200k',
+                    '400k',
+                    'Custom'
+                  ],
+                  index: ctxIndex,
+                  onSelect: (i) {
+                    if (i == 4) {
+                      _editContext();
+                      return;
+                    }
+                    final next = _presets[i];
+                    if (next == _context) return;
+                    final before = _context;
+                    _save(
+                        () => widget.client
+                            .setAgentContext(widget.agent.id, next),
+                        () => _context = next,
+                        () => _context = before);
+                  },
+                ),
+                SizedBox(height: S.of(10)),
+                Text(
+                    _context == null || ctxIndex < 4
+                        ? 'Custom takes at least 16k, for example 160k.'
+                        : 'Custom ceiling: ${tokensLabel(_context!)}. Minimum 16k.',
+                    style: sans(11.5, color: AppColors.fg4, height: 1.4)),
+              ],
+            ),
+          ),
+        ]),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cfg = _cfg;
@@ -242,6 +362,7 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
             ? 'Desk is on $running, moving to $deskTarget after this turn'
             : 'Desk is running on $running';
 
+    if (!kMobile) return _desktop(cfg, statusLine);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,

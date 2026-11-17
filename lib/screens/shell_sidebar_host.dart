@@ -53,6 +53,10 @@ class ShellSidebarHost extends StatelessWidget {
     required this.onSelectInstance,
     required this.onOpenMissionControl,
     this.onOpenPalette,
+    this.onOpenTasks,
+    this.onOpenPullRequests,
+    this.onOpenArtifacts,
+    this.onOpenWakes,
     this.desktopFooter,
     required this.onAddInstance,
     required this.onRenameInstance,
@@ -108,6 +112,10 @@ class ShellSidebarHost extends StatelessWidget {
   final ValueChanged<Instance> onSelectInstance;
   final VoidCallback onOpenMissionControl;
   final VoidCallback? onOpenPalette;
+  final VoidCallback? onOpenTasks;
+  final VoidCallback? onOpenPullRequests;
+  final VoidCallback? onOpenArtifacts;
+  final VoidCallback? onOpenWakes;
   final Widget? desktopFooter;
   final VoidCallback onAddInstance;
   final void Function(Instance inst, String name) onRenameInstance;
@@ -219,6 +227,10 @@ class ShellSidebarHost extends StatelessWidget {
     return Sidebar(
       topInset: topInset,
       onOpenPalette: onOpenPalette,
+      onOpenTasks: onOpenTasks,
+      onOpenPullRequests: onOpenPullRequests,
+      onOpenArtifacts: onOpenArtifacts,
+      onOpenWakes: onOpenWakes,
       desktopFooter: desktopFooter,
       onOpenAgent: onOpenRightAgent,
       instances: instances,

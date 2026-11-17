@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:media_store_plus/media_store_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -163,13 +164,28 @@ class FileViewer extends StatefulWidget {
   /// When true (desktop/shell tab), the window already has a tab strip —
   /// skip the in-pane title bar and put download/edit on a thin action row.
   final bool embedded;
+
+  /// Session and workspace-relative path: when both are set the viewer asks
+  /// git for this file's changes (Modified chip, gutter marks, +/- totals).
+  final String? sessionId;
+  final String? relPath;
+
+  /// Shows a Diff button that opens the file's diff.
+  final VoidCallback? onShowDiff;
+
+  /// False when the host already draws a header above the embedded viewer.
+  final bool header;
   const FileViewer(
       {super.key,
       required this.client,
       required this.path,
       required this.name,
       this.onClose,
-      this.embedded = false});
+      this.embedded = false,
+      this.sessionId,
+      this.relPath,
+      this.onShowDiff,
+      this.header = true});
   @override
   State<FileViewer> createState() => _FileViewerState();
 }
@@ -185,6 +201,8 @@ class _FileViewerState extends State<FileViewer> {
   bool _crlf = false;
   bool _dirty = false;
   bool _saving = false;
+  DiffMarks? _marks;
+  final FocusNode _focus = FocusNode();
 
   // Desktop edits in place; phones keep the separate editor screen.
   bool get _inline => !kMobile && (_f?.editable ?? false);
@@ -270,8 +288,8 @@ class _FileViewerState extends State<FileViewer> {
 
   Widget _markdownView(String content) => SelectionArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-              kMobile ? M.gutter : S.of(28), S.s20, kMobile ? M.gutter : S.of(28), S.of(48)),
+          padding: EdgeInsets.fromLTRB(kMobile ? M.gutter : S.of(28), S.s20,
+              kMobile ? M.gutter : S.of(28), S.of(48)),
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 760),
@@ -328,11 +346,71 @@ class _FileViewerState extends State<FileViewer> {
 
   @override
   void dispose() {
+    _focus.dispose();
     _controller.dispose();
     super.dispose();
   }
 
+  Future<void> _loadMarks() async {
+    final sid = widget.sessionId, rel = widget.relPath;
+    if (kMobile || sid == null || rel == null) return;
+    try {
+      final patch = await widget.client.gitDiff(sid, file: rel);
+      if (mounted) setState(() => _marks = DiffMarks.parse(patch));
+    } catch (_) {}
+  }
+
+  /// Fetches the file to a temp path and hands it to the OS default app.
+  Future<void> _openWith() async {
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File(
+          '${dir.path}/snippet-open-${DateTime.now().microsecondsSinceEpoch}-${widget.name}');
+      await widget.client.downloadToFile(widget.path, file);
+      if (!await openLocalFile(file.path) && mounted) {
+        toast(context, 'No app could open ${widget.name}', danger: true);
+      }
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+    }
+  }
+
+  void _edit() {
+    if (_isMarkdown && !_source) setState(() => _source = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
+  }
+
+  Widget _desktopHeader(FileContent? f) {
+    final text = f != null && !f.binary && !_isMedia && _error == null;
+    final marks = _marks;
+    return _FileHeaderBar(
+      path: widget.relPath ?? _homeShort(widget.path),
+      modified: _dirty || (marks != null && !marks.isEmpty),
+      leading: [
+        if (text && _isMarkdown) ...[
+          _modeTab('Preview', !_source, () => setState(() => _source = false)),
+          SizedBox(width: S.s4),
+          _modeTab('Source', _source, () => setState(() => _source = true)),
+          SizedBox(width: S.s8),
+        ],
+      ],
+      actions: [
+        if (_inline && (_dirty || _saving))
+          Btn(_saving ? 'Saving…' : 'Save',
+              small: true, disabled: _saving, onTap: _save),
+        if (widget.onShowDiff != null)
+          _HeaderButton('Diff', icon: 'split', onTap: widget.onShowDiff),
+        if (text && _inline) _HeaderButton('Edit', icon: 'edit', onTap: _edit),
+        IconBtn('download',
+            tooltip: 'Download', onTap: _downloading ? null : _download),
+        if (!_isMedia || f != null)
+          IconBtn('external-link', tooltip: 'Open with', onTap: _openWith),
+      ],
+    );
+  }
+
   Future<void> _load() async {
+    unawaited(_loadMarks());
     setState(() => _loading = true);
     try {
       final f = await widget.client.readFile(widget.path);
@@ -378,17 +456,16 @@ class _FileViewerState extends State<FileViewer> {
       if (editable && kMobile) _EditPill(onTap: edit),
     ];
     // The Mac window bar has no file actions; other desktops get them from CardTabStrip.
-    final barActions =
-        !widget.embedded || kMacOS ? actions : const <Widget>[];
+    final barActions = !widget.embedded || kMacOS ? actions : const <Widget>[];
     final merged = !kMobile;
+    final chrome = widget.embedded && !kMobile && widget.header;
     final meta = f == null || f.binary || _isMedia
         ? null
         : '${_controller.lineCount} lines · ${formatBytes(f.size)}${f.truncated ? ' · truncated' : ''}';
     return Scaffold(
-      backgroundColor:
-          widget.embedded && !kMobile
-              ? Colors.transparent
-              : AppColors.pageCanvas,
+      backgroundColor: widget.embedded && !kMobile
+          ? Colors.transparent
+          : AppColors.pageCanvas,
       body: SafeArea(
         bottom: false,
         child: Column(children: [
@@ -401,7 +478,10 @@ class _FileViewerState extends State<FileViewer> {
                     : '$meta · ${_homeShort(widget.path)}',
                 onBack: widget.onClose ?? () => Navigator.pop(context),
                 actions: merged ? const [] : actions),
-          if (merged && (_isMedia || f == null || f.binary) &&
+          if (chrome) _desktopHeader(f),
+          if (!chrome &&
+              merged &&
+              (_isMedia || f == null || f.binary) &&
               barActions.isNotEmpty)
             _FileToolbar(actions: barActions),
           if (_isImage)
@@ -480,30 +560,29 @@ class _FileViewerState extends State<FileViewer> {
               ),
             )
           else ...[
-            if (widget.embedded || _isMarkdown || merged || _inline)
-            _FileToolbar(
-              leading: [
-                if (_isMarkdown) ...[
-                  _modeTab('Preview', !_source,
-                      () => setState(() => _source = false)),
-                  SizedBox(width: S.s4),
-                  _modeTab(
-                      'Source', _source, () => setState(() => _source = true)),
+            if (!chrome &&
+                (widget.embedded || _isMarkdown || merged || _inline))
+              _FileToolbar(
+                leading: [
+                  if (_isMarkdown) ...[
+                    _modeTab('Preview', !_source,
+                        () => setState(() => _source = false)),
+                    SizedBox(width: S.s4),
+                    _modeTab('Source', _source,
+                        () => setState(() => _source = true)),
+                  ],
                 ],
-              ],
-              meta: widget.embedded ? meta : null,
-              actions: [
-                if (_inline && (_dirty || _saving))
-                  Padding(
-                    padding: EdgeInsets.only(left: S.s8),
-                    child: Btn(_saving ? 'Saving…' : 'Save',
-                        small: true,
-                        disabled: _saving,
-                        onTap: _save),
-                  ),
-                if (merged) ...barActions,
-              ],
-            ),
+                meta: widget.embedded ? meta : null,
+                actions: [
+                  if (_inline && (_dirty || _saving))
+                    Padding(
+                      padding: EdgeInsets.only(left: S.s8),
+                      child: Btn(_saving ? 'Saving…' : 'Save',
+                          small: true, disabled: _saving, onTap: _save),
+                    ),
+                  if (merged) ...barActions,
+                ],
+              ),
             if (_isMarkdown && !_source)
               Expanded(child: _markdownView(_controller.text))
             else
@@ -516,24 +595,35 @@ class _FileViewerState extends State<FileViewer> {
                         control: true): _save,
                   },
                   child: CodeEditor(
-                  controller: _controller,
-                  readOnly: !_inline,
-                  wordWrap: false,
-                  style: codeEditorStyle(widget.name),
-                  indicatorBuilder:
-                      (context, editingController, chunkController, notifier) {
-                    return Row(children: [
-                      DefaultCodeLineNumber(
-                          controller: editingController, notifier: notifier),
-                      DefaultCodeChunkIndicator(
-                          width: 20,
-                          controller: chunkController,
-                          notifier: notifier),
-                    ]);
-                  },
-                ),
+                    controller: _controller,
+                    focusNode: _focus,
+                    readOnly: !_inline,
+                    wordWrap: false,
+                    style: codeEditorStyle(widget.name),
+                    indicatorBuilder: (context, editingController,
+                        chunkController, notifier) {
+                      return Row(children: [
+                        DefaultCodeLineNumber(
+                            controller: editingController, notifier: notifier),
+                        if (!kMobile && _marks != null && !_marks!.isEmpty) ...[
+                          SizedBox(width: S.s4),
+                          _GutterMarks(notifier: notifier, marks: _marks!),
+                        ],
+                        DefaultCodeChunkIndicator(
+                            width: 20,
+                            controller: chunkController,
+                            notifier: notifier),
+                      ]);
+                    },
+                  ),
                 ),
               ),
+            if (!kMobile && (!_isMarkdown || _source))
+              _FileStatusBar(
+                  language: _languageLabel(widget.name),
+                  crlf: _crlf,
+                  controller: _controller,
+                  marks: _marks),
           ],
         ]),
       ),
@@ -938,5 +1028,316 @@ Future<void> _downloadDoneSheetFor(
     if (!opened) shareFile();
   } else if (action == 'share') {
     shareFile();
+  }
+}
+
+/// Which new-file lines a unified diff added or changed, plus the totals.
+class DiffMarks {
+  const DiffMarks(
+      {this.added = const {},
+      this.changed = const {},
+      this.add = 0,
+      this.del = 0});
+  final Set<int> added; // 0-based line indexes
+  final Set<int> changed;
+  final int add;
+  final int del;
+  bool get isEmpty => add == 0 && del == 0;
+
+  static final _hunk = RegExp(r'^@@ -\d+(?:,\d+)? \+(\d+)');
+
+  factory DiffMarks.parse(String patch) {
+    final added = <int>{}, changed = <int>{};
+    var add = 0, del = 0, line = 0, inHunk = false;
+    var run = <int>[];
+    var runDel = 0;
+    void flush() {
+      if (run.isNotEmpty) (runDel > 0 ? changed : added).addAll(run);
+      run = [];
+      runDel = 0;
+    }
+
+    for (final l in patch.split('\n')) {
+      final m = _hunk.firstMatch(l);
+      if (m != null) {
+        flush();
+        inHunk = true;
+        line = int.parse(m.group(1)!) - 1;
+        continue;
+      }
+      if (!inHunk || l.isEmpty) continue;
+      switch (l[0]) {
+        case '+':
+          run.add(line++);
+          add++;
+        case '-':
+          runDel++;
+          del++;
+        case ' ':
+          flush();
+          line++;
+      }
+    }
+    flush();
+    return DiffMarks(added: added, changed: changed, add: add, del: del);
+  }
+}
+
+String _languageLabel(String name) {
+  final d = name.lastIndexOf('.');
+  final ext = d >= 0 ? name.substring(d + 1).toLowerCase() : '';
+  return switch (ext) {
+    'dart' => 'Dart',
+    'rs' => 'Rust',
+    'ts' || 'tsx' => 'TypeScript',
+    'js' || 'jsx' || 'mjs' => 'JavaScript',
+    'py' => 'Python',
+    'md' || 'markdown' || 'mdx' => 'Markdown',
+    'json' => 'JSON',
+    'yaml' || 'yml' => 'YAML',
+    'toml' => 'TOML',
+    'html' => 'HTML',
+    'css' => 'CSS',
+    'sh' || 'zsh' || 'bash' => 'Shell',
+    'kt' => 'Kotlin',
+    'swift' => 'Swift',
+    'go' => 'Go',
+    'java' => 'Java',
+    'c' || 'h' => 'C',
+    'cpp' || 'cc' || 'hpp' => 'C++',
+    'sql' => 'SQL',
+    '' => 'Plain text',
+    _ => ext.toUpperCase(),
+  };
+}
+
+/// Green and amber bars beside changed lines, in the line-number column.
+/// A render object because the notifier fires during layout, where a
+/// ValueListenableBuilder cannot rebuild.
+class _GutterMarks extends LeafRenderObjectWidget {
+  const _GutterMarks({required this.notifier, required this.marks});
+  final CodeIndicatorValueNotifier notifier;
+  final DiffMarks marks;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _MarksRender(notifier, marks, AppColors.ok, AppColors.run);
+
+  @override
+  void updateRenderObject(BuildContext context, _MarksRender r) => r
+    ..notifier = notifier
+    ..marks = marks
+    ..ok = AppColors.ok
+    ..run = AppColors.run;
+}
+
+class _MarksRender extends RenderBox {
+  _MarksRender(this._notifier, this._marks, this._ok, this._run);
+  CodeIndicatorValueNotifier _notifier;
+  DiffMarks _marks;
+  Color _ok, _run;
+
+  set notifier(CodeIndicatorValueNotifier v) {
+    if (v == _notifier) return;
+    _notifier.removeListener(markNeedsPaint);
+    _notifier = v;
+    if (attached) _notifier.addListener(markNeedsPaint);
+    markNeedsPaint();
+  }
+
+  set marks(DiffMarks v) {
+    _marks = v;
+    markNeedsPaint();
+  }
+
+  set ok(Color v) {
+    _ok = v;
+    markNeedsPaint();
+  }
+
+  set run(Color v) {
+    _run = v;
+    markNeedsPaint();
+  }
+
+  @override
+  void detach() {
+    _notifier.removeListener(markNeedsPaint);
+    super.detach();
+  }
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _notifier.addListener(markNeedsPaint);
+  }
+
+  @override
+  bool get sizedByParent => true;
+
+  @override
+  Size computeDryLayout(BoxConstraints c) =>
+      Size(3, c.hasBoundedHeight ? c.maxHeight : 0);
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    for (final p in _notifier.value?.paragraphs ?? const []) {
+      final c = _marks.added.contains(p.index)
+          ? _ok
+          : _marks.changed.contains(p.index)
+              ? _run
+              : null;
+      if (c == null) continue;
+      context.canvas.drawRect(
+          Rect.fromLTWH(
+              offset.dx, offset.dy + p.offset.dy, 3, p.paragraph.height),
+          Paint()..color = c);
+    }
+  }
+}
+
+/// A ghost button the size of the mockup's `.btn.sm.ghost`.
+class _HeaderButton extends StatelessWidget {
+  const _HeaderButton(this.label, {this.icon, this.onTap});
+  final String label;
+  final String? icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(R.of(6)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(R.of(6)),
+          onTap: onTap,
+          child: Container(
+            height: 26,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.border2),
+              borderRadius: BorderRadius.circular(R.of(6)),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (icon != null) ...[
+                AppIcon(icon!, size: 13, color: AppColors.fg2),
+                const SizedBox(width: 6),
+              ],
+              Text(label, style: sans(12, color: AppColors.fg2)),
+            ]),
+          ),
+        ),
+      );
+}
+
+/// Breadcrumb, Modified chip and actions above an embedded file.
+class _FileHeaderBar extends StatelessWidget {
+  const _FileHeaderBar(
+      {required this.path,
+      required this.modified,
+      this.leading = const [],
+      this.actions = const []});
+  final String path;
+  final bool modified;
+  final List<Widget> leading;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final parts = path.split('/').where((s) => s.isNotEmpty).toList();
+    final shown = parts.length > 4 ? parts.sublist(parts.length - 4) : parts;
+    final dir = [
+      if (parts.length > shown.length) '…',
+      ...shown.take(shown.length - 1)
+    ].map((s) => '$s / ').join();
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
+      decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.border))),
+      child: Row(children: [
+        Expanded(
+          child: Row(children: [
+            Flexible(
+              child: Text.rich(
+                TextSpan(children: [
+                  TextSpan(
+                      text: dir, style: codeMono(12, color: AppColors.fg4)),
+                  TextSpan(
+                      text: shown.isEmpty ? path : shown.last,
+                      style: codeMono(12, color: AppColors.fg1)),
+                ]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (modified) ...[
+              const SizedBox(width: 8),
+              Container(
+                height: 20,
+                padding: const EdgeInsets.symmetric(horizontal: 7),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    color: AppColors.runBg,
+                    borderRadius: BorderRadius.circular(R.of(5))),
+                child:
+                    Text('Modified', style: sans(11.5, color: AppColors.run)),
+              ),
+            ],
+          ]),
+        ),
+        ...leading,
+        for (final a in actions) ...[const SizedBox(width: 6), a],
+      ]),
+    );
+  }
+}
+
+/// Language, encoding, line count, change totals and cursor position.
+class _FileStatusBar extends StatelessWidget {
+  const _FileStatusBar(
+      {required this.language,
+      required this.crlf,
+      required this.controller,
+      this.marks});
+  final String language;
+  final bool crlf;
+  final CodeLineEditingController controller;
+  final DiffMarks? marks;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = sans(11.5, color: AppColors.fg4);
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (_, __) {
+        final sel = controller.selection;
+        final m = marks;
+        return Container(
+          height: 28,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: AppColors.border))),
+          child: Row(children: [
+            Text(language, style: t),
+            const SizedBox(width: 16),
+            Text('UTF-8', style: t),
+            const SizedBox(width: 16),
+            Text(crlf ? 'CRLF' : 'LF', style: t),
+            const SizedBox(width: 16),
+            Text('${controller.lineCount} lines', style: t),
+            const Spacer(),
+            if (m != null && !m.isEmpty) ...[
+              Text('+${m.add}', style: t.copyWith(color: AppColors.ok)),
+              const SizedBox(width: 4),
+              Text('−${m.del}', style: t.copyWith(color: AppColors.danger)),
+              Text(' vs HEAD', style: t),
+              const SizedBox(width: 16),
+            ],
+            Text('Ln ${sel.extentIndex + 1}, Col ${sel.extentOffset + 1}',
+                style: t),
+          ]),
+        );
+      },
+    );
   }
 }

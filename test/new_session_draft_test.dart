@@ -89,61 +89,7 @@ Future<void> _pump(
 }
 
 void main() {
-  testWidgets('recent row shows up to four folder sessions and opens one',
-      (tester) async {
-    final client = _FakeDaemon();
-    final opened = <String>[];
-    final recents = [
-      _session('s5', 'Elsewhere', folder: '/other', lastActive: 50),
-      _session('s4', 'Fourth', lastActive: 40),
-      _session('s3', 'Third', lastActive: 30, profile: 'opus'),
-      _session('s2', 'Second', lastActive: 20, agentId: 'reviewer'),
-      _session('s1', 'First', lastActive: 10),
-      _session('s0', 'Worktree one',
-          folder: '/repo-wt', originFolder: '/repo', lastActive: 5),
-    ];
-    await _pump(tester, client,
-        recents: recents, onOpen: opened.add);
-
-    expect(find.text('Recent'), findsOneWidget);
-    expect(find.text('First'), findsOneWidget);
-    expect(find.text('Fourth'), findsOneWidget);
-    expect(find.text('Third'), findsOneWidget);
-    expect(find.text('Second'), findsOneWidget);
-    // Fifth-newest and the other folder's session stay off the row.
-    expect(find.text('Elsewhere'), findsNothing);
-    expect(find.text('Worktree one'), findsNothing);
-
-    await tester.tap(find.text('Third'));
-    await tester.pumpAndSettle();
-    expect(opened, ['s3']);
-  });
-
-  testWidgets('recent row is hidden without an open callback', (tester) async {
-    final client = _FakeDaemon()
-      ..sessionList = [_session('s1', 'First', lastActive: 10)];
-    await _pump(tester, client, recents: client.sessionList);
-
-    expect(find.text('Recent'), findsNothing);
-    expect(client.sessionsCalls, 0);
-  });
-
-  testWidgets('recents are fetched from the daemon when no pool is passed',
-      (tester) async {
-    final client = _FakeDaemon()
-      ..sessionList = [
-        _session('s1', 'Fetched', lastActive: 10),
-        _session('s2', 'Other folder', folder: '/elsewhere', lastActive: 20),
-      ];
-    await _pump(tester, client, onOpen: (_) {});
-
-    expect(client.sessionsCalls, 1);
-    expect(find.text('Recent'), findsOneWidget);
-    expect(find.text('Fetched'), findsOneWidget);
-    expect(find.text('Other folder'), findsNothing);
-  });
-
-  testWidgets('source session prefills folder, branch and profile',
+  testWidgets('source session prefills folder and profile',
       (tester) async {
     final client = _FakeDaemon();
     final source = _session(
@@ -156,7 +102,6 @@ void main() {
     await _pump(tester, client, source: source, folder: null);
 
     expect(find.text('src-project'), findsOneWidget);
-    expect(find.text('feature-x'), findsOneWidget);
     expect(find.text('gemini-pro'), findsOneWidget);
   });
 }

@@ -5,6 +5,7 @@ import 'package:markdown/markdown.dart' as md;
 import 'highlight.dart';
 import 'screens/artifact_viewer.dart' show MermaidDiagram, canRenderMermaid;
 import 'platform.dart';
+import 'settings_form.dart' show Grouped;
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -443,6 +444,9 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
     final lang =
         widget.language.trim().isEmpty ? 'code' : widget.language.trim();
     final gutterW = (lines.length.toString().length.clamp(2, 5) * 7.5) + 4.0;
+    if (!kMobile) {
+      return _desktop(lines, () => setState(() => _wrap = !_wrap));
+    }
     return Padding(
       padding: EdgeInsets.symmetric(vertical: S.s8),
       child: Container(
@@ -504,7 +508,8 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
                             child: Text(
                               '${i + 1}',
                               textAlign: TextAlign.right,
-                              style: codeMono(11, height: 1.55, color: AppColors.fg4),
+                              style: codeMono(11,
+                                  height: 1.55, color: AppColors.fg4),
                             ),
                           ),
                           SizedBox(width: S.of(10)),
@@ -531,7 +536,8 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
                       for (var i = 0; i < lines.length; i++) ...[
                         TextSpan(
                           text: '${i + 1}'.padLeft(3),
-                          style: codeMono(12, height: 1.55, color: AppColors.fg3),
+                          style:
+                              codeMono(12, height: 1.55, color: AppColors.fg3),
                         ),
                         const TextSpan(text: '  '),
                         highlightedCodeSpan(
@@ -547,4 +553,90 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
       ),
     );
   }
+}
+
+extension on _MdCodeBlockState {
+  /// Desktop: a bare bordered block; copy and wrap appear on hover.
+  Widget _desktop(List<String> lines, VoidCallback toggleWrap) {
+    return _HoverTools(
+      code: widget.code,
+      wrap: _wrap,
+      onWrap: toggleWrap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        decoration: BoxDecoration(
+          color: Grouped.row,
+          borderRadius: BorderRadius.circular(R.of(13)),
+          border: Border.all(color: AppColors.fg1.withValues(alpha: 0.06)),
+        ),
+        child: _wrap
+            ? Text.rich(highlightedCodeSpan(widget.code,
+                language: widget.language, fontSize: 12.5, height: 1.6))
+            : NotificationListener<ScrollNotification>(
+                onNotification: (_) => true,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SelectableText.rich(highlightedCodeSpan(widget.code,
+                      language: widget.language, fontSize: 12.5, height: 1.6)),
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+class _HoverTools extends StatefulWidget {
+  const _HoverTools(
+      {required this.code,
+      required this.wrap,
+      required this.onWrap,
+      required this.child});
+  final String code;
+  final bool wrap;
+  final VoidCallback onWrap;
+  final Widget child;
+
+  @override
+  State<_HoverTools> createState() => _HoverToolsState();
+}
+
+class _HoverToolsState extends State<_HoverTools> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: Padding(
+          padding: const EdgeInsets.only(top: 2, bottom: 12),
+          child: Stack(children: [
+            widget.child,
+            Positioned(
+              top: 4,
+              right: 4,
+              child: AnimatedOpacity(
+                opacity: _hover ? 1 : 0,
+                duration: const Duration(milliseconds: 120),
+                child: IgnorePointer(
+                  ignoring: !_hover,
+                  child: Row(children: [
+                    IconBtn('wrap',
+                        size: 26,
+                        iconSize: 13,
+                        active: widget.wrap,
+                        tooltip: widget.wrap ? 'Unwrap lines' : 'Wrap lines',
+                        onTap: widget.onWrap),
+                    IconBtn('clipboard',
+                        size: 26, iconSize: 13, tooltip: 'Copy', onTap: () {
+                      Clipboard.setData(ClipboardData(text: widget.code));
+                      toast(context, 'Copied');
+                    }),
+                  ]),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      );
 }

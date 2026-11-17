@@ -137,6 +137,27 @@ class ApprovalBar extends StatefulWidget {
 
 class ApprovalBarState extends State<ApprovalBar> {
   bool _sent = false;
+  bool _always = false;
+  String _alwaysKind = 'approve_all';
+
+  @override
+  void initState() {
+    super.initState();
+    if (!kMobile) HardwareKeyboard.instance.addHandler(_onEnter);
+  }
+
+  @override
+  void dispose() {
+    if (!kMobile) HardwareKeyboard.instance.removeHandler(_onEnter);
+    super.dispose();
+  }
+
+  // Enter approves unless a text field has focus (the composer below).
+  bool _onEnter(KeyEvent e) {
+    if (!deskPlainEnter(e) || _sent || deskTypingFocused()) return false;
+    _decide({'kind': _always ? _alwaysKind : 'approve'});
+    return true;
+  }
 
   void _decide(Map<String, dynamic> m) {
     if (_sent) return;
@@ -239,6 +260,74 @@ class ApprovalBarState extends State<ApprovalBar> {
                 ? null
                 : toolTitle(tool);
 
+    if (!kMobile) {
+      final alwaysLabel = ruleLabel != null
+          ? 'Always allow $ruleLabel in this session'
+          : (canAlways ? 'Always allow' : null);
+      _alwaysKind = ruleLabel != null ? 'approve_rule' : 'approve_all';
+      return DeskPinCard(
+        icon: 'shield',
+        iconColor: AppColors.run,
+        eyebrow: 'Needs your approval',
+        trailing: Text(
+            [
+              if (subtitle != null) subtitle,
+              if (total > 1) '$index of $total',
+            ].join(' \u00b7 '),
+            style: sans(12, color: AppColors.fg4)),
+        children: [
+          DeskPinTitle(headline, why: reason.isEmpty ? null : reason),
+          if (detail.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              constraints: const BoxConstraints(maxHeight: 180),
+              decoration: BoxDecoration(
+                color: AppColors.bg,
+                borderRadius: BorderRadius.circular(R.of(8)),
+                border: Border.all(color: AppColors.line),
+              ),
+              child: SingleChildScrollView(
+                child: SelectableText(detail,
+                    style: codeMono(12, height: 1.65, color: AppColors.fg1)),
+              ),
+            ),
+          if (isVault)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+              child: Wrap(spacing: S.s6, runSpacing: S.s4, children: [
+                for (final name in secrets)
+                  Tag(name, tone: Tone.run, icon: 'key', mono: true),
+              ]),
+            ),
+          DeskPinBar(
+            left: alwaysLabel == null
+                ? null
+                : Align(
+                    alignment: Alignment.centerLeft,
+                    child: DeskCheck(
+                      checked: _always,
+                      label: alwaysLabel,
+                      onTap: _sent
+                          ? null
+                          : () => setState(() => _always = !_always),
+                    ),
+                  ),
+            buttons: [
+              DeskTextButton('Deny',
+                  onTap: _sent ? null : () => _decide({'kind': 'deny'})),
+              DeskTextButton('Approve',
+                  kind: DeskBtnKind.primary,
+                  kbd: '\u21b5',
+                  busy: _sent,
+                  onTap: () =>
+                      _decide({'kind': _always ? _alwaysKind : 'approve'})),
+            ],
+          ),
+        ],
+      );
+    }
+
     return Padding(
       padding: EdgeInsets.fromLTRB(0, S.s4, 0, S.s6),
       child: ChatCard(children: [
@@ -253,9 +342,8 @@ class ApprovalBarState extends State<ApprovalBar> {
                   subtitleView: reason.isEmpty
                       ? null
                       : ApprovalReason(reason, meta: subtitle),
-                  eyebrow: kMobile && widget.agentId != null
-                      ? _askRow(req)
-                      : null,
+                  eyebrow:
+                      kMobile && widget.agentId != null ? _askRow(req) : null,
                   trailing: total > 1 ? ChatCardPill('$index of $total') : null,
                 ),
                 if (detail.isNotEmpty)
@@ -264,7 +352,8 @@ class ApprovalBarState extends State<ApprovalBar> {
                       radius: BorderRadius.circular(R.card),
                       kind: TactileKind.inset,
                       child: Container(
-                        padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s6),
+                        padding:
+                            EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s6),
                         decoration: BoxDecoration(
                           color: AppColors.bg,
                           borderRadius: BorderRadius.circular(R.card),
@@ -313,7 +402,14 @@ class ApprovalBarState extends State<ApprovalBar> {
 class QuestionBar extends StatefulWidget {
   final Map<String, dynamic> question;
   final void Function(Map<String, dynamic>) onSend;
-  const QuestionBar({super.key, required this.question, required this.onSend});
+
+  /// The asking agent, for the desktop card's "{Agent} asks" line.
+  final String? agentName;
+  const QuestionBar(
+      {super.key,
+      required this.question,
+      required this.onSend,
+      this.agentName});
   @override
   State<QuestionBar> createState() => QuestionBarState();
 }
@@ -567,8 +663,8 @@ class QuestionBarState extends State<QuestionBar> {
     return KeyEventResult.ignored;
   }
 
-  Widget _numberHint(int index) => Text('${index + 1}',
-      style: mono(10, color: AppColors.fg4));
+  Widget _numberHint(int index) =>
+      Text('${index + 1}', style: mono(10, color: AppColors.fg4));
 
   List<Widget> _inputFor(Map<String, dynamic> q) {
     final id = q['id'].toString();
@@ -607,8 +703,8 @@ class QuestionBarState extends State<QuestionBar> {
       ],
       if (writing)
         Padding(
-          padding: EdgeInsets.fromLTRB(
-              ChatCard.pad, k == 'free_text' ? 0 : S.of(10), ChatCard.pad, S.s4),
+          padding: EdgeInsets.fromLTRB(ChatCard.pad,
+              k == 'free_text' ? 0 : S.of(10), ChatCard.pad, S.s4),
           child: AppField(
               controller: controller,
               hint: 'Write your answer',
@@ -626,8 +722,8 @@ class QuestionBarState extends State<QuestionBar> {
           InkWell(
             onTap: _sent ? null : () => _goTo(i),
             child: Padding(
-              padding:
-                  EdgeInsets.symmetric(horizontal: ChatCard.pad, vertical: S.of(10)),
+              padding: EdgeInsets.symmetric(
+                  horizontal: ChatCard.pad, vertical: S.of(10)),
               child:
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(
@@ -650,6 +746,117 @@ class QuestionBarState extends State<QuestionBar> {
         ],
       ];
 
+  Widget _deskCard({
+    required Map<String, dynamic>? q,
+    required String? ctx,
+    required int total,
+    required bool last,
+    required String nextLabel,
+  }) {
+    final name = (widget.agentName ?? '').trim();
+    final String? id = q?['id']?.toString();
+    final multi = q != null && _kind(q) == 'multi_choice';
+    final opts = q == null ? const <_QOption>[] : _options(q);
+    final writing = q != null &&
+        id != null &&
+        (_kind(q) == 'free_text' || _freeText.contains(id));
+    final children = <Widget>[];
+    if (_review) {
+      children.add(const DeskPinTitle('Check your answers'));
+      children.add(const SizedBox(height: 8));
+      for (var i = 0; i < _questions.length; i++) {
+        children.add(DeskOption(
+          keyLabel: '${i + 1}',
+          label: _header(_questions[i], i),
+          detail: _answerFor(_questions[i]),
+          selected: false,
+          onTap: _sent ? null : () => _goTo(i),
+        ));
+      }
+    } else if (q != null && id != null) {
+      children.add(DeskPinTitle(q['text']?.toString() ?? '', why: ctx));
+      children.add(const SizedBox(height: 8));
+      if (_kind(q) != 'free_text') {
+        for (var i = 0; i < opts.length; i++) {
+          final picked = multi
+              ? (_multi[id]?.contains(opts[i].value) ?? false)
+              : _choice[id] == opts[i].value;
+          children.add(DeskOption(
+            keyLabel: '${i + 1}',
+            label: opts[i].label,
+            detail: opts[i].description,
+            selected: picked && !_freeText.contains(id),
+            onTap: _sent ? null : () => _pick(q, opts[i]),
+          ));
+        }
+        children.add(DeskOption(
+          keyLabel: '',
+          icon: 'edit',
+          label: _freeText.contains(id)
+              ? 'Writing a response'
+              : 'Write your own answer',
+          muted: !_freeText.contains(id),
+          selected: _freeText.contains(id),
+          onTap: _sent ? null : _toggleFreeText,
+        ));
+      }
+      if (writing) {
+        children.add(Padding(
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+          child: AppField(
+              controller: _controllerFor(id),
+              hint: 'Write your answer',
+              minLines: 2,
+              maxLines: 4,
+              onSubmitted: (_) => _submit()),
+        ));
+      }
+    }
+    final hasKeys = !_review && !writing && opts.isNotEmpty;
+    return DeskPinCard(
+      icon: 'help-circle',
+      iconColor: AppColors.accent,
+      eyebrow: _review ? 'Review' : (name.isEmpty ? 'Question' : '$name asks'),
+      trailing:
+          total > 1 && !_review ? DeskSteps(index: _step, total: total) : null,
+      children: [
+        ...children,
+        DeskPinBar(
+          left: _sent
+              ? null
+              : Row(mainAxisSize: MainAxisSize.min, children: [
+                  Flexible(
+                    child: Text(
+                        hasKeys
+                            ? 'Press 1 to ${opts.length > 9 ? 9 : opts.length} to choose'
+                            : '',
+                        style: sans(12, color: AppColors.fg4)),
+                  ),
+                  if (hasKeys) const SizedBox(width: 6),
+                  if (hasKeys)
+                    Text('\u00b7', style: sans(12, color: AppColors.fg4)),
+                  if (hasKeys) const SizedBox(width: 6),
+                  DeskKbd('\u21b5'),
+                  const SizedBox(width: 6),
+                  Text(last ? 'to submit' : 'for next',
+                      style: sans(12, color: AppColors.fg4)),
+                ]),
+          buttons: [
+            if (!_review)
+              DeskTextButton('Skip',
+                  kind: DeskBtnKind.ghost, onTap: _sent ? null : _skip),
+            if (_step > 0 || _review)
+              DeskTextButton('Back', onTap: _sent ? null : _back),
+            DeskTextButton(_sent ? 'Sending\u2026' : nextLabel,
+                kind: DeskBtnKind.primary,
+                busy: _sent,
+                onTap: (_ready && !_sent) ? _submit : null),
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ctx = widget.question['context']?.toString();
@@ -667,6 +874,18 @@ class QuestionBarState extends State<QuestionBar> {
             ? Text('Review', style: sans(13, color: AppColors.fg3))
             : ChatCardSteps(index: _step, total: total))
         : null;
+    if (!kMobile) {
+      return Focus(
+        focusNode: _keys,
+        onKeyEvent: _onKey,
+        child: _deskCard(
+            q: q,
+            ctx: hasCtx ? ctx : null,
+            total: total,
+            last: last,
+            nextLabel: nextLabel),
+      );
+    }
     return Focus(
       focusNode: _keys,
       onKeyEvent: _onKey,
@@ -709,8 +928,7 @@ class QuestionBarState extends State<QuestionBar> {
                     kind: ChatCardButtonKind.secondary,
                     onTap: _sent ? null : _back),
               ChatCardButton(_sent ? 'Sending…' : nextLabel,
-                  busy: _sent,
-                  onTap: (_ready && !_sent) ? _submit : null),
+                  busy: _sent, onTap: (_ready && !_sent) ? _submit : null),
             ],
             link: _review ? null : 'Skip',
             onLink: _sent ? null : _skip,
@@ -910,8 +1128,6 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
         child: child,
       );
 
-
-
   Widget _mobileGoalRow(HarnessState? s, bool goalOn) {
     final goal = s?.goal;
     if (goalOn && goal != null) {
@@ -993,8 +1209,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
             child: Btn(
               _modeLabel(m),
               small: true,
-              variant:
-                  m == mode ? BtnVariant.primary : BtnVariant.secondary,
+              variant: m == mode ? BtnVariant.primary : BtnVariant.secondary,
               onTap: () => pick(m),
             ),
           ),
@@ -1026,8 +1241,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
             Text('Goal', style: sans(13, color: AppColors.fg3)),
             const Spacer(),
             Container(
-              padding:
-                  EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s2),
+              padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s2),
               decoration: BoxDecoration(
                 color: (goal.paused ? AppColors.run : AppColors.ok)
                     .withValues(alpha: 0.13),
@@ -1050,7 +1264,6 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
       ),
     );
   }
-
 
   /// A drill-in: a pushed page on phones (so back steps out one level), the
   /// panel's own content on desktop where a popover has no route stack.
@@ -1133,24 +1346,33 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
             onTap: widget.onLanes),
       if (!widget.hideGoal)
         goalOn
-            ? _prow('goal', 'Goal', goal.text,
-                () => _drill(context, 'Goal', (_, back) => SessionGoalPage(
-                    goal: goal,
-                    onSet: widget.onSetGoal,
-                    onCancel: widget.onCancelGoal,
-                    onResume: widget.onResumeGoal,
-                    onDone: back)),
+            ? _prow(
+                'goal',
+                'Goal',
+                goal.text,
+                () => _drill(
+                    context,
+                    'Goal',
+                    (_, back) => SessionGoalPage(
+                        goal: goal,
+                        onSet: widget.onSetGoal,
+                        onCancel: widget.onCancelGoal,
+                        onResume: widget.onResumeGoal,
+                        onDone: back)),
                 value: goal.paused ? 'Paused' : 'Working')
             : _prow(
                 'goal',
                 'Set a goal',
                 'Something to work toward on its own',
-                () => _drill(context, 'Set a goal', (_, back) => SessionGoalPage(
-                    goal: null,
-                    onSet: widget.onSetGoal,
-                    onCancel: widget.onCancelGoal,
-                    onResume: widget.onResumeGoal,
-                    onDone: back)),
+                () => _drill(
+                    context,
+                    'Set a goal',
+                    (_, back) => SessionGoalPage(
+                        goal: null,
+                        onSet: widget.onSetGoal,
+                        onCancel: widget.onCancelGoal,
+                        onResume: widget.onResumeGoal,
+                        onDone: back)),
                 accent: true),
       if (widget.onAutonomy != null)
         _prow('activity', 'Automated wakes',
@@ -1194,13 +1416,16 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
             ].join(', '), () {
           _drill(context, 'Workspace', (_, back) => _workspace(counts, back));
         }),
-      _prow('history', 'History', [
-          if (!widget.hideCheckpoints) 'Checkpoints',
-          'memory',
-          'compact',
-        ].join(', '), () {
-          _drill(context, 'History', (_, back) => _history(back));
-        }),
+      _prow(
+          'history',
+          'History',
+          [
+            if (!widget.hideCheckpoints) 'Checkpoints',
+            'memory',
+            'compact',
+          ].join(', '), () {
+        _drill(context, 'History', (_, back) => _history(back));
+      }),
       if (behaviour.isNotEmpty)
         _prow('sliders', 'Behaviour', behaviour.join(' \u00b7 '), () {
           _drill(
@@ -1255,8 +1480,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
                     ? 'Nothing edited yet'
                     : '${widget.fileChangeCount} file${widget.fileChangeCount == 1 ? '' : 's'} changed in this session',
                 widget.onFileChanges),
-          _prow('git-branch', 'Git', 'Branch, commits and diffs',
-              widget.onGit,
+          _prow('git-branch', 'Git', 'Branch, commits and diffs', widget.onGit,
               value: counts.changedFiles > 0 ? '${counts.changedFiles}' : null),
           _prow('folder', 'Files', 'Browse the workspace', widget.onFiles),
           _prow('layers', 'Shared', 'Files the agent shared',
@@ -1276,12 +1500,16 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
 
   Widget _history(VoidCallback back) => SettingsGroup(children: [
         if (!widget.hideCheckpoints)
-          _prow('history', 'Checkpoints',
+          _prow(
+              'history',
+              'Checkpoints',
               'Restore the workspace to an earlier point',
               widget.onCheckpoints),
         _prow('book-marked', 'Memory', 'What this session remembers',
             widget.onMemory),
-        _prow('minimize', 'Compact history',
+        _prow(
+            'minimize',
+            'Compact history',
             'Summarise older turns to free context',
             () => _leave(back, widget.onCompact)),
       ]);
@@ -1355,9 +1583,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
         SessionFaceTile(
             icon: 'layers',
             label: 'Lanes',
-            detail: runningLanes > 0
-                ? '$runningLanes running'
-                : 'All finished',
+            detail: runningLanes > 0 ? '$runningLanes running' : 'All finished',
             onTap: widget.onLanes),
       if (widget.onWakes != null)
         SessionFaceTile(

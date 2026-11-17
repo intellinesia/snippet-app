@@ -115,7 +115,7 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     try {
       final client = await _pump(tester, _all);
-      expect(find.text('Delegated lanes'), findsOneWidget);
+      expect(find.text('Lanes'), findsOneWidget);
       expect(find.text('Rook · 1 needs you'), findsOneWidget);
       expect(find.text('Moss · 1 working'), findsOneWidget);
       expect(find.textContaining('Click a lane'), findsOneWidget);
@@ -253,15 +253,15 @@ void main() {
         return LanesScreen(liveLanes: () => lanes);
       }));
       await tester.pumpAndSettle();
-      expect(find.text(mode == 'mobile' ? 'Lanes' : 'Delegated lanes'),
-          mode == 'hosted desktop' ? findsNothing : findsOneWidget);
+      // Exactly one title: the host's in a panel, the screen's own otherwise.
+      expect(find.text('Lanes'), findsOneWidget);
       expect(find.text('This session · 1 working'), findsOneWidget);
       expect(find.text('In progress · 1'), findsNothing);
       expect(find.text('Handoff'), findsNothing);
       await tester.tap(find.text('Worker'));
       await tester.pumpAndSettle();
       expect(find.byType(LaneDetailScreen), findsOneWidget);
-      expect(find.text('Delegated lanes'), findsNothing);
+      expect(find.text('Lanes'), findsNothing);
       for (final text in ['Full handoff', 'Full report', 'Full error',
         'Current activity', 'Historical activity']) {
         expect(find.text(text), findsWidgets);
@@ -290,8 +290,8 @@ void main() {
         await tester.tap(find.byTooltip('Back'));
       }
       await tester.pumpAndSettle();
-      expect(find.text(mode == 'mobile' ? 'Lanes' : 'Delegated lanes'),
-          mode == 'hosted desktop' ? findsNothing : findsOneWidget);
+      // Exactly one title: the host's in a panel, the screen's own otherwise.
+      expect(find.text('Lanes'), findsOneWidget);
       expect(find.text('This session · 1 done'), findsOneWidget);
       expect(find.byType(LaneDetailScreen), findsNothing);
       expect(closed, isFalse);

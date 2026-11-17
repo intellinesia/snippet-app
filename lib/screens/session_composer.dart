@@ -304,6 +304,27 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   Widget _queuedCard() {
     final queue = _heldQueue;
     if (queue.isEmpty) return const SizedBox.shrink();
+    if (!kMobile) {
+      return DeskQueueCard(
+        entries: [
+          for (var i = 0; i < queue.length; i++)
+            () {
+              final e = _queuedEntry(i, queue[i]);
+              return DeskQueueEntry(
+                label: e.label,
+                muted: e.muted,
+                lead: e.lead,
+                extra: e.extra,
+                onSendNow: () => _interruptAndSendQueuedAt(i),
+                onEdit: () => _editQueuedAt(i),
+                onRemove: () => _cancelQueuedAt(i),
+              );
+            }(),
+        ],
+        onClear: _cancelAllQueued,
+        onSendAll: _steerAllQueued,
+      );
+    }
     return ComposerQueueList(
       entries: [
         for (var i = 0; i < queue.length; i++) _queuedEntry(i, queue[i]),
@@ -593,6 +614,16 @@ extension _SessionScreenComposerExt on _SessionScreenState {
 
   Widget? _recipientChip() {
     if (_isMissionControl || _recipientAgentId == null) return null;
+    if (!kMobile) {
+      return Builder(
+        builder: (ctx) => DeskRecipientChip(
+          leading: AgentMochi(_recipientAgentId!, size: 14),
+          label: 'Send to ${_recipientAgentName ?? _recipientAgentId!}',
+          onTap: () => _pickRecipient(ctx),
+          onClear: _clearRecipient,
+        ),
+      );
+    }
     return Padding(
       padding: EdgeInsets.only(bottom: S.s4),
       child: Align(
@@ -758,6 +789,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                 ? 'Steer or queue a message'
                 : 'Steer $agent, or queue for later')
             : (agent.isEmpty ? 'Reply to Snippet' : 'Message $agent');
+    if (!kMobile) return _deskComposerCard(running, hint);
     return KeyedSubtree(
       key: _composerCardKey,
       child: ComposerCard(
@@ -800,6 +832,137 @@ extension _SessionScreenComposerExt on _SessionScreenState {
         ),
       ),
     );
+  }
+
+  Widget _deskComposerCard(bool running, String hint) {
+    final goal = _state?.goal?.ongoing == true;
+    final rcpt = _recipientChip();
+    final mod = _isMac ? '\u2318\u21b5' : 'Ctrl \u21b5';
+    return KeyedSubtree(
+      key: _composerCardKey,
+      child: ListenableBuilder(
+        listenable: _input,
+        builder: (_, __) {
+          final typing = _input.text.isNotEmpty;
+          return DeskComposerCard(
+            highlight: _draggingFiles,
+            focus: _inputFocus,
+            banner: goal || rcpt != null
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (goal) _goalBanner(),
+                      if (rcpt != null) rcpt,
+                    ],
+                  )
+                : null,
+            attachments: _attachments.isNotEmpty ? _attachmentBar() : null,
+            field: CallbackShortcuts(
+              bindings: _composerShortcuts,
+              child: TextField(
+                controller: _input,
+                focusNode: _inputFocus,
+                contentInsertionConfiguration: _keyboardContent,
+                minLines: 1,
+                maxLines: 10,
+                cursorColor: AppColors.fg1,
+                onSubmitted: (_) => _sendMessage(),
+                style: DeskComposerCard.fieldStyle,
+                decoration: DeskComposerCard.decoration(hint),
+              ),
+            ),
+            attach: DeskIconButton('plus',
+                tooltip: 'Attach',
+                onTap: _onAttachTap,
+                iconSize: 16,
+                color: AppColors.fg2),
+            model: _inboxAgentId(widget.sessionId) == null
+                ? Builder(
+                    builder: (chipCtx) => DeskModelChip(
+                      icon: _modelProvider == null
+                          ? 'cpu'
+                          : 'provider:$_modelProvider',
+                      label: _modelLabel ?? 'Auto',
+                      onTap: () => _switchModel(chipCtx),
+                    ),
+                  )
+                : null,
+            hint: !typing
+                ? null
+                : DeskHint(running
+                    ? [('\u21b5', 'queue'), (mod, 'interrupt')]
+                    : [('\u21e7\u21b5', 'new line')]),
+            mic: kCanRecord
+                ? DeskIconButton('mic', tooltip: 'Record', onTap: _onMicTap)
+                : null,
+            action: _deskAction(running),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _deskRecorder() {
+    final reviewing = !_isRecording && _recordingPath != null;
+    final total = _playbackDuration > Duration.zero
+        ? _playbackDuration
+        : _recordingElapsed;
+    final showPosition =
+        reviewing && (_isPlayingRecording || _playbackPosition > Duration.zero);
+    final time = !reviewing
+        ? _audioTime(_recordingElapsed)
+        : '${_audioTime(showPosition ? _playbackPosition : Duration.zero)} / ${_audioTime(total)}';
+    final progress = !reviewing || total.inMilliseconds <= 0
+        ? null
+        : (_playbackPosition.inMilliseconds / total.inMilliseconds)
+            .clamp(0.0, 1.0);
+    final agent = (_meAgentName ?? '').trim();
+    return DeskVoiceCard(
+      recording: _isRecording,
+      sending: _sendingAudio,
+      playing: _isPlayingRecording,
+      label: _isRecording
+          ? (agent.isEmpty
+              ? 'Recording a voice note'
+              : 'Recording a voice note for $agent')
+          : 'Voice note ready to send',
+      time: time,
+      wave: LiveRecordingWave(
+          buffer: _waveform, live: _isRecording, progress: progress),
+      onDiscard: () => unawaited(_discardRecording()),
+      onPlay: () => unawaited(_toggleRecordingPlayback()),
+      onStop: () => unawaited(_stopRecording()),
+      onSend: () => unawaited(_sendMessage()),
+      onMore: reviewing ? () => unawaited(_recordMore()) : null,
+    );
+  }
+
+  bool get _isMac => defaultTargetPlatform == TargetPlatform.macOS;
+
+  /// Stop when the agent runs and there is nothing to send, else send.
+  Widget _deskAction(bool running) {
+    final draft = _hasDraft;
+    final sendBtn = DeskActionButton(
+      icon: 'arrow-up',
+      tooltip: 'Send',
+      on: _canSend,
+      busy: _sendingAudio,
+      onTap: _canSend ? () => _sendMessage() : null,
+    );
+    if (!running) return sendBtn;
+    final stop = DeskActionButton(
+      icon: 'stop',
+      tooltip: 'Stop',
+      soft: true,
+      onTap: () => _send({'kind': 'interrupt'}),
+    );
+    if (!draft) return stop;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      stop,
+      const SizedBox(width: 6),
+      sendBtn,
+    ]);
   }
 
   bool get _hasDraft =>
@@ -859,7 +1022,9 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                 kMobile
                     ? M.gutter
                     : (widget.embedded ? kComposerGutter : S.s20),
-                S.of(10) + (keyboard > 0 ? S.s8 : mq.padding.bottom)),
+                kMobile
+                    ? S.of(10) + (keyboard > 0 ? S.s8 : mq.padding.bottom)
+                    : 18),
             child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -876,7 +1041,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                   if (_attachments.isNotEmpty) _attachmentBar(),
                   if (_mentionQuery != null && !_isMissionControl)
                     _mentionList(),
-                  if (!kMobile) _contextBar(),
                   if (top != null) top,
                   Swap(
                     stateKey: (_isRecording || _recordingPath != null)
@@ -886,7 +1050,9 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                     child: (_isRecording || _recordingPath != null)
                         ? ValueListenableBuilder<int>(
                             valueListenable: _recorderTick,
-                            builder: (_, __, ___) => _mobileRecorder(running),
+                            builder: (_, __, ___) => kMobile
+                                ? _mobileRecorder(running)
+                                : _deskRecorder(),
                           )
                         : _composerCard(running),
                   ),
@@ -1088,14 +1254,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     }
   }
 
-  Widget _contextBar() {
-    return SessionContextBar(
-      termCount: _terms.length,
-      termRunning: _terms.any((t) => t.alive),
-      onTapTerms: _openTerm,
-    );
-  }
-
   // Composer attachment row: image thumbnails and file cards, each with its
   // own remove button and an upload overlay until the file reaches the daemon.
   Widget _attachmentBar() => ComposerAttachmentBar(
@@ -1212,89 +1370,4 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   }
 
   // ---- event → widget (pairs tool_call with its tool_result) ----
-}
-
-class SessionContextBar extends StatelessWidget {
-  const SessionContextBar({
-    super.key,
-    required this.termCount,
-    required this.termRunning,
-    required this.onTapTerms,
-  });
-
-  final int termCount;
-  final bool termRunning;
-  final VoidCallback onTapTerms;
-
-  @override
-  Widget build(BuildContext context) {
-    if (termCount == 0) return const SizedBox.shrink();
-    return Padding(
-      padding: EdgeInsets.only(bottom: S.s6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          _ContextChip(
-            icon: 'terminal',
-            label: '$termCount ${termCount == 1 ? 'terminal' : 'terminals'}',
-            running: termRunning,
-            onTap: onTapTerms,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ContextChip extends StatelessWidget {
-  const _ContextChip({
-    required this.icon,
-    required this.label,
-    required this.running,
-    required this.onTap,
-  });
-
-  final String icon;
-  final String label;
-  final bool running;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-        color: AppColors.surface1,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(R.lg),
-          side: BorderSide(color: AppColors.line),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(R.lg),
-          child: SizedBox(
-            height: 24,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: S.of(9)),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppIcon(icon, size: 12, color: AppColors.fg3),
-                  SizedBox(width: S.s6),
-                  Text(label, style: TS.caption(AppColors.fg3)),
-                  if (running) ...[
-                    SizedBox(width: S.s6),
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.ok,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
 }

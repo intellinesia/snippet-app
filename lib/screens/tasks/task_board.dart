@@ -12,10 +12,10 @@ import '../../widgets.dart';
 import '../list_search_field.dart';
 import '../session.dart' show SessionScreen;
 import 'task_common.dart';
+import 'task_kanban.dart';
+import 'task_view_toggle.dart';
 
-/// Desktop task board, list and detail: grouped rows beside the selected task.
-///
-/// Reads the same [TaskFeed] as the kanban; only the layout differs.
+/// The desktop Tasks tab: a status board by default, with a list option.
 class TaskBoard extends StatefulWidget {
   const TaskBoard({super.key, required this.client});
 
@@ -25,9 +25,38 @@ class TaskBoard extends StatefulWidget {
   State<TaskBoard> createState() => _TaskBoardState();
 }
 
+class _TaskBoardState extends State<TaskBoard> {
+  // Remembered across tab reopenings within a run.
+  static TaskView _last = TaskView.board;
+  TaskView _view = _last;
+
+  void _set(TaskView v) => setState(() => _view = _last = v);
+
+  @override
+  Widget build(BuildContext context) {
+    final toggle = TaskViewToggle(value: _view, onChanged: _set);
+    return _view == TaskView.board
+        ? TaskKanban(client: widget.client, viewToggle: toggle)
+        : TaskListView(client: widget.client, viewToggle: toggle);
+  }
+}
+
+/// Grouped task rows beside the selected task.
+///
+/// Reads the same [TaskFeed] as the kanban; only the layout differs.
+class TaskListView extends StatefulWidget {
+  const TaskListView({super.key, required this.client, this.viewToggle});
+
+  final DaemonClient client;
+  final Widget? viewToggle;
+
+  @override
+  State<TaskListView> createState() => _TaskListViewState();
+}
+
 enum _Tab { active, review, done }
 
-class _TaskBoardState extends State<TaskBoard> {
+class _TaskListViewState extends State<TaskListView> {
   late TaskFeed _feed = TaskFeed(widget.client, onChange: _sync);
   final _search = TextEditingController();
 
@@ -55,7 +84,7 @@ class _TaskBoardState extends State<TaskBoard> {
   }
 
   @override
-  void didUpdateWidget(covariant TaskBoard old) {
+  void didUpdateWidget(covariant TaskListView old) {
     super.didUpdateWidget(old);
     if (old.client != widget.client) {
       _feed.dispose();
@@ -126,8 +155,10 @@ class _TaskBoardState extends State<TaskBoard> {
         at.day == now.day;
   }
 
-  List<TaskItem> _in(List<TaskStatus> s, List<TaskItem> all) =>
-      [for (final t in all) if (s.contains(t.status)) t];
+  List<TaskItem> _in(List<TaskStatus> s, List<TaskItem> all) => [
+        for (final t in all)
+          if (s.contains(t.status)) t
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -135,7 +166,10 @@ class _TaskBoardState extends State<TaskBoard> {
     final review = _in(_review, all);
     final flight = _in(_flight, all);
     final done = _in(_finished, all);
-    final today = [for (final t in done) if (_isToday(t)) t];
+    final today = [
+      for (final t in done)
+        if (_isToday(t)) t
+    ];
     final sections = switch (_tab) {
       _Tab.active => [
           ('Needs review', review),
@@ -181,10 +215,13 @@ class _TaskBoardState extends State<TaskBoard> {
                       Btn('Retry', small: true, onTap: _feed.refresh),
                     ]),
                   )
-                : Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    Expanded(child: _list(sections, selected)),
-                    if (showDetail && selected != null) _detail(selected, all),
-                  ]),
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                        Expanded(child: _list(sections, selected)),
+                        if (showDetail && selected != null)
+                          _detail(selected, all),
+                      ]),
       ),
     ]);
   }
@@ -196,11 +233,15 @@ class _TaskBoardState extends State<TaskBoard> {
       decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: AppColors.line))),
       child: Row(children: [
-        Text('Task board',
+        Text('Tasks',
             style: sans(15, weight: FontWeight.w600, color: AppColors.fg1)),
         SizedBox(width: S.s12 + S.s12),
         _segment(),
         const Spacer(),
+        if (widget.viewToggle != null) ...[
+          widget.viewToggle!,
+          SizedBox(width: S.s8),
+        ],
         _SmallBtn(
             label: 'Filter',
             icon: LucideIcons.slidersHorizontal,
@@ -264,15 +305,14 @@ class _TaskBoardState extends State<TaskBoard> {
               child: Row(children: [
                 Text(s.$1, style: sans(12, color: AppColors.fg3)),
                 SizedBox(width: S.s6),
-                Text('${s.$2.length}',
-                    style: mono(11, color: AppColors.fg4)),
+                Text('${s.$2.length}', style: mono(11, color: AppColors.fg4)),
               ]),
             ),
             if (s.$2.isEmpty)
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s8),
-                child: Text('Nothing here',
-                    style: sans(12, color: AppColors.fg4)),
+                child:
+                    Text('Nothing here', style: sans(12, color: AppColors.fg4)),
               ),
             for (final t in s.$2)
               _TaskRow(
@@ -303,7 +343,10 @@ class _TaskBoardState extends State<TaskBoard> {
   Widget _detail(TaskItem t, List<TaskItem> all) {
     final session = _sessions[t.sessionId];
     final plan = t.workPlan;
-    final lanes = [for (final a in _roster) if (a.workSessionId != null) a];
+    final lanes = [
+      for (final a in _roster)
+        if (a.workSessionId != null) a
+    ];
     final age = taskAge(t);
     final byline = [
       if (t.createdById.isNotEmpty) _agent(t.createdById),
@@ -434,9 +477,8 @@ class _TaskBoardState extends State<TaskBoard> {
                         height: 6,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: s.current
-                              ? AppColors.accent
-                              : AppColors.surface3,
+                          color:
+                              s.current ? AppColors.accent : AppColors.surface3,
                         ),
                       ),
               ),
@@ -553,8 +595,8 @@ class _Pill extends StatelessWidget {
         color: neutral ? AppColors.surface3 : color.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(label,
-          maxLines: 1, style: sans(11, color: color, height: 1.4)),
+      child:
+          Text(label, maxLines: 1, style: sans(11, color: color, height: 1.4)),
     );
   }
 }
@@ -627,8 +669,7 @@ class _TaskRowState extends State<_TaskRow> {
             const SizedBox(width: 10),
             SizedBox(
                 width: 96,
-                child: Align(
-                    alignment: Alignment.centerLeft, child: _Pill(t))),
+                child: Align(alignment: Alignment.centerLeft, child: _Pill(t))),
             const SizedBox(width: 10),
             SizedBox(
               width: 56,

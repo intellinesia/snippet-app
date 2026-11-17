@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:snippet/notification_inbox.dart';
 import 'package:flutter_test/flutter_test.dart' hide testWidgets;
 import 'package:flutter_test/flutter_test.dart' as ft show testWidgets;
+import 'package:snippet/desktop_notifications.dart';
 import 'package:snippet/notification_popovers.dart';
+import 'package:snippet/widgets.dart' show AppIcon;
 import 'package:snippet/notification_sync.dart';
 import 'package:snippet/notifications.dart';
 
@@ -61,49 +63,6 @@ void main() {
         .setMockMethodCallHandler(SystemChannels.platform, null);
   });
 
-  testWidgets('builder overlay supports tooltip, updates, and routing',
-      (tester) async {
-    _platform(TargetPlatform.linux);
-    final navigator = GlobalKey<NavigatorState>();
-    final revision = ValueNotifier<int>(0);
-    addTearDown(revision.dispose);
-    onNotifTap = (payload) => navigator.currentState!.push(
-          MaterialPageRoute<void>(
-            builder: (_) => Scaffold(body: Text(payload['title'] as String)),
-          ),
-        );
-    await tester.pumpWidget(ValueListenableBuilder<int>(
-      valueListenable: revision,
-      builder: (_, value, __) => MaterialApp(
-        navigatorKey: navigator,
-        builder: (_, child) => NotificationPopovers(child: child!),
-        home: Scaffold(body: Text('Home $value')),
-      ),
-    ));
-    foregroundNotifications.add({'title': 'Dismiss me'});
-    await tester.pumpAndSettle();
-    expect(find.text('Dismiss me'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-    await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Dismiss me'), findsNothing);
-    revision.value = 1;
-    await tester.pumpAndSettle();
-    expect(find.text('Home 1'), findsOneWidget);
-    foregroundNotifications.add({'title': 'Destination'});
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Destination'));
-    await tester.pumpAndSettle();
-    expect(find.text('Destination'), findsOneWidget);
-    expect(find.byTooltip('Dismiss'), findsNothing);
-    navigator.currentState!.pop();
-    await tester.pumpAndSettle();
-    expect(find.text('Home 1'), findsOneWidget);
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(seconds: 10));
-    expect(tester.takeException(), isNull);
-  });
-
   test('destination preserves brief context', () {
     final payload = notificationDestination('url', {
       'kind': 'waiting',
@@ -137,35 +96,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  for (final direction in TextDirection.values) {
-    testWidgets('both horizontal directions dismiss in $direction',
-        (tester) async {
-      _platform(TargetPlatform.linux);
-      final opened = <Map<String, dynamic>>[];
-      onNotifTap = opened.add;
-      foregroundNotifications.add({'title': 'Swipe'});
-      await tester.pumpWidget(MaterialApp(
-          home: Directionality(
-        textDirection: direction,
-        child: const NotificationPopovers(child: Scaffold()),
-      )));
-      expect(haptics, isEmpty);
-      await tester.drag(find.byType(Dismissible), const Offset(500, 0));
-      await tester.pumpAndSettle();
-      expect(find.text('Swipe'), findsNothing);
-      foregroundNotifications.add({'title': 'Swipe'});
-      await tester.pumpAndSettle();
-      await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
-      await tester.pumpAndSettle();
-      expect(find.text('Swipe'), findsNothing);
-      expect(opened, isEmpty);
-      expect(haptics, [
-        'HapticFeedbackType.lightImpact',
-        'HapticFeedbackType.lightImpact',
-      ]);
-    });
-  }
-
   testWidgets('phone banners dismiss with a swipe up, not sideways',
       (tester) async {
     _platform(TargetPlatform.android);
@@ -186,20 +116,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Up'), findsNothing);
     expect(haptics, ['HapticFeedbackType.lightImpact']);
-  });
-
-  testWidgets('desktop toasts dismiss sideways, not upward', (tester) async {
-    _platform(TargetPlatform.linux);
-    foregroundNotifications.add({'title': 'Side'});
-    await tester.pumpWidget(
-        const MaterialApp(home: NotificationPopovers(child: Scaffold())));
-    await tester.pumpAndSettle();
-    await tester.drag(find.byType(Dismissible), const Offset(0, -300));
-    await tester.pumpAndSettle();
-    expect(find.text('Side'), findsOneWidget);
-    await tester.drag(find.byType(Dismissible), const Offset(500, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Side'), findsNothing);
   });
 
   testWidgets('gesture pauses expiry; reduced motion and suppression clean up',
@@ -242,33 +158,30 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('whole card tap and dismiss reveal the next in the stack',
+  testWidgets('desktop toast shows one item, closes to the next and opens chat',
       (tester) async {
     _platform(TargetPlatform.linux);
     final opened = <Map<String, dynamic>>[];
     onNotifTap = opened.add;
-    final third = <String, dynamic>{'title': 'Third', 'notification_id': 'one'};
-    foregroundNotifications.add({'title': 'First'});
-    foregroundNotifications.add({'title': 'Second'});
-    await tester.pumpWidget(
-        const MaterialApp(home: NotificationPopovers(child: Scaffold())));
-    foregroundNotifications.add(third);
+    foregroundNotifications.add({'title': 'First', 'kind': 'done', 'session': 's1'});
+    foregroundNotifications.add({'title': 'Second', 'kind': 'done', 'session': 's2'});
+    await tester.pumpWidget(const MaterialApp(
+        home: NotificationPopovers(child: Scaffold(body: Text('Home')))));
     await tester.pumpAndSettle();
-    expect(find.text('Second'), findsNothing);
-    final card = find.byType(InkWell).first;
-    await tester.tapAt(tester.getTopLeft(card) + const Offset(24, 24));
+    expect(find.byType(DesktopToast), findsOneWidget);
+    expect(find.text('+1 more in the bell'), findsOneWidget);
+    final first = find.text('First').evaluate().isNotEmpty ? 'First' : 'Second';
+    final next = first == 'First' ? 'Second' : 'First';
+    await tester.tap(find.descendant(
+        of: find.byType(DesktopToast), matching: find.byType(AppIcon)).last);
     await tester.pumpAndSettle();
-    expect(opened, [same(third)]);
-    expect(haptics, ['HapticFeedbackType.lightImpact']);
-    expect(find.text('Second'), findsOneWidget);
-    await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
+    expect(find.text(first), findsNothing);
+    expect(find.text(next), findsOneWidget);
+    await tester.tap(find.text('Open chat'));
     await tester.pumpAndSettle();
-    expect(opened, hasLength(1));
-    expect(find.text('First'), findsOneWidget);
-    await tester.tap(find.text('First'));
-    await tester.pumpAndSettle();
-    expect(opened.last['title'], 'First');
-    expect(find.byType(Dismissible), findsNothing);
+    expect(opened.single['title'], next);
+    expect(find.byType(DesktopToast), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 10));
   });
-
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api.dart';
+import '../desktop_pick.dart';
 import '../diff_counts.dart';
 import '../local_service.dart';
 import '../mochi.dart';
@@ -12,6 +13,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'add_instance.dart' show parseConnection;
+import 'new_session_draft.dart';
 import 'welcome_art.dart';
 
 /// Overlay a sidebar-toggle on the welcome/empty states when the sidebar is collapsed.
@@ -395,12 +397,16 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(title,
-                              textAlign: TextAlign.center, style: display(18)),
+                              textAlign: TextAlign.center,
+                              style: sans(22,
+                                  weight: W.label,
+                                  spacing: -0.2,
+                                  color: AppColors.fg1)),
                           SizedBox(height: S.s8),
                           Text(body,
                               textAlign: TextAlign.center,
-                              style: sans(13,
-                                  height: 1.55, color: AppColors.fg3)),
+                              style:
+                                  sans(13, height: 1.55, color: AppColors.fg3)),
                           SizedBox(height: S.of(22)),
                           controls,
                         ],
@@ -447,7 +453,7 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
       final line = Container(
           width: stacked ? null : 1,
           height: stacked ? 1 : null,
-          color: AppColors.border);
+          color: AppColors.border2);
       return Stack(children: [
         Positioned.fill(
           child: stacked
@@ -510,8 +516,8 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
         builder: (context, box) => SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(S.s24, S.s8, S.s24, S.s32),
           child: ConstrainedBox(
-            constraints: BoxConstraints(
-                maxWidth: 460, minHeight: box.maxHeight - 40),
+            constraints:
+                BoxConstraints(maxWidth: 460, minHeight: box.maxHeight - 40),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -534,13 +540,15 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                 _wideButton('Scan QR code', 'scan', widget.onAddInstance),
                 SizedBox(height: S.of(18)),
                 Row(children: [
-                  Expanded(child: Container(height: 1, color: AppColors.border)),
+                  Expanded(
+                      child: Container(height: 1, color: AppColors.border)),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: S.s12),
                     child: Text('or paste its link',
                         style: sans(13, color: AppColors.fg4)),
                   ),
-                  Expanded(child: Container(height: 1, color: AppColors.border)),
+                  Expanded(
+                      child: Container(height: 1, color: AppColors.border)),
                 ]),
                 SizedBox(height: S.of(18)),
                 Row(children: [
@@ -574,16 +582,14 @@ class _ShellWelcomeViewState extends State<ShellWelcomeView>
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text('Not running yet? On your computer:',
-                          style: sans(13,
-                              weight: W.label, color: AppColors.fg1)),
+                          style:
+                              sans(13, weight: W.label, color: AppColors.fg1)),
                       SizedBox(height: S.of(14)),
                       const _WelcomeStep(
                           n: '1', title: 'Install', command: installCommand),
                       SizedBox(height: S.of(14)),
                       const _WelcomeStep(
-                          n: '2',
-                          title: 'Start it',
-                          command: enableCommand),
+                          n: '2', title: 'Start it', command: enableCommand),
                       SizedBox(height: S.of(14)),
                       const _WelcomeStep(
                         n: '3',
@@ -675,13 +681,16 @@ class _CommandBox extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(S.s12, S.s6, S.s4, S.s6),
         decoration: BoxDecoration(
           color: AppColors.bg,
-          borderRadius: BorderRadius.circular(R.sm),
-          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(kMobile ? R.sm : R.of(8)),
+          border:
+              Border.all(color: kMobile ? AppColors.border : AppColors.border2),
         ),
         child: Row(children: [
           Expanded(
             child: SelectableText(command,
-                style: mono(kMobile ? 12 : 12, color: AppColors.fg1)),
+                style: kMobile
+                    ? mono(12, color: AppColors.fg1)
+                    : mono(12.5, color: AppColors.fg2)),
           ),
           IconBtn('copy', size: 30, iconSize: 13, tooltip: 'Copy', onTap: () {
             Clipboard.setData(ClipboardData(text: command));
@@ -744,15 +753,137 @@ class ShellRecentPlaceholder extends StatelessWidget {
   final bool sessionsLoading;
   final void Function(String id, String title, String? profile) onOpenSession;
 
+  /// Desktop empty state: with a [client] and [onStart] the placeholder is a
+  /// composer that starts a session; without them it is the plain list.
+  final DaemonClient? client;
+  final String machineLabel;
+  final Future<void> Function(
+      String folder, WorkspaceMode mode, String? profile, String text)? onStart;
+  final Future<void> Function(
+      String folder,
+      WorkspaceMode mode,
+      String? profile,
+      String text,
+      List<PickedLocalFile> files)? onStartWithFiles;
+
   const ShellRecentPlaceholder({
     super.key,
     required this.sessions,
     required this.sessionsLoading,
     required this.onOpenSession,
+    this.client,
+    this.machineLabel = '',
+    this.onStart,
+    this.onStartWithFiles,
   });
+
+  Widget _pickUp(BuildContext context) {
+    final list = (sessions ?? const <SessionInfo>[]).take(4).toList();
+    Widget key(String t) => Container(
+          constraints: const BoxConstraints(minWidth: 18),
+          height: 18,
+          padding: EdgeInsets.symmetric(horizontal: S.s4),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+              color: AppColors.surface3,
+              borderRadius: BorderRadius.circular(R.of(4))),
+          child: Text(t, style: sans(10.5, color: AppColors.fg3)),
+        );
+    final mod = kMacOS ? '\u2318' : 'Ctrl';
+    Widget hint(List<String> keys, String label) =>
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          for (final k in keys) ...[key(k), SizedBox(width: S.s2)],
+          SizedBox(width: S.s6),
+          Text(label, style: sans(11.5, color: AppColors.fg4)),
+        ]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (list.isNotEmpty) ...[
+          Padding(
+            padding: EdgeInsets.only(top: S.s32, bottom: S.s6),
+            child: Row(children: [
+              Text('Pick up where you left off',
+                  style: sans(11.5, weight: W.label, color: AppColors.fg4)),
+              const Spacer(),
+              key(mod),
+              SizedBox(width: S.s2),
+              key('K'),
+              SizedBox(width: S.s6),
+              Text('for everything else',
+                  style: sans(11.5, color: AppColors.fg4)),
+            ]),
+          ),
+          for (final s in list)
+            Padding(
+              padding: EdgeInsets.only(bottom: S.s2),
+              child: Material(
+                color: AppColors.surface1,
+                borderRadius: BorderRadius.circular(R.of(8)),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(R.of(8)),
+                  onTap: () => onOpenSession(s.id, s.title, s.profile),
+                  child: Container(
+                    height: 36,
+                    padding: EdgeInsets.symmetric(horizontal: S.of(14)),
+                    child: Row(children: [
+                      AgentMochi(s.displayAgentId ?? 'snippet', size: 14),
+                      SizedBox(width: S.of(10)),
+                      Expanded(
+                        child: Row(children: [
+                          Flexible(
+                            child: Text(
+                                s.title.isEmpty ? '(untitled)' : s.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: sans(13, color: AppColors.fg1)),
+                          ),
+                          SizedBox(width: S.s8),
+                          Flexible(
+                            child: Text(
+                                lastPathSegment(s.projectFolder,
+                                    ifEmpty: s.projectFolder),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: sans(12, color: AppColors.fg4)),
+                          ),
+                        ]),
+                      ),
+                      Text(relativeTime(s.lastActive),
+                          style: sans(11.5, color: AppColors.fg4)),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+        ],
+        SizedBox(height: S.s24),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          hint([mod, 'N'], 'new session'),
+          SizedBox(width: S.s20),
+          hint([mod, '1'], 'Mission Control'),
+          SizedBox(width: S.s20),
+          hint([mod, 'B'], 'sidebar'),
+        ]),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final c = client;
+    final start = onStart;
+    if (!kMobile && c != null && start != null) {
+      return NewSessionDraft(
+        client: c,
+        machineLabel: machineLabel,
+        onStart: start,
+        onStartWithFiles: onStartWithFiles,
+        layout: NewSessionLayout.hero,
+        recentSessions: sessions,
+        footer: _pickUp(context),
+      );
+    }
     final list = (sessions ?? const <SessionInfo>[]).take(8).toList();
     return Center(
       child: Padding(
@@ -791,7 +922,8 @@ class ShellRecentPlaceholder extends StatelessWidget {
                     padding: EdgeInsets.only(bottom: S.s8),
                     child: AppCard(
                       onTap: () => onOpenSession(s.id, s.title, s.profile),
-                      padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.s12, S.s12),
+                      padding:
+                          EdgeInsets.fromLTRB(S.of(14), S.s12, S.s12, S.s12),
                       child: Row(children: [
                         Expanded(
                           child: Column(

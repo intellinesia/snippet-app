@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'glass.dart';
 import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -80,15 +79,15 @@ Future<void> showCommandPalette(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'palette',
-      barrierColor: AppColors.glassScrim,
+      barrierColor: Colors.black.withValues(alpha: .35),
       transitionDuration: Motion.quick,
       pageBuilder: (ctx, _, __) => Align(
-        alignment: const Alignment(0, -0.55),
+        alignment: Alignment.topCenter,
         child: Padding(
-          padding: EdgeInsets.all(S.s24),
+          padding: EdgeInsets.fromLTRB(S.s24, 96, S.s24, S.s24),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640, maxHeight: 520),
-            child: _glassFrame(body()),
+            constraints: const BoxConstraints(maxWidth: 640, maxHeight: 650),
+            child: _solidFrame(body()),
           ),
         ),
       ),
@@ -135,17 +134,17 @@ Widget _frame(Widget child) {
   );
 }
 
-Widget _glassFrame(Widget child) {
+Widget _solidFrame(Widget child) {
   final radius = BorderRadius.all(Radius.circular(R.lg));
-  return Glass(
-    radius: radius,
-    border: false,
-    child: DecoratedBox(
-      position: DecorationPosition.foreground,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(color: AppColors.glassBorder),
-      ),
+  return DecoratedBox(
+    decoration: BoxDecoration(
+      color: AppColors.surface1,
+      borderRadius: radius,
+      border: Border.all(color: AppColors.lineStrong),
+      boxShadow: overlayShadow,
+    ),
+    child: ClipRRect(
+      borderRadius: radius,
       child: Material(type: MaterialType.transparency, child: child),
     ),
   );
@@ -157,12 +156,6 @@ const _desktopOrder = [
   PaletteKind.agent,
   PaletteKind.command,
 ];
-
-String _desktopLabel(PaletteKind k) => switch (k) {
-      PaletteKind.session => 'Sessions',
-      PaletteKind.command => 'Actions',
-      _ => k.label,
-    };
 
 double? fuzzyScore(String query, String text) {
   if (query.isEmpty) return 0;
@@ -222,8 +215,8 @@ class _Palette extends StatefulWidget {
 }
 
 class _PaletteState extends State<_Palette> {
-  static double get _rowHeight => kMobile ? 44.0 : 30.0;
-  static double get _headerHeight => kMobile ? 30.0 : 28.0;
+  static double get _rowHeight => kMobile ? 44.0 : 34.0;
+  static double get _headerHeight => kMobile ? 30.0 : 32.0;
 
   final _ctrl = TextEditingController();
   final _scroll = ScrollController();
@@ -339,8 +332,14 @@ class _PaletteState extends State<_Palette> {
 
       Iterable<PaletteItem> of(PaletteKind k) =>
           widget.items.where((i) => i.kind == k);
-      section(PaletteKind.recent, recent, _recentMax);
+      section(PaletteKind.recent, recent, kMobile ? _recentMax : 2);
       section(PaletteKind.session, of(PaletteKind.session), 6);
+      if (!kMobile) {
+        section(PaletteKind.command, of(PaletteKind.command), 20);
+        section(PaletteKind.setting,
+            _all.where((i) => i.kind == PaletteKind.setting), 2);
+        return rows;
+      }
       section(PaletteKind.tab, of(PaletteKind.tab), 6);
       section(PaletteKind.chat, of(PaletteKind.chat), 5);
       // A taste of each kind, so the empty palette shows what it can reach.
@@ -453,41 +452,7 @@ class _PaletteState extends State<_Palette> {
             Navigator.pop(context),
       },
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-          height: kMobile ? 44 : 36,
-          padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s12 : S.of(10)),
-          margin: kMobile
-              ? EdgeInsets.fromLTRB(S.s16, S.s16, S.s16, S.s8)
-              : EdgeInsets.fromLTRB(S.s8, S.s8, S.s8, S.s4),
-          decoration: BoxDecoration(
-            color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(kMobile ? R.of(12) : R.of(9)),
-            border: kMobile ? Border.all(color: AppColors.border2) : null,
-          ),
-          child: Row(children: [
-            AppIcon('search', size: 16, color: AppColors.fg3),
-            SizedBox(width: S.s8),
-            Expanded(
-              child: TextField(
-                controller: _ctrl,
-                autofocus: true,
-                cursorColor: AppColors.accent,
-                style: sans(kMobile ? 14 : 13, color: AppColors.fg1),
-                decoration: InputDecoration(
-                  isCollapsed: true,
-                  border: InputBorder.none,
-                  hintText: 'Search or jump to anything',
-                  hintStyle: sans(kMobile ? 14 : 13, color: AppColors.fg4),
-                ),
-              ),
-            ),
-            if (busy)
-              Padding(
-                padding: EdgeInsets.only(left: S.s8),
-                child: DelayedSpinner(size: 12),
-              ),
-          ]),
-        ),
+        kMobile ? _mobileSearch(busy) : _desktopSearch(busy),
         Flexible(
           child: selectable.isEmpty
               ? Padding(
@@ -501,7 +466,7 @@ class _PaletteState extends State<_Palette> {
                   controller: _scroll,
                   shrinkWrap: true,
                   padding: EdgeInsets.fromLTRB(
-                      kMobile ? S.s12 : S.s8, 0, kMobile ? S.s12 : S.s8, S.s8),
+                      kMobile ? S.s12 : S.s6, 0, kMobile ? S.s12 : S.s6, S.s8),
                   children: [
                     for (final r in _rows)
                       if (r is PaletteKind)
@@ -516,6 +481,102 @@ class _PaletteState extends State<_Palette> {
     );
   }
 
+  Widget _mobileSearch(bool busy) {
+    return Container(
+      height: 44,
+      padding: EdgeInsets.symmetric(horizontal: S.s12),
+      margin: EdgeInsets.fromLTRB(S.s16, S.s16, S.s16, S.s8),
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(R.of(12)),
+        border: Border.all(color: AppColors.border2),
+      ),
+      child: Row(children: [
+        AppIcon('search', size: 16, color: AppColors.fg3),
+        SizedBox(width: S.s8),
+        Expanded(
+          child: TextField(
+            controller: _ctrl,
+            autofocus: true,
+            cursorColor: AppColors.accent,
+            style: sans(14, color: AppColors.fg1),
+            decoration: InputDecoration(
+              isCollapsed: true,
+              border: InputBorder.none,
+              hintText: 'Search or jump to anything',
+              hintStyle: sans(14, color: AppColors.fg4),
+            ),
+          ),
+        ),
+        if (busy)
+          Padding(
+            padding: EdgeInsets.only(left: S.s8),
+            child: DelayedSpinner(size: 12),
+          ),
+      ]),
+    );
+  }
+
+  Widget _desktopSearch(bool busy) {
+    Widget chip(String prefix, String label) => GestureDetector(
+          onTap: () {
+            _ctrl.value = TextEditingValue(
+              text: '$prefix ',
+              selection: TextSelection.collapsed(offset: prefix.length + 1),
+            );
+          },
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: Container(
+              height: 20,
+              margin: const EdgeInsets.only(left: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 7),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.surface3,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child:
+                  Text('$prefix $label', style: sans(11, color: AppColors.fg3)),
+            ),
+          ),
+        );
+    return Container(
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.lineStrong)),
+      ),
+      child: Row(children: [
+        AppIcon('search', size: 16, color: AppColors.fg3),
+        SizedBox(width: S.of(10)),
+        Expanded(
+          child: TextField(
+            controller: _ctrl,
+            autofocus: true,
+            cursorColor: AppColors.accent,
+            style: sans(15, color: AppColors.fg1),
+            decoration: InputDecoration(
+              isCollapsed: true,
+              border: InputBorder.none,
+              hintText: 'Search or jump to anything',
+              hintStyle: sans(15, color: AppColors.fg4),
+            ),
+          ),
+        ),
+        if (busy)
+          Padding(
+            padding: EdgeInsets.only(right: S.s8),
+            child: DelayedSpinner(size: 12),
+          ),
+        chip('>', 'commands'),
+        chip('@', 'agents'),
+        chip('#', 'PRs'),
+        chip('/', 'files'),
+      ]),
+    );
+  }
+
   Widget _header(PaletteKind k) => SizedBox(
         height: _headerHeight,
         child: Padding(
@@ -523,12 +584,21 @@ class _PaletteState extends State<_Palette> {
               kMobile ? S.s4 : S.of(10), S.of(10), S.of(10), S.s2),
           child: kMobile
               ? Text(k.label, style: sans(12, color: AppColors.fg3))
-              : Text(_desktopLabel(k), style: sans(11, color: AppColors.fg3)),
+              : Text(k.label,
+                  style: sans(11, weight: W.title, color: AppColors.fg4)),
         ),
+      );
+
+  Widget _kbd(String k) => Padding(
+        padding: const EdgeInsets.only(left: 4),
+        child: Text(k, style: sans(11, color: AppColors.fg4)),
       );
 
   Widget _row(PaletteItem item, int i) {
     final selected = i == _selected;
+    final keys = item.shortcut.isEmpty
+        ? const <String>[]
+        : item.shortcut.split(RegExp(r'[\s+]+')).where((k) => k.isNotEmpty);
     return MouseRegion(
       onHover: (_) {
         if (_selected != i) setState(() => _selected = i);
@@ -538,43 +608,55 @@ class _PaletteState extends State<_Palette> {
         onTap: () => _run(item),
         child: Container(
           height: _rowHeight,
-          padding: EdgeInsets.symmetric(horizontal: S.s8),
+          padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s8 : S.of(10)),
           decoration: BoxDecoration(
             color: selected
-                ? (kMobile ? AppColors.surface3 : AppColors.tint2)
+                ? (kMobile ? AppColors.surface3 : AppColors.surface2)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(kMobile ? R.of(10) : R.of(7)),
+            borderRadius: BorderRadius.circular(kMobile ? R.of(10) : R.md),
           ),
           child: Row(children: [
             SizedBox(
-              width: 22,
+              width: kMobile ? 22 : 18,
               child: Center(
-                child: AppIcon(item.icon, size: 15, color: AppColors.fg3),
+                child: AppIcon(item.icon,
+                    size: kMobile ? 15 : 14, color: AppColors.fg3),
               ),
             ),
             SizedBox(width: S.of(10)),
             Expanded(
-              child: Text(item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(kMobile ? 14 : 13, color: AppColors.fg1)),
-            ),
-            if (item.subtitle.isNotEmpty)
-              Padding(
-                padding: EdgeInsets.only(left: S.s8),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: kMobile ? 150 : 240),
-                  child: Text(item.subtitle,
+              child: Row(children: [
+                Flexible(
+                  child: Text(item.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(12, color: AppColors.fg4)),
+                      style: sans(kMobile ? 14 : 13, color: AppColors.fg1)),
                 ),
-              ),
-            if (item.shortcut.isNotEmpty)
+                if (item.subtitle.isNotEmpty)
+                  Flexible(
+                    child: Padding(
+                      padding: EdgeInsets.only(left: kMobile ? S.s8 : S.of(10)),
+                      child: Text(item.subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              sans(kMobile ? 12 : 11.5, color: AppColors.fg4)),
+                    ),
+                  ),
+              ]),
+            ),
+            if (kMobile && item.shortcut.isNotEmpty)
               Padding(
                 padding: EdgeInsets.only(left: S.s8),
                 child:
                     Text(item.shortcut, style: sans(11, color: AppColors.fg4)),
+              )
+            else
+              for (final k in keys) _kbd(k),
+            if (!kMobile && selected)
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Text('↵', style: sans(13, color: AppColors.fg4)),
               ),
           ]),
         ),
@@ -583,23 +665,30 @@ class _PaletteState extends State<_Palette> {
   }
 
   Widget _footer() {
-    Widget hint(String k, String label, {bool last = false}) => Padding(
-          padding: EdgeInsets.only(right: last ? 0 : S.of(14)),
-          child: Text.rich(TextSpan(children: [
-            TextSpan(text: k, style: sans(11, color: AppColors.fg2)),
-            if (label.isNotEmpty)
-              TextSpan(text: ' $label', style: sans(11, color: AppColors.fg4)),
-          ])),
+    Widget hint(List<String> keys, String label) => Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            for (final k in keys) _kbd(k),
+            SizedBox(width: S.s6),
+            Text(label, style: sans(11.5, color: AppColors.fg4)),
+          ]),
         );
     return Container(
-      padding: EdgeInsets.fromLTRB(S.s16, S.of(10), S.s16, S.of(10)),
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: AppColors.line))),
+          border: Border(top: BorderSide(color: AppColors.lineStrong))),
       child: Row(children: [
-        hint('↑↓', 'move'),
-        hint('↵', 'open'),
+        hint(const ['↑', '↓'], 'move'),
+        hint(const ['↵'], 'open'),
+        hint(const ['esc'], 'close'),
         const Spacer(),
-        hint('esc', '', last: true),
+        Flexible(
+          child: Text('Type to search tabs, chats, files, PRs, tasks, agents',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(11.5, color: AppColors.fg4)),
+        ),
       ]),
     );
   }

@@ -140,8 +140,9 @@ class _SpinnerPainter extends CustomPainter {
 }
 
 BorderRadius _segmentRadius({required bool first, required bool last}) {
-  final end = Radius.circular(R.of(Grouped.radiusEnd));
-  final inner = Radius.circular(R.of(Grouped.radiusInner));
+  // The desktop design wants 8px group ends and 3px between rows.
+  final end = Radius.circular(kMobile ? R.of(Grouped.radiusEnd) : R.of(13));
+  final inner = Radius.circular(kMobile ? R.of(Grouped.radiusInner) : R.of(5));
   return BorderRadius.only(
     topLeft: first ? end : inner,
     topRight: first ? end : inner,
@@ -213,17 +214,22 @@ class WorkLine extends StatelessWidget {
           ];
     final took = stepsDuration(steps);
     final note = isRunning ? null : _failureNote(steps);
-    final count = isRunning
-        ? 'Step ${steps.indexOf(live.last) + 1}'
-        : '${steps.length} steps';
     final sub = <InlineSpan>[
-      TextSpan(
-          text: took == null ? count : '$count · ${formatWorkDuration(took)}'),
+      if (took != null) TextSpan(text: formatWorkDuration(took)),
       if (note != null)
         TextSpan(
-            text: ' · $note',
+            text: took == null ? note : ' · $note',
             style: subStyle.copyWith(color: AppColors.danger)),
     ];
+    if (!kMobile) {
+      return _desktopWorkLine(
+          title: title,
+          titleStyle: titleStyle,
+          isRunning: isRunning,
+          failed: work.failed,
+          took: took,
+          note: note);
+    }
     final glyph = Grouped.icon;
     final Widget lead = isRunning
         ? SizedBox.square(
@@ -257,13 +263,14 @@ class WorkLine extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: titleStyle),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text.rich(TextSpan(children: sub),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: subStyle),
-                  ),
+                  if (sub.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text.rich(TextSpan(children: sub),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: subStyle),
+                    ),
                 ],
               ),
             ),
@@ -277,6 +284,81 @@ class WorkLine extends StatelessWidget {
             ),
           ]),
         ),
+      ),
+    );
+  }
+}
+
+extension on WorkLine {
+  Widget _desktopWorkLine({
+    required List<InlineSpan> title,
+    required TextStyle titleStyle,
+    required bool isRunning,
+    required bool failed,
+    required Duration? took,
+    required String? note,
+  }) {
+    final style = sans(12.5, color: AppColors.fg2);
+    final Widget lead = SizedBox(
+      width: 16,
+      child: Center(
+        child: isRunning
+            ? RunSpinner(size: 12, color: AppColors.accent)
+            : AppIcon(failed ? 'x-circle' : 'check-circle',
+                size: 16, color: failed ? AppColors.danger : AppColors.fg4),
+      ),
+    );
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 34),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Grouped.row,
+          borderRadius: _segmentRadius(first: true, last: !open),
+        ),
+        child: Row(children: [
+          lead,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text.rich(
+              TextSpan(children: [
+                for (final sp in title)
+                  if (sp is TextSpan && sp.text != null)
+                    TextSpan(
+                        text: sp.text,
+                        style: sp.style?.color == AppColors.fg1 ||
+                                sp.style?.color == AppColors.ok ||
+                                sp.style?.color == AppColors.danger
+                            ? style.copyWith(
+                                color: sp.style!.color == AppColors.fg1
+                                    ? AppColors.fg2
+                                    : sp.style!.color)
+                            : style)
+                  else
+                    sp,
+                if (note != null)
+                  TextSpan(
+                      text: ' · $note',
+                      style: style.copyWith(color: AppColors.danger)),
+              ]),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: style,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(took == null ? '' : formatWorkDuration(took),
+              style: sans(11, color: AppColors.fg4, tabular: true)),
+          const SizedBox(width: 6),
+          AnimatedRotation(
+            turns: open ? 0.5 : 0,
+            duration: Motion.fast,
+            curve: Curves.easeOutCubic,
+            child: AppIcon('chevron-down', size: 14, color: AppColors.fg4),
+          ),
+        ]),
       ),
     );
   }
@@ -383,6 +465,10 @@ class _DenseToolRowState extends State<DenseToolRow> {
     }
     final radius =
         StepScope.radiusOf(context) ?? _segmentRadius(first: true, last: true);
+    if (!kMobile) {
+      return _desktop(step, verb, object, value, radius,
+          canExpand: canExpand, open: open, danger: danger);
+    }
     final icon = kMobile ? (Grouped.compact ? 18.0 : 20.0) : 18.0;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -441,6 +527,92 @@ class _DenseToolRowState extends State<DenseToolRow> {
   }
 }
 
+extension on _DenseToolRowState {
+  /// One soft line: glyph, verb, mono target, counts and time on the right.
+  Widget _desktop(ToolStep step, String verb, String object, Widget? value,
+      BorderRadius radius,
+      {required bool canExpand, required bool open, required bool danger}) {
+    final took = stepDuration(step);
+    final live = step.running;
+    final Widget lead = live
+        ? SizedBox(
+            width: 16,
+            child: Center(child: RunSpinner(size: 12, color: AppColors.accent)))
+        : SizedBox(
+            width: 16,
+            child: AppIcon(toolIcon(step.tool),
+                size: 16, color: danger ? AppColors.danger : AppColors.fg4));
+    final trailing = <Widget>[
+      if (value != null) ...[
+        DefaultTextStyle.merge(
+            style: mono(11.5, color: AppColors.fg3), child: value),
+        SizedBox(width: 10),
+      ],
+      if (took != null)
+        ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 38),
+          child: Text(took,
+              textAlign: TextAlign.right,
+              maxLines: 1,
+              style: sans(11, color: AppColors.fg4, tabular: true)),
+        ),
+      if (canExpand) ...[
+        SizedBox(width: 6),
+        AppIcon(open ? 'chevron-up' : 'chevron-down',
+            size: 14, color: AppColors.fg4),
+      ],
+    ];
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: canExpand ? _toggle : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(color: Grouped.row, borderRadius: radius),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 34),
+              child: Row(children: [
+                lead,
+                const SizedBox(width: 10),
+                Text(verb,
+                    maxLines: 1,
+                    style: sans(12.5,
+                        color: live ? AppColors.fg1 : AppColors.fg2)),
+                if (object.isNotEmpty) ...[
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(object,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: mono(12, color: AppColors.fg3)),
+                  ),
+                ] else
+                  const Spacer(),
+                if (trailing.isNotEmpty) ...[
+                  const SizedBox(width: 10),
+                  ...trailing
+                ],
+              ]),
+            ),
+            SpringExpand(
+              open: open,
+              child: canExpand
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(26, 0, 0, 12),
+                      child: _StepDetail(step: step),
+                    )
+                  : const SizedBox(width: double.infinity),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _StepDetail extends StatefulWidget {
   const _StepDetail({required this.step});
   final ToolStep step;
@@ -455,7 +627,7 @@ class _StepDetailState extends State<_StepDetail> {
   bool _full = false;
   double _height = 0;
 
-  double get _lineHeight => (kMobile ? 12.5 : 12) * 1.45;
+  double get _lineHeight => kMobile ? 12.5 * 1.45 : 12 * 1.65;
 
   void _measure() {
     final box = _key.currentContext?.findRenderObject();
@@ -509,9 +681,9 @@ class _StepDetailState extends State<_StepDetail> {
                   behavior: HitTestBehavior.opaque,
                   onTap: () => setState(() => _full = !_full),
                   child: Padding(
-                    padding: EdgeInsets.only(top: S.s8),
+                    padding: EdgeInsets.only(top: kMobile ? S.s8 : S.s6),
                     child: Text(_full ? 'Show less' : more,
-                        style: sans(kMobile ? 13 : 13,
+                        style: sans(kMobile ? 13 : 12,
                             weight: W.label, color: AppColors.fg3)),
                   ),
                 ),

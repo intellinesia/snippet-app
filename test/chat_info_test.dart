@@ -59,7 +59,8 @@ class _Client extends FakeWakeClient {
         if (agent != null) agent!,
         CoordinationAgent.fromJson(
             {'id': 'scout', 'display_name': 'Revenue Scout'}),
-        CoordinationAgent.fromJson({'id': 'snippet', 'display_name': 'Snippet'}),
+        CoordinationAgent.fromJson(
+            {'id': 'snippet', 'display_name': 'Snippet'}),
       ];
 
   @override
@@ -92,8 +93,7 @@ class _Client extends FakeWakeClient {
       for (final m in g.members)
         if (!(removeMembers ?? const []).contains(m.id))
           {'kind': m.kind, 'id': m.id},
-      for (final id in addMembers ?? const [])
-        {'kind': 'agent', 'id': id},
+      for (final id in addMembers ?? const []) {'kind': 'agent', 'id': id},
     ];
     group = GroupSummary.fromJson({
       'id': g.id,
@@ -153,8 +153,8 @@ void main() {
     await tester.pumpWidget(_app(Builder(
       builder: (ctx) => Center(
         child: TextButton(
-          onPressed: () => showGroupInfo(
-              ctx, client: client, group: _group(), onOpenTasks: () {}),
+          onPressed: () => showGroupInfo(ctx,
+              client: client, group: _group(), onOpenTasks: () {}),
           child: const Text('open'),
         ),
       ),
@@ -201,7 +201,7 @@ void main() {
     await tester.tap(find.text('Add member'));
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsNothing);
-    expect(find.text('Add member'), findsNWidgets(2));
+    expect(find.text('Add member'), findsOneWidget);
     expect(find.text('Snippet'), findsOneWidget);
     await tester.tap(find.text('Snippet'));
     await tester.pumpAndSettle();
@@ -219,5 +219,4 @@ void main() {
     expect(tester.takeException(), isNull);
     debugDefaultTargetPlatformOverride = null;
   });
-
 }

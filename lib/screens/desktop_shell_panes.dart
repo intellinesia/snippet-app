@@ -123,6 +123,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         path: t.filePath!,
         name: t.title,
         embedded: true,
+        sessionId: t.sessionId,
+        relPath: _relToWorkspace(t.filePath!, t.workspacePath),
         onClose: primary ? () => _closeTabByKey(t.key) : null,
       );
     }
@@ -740,6 +742,16 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         sessions: _sessions,
         sessionsLoading: _sessionsLoading,
         onOpenSession: _openSession,
+        client: _client,
+        machineLabel: _active?.label ?? '',
+        onStart: _client == null
+            ? null
+            : (folder, mode, profile, text) =>
+                _startSheet(_client!, folder, mode, profile, text, const []),
+        onStartWithFiles: _client == null
+            ? null
+            : (folder, mode, profile, text, files) =>
+                _startSheet(_client!, folder, mode, profile, text, files),
       );
 
   Widget _welcome() => ShellWelcomeView(
@@ -825,7 +837,9 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             builder: (ctx) => _TbBtn(
                 icon: 'plus',
                 tooltip: agents ? 'New agent or group' : 'New session',
-                onTap: () => SidebarState.openNew(ctx, _newSessionFlow)),
+                onTap: () => kMobile
+                    ? SidebarState.openNew(ctx, _newSessionFlow)
+                    : _showNewMenu(ctx)),
           ),
         ),
         SizedBox(width: S.of(10)),
@@ -1057,4 +1071,11 @@ class _ListeningPill extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The file's path inside its workspace, or null when it lives elsewhere.
+String? _relToWorkspace(String path, String workspace) {
+  if (workspace.isEmpty) return null;
+  final root = workspace.endsWith('/') ? workspace : '$workspace/';
+  return path.startsWith(root) ? path.substring(root.length) : null;
 }

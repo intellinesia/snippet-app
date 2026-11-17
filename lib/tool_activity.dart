@@ -1018,6 +1018,16 @@ Duration? stepsDuration(Iterable<ToolStep> steps) {
   return known && ms >= 1000 ? Duration(milliseconds: ms.round()) : null;
 }
 
+/// One step's own reported time, to a tenth of a second; null when unreported.
+String? stepDuration(ToolStep step) {
+  final d = step.data;
+  final v = d?['duration_ms'];
+  final secs = d?['duration_secs'] ?? d?['elapsed_secs'];
+  final ms = v is num ? v.toDouble() : (secs is num ? secs * 1000.0 : null);
+  if (ms == null) return null;
+  return formatWorkDuration(Duration(milliseconds: ms.round()));
+}
+
 String formatWorkDuration(Duration d) {
   final s = d.inMilliseconds / 1000;
   if (s < 10) return '${s.toStringAsFixed(1)}s';

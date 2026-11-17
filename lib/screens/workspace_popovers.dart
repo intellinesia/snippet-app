@@ -11,6 +11,20 @@ import '../file_icons.dart';
 /// Desktop session-header chips: Files and the branch. Each opens an anchored
 /// popover; the full workspace lives in the shell's own pane.
 
+String gitLetter(GitFile f) {
+  if (f.untracked || f.x == 'A' || f.y == 'A') return 'A';
+  if (f.x == 'D' || f.y == 'D') return 'D';
+  if (f.x == 'R' || f.y == 'R') return 'R';
+  return 'M';
+}
+
+Color gitLetterColour(String l) => switch (l) {
+      'A' => AppColors.ok,
+      'D' => AppColors.danger,
+      'R' => AppColors.accent,
+      _ => AppColors.run,
+    };
+
 class LineCounts {
   const LineCounts(this.added, this.removed);
   final int added;
@@ -123,11 +137,13 @@ class FilesChip extends StatefulWidget {
     required this.sessionId,
     required this.workspace,
     required this.onOpenFile,
+    this.onOpenWorkspace,
   });
   final DaemonClient client;
   final String sessionId;
   final String workspace;
   final void Function(String path, String name) onOpenFile;
+  final VoidCallback? onOpenWorkspace;
 
   @override
   State<FilesChip> createState() => _FilesChipState();
@@ -149,6 +165,12 @@ class _FilesChipState extends State<FilesChip> {
             Navigator.of(anchor, rootNavigator: true).pop();
             widget.onOpenFile(path, name);
           },
+          onOpenWorkspace: widget.onOpenWorkspace == null
+              ? null
+              : () {
+                  Navigator.of(anchor, rootNavigator: true).pop();
+                  widget.onOpenWorkspace!();
+                },
         ));
     if (mounted) setState(() => _open = false);
   }
@@ -347,8 +369,12 @@ class _Row extends StatefulWidget {
       required this.leading,
       required this.icon,
       required this.label,
+      this.sub,
+      this.letter,
       this.trailing,
       this.onTap});
+  final String? sub;
+  final String? letter;
   final double indent;
   final Widget? leading;
   final Widget icon;
@@ -386,11 +412,27 @@ class _RowState extends State<_Row> {
               widget.icon,
               const SizedBox(width: 8),
               Expanded(
-                child: Text(widget.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(12.5, color: AppColors.fg1)),
+                child: Row(children: [
+                  Flexible(
+                    child: Text(widget.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12.5, color: AppColors.fg1)),
+                  ),
+                  if (widget.sub != null) ...[
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(widget.sub!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(11.5, color: AppColors.fg4)),
+                    ),
+                  ],
+                ]),
               ),
+              if (widget.letter != null)
+                Text(widget.letter!,
+                    style: mono(11, color: gitLetterColour(widget.letter!))),
               if (widget.trailing != null) widget.trailing!,
             ]),
           ),
@@ -404,7 +446,7 @@ Widget _delta(LineCounts? c) {
     if (c.added > 0) Text('+${c.added}', style: mono(11, color: AppColors.ok)),
     if (c.removed > 0) ...[
       const SizedBox(width: 4),
-      Text('-${c.removed}', style: mono(11, color: AppColors.danger)),
+      Text('−${c.removed}', style: mono(11, color: AppColors.danger)),
     ],
   ]);
 }
@@ -416,11 +458,13 @@ class FilesPopover extends StatefulWidget {
     required this.sessionId,
     required this.workspace,
     required this.onOpenFile,
+    this.onOpenWorkspace,
   });
   final DaemonClient client;
   final String sessionId;
   final String workspace;
   final void Function(String path, String name) onOpenFile;
+  final VoidCallback? onOpenWorkspace;
 
   @override
   State<FilesPopover> createState() => _FilesPopoverState();
@@ -432,6 +476,7 @@ class _FilesPopoverState extends State<FilesPopover> {
   final _expanded = <String>{};
   final _loading = <String>{};
   Map<String, LineCounts> _changes = {};
+  Map<String, String> _letters = {};
   List<String>? _all;
   String _q = '';
   String? _error;
@@ -444,10 +489,13 @@ class _FilesPopoverState extends State<FilesPopover> {
     _list(_root);
     loadWorkspaceChanges(widget.client, widget.sessionId).then((d) {
       if (mounted && d != null) {
-        setState(() => _changes = {
-              for (final f in d.status.files)
-                f.path: d.counts[f.path] ?? const LineCounts(0, 0)
-            });
+        setState(() {
+          _changes = {
+            for (final f in d.status.files)
+              f.path: d.counts[f.path] ?? const LineCounts(0, 0)
+          };
+          _letters = {for (final f in d.status.files) f.path: gitLetter(f)};
+        });
       }
     });
   }
@@ -514,7 +562,8 @@ class _FilesPopoverState extends State<FilesPopover> {
       return [
         if (_loading.contains(dir))
           Padding(
-            padding: EdgeInsets.only(left: 24.0 + depth * 16, top: 4, bottom: 4),
+            padding:
+                EdgeInsets.only(left: 24.0 + depth * 16, top: 4, bottom: 4),
             child: Text('Loading', style: sans(12, color: AppColors.fg4)),
           ),
       ];
@@ -532,7 +581,8 @@ class _FilesPopoverState extends State<FilesPopover> {
           label: e.name,
           trailing: open ? null : _delta(_countFor(rel, dir: true)),
           onTap: () {
-            setState(() => open ? _expanded.remove(e.path) : _expanded.add(e.path));
+            setState(
+                () => open ? _expanded.remove(e.path) : _expanded.add(e.path));
             if (!open) _list(e.path);
           },
         ));
@@ -561,17 +611,27 @@ class _FilesPopoverState extends State<FilesPopover> {
     }
     if (hits.isEmpty) return [_note('No matching files')];
     return [
+      _section('Matches'),
       for (final f in hits)
         _Row(
           indent: 0,
           leading: null,
           icon: FileGlyph(f.split('/').last),
-          label: f,
-          trailing: _delta(_changes[f]),
+          label: f.split('/').last,
+          sub: f.contains('/') ? f.substring(0, f.lastIndexOf('/')) : null,
+          letter: _letters[f],
           onTap: () => _open(f),
         ),
     ];
   }
+
+  Widget _section(String t) => Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
+          child: Text(t, style: sans(11.5, color: AppColors.fg4)),
+        ),
+      );
 
   Widget _note(String t) => Padding(
         padding: const EdgeInsets.all(10),
@@ -581,6 +641,22 @@ class _FilesPopoverState extends State<FilesPopover> {
   @override
   Widget build(BuildContext context) {
     return Column(mainAxisSize: MainAxisSize.min, children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(6, 2, 6, 8),
+        child: Row(children: [
+          Text('Files',
+              style: sans(12, weight: W.strong, color: AppColors.fg1)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(_root,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(11.5, color: AppColors.fg4)),
+          ),
+          if (_changes.isNotEmpty)
+            Tag('${_changes.length} changed', tone: Tone.neutral),
+        ]),
+      ),
       _Field(
         controller: _search,
         hint: 'Go to file',
@@ -599,8 +675,25 @@ class _FilesPopoverState extends State<FilesPopover> {
         _note(_error!)
       else if (_q.isNotEmpty)
         ..._results()
-      else
+      else ...[
+        _section('Project'),
         ..._tree(_root, 0),
+      ],
+      if (widget.onOpenWorkspace != null) ...[
+        const SizedBox(height: 8),
+        Divider(height: 1, color: AppColors.border),
+        const SizedBox(height: 8),
+        Row(children: [
+          Expanded(
+            child: Text('↵ open in a tab',
+                style: sans(11.5, color: AppColors.fg4)),
+          ),
+          Btn('Open workspace',
+              small: true,
+              variant: BtnVariant.ghost,
+              onTap: widget.onOpenWorkspace),
+        ]),
+      ],
     ]);
   }
 }
@@ -720,11 +813,10 @@ class _GitPopoverState extends State<GitPopover> {
                   overflow: TextOverflow.ellipsis,
                   style: mono(12.5, weight: W.strong, color: AppColors.fg1)),
             ),
-            if (st.ahead > 0) ...[
-              const SizedBox(width: 8),
+            const Spacer(),
+            if (st.ahead > 0)
               Text('${st.ahead} ahead of origin',
                   style: sans(12, color: AppColors.fg3)),
-            ],
           ]),
         ),
         Padding(
@@ -735,6 +827,8 @@ class _GitPopoverState extends State<GitPopover> {
             const SizedBox(width: 8),
             Text('${files.length} ${files.length == 1 ? 'file' : 'files'}',
                 style: sans(12, color: AppColors.fg3)),
+            const Spacer(),
+            _delta(LineCounts(_data.added, _data.removed)),
           ]),
         ),
         if (files.isEmpty)
@@ -752,9 +846,21 @@ class _GitPopoverState extends State<GitPopover> {
                   _Row(
                     indent: 0,
                     leading: null,
-                    icon: FileGlyph(f.path.split('/').last),
-                    label: f.path,
-                    trailing: _delta(_data.counts[f.path]),
+                    icon: SizedBox(
+                      width: 14,
+                      child: Text(gitLetter(f),
+                          textAlign: TextAlign.center,
+                          style:
+                              mono(11, color: gitLetterColour(gitLetter(f)))),
+                    ),
+                    label: f.path.split('/').last,
+                    sub: f.path.contains('/')
+                        ? f.path.substring(0, f.path.lastIndexOf('/'))
+                        : null,
+                    trailing: Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: _delta(_data.counts[f.path]),
+                    ),
                     onTap: widget.onOpenDiff == null
                         ? null
                         : () => widget.onOpenDiff!(f),
@@ -798,21 +904,15 @@ class _GitPopoverState extends State<GitPopover> {
                 onTap: _openPr),
         ]),
         if (widget.onOpenWorkspace != null) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Divider(height: 1, color: AppColors.border),
-          const SizedBox(height: 4),
-          GestureDetector(
-            onTap: widget.onOpenWorkspace,
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(6, 4, 6, 4),
-              child: Row(children: [
-                Text('Open workspace',
-                    style: sans(12, color: AppColors.fg2)),
-                const SizedBox(width: 4),
-                AppIcon('arrow-right', size: 12, color: AppColors.fg3),
-              ]),
-            ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Btn('Open workspace',
+                small: true,
+                variant: BtnVariant.ghost,
+                onTap: widget.onOpenWorkspace),
           ),
         ],
       ],

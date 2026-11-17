@@ -143,6 +143,10 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     // A plan is drawn once, at its latest update, not once per update.
     final lastPlan = events.lastIndexWhere((e) => e['kind'] == 'plan_updated');
     final staleStalls = supersededStalls(events);
+    // Desktop closes a finished turn with a quiet footer under its last reply.
+    final lastReply = _state?.status == 'running' || kMobile
+        ? -1
+        : events.lastIndexWhere((e) => e['kind'] == 'assistant_text');
 
     final resultOf = <int, int>{};
     final pairedResults = <int>{};
@@ -389,7 +393,19 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                   padding: EdgeInsets.only(top: S.s4, bottom: S.s4),
                   child: e['quiet'] == true
                       ? QuietAside(text: reply)
-                      : Bubble(mine: false, text: reply)));
+                      : idx == lastReply &&
+                              !events.skip(idx + 1).any((x) =>
+                                  x['kind'] == 'user_input' ||
+                                  x['kind'] == 'steer')
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                  Bubble(mine: false, text: reply),
+                                  _TurnFooter(
+                                      text: reply,
+                                      took: _turnTook(events, idx)),
+                                ])
+                          : Bubble(mine: false, text: reply)));
         case 'agent_message':
           endTools(key);
           final voiceNote = e['outbound'] == true
@@ -600,7 +616,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             addEvent(
                 key,
                 Padding(
-                  padding: EdgeInsets.symmetric(vertical: S.s12),
+                  padding: kMobile
+                      ? EdgeInsets.symmetric(vertical: S.s12)
+                      : const EdgeInsets.only(top: 4, bottom: 16),
                   child: PlanProgressCard(
                       steps: steps, explanation: _s(e['explanation'])),
                 ));
@@ -1183,21 +1201,90 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
       for (final r in widget.rows.whereType<DenseToolRow>())
         ToolStep(tool: r.tool, args: r.args, result: r.result),
     ];
+    // Desktop shows a live run as plain rows; a long one keeps its header.
+    if (!kMobile && widget.running && widget.rows.length <= 8) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 16),
+        child: WorkSteps(rows: widget.rows, header: false),
+      );
+    }
     final open = _open;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        WorkLine(
-            steps: steps, running: widget.running, open: open, onTap: _toggle),
-        AnimatedSize(
-          duration: Motion.fast,
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: open
-              ? WorkSteps(rows: widget.rows)
-              : const SizedBox(width: double.infinity),
-        ),
-      ],
+    return Padding(
+        padding: kMobile
+            ? EdgeInsets.zero
+            : const EdgeInsets.only(top: 4, bottom: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            WorkLine(
+                steps: steps,
+                running: widget.running,
+                open: open,
+                onTap: _toggle),
+            AnimatedSize(
+              duration: Motion.fast,
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topCenter,
+              child: open
+                  ? WorkSteps(rows: widget.rows)
+                  : const SizedBox(width: double.infinity),
+            ),
+          ],
+        ));
+  }
+}
+
+DateTime? _eventTime(Map e) {
+  final v = e['at'] ?? e['created_at'];
+  if (v is num) {
+    return DateTime.fromMillisecondsSinceEpoch(
+        v > 1e12 ? v.toInt() : (v * 1000).toInt());
+  }
+  return DateTime.tryParse('$v');
+}
+
+/// Time from the user's last message to the reply at [idx], when both carry one.
+Duration? _turnTook(List<Map<String, dynamic>> events, int idx) {
+  for (var i = idx - 1; i >= 0; i--) {
+    final k = events[i]['kind'];
+    if (k != 'user_input' && k != 'steer') continue;
+    final a = _eventTime(events[i]);
+    final b = _eventTime(events[idx]);
+    if (a == null || b == null || b.isBefore(a)) return null;
+    return b.difference(a);
+  }
+  return null;
+}
+
+class _TurnFooter extends StatelessWidget {
+  const _TurnFooter({required this.text, this.took});
+  final String text;
+  final Duration? took;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = sans(12, color: AppColors.fg4);
+    return Padding(
+      padding: const EdgeInsets.only(top: 2, bottom: 6),
+      child: Row(children: [
+        Text('Finished', style: style),
+        if (took != null) ...[
+          const SizedBox(width: 10),
+          Container(
+              width: 3,
+              height: 3,
+              decoration:
+                  BoxDecoration(color: AppColors.fg4, shape: BoxShape.circle)),
+          const SizedBox(width: 10),
+          Text(formatWorkDuration(took!), style: style),
+        ],
+        const Spacer(),
+        IconBtn('clipboard', size: 24, iconSize: 13, tooltip: 'Copy reply',
+            onTap: () {
+          Clipboard.setData(ClipboardData(text: text));
+          toast(context, 'Copied');
+        }),
+      ]),
     );
   }
 }

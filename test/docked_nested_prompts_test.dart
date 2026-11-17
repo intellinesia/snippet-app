@@ -98,7 +98,7 @@ void main() {
     )));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Edit'));
+    await tester.tap(find.text('Rename'));
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsNothing);
     expect(find.text('Rename group'), findsOneWidget);

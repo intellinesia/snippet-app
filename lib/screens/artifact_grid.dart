@@ -3,7 +3,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../api.dart';
 import '../models.dart';
-import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../clock.dart';
@@ -20,6 +19,8 @@ class ArtifactGrid extends StatefulWidget {
     required this.artifacts,
     required this.files,
     this.onOpenFileTab,
+    this.selectedId,
+    this.onSelect,
   });
 
   final DaemonClient client;
@@ -28,6 +29,11 @@ class ArtifactGrid extends StatefulWidget {
   final List<({String path, String caption})> files;
   final void Function(String path, String name)? onOpenFileTab;
 
+  /// Desktop list/detail: the artifact shown beside the list. Without
+  /// [onSelect] a click opens the artifact in a drawer instead.
+  final String? selectedId;
+  final void Function(ArtifactInfo artifact)? onSelect;
+
   @override
   State<ArtifactGrid> createState() => _ArtifactGridState();
 }
@@ -35,12 +41,14 @@ class ArtifactGrid extends StatefulWidget {
 String _group(String kind) => switch (kind) {
       'html' => 'Pages',
       'image' || 'svg' => 'Images',
+      'csv' => 'Tables',
+      'code' => 'Code',
       _ => 'Docs',
     };
 
 String _kindLabel(String kind) => switch (kind) {
-      'html' => 'Page',
-      'markdown' => 'Doc',
+      'html' => 'Web page',
+      'markdown' => 'Document',
       'image' || 'svg' => 'Image',
       'csv' => 'Table',
       'pdf' => 'PDF',
@@ -51,30 +59,154 @@ String _kindLabel(String kind) => switch (kind) {
 
 class _ArtifactGridState extends State<ArtifactGrid> {
   String _filter = 'All';
+  final _search = TextEditingController();
+  String _q = '';
 
-  Widget _chip(String label, int n) {
+  @override
+  void initState() {
+    super.initState();
+    _search.addListener(() {
+      final q = _search.text.trim().toLowerCase();
+      if (q != _q) setState(() => _q = q);
+    });
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  String _day(int unixSec) {
+    if (unixSec <= 0) return 'Earlier';
+    final n = DateTime.now();
+    final at = DateTime.fromMillisecondsSinceEpoch(unixSec * 1000);
+    final ago = DateTime(n.year, n.month, n.day)
+        .difference(DateTime(at.year, at.month, at.day))
+        .inDays;
+    return ago <= 0
+        ? 'Today'
+        : ago == 1
+            ? 'Yesterday'
+            : 'Earlier';
+  }
+
+  Widget _chip(String label) {
     final on = _filter == label;
-    return Padding(
-      padding: EdgeInsets.only(right: S.s4),
-      child: Material(
-        color: on ? AppColors.tint2 : Colors.transparent,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(kMobile ? R.pill : R.sm),
-            side: BorderSide(color: on ? Colors.transparent : AppColors.line)),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(kMobile ? R.pill : R.sm),
-          onTap: () => setState(() => _filter = label),
-          child: Container(
-            height: 24,
-            padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-            alignment: Alignment.center,
-            child: Text('$label $n',
-                style: sans(12, color: on ? AppColors.fg1 : AppColors.fg3)),
+    return Material(
+      color: on ? AppColors.surface3 : AppColors.surface1,
+      borderRadius: BorderRadius.circular(R.of(6)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(R.of(6)),
+        onTap: () => setState(() => _filter = label),
+        child: SizedBox(
+          height: 24,
+          child: Center(
+            widthFactor: 1,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 9),
+              child: Text(label,
+                  style: sans(11.5, color: on ? AppColors.fg1 : AppColors.fg3)),
+            ),
           ),
         ),
       ),
     );
   }
+
+  Widget _searchField() => Padding(
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+        child: Container(
+          height: 30,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: AppColors.bg,
+            borderRadius: BorderRadius.circular(R.of(6)),
+            border: Border.all(color: AppColors.border2),
+          ),
+          child: Row(children: [
+            AppIcon('search', size: 14, color: AppColors.fg4),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                key: const ValueKey('artifact-search'),
+                controller: _search,
+                cursorColor: AppColors.accent,
+                style: sans(12.5, color: AppColors.fg1),
+                decoration: InputDecoration.collapsed(
+                  hintText: 'Search artifacts',
+                  hintStyle: sans(12.5, color: AppColors.fg4),
+                ),
+              ),
+            ),
+            if (_q.isNotEmpty)
+              GestureDetector(
+                onTap: _search.clear,
+                child: AppIcon('x', size: 13, color: AppColors.fg3),
+              ),
+          ]),
+        ),
+      );
+
+  Widget _label(String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 10, 8, 4),
+        child: Text(text, style: sans(11.5, color: AppColors.fg4)),
+      );
+
+  Widget _row({
+    required Widget icon,
+    required String title,
+    required String meta,
+    required bool selected,
+    VoidCallback? onTap,
+  }) =>
+      Padding(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 2),
+        child: Material(
+          color: selected ? AppColors.surface2 : Colors.transparent,
+          borderRadius: BorderRadius.circular(R.of(8)),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(R.of(8)),
+            hoverColor: AppColors.surface1,
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Row(children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface3,
+                    borderRadius: BorderRadius.circular(R.of(6)),
+                  ),
+                  child: icon,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(13, color: AppColors.fg1)),
+                        Text(meta,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(11.5, color: AppColors.fg4)),
+                      ]),
+                ),
+              ]),
+            ),
+          ),
+        ),
+      );
+
+  bool _hit(String title, String kindLabel) =>
+      _q.isEmpty ||
+      title.toLowerCase().contains(_q) ||
+      kindLabel.toLowerCase().contains(_q);
 
   @override
   Widget build(BuildContext context) {
@@ -82,249 +214,86 @@ class _ArtifactGridState extends State<ArtifactGrid> {
     for (final a in widget.artifacts) {
       groups[_group(a.kind)] = (groups[_group(a.kind)] ?? 0) + 1;
     }
-    final total = widget.artifacts.length + widget.files.length;
     final arts = [
       for (final a in widget.artifacts)
-        if (_filter == 'All' || _group(a.kind) == _filter) a
+        if ((_filter == 'All' || _group(a.kind) == _filter) &&
+            _hit(a.title.isEmpty ? a.id : a.title, _kindLabel(a.kind)))
+          a
+    ]..sort((x, y) =>
+        (y.latest?.createdAt ?? 0).compareTo(x.latest?.createdAt ?? 0));
+    final files = [
+      if (_filter == 'All' || _filter == 'Files')
+        for (final f in widget.files)
+          if (_hit(f.path.split('/').last, f.caption)) f
     ];
-    final files = _filter == 'All' || _filter == 'Files'
-        ? widget.files
-        : const <({String path, String caption})>[];
-    return LayoutBuilder(builder: (context, box) {
-      final wide = box.maxWidth > 640;
-      final side = wide ? 32.0 : 14.0;
-      final cols = ((box.maxWidth - side * 2 + 10) / (wide ? 230 : 170))
-          .floor()
-          .clamp(2, 6);
-      final cards = <Widget>[
-        for (final a in arts)
-          _Card(
-            title: a.title.isEmpty ? a.id : a.title,
-            meta: [
-              _kindLabel(a.kind),
-              if (a.latest != null) 'v${a.latest!.n}',
-              if ((a.latest?.createdAt ?? 0) > 0)
-                relativeTime(a.latest!.createdAt),
-            ].join(' · '),
-            thumb: _ArtifactThumb(client: widget.client, artifact: a),
-            onTap: () => openArtifact(context,
-                client: widget.client,
-                session: widget.session,
-                id: a.id,
-                version: a.latest?.n ?? 1),
-          ),
-        for (final f in files)
-          _Card(
-            title: f.path.split('/').last,
-            meta: f.caption.isEmpty ? 'File' : f.caption,
-            thumb: Center(
-              child: FileGlyph(f.path, size: 26),
+    final days = <String, List<ArtifactInfo>>{};
+    for (final a in arts) {
+      (days[_day(a.latest?.createdAt ?? 0)] ??= []).add(a);
+    }
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 24),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+          child: Text('Artifacts and files',
+              style: sans(15, weight: W.strong, color: AppColors.fg1)),
+        ),
+        _searchField(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+          child: Wrap(spacing: 4, runSpacing: 4, children: [
+            _chip('All'),
+            for (final g in ['Pages', 'Docs', 'Images', 'Tables', 'Code'])
+              if ((groups[g] ?? 0) > 0) _chip(g),
+            if (widget.files.isNotEmpty) _chip('Files'),
+          ]),
+        ),
+        for (final d in ['Today', 'Yesterday', 'Earlier'])
+          if (days[d] != null) ...[
+            _label(d),
+            for (final a in days[d]!)
+              _row(
+                icon: AppIcon(artifactIcon(a.kind),
+                    size: 16, color: AppColors.fg3),
+                title: a.title.isEmpty ? a.id : a.title,
+                meta: [
+                  _kindLabel(a.kind),
+                  if (a.latest != null) 'v${a.latest!.n}',
+                  if ((a.latest?.createdAt ?? 0) > 0)
+                    relativeTime(a.latest!.createdAt),
+                ].join(' · '),
+                selected: widget.selectedId == a.id,
+                onTap: () => widget.onSelect != null
+                    ? widget.onSelect!(a)
+                    : openArtifact(context,
+                        client: widget.client,
+                        session: widget.session,
+                        id: a.id,
+                        version: a.latest?.n ?? 1),
+              ),
+          ],
+        if (files.isNotEmpty) ...[
+          _label('Files'),
+          for (final f in files)
+            _row(
+              icon: FileGlyph(f.path, size: 18),
+              title: f.path.split('/').last,
+              meta: f.caption.isEmpty ? 'File' : f.caption,
+              selected: false,
+              onTap: widget.onOpenFileTab == null
+                  ? null
+                  : () => widget.onOpenFileTab!(f.path, f.path.split('/').last),
             ),
-            onTap: widget.onOpenFileTab == null
-                ? null
-                : () => widget.onOpenFileTab!(f.path, f.path.split('/').last),
-          ),
-      ];
-      return ListView(
-        padding: EdgeInsets.fromLTRB(side, wide ? S.s20 : S.s2, side, S.s24),
-        children: [
-          if (wide)
-            Padding(
-              padding: EdgeInsets.only(bottom: S.s12),
-              child: Text('Artifacts',
-                  style: sans(18, weight: W.label, color: AppColors.fg1)),
-            ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: [
-              _chip('All', total),
-              for (final g in ['Pages', 'Images', 'Docs'])
-                if ((groups[g] ?? 0) > 0) _chip(g, groups[g]!),
-              if (widget.files.isNotEmpty) _chip('Files', widget.files.length),
-            ]),
-          ),
-          SizedBox(height: S.s12),
-          GridView.count(
-            crossAxisCount: cols,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: wide ? 1.15 : 1.0,
-            children: cards,
-          ),
         ],
-      );
-    });
-  }
-}
-
-class _Card extends StatefulWidget {
-  const _Card(
-      {required this.title, required this.meta, required this.thumb, this.onTap});
-  final String title;
-  final String meta;
-  final Widget thumb;
-  final VoidCallback? onTap;
-
-  @override
-  State<_Card> createState() => _CardState();
-}
-
-class _CardState extends State<_Card> {
-  bool _hover = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: AppColors.tint1,
-            borderRadius: BorderRadius.circular(R.lg),
-            border: Border.all(
-                color: _hover
-                    ? AppColors.accent.withValues(alpha: 0.45)
-                    : AppColors.line),
+        if (arts.isEmpty && files.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Text('Nothing matches.',
+                textAlign: TextAlign.center,
+                style: sans(13, color: AppColors.fg3)),
           ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(
-              child: Container(color: AppColors.surface2.withValues(alpha: 0.5), child: widget.thumb),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(S.of(10), S.s8, S.of(10), S.of(9)),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(widget.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(13, color: AppColors.fg1)),
-                    SizedBox(height: S.s2),
-                    Text(widget.meta,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(11, color: AppColors.fg4)),
-                  ]),
-            ),
-          ]),
-        ),
-      ),
+      ],
     );
-  }
-}
-
-class _ArtifactThumb extends StatefulWidget {
-  const _ArtifactThumb({required this.client, required this.artifact});
-  final DaemonClient client;
-  final ArtifactInfo artifact;
-
-  @override
-  State<_ArtifactThumb> createState() => _ArtifactThumbState();
-}
-
-class _ArtifactThumbState extends State<_ArtifactThumb> {
-  Future<String>? _text;
-
-  bool get _textual => const {'markdown', 'code', 'csv'}
-      .contains(widget.artifact.kind);
-
-  @override
-  void initState() {
-    super.initState();
-    final v = widget.artifact.latest;
-    if (v != null && _textual) _text = widget.client.artifactText(v.url);
-  }
-
-  Widget _page() => Padding(
-        padding: EdgeInsets.all(S.s12),
-        child: Container(
-          padding: EdgeInsets.all(S.of(9)),
-          decoration: BoxDecoration(
-            color: AppColors.bg,
-            borderRadius: BorderRadius.circular(R.sm),
-            border: Border.all(color: AppColors.line),
-          ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              AppIcon('globe', size: 10, color: AppColors.fg4),
-              SizedBox(width: S.of(5)),
-              Container(
-                  width: 46,
-                  height: 5,
-                  decoration: BoxDecoration(
-                      color: AppColors.surface3,
-                      borderRadius: BorderRadius.circular(R.of(3)))),
-            ]),
-            SizedBox(height: S.of(7)),
-            Expanded(
-              child: Container(
-                  decoration: BoxDecoration(
-                      color: AppColors.surface2,
-                      borderRadius: BorderRadius.circular(R.xs))),
-            ),
-            SizedBox(height: S.of(5)),
-            Row(children: [
-              Expanded(
-                child: Container(
-                    height: 14,
-                    decoration: BoxDecoration(
-                        color: AppColors.surface2,
-                        borderRadius: BorderRadius.circular(R.xs))),
-              ),
-              SizedBox(width: S.of(5)),
-              Expanded(
-                child: Container(
-                    height: 14,
-                    decoration: BoxDecoration(
-                        color: AppColors.accent.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(R.xs))),
-              ),
-            ]),
-          ]),
-        ),
-      );
-
-  @override
-  Widget build(BuildContext context) {
-    final a = widget.artifact;
-    final v = a.latest;
-    if (v == null) return Center(child: AppIcon(artifactIcon(a.kind), size: 24, color: AppColors.fg4));
-    final uri = widget.client.artifactUri(v.url).toString();
-    if (a.kind == 'image') {
-      return Image.network(uri,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) =>
-              Center(child: AppIcon('image', size: 24, color: AppColors.fg4)));
-    }
-    if (a.kind == 'svg') {
-      return Padding(
-        padding: EdgeInsets.all(S.s12),
-        child: SvgPicture.network(uri, fit: BoxFit.contain),
-      );
-    }
-    if (a.kind == 'html') return _page();
-    if (_text != null) {
-      return FutureBuilder<String>(
-        future: _text,
-        builder: (_, snap) => Padding(
-          padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, 0),
-          child: Text(
-            (snap.data ?? '').split('\n').take(9).join('\n'),
-            maxLines: 9,
-            overflow: TextOverflow.clip,
-            style: mono(9, height: 1.45, color: AppColors.fg4),
-          ),
-        ),
-      );
-    }
-    return Center(child: AppIcon(artifactIcon(a.kind), size: 26, color: AppColors.fg4));
   }
 }
 
@@ -447,7 +416,8 @@ class _ArtifactCollectionState extends State<ArtifactCollection> {
       widget.onOpenFileTab!(path, name);
       return;
     }
-    presentFileOnDesktop(context, client: widget.client, path: path, name: name);
+    presentFileOnDesktop(context,
+        client: widget.client, path: path, name: name);
   }
 
   Future<void> _downloadFile(String path) async {
@@ -542,7 +512,8 @@ class _ArtifactCollectionState extends State<ArtifactCollection> {
 
   Widget _label(String text) => Padding(
         padding: const EdgeInsets.fromLTRB(0, 20, 0, 8),
-        child: Text(text, style: sans(15, height: 20 / 15, color: AppColors.fg3)),
+        child:
+            Text(text, style: sans(15, height: 20 / 15, color: AppColors.fg3)),
       );
 
   Widget _grid(List<Widget> cards) => LayoutBuilder(builder: (context, box) {
@@ -613,7 +584,8 @@ class _ArtifactCollectionState extends State<ArtifactCollection> {
               key: ValueKey('file-card-${f.path}'),
               title: f.path.split('/').last,
               kind: _fileKind(f.path),
-              meta: f.caption.isEmpty ? _kindName(_fileKind(f.path)) : f.caption,
+              meta:
+                  f.caption.isEmpty ? _kindName(_fileKind(f.path)) : f.caption,
               preview: _fileKind(f.path) == 'image'
                   ? Image(
                       image: widget.client.imageProvider(f.path),
@@ -793,8 +765,8 @@ class _ArtifactTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final a = artifact;
     final v = a.latest;
-    final tile = _TypeTile(
-        kind: a.kind, label: _kindName(a.kind), caption: a.caption);
+    final tile =
+        _TypeTile(kind: a.kind, label: _kindName(a.kind), caption: a.caption);
     if (v == null) return tile;
     final uri = client.artifactUri(v.url).toString();
     if (a.kind == 'image') {

@@ -26,6 +26,7 @@ class WakesScreen extends StatefulWidget {
     this.embedded = false,
     this.keepWarm = false,
     this.onBack,
+    this.tab = false,
   });
 
   final DaemonClient client;
@@ -34,6 +35,9 @@ class WakesScreen extends StatefulWidget {
 
   /// Phone drill-down back action; the screen then draws its own header.
   final VoidCallback? onBack;
+
+  /// Shown as a workspace tab rather than inside Settings.
+  final bool tab;
 
   @override
   State<WakesScreen> createState() => _WakesScreenState();
@@ -61,8 +65,7 @@ class _WakesScreenState extends State<WakesScreen> {
         await c.coordinationAgents().catchError((_) => <CoordinationAgent>[]);
     if (warm?.entries.any((e) => e.enabled && e.ownerKind == 'session') ??
         false) {
-      final sessions =
-          await c.sessions().catchError((_) => <SessionInfo>[]);
+      final sessions = await c.sessions().catchError((_) => <SessionInfo>[]);
       _sessionTitles = {
         for (final s in sessions)
           if (s.title.trim().isNotEmpty) s.id: s.title.trim()
@@ -107,13 +110,36 @@ class _WakesScreenState extends State<WakesScreen> {
     final subtitle = warmPage
         ? 'Sessions that hold their prompt cache while idle.'
         : 'When each agent wakes on its own.';
-    Widget page(List<Widget> children) => desk
-        ? SettingsColumn(children: [
-            SettingsHeader(title: title, subtitle: subtitle),
-            SizedBox(height: S.s8),
-            ...children,
+    Widget page(List<Widget> children) => !kMobile && widget.tab
+        ? ListView(padding: const EdgeInsets.only(bottom: 24), children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 16),
+                        Text(title,
+                            style: sans(20,
+                                weight: FontWeight.w600, color: AppColors.fg1)),
+                        const SizedBox(height: 4),
+                        Text(subtitle, style: sans(12.5, color: AppColors.fg4)),
+                        const SizedBox(height: 12),
+                        ...children,
+                      ]),
+                ),
+              ),
+            ),
           ])
-        : PageBody(children: children);
+        : desk
+            ? SettingsColumn(children: [
+                SettingsHeader(title: title, subtitle: subtitle),
+                SizedBox(height: S.s8),
+                ...children,
+              ])
+            : PageBody(children: children);
     final body =
         FutureBuilder<(WakeList, KeepWarmList?, List<CoordinationAgent>)>(
       future: _future,
@@ -139,23 +165,24 @@ class _WakesScreenState extends State<WakesScreen> {
           const empty = EmptyState(
             icon: 'calendar-clock',
             title: 'No wakes yet',
-            body:
-                'Schedule an agent from its page, under Wakes and reporting.',
+            body: 'Schedule an agent from its page, under Wakes and reporting.',
           );
           if (!desk) return empty;
-          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 0),
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 680),
-                  child: SettingsHeader(title: title, subtitle: subtitle),
+          return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 0),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 680),
+                      child: SettingsHeader(title: title, subtitle: subtitle),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const Expanded(child: empty),
-          ]);
+                const Expanded(child: empty),
+              ]);
         }
         return page([
           if (!warmPage)
@@ -163,23 +190,23 @@ class _WakesScreenState extends State<WakesScreen> {
               for (final w in wakes.wakes) _wakeRow(context, w, agents),
             ]),
           if (warmPage)
-          SettingsGroup(
-            header: 'Keep warm',
-            footer: warm != null && warm.calls7d > 0 && warmOn.isNotEmpty
-                ? '${warm.calls7d} warm calls in the last 7 days, ${tokensLabel(warm.cacheReadTokens7d)} tokens read from cache.'
-                : null,
-            children: [
-              if (warmOn.isEmpty)
-                const SettingsRow(
-                  key: Key('keep-warm-empty'),
-                  label: 'No session is kept warm',
-                  sub:
-                      'A warm session keeps its prompt cache while idle, so the next turn is cheaper.',
-                )
-              else
-                for (final e in warmOn) _warmRow(context, e, agents),
-            ],
-          ),
+            SettingsGroup(
+              header: 'Keep warm',
+              footer: warm != null && warm.calls7d > 0 && warmOn.isNotEmpty
+                  ? '${warm.calls7d} warm calls in the last 7 days, ${tokensLabel(warm.cacheReadTokens7d)} tokens read from cache.'
+                  : null,
+              children: [
+                if (warmOn.isEmpty)
+                  const SettingsRow(
+                    key: Key('keep-warm-empty'),
+                    label: 'No session is kept warm',
+                    sub:
+                        'A warm session keeps its prompt cache while idle, so the next turn is cheaper.',
+                  )
+                else
+                  for (final e in warmOn) _warmRow(context, e, agents),
+              ],
+            ),
         ]);
       },
     );
@@ -285,9 +312,7 @@ class _WakesScreenState extends State<WakesScreen> {
         key: ValueKey('warm-${e.owner}'),
         label: name,
         sub: sub,
-        leading: session
-            ? null
-            : const V5IconTile('gauge'),
+        leading: session ? null : const V5IconTile('gauge'),
         trailing: session
             ? GestureDetector(
                 key: ValueKey('warm-open-${e.owner}'),
@@ -321,10 +346,7 @@ class _WakesScreenState extends State<WakesScreen> {
     }
     unawaited(presentScreen(context,
         builder: (_, close) => SessionScreen(
-            client: widget.client,
-            sessionId: id,
-            title: name,
-            onMenu: close)));
+            client: widget.client, sessionId: id, title: name, onMenu: close)));
   }
 
   Future<void> _sessionWarmMenu(

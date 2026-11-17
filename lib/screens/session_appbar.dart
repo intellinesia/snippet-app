@@ -1303,17 +1303,52 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       builder: (_, close) => ProcessesScreen(
           client: widget.client, sessionId: widget.sessionId, onClose: close));
 
-  /// The chat pane: full width alone, capped to its reading width when it is
-  /// paired with the session panel.
-  Widget _chatPane(bool paired, Widget child) => paired
-      ? Flexible(
-          child: ConstrainedBox(
-              constraints: BoxConstraints(
-                  maxWidth: 740 + 2 * kComposerGutter + 2 * S.s16),
-              child: child))
-      : Expanded(child: child);
+  /// The chat pane: capped to its reading width and centred, 680 of text
+  /// beside the session panel and 760 without it. Alone (phone, read-only,
+  /// inbox) it takes the full width.
+  Widget _chatPane(bool paired, Widget child) {
+    final hasPanel =
+        !widget.readOnly && _inboxAgentId(widget.sessionId) == null;
+    if (kMobile || (!paired && !hasPanel)) return Expanded(child: child);
+    // The transcript keeps a 20px gutter inside the pane.
+    return Flexible(
+        child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: (paired ? 680 : 760) + 40),
+            child: child));
+  }
 
-  Widget _sessionRail(HarnessState? s) {
+  Widget _passThrough(Widget w) => w;
+
+  /// Below the pair width the panel opens as a floating card under the header
+  /// button and closes on a click away.
+  Widget _floatingRail(HarnessState? s, BoxConstraints column) {
+    if (_railVisible(column.maxWidth) ||
+        widget.readOnly ||
+        _inboxAgentId(widget.sessionId) != null) {
+      return const SizedBox.shrink();
+    }
+    return ValueListenableBuilder<bool>(
+      valueListenable: sessionRailFloating,
+      builder: (_, open, __) {
+        if (!open) return const SizedBox.shrink();
+        return Stack(children: [
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => sessionRailFloating.value = false,
+            ),
+          ),
+          Positioned(
+            right: 16,
+            top: SessionChatHeader.height - 4,
+            child: _sessionRail(s, floating: true),
+          ),
+        ]);
+      },
+    );
+  }
+
+  Widget _sessionRail(HarnessState? s, {bool floating = false}) {
     final mc = _isMissionControl;
     final open = widget.onOpenRightPanel;
     final goalOn = s?.goal?.ongoing ?? false;
@@ -1323,6 +1358,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       sessionId: widget.sessionId,
       state: s,
       isMissionControl: mc,
+      floating: floating,
       profileLabel: profile.isEmpty ? 'Default model' : profile,
       resumeMode: _resumeMode,
       github: _github != null,
@@ -1481,61 +1517,89 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   // transcript. The tab strip carries the title; the phone keeps its own chrome.
   bool get _deskHeader => !kMobile && !widget.readOnly;
 
-  double get _deskHeaderHeight =>
-      _isMissionControl ? ChatHeader.overlap - 8 : _kDeskHeaderH;
+  double get _deskHeaderHeight => SessionChatHeader.height;
 
   /// With the session panel open, its header holds the actions; the chat
-  /// header carries them only when the panel is hidden or does not fit.
+  /// header carries them only when the panel is hidden or does not fit, and
+  /// then a panel button shows it (docked, or floating when it cannot dock).
   Widget _deskHeaderBar(HarnessState? s, bool running, {bool rail = false}) {
-    if (!rail) return _deskHeaderBarWith(s, running, actions: true);
-    return ValueListenableBuilder<bool>(
-      valueListenable: sessionRailCollapsed,
-      builder: (_, collapsed, __) => _deskHeaderBarWith(s, running,
-          actions: collapsed, showPanel: collapsed),
+    return ListenableBuilder(
+      listenable: Listenable.merge([sessionRailCollapsed, sessionRailFloating]),
+      builder: (_, __) {
+        final collapsed = sessionRailCollapsed.value;
+        final floating = sessionRailFloating.value;
+        final hasPanel =
+            !widget.readOnly && _inboxAgentId(widget.sessionId) == null;
+        final docked = rail && !collapsed;
+        final Widget? toggle = !hasPanel || docked
+            ? null
+            : IconBtn('sidebar',
+                size: 30,
+                iconSize: 15,
+                active: !rail && floating,
+                tooltip: rail || !floating
+                    ? 'Show session panel'
+                    : 'Hide session panel', onTap: () {
+                if (rail) {
+                  setSessionRailCollapsed(false);
+                } else {
+                  sessionRailFloating.value = !floating;
+                }
+              });
+        return _deskHeaderBarWith(s, running,
+            actions: !docked, toggle: toggle, hidden: rail && collapsed);
+      },
     );
   }
 
   Widget _deskHeaderBarWith(HarnessState? s, bool running,
-      {required bool actions, bool showPanel = false}) {
-    final toggle = showPanel
-        ? IconBtn('sidebar',
-            size: 30,
-            iconSize: 15,
-            tooltip: 'Show session panel',
-            onTap: () => setSessionRailCollapsed(false))
-        : null;
-    if (_isMissionControl) {
-      return ChatHeader(
-        agentIds: const ['mission-control'],
-        title: 'Mission Control',
-        status: ChatHeader.statusText(running ? 'Working' : 'Active'),
-        onTitleTap: widget.onDeskInfo,
-        titleHint: 'Info',
-        trailing: actions
-            ? Padding(
-                padding: EdgeInsets.only(top: S.s4),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  _mcHeaderActions(s),
-                  if (toggle != null) toggle,
-                ]),
-              )
-            : null,
-      );
-    }
-    return SizedBox(
-      height: _kDeskHeaderH,
-      child: actions
-          ? Stack(clipBehavior: Clip.none, children: [
-              Positioned(
-                  right: 12,
-                  top: 7,
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    _workspaceChips(s),
-                    _sessionIconActions(s),
-                    if (toggle != null) toggle,
-                  ])),
-            ])
-          : null,
+      {required bool actions, Widget? toggle, bool hidden = false}) {
+    final mc = _isMissionControl;
+    final status = s?.pendingQuestion != null
+        ? 'needs_you'
+        : running
+            ? 'running'
+            : (s?.status ?? 'idle');
+    final ws = s?.workspace.trim() ?? '';
+    final agent = (_meAgentName ?? '').trim().isEmpty
+        ? (_me?.displayAgentId ?? '')
+        : _meAgentName!.trim();
+    final sub = mc
+        ? [
+            'Coordinator',
+            if ((_mcInFlight ?? 0) > 0) '${_mcInFlight!} tasks in flight',
+          ].join(' \u00b7 ')
+        : hidden
+            ? ''
+            : [
+                if (agent.isNotEmpty) agent,
+                if (ws.isNotEmpty) lastPathSegment(ws, ifEmpty: ws),
+              ].join(' \u00b7 ');
+    return SessionChatHeader(
+      agentId: mc ? 'mission-control' : (_me?.displayAgentId ?? 'snippet'),
+      title: mc ? 'Mission Control' : (_title.isEmpty ? 'Session' : _title),
+      status: mc && !running ? 'idle' : status,
+      startedAt: DateTime.tryParse(s?.turnStartedAt ?? ''),
+      sub: sub,
+      onTitleTap: mc ? widget.onDeskInfo : null,
+      actions: !actions
+          ? null
+          : Row(mainAxisSize: MainAxisSize.min, children: [
+              if (mc)
+                _mcHeaderActions(s)
+              else ...[
+                _workspaceChips(s),
+                _sessionIconActions(s),
+              ],
+              if (toggle != null) ...[
+                Container(
+                    width: 1,
+                    height: 18,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    color: AppColors.lineStrong),
+                toggle,
+              ],
+            ]),
     );
   }
 
@@ -1550,6 +1614,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                 sessionId: widget.sessionId,
                 workspace: s!.workspace,
                 onOpenFile: _openWorkspaceFile,
+                onOpenWorkspace: widget.onOpenWorkspace,
               ),
             ),
             GitChip(
@@ -1572,6 +1637,13 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               iconSize: 15,
               tooltip: 'Goal',
               onTap: () => _performMacAction('goal')),
+          if (!_isMissionControl)
+            IconBtn('terminal',
+                size: 30,
+                iconSize: 15,
+                tooltip: 'Terminal',
+                active: _termOpen && _terms.isNotEmpty,
+                onTap: _openTerm),
           widget.deskActions?.call() ??
               Builder(
                 builder: (ctx) => IconBtn('more-horizontal',
@@ -1597,8 +1669,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         ],
       );
 }
-
-const double _kDeskHeaderH = 44;
 
 /// Status dot for a terminal tab: ok while alive, faint once ended, accent
 /// while the pty is still starting.

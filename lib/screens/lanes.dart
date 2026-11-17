@@ -81,9 +81,10 @@ class _LanesScreenState extends State<LanesScreen> {
               onBack: widget.onClose ?? () => Navigator.pop(context),
             )
           else
+            // SnAppBar steps aside when a hosting panel already shows the title.
             SnAppBar(
-              title: 'Delegated lanes',
-              titleSize: 14,
+              title: 'Lanes',
+              titleSize: 20,
               compact: true,
               onBack: widget.onClose ?? () => Navigator.pop(context),
             ),
@@ -358,9 +359,8 @@ class _AgentLanesView extends StatelessWidget {
     ]);
 
     final provider = profiles[(lane.profile ?? '').trim()];
-    final mark = provider == null || provider.provider.isEmpty
-        ? null
-        : provider;
+    final mark =
+        provider == null || provider.provider.isEmpty ? null : provider;
     String? tag;
     Color tagColor = AppColors.fg3;
     var rest = '';
@@ -568,7 +568,9 @@ void openLaneView(BuildContext context, LaneInfo lane,
   final daemon = client ?? DaemonScope.maybeOf(context);
   final live = liveLanes ?? () => [lane];
   final transcript = lane.transcript;
-  Widget screen() => daemon != null && transcript != null && transcript.isNotEmpty
+  Widget screen() => daemon != null &&
+          transcript != null &&
+          transcript.isNotEmpty
       ? LaneTranscriptScreen(client: daemon, laneId: lane.id, liveLanes: live)
       : LaneDetailScreen(
           laneId: lane.id,
@@ -790,13 +792,16 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
               padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s2),
               decoration: BoxDecoration(
                   color: toneBg, borderRadius: BorderRadius.circular(R.pill)),
-              child: Text(pill,
-                  style: sans(12, weight: W.label, color: toneFg)),
+              child:
+                  Text(pill, style: sans(12, weight: W.label, color: toneFg)),
             ),
             Text(status, style: sans(12, color: AppColors.fg3)),
             identity,
           ]),
-      if (ctrl != null) ...[SizedBox(height: S.s12), Row(children: [ctrl])],
+      if (ctrl != null) ...[
+        SizedBox(height: S.s12),
+        Row(children: [ctrl])
+      ],
       if (rows.isNotEmpty)
         _section('Activity · ${rows.length}', [
           SizedBox(height: S.s6),
@@ -832,7 +837,8 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
         child: Row(children: [
           Expanded(
             child: Text(label,
-                style: sans(13, color: danger ? AppColors.danger : AppColors.fg3)),
+                style:
+                    sans(13, color: danger ? AppColors.danger : AppColors.fg3)),
           ),
           if (copy != null)
             InkWell(
@@ -856,7 +862,8 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
           borderRadius: BorderRadius.circular(R.lg),
           border: Border.all(color: AppColors.line),
         ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+        child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: children),
       ),
     ]);
   }
@@ -918,7 +925,10 @@ class _LaneDetailCardState extends State<LaneDetailCard> {
     if (client == null || sessionId == null) return null;
     if (!lane.running && !lane.retryable) return null;
     return LaneControlButton(
-        client: client, sessionId: sessionId, lane: lane, quiet: !widget.detail);
+        client: client,
+        sessionId: sessionId,
+        lane: lane,
+        quiet: !widget.detail);
   }
 
   /// The agent's character and name, or the provider mark and profile when the

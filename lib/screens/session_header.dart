@@ -1,0 +1,166 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+
+import '../mochi.dart';
+import '../theme.dart';
+
+/// Desktop chat header: orb, title, status pill and a quiet agent line, with
+/// the session actions at the right while the panel is hidden or folded.
+class SessionChatHeader extends StatelessWidget {
+  const SessionChatHeader({
+    super.key,
+    required this.agentId,
+    required this.title,
+    required this.status,
+    this.startedAt,
+    this.sub,
+    this.actions,
+    this.onTitleTap,
+  });
+
+  static const double height = 56;
+
+  final String agentId;
+  final String title;
+
+  /// idle, running, needs-you or another daemon status.
+  final String status;
+
+  /// Turn start; the pill counts up from it while the turn runs.
+  final DateTime? startedAt;
+  final String? sub;
+  final Widget? actions;
+  final VoidCallback? onTitleTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = Text(title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style:
+            sans(15, weight: W.label, color: AppColors.fg1, spacing: -0.075));
+    return SizedBox(
+      height: height,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: S.s20),
+        child: Row(children: [
+          AgentMochi(agentId, size: 22),
+          const SizedBox(width: 10),
+          Flexible(
+            child: onTitleTap == null
+                ? name
+                : GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onTitleTap,
+                    child: name),
+          ),
+          const SizedBox(width: 10),
+          _StatusPill(status: status, startedAt: startedAt),
+          if ((sub ?? '').isNotEmpty) ...[
+            const SizedBox(width: 8),
+            Flexible(
+              flex: 0,
+              child: Text(sub!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12, color: AppColors.fg4)),
+            ),
+          ],
+          const Spacer(),
+          if (actions != null) actions!,
+        ]),
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatefulWidget {
+  const _StatusPill({required this.status, this.startedAt});
+  final String status;
+  final DateTime? startedAt;
+
+  @override
+  State<_StatusPill> createState() => _StatusPillState();
+}
+
+class _StatusPillState extends State<_StatusPill> {
+  Timer? _tick;
+
+  bool get _running => widget.status == 'running';
+
+  @override
+  void initState() {
+    super.initState();
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(_StatusPill old) {
+    super.didUpdateWidget(old);
+    _sync();
+  }
+
+  void _sync() {
+    if (_running && widget.startedAt != null) {
+      _tick ??= Timer.periodic(
+          const Duration(seconds: 1), (_) => mounted ? setState(() {}) : null);
+    } else {
+      _tick?.cancel();
+      _tick = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  static String _clock(Duration d) {
+    final m = d.inMinutes;
+    final s = d.inSeconds % 60;
+    return m > 0 ? '${m}m ${s}s' : '${s}s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, fg, bg) = switch (widget.status) {
+      'running' => (
+          widget.startedAt == null
+              ? 'Working'
+              : 'Working ${_clock(DateTime.now().difference(widget.startedAt!))}',
+          AppColors.accent,
+          AppColors.accentBg
+        ),
+      'waiting_for_input' || 'needs_you' => (
+          'Needs you',
+          AppColors.run,
+          AppColors.runBg
+        ),
+      'in_review' => ('In review', AppColors.fg2, AppColors.surface2),
+      'failed' || 'error' => ('Failed', AppColors.danger, AppColors.dangerBg),
+      _ => ('Finished', AppColors.fg3, AppColors.surface2),
+    };
+    return Container(
+      height: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 7),
+      decoration: BoxDecoration(
+          color: bg, borderRadius: BorderRadius.circular(R.of(5))),
+      alignment: Alignment.center,
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (_running) ...[
+          Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: fg, shape: BoxShape.circle)),
+          const SizedBox(width: 6),
+        ],
+        Text(label,
+            style: sans(11.5, color: fg, tabular: true),
+            maxLines: 1,
+            softWrap: false),
+      ]),
+    );
+  }
+}

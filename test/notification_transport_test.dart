@@ -9,8 +9,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/device_events.dart';
 import 'package:snippet/notification_inbox.dart';
+import 'package:snippet/desktop_notifications.dart';
 import 'package:snippet/notification_popovers.dart';
 import 'package:snippet/notification_sync.dart';
+import 'package:snippet/widgets.dart' show AppIcon;
 import 'package:snippet/screens/desktop_shell.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -146,7 +148,9 @@ void main() {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
     await tester.pump();
     expect(delivered, hasLength(1));
-    await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
+    // The desktop toast closes from its x, the last icon in the card.
+    await tester.tap(find.descendant(
+        of: find.byType(DesktopToast), matching: find.byType(AppIcon)).last);
     await tester.pump(const Duration(milliseconds: 400));
     visibleNotificationSession.value = notificationSessionKey(url, 'transport-chat');
     for (final socket in eventSockets) {

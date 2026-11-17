@@ -12,6 +12,7 @@ import '../swr.dart';
 import '../session_status_updates.dart';
 import '../session_seen.dart';
 import '../command_palette.dart';
+import '../desktop_notifications.dart';
 import '../device_events.dart';
 import '../models.dart';
 import '../macos_notch.dart';
@@ -48,10 +49,16 @@ import 'mobile_chrome.dart';
 import 'mobile_shell.dart';
 import 'new_session_picker.dart';
 import 'new_session_draft.dart';
+import 'new_menu.dart';
+import 'agents_sidebar_panel.dart' show showCreateAgentDialog;
+import 'group_messaging.dart' show createAndOpenGroup;
+import '../desktop_pick.dart' show PickedLocalFile;
 import 'session.dart';
 import 'mission_board_panel.dart';
 import 'pull_requests.dart';
 import 'session_list_row.dart' show sessionNeedsYou;
+import 'artifact_viewer.dart' show SessionDeliverables;
+import 'wakes_screen.dart';
 import 'workspace_tab.dart';
 import 'desktop_settings_page.dart';
 import 'settings_panel.dart';
@@ -339,7 +346,7 @@ class _DesktopShellState extends State<DesktopShell>
       if (existing == null) _rightTabs.add(tab);
       if (tab.pane == _Pane.right) {
         _rightCollapsed = false;
-          _agentPanelHidden = false;
+        _agentPanelHidden = false;
       }
       _activePane = tab.pane;
       _activeKey[tab.pane] = tab.key;
@@ -420,8 +427,7 @@ class _DesktopShellState extends State<DesktopShell>
 
   bool get _panelHidden => _agentPanelHidden;
 
-  void _togglePanel() =>
-      setState(() => _agentPanelHidden = !_agentPanelHidden);
+  void _togglePanel() => setState(() => _agentPanelHidden = !_agentPanelHidden);
 
   void _showAgentInfo() => setState(() {
         _agentPanelHidden = false;
@@ -470,7 +476,7 @@ class _DesktopShellState extends State<DesktopShell>
       );
 
   // Session, MC, and agent tabs carry their tools in the chat header.
-  List<Widget> _railTools() => const [];
+  List<Widget> _railTools() => const [NotificationBell()];
 
   Future<void> _openGoalPopover(BuildContext btnCtx) => showGoalPopover(
         context: context,
@@ -977,8 +983,7 @@ class _DesktopShellState extends State<DesktopShell>
         act('memory', 'brain', 'Mission Control memory'),
       ],
       if (inSession && !mc)
-        cmd('open-workspace', 'folder', 'Open workspace',
-            _openActiveWorkspace,
+        cmd('open-workspace', 'folder', 'Open workspace', _openActiveWorkspace,
             kind: PaletteKind.session,
             keywords: const ['files', 'git', 'diff', 'commit', 'changes']),
       cmd('new-session', 'plus', 'New chat', _newSessionFlow,
@@ -986,6 +991,7 @@ class _DesktopShellState extends State<DesktopShell>
           keywords: const ['session', 'create', 'new']),
       cmd('mission-control', 'layers', 'Mission Control',
           _openMissionControlTab,
+          subtitle: _mcAttentionCount > 0 ? '$_mcAttentionCount need you' : '',
           keywords: const ['mc', 'orchestrator', 'tasks']),
       cmd(
         'toggle-sidebar',
@@ -1364,26 +1370,74 @@ class _DesktopShellState extends State<DesktopShell>
     }
   }
 
-  // Start a chat by picking a folder using NewSessionPicker on both desktop and mobile.
+  // Desktop opens the sheet in a dialog; the phone never reaches this.
   void _openDraftTab([String? folder]) {
     final client = _client;
-    final url = _active?.url;
-    if (client == null || url == null) return;
-    final existing = _tabs.indexWhere((t) => t.isDraft && t.instanceUrl == url);
-    setState(() {
-      if (existing >= 0) {
-        if (folder != null) _tabs[existing].draftFolder = folder;
-        _activeIndex = existing;
-      } else {
-        _tabs.add(
-            _ShellTab.draft(client: client, instanceUrl: url, folder: folder));
-        _activeIndex = _tabs.length - 1;
-      }
-      final root = _tabs[_activeIndex];
-      _groupRootKey[root.pane] = root.key;
-      _activeKey[root.pane] = root.key;
-    });
-    _syncPage();
+    if (client == null || _active == null) return;
+    presentScreen(
+      context,
+      style: PanelStyle.dialog,
+      maxWidth: 640,
+      maxHeight: 720,
+      builder: (_, close) => NewSessionDraft(
+        client: client,
+        machineLabel: _active?.label ?? '',
+        folder: folder,
+        source: _draftSource(folder),
+        recentSessions: _sessions,
+        layout: NewSessionLayout.sheet,
+        onCancel: close,
+        onStart: (f, mode, profile, text) async {
+          await _startSheet(client, f, mode, profile, text, const []);
+          close();
+        },
+        onStartWithFiles: (f, mode, profile, text, files) async {
+          await _startSheet(client, f, mode, profile, text, files);
+          close();
+        },
+      ),
+    );
+  }
+
+  Future<void> _startSheet(DaemonClient c, String folder, WorkspaceMode mode,
+      String? profile, String text, List<PickedLocalFile> files) async {
+    try {
+      final id = await c.openSession(folder,
+          workspace: mode, profile: profile, newConversation: true);
+      _openSession(id, 'New session', profile,
+          share: SharedInbound(
+            type: files.isEmpty ? 'text' : 'file',
+            text: text,
+            paths: [for (final f in files) f.path],
+            names: [for (final f in files) f.name],
+            send: true,
+          ));
+      _loadSessions();
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+      rethrow;
+    }
+  }
+
+  void _showNewMenu(BuildContext anchor) {
+    final c = _client;
+    if (c == null) return;
+    final seen = <String>{};
+    final recents = <String>[
+      for (final s in _sessions ?? const <SessionInfo>[])
+        if (s.projectFolder.isNotEmpty && seen.add(s.projectFolder))
+          s.projectFolder,
+    ];
+    showNewMenu(
+      anchor,
+      onNewSession: _newSessionFlow,
+      onNewAgent: () => showCreateAgentDialog(context, c),
+      onNewGroup: () => createAndOpenGroup(context, c),
+      onNewShell: _newGlobalShell,
+      onNewTask: () => showCreateTask(context, c),
+      recentProjects: recents,
+      onNewSessionIn: _openDraftTab,
+    );
   }
 
   Future<void> _startDraft(_ShellTab draft, String folder, WorkspaceMode mode,
@@ -1683,6 +1737,10 @@ class _DesktopShellState extends State<DesktopShell>
         onSelectInstance: _selectInstance,
         onOpenMissionControl: _openMissionControlTab,
         onOpenPalette: kMobile ? null : _openCommandPalette,
+        onOpenTasks: kMobile ? null : _openTasksTab,
+        onOpenPullRequests: kMobile ? null : _openPullRequestsTile,
+        onOpenArtifacts: kMobile ? null : _openArtifactsTile,
+        onOpenWakes: kMobile ? null : _openWakesTile,
         desktopFooter: kMobile ? null : _sidebarFooter(),
         onAddInstance: _addInstanceFlow,
         onRenameInstance: _renameInstance,

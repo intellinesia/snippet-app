@@ -7,9 +7,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     final ctx = _chipKeys[t.key]?.currentContext;
     if (ctx != null) {
       Scrollable.ensureVisible(ctx,
-          alignment: 0.5,
-          duration: Motion.base,
-          curve: Motion.enter);
+          alignment: 0.5, duration: Motion.base, curve: Motion.enter);
     }
   }
 
@@ -19,7 +17,8 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       if (!mounted) return;
       _store.saveOpenTabs(
         _tabs
-            .where((t) => !t.isPrs &&
+            .where((t) =>
+                !t.isPrs &&
                 !t.isDraft &&
                 !t.isReadout &&
                 !t.isTask &&
@@ -438,9 +437,8 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     if (mains.length < 2) return;
     final active = _activeTab;
     final currentIndex = active != null ? mains.indexOf(active) : -1;
-    final nextIndex = currentIndex >= 0
-        ? (currentIndex + delta) % mains.length
-        : 0;
+    final nextIndex =
+        currentIndex >= 0 ? (currentIndex + delta) % mains.length : 0;
     final target = mains[nextIndex < 0 ? nextIndex + mains.length : nextIndex];
     _activateTabAt(target);
   }
@@ -450,14 +448,16 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     if (root == null || root.sessionId == null) return;
     final existing =
         _tabs.indexWhere((t) => t.isPrs && t.instanceUrl == root.instanceUrl);
-    _openMainTab(existing >= 0
-        ? null
-        : _ShellTab.prs(
-            client: root.client,
-            instanceUrl: root.instanceUrl,
-            session: root.sessionId!,
-            github: status,
-          ), existing);
+    _openMainTab(
+        existing >= 0
+            ? null
+            : _ShellTab.prs(
+                client: root.client,
+                instanceUrl: root.instanceUrl,
+                session: root.sessionId!,
+                github: status,
+              ),
+        existing);
   }
 
   void _openMainTab(_ShellTab? tab, int existing) {
@@ -604,8 +604,10 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     final pane = _focusedPane;
     final group = _activeGroupKeyFor(pane) ?? _activeTab?.key;
     if (group == null) return;
-    final existing = _tabs.indexWhere(
-        (t) => t.isWorkspace && t.instanceUrl == url && t.workspaceSession == sessionId);
+    final existing = _tabs.indexWhere((t) =>
+        t.isWorkspace &&
+        t.instanceUrl == url &&
+        t.workspaceSession == sessionId);
     _setState(() {
       if (existing >= 0) {
         final t = _tabs[existing];
@@ -704,13 +706,89 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     final client = _client;
     final url = _active?.url;
     if (client == null || url == null) return;
-    final existing =
-        _tabs.indexWhere((t) => t.isBoard && t.instanceUrl == url);
+    final existing = _tabs.indexWhere((t) => t.isBoard && t.instanceUrl == url);
     _openMainTab(
         existing >= 0
             ? null
             : _ShellTab.board(client: client, instanceUrl: url),
         existing);
+  }
+
+  /// The session the machine-wide tiles borrow when they need one: the open
+  /// chat, else the newest session in the list.
+  String? _tileSessionId() {
+    final t = _activeTab;
+    if (t != null && t.sessionId != null && !t.isMissionControl) {
+      return t.sessionId;
+    }
+    final list = _sessions ?? const <SessionInfo>[];
+    return list.isEmpty ? null : list.first.id;
+  }
+
+  Future<void> _openPullRequestsTile() async {
+    final client = _client;
+    final url = _active?.url;
+    final session = _tileSessionId();
+    if (client == null || url == null) return;
+    if (session == null) {
+      toast(context, 'Open a session to browse its pull requests.');
+      return;
+    }
+    final existing = _tabs.indexWhere((t) => t.isPrs && t.instanceUrl == url);
+    if (existing >= 0) {
+      _openMainTab(null, existing);
+      return;
+    }
+    GithubStatus? status;
+    try {
+      status = await client.githubStatus(session);
+    } catch (_) {}
+    if (!mounted) return;
+    if (status == null) {
+      toast(context, 'No GitHub repository found for this session.');
+      return;
+    }
+    _openMainTab(
+        _ShellTab.prs(
+            client: client, instanceUrl: url, session: session, github: status),
+        -1);
+  }
+
+  void _openArtifactsTile() {
+    final client = _client;
+    final session = _tileSessionId();
+    if (client == null) return;
+    if (session == null) {
+      toast(context, 'Open a session to see its artifacts.');
+      return;
+    }
+    _openReadoutTab(_RightTab.request(ShellPanelRequest(
+      purpose: ShellPanelPurpose.deliverables,
+      id: 'artifacts',
+      client: client,
+      sessionId: session,
+      title: 'Artifacts',
+      builder: (_, close) => SessionDeliverables(
+        client: client,
+        session: session,
+        files: const [],
+        onOpenFileTab: (path, name) =>
+            _openFileTab(client, _active?.url ?? '', path, name),
+        onClose: close,
+      ),
+    )));
+  }
+
+  void _openWakesTile() {
+    final client = _client;
+    if (client == null) return;
+    _openReadoutTab(_RightTab.request(ShellPanelRequest(
+      purpose: ShellPanelPurpose.wakes,
+      id: 'wakes',
+      client: client,
+      title: 'Wakes',
+      builder: (_, close) => WakesScreen(client: client, embedded: true, tab: true),
+    )));
   }
 
   String? _agentForTab(_ShellTab t) {
@@ -768,8 +846,12 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         agentFor: _agentForTab,
         folderFor: _folderForTab,
         mcAttentionCount: _mcAttentionCount,
-        tasksActive: _activeTab?.isBoard ?? false,
-        onOpenTasks: null,
+        onCloseOthers: () {
+          final a = _activeTab;
+          final i = a == null ? -1 : _tabs.indexOf(a);
+          if (i >= 0) _closeOthers(i);
+        },
+        onCloseAll: _closeAllTabs,
       );
 
   Future<void> _downloadActiveFile() async {

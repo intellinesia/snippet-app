@@ -19,9 +19,12 @@ import 'task_list.dart' show TaskLoadMore;
 /// Working takes no drops because only a dispatch binds the session allowed to
 /// report progress. Moves show at once and revert if the daemon refuses them.
 class TaskKanban extends StatefulWidget {
-  const TaskKanban({super.key, required this.client});
+  const TaskKanban({super.key, required this.client, this.viewToggle});
 
   final DaemonClient client;
+
+  /// Desktop Board/List switch drawn in the header.
+  final Widget? viewToggle;
 
   @override
   State<TaskKanban> createState() => _TaskKanbanState();
@@ -43,9 +46,16 @@ enum _KanbanColumn {
   final List<TaskStatus> statuses;
   final TaskStatus? dropStatus;
 
+  String get title =>
+      !kMobile && this == _KanbanColumn.queued ? 'Up next' : label;
+
+  /// Desktop reads left to right as the work flows; the phone keeps its order.
+  static List<_KanbanColumn> get ordered =>
+      kMobile ? values : const [queued, working, needsYou, done];
+
   Color get dotColor => switch (this) {
-        _KanbanColumn.needsYou => AppColors.run,
-        _KanbanColumn.working => AppColors.fg2,
+        _KanbanColumn.needsYou => kMobile ? AppColors.run : AppColors.accent,
+        _KanbanColumn.working => kMobile ? AppColors.fg2 : AppColors.run,
         _KanbanColumn.queued => AppColors.fg4,
         _KanbanColumn.done => AppColors.ok,
       };
@@ -144,7 +154,9 @@ class _TaskKanbanState extends State<TaskKanban> {
   }
 
   static bool _finished(TaskStatus s) =>
-      s == TaskStatus.done || s == TaskStatus.failed || s == TaskStatus.cancelled;
+      s == TaskStatus.done ||
+      s == TaskStatus.failed ||
+      s == TaskStatus.cancelled;
 
   static bool _accepts(_KanbanColumn column, TaskItem task) {
     final target = column.dropStatus;
@@ -213,11 +225,11 @@ class _TaskKanbanState extends State<TaskKanban> {
     final sub = needsYou > 0
         ? '$active active · $needsYou needs you'
         : '$active active';
+    if (!kMobile) return _desktopHeader(showCounts, sub);
     return Padding(
       padding: EdgeInsets.fromLTRB(S.s24, S.s20, S.s24, S.of(14)),
       child: Row(children: [
-        Text('Tasks',
-            style: sans(16, weight: W.label, color: AppColors.fg1)),
+        Text('Tasks', style: sans(16, weight: W.label, color: AppColors.fg1)),
         SizedBox(width: S.of(10)),
         if (showCounts)
           Text(sub, style: sans(12, color: AppColors.fg4, tabular: true)),
@@ -235,6 +247,53 @@ class _TaskKanbanState extends State<TaskKanban> {
             small: true, variant: BtnVariant.secondary, onTap: _create),
       ]),
     );
+  }
+
+  Widget _desktopHeader(bool showCounts, String sub) {
+    final today = _feed.tasks
+        .where((t) => t.status == TaskStatus.done && _isToday(t.updatedAt))
+        .length;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(S.s24, S.s20, S.s24, S.of(14)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text('Tasks',
+                  style:
+                      sans(20, weight: FontWeight.w600, color: AppColors.fg1)),
+              SizedBox(width: S.of(10)),
+              if (showCounts)
+                Text(today > 0 ? '$sub · $today done today' : sub,
+                    style: sans(12.5, color: AppColors.fg4, tabular: true)),
+              const Spacer(),
+              if (widget.viewToggle != null) widget.viewToggle!,
+            ]),
+        SizedBox(height: S.of(14)),
+        Row(children: [
+          SizedBox(
+            width: 320,
+            child: ListSearchField(
+              controller: _search,
+              hint: 'Search tasks',
+              onChanged: (v) => setState(() => _query = v),
+            ),
+          ),
+          const Spacer(),
+          Btn('New task', small: true, icon: 'plus', onTap: _create),
+        ]),
+      ]),
+    );
+  }
+
+  static bool _isToday(String iso) {
+    final at = DateTime.tryParse(iso)?.toLocal();
+    final now = DateTime.now();
+    return at != null &&
+        at.year == now.year &&
+        at.month == now.month &&
+        at.day == now.day;
   }
 
   Widget _board() {
@@ -264,10 +323,10 @@ class _TaskKanbanState extends State<TaskKanban> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (var i = 0; i < _KanbanColumn.values.length; i++) ...[
+            for (var i = 0; i < _KanbanColumn.ordered.length; i++) ...[
               if (i > 0) SizedBox(width: gap),
-              _column(_KanbanColumn.values[i],
-                  _itemsFor(_KanbanColumn.values[i], visible)),
+              _column(_KanbanColumn.ordered[i],
+                  _itemsFor(_KanbanColumn.ordered[i], visible)),
             ],
           ],
         ),
@@ -301,13 +360,14 @@ class _TaskKanbanState extends State<TaskKanban> {
         return AnimatedContainer(
           duration: Motion.fast,
           width: _columnWidth,
+          padding: kMobile ? null : const EdgeInsets.fromLTRB(6, 4, 6, 6),
           decoration: BoxDecoration(
             color: hovering
                 ? (kMobile
                     ? AppColors.surface2.withValues(alpha: 0.45)
-                    : AppColors.tint3)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(R.lg),
+                    : AppColors.surface2)
+                : (kMobile ? Colors.transparent : AppColors.surface1),
+            borderRadius: BorderRadius.circular(kMobile ? R.lg : R.of(12)),
           ),
           child: Opacity(
             opacity: refuses ? 0.5 : 1,
@@ -315,6 +375,12 @@ class _TaskKanbanState extends State<TaskKanban> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _columnHeader(column, items.length),
+                if (!kMobile && column == _KanbanColumn.queued)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 6),
+                    child: Text('Only a dispatch starts work',
+                        style: sans(11.5, color: AppColors.fg4)),
+                  ),
                 Expanded(
                   child: items.isEmpty
                       ? _emptyColumn(column, refuses)
@@ -339,22 +405,43 @@ class _TaskKanbanState extends State<TaskKanban> {
     );
   }
 
-  Widget _columnHeader(_KanbanColumn column, int count) => Padding(
-        padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
-        child: Row(children: [
-          Container(
-            width: 7,
-            height: 7,
-            decoration:
-                BoxDecoration(color: column.dotColor, shape: BoxShape.circle),
+  Widget _columnHeader(_KanbanColumn column, int count) => !kMobile
+      ? SizedBox(
+          height: 38,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
+            child: Row(children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                    color: column.dotColor, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+              Text(column.title,
+                  style: sans(12.5,
+                      weight: FontWeight.w600, color: AppColors.fg1)),
+              const SizedBox(width: 8),
+              Text('$count', style: mono(11, color: AppColors.fg4)),
+            ]),
           ),
-          SizedBox(width: S.s6),
-          Text(column.label,
-              style: sans(12, weight: W.label, color: AppColors.fg3)),
-          SizedBox(width: S.s6),
-          Text('$count', style: mono(11, color: AppColors.fg4)),
-        ]),
-      );
+        )
+      : Padding(
+          padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, S.s8),
+          child: Row(children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration:
+                  BoxDecoration(color: column.dotColor, shape: BoxShape.circle),
+            ),
+            SizedBox(width: S.s6),
+            Text(column.title,
+                style: sans(12, weight: W.label, color: AppColors.fg3)),
+            SizedBox(width: S.s6),
+            Text('$count', style: mono(11, color: AppColors.fg4)),
+          ]),
+        );
 
   Widget _emptyColumn(_KanbanColumn column, bool refuses) => Align(
         alignment: Alignment.topCenter,
@@ -367,7 +454,9 @@ class _TaskKanbanState extends State<TaskKanban> {
           ),
           child: Text(
               column == _KanbanColumn.working
-                  ? (refuses ? 'Only a dispatch starts work' : 'Nothing running')
+                  ? (refuses
+                      ? 'Only a dispatch starts work'
+                      : 'Nothing running')
                   : 'No tasks',
               style: TS.meta(AppColors.fg4)),
         ),
@@ -463,6 +552,160 @@ class _TaskCard extends StatefulWidget {
 class _TaskCardState extends State<_TaskCard> {
   bool _hover = false;
 
+  Widget _chip(String label, Color color, {bool outline = false}) => Container(
+        height: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 7),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: outline ? Colors.transparent : color.withValues(alpha: 0.13),
+          border: outline ? Border.all(color: AppColors.lineStrong) : null,
+          borderRadius: BorderRadius.circular(R.of(5)),
+        ),
+        child: Text(label, style: sans(11.5, color: color, height: 1.2)),
+      );
+
+  Widget _desktop(TaskItem t, bool isAgent, String agentLabel, String age) {
+    final status = switch (t.status) {
+      TaskStatus.inReview => _chip('Ready for review', AppColors.accent),
+      TaskStatus.blocked => _chip('Blocked', AppColors.run),
+      TaskStatus.failed => _chip('Failed', AppColors.danger),
+      TaskStatus.done => _chip('Done', AppColors.ok),
+      TaskStatus.cancelled => _chip('Cancelled', AppColors.fg3, outline: true),
+      _ => null,
+    };
+    final blocked =
+        t.status == TaskStatus.blocked || t.status == TaskStatus.failed;
+    final folder = widget.folder ?? '';
+    final hot = _hover || widget.lifted;
+    final done = t.planDone >= t.planTotal;
+    final showActions = widget.needsYou && t.status == TaskStatus.inReview;
+    return MouseRegion(
+      cursor: SystemMouseCursors.grab,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: Motion.fast,
+          padding: const EdgeInsets.fromLTRB(12, 11, 12, 10),
+          decoration: BoxDecoration(
+            color: hot ? AppColors.surface3 : AppColors.surface2,
+            borderRadius: BorderRadius.circular(R.of(8)),
+            border: Border.all(
+                color: hot ? AppColors.lineStrong : Colors.transparent),
+            boxShadow: widget.lifted
+                ? const [
+                    BoxShadow(
+                        color: Color(0x66000000),
+                        blurRadius: 18,
+                        offset: Offset(0, 8)),
+                  ]
+                : null,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(t.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13, height: 1.4, color: AppColors.fg1)),
+              if (status != null || folder.isNotEmpty) ...[
+                const SizedBox(height: 7),
+                Row(children: [
+                  if (status != null) ...[status, const SizedBox(width: 6)],
+                  if (folder.isNotEmpty)
+                    Flexible(
+                      child: Text(folder,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: mono(11, color: AppColors.fg3)),
+                    ),
+                ]),
+              ],
+              if (blocked && widget.step.isNotEmpty) ...[
+                const SizedBox(height: 7),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface1,
+                    borderRadius: BorderRadius.circular(R.of(6)),
+                  ),
+                  child: Text(widget.step,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, height: 1.4, color: AppColors.fg3)),
+                ),
+              ],
+              if (t.planTotal > 0) ...[
+                const SizedBox(height: 9),
+                Row(children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: SizedBox(
+                        height: 4,
+                        child: Stack(fit: StackFit.expand, children: [
+                          ColoredBox(color: AppColors.surface3),
+                          FractionallySizedBox(
+                            alignment: Alignment.centerLeft,
+                            widthFactor:
+                                (t.planDone / t.planTotal).clamp(0.0, 1.0),
+                            child: ColoredBox(
+                                color: done ? AppColors.ok : AppColors.fg2),
+                          ),
+                        ]),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('${done ? t.planTotal : t.planDone + 1}/${t.planTotal}',
+                      style: mono(11, color: AppColors.fg3)),
+                ]),
+              ],
+              const SizedBox(height: 10),
+              Row(children: [
+                if (isAgent) ...[
+                  AgentMochi(t.createdById, size: 14),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(agentLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(11.5, color: AppColors.fg3)),
+                  ),
+                ],
+                const Spacer(),
+                if (age.isNotEmpty)
+                  Text(age,
+                      style: sans(11.5,
+                          color:
+                              widget.needsYou ? AppColors.run : AppColors.fg4,
+                          tabular: true)),
+              ]),
+              if (showActions) ...[
+                const SizedBox(height: 10),
+                Row(children: [
+                  Expanded(
+                    child: Btn('Send back',
+                        small: true,
+                        variant: BtnVariant.surface,
+                        onTap: widget.onSendBack),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Btn('Approve', small: true, onTap: widget.onApprove),
+                  ),
+                ]),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = widget.task;
@@ -474,6 +717,7 @@ class _TaskCardState extends State<_TaskCard> {
     final age = taskAge(t);
     final showReviewActions =
         widget.needsYou && t.status == TaskStatus.inReview;
+    if (!kMobile) return _desktop(t, isAgent, agentLabel, age);
 
     return MouseRegion(
       cursor: SystemMouseCursors.grab,
@@ -553,9 +797,8 @@ class _TaskCardState extends State<_TaskCard> {
                     Text(
                       age,
                       style: sans(12,
-                          color: widget.needsYou
-                              ? AppColors.run
-                              : AppColors.fg4,
+                          color:
+                              widget.needsYou ? AppColors.run : AppColors.fg4,
                           tabular: true),
                     ),
                   ],

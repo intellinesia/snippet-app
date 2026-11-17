@@ -260,8 +260,8 @@ Widget toolDetailView(BuildContext context,
 
 double get _bodySize => kMobile ? 13.5 : 13;
 
-TextStyle _code([Color? color]) =>
-    codeMono(kMobile ? 13 : 12, height: 1.45, color: color ?? AppColors.fg2);
+TextStyle _code([Color? color]) => codeMono(kMobile ? 13 : 12,
+    height: kMobile ? 1.45 : 1.65, color: color ?? AppColors.fg2);
 
 Widget _wrap(List<Widget> rows) =>
     Column(crossAxisAlignment: CrossAxisAlignment.start, children: rows);
@@ -473,7 +473,11 @@ List<Widget> _bashView(Map? a, Map? d, {required bool running, String? error}) {
   }
   if (stdout.isNotEmpty) {
     for (final l in stdout.split('\n')) {
-      line(l, _errorLine.hasMatch(l) ? AppColors.danger : AppColors.fg2);
+      line(
+          l,
+          _errorLine.hasMatch(l)
+              ? AppColors.danger
+              : (kMobile ? AppColors.fg2 : AppColors.fg3));
     }
   }
   if (stderr.isNotEmpty) {

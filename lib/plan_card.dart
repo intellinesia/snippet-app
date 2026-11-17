@@ -42,6 +42,10 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
     var cur = st.indexOf(_St.now);
     if (cur < 0 && !finished) cur = st.indexOf(_St.open);
     final next = cur < 0 ? -1 : st.indexWhere((s) => s == _St.open, cur + 1);
+    if (!kMobile) {
+      return _desktop(st, cur, next, done, total, finished,
+          () => setState(() => _open = !_open));
+    }
     final r = Grouped.radiusEnd;
     const ri = Radius.circular(Grouped.radiusInner);
     final head = GestureDetector(
@@ -160,10 +164,96 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
   }
 }
 
+extension on _PlanProgressCardState {
+  /// Desktop: one bordered card, the heading and live step on top, steps below.
+  Widget _desktop(List<_St> st, int cur, int next, int done, int total,
+      bool finished, VoidCallback toggle) {
+    final steps = widget.steps;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: toggle,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        decoration: BoxDecoration(
+          color: Grouped.row,
+          border: Border.all(color: AppColors.fg1.withValues(alpha: 0.06)),
+          borderRadius: BorderRadius.circular(R.of(20)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(children: [
+              AppIcon('list', size: 14, color: AppColors.fg4),
+              const SizedBox(width: 8),
+              Text(
+                  finished
+                      ? 'Plan done · $total of $total'
+                      : 'Plan ${cur + 1} of $total',
+                  style: sans(13, weight: W.label, color: AppColors.fg1)),
+              const Spacer(),
+              AppIcon(_open ? 'chevron-up' : 'chevron-down',
+                  size: 14, color: AppColors.fg4),
+            ]),
+            const SizedBox(height: 10),
+            _Segments(st, height: 3),
+            if (!finished && cur >= 0) ...[
+              const SizedBox(height: 10),
+              Text(_text(steps[cur]),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(13.5, height: 1.4, color: AppColors.fg1)),
+            ],
+            if (next >= 0 && !_open) ...[
+              const SizedBox(height: 2),
+              Text('Next: ${_text(steps[next])}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12, color: AppColors.fg4)),
+            ],
+            if (_open) ...[
+              if (widget.explanation.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(widget.explanation,
+                    style: sans(12, height: 1.4, color: AppColors.fg3)),
+              ],
+              const SizedBox(height: 6),
+              for (var i = 0; i < total; i++)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 5),
+                  child: Row(children: [
+                    PlanStepDot(
+                        state: st[i] == _St.done
+                            ? 2
+                            : i == cur
+                                ? 1
+                                : 0,
+                        size: 16),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(_text(steps[i]),
+                          style: sans(13,
+                              height: 1.35,
+                              color: st[i] == _St.done
+                                  ? AppColors.fg4
+                                  : i == cur
+                                      ? AppColors.fg1
+                                      : AppColors.fg3)),
+                    ),
+                  ]),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// One short bar per step: done muted, live accent, the rest a track.
 class _Segments extends StatelessWidget {
-  const _Segments(this.st);
+  const _Segments(this.st, {this.height = 4});
   final List<_St> st;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -174,7 +264,7 @@ class _Segments extends StatelessWidget {
         if (i > 0) const SizedBox(width: 3),
         Expanded(
           child: Container(
-            height: 4,
+            height: height,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(2),
               color: st[i] == _St.done

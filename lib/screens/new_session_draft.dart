@@ -2,10 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api.dart';
+import '../desktop_pick.dart';
 import '../mochi.dart';
+import '../platform.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
+
+/// `sheet` is the new-session dialog body; `hero` is the empty-state composer
+/// with its settings as chips.
+enum NewSessionLayout { sheet, hero }
+
+enum _Wt { fresh, here, existing }
 
 class NewSessionDraft extends StatefulWidget {
   const NewSessionDraft({
@@ -17,6 +25,10 @@ class NewSessionDraft extends StatefulWidget {
     this.source,
     this.recentSessions,
     this.onOpenSession,
+    this.layout = NewSessionLayout.sheet,
+    this.onCancel,
+    this.onStartWithFiles,
+    this.footer,
   });
 
   final DaemonClient client;
@@ -26,12 +38,27 @@ class NewSessionDraft extends StatefulWidget {
   /// The session this draft was opened from, for folder/branch/profile prefill.
   final SessionInfo? source;
 
-  /// Pool the Recent row filters by folder; fetched from the daemon when null.
+  /// Pool the recent folders come from; fetched from the daemon when null.
   final List<SessionInfo>? recentSessions;
   final ValueChanged<String>? onOpenSession;
+  final NewSessionLayout layout;
+
+  /// Close/Cancel in the sheet; both are hidden when null.
+  final VoidCallback? onCancel;
+
+  /// When set, "Add context" is offered and picked files are passed here
+  /// instead of [onStart].
   final Future<void> Function(
-          String folder, WorkspaceMode mode, String? profile, String text)
-      onStart;
+      String folder,
+      WorkspaceMode mode,
+      String? profile,
+      String text,
+      List<PickedLocalFile> files)? onStartWithFiles;
+
+  /// Shown under the hero composer (the pick-up-where-you-left-off list).
+  final Widget? footer;
+  final Future<void> Function(
+      String folder, WorkspaceMode mode, String? profile, String text) onStart;
 
   @override
   State<NewSessionDraft> createState() => _NewSessionDraftState();
@@ -40,30 +67,35 @@ class NewSessionDraft extends StatefulWidget {
 class _NewSessionDraftState extends State<NewSessionDraft> {
   final _input = TextEditingController();
   final _focus = FocusNode();
-  final _folderChipKey = GlobalKey();
+  final _folderKey = GlobalKey();
   String? _folder;
-  WorkspaceMode _mode = WorkspaceMode.worktree;
+  _Wt _wt = _Wt.fresh;
+  Worktree? _existing;
+  List<Worktree> _worktrees = const [];
   bool _isRepo = false;
-  String? _branch;
   List<InferenceProfile> _profiles = const [];
+  List<CoordinationAgent> _agents = const [];
   String? _profile;
 
-  /// The owner agent's profile the draft follows by default, and its name for
-  /// the chip label. Null when the agent has none or the user picked a profile.
+  /// The agent the draft starts as; its profile is the default model.
+  String _agentId = 'snippet';
   String? _agentProfile;
-  String? _agentName;
 
   /// Only an explicit pick (or a pinned source session) is sent to the daemon;
   /// following the agent's profile means omitting `profile`.
   bool _profileExplicit = false;
   bool _starting = false;
   List<SessionInfo>? _recentPool;
+  final List<PickedLocalFile> _files = [];
+
+  bool get _sheet => widget.layout == NewSessionLayout.sheet;
 
   @override
   void initState() {
     super.initState();
     final sourceFolder = widget.source?.projectFolder ?? '';
     _folder = widget.folder ?? (sourceFolder.isEmpty ? null : sourceFolder);
+    _agentId = widget.source?.displayAgentId ?? 'snippet';
     _input.addListener(() => setState(() {}));
     _loadRepo();
     _loadProfiles();
@@ -80,6 +112,14 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
     super.dispose();
   }
 
+  CoordinationAgent? get _agent =>
+      _agents.where((a) => a.id == _agentId).firstOrNull;
+
+  String get _agentName => _agent?.displayName ?? _agentLabel(_agentId);
+
+  static String _agentLabel(String id) =>
+      id.isEmpty ? 'Agent' : id[0].toUpperCase() + id.substring(1);
+
   Future<void> _loadProfiles() async {
     try {
       final cfg = await widget.client.getConfig();
@@ -88,21 +128,21 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
         agents = await widget.client.coordinationAgents();
       } catch (_) {}
       if (!mounted) return;
-      final owner = widget.source?.displayAgentId ?? 'snippet';
-      final agent = agents.where((a) => a.id == owner).firstOrNull;
+      final agent = agents.where((a) => a.id == _agentId).firstOrNull;
       bool known(String? name) =>
           name != null && cfg.profiles.any((p) => p.name == name);
-      final pinned = known(widget.source?.profile) ? widget.source!.profile : null;
+      final pinned =
+          known(widget.source?.profile) ? widget.source!.profile : null;
       final agentProfile = known(agent?.profile) ? agent!.profile : null;
       setState(() {
         _profiles = cfg.profiles;
+        _agents = agents;
         _profile = pinned ??
             agentProfile ??
             cfg.active ??
             cfg.profiles.where((p) => p.active).firstOrNull?.name;
         _profileExplicit = pinned != null;
         _agentProfile = _profileExplicit ? null : agentProfile;
-        _agentName = agent?.displayName;
       });
     } catch (_) {}
   }
@@ -112,20 +152,24 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
     if (f == null || f.isEmpty) {
       setState(() {
         _isRepo = false;
-        _branch = null;
+        _worktrees = const [];
       });
       return;
     }
     try {
       final r = await widget.client.worktrees(f);
       if (!mounted || _folder != f) return;
-      final main = r.worktrees.where((w) => w.path == r.repo).firstOrNull ??
-          r.worktrees.firstOrNull;
-      final srcBranch = widget.source?.branch ?? '';
       setState(() {
         _isRepo = r.repo != null;
-        _branch = srcBranch.isNotEmpty ? srcBranch : main?.branch;
-        if (!_isRepo) _mode = WorkspaceMode.folder;
+        _worktrees = r.worktrees;
+        if (!_isRepo) {
+          _wt = _Wt.here;
+          _existing = null;
+        } else if (_wt == _Wt.existing &&
+            !_worktrees.any((w) => w.path == _existing?.path)) {
+          _wt = _Wt.fresh;
+          _existing = null;
+        }
       });
     } catch (_) {
       if (mounted) setState(() => _isRepo = false);
@@ -133,54 +177,103 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
   }
 
   Future<void> _loadRecents() async {
-    if (widget.recentSessions != null ||
-        widget.onOpenSession == null ||
-        _recentPool != null) {
-      return;
-    }
+    if (widget.recentSessions != null || _recentPool != null) return;
     try {
       final all = await widget.client.sessions();
       if (mounted) setState(() => _recentPool = all);
     } catch (_) {}
   }
 
-  List<SessionInfo> get _recents {
-    final pool = widget.recentSessions ?? _recentPool ?? const <SessionInfo>[];
-    final f = _folder;
-    if (f == null || f.isEmpty) return const [];
-    final matches = pool
-        .where((s) => s.projectFolder == f || s.folder == f)
-        .toList()
+  List<SessionInfo> get _pool =>
+      widget.recentSessions ?? _recentPool ?? const <SessionInfo>[];
+
+  List<String> get _recentFolders {
+    final sorted = [..._pool]
       ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
-    return matches.take(4).toList();
+    final out = <String>[];
+    for (final s in sorted) {
+      final f = s.projectFolder;
+      if (f.isNotEmpty && !out.contains(f)) out.add(f);
+      if (out.length == 6) break;
+    }
+    return out;
   }
 
+  int _sessionsIn(String path) => _pool.where((s) => s.folder == path).length;
+
   Future<void> _pickFolder() async {
-    final picked = await _showFolderPopover(
+    final anchor = _folderKey.currentContext;
+    final choice = await _showFolderQuick(
       context,
-      anchor: _folderChipKey.currentContext,
-      client: widget.client,
-      startPath: _folder,
+      anchor: anchor,
+      folder: _folder,
+      recents: _recentFolders,
+      worktrees: _isRepo ? _worktrees : const [],
+      sessionsIn: _sessionsIn,
     );
-    if (picked != null && mounted) {
-      setState(() => _folder = picked);
-      _loadRepo();
+    if (!mounted || choice == null) return;
+    switch (choice) {
+      case _FolderChoice(:final worktree?):
+        setState(() {
+          _wt = _Wt.existing;
+          _existing = worktree;
+        });
+      case _FolderChoice(:final path?):
+        _setFolder(path);
+      case _FolderChoice(browse: true, :final create):
+        final picked = await _showFolderPopover(
+          context,
+          anchor: _folderKey.currentContext,
+          client: widget.client,
+          startPath: _folder,
+          startCreating: create,
+        );
+        if (picked != null && mounted) _setFolder(picked);
+      default:
     }
     if (mounted) _focus.requestFocus();
+  }
+
+  void _setFolder(String path) {
+    setState(() {
+      _folder = path;
+      _existing = null;
+      if (_wt == _Wt.existing) _wt = _Wt.fresh;
+    });
+    _loadRepo();
+  }
+
+  Future<void> _addFiles() async {
+    try {
+      final files = await pickLocalFiles();
+      if (files.isNotEmpty && mounted) setState(() => _files.addAll(files));
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+    }
   }
 
   Future<void> _start() async {
     final text = _input.text.trim();
     if (_starting) return;
-    if (_folder == null) {
+    final folder =
+        _existing != null && _wt == _Wt.existing ? _existing!.path : _folder;
+    if (folder == null || folder.isEmpty) {
       await _pickFolder();
       return;
     }
     if (text.isEmpty) return;
+    final mode = _isRepo && _wt == _Wt.fresh
+        ? WorkspaceMode.worktree
+        : WorkspaceMode.folder;
+    final profile = _profileExplicit ? _profile : null;
     setState(() => _starting = true);
     try {
-      await widget.onStart(
-        _folder!, _mode, _profileExplicit ? _profile : null, text);
+      final withFiles = widget.onStartWithFiles;
+      if (withFiles != null) {
+        await withFiles(folder, mode, profile, text, List.of(_files));
+      } else {
+        await widget.onStart(folder, mode, profile, text);
+      }
     } catch (e) {
       if (mounted) toast(context, '$e', danger: true);
     } finally {
@@ -193,6 +286,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
     final picked = await showAppMenu<String>(
       context,
       anchor: anchor,
+      below: _sheet,
       minWidth: 260,
       maxWidth: 360,
       items: [
@@ -216,280 +310,894 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
     }
   }
 
-  Widget _chip(String icon, String label,
-          {VoidCallback? onTap, bool filled = false}) =>
+  Future<void> _pickAgent(BuildContext anchor) async {
+    if (_agents.isEmpty) return;
+    final picked = await showAppMenu<String>(
+      context,
+      anchor: anchor,
+      below: _sheet,
+      minWidth: 220,
+      maxWidth: 300,
+      items: [
+        for (final a in _agents.where((a) => a.kind != 'group'))
+          appMenuRow<String>(
+            value: a.id,
+            leading: AgentMochi(a.id, size: 16),
+            label: a.displayName,
+            selected: a.id == _agentId,
+          ),
+      ],
+    );
+    if (picked == null || !mounted || picked == _agentId) return;
+    final agent = _agents.firstWhere((a) => a.id == picked);
+    final profile =
+        _profiles.any((p) => p.name == agent.profile) ? agent.profile : null;
+    setState(() {
+      _agentId = picked;
+      if (profile != null) {
+        _profile = profile;
+        _profileExplicit = picked != 'snippet';
+        _agentProfile = picked == 'snippet' ? profile : null;
+      }
+    });
+  }
+
+  Future<void> _pickWorktree(BuildContext anchor) async {
+    final picked = await showAppMenu<Object>(
+      context,
+      anchor: anchor,
+      minWidth: 240,
+      maxWidth: 320,
+      items: [
+        appMenuRow<Object>(
+            value: _Wt.fresh,
+            icon: 'git-branch',
+            label: 'New worktree',
+            selected: _wt == _Wt.fresh),
+        appMenuRow<Object>(
+            value: _Wt.here,
+            icon: 'folder',
+            label: 'This folder',
+            selected: _wt == _Wt.here),
+        if (_isRepo && _worktrees.isNotEmpty) ...[
+          appMenuHeading<Object>('Existing worktrees'),
+          for (final w in _worktrees)
+            appMenuRow<Object>(
+                value: w,
+                icon: 'git-branch',
+                label: _wtName(w),
+                selected: _wt == _Wt.existing && _existing?.path == w.path),
+        ],
+      ],
+    );
+    if (!mounted) return;
+    setState(() {
+      if (picked is _Wt) {
+        _wt = picked;
+        _existing = null;
+      } else if (picked is Worktree) {
+        _wt = _Wt.existing;
+        _existing = picked;
+      }
+    });
+  }
+
+  String _wtName(Worktree w) =>
+      (w.branch ?? '').isNotEmpty ? w.branch! : lastPathSegment(w.path);
+
+  // Hero chip: quiet ghost button, as the mockup's `.btn.sm.gh`.
+  Widget _chip(Widget? lead, String label, {VoidCallback? onTap, Key? key}) =>
       Material(
-        color: filled ? AppColors.surface2 : Colors.transparent,
-        borderRadius: BorderRadius.circular(R.of(13)),
+        key: key,
+        color: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(R.of(5)),
+          side: BorderSide(color: AppColors.border2),
+        ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(R.of(13)),
+          borderRadius: BorderRadius.circular(R.of(5)),
           onTap: onTap,
           child: Container(
-            height: 26,
+            height: 24,
             padding: EdgeInsets.symmetric(horizontal: S.of(9)),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon(icon, size: 13, color: AppColors.fg3),
-              SizedBox(width: S.s6),
+              if (lead != null) ...[lead, SizedBox(width: S.s6)],
               ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 220),
+                constraints: const BoxConstraints(maxWidth: 180),
                 child: Text(label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(13, color: AppColors.fg3)),
+                    style: sans(12, color: AppColors.fg2)),
               ),
+              SizedBox(width: S.s4),
+              AppIcon('chevron-down', size: 10, color: AppColors.fg4),
             ]),
           ),
         ),
       );
 
-  Widget _recentMark(SessionInfo s) {
-    final agent = s.displayAgentId?.trim() ?? '';
-    if (agent.isNotEmpty) return AgentMochi(agent, size: 14);
-    final provider = _profiles
-        .where((p) => p.name == s.profile)
-        .firstOrNull
-        ?.provider;
-    if (provider != null && providerLogoAsset(provider) != null) {
-      return ProviderLogo(provider, size: 14);
-    }
-    return Container(
-      width: 6,
-      height: 6,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.fg4,
-      ),
-    );
-  }
-
-  Widget _recentChip(SessionInfo s) {
-    final radius = BorderRadius.circular(R.card);
-    return Material(
-      color: AppColors.surface1,
-      shape: RoundedRectangleBorder(
-        borderRadius: radius,
-        side: BorderSide(color: AppColors.line),
-      ),
-      child: InkWell(
-        borderRadius: radius,
-        onTap: () => widget.onOpenSession?.call(s.id),
-        child: Container(
-          height: 30,
-          padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            _recentMark(s),
-            SizedBox(width: S.s6),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 200),
-              child: Text(s.title.isEmpty ? '(untitled)' : s.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TS.label(AppColors.fg2)),
+  Widget _sendButton(bool canSend) => Material(
+        color: canSend ? AppColors.accentFill : AppColors.surface3,
+        borderRadius: BorderRadius.circular(R.of(8)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(R.of(8)),
+          onTap: canSend ? _start : null,
+          child: SizedBox(
+            width: 30,
+            height: 30,
+            child: Center(
+              child: _starting
+                  ? const Spinner(size: 14)
+                  : AppIcon('arrow-up',
+                      size: 15,
+                      color: canSend ? AppColors.accentFg : AppColors.fg4),
             ),
-          ]),
+          ),
         ),
-      ),
-    );
-  }
+      );
 
-  Widget _worktreeToggle() {
-    final on = _mode == WorkspaceMode.worktree;
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(R.of(13)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(R.of(13)),
-        onTap: () => setState(() => _mode =
-            on ? WorkspaceMode.folder : WorkspaceMode.worktree),
-        child: Container(
-          height: 26,
-          padding: EdgeInsets.symmetric(horizontal: S.of(9)),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              width: 22,
-              height: 13,
-              padding: EdgeInsets.all(S.s2),
-              alignment: on ? Alignment.centerRight : Alignment.centerLeft,
-              decoration: BoxDecoration(
-                color: on
-                    ? AppColors.accent.withValues(alpha: 0.35)
-                    : AppColors.surface3,
-                borderRadius: BorderRadius.circular(R.of(7)),
+  Widget _field(String label, Widget child) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: sans(11.5, weight: W.label, color: AppColors.fg4)),
+          SizedBox(height: S.s6),
+          child,
+        ],
+      );
+
+  Widget _select(
+          {Key? key,
+          Widget? lead,
+          required String label,
+          String? hint,
+          bool on = false,
+          VoidCallback? onTap}) =>
+      Material(
+        key: key,
+        color: AppColors.surface2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(R.of(8)),
+          side: BorderSide(color: on ? AppColors.fg4 : AppColors.line),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(R.of(8)),
+          onTap: onTap,
+          child: Container(
+            height: 34,
+            padding: EdgeInsets.symmetric(horizontal: S.of(10)),
+            child: Row(children: [
+              if (lead != null) ...[lead, SizedBox(width: S.s8)],
+              Expanded(
+                child: Row(children: [
+                  Flexible(
+                    child: Text(label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13, color: AppColors.fg1)),
+                  ),
+                  if (hint != null && hint.isNotEmpty) ...[
+                    SizedBox(width: S.s8),
+                    Flexible(
+                      child: Text(hint,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(12, color: AppColors.fg4)),
+                    ),
+                  ],
+                ]),
               ),
-              child: Container(
-                width: 9,
-                height: 9,
-                decoration: BoxDecoration(
-                  color: on ? AppColors.accent : AppColors.fg4,
-                  shape: BoxShape.circle,
+              SizedBox(width: S.s6),
+              AppIcon('chevron-down', size: 12, color: AppColors.fg4),
+            ]),
+          ),
+        ),
+      );
+
+  Widget _segmented(List<(String, String?, bool, VoidCallback?)> items) =>
+      Container(
+        height: 34,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(R.of(8)),
+          border: Border.all(color: AppColors.line),
+        ),
+        child: Row(children: [
+          for (final (label, icon, on, tap) in items)
+            Expanded(
+              child: Material(
+                color: on ? AppColors.surface3 : Colors.transparent,
+                borderRadius: BorderRadius.circular(R.of(6)),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(R.of(6)),
+                  onTap: tap,
+                  child: Center(
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      if (icon != null) ...[
+                        AppIcon(icon,
+                            size: 13,
+                            color: on ? AppColors.fg1 : AppColors.fg3),
+                        SizedBox(width: S.s6),
+                      ],
+                      Flexible(
+                        child: Text(label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(12.5,
+                                color: on ? AppColors.fg1 : AppColors.fg3)),
+                      ),
+                    ]),
+                  ),
                 ),
               ),
             ),
-            SizedBox(width: S.of(7)),
-            Text('Worktree',
-                style: sans(13, color: on ? AppColors.fg2 : AppColors.fg4)),
-          ]),
-        ),
-      ),
-    );
-  }
+        ]),
+      );
 
-  @override
-  Widget build(BuildContext context) {
-    final folderName = _folder == null
-        ? 'Choose folder'
-        : lastPathSegment(_folder!, ifEmpty: _folder!);
-    final current = _profiles.where((p) => p.name == _profile).firstOrNull;
-    final canSend = !_starting && _input.text.trim().isNotEmpty;
-    return Container(
-      color: Colors.transparent,
-      child: LayoutBuilder(
-        builder: (context, box) => SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-                minHeight: box.maxHeight, minWidth: box.maxWidth),
+  Widget _fileChip(int i) => Container(
+        height: 24,
+        padding: EdgeInsets.only(left: S.of(7), right: S.s4),
+        decoration: BoxDecoration(
+          color: AppColors.surface3,
+          borderRadius: BorderRadius.circular(R.of(5)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          AppIcon('file', size: 11, color: AppColors.fg3),
+          SizedBox(width: S.s6),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 140),
+            child: Text(_files[i].name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(11.5, color: AppColors.fg2)),
+          ),
+          InkWell(
+            borderRadius: BorderRadius.circular(R.of(4)),
+            onTap: () => setState(() => _files.removeAt(i)),
             child: Padding(
-              padding: EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 70),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const AgentMochi('snippet', size: 120),
-                  SizedBox(height: S.of(10)),
-                  Text('What are we making?',
-                      style: sans(26, spacing: -0.5, color: AppColors.fg1)),
-                  SizedBox(height: S.s24),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 660),
-                    child: Container(
+              padding: EdgeInsets.all(S.s4),
+              child: AppIcon('x', size: 10, color: AppColors.fg3),
+            ),
+          ),
+        ]),
+      );
+
+  Widget _messageBox(bool sheet) => TextField(
+        controller: _input,
+        focusNode: _focus,
+        minLines: sheet ? 3 : 2,
+        maxLines: 10,
+        style: sans(sheet ? 16 : 15, height: 1.5, color: AppColors.fg1),
+        decoration: InputDecoration(
+          isCollapsed: true,
+          border: InputBorder.none,
+          hintText: 'Ask, build, or type / for commands',
+          hintStyle: sans(sheet ? 16 : 15, color: AppColors.fg4),
+        ),
+      );
+
+  Widget _agentMark() => AgentMochi(_agentId, size: 14);
+
+  String get _folderLabel => _folder == null
+      ? 'Choose folder'
+      : lastPathSegment(_folder!, ifEmpty: _folder!);
+
+  String get _worktreeLabel => switch (_wt) {
+        _Wt.fresh => 'New worktree',
+        _Wt.here => 'This folder',
+        _Wt.existing => _existing == null ? 'Existing' : _wtName(_existing!),
+      };
+
+  InferenceProfile? get _current =>
+      _profiles.where((p) => p.name == _profile).firstOrNull;
+
+  Widget _hero() {
+    final canSend = !_starting && _input.text.trim().isNotEmpty;
+    final current = _current;
+    return LayoutBuilder(
+      builder: (context, box) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: box.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(S.s32, 120, S.s32, S.s32),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 680),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(children: [
+                      AgentMochi(_agentId, size: 28),
+                      SizedBox(width: S.s12),
+                      Text('What are we making?',
+                          style: sans(22,
+                              weight: W.label,
+                              spacing: -0.2,
+                              color: AppColors.fg1)),
+                    ]),
+                    SizedBox(height: S.of(18)),
+                    Container(
+                      padding: EdgeInsets.fromLTRB(
+                          S.of(16), S.of(14), S.of(10), S.s8),
                       decoration: BoxDecoration(
                         color: AppColors.surface1,
-                        borderRadius: BorderRadius.circular(R.of(18)),
-                        border: Border.all(color: AppColors.line),
+                        borderRadius: BorderRadius.circular(R.lg),
+                        border: Border.all(color: AppColors.border2),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, 0),
-                            child: Wrap(spacing: 6, children: [
-                              KeyedSubtree(
-                                key: _folderChipKey,
-                                child: _chip('folder', folderName,
-                                    filled: true, onTap: _pickFolder),
-                              ),
-                              if (_isRepo && (_branch ?? '').isNotEmpty)
-                                _chip('git-branch', _branch!),
-                              if (_isRepo) _worktreeToggle(),
-                            ]),
-                          ),
                           CallbackShortcuts(
                             bindings: {
                               const SingleActivator(LogicalKeyboardKey.enter):
                                   _start,
                             },
-                            child: TextField(
-                              controller: _input,
-                              focusNode: _focus,
-                              minLines: 2,
-                              maxLines: 10,
-                              style: sans(14,
-                                  height: 1.5, color: AppColors.fg1),
-                              decoration: InputDecoration(
-                                isCollapsed: true,
-                                border: InputBorder.none,
-                                contentPadding:
-                                    EdgeInsets.fromLTRB(S.of(18), S.s12, S.of(18), S.s6),
-                                hintText: 'Ask, build, or type / for commands',
-                                hintStyle:
-                                    sans(14, color: AppColors.fg4),
-                              ),
-                            ),
+                            child: _messageBox(false),
                           ),
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(S.of(10), S.s6, S.of(10), S.of(10)),
-                            child: Row(children: [
-                              const Spacer(),
-                              if (current != null)
-                                Builder(
-                                  builder: (anchor) => Material(
-                                    color: Colors.transparent,
-                                    borderRadius: BorderRadius.circular(R.of(15)),
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(R.of(15)),
-                                      onTap: () => _pickProfile(anchor),
-                                      child: Container(
-                                        height: 30,
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: S.of(10)),
-                                        child: Row(children: [
-                                          ProviderLogo(current.provider,
-                                              size: 13),
-                                          SizedBox(width: S.of(7)),
-                                          Text(
-                                              _agentProfile != null
-                                                  ? "${_agentName ?? 'Agent'}'s profile (${current.name})"
-                                                  : current.name,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: sans(13,
-                                                  color: AppColors.fg2)),
-                                        ]),
+                          SizedBox(height: S.s8),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Expanded(
+                                child: Wrap(
+                                  spacing: S.s4,
+                                  runSpacing: S.s4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    _chip(
+                                        AppIcon('folder',
+                                            size: 12, color: AppColors.fg3),
+                                        _folderLabel,
+                                        key: _folderKey,
+                                        onTap: _pickFolder),
+                                    Builder(
+                                      builder: (a) => _chip(
+                                          _agentMark(), _agentName,
+                                          onTap: () => _pickAgent(a)),
+                                    ),
+                                    if (current != null)
+                                      Builder(
+                                        builder: (a) => _chip(
+                                            null, current.name,
+                                            onTap: () => _pickProfile(a)),
                                       ),
+                                    Builder(
+                                      builder: (a) => _chip(
+                                          AppIcon('git-branch',
+                                              size: 12, color: AppColors.fg3),
+                                          _worktreeLabel,
+                                          onTap: () => _pickWorktree(a)),
                                     ),
-                                  ),
-                                ),
-                              SizedBox(width: S.s6),
-                              Material(
-                                color: canSend
-                                    ? AppColors.fg1
-                                    : AppColors.surface2,
-                                shape: const CircleBorder(),
-                                child: InkWell(
-                                  customBorder: const CircleBorder(),
-                                  onTap: canSend ? _start : null,
-                                  child: SizedBox(
-                                    width: 32,
-                                    height: 32,
-                                    child: Center(
-                                      child: _starting
-                                          ? const Spinner(size: 14)
-                                          : AppIcon('arrow-up',
-                                              size: 16,
-                                              color: canSend
-                                                  ? AppColors.bg
-                                                  : AppColors.fg4),
-                                    ),
-                                  ),
+                                    for (var i = 0; i < _files.length; i++)
+                                      _fileChip(i),
+                                  ],
                                 ),
                               ),
-                            ]),
+                              if (widget.onStartWithFiles != null)
+                                IconBtn('paperclip',
+                                    size: 28,
+                                    iconSize: 15,
+                                    tooltip: 'Add context',
+                                    onTap: _addFiles),
+                              SizedBox(width: S.s4),
+                              _sendButton(canSend),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  if (widget.onOpenSession != null && _recents.isNotEmpty) ...[
-                    SizedBox(height: S.of(14)),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 6,
-                      runSpacing: 6,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(right: S.s2),
-                          child: Text('Recent',
-                              style: TS.caption(AppColors.fg4)),
-                        ),
-                        for (final s in _recents) _recentChip(s),
-                      ],
-                    ),
+                    if (widget.footer != null) widget.footer!,
                   ],
-                ],
+                ),
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sheetCard() {
+    final canSend = !_starting && _input.text.trim().isNotEmpty;
+    final current = _current;
+    final hint = switch (_wt) {
+      _Wt.fresh =>
+        'A new worktree keeps this session off the main checkout until you merge it.',
+      _Wt.here => 'The session edits this folder directly.',
+      _Wt.existing => 'The session continues in the chosen worktree.',
+    };
+    return Container(
+      width: 680,
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(R.lg),
+        border: Border.all(color: AppColors.border2),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.6),
+              blurRadius: 50,
+              offset: const Offset(0, 18)),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(S.s20, S.of(14), S.of(14), 0),
+              child: Row(children: [
+                Text('New session',
+                    style: sans(15, weight: W.label, color: AppColors.fg1)),
+                SizedBox(width: S.of(10)),
+                Expanded(
+                  child: Text(
+                      widget.machineLabel.isEmpty
+                          ? ''
+                          : 'on ${widget.machineLabel}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, color: AppColors.fg4)),
+                ),
+                if (widget.onCancel != null)
+                  IconBtn('x',
+                      size: 28,
+                      iconSize: 14,
+                      tooltip: 'Close',
+                      onTap: widget.onCancel),
+              ]),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(S.s20, S.of(14), S.s20, 0),
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 132),
+                padding:
+                    EdgeInsets.fromLTRB(S.of(14), S.of(14), S.of(14), S.of(10)),
+                decoration: BoxDecoration(
+                  color: AppColors.bg,
+                  borderRadius: BorderRadius.circular(R.md),
+                  border: Border.all(color: AppColors.border2),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    CallbackShortcuts(
+                      bindings: {
+                        const SingleActivator(LogicalKeyboardKey.enter,
+                            meta: true): _start,
+                        const SingleActivator(LogicalKeyboardKey.enter,
+                            control: true): _start,
+                      },
+                      child: _messageBox(true),
+                    ),
+                    SizedBox(height: S.s12),
+                    Wrap(
+                      spacing: S.s6,
+                      runSpacing: S.s6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        if (widget.onStartWithFiles != null)
+                          Material(
+                            color: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(R.of(5)),
+                              side: BorderSide(color: AppColors.border2),
+                            ),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(R.of(5)),
+                              onTap: _addFiles,
+                              child: Container(
+                                height: 24,
+                                padding:
+                                    EdgeInsets.symmetric(horizontal: S.of(9)),
+                                child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      AppIcon('paperclip',
+                                          size: 12, color: AppColors.fg2),
+                                      SizedBox(width: S.s6),
+                                      Text('Add context',
+                                          style: sans(12,
+                                              weight: W.label,
+                                              color: AppColors.fg1)),
+                                    ]),
+                              ),
+                            ),
+                          ),
+                        for (var i = 0; i < _files.length; i++) _fileChip(i),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(S.s20, S.s16, S.s20, 0),
+              child:
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(
+                  flex: 125,
+                  child: _field(
+                    'Works in',
+                    _select(
+                      key: _folderKey,
+                      lead: AppIcon('folder', size: 14, color: AppColors.fg2),
+                      label: _folderLabel,
+                      hint: _folder == null ? null : _parentLabel(_folder!),
+                      onTap: _pickFolder,
+                    ),
+                  ),
+                ),
+                SizedBox(width: S.s12),
+                Expanded(
+                  flex: 100,
+                  child: _field(
+                    'Agent',
+                    Builder(
+                      builder: (a) => _select(
+                        lead: _agentMark(),
+                        label: _agentName,
+                        onTap: () => _pickAgent(a),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: S.s12),
+                Expanded(
+                  flex: 100,
+                  child: _field(
+                    'Model',
+                    Builder(
+                      builder: (a) => _select(
+                        label: current?.name ?? '...',
+                        hint: _agentProfile != null ? 'default' : null,
+                        onTap: () => _pickProfile(a),
+                      ),
+                    ),
+                  ),
+                ),
+              ]),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(S.s20, S.s12, S.s20, 0),
+              child: Row(children: [
+                Expanded(
+                  flex: 125,
+                  child: _field(
+                    'Worktree',
+                    _segmented([
+                      (
+                        'New',
+                        'git-branch',
+                        _wt == _Wt.fresh,
+                        _isRepo ? () => setState(() => _wt = _Wt.fresh) : null
+                      ),
+                      (
+                        'This folder',
+                        null,
+                        _wt == _Wt.here,
+                        () => setState(() {
+                              _wt = _Wt.here;
+                              _existing = null;
+                            })
+                      ),
+                      (
+                        'Existing',
+                        null,
+                        _wt == _Wt.existing,
+                        _isRepo && _worktrees.isNotEmpty
+                            ? () => _pickExistingWorktree()
+                            : null
+                      ),
+                    ]),
+                  ),
+                ),
+              ]),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(S.s20, S.s8, S.s20, 0),
+              child: Text(
+                  _isRepo ? hint : 'This folder is not a git repository.',
+                  style: sans(12, color: AppColors.fg4)),
+            ),
+            SizedBox(height: S.s16),
+            Container(
+              padding: EdgeInsets.fromLTRB(S.s20, S.of(18), S.of(14), S.of(14)),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.line)),
+              ),
+              child: Row(children: [
+                Text(kMacOS ? '⌘↵ to start' : 'Ctrl ↵ to start',
+                    style: sans(12, color: AppColors.fg4)),
+                const Spacer(),
+                if (widget.onCancel != null) ...[
+                  Btn('Cancel',
+                      variant: BtnVariant.secondary, onTap: widget.onCancel),
+                  SizedBox(width: S.s8),
+                ],
+                Btn(_starting ? 'Starting' : 'Start session',
+                    disabled: !canSend, onTap: _start),
+              ]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickExistingWorktree() async {
+    final box = _folderKey.currentContext;
+    final picked = await showAppMenu<Worktree>(
+      context,
+      anchor: box,
+      below: true,
+      minWidth: 280,
+      maxWidth: 360,
+      items: [
+        for (final w in _worktrees)
+          appMenuRow<Worktree>(
+            value: w,
+            icon: 'git-branch',
+            label: _wtName(w),
+            trailing: _sessionsIn(w.path) == 0
+                ? null
+                : '${_sessionsIn(w.path)} sessions',
+            selected: _existing?.path == w.path,
+          ),
+      ],
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _wt = _Wt.existing;
+        _existing = picked;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_sheet) return _hero();
+    return CallbackShortcuts(
+      bindings: {
+        if (widget.onCancel != null)
+          const SingleActivator(LogicalKeyboardKey.escape): widget.onCancel!,
+      },
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.45),
+        alignment: Alignment.topCenter,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(top: 110, bottom: 24),
+          child: _sheetCard(),
+        ),
+      ),
+    );
+  }
+}
+
+String _parentLabel(String path) {
+  final i = path.lastIndexOf('/');
+  var parent = i > 0 ? path.substring(0, i) : '/';
+  parent = parent.replaceFirst(RegExp(r'^/(home|Users)/[^/]+'), '~');
+  return parent.isEmpty ? '~' : parent;
+}
+
+class _FolderChoice {
+  const _FolderChoice(
+      {this.path, this.worktree, this.browse = false, this.create = false});
+  final String? path;
+  final Worktree? worktree;
+  final bool browse;
+  final bool create;
+}
+
+Future<_FolderChoice?> _showFolderQuick(
+  BuildContext context, {
+  required BuildContext? anchor,
+  required String? folder,
+  required List<String> recents,
+  required List<Worktree> worktrees,
+  required int Function(String path) sessionsIn,
+}) {
+  final screen = MediaQuery.sizeOf(context);
+  const width = 300.0;
+  var left = (screen.width - width) / 2;
+  var top = 220.0;
+  final box = anchor?.findRenderObject() as RenderBox?;
+  if (box != null) {
+    final origin = box.localToGlobal(Offset.zero);
+    left = origin.dx
+        .clamp(12.0, (screen.width - width - 12).clamp(12.0, double.infinity));
+    top = origin.dy + box.size.height + 6;
+  }
+  return showGeneralDialog<_FolderChoice>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Choose folder',
+    barrierColor: Colors.transparent,
+    transitionDuration: Motion.quick,
+    pageBuilder: (ctx, _, __) => Stack(children: [
+      Positioned(
+        left: left,
+        top: top,
+        width: width,
+        child: _FolderQuick(
+          folder: folder,
+          recents: recents,
+          worktrees: worktrees,
+          sessionsIn: sessionsIn,
+        ),
+      ),
+    ]),
+    transitionBuilder: (ctx, anim, _, child) {
+      final c = CurvedAnimation(parent: anim, curve: Motion.enter);
+      return FadeTransition(
+        opacity: c,
+        child: ScaleTransition(
+          alignment: Alignment.topLeft,
+          scale: Tween(begin: 0.97, end: 1.0).animate(c),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
+class _FolderQuick extends StatefulWidget {
+  const _FolderQuick({
+    required this.folder,
+    required this.recents,
+    required this.worktrees,
+    required this.sessionsIn,
+  });
+  final String? folder;
+  final List<String> recents;
+  final List<Worktree> worktrees;
+  final int Function(String) sessionsIn;
+
+  @override
+  State<_FolderQuick> createState() => _FolderQuickState();
+}
+
+class _FolderQuickState extends State<_FolderQuick> {
+  final _query = TextEditingController();
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  Widget _row(String icon, String label,
+      {String? trailing,
+      bool selected = false,
+      bool mono_ = false,
+      Color? color,
+      required _FolderChoice choice}) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(R.sm),
+      onTap: () => Navigator.of(context).pop(choice),
+      child: Container(
+        height: 30,
+        padding: EdgeInsets.symmetric(horizontal: S.s8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.surface2 : Colors.transparent,
+          borderRadius: BorderRadius.circular(R.sm),
+        ),
+        child: Row(children: [
+          AppIcon(icon, size: 14, color: color ?? AppColors.fg3),
+          SizedBox(width: S.of(10)),
+          Expanded(
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: mono_
+                    ? mono(12.5, color: color ?? AppColors.fg1)
+                    : sans(12.5, color: color ?? AppColors.fg1)),
+          ),
+          if (trailing != null)
+            Text(trailing, style: sans(11, color: AppColors.fg4)),
+          if (selected) AppIcon('check', size: 13, color: AppColors.fg2),
+        ]),
+      ),
+    );
+  }
+
+  Widget _label(String text) => Padding(
+        padding: EdgeInsets.fromLTRB(S.s8, S.s8, S.s8, S.s4),
+        child:
+            Text(text, style: sans(11, weight: W.label, color: AppColors.fg4)),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final q = _query.text.trim().toLowerCase();
+    bool match(String s) => q.isEmpty || s.toLowerCase().contains(q);
+    final recents = [
+      for (final f in widget.recents)
+        if (match(lastPathSegment(f, ifEmpty: f))) f
+    ];
+    final trees = [
+      for (final w in widget.worktrees)
+        if (match(w.branch ?? lastPathSegment(w.path))) w
+    ];
+    return Container(
+      padding: EdgeInsets.all(S.s6),
+      decoration: BoxDecoration(
+        color: AppColors.surface1,
+        borderRadius: BorderRadius.circular(R.lg),
+        border: Border.all(color: AppColors.border2),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.6),
+              blurRadius: 50,
+              offset: const Offset(0, 18)),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              height: 30,
+              margin: EdgeInsets.fromLTRB(S.s2, S.s2, S.s2, S.s6),
+              padding: EdgeInsets.only(left: S.of(10), right: S.s8),
+              decoration: BoxDecoration(
+                color: AppColors.surface1,
+                borderRadius: BorderRadius.circular(R.of(8)),
+                border: Border.all(color: AppColors.line),
+              ),
+              child: Row(children: [
+                AppIcon('search', size: 13, color: AppColors.fg4),
+                SizedBox(width: S.s8),
+                Expanded(
+                  child: TextField(
+                    controller: _query,
+                    autofocus: true,
+                    onChanged: (_) => setState(() {}),
+                    style: sans(12.5, color: AppColors.fg1),
+                    decoration: InputDecoration(
+                      isCollapsed: true,
+                      border: InputBorder.none,
+                      hintText: 'Find a folder',
+                      hintStyle: sans(12.5, color: AppColors.fg4),
+                    ),
+                  ),
+                ),
+              ]),
+            ),
+            if (recents.isNotEmpty) ...[
+              _label('Recent folders'),
+              for (final f in recents)
+                _row('folder', lastPathSegment(f, ifEmpty: f),
+                    selected: f == widget.folder,
+                    choice: _FolderChoice(path: f)),
+            ],
+            if (trees.isNotEmpty) ...[
+              _label('Existing worktrees'),
+              for (final w in trees)
+                _row('git-branch', w.branch ?? lastPathSegment(w.path),
+                    mono_: true,
+                    trailing: widget.sessionsIn(w.path) == 0
+                        ? null
+                        : '${widget.sessionsIn(w.path)} sessions',
+                    choice: _FolderChoice(worktree: w)),
+            ],
+            Container(
+              height: 1,
+              margin: EdgeInsets.symmetric(vertical: S.s6),
+              color: AppColors.line,
+            ),
+            _row('folder', 'Choose folder…',
+                color: AppColors.fg2,
+                choice: const _FolderChoice(browse: true)),
+            _row('plus', 'New folder',
+                color: AppColors.fg2,
+                choice: const _FolderChoice(browse: true, create: true)),
+          ],
         ),
       ),
     );
@@ -501,6 +1209,7 @@ Future<String?> _showFolderPopover(
   required BuildContext? anchor,
   required DaemonClient client,
   String? startPath,
+  bool startCreating = false,
 }) {
   final screen = MediaQuery.sizeOf(context);
   const width = 340.0;
@@ -509,8 +1218,8 @@ Future<String?> _showFolderPopover(
   final box = anchor?.findRenderObject() as RenderBox?;
   if (box != null) {
     final origin = box.localToGlobal(Offset.zero);
-    left = origin.dx.clamp(
-        12.0, (screen.width - width - 12).clamp(12.0, double.infinity));
+    left = origin.dx
+        .clamp(12.0, (screen.width - width - 12).clamp(12.0, double.infinity));
     top = origin.dy + box.size.height + 6;
   }
   final maxHeight = (screen.height - top - 16).clamp(220.0, 360.0);
@@ -527,7 +1236,10 @@ Future<String?> _showFolderPopover(
         width: width,
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: maxHeight),
-          child: _FolderPopover(client: client, startPath: startPath),
+          child: _FolderPopover(
+              client: client,
+              startPath: startPath,
+              startCreating: startCreating),
         ),
       ),
     ]),
@@ -546,9 +1258,11 @@ Future<String?> _showFolderPopover(
 }
 
 class _FolderPopover extends StatefulWidget {
-  const _FolderPopover({required this.client, this.startPath});
+  const _FolderPopover(
+      {required this.client, this.startPath, this.startCreating = false});
   final DaemonClient client;
   final String? startPath;
+  final bool startCreating;
 
   @override
   State<_FolderPopover> createState() => _FolderPopoverState();
@@ -568,6 +1282,7 @@ class _FolderPopoverState extends State<_FolderPopover> {
   @override
   void initState() {
     super.initState();
+    _creating = widget.startCreating;
     _go(widget.startPath);
   }
 
@@ -587,8 +1302,9 @@ class _FolderPopoverState extends State<_FolderPopover> {
     try {
       final res = await widget.client.fs(path);
       if (!mounted || id != _run) return;
-      final learnHome =
-          _homePath == null && (path == null || path.isEmpty) && res.path.isNotEmpty;
+      final learnHome = _homePath == null &&
+          (path == null || path.isEmpty) &&
+          res.path.isNotEmpty;
       setState(() {
         if (learnHome) _homePath = res.path;
         _listing = res;
@@ -633,7 +1349,9 @@ class _FolderPopoverState extends State<_FolderPopover> {
     final home = _homePath;
     if (home != null && home.isNotEmpty) {
       if (_here == home) return '~';
-      if (_here.startsWith('$home/')) return '~/${_here.substring(home.length + 1)}';
+      if (_here.startsWith('$home/')) {
+        return '~/${_here.substring(home.length + 1)}';
+      }
     }
     return _here;
   }
@@ -652,7 +1370,9 @@ class _FolderPopoverState extends State<_FolderPopover> {
     final home = _homePath;
     final here = _here;
     if (here.isEmpty) return const [];
-    if (home != null && home.isNotEmpty && (here == home || here.startsWith('$home/'))) {
+    if (home != null &&
+        home.isNotEmpty &&
+        (here == home || here.startsWith('$home/'))) {
       final out = <({String label, String path})>[(label: '~', path: home)];
       if (here == home) return out;
       var acc = home;
@@ -869,38 +1589,39 @@ class _FolderPopoverState extends State<_FolderPopover> {
                                       32.0) +
                                   12,
                               child: ListView.builder(
-                              padding: EdgeInsets.all(S.s6),
-                              itemExtent: 32,
-                              itemCount: dirs.length,
-                              itemBuilder: (ctx, i) {
-                                final e = dirs[i];
-                                return InkWell(
-                                  borderRadius: BorderRadius.circular(R.of(7)),
-                                  onTap: () => _go(e.path),
-                                  child: Container(
-                                    height: 32,
-                                    padding: EdgeInsets.symmetric(
-                                        horizontal: S.s8),
-                                    child: Row(children: [
-                                      AppIcon('folder',
-                                          size: 15, color: AppColors.fg3),
-                                      SizedBox(width: S.of(9)),
-                                      Expanded(
-                                        child: Text(
-                                          e.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style:
-                                              sans(13, color: AppColors.fg1),
+                                padding: EdgeInsets.all(S.s6),
+                                itemExtent: 32,
+                                itemCount: dirs.length,
+                                itemBuilder: (ctx, i) {
+                                  final e = dirs[i];
+                                  return InkWell(
+                                    borderRadius:
+                                        BorderRadius.circular(R.of(7)),
+                                    onTap: () => _go(e.path),
+                                    child: Container(
+                                      height: 32,
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: S.s8),
+                                      child: Row(children: [
+                                        AppIcon('folder',
+                                            size: 15, color: AppColors.fg3),
+                                        SizedBox(width: S.of(9)),
+                                        Expanded(
+                                          child: Text(
+                                            e.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style:
+                                                sans(13, color: AppColors.fg1),
+                                          ),
                                         ),
-                                      ),
-                                      AppIcon('chevron-right',
-                                          size: 14, color: AppColors.fg4),
-                                    ]),
-                                  ),
-                                );
-                              },
-                            ),
+                                        AppIcon('chevron-right',
+                                            size: 14, color: AppColors.fg4),
+                                      ]),
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
             ),
             Container(
@@ -937,9 +1658,8 @@ class _FolderPopoverState extends State<_FolderPopover> {
                         overflow: TextOverflow.ellipsis,
                         style: sans(12,
                             weight: FontWeight.w500,
-                            color: _here.isEmpty
-                                ? AppColors.fg4
-                                : AppColors.bg),
+                            color:
+                                _here.isEmpty ? AppColors.fg4 : AppColors.bg),
                       ),
                     ),
                   ),

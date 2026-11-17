@@ -81,12 +81,27 @@ class _CompactingStatusState extends State<_CompactingStatus> {
   }
 }
 
+/// Tool calls since the last thing the user said.
+int _turnToolCalls(List<Map<String, dynamic>> events) {
+  var n = 0;
+  for (var i = events.length - 1; i >= 0; i--) {
+    final k = events[i]['kind'];
+    if (k == 'user_input' || k == 'steer') break;
+    if (k == 'tool_call') n++;
+  }
+  return n;
+}
+
 class _ChurningStatus extends StatefulWidget {
   final String? startedAt;
   final String thinking;
   final String agentId;
+  final int steps;
   const _ChurningStatus(
-      {this.startedAt, this.thinking = '', this.agentId = 'snippet'});
+      {this.startedAt,
+      this.thinking = '',
+      this.agentId = 'snippet',
+      this.steps = 0});
   @override
   State<_ChurningStatus> createState() => _ChurningStatusState();
 }
@@ -158,6 +173,21 @@ class _ChurningStatusState extends State<_ChurningStatus> {
   Widget build(BuildContext context) {
     Theme.of(context);
     final thought = widget.thinking.trim();
+    if (!kMobile) {
+      // Desktop: "Churning 1m 42s" on one quiet line.
+      return Padding(
+        padding: const EdgeInsets.only(top: 2, bottom: 6),
+        child: Row(children: [
+          const SizedBox(width: 3),
+          RunSpinner(size: 10, color: AppColors.accent),
+          const SizedBox(width: 13),
+          SwapText(_verb, maxLines: 1, style: sans(12.5, color: AppColors.fg2)),
+          const SizedBox(width: 8),
+          Text(_elapsed,
+              style: sans(12.5, color: AppColors.fg4, tabular: true)),
+        ]),
+      );
+    }
     return Padding(
       padding: EdgeInsets.only(bottom: S.s4),
       child: Column(
@@ -230,6 +260,7 @@ class _LiveStreamRow extends StatelessWidget {
   final bool hasVisibleAction;
   final String? compactionDetail;
   final String agentId;
+  final int steps;
 
   const _LiveStreamRow({
     super.key,
@@ -240,6 +271,7 @@ class _LiveStreamRow extends StatelessWidget {
     required this.hasVisibleAction,
     required this.compactionDetail,
     this.agentId = 'snippet',
+    this.steps = 0,
   });
 
   @override
@@ -275,6 +307,7 @@ class _LiveStreamRow extends StatelessWidget {
               startedAt: startedAt,
               thinking: hasVisibleAction ? '' : value.thinking,
               agentId: agentId,
+              steps: steps,
             ),
           ]);
         }

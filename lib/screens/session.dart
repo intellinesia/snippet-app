@@ -1,3 +1,4 @@
+import 'session_header.dart';
 import 'package:snippet/ambient/controller.dart';
 import 'package:snippet/ambient/hold.dart';
 import 'package:snippet/ambient/live_caption.dart';
@@ -67,7 +68,6 @@ import '../composer/attachment_tile.dart';
 import '../composer/composer_card.dart';
 import '../composer/composer_tray.dart';
 import '../media_views.dart';
-import '../chat/chat_style.dart' show ChatHeader;
 import 'agent_messaging.dart';
 import 'package:xterm/xterm.dart';
 import 'files.dart';
@@ -891,8 +891,9 @@ class _SessionScreenState extends State<SessionScreen>
       await widget.client.setKeepAwake(widget.sessionId, !on);
     } catch (e) {
       _keepAwake = before;
-      if (mounted)
+      if (mounted) {
         toast(context, "Couldn't change auto-settle: $e", danger: true);
+      }
     }
   }
 
@@ -1564,7 +1565,7 @@ class _SessionScreenState extends State<SessionScreen>
             child: LayoutBuilder(
                 builder: (context, column) => ValueListenableBuilder<bool>(
                     valueListenable: sessionRailCollapsed,
-                    builder: (context, railHidden, _) => Row(
+                    builder: (context, railHidden, _) => _withTermDock(Row(
                           // With the panel open, chat and panel sit together as one
                           // centred pair instead of the panel hugging the window edge.
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -1572,7 +1573,7 @@ class _SessionScreenState extends State<SessionScreen>
                           children: [
                             _chatPane(
                               _railVisible(column.maxWidth) && !railHidden,
-                              _withTermDock(
+                              _passThrough(
                                 // The bottom chrome is NON-FLEX, so Flutter lays it out at its
                                 // natural height BEFORE the transcript's Expanded claims what
                                 // is left. A question or approval card carrying a long
@@ -1657,6 +1658,7 @@ class _SessionScreenState extends State<SessionScreen>
                                                 key: ValueKey(jsonEncode(
                                                     s!.pendingQuestion!)),
                                                 question: s.pendingQuestion!,
+                                                agentName: _meAgentName,
                                                 onSend: _sendDecision),
                                           ),
                                         ),
@@ -1809,6 +1811,9 @@ class _SessionScreenState extends State<SessionScreen>
                                                                   .turnStartedAt,
                                                               hasVisibleAction:
                                                                   _turnHasVisibleAction(
+                                                                      events),
+                                                              steps:
+                                                                  _turnToolCalls(
                                                                       events),
                                                               compactionDetail:
                                                                   _latestCompactionDetail(
@@ -2039,8 +2044,13 @@ class _SessionScreenState extends State<SessionScreen>
                             ),
                             if (_railVisible(column.maxWidth)) _sessionRail(s),
                           ],
-                        ))),
+                        )))),
           ),
+          if (_deskHeader)
+            Positioned.fill(
+              child: LayoutBuilder(
+                  builder: (context, column) => _floatingRail(s, column)),
+            ),
           Positioned.fill(
             child: AnimatedSwitcher(
               duration: Motion.fast,

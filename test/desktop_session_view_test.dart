@@ -275,8 +275,9 @@ void main() {
     ));
     await tester.pump();
 
-    expect(find.text('Running flutter test', findRichText: true),
-        findsOneWidget);
+    // Desktop splits the verb from the mono target.
+    expect(find.text('Running'), findsOneWidget);
+    expect(find.text('flutter test'), findsOneWidget);
     expect(find.text('Show'), findsNothing);
     expect(find.byType(WorkingDots), findsNothing);
     expect(
@@ -284,8 +285,9 @@ void main() {
         of: find.byType(CollapsedActivity),
         matching: find.byType(AppIcon),
       ),
-      findsOneWidget, // the tool glyph; a lone step has no header
+      findsNothing, // a live step shows the spinner; a lone step has no header
     );
+    expect(find.byType(RunSpinner), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 
@@ -325,7 +327,10 @@ void main() {
           find.text('Edited 3 files, ran echo',
               findRichText: true),
           findsOneWidget);
-      expect(find.text('Running flutter analyze', findRichText: true),
+      expect(
+          desktop
+              ? find.text('flutter analyze')
+              : find.text('Running flutter analyze', findRichText: true),
           findsOneWidget);
       expect(find.byType(DenseToolRow), findsOneWidget);
       expect(find.text('Show'), findsNothing);

@@ -9,6 +9,7 @@ import 'composer_pill.dart';
 
 export 'composer_pill.dart';
 export 'composer_queue.dart';
+export 'desktop_composer.dart';
 
 /// The one composer surface: a 52px Duet pill, attach | field | trailing
 /// controls. The field grows upward and the controls stay on the last line.

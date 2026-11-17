@@ -1778,10 +1778,19 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         children: [
           if (stamp != null) ChatSystemLine(stamp.$2, bold: stamp.$1),
           if (!mine && run.first)
-            ChatSenderName(
-              _agentName(e.actorId),
-              indent: ChatBubbleRow.avatarSize + 6,
-            ),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              Flexible(
+                child: ChatSenderName(
+                  _agentName(e.actorId),
+                  indent: ChatBubbleRow.avatarSize + 6,
+                ),
+              ),
+              if (!kMobile && e.actorId == _group.lead)
+                Padding(
+                  padding: EdgeInsets.only(left: S.s6, top: S.s2),
+                  child: Text('Lead', style: sans(11, color: AppColors.fg4)),
+                ),
+            ]),
           MessageBubbleInteractive(
             text: e.body,
             mine: mine,

@@ -52,18 +52,18 @@ Widget _rail(DaemonClient client, String status, {bool mc = false}) => MaterialA
     );
 
 void main() {
-  testWidgets('a turn refreshes only the worktree and processes', (tester) async {
+  testWidgets('a turn refreshes only the worktree', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     SharedPreferences.setMockInitialValues({});
     final client = _Counting();
     await tester.pumpWidget(_rail(client, 'idle'));
     await tester.pump();
-    expect(client.calls.toSet(), {'git', 'sessions', 'bg', 'wake', 'warm', 'tasks'});
+    expect(client.calls.toSet(), {'git', 'wake', 'warm', 'tasks'});
     client.calls.clear();
     await tester.pumpWidget(_rail(client, 'running'));
     await tester.pump();
-    expect(client.calls, unorderedEquals(['git', 'bg']));
+    expect(client.calls, unorderedEquals(['git']));
     debugDefaultTargetPlatformOverride = null;
   });
 

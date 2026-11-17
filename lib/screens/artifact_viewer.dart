@@ -23,15 +23,69 @@ import 'file_viewer.dart';
 import 'mobile_chrome.dart';
 
 const _textExts = {
-  'txt', 'log', 'md', 'json', 'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf',
-  'env', 'xml', 'css', 'scss', 'js', 'ts', 'tsx', 'jsx', 'dart', 'rs', 'py',
-  'go', 'c', 'h', 'cpp', 'hpp', 'java', 'kt', 'swift', 'rb', 'lua', 'sh',
-  'sql', 'diff', 'patch', 'lock', 'vue', 'svelte', 'gradle', 'properties',
+  'txt',
+  'log',
+  'md',
+  'json',
+  'yaml',
+  'yml',
+  'toml',
+  'ini',
+  'cfg',
+  'conf',
+  'env',
+  'xml',
+  'css',
+  'scss',
+  'js',
+  'ts',
+  'tsx',
+  'jsx',
+  'dart',
+  'rs',
+  'py',
+  'go',
+  'c',
+  'h',
+  'cpp',
+  'hpp',
+  'java',
+  'kt',
+  'swift',
+  'rb',
+  'lua',
+  'sh',
+  'sql',
+  'diff',
+  'patch',
+  'lock',
+  'vue',
+  'svelte',
+  'gradle',
+  'properties',
 };
 
 const _webExts = {
-  'html', 'htm', 'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'css',
-  'js', 'mjs', 'json', 'txt', 'md', 'woff', 'woff2', 'ttf', 'otf', 'ico',
+  'html',
+  'htm',
+  'svg',
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'webp',
+  'avif',
+  'css',
+  'js',
+  'mjs',
+  'json',
+  'txt',
+  'md',
+  'woff',
+  'woff2',
+  'ttf',
+  'otf',
+  'ico',
 };
 
 String _ext(String path) {
@@ -102,8 +156,9 @@ class _HeaderDragSheet extends StatefulWidget {
 class _HeaderDragSheetState extends State<_HeaderDragSheet>
     with SingleTickerProviderStateMixin {
   static const _headerHeight = 76.0;
-  late final AnimationController _dy = AnimationController.unbounded(vsync: this)
-    ..addListener(() => setState(() {}));
+  late final AnimationController _dy =
+      AnimationController.unbounded(vsync: this)
+        ..addListener(() => setState(() {}));
   double _raw = 0;
 
   @override
@@ -269,8 +324,8 @@ class _ArtifactRowState extends State<ArtifactRow> {
       );
 
   Widget _compact(BuildContext context, {String? text}) {
-    final plain = plainPreview(
-        (text ?? '').trim().isNotEmpty ? text! : widget.caption);
+    final plain =
+        plainPreview((text ?? '').trim().isNotEmpty ? text! : widget.caption);
     return GroupedCard(segments: [
       _header(context),
       if (plain.isNotEmpty)
@@ -303,14 +358,15 @@ class _ArtifactRowState extends State<ArtifactRow> {
             fit: BoxFit.cover,
             width: double.infinity,
             height: double.infinity,
-            errorBuilder: (_, __, ___) => Center(
-                child: AppIcon('image', size: 24, color: AppColors.fg4)),
+            errorBuilder: (_, __, ___) =>
+                Center(child: AppIcon('image', size: 24, color: AppColors.fg4)),
             frameBuilder: (context, child, frame, sync) {
               if (sync) return child;
               return AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 child: frame == null
-                    ? const ArtifactSkeleton(key: ValueKey('loading'), fill: true)
+                    ? const ArtifactSkeleton(
+                        key: ValueKey('loading'), fill: true)
                     : KeyedSubtree(key: const ValueKey('loaded'), child: child),
               );
             },
@@ -336,7 +392,8 @@ class _ArtifactPreview {
 
 bool artifactShowsInline(String kind, String? display) {
   final wanted = display == 'inline' ||
-      (display == null && (kind == 'markdown' || kind == 'csv' || kind == 'image'));
+      (display == null &&
+          (kind == 'markdown' || kind == 'csv' || kind == 'image'));
   if (!wanted) return false;
   return switch (kind) {
     'markdown' || 'csv' || 'code' || 'image' => true,
@@ -543,7 +600,8 @@ String snippetPageTheme(bool dark, String bg) {
     '--sn-font': "'Geist', -apple-system, system-ui, sans-serif",
     '--sn-mono': "'Geist Mono', ui-monospace, monospace",
   };
-  final css = ':root{${vars.entries.map((e) => '${e.key}:${e.value}').join(';')}}';
+  final css =
+      ':root{${vars.entries.map((e) => '${e.key}:${e.value}').join(';')}}';
   return '''
 (function () {
   var d = document, h = d.head || d.documentElement;
@@ -611,7 +669,8 @@ class _ArtifactSkeletonState extends State<ArtifactSkeleton>
         SizedBox(height: S.s16),
         if (widget.fill)
           Expanded(
-              child:           Skeleton(height: double.infinity, radius: 12, color: AppColors.tint1))
+              child: Skeleton(
+                  height: double.infinity, radius: 12, color: AppColors.tint1))
         else
           Skeleton(height: 96, radius: 12, color: AppColors.tint1),
       ],
@@ -619,8 +678,8 @@ class _ArtifactSkeletonState extends State<ArtifactSkeleton>
     return Semantics(
       label: 'Loading',
       child: FadeTransition(
-        opacity: Tween(begin: 0.55, end: 1.0).animate(
-            CurvedAnimation(parent: _pulse, curve: Curves.easeInOut)),
+        opacity: Tween(begin: 0.55, end: 1.0)
+            .animate(CurvedAnimation(parent: _pulse, curve: Curves.easeInOut)),
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: S.s8),
           child: ClipRect(child: body),
@@ -667,7 +726,8 @@ class MermaidDiagram extends StatelessWidget {
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({startOnLoad:true,securityLevel:'strict',theme:'base',themeVariables:$vars});</script>
 </body></html>''';
-    return _InlineWebPage(key: ValueKey('mermaid:${code.hashCode}'), html: html);
+    return _InlineWebPage(
+        key: ValueKey('mermaid:${code.hashCode}'), html: html);
   }
 }
 
@@ -736,8 +796,7 @@ class _InlineWebPageState extends State<_InlineWebPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final position =
-        Scrollable.maybeOf(context, axis: Axis.vertical)?.position;
+    final position = Scrollable.maybeOf(context, axis: Axis.vertical)?.position;
     if (!identical(position, _position)) {
       _position?.removeListener(_checkOnScreen);
       _position = position;
@@ -748,7 +807,12 @@ class _InlineWebPageState extends State<_InlineWebPage> {
   void _checkOnScreen() {
     final box = context.findRenderObject();
     final viewport = _position?.context.notificationContext?.findRenderObject();
-    if (box is! RenderBox || viewport is! RenderBox || !box.attached || !viewport.attached) return;
+    if (box is! RenderBox ||
+        viewport is! RenderBox ||
+        !box.attached ||
+        !viewport.attached) {
+      return;
+    }
     final top = box.localToGlobal(Offset.zero).dy;
     final viewTop = viewport.localToGlobal(Offset.zero).dy;
     const margin = 600.0;
@@ -756,6 +820,7 @@ class _InlineWebPageState extends State<_InlineWebPage> {
         top < viewTop + viewport.size.height + margin;
     if (visible != _onScreen) setState(() => _onScreen = visible);
   }
+
   String _bg = '#000000';
   bool _dark = true;
 
@@ -908,7 +973,8 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
     super.initState();
     _n = widget.version;
     _load();
-    _poll = Timer.periodic(const Duration(seconds: 5), (_) => _load(quiet: true));
+    _poll =
+        Timer.periodic(const Duration(seconds: 5), (_) => _load(quiet: true));
   }
 
   @override
@@ -953,8 +1019,10 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
       }
     }
     try {
+      if (!mounted) return;
       toast(context, 'Preparing ${a.title}…');
-      final path = await widget.client.zipArtifact(widget.session, a.id, version: v.n);
+      final path =
+          await widget.client.zipArtifact(widget.session, a.id, version: v.n);
       if (!mounted) return;
       final msg = await downloadRemoteFileWithCancel(context, widget.client,
           path: path, name: '${a.id}-v${v.n}.zip');
@@ -996,7 +1064,9 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
           appMenuRow<int>(
             value: v.n,
             icon: 'history',
-            label: 'Version ${v.n}',
+            label: kMobile
+                ? 'Version ${v.n}'
+                : 'v${v.n}${v.n == a.latest?.n ? ' \u00b7 Latest version' : ''}',
             description: _when(v.createdAt),
             selected: v.n == _n,
           ),
@@ -1097,15 +1167,15 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
       );
 
   Widget _subBar() {
-    if (_version == null) return const SizedBox.shrink();
+    if (_version == null || !kMobile) return const SizedBox.shrink();
     return Padding(
       padding: EdgeInsets.fromLTRB(
           kMobile ? M.gutter : S.s16, S.s4, kMobile ? M.gutter : S.s16, S.s4),
       child: Row(children: [
         if (_hasSource) ...[_sourceSeg(), SizedBox(width: S.s12)],
         Expanded(
-          child: Align(
-              alignment: Alignment.centerRight, child: _versionLabel()),
+          child:
+              Align(alignment: Alignment.centerRight, child: _versionLabel()),
         ),
       ]),
     );
@@ -1161,27 +1231,88 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
     if (kMobile) return _mobileHeader();
     final a = _artifact;
     return Container(
-      padding: EdgeInsets.fromLTRB(S.s16, S.s12, S.s8, S.of(10)),
+      height: 52,
+      padding: const EdgeInsets.fromLTRB(22, 0, 14, 0),
+      decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.border))),
       child: Row(children: [
-        Expanded(
+        Flexible(
           child: Text(a?.title ?? 'Artifact',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: sans(15, weight: W.label, color: AppColors.fg1)),
+              style: sans(14, weight: W.strong, color: AppColors.fg1)),
         ),
+        if (a != null) ...[
+          const SizedBox(width: 8),
+          Container(
+            height: 20,
+            padding: const EdgeInsets.symmetric(horizontal: 7),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+                color: AppColors.surface3,
+                borderRadius: BorderRadius.circular(R.of(5))),
+            child: Text(_artifactKindLabel(a.kind),
+                style: sans(11.5, color: AppColors.fg2)),
+          ),
+        ],
+        const SizedBox(width: 8),
+        _versionButton(),
+        const Spacer(),
+        if (_hasSource) ...[_sourceSeg(), const SizedBox(width: 6)],
+        IconBtn('external-link',
+            size: 28,
+            iconSize: 15,
+            tooltip: 'Open in browser',
+            onTap: _openInBrowser),
         IconBtn('download',
-            size: 32, iconSize: 15, tooltip: 'Download', onTap: _download),
+            size: 28, iconSize: 15, tooltip: 'Download', onTap: _download),
         Builder(
           builder: (anchor) => IconBtn('more-horizontal',
-              size: 32,
+              size: 28,
               iconSize: 15,
               tooltip: 'More',
               onTap: () => _more(anchor)),
         ),
         if (widget.onClose != null)
           IconBtn('x',
-              size: 32, iconSize: 15, tooltip: 'Close', onTap: widget.onClose),
+              size: 28, iconSize: 15, tooltip: 'Close', onTap: widget.onClose),
       ]),
+    );
+  }
+
+  Widget _versionButton() {
+    final v = _version;
+    final a = _artifact;
+    if (v == null || a == null) return const SizedBox.shrink();
+    final multi = a.versions.length > 1;
+    final latest = v.n == a.latest?.n;
+    return Builder(
+      builder: (anchor) => Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(R.of(6)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(R.of(6)),
+          onTap: multi ? () => _pickVersion(anchor) : null,
+          child: Container(
+            height: 28,
+            padding: const EdgeInsets.symmetric(horizontal: 9),
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.border2),
+              borderRadius: BorderRadius.circular(R.of(6)),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              AppIcon('history', size: 13, color: AppColors.fg2),
+              const SizedBox(width: 6),
+              Text('v${v.n}${latest ? ' \u00b7 Latest version' : ''}',
+                  style: sans(12, color: AppColors.fg2)),
+              if (multi) ...[
+                const SizedBox(width: 6),
+                AppIcon('chevron-down', size: 12, color: AppColors.fg2),
+              ],
+            ]),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1247,7 +1378,9 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
         future: _textOf(v),
         builder: (context, snap) {
           if (snap.hasError) return _centered('${snap.error}');
-          if (!snap.hasData) return Center(child: Spinner(size: 16, color: AppColors.fg3));
+          if (!snap.hasData) {
+            return Center(child: Spinner(size: 16, color: AppColors.fg3));
+          }
           return render(snap.data!);
         },
       );
@@ -1261,6 +1394,39 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
         ),
       );
 
+  /// Desktop: the page sits in a bordered frame under an address strip.
+  Widget _framed(ArtifactVersion v, Widget page) => Padding(
+        padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: AppColors.surface1,
+            borderRadius: BorderRadius.circular(R.of(12)),
+            border: Border.all(color: AppColors.border2),
+          ),
+          child: Column(children: [
+            Container(
+              height: 30,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                  color: AppColors.surface1,
+                  border: Border(bottom: BorderSide(color: AppColors.border))),
+              child: Row(children: [
+                AppIcon('globe', size: 11, color: AppColors.fg4),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(v.entry,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: codeMono(11, color: AppColors.fg4)),
+                ),
+              ]),
+            ),
+            Expanded(child: page),
+          ]),
+        ),
+      );
+
   Widget _preview(ArtifactInfo a, ArtifactVersion v) {
     final uri = widget.client.artifactUri(v.url);
     switch (a.kind) {
@@ -1268,13 +1434,24 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
         return _textBody(
           v,
           (text) => SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(S.s20, S.s16, S.s20, S.s32),
-            child: SelectionArea(
-              child: MarkdownBody(
-                  data: text,
-                  styleSheet: markdownStyle(context),
-                  builders: {'pre': PreBlockBuilder()},
-                  onTapLink: (_, href, __) => openMarkdownLink(href, context)),
+            padding: kMobile
+                ? EdgeInsets.fromLTRB(S.s20, S.s16, S.s20, S.s32)
+                : const EdgeInsets.fromLTRB(28, 30, 28, 48),
+            child: Center(
+              child: ConstrainedBox(
+                constraints:
+                    BoxConstraints(maxWidth: kMobile ? double.infinity : 720),
+                child: SelectionArea(
+                  child: MarkdownBody(
+                      data: text,
+                      styleSheet: kMobile
+                          ? markdownStyle(context)
+                          : documentMarkdownStyle(context),
+                      builders: {'pre': PreBlockBuilder()},
+                      onTapLink: (_, href, __) =>
+                          openMarkdownLink(href, context)),
+                ),
+              ),
             ),
           ),
         );
@@ -1300,9 +1477,11 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
         if (!_canEmbedWeb) {
           return _centered('This page opens in your browser.',
               action: TextButton(
-                  onPressed: _openInBrowser, child: const Text('Open in browser')));
+                  onPressed: _openInBrowser,
+                  child: const Text('Open in browser')));
         }
-        return _WebPreview(key: ValueKey(v.url), uri: uri);
+        final page = _WebPreview(key: ValueKey(v.url), uri: uri);
+        return kMobile ? page : _framed(v, page);
     }
   }
 
@@ -1314,7 +1493,8 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
       color: kMobile ? AppColors.pageBg : Colors.transparent,
       child: SafeArea(
         bottom: false,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _header(),
           _subBar(),
           Expanded(
@@ -1551,6 +1731,54 @@ class SessionDeliverables extends StatefulWidget {
 class _SessionDeliverablesState extends State<SessionDeliverables> {
   List<ArtifactInfo>? _artifacts;
   String? _error;
+  String? _selected;
+  bool _dismissed = false;
+
+  /// Desktop list beside the open artifact; narrow hosts keep the list alone
+  /// and open artifacts in a drawer.
+  Widget _split(List<ArtifactInfo> artifacts,
+      List<({String path, String caption})> files) {
+    final newest = [...artifacts]..sort((x, y) =>
+        (y.latest?.createdAt ?? 0).compareTo(x.latest?.createdAt ?? 0));
+    final sel =
+        _selected ?? (_dismissed || newest.isEmpty ? null : newest.first.id);
+    final open = artifacts.any((a) => a.id == sel) ? sel : null;
+    return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Container(
+        width: 300,
+        decoration: BoxDecoration(
+            border: Border(right: BorderSide(color: AppColors.border))),
+        child: ArtifactGrid(
+          client: widget.client,
+          session: widget.session,
+          artifacts: artifacts,
+          files: files,
+          onOpenFileTab: widget.onOpenFileTab,
+          selectedId: open,
+          onSelect: (a) => setState(() {
+            _selected = a.id;
+            _dismissed = false;
+          }),
+        ),
+      ),
+      Expanded(
+        child: open == null
+            ? Center(
+                child: Text('Select an artifact to preview it.',
+                    style: sans(13, color: AppColors.fg4)))
+            : ArtifactViewer(
+                key: ValueKey('deliverable-$open'),
+                client: widget.client,
+                session: widget.session,
+                id: open,
+                onClose: () => setState(() {
+                  _selected = null;
+                  _dismissed = true;
+                }),
+              ),
+      ),
+    ]);
+  }
 
   @override
   void initState() {
@@ -1570,11 +1798,30 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
       for (final f in widget.files.reversed)
         if (seen.add(f.path)) f,
     ];
+    if (!kMobile &&
+        _error == null &&
+        artifacts != null &&
+        (artifacts.isNotEmpty || files.isNotEmpty)) {
+      return Material(
+        color: Colors.transparent,
+        child: LayoutBuilder(
+          builder: (context, box) => box.maxWidth >= 640
+              ? _split(artifacts, files)
+              : _wrap(context, artifacts, files),
+        ),
+      );
+    }
+    return _wrap(context, artifacts, files);
+  }
+
+  Widget _wrap(BuildContext context, List<ArtifactInfo>? artifacts,
+      List<({String path, String caption})> files) {
     return Material(
       color: kMobile ? AppColors.pageBg : Colors.transparent,
       child: SafeArea(
         bottom: false,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           if (kMobile)
             Center(
               child: Container(
@@ -1590,47 +1837,52 @@ class _SessionDeliverablesState extends State<SessionDeliverables> {
           if (kMobile && !ShellPanelRoot.inPanel(context))
             _SheetHeader(onDone: widget.onClose)
           else if (!ShellPanelRoot.inPanel(context))
-          Container(
-            padding: EdgeInsets.fromLTRB(S.s16, kMobile ? S.s8 : S.s12, S.s8, S.of(10)),
-            child: Row(children: [
-              Expanded(
-                child: Text('Artifacts & files',
-                    style: sans(15, weight: W.label, color: AppColors.fg1)),
-              ),
-              if (widget.onClose != null)
-                IconBtn('x',
-                    size: 32,
-                    iconSize: 15,
-                    tooltip: 'Close',
-                    onTap: widget.onClose),
-            ]),
-          ),
+            Container(
+              padding: EdgeInsets.fromLTRB(
+                  S.s16, kMobile ? S.s8 : S.s12, S.s8, S.of(10)),
+              child: Row(children: [
+                Expanded(
+                  child: Text('Artifacts & files',
+                      style: sans(15, weight: W.label, color: AppColors.fg1)),
+                ),
+                if (widget.onClose != null)
+                  IconBtn('x',
+                      size: 32,
+                      iconSize: 15,
+                      tooltip: 'Close',
+                      onTap: widget.onClose),
+              ]),
+            ),
           Expanded(
             child: _error != null
-                ? EmptyState(icon: 'alert-triangle', title: 'Couldn\'t load artifacts', body: _error)
+                ? EmptyState(
+                    icon: 'alert-triangle',
+                    title: 'Couldn\'t load artifacts',
+                    body: _error)
                 : artifacts == null
                     ? Center(child: Spinner(size: 16, color: AppColors.fg3))
                     : artifacts.isEmpty && files.isEmpty
                         ? const EmptyState(
                             icon: 'layers',
                             title: 'Nothing shared yet',
-                            body: 'Artifacts and files the agent hands over in this chat collect here.',
+                            body:
+                                'Artifacts and files the agent hands over in this chat collect here.',
                           )
                         : !kMobile
-                        ? ArtifactGrid(
-                            client: widget.client,
-                            session: widget.session,
-                            artifacts: artifacts,
-                            files: files,
-                            onOpenFileTab: widget.onOpenFileTab,
-                          )
-                        : ArtifactCollection(
-                            client: widget.client,
-                            session: widget.session,
-                            artifacts: artifacts,
-                            files: files,
-                            onOpenFileTab: widget.onOpenFileTab,
-                          ),
+                            ? ArtifactGrid(
+                                client: widget.client,
+                                session: widget.session,
+                                artifacts: artifacts,
+                                files: files,
+                                onOpenFileTab: widget.onOpenFileTab,
+                              )
+                            : ArtifactCollection(
+                                client: widget.client,
+                                session: widget.session,
+                                artifacts: artifacts,
+                                files: files,
+                                onOpenFileTab: widget.onOpenFileTab,
+                              ),
           ),
         ]),
       ),
@@ -1656,8 +1908,8 @@ class _SheetHeader extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(17,
-                      weight: FontWeight.w600, color: AppColors.fg1)),
+                  style:
+                      sans(17, weight: FontWeight.w600, color: AppColors.fg1)),
             ),
             SizedBox(
               width: 72,

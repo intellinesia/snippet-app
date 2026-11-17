@@ -1,8 +1,5 @@
 import 'dart:async';
 
-import '../desktop_look.dart';
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -22,6 +19,19 @@ import 'agent_cluster.dart';
 import '../screens/agent_profile_panel.dart' show showAgentProfileSettings;
 import '../desktop_layout.dart' show SettingsHeader;
 import '../screens/memory_screen.dart' show MemoryScreen;
+import '../screens/agent_panel.dart'
+    show
+        PanelBar,
+        PanelBarButton,
+        PanelCard,
+        PanelFootnote,
+        PanelGroup,
+        PanelRadio,
+        PanelRow,
+        pr;
+import '../crew_widgets.dart' show showCrewAgentMenu;
+import '../shell_panel.dart' show ShellRequestScope;
+import '../screens/tasks/tasks_panel.dart' show openTaskCountFor;
 import '../settings_form.dart'
     show Grouped, SettingsGroup, SettingsHero, SettingsRow;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -96,19 +106,32 @@ Future<T?> dockedPick<T>(BuildContext context,
       title,
       (_) => _CompleteOnDispose(
             done: done,
-            child: SettingsGroup(children: [
-              for (final (value, label, icon) in options)
-                AgentPageRow(
-                  label: label,
-                  icon: icon,
-                  checked: value == selected,
-                  chevron: false,
-                  onTap: () {
-                    if (!done.isCompleted) done.complete(value);
-                    nav.pop();
-                  },
-                ),
-            ]),
+            child: kMobile
+                ? SettingsGroup(children: [
+                    for (final (value, label, icon) in options)
+                      AgentPageRow(
+                        label: label,
+                        icon: icon,
+                        checked: value == selected,
+                        chevron: false,
+                        onTap: () {
+                          if (!done.isCompleted) done.complete(value);
+                          nav.pop();
+                        },
+                      ),
+                  ])
+                : PanelGroup(children: [
+                    for (final (value, label, icon) in options)
+                      PanelRow(
+                        label: label,
+                        icon: icon,
+                        trailing: PanelRadio(on: value == selected),
+                        onTap: () {
+                          if (!done.isCompleted) done.complete(value);
+                          nav.pop();
+                        },
+                      ),
+                  ]),
           ));
   return done.future;
 }
@@ -306,6 +329,22 @@ class AgentInfoPanel extends StatefulWidget {
 
 class _AgentInfoPanelState extends State<AgentInfoPanel> {
   final _navKey = GlobalKey<NavigatorState>();
+  InferenceProfile? _profileInfo;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!kMobile) _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final cfg = await widget.client.getConfig();
+      final name = (widget.agent?.profile ?? '').trim();
+      final hit = cfg.profiles.where((p) => p.name == name).firstOrNull;
+      if (mounted && hit != null) setState(() => _profileInfo = hit);
+    } catch (_) {}
+  }
 
   void _pushNested(String title, WidgetBuilder body,
       {List<Widget> actions = const [], bool scroll = true}) {
@@ -409,6 +448,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
 
   /// The agent page: who it is, then its settings, then where its work lives.
   Widget _groups(BuildContext ctx) {
+    if (!kMobile) return _desktopGroups(ctx);
     final agent = widget.agent;
     final mc = _mc;
     return Column(
@@ -521,12 +561,160 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     );
   }
 
+  static String _stateLabel(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+
+  static String _elapsed(DateTime since) {
+    final d = DateTime.now().difference(since);
+    if (d.inMinutes < 1) return 'now';
+    if (d.inHours < 1) return '${d.inMinutes}m';
+    if (d.inDays < 1) return '${d.inHours}h';
+    return '${d.inDays}d';
+  }
+
+  Widget? _statusRow() {
+    final p = widget.agent?.presence;
+    if (p == null || !p.active) return null;
+    return PanelRow(
+      leading: Container(
+        padding: EdgeInsets.symmetric(horizontal: S.of(7), vertical: S.s2),
+        decoration: BoxDecoration(
+          color: AppColors.runBg,
+          borderRadius: BorderRadius.circular(R.pill),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+              width: 5,
+              height: 5,
+              decoration:
+                  BoxDecoration(color: AppColors.run, shape: BoxShape.circle)),
+          SizedBox(width: S.s4),
+          Text(_stateLabel(p.state), style: sans(11.5, color: AppColors.run)),
+        ]),
+      ),
+      label: p.detail,
+      value: p.since == null ? null : _elapsed(p.since!),
+    );
+  }
+
+  /// The desktop page: status, work, settings, then the destructive row.
+  Widget _desktopGroups(BuildContext ctx) {
+    final agent = widget.agent;
+    final mc = _mc;
+    final status = _statusRow();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (mc && widget.onCompact != null)
+          PanelGroup(children: [
+            _ContextMeter(
+                used: widget.contextUsed,
+                window: widget.contextWindow,
+                onCompact: widget.onCompact!),
+          ]),
+        if (status != null) PanelGroup(children: [status]),
+        PanelGroup(children: [
+          if (widget.onOpenInbox != null)
+            PanelRow(
+                label: 'Inbox',
+                sub: 'Everything sent to this agent',
+                icon: 'inbox',
+                chevron: true,
+                onTap: () => _go(widget.onOpenInbox!)),
+          if (widget.onOpenBoard != null)
+            PanelRow(
+                label: 'Board',
+                sub: 'What it dispatched, reported and noted',
+                icon: 'kanban',
+                chevron: true,
+                onTap: () => _go(widget.onOpenBoard!)),
+          PanelRow(
+              label: 'Memory',
+              sub: 'What this agent remembers',
+              icon: 'book',
+              chevron: true,
+              onTap: () => _openMemory(ctx)),
+        ]),
+        PanelGroup(children: [
+          if (agent != null && !mc)
+            PanelRow(
+                label: 'Models and context',
+                sub: _modelsLine(agent),
+                icon: 'cpu',
+                chevron: true,
+                onTap: () => showAgentProfileSettings(ctx,
+                    client: widget.client,
+                    agent: agent,
+                    name: widget.name,
+                    onChanged: widget.onChanged)),
+          if (mc && widget.onAutonomy != null)
+            PanelRow(
+                label: 'Automated wakes',
+                sub: 'What wakes it without you',
+                icon: 'activity',
+                chevron: true,
+                onTap: widget.onAutonomy),
+          if (mc && widget.onScheduled != null)
+            PanelRow(
+                label: 'Scheduled',
+                sub: 'Recurring goals and messages',
+                icon: 'scheduled',
+                chevron: true,
+                onTap: widget.onScheduled),
+          if (!mc)
+            PanelRow(
+                label: 'Wakes and reporting',
+                sub: 'When it wakes and who it tells',
+                icon: 'repeat',
+                chevron: true,
+                onTap: () => showAgentWakeSettings(ctx,
+                    client: widget.client,
+                    owner: widget.agentId,
+                    name: widget.name,
+                    onChanged: widget.onChanged)),
+          PanelRow(
+              label: 'How it reaches you',
+              sub: 'Notifications and where each kind goes',
+              icon: 'bell',
+              chevron: true,
+              onTap: () => showAgentReachSettings(ctx,
+                  client: widget.client,
+                  agentId: widget.agentId,
+                  name: widget.name)),
+          PanelRow(
+              label: 'Appearance',
+              sub: 'Avatar and colour across the app',
+              icon: 'sparkles',
+              chevron: true,
+              onTap: () => _openAppearance(ctx)),
+          if (agent != null && !mc)
+            PanelRow(
+                label: 'Nickname',
+                sub: 'What it is called here',
+                icon: 'edit',
+                chevron: true,
+                onTap: () => _editNickname(ctx)),
+        ]),
+        if (agent != null && !mc)
+          PanelGroup(children: [
+            PanelRow(
+                label: 'Delete agent',
+                icon: 'trash',
+                danger: true,
+                onTap: () => _deleteAgent(ctx)),
+          ]),
+      ],
+    );
+  }
+
   Widget _hero() {
     final agent = widget.agent;
+    final profile = (agent?.profile ?? '').trim();
+    final model = _profileInfo?.model ?? '';
     final sub = _mc
         ? 'Coordinator'
-        : ((agent?.profile ?? '').trim().isNotEmpty
-            ? agent!.profile!.trim()
+        : (profile.isNotEmpty
+            ? (model.isNotEmpty ? '$model · $profile' : profile)
             : 'Routing default');
     void copyId() {
       Clipboard.setData(ClipboardData(text: widget.agentId));
@@ -558,12 +746,10 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
           toast(context, 'Agent ID copied');
         },
         child: Padding(
-          padding: kMobile
-              ? EdgeInsets.fromLTRB(S.s4, S.s8, S.s4, S.s16)
-              : EdgeInsets.fromLTRB(S.s4, S.s4, S.s4, S.s12),
+          padding: EdgeInsets.fromLTRB(S.s12, S.s4, S.s12, S.s12),
           child: Row(children: [
-            AgentMochi(widget.agentId, size: 64),
-            SizedBox(width: S.s16),
+            AgentMochi(widget.agentId, size: 52),
+            SizedBox(width: S.s12),
             Expanded(
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -572,12 +758,12 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style:
-                            sans(20, weight: W.strong, color: AppColors.fg1)),
+                            sans(17, weight: W.strong, color: AppColors.fg1)),
                     SizedBox(height: S.s2),
                     Text(sub,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(13, color: AppColors.fg3)),
+                        style: sans(12.5, color: AppColors.fg3)),
                   ]),
             ),
           ]),
@@ -588,14 +774,35 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final agent = widget.agent;
     Widget root(BuildContext ctx) => _AgentPageFrame(
           // On phones the centred hero carries the name.
-          title: kMobile ? '' : widget.name,
+          title: kMobile ? '' : 'Agent',
           onBack: widget.docked || !kMobile ? null : _close,
           onClose: widget.docked || !kMobile ? widget.onClose : null,
+          closeIcon: 'panel-right',
+          closeTooltip: 'Hide panel',
+          actions: kMobile
+              ? const []
+              : [
+                  if (widget.onOpenDesk != null && !_mc)
+                    PanelBarButton(
+                        'monitor', 'Desk session', widget.onOpenDesk),
+                  if (agent != null && !_mc)
+                    Builder(
+                        builder: (bc) => PanelBarButton(
+                            'ellipsis',
+                            'More',
+                            () => showCrewAgentMenu(bc,
+                                    client: widget.client,
+                                    agent: agent, onDeleted: () {
+                                  widget.onChanged?.call();
+                                  _close();
+                                }))),
+                ],
           children: [_hero(), _groups(ctx)],
         );
-    return DockedInfoNav(
+    final nav = DockedInfoNav(
       push: _pushNested,
       pop: _popNested,
       close: widget.onClose,
@@ -604,6 +811,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
         child: _DockedNavigator(navKey: _navKey, root: root),
       ),
     );
+    return kMobile ? nav : _DesktopPanelShell(child: nav);
   }
 }
 
@@ -617,17 +825,22 @@ class _AgentPageFrame extends StatelessWidget {
     this.onClose,
     this.actions = const [],
     this.scroll = true,
+    this.closeIcon = 'x',
+    this.closeTooltip = 'Close',
   });
 
   final String title;
   final List<Widget> children;
   final VoidCallback? onBack;
   final VoidCallback? onClose;
+  final String closeIcon;
+  final String closeTooltip;
   final List<Widget> actions;
   final bool scroll;
 
   @override
   Widget build(BuildContext context) {
+    if (!kMobile) return _desktop(context);
     final bottom = MediaQuery.paddingOf(context).bottom;
     final body = scroll
         ? ListView(
@@ -642,51 +855,95 @@ class _AgentPageFrame extends StatelessWidget {
         : Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [for (final c in children) Expanded(child: c)]);
-    final Widget head;
-    if (kMobile) {
-      head = Padding(
-        padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s16, S.s4),
-        child: SettingsHeader(
-          title: title,
-          compact: true,
-          onBack: onBack ?? () => Navigator.of(context).maybePop(),
-          actions: actions,
-        ),
-      );
-    } else {
-      head = Container(
-        height: 40,
-        padding: EdgeInsets.fromLTRB(onBack != null ? S.s6 : S.s16, 0, S.s8, 0),
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.line))),
-        child: Row(children: [
-          if (onBack != null) ...[
-            IconBtn('chevron-left',
-                size: 28, iconSize: 15, tooltip: 'Back', onTap: onBack),
-            SizedBox(width: S.s2),
-          ],
-          Expanded(
-            child: Text(title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sans(13, weight: W.strong, color: AppColors.fg1)),
-          ),
-          for (final a in actions) ...[a, SizedBox(width: S.s4)],
-          if (onClose != null)
-            IconBtn('x',
-                size: 28, iconSize: 14, tooltip: 'Close', onTap: onClose),
-        ]),
-      );
-    }
+    final head = Padding(
+      padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s16, S.s4),
+      child: SettingsHeader(
+        title: title,
+        compact: true,
+        onBack: onBack ?? () => Navigator.of(context).maybePop(),
+        actions: actions,
+      ),
+    );
     return Material(
-      color: kMobile ? AppColors.bg : Colors.transparent,
+      color: AppColors.bg,
       child: SafeArea(
-        bottom: false,
-        top: kMobile,
         child: Column(children: [head, Expanded(child: body)]),
       ),
     );
   }
+
+  /// The docked card page: a 44px bar, then content that sizes to itself up to
+  /// the panel's height.
+  Widget _desktop(BuildContext context) {
+    final room = (_PanelMax.of(context) - 44).clamp(120.0, 4000.0);
+    final bar = PanelBar(
+      title: title,
+      onBack: onBack,
+      actions: [
+        ...actions,
+        if (onClose != null) PanelBarButton(closeIcon, closeTooltip, onClose),
+      ],
+    );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        bar,
+        if (scroll)
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: room),
+            child: ListView(
+              shrinkWrap: true,
+              physics: const ClampingScrollPhysics(),
+              padding: EdgeInsets.only(top: S.s2, bottom: S.s4),
+              children: children,
+            ),
+          )
+        else
+          SizedBox(
+            height: room,
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [for (final c in children) Expanded(child: c)]),
+          ),
+      ],
+    );
+  }
+}
+
+/// How tall the card may grow; pages size to their content up to this.
+class _PanelMax extends InheritedWidget {
+  const _PanelMax({required this.height, required super.child});
+  final double height;
+
+  static double of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_PanelMax>()?.height ?? 640;
+
+  @override
+  bool updateShouldNotify(_PanelMax old) => old.height != height;
+}
+
+/// The desktop card around a docked or dialog panel's navigator. The card is
+/// as tall as the current page, so the navigator gets unbounded height.
+class _DesktopPanelShell extends StatelessWidget {
+  const _DesktopPanelShell({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, c) {
+          final h = c.maxHeight.isFinite ? c.maxHeight : 700.0;
+          return _PanelMax(
+            height: h - S.s12 * 2,
+            child: PanelCard(
+              child: UnconstrainedBox(
+                constrainedAxis: Axis.horizontal,
+                child: child,
+              ),
+            ),
+          );
+        },
+      );
 }
 
 /// A group caption on the agent pages, sentence case and quiet; it sits a
@@ -894,11 +1151,20 @@ class GroupInfoPanel extends StatefulWidget {
   State<GroupInfoPanel> createState() => _GroupInfoPanelState();
 }
 
+class _PickItem {
+  const _PickItem(this.id, this.title, this.sub, this.selected);
+  final String id;
+  final String title;
+  final String? sub;
+  final bool selected;
+}
+
 class _GroupInfoPanelState extends State<GroupInfoPanel> {
   late GroupSummary _group = widget.group;
   List<CoordinationAgent> _agents = const [];
   Map<String, CoordinationAgent> _byId = const {};
   bool _busy = false;
+  int? _openTasks;
   final _navKey = GlobalKey<NavigatorState>();
 
   void _pushNested(String title, WidgetBuilder body,
@@ -915,23 +1181,28 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
     _loadAgents();
   }
 
-  /// Docked: a nested page in the panel. Elsewhere: a sheet.
-  Future<String?> _pickFrom(
-      String title, List<Widget> Function(void Function(String)) rows) {
-    if (widget.docked && _navKey.currentState != null) {
+  /// Desktop: a nested page in the panel. Phone: a sheet.
+  Future<String?> _pickFrom(String title, List<_PickItem> items, bool radios) {
+    if (!kMobile && _navKey.currentState != null) {
       final done = Completer<String?>();
+      void pick(String id) {
+        if (!done.isCompleted) done.complete(id);
+        _navKey.currentState?.maybePop();
+      }
+
       _navKey.currentState!
           .push(_NestedPageRoute(
               title: title,
-              builder: (_) => Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _InfoCard(children: rows((id) {
-                        if (!done.isCompleted) done.complete(id);
-                        _navKey.currentState?.maybePop();
-                      })),
-                    ],
-                  )))
+              builder: (_) => PanelGroup(children: [
+                    for (final it in items)
+                      PanelRow(
+                        label: it.title,
+                        sub: it.sub,
+                        leading: AgentMochi(it.id, size: 24),
+                        trailing: radios ? PanelRadio(on: it.selected) : null,
+                        onTap: () => pick(it.id),
+                      ),
+                  ])))
           .then((_) {
         if (!done.isCompleted) done.complete(null);
       });
@@ -944,7 +1215,18 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
         builder: (ctx) => Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: rows((id) => Navigator.pop(ctx, id)),
+          children: [
+            for (final it in items)
+              ListRow(
+                title: it.title,
+                subtitle: it.sub,
+                leading: AgentMochi(it.id, size: 20),
+                trailing: it.selected && radios
+                    ? AppIcon('check', size: 14, color: AppColors.fg1)
+                    : null,
+                onTap: () => Navigator.pop(ctx, it.id),
+              ),
+          ],
         ),
       ),
     );
@@ -961,6 +1243,11 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
           ..sort((a, b) => a.displayName.compareTo(b.displayName));
         _byId = {for (final a in _agents) a.id: a};
       });
+    } catch (_) {}
+    if (kMobile) return;
+    try {
+      final n = await openTaskCountFor(widget.client, _group.agentIds);
+      if (mounted) setState(() => _openTasks = n);
     } catch (_) {}
   }
 
@@ -990,6 +1277,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
 
   String _name(String id, String kind) {
     if (kind == 'human') return 'You';
+    if (id == 'mission-control') return 'Mission Control';
     final a = _byId[id];
     if (a == null) return id;
     final n = a.displayName.trim();
@@ -1019,17 +1307,11 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
     if (members.isEmpty) return;
     final picked = await _pickFrom(
       'Group lead',
-      (pick) => [
+      [
         for (final m in members)
-          ListRow(
-            title: _name(m.id, m.kind),
-            leading: AgentMochi(m.id, size: 20),
-            trailing: m.id == _group.lead
-                ? AppIcon('check', size: 14, color: AppColors.fg1)
-                : null,
-            onTap: () => pick(m.id),
-          ),
+          _PickItem(m.id, _name(m.id, m.kind), null, m.id == _group.lead),
       ],
+      true,
     );
     if (picked == null || picked == _group.lead || !mounted) return;
     await _update(() => widget.client.updateGroup(_group.id, lead: picked));
@@ -1048,15 +1330,12 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
     }
     final picked = await _pickFrom(
       'Add member',
-      (pick) => [
+      [
         for (final a in addable)
-          ListRow(
-            title: a.displayName.trim().isEmpty ? a.id : a.displayName,
-            subtitle: a.id,
-            leading: AgentMochi(a.id, size: 20),
-            onTap: () => pick(a.id),
-          ),
+          _PickItem(a.id, a.displayName.trim().isEmpty ? a.id : a.displayName,
+              a.id, false),
       ],
+      !kMobile,
     );
     if (picked == null || !mounted) return;
     await _update(
@@ -1070,63 +1349,66 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
     }
   }
 
-  Widget _membersSection() => _InfoCard(children: [
-        for (final m in _group.members) _memberRow(m),
-        _InfoRow(
-          label: 'Lead',
-          icon: 'crown',
-          value: _leadName() ?? 'None',
-          onTap: _busy ? null : _pickLead,
-        ),
-        _InfoRow(
-          label: 'Add member',
-          icon: 'user-plus',
-          accent: true,
-          onTap: _busy ? null : _pickAdd,
-        ),
-      ]);
+  /// Desktop: tasks, then members with Lead and Add member, then Delete.
+  Widget _desktopInfo() {
+    final tasks = widget.onOpenTasks;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (tasks != null)
+          PanelGroup(children: [
+            PanelRow(
+              label: 'Tasks',
+              icon: 'task',
+              value: _openTasks == null ? null : '$_openTasks open',
+              chevron: true,
+              onTap: () {
+                if (!widget.docked) _close();
+                tasks();
+              },
+            ),
+          ]),
+        PanelGroup(children: [
+          for (final m in _group.members) _memberRow(m),
+          PanelRow(
+            label: 'Lead',
+            icon: 'crown',
+            value: _leadName() ?? 'None',
+            chevron: true,
+            onTap: _busy ? null : _pickLead,
+          ),
+          PanelRow(
+            label: 'Add member',
+            icon: 'user-plus',
+            chevron: true,
+            onTap: _busy ? null : _pickAdd,
+          ),
+        ]),
+        const PanelFootnote(
+            'A lead answers first. Remove a member with the cross on its row.'),
+        PanelGroup(children: [
+          PanelRow(
+              label: 'Delete group',
+              icon: 'trash',
+              danger: true,
+              onTap: _deleteGroup),
+        ]),
+      ],
+    );
+  }
 
   Widget _memberRow(GroupMember m) {
     final lead = m.id == _group.lead;
-    final role = m.isHuman ? null : (lead ? 'Lead' : 'Member');
-    return _LongPressRow(
-      onLongPress: _busy || m.isHuman
+    return _MemberRow(
+      avatar: m.isAgent
+          ? AgentMochi(m.id, size: 24)
+          : AppIcon('user', size: 16, color: AppColors.fg3),
+      name: _name(m.id, m.kind),
+      role: m.isHuman ? null : (lead ? 'Lead' : 'Member'),
+      onRemove: _busy || m.isHuman
           ? null
           : () => _update(() =>
               widget.client.updateGroup(_group.id, removeMembers: [m.id])),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.s4),
-          child: Row(children: [
-            SizedBox.square(
-              dimension: 26,
-              child: Center(
-                child: m.isAgent
-                    ? AgentMochi(m.id, size: 26)
-                    : AppIcon('user', size: 20, color: AppColors.fg3),
-              ),
-            ),
-            SizedBox(width: S.s12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(_name(m.id, m.kind),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(15, color: AppColors.fg1)),
-                  if (role != null)
-                    Text(role,
-                        style: sans(12,
-                            color: lead ? AppColors.accent : AppColors.fg3)),
-                ],
-              ),
-            ),
-          ]),
-        ),
-      ),
     );
   }
 
@@ -1192,27 +1474,15 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
     );
   }
 
-  Widget _infoTab() {
-    if (kMobile && !widget.docked) return _phoneInfo();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _membersSection(),
-        _InfoCard(children: [
-          _DangerRow(label: 'Delete group', onTap: _deleteGroup),
-        ]),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (!widget.docked) return _frame();
-    return DockedInfoNav(
+    if (kMobile) return _frame();
+    final nav = DockedInfoNav(
       push: _pushNested,
       pop: _popNested,
       child: _DockedNavigator(navKey: _navKey, root: (_) => _frame()),
     );
+    return _DesktopPanelShell(child: nav);
   }
 
   Widget _frame() {
@@ -1239,28 +1509,38 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
         ],
       );
     }
-    final actions = <_CircleAction>[
-      if (widget.onOpenTasks != null && !widget.docked && !kMobile)
-        _CircleAction('task', 'Tasks', () {
-          // Phone: Tasks stacks on this page, so back returns here.
-          if (!widget.docked && !kMobile) _close();
-          widget.onOpenTasks!();
-        }),
-    ];
-    return _InfoFrame(
-      onClose: widget.docked ? null : _close,
-      edit: _EditPill(onTap: _busy ? null : _rename),
-      avatar: AgentCluster(ids: _group.agentIds, size: kMobile ? 88 : 64),
-      name: title,
-      status: Text(
-          '${_group.members.length} '
-          '${_group.members.length == 1 ? 'member' : 'members'}',
-          style: kMobile ? Grouped.subStyle() : sans(13, color: AppColors.fg3)),
-      actions: actions,
-      tabs: const [],
-      tab: 0,
-      onTab: (_) {},
-      body: _infoTab(),
+    final hide =
+        widget.docked ? ShellRequestScope.maybeOf(context)?.toggleSide : _close;
+    return _AgentPageFrame(
+      title: 'Group',
+      onClose: hide,
+      closeIcon: 'panel-right',
+      closeTooltip: 'Hide panel',
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(S.s12, S.s4, S.s12, S.s12),
+          child: Row(children: [
+            AgentCluster(ids: _group.agentIds, size: 52),
+            SizedBox(width: S.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(17, weight: W.strong, color: AppColors.fg1)),
+                  SizedBox(height: S.s2),
+                  Text(count, style: sans(12.5, color: AppColors.fg3)),
+                ],
+              ),
+            ),
+            SizedBox(width: S.s8),
+            _RenameButton(onTap: _busy ? null : _rename),
+          ]),
+        ),
+        _desktopInfo(),
+      ],
     );
   }
 }
@@ -1269,148 +1549,60 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
 // Shared chrome
 // ---------------------------------------------------------------------------
 
-class _CircleAction {
-  const _CircleAction(this.icon, this.label, this.onTap);
-  final String icon;
-  final String label;
-  final VoidCallback onTap;
+class _RenameButton extends StatelessWidget {
+  const _RenameButton({required this.onTap});
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(pr(8)),
+        child: Container(
+          height: 26,
+          padding: EdgeInsets.symmetric(horizontal: S.of(10)),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(pr(8)),
+            border: Border.all(color: AppColors.lineStrong),
+          ),
+          child: Text('Rename', style: sans(12, color: AppColors.fg1)),
+        ),
+      );
 }
 
-class _InfoFrame extends StatelessWidget {
-  const _InfoFrame({
-    required this.onClose,
-    required this.avatar,
-    required this.name,
-    required this.status,
-    required this.actions,
-    required this.tabs,
-    required this.tab,
-    required this.onTab,
-    required this.body,
-    this.edit,
-  });
-
-  final VoidCallback? onClose;
-  final Widget? edit;
+/// A member row: 24px avatar, name over its role, and a cross on hover.
+class _MemberRow extends StatefulWidget {
+  const _MemberRow(
+      {required this.avatar, required this.name, this.role, this.onRemove});
   final Widget avatar;
   final String name;
-  final Widget status;
-  final List<_CircleAction> actions;
-  final List<String> tabs;
-  final int tab;
-  final ValueChanged<int> onTab;
-  final Widget body;
+  final String? role;
+  final VoidCallback? onRemove;
 
   @override
-  Widget build(BuildContext context) {
-    final reduced = reduceMotion(context);
-    return Material(
-      type: MaterialType.transparency,
-      child: Column(children: [
-        SizedBox(
-          height: 52,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: S.s16),
-            child: Row(children: [
-              if (onClose != null)
-                _GlassCircle(onTap: onClose!, icon: 'x', label: 'Close'),
-              const Spacer(),
-              if (edit != null) edit!,
-            ]),
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(S.s16, S.s4, S.s16, 0),
-          child: Column(children: [
-            avatar,
-            SizedBox(height: S.s12),
-            Text(name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: sans(kMobile ? 26 : 20,
-                    weight: W.strong, color: AppColors.fg1)),
-            SizedBox(height: S.s4),
-            status,
-            if (actions.isNotEmpty) ...[
-              SizedBox(height: S.s16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  for (final a in actions) ...[
-                    Flexible(child: _ActionCircle(action: a)),
-                    if (a != actions.last) SizedBox(width: S.s12),
-                  ],
-                ],
-              ),
-            ],
-            SizedBox(height: S.s20),
-            if (tabs.length > 1) ...[
-              _Segmented(labels: tabs, index: tab, onSelect: onTab),
-              SizedBox(height: S.s16),
-            ],
-          ]),
-        ),
-        Expanded(
-          child: ListView(
-            physics: kMobile
-                ? const BouncingScrollPhysics()
-                : const ClampingScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(
-                S.s16, 0, S.s16, S.s24 + MediaQuery.paddingOf(context).bottom),
-            children: [
-              AnimatedSwitcher(
-                duration:
-                    reduced ? Motion.fast : const Duration(milliseconds: 180),
-                switchInCurve: Motion.enter,
-                switchOutCurve: Motion.exit,
-                transitionBuilder: (child, anim) {
-                  final curved =
-                      CurvedAnimation(parent: anim, curve: Motion.enter);
-                  if (reduced) {
-                    return FadeTransition(opacity: curved, child: child);
-                  }
-                  return FadeTransition(
-                    opacity: curved,
-                    child: SlideTransition(
-                      position:
-                          Tween(begin: const Offset(0, 0.02), end: Offset.zero)
-                              .animate(curved),
-                      child: child,
-                    ),
-                  );
-                },
-                child: KeyedSubtree(key: ValueKey(tab), child: body),
-              ),
-            ],
-          ),
-        ),
-      ]),
-    );
-  }
+  State<_MemberRow> createState() => _MemberRowState();
 }
 
-class _GlassCircle extends StatelessWidget {
-  const _GlassCircle({required this.onTap, required this.icon, this.label});
-
-  final VoidCallback onTap;
-  final String icon;
-  final String? label;
+class _MemberRowState extends State<_MemberRow> {
+  bool _hover = false;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: label,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Glass(
-            child: SizedBox.square(
-              dimension: 36,
-              child:
-                  Center(child: AppIcon(icon, size: 16, color: AppColors.fg1)),
-            ),
-          ),
+  Widget build(BuildContext context) => MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: PanelRow(
+          minHeight: 44,
+          leading: SizedBox.square(
+              dimension: 24, child: Center(child: widget.avatar)),
+          label: widget.name,
+          sub: widget.role,
+          trailing: widget.onRemove == null
+              ? null
+              : Opacity(
+                  opacity: _hover ? 1 : 0,
+                  child:
+                      PanelBarButton('x', 'Remove from group', widget.onRemove),
+                ),
         ),
       );
 }
@@ -1433,81 +1625,6 @@ class _EditPill extends StatelessWidget {
           ),
         ),
       );
-}
-
-class _ActionCircle extends StatelessWidget {
-  const _ActionCircle({required this.action});
-
-  final _CircleAction action;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-      button: true,
-      label: action.label,
-      excludeSemantics: true,
-      child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: action.onTap,
-          child: SizedBox(
-            width: kMobile ? 64 : 56,
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Glass(
-                child: SizedBox.square(
-                  dimension: kMobile ? 48 : 40,
-                  child: Center(
-                      child: AppIcon(action.icon,
-                          size: kMobile ? 20 : 17, color: AppColors.fg1)),
-                ),
-              ),
-              SizedBox(height: S.s6),
-              Text(action.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(11, color: AppColors.fg3)),
-            ]),
-          )));
-}
-
-class _Segmented extends StatelessWidget {
-  const _Segmented(
-      {required this.labels, required this.index, required this.onSelect});
-
-  final List<String> labels;
-  final int index;
-  final ValueChanged<int> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final reduced = reduceMotion(context);
-    return Glass(
-      radius: BorderRadius.circular(R.pill),
-      child: Container(
-        padding: EdgeInsets.all(S.of(3)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          for (var i = 0; i < labels.length; i++)
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: i == index ? null : () => onSelect(i),
-              child: AnimatedContainer(
-                duration: reduced ? Duration.zero : Motion.fast,
-                padding:
-                    EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s6),
-                decoration: BoxDecoration(
-                  color: i == index
-                      ? AppColors.fg1.withValues(alpha: 0.12)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(R.pill),
-                ),
-                child: Text(labels[i],
-                    style: sans(13,
-                        weight: i == index ? W.label : W.body,
-                        color: i == index ? AppColors.fg1 : AppColors.fg3)),
-              ),
-            ),
-        ]),
-      ),
-    );
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1572,167 +1689,6 @@ class _ContextMeter extends StatelessWidget {
   }
 }
 
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  // A Material of its own so row hover ink is clipped to the rounded card.
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.only(bottom: S.s12),
-        child: Tactile(
-          radius: BorderRadius.circular(R.of(16)),
-          child: Material(
-            color: kMobile
-                ? AppColors.surface2.withValues(alpha: 0.6)
-                : AppColors.surface1,
-            shape: kMobile
-                ? RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(R.of(16)))
-                : RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(R.of(12)),
-                    side: BorderSide(color: AppColors.line)),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var i = 0; i < children.length; i++) ...[
-                  if (i > 0)
-                    Divider(
-                        height: 1,
-                        thickness: 1,
-                        indent: kMobile ? S.s16 : 0,
-                        endIndent: 0),
-                  children[i],
-                ],
-              ],
-            ),
-          ),
-        ),
-      );
-}
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.label,
-    this.value,
-    this.onTap,
-    this.icon,
-    this.accent = false,
-  });
-
-  final String label;
-  final String? value;
-  final VoidCallback? onTap;
-  final String? icon;
-  final bool accent;
-
-  @override
-  Widget build(BuildContext context) {
-    final labelColor = accent ? AppColors.accent : AppColors.fg1;
-    final hasValue = value != null && value!.isNotEmpty;
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: kMobile ? 48 : 34),
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s16 : S.s8),
-          child: Row(children: [
-            if (icon != null && !kMobile) ...[
-              Container(
-                width: 22,
-                height: 22,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                    color: AppColors.tint2,
-                    borderRadius: BorderRadius.circular(R.of(6))),
-                child: AppIcon(icon!,
-                    size: 13, color: accent ? AppColors.accent : AppColors.fg3),
-              ),
-              SizedBox(width: S.s8),
-            ] else if (icon != null) ...[
-              AppIcon(icon!,
-                  size: 18, color: accent ? AppColors.accent : AppColors.fg3),
-              SizedBox(width: S.s12),
-            ],
-            if (hasValue)
-              // Not Flexible: a loose flex share would strand the value mid-row.
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 160),
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(kMobile ? 15 : 13, color: labelColor)),
-              )
-            else
-              Expanded(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(kMobile ? 15 : 13, color: labelColor)),
-              ),
-            if (hasValue)
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(left: S.s8),
-                  child: Text(value!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.end,
-                      style: sans(13, color: AppColors.fg3)),
-                ),
-              ),
-            if (onTap != null)
-              AppIcon('chevron-right', size: 14, color: AppColors.fg4),
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-class _DangerRow extends StatelessWidget {
-  const _DangerRow({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: kMobile ? 48 : 34),
-          child: Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: S.s12),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                AppIcon('trash', size: 16, color: AppColors.danger),
-                SizedBox(width: S.s8),
-                Text(label,
-                    style: sans(kMobile ? 15 : 13,
-                        weight: W.label, color: AppColors.danger)),
-              ]),
-            ),
-          ),
-        ),
-      );
-}
-
-class _LongPressRow extends StatelessWidget {
-  const _LongPressRow({required this.child, this.onLongPress});
-
-  final Widget child;
-  final VoidCallback? onLongPress;
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onLongPress: onLongPress,
-        child: child,
-      );
-}
-
 // ---------------------------------------------------------------------------
 // Docked nested pages
 // ---------------------------------------------------------------------------
@@ -1763,7 +1719,6 @@ class _NestedPage extends StatelessWidget {
       child: _AgentPageFrame(
         title: title,
         onBack: nav?.pop ?? () => Navigator.of(context).maybePop(),
-        onClose: kMobile ? null : nav?.close,
         actions: actions,
         scroll: scroll,
         children: [Builder(builder: builder)],
@@ -1821,8 +1776,10 @@ class _NestedPageRoute extends PageRoute<void> {
   final List<Widget> actions;
   final bool scroll;
 
+  // The desktop card sizes to its page, which the overlay only allows from an
+  // opaque route.
   @override
-  bool get opaque => false;
+  bool get opaque => !kMobile;
 
   @override
   Color? get barrierColor => null;
@@ -1842,13 +1799,22 @@ class _NestedPageRoute extends PageRoute<void> {
   @override
   Widget buildPage(BuildContext context, Animation<double> animation,
           Animation<double> secondaryAnimation) =>
-      title == null
+      _fit(title == null
           ? builder(context)
           : _NestedPage(
               title: title!,
               builder: builder,
               actions: actions,
-              scroll: scroll);
+              scroll: scroll));
+
+  // A covered page keeps its own height instead of overflowing the shorter one.
+  static Widget _fit(Widget page) => kMobile
+      ? page
+      : UnconstrainedBox(
+          constrainedAxis: Axis.horizontal,
+          alignment: Alignment.topCenter,
+          clipBehavior: Clip.hardEdge,
+          child: page);
 
   @override
   Widget buildTransitions(
@@ -2053,8 +2019,9 @@ Future<void> _showDesktopInfo(
         top: 0,
         bottom: 0,
         right: 0,
-        width: 340,
-        child: _DesktopPanelSurface(
+        width: 320,
+        child: Material(
+          type: MaterialType.transparency,
           child: panel(() => Navigator.of(ctx).pop()),
         ),
       ),
@@ -2071,25 +2038,4 @@ Future<void> _showDesktopInfo(
       );
     },
   );
-}
-
-/// Frosted surface2 right panel for desktop use.
-class _DesktopPanelSurface extends StatelessWidget {
-  const _DesktopPanelSurface({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface2.withValues(alpha: 0.88),
-              border: Border(left: BorderSide(color: AppColors.border)),
-            ),
-            child: Material(type: MaterialType.transparency, child: child),
-          ),
-        ),
-      );
 }

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api.dart';
-import '../composer/composer_pill.dart' show C7;
 import '../drafts.dart';
 import '../models.dart';
 import '../pins.dart';
@@ -22,6 +21,7 @@ import 'shell_models.dart';
 import 'shell_nav.dart';
 import 'session_list_row.dart';
 import 'sidebar_mobile.dart';
+import 'sidebar_tiles.dart';
 import 'tasks/tasks_panel.dart';
 import '../pull_refresh.dart';
 import '../motion.dart';
@@ -52,6 +52,10 @@ class Sidebar extends StatefulWidget {
   final VoidCallback onOpenMissionControl;
   final ValueChanged<CoordinationAgent>? onOpenAgent;
   final VoidCallback? onOpenPalette;
+  final VoidCallback? onOpenTasks;
+  final VoidCallback? onOpenPullRequests;
+  final VoidCallback? onOpenArtifacts;
+  final VoidCallback? onOpenWakes;
   final Widget? desktopFooter;
   final void Function(String id, String title, String? profile) onOpenSession;
   final VoidCallback onAddInstance;
@@ -96,6 +100,10 @@ class Sidebar extends StatefulWidget {
     required this.onOpenMissionControl,
     this.onOpenAgent,
     this.onOpenPalette,
+    this.onOpenTasks,
+    this.onOpenPullRequests,
+    this.onOpenArtifacts,
+    this.onOpenWakes,
     this.desktopFooter,
     required this.onOpenSession,
     required this.onAddInstance,
@@ -1522,36 +1530,39 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   Widget _sidebarControls({required bool agentsFirst}) {
     final agentsAvailable =
         widget.client != null && _desktopAgentsAvailable(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 2),
-      child: Column(children: [
-        Row(children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: C7.row,
-                borderRadius: BorderRadius.circular(R.of(10)),
-              ),
-              child: Row(children: [
-                _segCell(
-                    'Sessions',
-                    !agentsFirst,
-                    const ValueKey('sidebar-mode-sessions'),
-                    () => setSidebarAgentsFirst(false)),
-                _segCell(
-                    'Agents',
-                    agentsFirst,
-                    const ValueKey('sidebar-mode-agents'),
-                    agentsAvailable ? () => setSidebarAgentsFirst(true) : null),
-              ]),
-            ),
-          ),
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+        child: _sidebarSearch(agentsFirst: agentsFirst),
+      ),
+      SidebarTiles(
+        client: widget.client,
+        sessions: widget.sessions,
+        onOpenTasks: widget.onOpenTasks,
+        onOpenPullRequests: widget.onOpenPullRequests,
+        onOpenArtifacts: widget.onOpenArtifacts,
+        onOpenWakes: widget.onOpenWakes,
+      ),
+      Container(
+        height: 30,
+        margin: const EdgeInsets.fromLTRB(10, 2, 10, 6),
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          border: Border.all(color: AppColors.line),
+          borderRadius: BorderRadius.circular(R.of(10)),
+        ),
+        child: Row(children: [
+          _segCell(
+              'Sessions',
+              !agentsFirst,
+              const ValueKey('sidebar-mode-sessions'),
+              () => setSidebarAgentsFirst(false)),
+          _segCell('Agents', agentsFirst, const ValueKey('sidebar-mode-agents'),
+              agentsAvailable ? () => setSidebarAgentsFirst(true) : null),
         ]),
-        const SizedBox(height: 8),
-        _sidebarSearch(agentsFirst: agentsFirst),
-      ]),
-    );
+      ),
+    ]);
   }
 
   Widget _segCell(String label, bool on, Key key, VoidCallback? onTap) =>
@@ -1566,14 +1577,14 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             onTap: onTap,
             child: AnimatedContainer(
               duration: Motion.quick,
-              height: 28,
+              height: 24,
               decoration: BoxDecoration(
-                color: on ? C7.rowHi : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
+                color: on ? AppColors.surface3 : Colors.transparent,
+                borderRadius: BorderRadius.circular(R.of(8)),
               ),
               alignment: Alignment.center,
               child: Text(label,
-                  style: sans(13, color: on ? AppColors.fg1 : AppColors.fg3)),
+                  style: sans(12.5, color: on ? AppColors.fg1 : AppColors.fg3)),
             ),
           ),
         ),
@@ -1629,10 +1640,11 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
   Widget _searchBox({VoidCallback? onTap, required Widget child}) {
     final box = Container(
-      height: 32,
+      height: 30,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: C7.row,
+        color: AppColors.surface1,
+        border: Border.all(color: AppColors.line),
         borderRadius: BorderRadius.circular(R.of(10)),
       ),
       child: child,
