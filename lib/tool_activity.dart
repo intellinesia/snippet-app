@@ -92,8 +92,9 @@ class ToolStep {
   List<Map> get changes => normalizeChanges(args);
 }
 
-String toolBaseName(String tool) =>
-    tool.startsWith('mcp__') ? tool.substring(tool.lastIndexOf('__') + 2) : tool;
+String toolBaseName(String tool) => tool.startsWith('mcp__')
+    ? tool.substring(tool.lastIndexOf('__') + 2)
+    : tool;
 
 String toolVerb(String tool, {required bool running}) {
   tool = toolBaseName(tool);
@@ -551,8 +552,7 @@ String? _commandResultExcerpt(ToolStep step) {
           .toList();
   if (passedFailed.isNotEmpty) {
     final m = passedFailed.last;
-    return _formatPassedFailed(
-        int.parse(m.group(1)!), int.parse(m.group(2)!));
+    return _formatPassedFailed(int.parse(m.group(1)!), int.parse(m.group(2)!));
   }
 
   final failedPassed =
@@ -561,8 +561,7 @@ String? _commandResultExcerpt(ToolStep step) {
           .toList();
   if (failedPassed.isNotEmpty) {
     final m = failedPassed.last;
-    return _formatPassedFailed(
-        int.parse(m.group(2)!), int.parse(m.group(1)!));
+    return _formatPassedFailed(int.parse(m.group(2)!), int.parse(m.group(1)!));
   }
 
   final flutterFail = RegExp(r'\+(\d+)\s+-(\d+):\s+Some tests failed')
@@ -570,8 +569,7 @@ String? _commandResultExcerpt(ToolStep step) {
       .toList();
   if (flutterFail.isNotEmpty) {
     final m = flutterFail.last;
-    return _formatPassedFailed(
-        int.parse(m.group(1)!), int.parse(m.group(2)!));
+    return _formatPassedFailed(int.parse(m.group(1)!), int.parse(m.group(2)!));
   }
 
   if (RegExp(r'All tests passed!').hasMatch(text)) {
@@ -949,22 +947,28 @@ CommandInfo _classify(String program, String second, {String third = ''}) {
       : _readPrograms.contains(program)
           ? CommandKind.read
           : const {'test', 'tests', 'pytest', 'jest', 'vitest', 'rspec'}
-              .contains(last)
-          ? CommandKind.test
-          : const {'build', 'compile', 'bundle', 'make', 'gradle', 'assemble'}
                   .contains(last)
-              ? CommandKind.build
+              ? CommandKind.test
               : const {
-                  'analyze',
-                  'lint',
-                  'check',
-                  'fmt',
-                  'format',
-                  'clippy',
-                  'tsc'
+                  'build',
+                  'compile',
+                  'bundle',
+                  'make',
+                  'gradle',
+                  'assemble'
                 }.contains(last)
-                  ? CommandKind.check
-                  : CommandKind.other;
+                  ? CommandKind.build
+                  : const {
+                      'analyze',
+                      'lint',
+                      'check',
+                      'fmt',
+                      'format',
+                      'clippy',
+                      'tsc'
+                    }.contains(last)
+                      ? CommandKind.check
+                      : CommandKind.other;
   return CommandInfo(label, kind);
 }
 
@@ -1036,7 +1040,13 @@ bool verifyOutputFailed(ToolStep step) {
   final excerpt = _commandResultExcerpt(step) ?? '';
   if (RegExp(r'\b[1-9]\d*\s+failed\b').hasMatch(excerpt)) return true;
   final raw = [
-    for (final k in const ['stdout', 'output', 'output_so_far', 'stderr', 'preview'])
+    for (final k in const [
+      'stdout',
+      'output',
+      'output_so_far',
+      'stderr',
+      'preview'
+    ])
       (step.data?[k] ?? '').toString(),
   ].join('\n').replaceAll(_ansiEscape, '');
   // Flutter's "+2 -3:" counter survives a grep that drops the summary line.
@@ -1290,6 +1300,9 @@ StepResultChip? stepChip(ToolStep step) {
   final name = toolBaseName(step.tool);
   final a = step.args is Map ? step.args as Map : const {};
   if (step.failed) {
+    // A failure count says more than the exit code.
+    final counted = name == 'bash' ? _verifyChip(step) : null;
+    if (counted != null && counted.tone == StepChipTone.danger) return counted;
     final code = step.exitCode;
     return StepResultChip(
         name == 'bash' && code != null && code != 0
@@ -1321,40 +1334,43 @@ StepResultChip? stepChip(ToolStep step) {
           ? StepResultChip('${total.toInt()} lines', StepChipTone.neutral)
           : null;
     case 'bash':
-      final cmd = stepCommand(step);
-      if (cmd == null || !cmd.verifies) return null;
-      final raw = [
-        for (final k in const ['stdout', 'output', 'stderr'])
-          (step.data?[k] ?? '').toString(),
-        _commandResultExcerpt(step) ?? '',
-      ].join('\n').replaceAll(_ansiEscape, '');
-      // flutter and dart print "+7 -1:"; pytest and cargo print "7 passed".
-      final flutter = RegExp(r'\+(\d+)(?:\s+~\d+)?(?:\s+-(\d+))?:')
-          .allMatches(raw)
-          .lastOrNull;
-      // The excerpt sums every cargo block, so a later failure is not hidden.
-      final excerpt = _commandResultExcerpt(step) ?? '';
-      final p = _passedCount.firstMatch(excerpt)?.group(1) ??
-          flutter?.group(1) ??
-          _passedCount.firstMatch(raw)?.group(1);
-      final f = _failedCount.firstMatch(excerpt)?.group(1) ??
-          flutter?.group(2) ??
-          _failedCount.allMatches(raw).map((m) => m.group(1)).lastWhere(
-              (n) => n != '0',
-              orElse: () => null);
-      if (f != null && f != '0') {
-        return StepResultChip(
-            p == null ? '$f failed' : '$p passed, $f failed',
-            StepChipTone.danger);
-      }
-      if (verifyOutputFailed(step)) {
-        return const StepResultChip('failed', StepChipTone.danger);
-      }
-      return StepResultChip(
-          p != null
-              ? '$p passed'
-              : (cmd.kind == CommandKind.test ? 'passed' : 'ok'),
-          StepChipTone.ok);
+      return _verifyChip(step);
   }
   return null;
+}
+
+StepResultChip? _verifyChip(ToolStep step) {
+  final cmd = stepCommand(step);
+  if (cmd == null || !cmd.verifies) return null;
+  final raw = [
+    for (final k in const ['stdout', 'output', 'stderr'])
+      (step.data?[k] ?? '').toString(),
+    _commandResultExcerpt(step) ?? '',
+  ].join('\n').replaceAll(_ansiEscape, '');
+  // flutter and dart print "+7 -1:"; pytest and cargo print "7 passed".
+  final flutter =
+      RegExp(r'\+(\d+)(?:\s+~\d+)?(?:\s+-(\d+))?:').allMatches(raw).lastOrNull;
+  // The excerpt sums every cargo block, so a later failure is not hidden.
+  final excerpt = _commandResultExcerpt(step) ?? '';
+  final p = _passedCount.firstMatch(excerpt)?.group(1) ??
+      flutter?.group(1) ??
+      _passedCount.firstMatch(raw)?.group(1);
+  final f = _failedCount.firstMatch(excerpt)?.group(1) ??
+      flutter?.group(2) ??
+      _failedCount
+          .allMatches(raw)
+          .map((m) => m.group(1))
+          .lastWhere((n) => n != '0', orElse: () => null);
+  if (f != null && f != '0') {
+    return StepResultChip(
+        p == null ? '$f failed' : '$p passed, $f failed', StepChipTone.danger);
+  }
+  if (verifyOutputFailed(step)) {
+    return const StepResultChip('failed', StepChipTone.danger);
+  }
+  return StepResultChip(
+      p != null
+          ? '$p passed'
+          : (cmd.kind == CommandKind.test ? 'passed' : 'ok'),
+      StepChipTone.ok);
 }

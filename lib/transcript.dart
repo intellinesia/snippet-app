@@ -14,143 +14,26 @@ import 'crew_widgets.dart' show AgentProviderMark;
 import 'mochi.dart';
 import 'models.dart';
 import 'platform.dart';
+import 'settings_form.dart' show Grouped;
 import 'theme.dart';
 import 'tool_activity.dart';
 import 'tool_views.dart';
 import 'widgets.dart';
 
-double get _sentenceSize => kMobile ? 14 : 13;
-
-enum _NodeState { ok, failed, running, neutral }
-
-class _Node extends StatefulWidget {
-  const _Node(this.state, {this.icon});
-  final _NodeState state;
-
-  /// The tool's own icon, in place of the dot.
-  final String? icon;
-
-  @override
-  State<_Node> createState() => _NodeState2();
-}
-
-class _NodeState2 extends State<_Node> {
-  final _c = AmbientLoop(const Duration(milliseconds: 1400));
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _c.bind(context);
-    final animate =
-        widget.state == _NodeState.running && !reduceMotion(context);
-    if (animate) {
-      _c.start();
-    } else if (_c.isRunning) {
-      _c.stop(at: 0);
-    }
-  }
-
-  @override
-  void didUpdateWidget(_Node old) {
-    super.didUpdateWidget(old);
-    didChangeDependencies();
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = widget.icon;
-    if (icon != null) {
-      final color = switch (widget.state) {
-        _NodeState.failed => AppColors.danger,
-        _NodeState.running => AppColors.accent,
-        _ => AppColors.fg3,
-      };
-      final glyph = SizedBox.square(
-        dimension: 16,
-        child: Center(child: AppIcon(icon, size: 14, color: color)),
-      );
-      if (widget.state != _NodeState.running) return Center(child: glyph);
-      return RepaintBoundary(
-        child: Center(
-          child: AnimatedBuilder(
-            animation: _c,
-            builder: (_, child) => Opacity(
-              opacity: 0.45 + 0.55 * (1 - (2 * _c.value - 1).abs()),
-              child: child,
-            ),
-            child: glyph,
-          ),
-        ),
-      );
-    }
-    const size = 9.0;
-    final (fill, border) = switch (widget.state) {
-      _NodeState.ok => (Colors.transparent, AppColors.ok),
-      _NodeState.failed => (AppColors.danger, AppColors.danger),
-      _NodeState.running => (AppColors.accent, AppColors.accent),
-      _NodeState.neutral => (Colors.transparent, AppColors.fg4),
-    };
-    final dot = Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: fill,
-        shape: BoxShape.circle,
-        border: Border.all(color: border, width: 1.5),
-      ),
-    );
-    if (widget.state != _NodeState.running) return Center(child: dot);
-    return RepaintBoundary(
-      child: Center(
-        child: AnimatedBuilder(
-          animation: _c,
-          builder: (_, __) => Stack(
-            alignment: Alignment.center,
-            clipBehavior: Clip.none,
-            children: [
-              Opacity(
-                opacity: (1 - _c.value) * 0.45,
-                child: Container(
-                  width: size + 8 * _c.value,
-                  height: size + 8 * _c.value,
-                  decoration: BoxDecoration(
-                      color: AppColors.accent, shape: BoxShape.circle),
-                ),
-              ),
-              dot,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-_NodeState _nodeFor(ToolStep step) {
-  if (step.running) return _NodeState.running;
-  if (step.failed) return _NodeState.failed;
-  final r = step.result;
-  if (r is Map && r['status'] == null && r['data'] == null) {
-    return _NodeState.neutral;
-  }
-  return _NodeState.ok;
-}
-
-/// Inside an expanded work line: steps draw as a target and a result chip.
+/// Marks steps drawn as grouped-card segments and carries each one's corners.
 class StepScope extends InheritedWidget {
-  const StepScope({super.key, required super.child});
+  const StepScope({super.key, this.radius, required super.child});
+
+  final BorderRadius? radius;
 
   static bool active(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<StepScope>() != null;
 
+  static BorderRadius? radiusOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<StepScope>()?.radius;
+
   @override
-  bool updateShouldNotify(StepScope old) => false;
+  bool updateShouldNotify(StepScope old) => old.radius != radius;
 }
 
 /// The summary sentence with file names a step brighter and the outcome word
@@ -190,7 +73,10 @@ List<InlineSpan> workSpans(WorkSummary w, TextStyle base) {
 
 /// The small amber ring for work in progress.
 class RunSpinner extends StatefulWidget {
-  const RunSpinner({super.key});
+  const RunSpinner({super.key, this.size = 12, this.color});
+
+  final double size;
+  final Color? color;
 
   @override
   State<RunSpinner> createState() => RunSpinnerState();
@@ -222,9 +108,10 @@ class RunSpinnerState extends State<RunSpinner> {
           child: RotationTransition(
             turns: _c,
             child: SizedBox.square(
-              dimension: 12,
+              dimension: widget.size,
               child: CustomPaint(
-                painter: _SpinnerPainter(AppColors.run, AppColors.runBg),
+                painter: _SpinnerPainter(
+                    widget.color ?? AppColors.run, AppColors.runBg),
               ),
             ),
           ),
@@ -253,8 +140,33 @@ class _SpinnerPainter extends CustomPainter {
       old.head != head || old.track != track;
 }
 
-/// One muted line for a run of tool calls: what the work did, an outcome word
-/// and its duration. Running, it names the live step.
+BorderRadius _segmentRadius({required bool first, required bool last}) {
+  final end = Radius.circular(R.of(Grouped.radiusEnd));
+  final inner = Radius.circular(R.of(Grouped.radiusInner));
+  return BorderRadius.only(
+    topLeft: first ? end : inner,
+    topRight: first ? end : inner,
+    bottomLeft: last ? end : inner,
+    bottomRight: last ? end : inner,
+  );
+}
+
+/// The phrase for a failing step: "3 tests failed" for a test run, else its chip.
+String? _failureNote(List<ToolStep> steps) {
+  for (final s in steps) {
+    if (!(s.failed || verifyOutputFailed(s))) continue;
+    final text = stepChip(s)?.text ?? 'failed';
+    final count = RegExp(r'(\d+) failed').firstMatch(text)?.group(1);
+    if (count != null && stepCommand(s)?.kind == CommandKind.test) {
+      return '$count ${count == '1' ? 'test' : 'tests'} failed';
+    }
+    return text;
+  }
+  return null;
+}
+
+/// The header segment of a run of tool calls: what the work did, how many
+/// steps and how long, and the first failure. Running, it names the live step.
 class WorkLine extends StatelessWidget {
   const WorkLine({
     super.key,
@@ -274,70 +186,126 @@ class WorkLine extends StatelessWidget {
     Theme.of(context);
     final live = steps.where((s) => s.running).toList();
     final isRunning = running && live.isNotEmpty;
-    final style = sans(kMobile ? 14 : 13, height: 1.4, color: AppColors.fg3);
     final work = describeWork(steps);
-    final spans = isRunning
+    final titleStyle = sans(kMobile ? 16 : 14,
+        height: kMobile ? 22 / 16 : 20 / 14, color: AppColors.fg2);
+    final subStyle = sans(kMobile ? 14 : 13,
+        height: kMobile ? 20 / 14 : 18 / 13, color: AppColors.fg3);
+    final title = isRunning
         ? <InlineSpan>[
             TextSpan(
                 text: liveStepText(live.last),
-                style: style.copyWith(color: AppColors.fg2))
+                style: titleStyle.copyWith(color: AppColors.fg1))
           ]
-        : workSpans(work, style);
-    final took = isRunning ? null : stepsDuration(steps);
+        : [
+            for (final sp in workSpans(
+                WorkSummary(work.text,
+                    emphasis: work.emphasis,
+                    outcome: work.failed ? null : work.outcome,
+                    failed: work.failed),
+                titleStyle))
+              // The emphasis colour is fg2; names go to fg1 over an fg2 sentence.
+              if (sp is TextSpan && sp.style?.color == AppColors.fg2)
+                TextSpan(
+                    text: sp.text,
+                    style: sp.style!.copyWith(color: AppColors.fg1))
+              else
+                sp
+          ];
+    final took = stepsDuration(steps);
+    final note = isRunning ? null : _failureNote(steps);
+    final count = isRunning
+        ? 'Step ${steps.indexOf(live.last) + 1}'
+        : '${steps.length} steps';
+    final sub = <InlineSpan>[
+      TextSpan(
+          text: took == null ? count : '$count · ${formatWorkDuration(took)}'),
+      if (note != null)
+        TextSpan(
+            text: ' · $note',
+            style: subStyle.copyWith(color: AppColors.danger)),
+    ];
+    final glyph = Grouped.icon;
+    final Widget lead = isRunning
+        ? SizedBox.square(
+            dimension: glyph,
+            child: RunSpinner(size: glyph, color: AppColors.accent))
+        : AppIcon(work.failed ? 'x-circle' : 'check-circle',
+            size: glyph, color: work.failed ? AppColors.danger : AppColors.fg3);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: kMobile ? 32 : 26),
-        child: Row(children: [
-          SizedBox(
-            width: 16,
-            child: isRunning
-                ? const RunSpinner()
-                : Center(
-                    child: AnimatedRotation(
-                      turns: open ? 0.25 : 0,
-                      duration: Motion.fast,
-                      curve: Curves.easeOutCubic,
-                      child: AppIcon('chevron-right',
-                          size: 14, color: AppColors.fg4),
-                    ),
+      child: Container(
+        constraints: BoxConstraints(minHeight: kMobile ? 64 : 56),
+        padding: EdgeInsets.symmetric(
+            horizontal: Grouped.padX, vertical: Grouped.padY),
+        decoration: BoxDecoration(
+          color: Grouped.row,
+          borderRadius: _segmentRadius(first: true, last: !open),
+        ),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          heightFactor: 1,
+          child: Row(children: [
+            lead,
+            SizedBox(width: Grouped.iconGap),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text.rich(TextSpan(children: title),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: titleStyle),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text.rich(TextSpan(children: sub),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: subStyle),
                   ),
-          ),
-          SizedBox(width: S.s8),
-          Expanded(
-            child: Text.rich(TextSpan(children: spans),
-                maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
-          ),
-          if (took != null) ...[
+                ],
+              ),
+            ),
             SizedBox(width: S.s8),
-            Text(formatWorkDuration(took),
-                style: mono(12, color: AppColors.fg4)),
-          ],
-        ]),
+            AnimatedRotation(
+              turns: open ? 0.5 : 0,
+              duration: Motion.fast,
+              curve: Curves.easeOutCubic,
+              child: AppIcon('chevron-down',
+                  size: Grouped.chevron, color: AppColors.fg4),
+            ),
+          ]),
+        ),
       ),
     );
   }
 }
 
-/// The indented step list under an open work line: a 1px rule on the left.
+/// The step segments of a grouped card, 2px apart. Under a header the first
+/// segment is square at the top; without one the group rounds at both ends.
 class WorkSteps extends StatelessWidget {
-  const WorkSteps({super.key, required this.rows});
+  const WorkSteps({super.key, required this.rows, this.header = true});
   final List<Widget> rows;
+  final bool header;
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.only(left: S.of(7), top: S.s2, bottom: S.s4),
-        child: Container(
-          decoration: BoxDecoration(
-              border: Border(left: BorderSide(color: AppColors.border2))),
-          padding: EdgeInsets.only(left: S.of(14)),
-          child: StepScope(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: rows,
-            ),
-          ),
+        padding: EdgeInsets.only(top: header ? Grouped.gap : 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < rows.length; i++)
+              Padding(
+                padding: EdgeInsets.only(top: i == 0 ? 0 : Grouped.gap),
+                child: StepScope(
+                  radius: _segmentRadius(
+                      first: i == 0 && !header, last: i == rows.length - 1),
+                  child: rows[i],
+                ),
+              ),
+          ],
         ),
       );
 }
@@ -364,114 +332,110 @@ class DenseToolRow extends StatefulWidget {
 
 class _DenseToolRowState extends State<DenseToolRow> {
   bool _localOpen = false;
+  bool _touched = false;
 
-  bool get _open => widget.open ?? _localOpen;
+  ToolStep get _step =>
+      ToolStep(tool: widget.tool, args: widget.args, result: widget.result);
+
+  // A failed step starts open until the reader says otherwise.
+  bool get _autoOpen => stepChip(_step)?.tone == StepChipTone.danger;
+
+  bool get _open => !_touched && _autoOpen ? true : (widget.open ?? _localOpen);
 
   void _toggle() {
     final next = !_open;
-    if (widget.onOpenChanged != null) {
-      widget.onOpenChanged!(next);
-    } else {
-      setState(() => _localOpen = next);
-    }
+    _touched = true;
+    widget.onOpenChanged?.call(next);
+    setState(() => _localOpen = next);
   }
 
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
-    final step =
-        ToolStep(tool: widget.tool, args: widget.args, result: widget.result);
+    final step = _step;
     final canExpand = toolHasDetail(step);
     final open = _open && canExpand;
-    final asStep = StepScope.active(context);
-    final Widget line;
-    if (asStep) {
-      final chip = stepChip(step);
-      final target = stepTarget(step);
-      line = Row(children: [
-        SizedBox(
-            width: 16, child: _Node(_nodeFor(step), icon: toolIcon(step.tool))),
-        SizedBox(width: S.s8),
-        Expanded(
-          child: Text(target.isEmpty ? toolSentence(step) : target,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: codeMono(12, height: 1.4, color: AppColors.fg2)),
-        ),
-        if (chip != null) ...[SizedBox(width: S.s8), _ResultChip(chip)],
-      ]);
+    final chip = stepChip(step);
+    final danger = chip?.tone == StepChipTone.danger;
+    final (verb, object) = toolSentenceParts(step);
+    final valueStyle = sans(kMobile ? 14 : 13, color: AppColors.fg3);
+    final Widget? value;
+    if (chip == null) {
+      value = null;
+    } else if (chip.added > 0 || chip.removed > 0) {
+      value = Text.rich(TextSpan(children: [
+        TextSpan(
+            text: '+${chip.added}',
+            style: valueStyle.copyWith(color: AppColors.ok)),
+        TextSpan(
+            text: ' −${chip.removed}',
+            style: valueStyle.copyWith(color: AppColors.danger)),
+      ]));
     } else {
-      final base = sans(_sentenceSize, height: 1.4, color: AppColors.fg3);
-      final work = describeWork([step]);
-      final spans = step.running
-          ? <InlineSpan>[TextSpan(text: liveStepText(step))]
-          : workSpans(work, base);
-      final took = step.running ? null : stepsDuration([step]);
-      line = Row(children: [
-        SizedBox(
-            width: 16, child: _Node(_nodeFor(step), icon: toolIcon(step.tool))),
-        SizedBox(width: S.s8),
-        Expanded(
-          child: Text.rich(TextSpan(children: spans),
-              maxLines: 1, overflow: TextOverflow.ellipsis, style: base),
-        ),
-        if (took != null) ...[
-          SizedBox(width: S.s8),
-          Text(formatWorkDuration(took), style: mono(12, color: AppColors.fg4)),
-        ],
-      ]);
+      // On a failing row the failure count is the news; passes crowd it.
+      value = Text(danger ? chip.text.split(', ').last : chip.text,
+          maxLines: 1,
+          style: valueStyle.copyWith(
+              color: switch (chip.tone) {
+            StepChipTone.ok => AppColors.ok,
+            StepChipTone.danger => AppColors.danger,
+            StepChipTone.neutral => AppColors.fg3,
+          }));
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: canExpand ? _toggle : null,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: kMobile ? 32 : 26),
-            child: line,
+    final radius =
+        StepScope.radiusOf(context) ?? _segmentRadius(first: true, last: true);
+    final icon = kMobile ? 20.0 : 18.0;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: canExpand ? _toggle : null,
+      child: Container(
+        constraints: BoxConstraints(minHeight: kMobile ? 52 : 44),
+        padding: EdgeInsets.symmetric(
+            horizontal: Grouped.padX, vertical: kMobile ? 8 : 6),
+        decoration: BoxDecoration(color: Grouped.row, borderRadius: radius),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          heightFactor: 1,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(children: [
+                AppIcon(toolIcon(step.tool),
+                    size: icon,
+                    color: danger ? AppColors.danger : AppColors.fg2),
+                SizedBox(width: Grouped.iconGap),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(children: [
+                      TextSpan(
+                          text: verb, style: TextStyle(color: AppColors.fg3)),
+                      if (object.isNotEmpty)
+                        TextSpan(
+                            text: ' $object',
+                            style: TextStyle(color: AppColors.fg1)),
+                    ]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(kMobile ? 15 : 13, height: 20 / 15),
+                  ),
+                ),
+                if (value != null) ...[SizedBox(width: S.s12), value],
+              ]),
+              SpringExpand(
+                open: open,
+                child: canExpand
+                    ? Padding(
+                        padding: EdgeInsets.fromLTRB(
+                            icon + Grouped.iconGap, S.s6, 0, S.s4),
+                        child: _StepDetail(step: step),
+                      )
+                    : const SizedBox(width: double.infinity),
+              ),
+            ],
           ),
         ),
-        SpringExpand(
-          open: open,
-          child: canExpand
-              ? Padding(
-                  padding: EdgeInsets.fromLTRB(S.s24, S.s2, 0, S.s8),
-                  child: _StepDetail(step: step),
-                )
-              : const SizedBox(width: double.infinity),
-        ),
-      ],
-    );
-  }
-}
-
-class _ResultChip extends StatelessWidget {
-  const _ResultChip(this.chip);
-  final StepResultChip chip;
-
-  @override
-  Widget build(BuildContext context) {
-    final (bg, fg) = switch (chip.tone) {
-      StepChipTone.ok => (AppColors.okBg, AppColors.ok),
-      StepChipTone.danger => (AppColors.dangerBg, AppColors.danger),
-      StepChipTone.neutral => (AppColors.surface2, AppColors.fg3),
-    };
-    final style = mono(11, color: fg);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration:
-          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-      child: chip.added > 0 || chip.removed > 0
-          ? Text.rich(TextSpan(children: [
-              TextSpan(
-                  text: '+${chip.added}',
-                  style: style.copyWith(color: AppColors.ok)),
-              TextSpan(
-                  text: ' −${chip.removed}',
-                  style: style.copyWith(color: AppColors.danger)),
-            ]))
-          : Text(chip.text, style: style),
+      ),
     );
   }
 }
@@ -521,8 +485,8 @@ class _StepDetailState extends State<_StepDetail> {
         Container(
           padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
           decoration: BoxDecoration(
-            color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(R.card),
+            color: AppColors.bg,
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -631,7 +595,7 @@ class _ToolRunState extends State<ToolRun> {
               open: open,
               onTap: _toggle),
         if (!long)
-          ...rows
+          WorkSteps(rows: rows, header: false)
         else
           SpringExpand(open: open, child: WorkSteps(rows: rows)),
       ]),
@@ -1058,8 +1022,16 @@ class _WatchFiredState extends State<_WatchFired> {
     final read = readWatchPreview(widget.preview);
     final (text, tone, icon) = switch (read.ok) {
       true => ('**${widget.subject}** finished', SignalTone.ok, 'check'),
-      false => ('**${widget.subject}** failed', SignalTone.danger, 'alert-triangle'),
-      null => ('**${widget.subject}** has new output', SignalTone.neutral, 'activity'),
+      false => (
+          '**${widget.subject}** failed',
+          SignalTone.danger,
+          'alert-triangle'
+        ),
+      null => (
+          '**${widget.subject}** has new output',
+          SignalTone.neutral,
+          'activity'
+        ),
     };
     final canExpand = read.lines.isNotEmpty;
     return Column(

@@ -204,7 +204,7 @@ void main() {
         of: find.byType(CollapsedActivity),
         matching: find.byType(AppIcon),
       ),
-      findsOneWidget,
+      findsNWidgets(2), // status glyph and chevron
     );
 
     await tester.tap(summary);
@@ -249,7 +249,7 @@ void main() {
         of: find.byType(CollapsedActivity),
         matching: find.byType(AppIcon),
       ),
-      findsOneWidget,
+      findsOneWidget, // the tool glyph; a lone step has no header
     );
     debugDefaultTargetPlatformOverride = null;
   });

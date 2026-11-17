@@ -55,11 +55,12 @@ void main() {
         of: summary,
         matching: find.byType(Text),
         matchRoot: true));
-    expect(text.style?.color, AppColors.fg3);
-    expect(text.style?.fontSize, 14);
+    expect(text.style?.color, AppColors.fg2);
+    expect(text.style?.fontSize, 16);
 
-    // 16px chevron slot + 8px gap puts the summary at x = 24.
-    expect(tester.getTopLeft(summary).dx, closeTo(24, 0.5));
+    // 16px padding + 22px glyph + 14px gap puts the title at x = 52.
+    expect(tester.getTopLeft(summary).dx, closeTo(52, 0.5));
+    expect(find.textContaining('8 steps', findRichText: true), findsOneWidget);
 
     expect(find.text('Show'), findsNothing);
     expect(find.text('Hide'), findsNothing);
@@ -69,7 +70,7 @@ void main() {
         of: find.byType(CollapsedActivity),
         matching: find.byType(AppIcon),
       ),
-      findsOneWidget,
+      findsNWidgets(2), // status glyph and chevron
     );
     debugDefaultTargetPlatformOverride = null;
   });
@@ -144,7 +145,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(DenseToolRow), findsNWidgets(3));
-    await tester.tap(find.text('flutter test test/work_notes_test.dart',
+    await tester.tap(find.textContaining('flutter test test/work_notes_test.dart',
         findRichText: true));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));

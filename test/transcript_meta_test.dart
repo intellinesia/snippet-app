@@ -234,8 +234,12 @@ void main() {
         onOpenChanged: (_) {},
       )));
       await t.pump(const Duration(milliseconds: 300));
-      expect(find.text('lib/a.dart'), findsOneWidget);
-      expect(find.text('flutter test test/a_test.dart'), findsOneWidget);
+      // The header title and the step row both name the edit.
+      expect(find.textContaining('Edited a.dart', findRichText: true),
+          findsNWidgets(2));
+      expect(find.textContaining('flutter test test/a_test.dart',
+              findRichText: true),
+          findsOneWidget);
       expect(find.text('3 passed'), findsOneWidget);
       debugDefaultTargetPlatformOverride = null;
     });

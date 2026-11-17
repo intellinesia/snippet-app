@@ -327,9 +327,10 @@ void main() {
     await t.tap(find.text('Show'));
     await t.pump();
     expect(find.byType(DenseToolRow), findsNWidgets(3));
-    expect(find.textContaining('Read models.dart', findRichText: true),
+    expect(find.textContaining('Read lib/models.dart', findRichText: true),
         findsOneWidget);
-    expect(find.textContaining('flutter analyze'), findsOneWidget);
+    expect(find.textContaining('flutter analyze', findRichText: true),
+        findsOneWidget);
     await t.pumpWidget(const SizedBox());
     debugDefaultTargetPlatformOverride = null;
   });
