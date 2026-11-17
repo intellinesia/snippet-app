@@ -463,9 +463,13 @@ class _MainTabsStripState extends State<MainTabsStrip> {
     final rest = widget.tabs.where((t) => !t.isMissionControl).toList();
     return LayoutBuilder(builder: (context, box) {
       const plusW = 28.0 + _gap;
-      const moreW = 54.0 + _gap;
-      final mcW = mc.length * (46.0 + _gap);
-      final room = box.maxWidth - mcW - plusW;
+      const moreW = 64.0 + _gap;
+      // The MC chip grows with its attention count; budget for it, plus a
+      // little slack, so the strip never overruns the bar.
+      final count = widget.mcAttentionCount;
+      final mcChip = 46.0 + (count > 0 ? 8.0 + 7.0 * '$count'.length : 0);
+      final mcW = mc.length * (mcChip + _gap);
+      final room = box.maxWidth - mcW - plusW - 6;
       var visibleCount = rest.length;
       var overflow = false;
       if (rest.length * (_minTab + _gap) > room) {

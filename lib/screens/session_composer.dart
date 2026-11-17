@@ -857,7 +857,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                     ],
                   )
                 : null,
-            attachments: _attachments.isNotEmpty ? _attachmentBar() : null,
             field: CallbackShortcuts(
               bindings: _composerShortcuts,
               child: TextField(
@@ -1038,8 +1037,8 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                           child: _trayPage(running)),
                     ),
                   if (_heldQueue.isNotEmpty) _queuedCard(),
-                  // Desktop draws attachments inside the composer card.
-                  if (kMobile && _attachments.isNotEmpty) _attachmentBar(),
+                  // Attachments sit above the composer, never inside it.
+                  if (_attachments.isNotEmpty) _attachmentBar(),
                   if (_mentionQuery != null && !_isMissionControl)
                     _mentionList(),
                   if (top != null) top,
