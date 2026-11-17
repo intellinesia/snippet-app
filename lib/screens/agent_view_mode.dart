@@ -5,6 +5,10 @@ import '../theme.dart';
 /// Agents whose tab shows the Work view (the desk transcript) instead of Chat.
 final ValueNotifier<Set<String>> agentWorkView = ValueNotifier(<String>{});
 
+/// The agent whose tab is active in the desktop shell, for the list's
+/// selected row.
+final ValueNotifier<String?> openAgentTab = ValueNotifier<String?>(null);
+
 void setAgentWorkView(String agentId, bool work) {
   final next = {...agentWorkView.value};
   work ? next.add(agentId) : next.remove(agentId);

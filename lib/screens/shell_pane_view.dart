@@ -557,7 +557,8 @@ class RightTabBody extends StatelessWidget {
         agent: agent,
         client: client,
         embedded: true,
-        tabHeader: true,
+        // Desktop: the tab, bar and panel carry the identity; no stage.
+        tabHeader: kMobile,
         deskTrailing: deskTrailing,
         onDeskInfo: onDeskInfo,
       );

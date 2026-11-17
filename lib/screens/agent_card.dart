@@ -70,7 +70,10 @@ String cleanAgentStatusText(String text,
 String agentStatusLine(CoordinationAgent agent,
     {Presence? presence, Map<String, String> groupTitles = const {}}) {
   final last = agent.lastMessage;
-  var context = last == null
+  // Restart notices are the harness talking, not the agent.
+  final noise =
+      last != null && last.text.trim().startsWith('Snippet restarted');
+  var context = last == null || noise
       ? ''
       : cleanAgentStatusText(last.text, groupTitles: groupTitles);
   if (last?.fromUser ?? false) {
@@ -82,7 +85,8 @@ String agentStatusLine(CoordinationAgent agent,
     AgentGroup.needsYou =>
       context.isEmpty ? 'Waiting on you' : 'Waiting on you · $context',
     AgentGroup.working => context.isEmpty ? 'Working' : context,
-    AgentGroup.recent => context.isEmpty ? 'No messages yet' : context,
+    AgentGroup.recent =>
+      context.isEmpty ? (last == null ? 'No messages yet' : 'Quiet') : context,
   };
 }
 

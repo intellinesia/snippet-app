@@ -573,7 +573,31 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   /// Agent tabs: the Chat | Work switch and the panel toggle, in the window bar.
   Widget _agentBarTools(_ShellTab t) {
     final a = t.readout!.agent!;
+    final presence = t.client.presence;
     return Row(mainAxisSize: MainAxisSize.min, children: [
+      // Live state beside the switch, the way a session tab shows its run.
+      ListenableBuilder(
+        listenable: presence,
+        builder: (_, __) {
+          final p = presence.presenceForAgentId(a.id);
+          final status = switch (p?.state) {
+            'running' || 'tool' || 'thinking' || 'typing' => 'running',
+            'waiting' when PresenceStore.chatWord(p!) == 'waiting on you' =>
+              'needs_you',
+            _ => null,
+          };
+          if (status == null) return const SizedBox.shrink();
+          return Padding(
+            padding: EdgeInsets.only(right: S.s8),
+            child: SessionStatusPill(
+              status: status,
+              startedAt: p!.since > 0
+                  ? DateTime.fromMillisecondsSinceEpoch(p.since * 1000)
+                  : null,
+            ),
+          );
+        },
+      ),
       if (a.id != 'mission-control') ...[
         AgentViewSwitch(agentId: a.id),
         SizedBox(width: S.s6),

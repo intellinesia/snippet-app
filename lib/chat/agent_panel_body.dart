@@ -254,11 +254,13 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
       if (line.isEmpty) return null;
     } else {
       final m = a?.lastMessage?.text.trim() ?? '';
-      if (m.isEmpty || m.startsWith('Snippet restarted while')) return null;
+      // Restart notices say nothing about the agent; show its idle state.
+      final noise = m.isEmpty || m.startsWith('Snippet restarted while');
       color = AppColors.fg4;
       state = 'Quiet';
-      since = null;
-      line = m;
+      final at = a?.lastMessage?.at;
+      since = noise || at == null ? null : _elapsed(at);
+      line = noise ? 'Nothing on its desk.' : m;
     }
     return Padding(
       padding: const EdgeInsets.only(top: 12),

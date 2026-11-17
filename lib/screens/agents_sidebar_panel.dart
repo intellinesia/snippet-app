@@ -8,6 +8,7 @@ import '../crew_status.dart';
 import '../models.dart';
 import '../pins.dart';
 import '../platform.dart';
+import 'agent_view_mode.dart' show openAgentTab;
 import '../theme.dart';
 import '../widgets.dart';
 import 'agent_card.dart';
@@ -534,20 +535,23 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       });
     Widget agentTile(CoordinationAgent a,
             {CrewEntry? crew, AgentGroup? group}) =>
-        AgentCard(
-          key: ValueKey('agent-card-${a.id}'),
-          crew: crew,
-          group: group,
-          client: widget.client,
-          agent: a,
-          pinned: _isPinnedAgent(a),
-          onTogglePin: () =>
-              Pins.instance.toggle(Pins.agent, a.id, host: _pinHost),
-          groupTitles: groupTitles,
-          onOpen: () => widget.onOpenAgent?.call(a),
-          onDelete: () => _deleteAgent(a),
-          onChanged: refresh,
-        );
+        ValueListenableBuilder<String?>(
+            key: ValueKey('agent-card-${a.id}'),
+            valueListenable: openAgentTab,
+            builder: (_, open, __) => AgentCard(
+                  selected: !kMobile && open == a.id,
+                  crew: crew,
+                  group: group,
+                  client: widget.client,
+                  agent: a,
+                  pinned: _isPinnedAgent(a),
+                  onTogglePin: () =>
+                      Pins.instance.toggle(Pins.agent, a.id, host: _pinHost),
+                  groupTitles: groupTitles,
+                  onOpen: () => widget.onOpenAgent?.call(a),
+                  onDelete: () => _deleteAgent(a),
+                  onChanged: refresh,
+                ));
 
     String agentName(String id) {
       for (final a in agents) {

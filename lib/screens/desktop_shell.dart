@@ -12,7 +12,8 @@ import '../swr.dart';
 import '../session_status_updates.dart';
 import '../session_seen.dart';
 import '../command_palette.dart';
-import 'session_header.dart' show sessionBarTools;
+import 'session_header.dart' show sessionBarTools, SessionStatusPill;
+import '../presence.dart' show PresenceStore;
 import 'agent_view_mode.dart';
 import '../desktop_notifications.dart';
 import '../device_events.dart';
@@ -446,7 +447,7 @@ class _DesktopShellState extends State<DesktopShell>
     final name = a.displayName.trim().isEmpty ? a.id : a.displayName.trim();
     if (action == 'delete' && a.id == 'mission-control') return;
     if (action == 'desk') {
-      _openSession('inbox-${a.id}', '$name desk', null);
+      setAgentWorkView(a.id, true);
     } else if (action == 'delete') {
       runCrewAgentAction(context, 'delete',
           client: tab.client, agent: a, onDeleted: () => _closePaneTab(tab));
@@ -1564,6 +1565,32 @@ class _DesktopShellState extends State<DesktopShell>
       _attachShareToActive(share);
       return;
     }
+    // A desk is the agent's Work view, not a tab of its own.
+    if (!kMobile && share == null && id.startsWith('inbox-')) {
+      _openDesk(id.substring('inbox-'.length),
+          orElse: () => _openSessionTab(id, title, profile));
+      return;
+    }
+    _openSessionTab(id, title, profile,
+        share: share, fromNotification: fromNotification);
+  }
+
+  void _openDesk(String agentId, {required VoidCallback orElse}) {
+    final c = _client;
+    if (c == null) return orElse();
+    c.coordinationAgents().then((all) {
+      if (!mounted) return;
+      final a = all.where((x) => x.id == agentId).firstOrNull;
+      if (a == null) return orElse();
+      setAgentWorkView(agentId, true);
+      _openRightAgent(a);
+    }, onError: (_) {
+      if (mounted) orElse();
+    });
+  }
+
+  void _openSessionTab(String id, String title, String? profile,
+      {SharedInbound? share, bool fromNotification = false}) {
     final client = _client;
     final url = _active?.url;
     if (client == null || url == null) return;
@@ -1839,6 +1866,11 @@ class _DesktopShellState extends State<DesktopShell>
 
   @override
   Widget build(BuildContext context) {
+    final openAgent = _activeTab?.readout?.agent?.id;
+    if (openAgentTab.value != openAgent) {
+      WidgetsBinding.instance.addPostFrameCallback(
+          (_) => openAgentTab.value = _activeTab?.readout?.agent?.id);
+    }
     Theme.of(context); // Rebuild on theme change
     DaemonScope.current = _client;
     if (_loading) {

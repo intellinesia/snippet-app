@@ -462,7 +462,7 @@ class _NotificationBellState extends State<NotificationBell> {
       builder: (_, items, __) {
         final n = items.length;
         return Tooltip(
-          message: 'Notifications',
+          message: n > 0 ? '$n notifications' : 'Notifications',
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
             onEnter: (_) => setState(() => _hover = true),
@@ -471,33 +471,41 @@ class _NotificationBellState extends State<NotificationBell> {
               key: _key,
               behavior: HitTestBehavior.opaque,
               onTap: _toggle,
+              // Inbox, not an alarm: what came back, with its count beside it.
               child: Container(
-                width: 28,
                 height: 28,
+                constraints: const BoxConstraints(minWidth: 28),
+                padding: EdgeInsets.symmetric(horizontal: n > 0 ? 7 : 0),
                 decoration: BoxDecoration(
                   color:
                       _open || _hover ? AppColors.surface2 : Colors.transparent,
                   borderRadius: BorderRadius.circular(R.md),
                 ),
-                child: Stack(clipBehavior: Clip.none, children: [
-                  Center(
-                    child: AppIcon('bell',
-                        size: 15,
-                        color: _hover || _open ? AppColors.fg1 : AppColors.fg3),
-                  ),
-                  // A dot, not a count: the popover lists them.
-                  if (n > 0)
-                    Positioned(
-                      right: 5,
-                      top: 5,
-                      child: Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                            color: AppColors.run, shape: BoxShape.circle),
-                      ),
-                    ),
-                ]),
+                child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      AppIcon('inbox',
+                          size: 15,
+                          color:
+                              _hover || _open ? AppColors.fg1 : AppColors.fg3),
+                      if (n > 0) ...[
+                        const SizedBox(width: 5),
+                        Container(
+                          height: 16,
+                          padding: const EdgeInsets.symmetric(horizontal: 5),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: AppColors.run.withValues(alpha: 0.13),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(n > 99 ? '99+' : '$n',
+                              style: mono(11,
+                                  weight: FontWeight.w500,
+                                  color: AppColors.run)),
+                        ),
+                      ],
+                    ]),
               ),
             ),
           ),
