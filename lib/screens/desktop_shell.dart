@@ -12,6 +12,7 @@ import '../swr.dart';
 import '../session_status_updates.dart';
 import '../session_seen.dart';
 import '../command_palette.dart';
+import 'session_header.dart' show sessionBarTools;
 import '../desktop_notifications.dart';
 import '../device_events.dart';
 import '../models.dart';

@@ -311,57 +311,44 @@ class _SessionRailState extends State<SessionRail> {
             : '${files.length} file${files.length == 1 ? '' : 's'}',
         link: 'Review',
         onLabel: widget.onChanges);
-    add('Usage', _usageRows(s));
-    add('Next without you', _nextRows());
+    add('Usage', _usageRows(s), open: false);
+    add('Next without you', _nextRows(), open: false);
     final w = widget;
     add(
-        'Actions',
+        'Session actions',
         [
           if (w.onHandOff != null)
-            _RailRow(icon: 'users', label: 'Hand off', onTap: w.onHandOff),
+            _RailRow(
+                icon: 'users',
+                label: 'Hand off to another agent',
+                onTap: w.onHandOff),
           if (w.onFork != null)
             _RailRow(
                 icon: 'git-branch', label: 'Fork from here', onTap: w.onFork),
-          if (w.onRecurring != null)
-            _RailRow(icon: 'repeat', label: 'Scheduled', onTap: w.onRecurring),
-        ],
-        open: false);
-    add(
-        'Workspace',
-        [
+          if (w.onCheckpoints != null)
+            _RailRow(
+                icon: 'history', label: 'Checkpoints', onTap: w.onCheckpoints),
+          if (w.onMemory != null)
+            _RailRow(icon: 'brain', label: 'Memory', onTap: w.onMemory),
           if (w.onDeliverables != null)
             _RailRow(
                 icon: 'folder', label: 'Shared files', onTap: w.onDeliverables),
           if (w.onProcesses != null)
             _RailRow(
                 icon: 'activity', label: 'Processes', onTap: w.onProcesses),
-          if (w.onShell != null)
-            _RailRow(icon: 'terminal', label: 'Terminal', onTap: w.onShell),
-        ],
-        open: false);
-    add(
-        'History',
-        [
-          if (w.onCheckpoints != null)
-            _RailRow(
-                icon: 'history', label: 'Checkpoints', onTap: w.onCheckpoints),
-          if (w.onMemory != null)
-            _RailRow(icon: 'brain', label: 'Memory', onTap: w.onMemory),
+          if (w.onRecurring != null)
+            _RailRow(icon: 'repeat', label: 'Scheduled', onTap: w.onRecurring),
           if (w.onCompact != null)
             _RailRow(
                 icon: 'minimize', label: 'Compact history', onTap: w.onCompact),
+          if (w.onDelete != null)
+            _RailRow(
+                icon: 'trash',
+                label: 'Delete session',
+                danger: true,
+                onTap: w.onDelete),
         ],
         open: false);
-    if (w.onDelete != null) {
-      out.add(Padding(
-        padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
-        child: _RailRow(
-            icon: 'trash',
-            label: 'Delete session',
-            danger: true,
-            onTap: w.onDelete),
-      ));
-    }
     return out;
   }
 
@@ -379,13 +366,12 @@ class _SessionRailState extends State<SessionRail> {
                 style: sans(13, weight: W.label, color: AppColors.fg1)),
           ),
           if (widget.headerActions != null) widget.headerActions!,
-          IconBtn(widget.floating ? 'x' : 'sidebar',
-              size: 30,
-              iconSize: 15,
-              tooltip: widget.floating ? 'Close' : 'Hide session panel',
-              onTap: () => widget.floating
-                  ? sessionRailFloating.value = false
-                  : setSessionRailCollapsed(true)),
+          if (widget.floating)
+            IconBtn('x',
+                size: 30,
+                iconSize: 15,
+                tooltip: 'Close',
+                onTap: () => sessionRailFloating.value = false),
         ]),
       ),
       if (widget.headerChips != null)
@@ -542,6 +528,14 @@ class _SessionRailState extends State<SessionRail> {
     ];
   }
 
+  /// Paths inside the workspace read relative to it.
+  String _relPath(String path) {
+    var ws = (widget.state?.workspace ?? '').trim();
+    if (ws.isEmpty) return path;
+    if (!ws.endsWith('/')) ws = '$ws/';
+    return path.startsWith(ws) ? path.substring(ws.length) : path;
+  }
+
   List<Widget> _changeRows(List<FileChange> files) => [
         for (final f in files.take(5))
           InkWell(
@@ -551,7 +545,7 @@ class _SessionRailState extends State<SessionRail> {
             child: SizedBox(
               height: 26,
               child: Row(children: [
-                Expanded(child: _PathText(f.path)),
+                Expanded(child: _PathText(_relPath(f.path))),
                 if (f.added > 0)
                   Text('+${f.added}', style: mono(11, color: AppColors.ok)),
                 SizedBox(

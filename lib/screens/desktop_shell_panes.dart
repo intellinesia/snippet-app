@@ -936,7 +936,14 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         tabsRow: _mainTabsRow(),
         onOpenSettings: _openShellSettings,
         machineSwitcher: _topMachineSwitcher(),
-        tools: _sidebarHidden ? _railTools() : const [],
+        tools: [
+          ListenableBuilder(
+              listenable: sessionBarTools,
+              builder: (_, __) =>
+                  sessionBarTools.of(_activeTab?.sessionId) ??
+                  const SizedBox.shrink()),
+          if (_sidebarHidden) ..._railTools(),
+        ],
         reserveWindowControls: kMacOS,
       );
 

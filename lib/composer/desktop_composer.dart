@@ -6,7 +6,7 @@ import '../widgets.dart';
 
 /// Desktop composer surfaces: one calm card, pinned cards above it. The phone
 /// keeps the pill in composer_card.dart.
-const double _kCardRadius = 18;
+const double _kCardRadius = 20;
 
 BoxDecoration _cardDecoration({bool focus = false}) => BoxDecoration(
       color: AppColors.surface1,
@@ -34,6 +34,7 @@ class DeskButton extends StatefulWidget {
   });
 
   final Widget child;
+
   /// Corner radius; null keeps the small default.
   final double? radius;
   final VoidCallback? onTap;
@@ -150,8 +151,8 @@ class DeskActionButton extends StatelessWidget {
       ink = AppColors.fg4;
     }
     return DeskButton(
-      size: 30,
-      radius: 15,
+      size: 32,
+      radius: 16,
       fill: fill,
       hoverFill: on || soft || danger ? fill.withValues(alpha: 0.85) : fill,
       tooltip: tooltip,
@@ -404,75 +405,69 @@ class DeskQueueCard extends StatelessWidget {
   final VoidCallback onSendAll;
   final double maxHeight;
 
+  // Soft rows tucked on top of the composer card, inset from its sides.
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) return const SizedBox.shrink();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      decoration: _cardDecoration(),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            height: 32,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 8, 0),
-              child: Row(children: [
-                AppIcon('clock', size: 13, color: AppColors.fg3),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                      entries.length > 1
-                          ? '${entries.length} queued · sent in order after this step'
-                          : 'Queued · sends after this step',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(12, color: AppColors.fg3)),
-                ),
-                DeskButton(
-                  height: 24,
-                  padding: const EdgeInsets.symmetric(horizontal: 9),
-                  onTap: onClear,
-                  child: Text('Clear', style: sans(12, color: AppColors.fg3)),
-                ),
-                const SizedBox(width: 2),
-                DeskButton(
-                  height: 24,
-                  fill: AppColors.surface3,
-                  hoverFill: AppColors.surface3.withValues(alpha: 0.8),
-                  padding: const EdgeInsets.symmetric(horizontal: 9),
-                  onTap: onSendAll,
-                  child: Text('Send all now',
-                      style: sans(12, color: AppColors.fg1)),
-                ),
-              ]),
+    final many = entries.length > 1;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (many)
+              Container(
+                height: 32,
+                color: AppColors.surface2,
+                margin: const EdgeInsets.only(bottom: 2),
+                padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
+                child: Row(children: [
+                  Expanded(
+                    child: Text('${entries.length} queued, sent in order',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12, color: AppColors.fg4)),
+                  ),
+                  _textBtn('Clear', onClear),
+                  _textBtn('Send all now', onSendAll),
+                ]),
+              ),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: SingleChildScrollView(
+                reverse: true,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  for (var i = 0; i < entries.length; i++) _row(i, entries[i]),
+                ]),
+              ),
             ),
-          ),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: SingleChildScrollView(
-              reverse: true,
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                for (final e in entries) _row(e),
-              ]),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _row(DeskQueueEntry e) => Container(
+  Widget _textBtn(String label, VoidCallback onTap) => DeskButton(
+        height: 26,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        onTap: onTap,
+        child: Text(label, style: sans(12, color: AppColors.fg3)),
+      );
+
+  Widget _row(int i, DeskQueueEntry e) => Container(
         constraints: const BoxConstraints(minHeight: 38),
-        margin: const EdgeInsets.fromLTRB(4, 0, 4, 2),
-        padding: const EdgeInsets.fromLTRB(14, 0, 6, 0),
-        decoration: BoxDecoration(
-          color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(R.of(8)),
-        ),
+        margin: const EdgeInsets.only(bottom: 2),
+        padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
+        color: AppColors.surface2,
         child: Row(children: [
+          SizedBox(
+            width: 16,
+            child: Text('${i + 1}', style: mono(11, color: AppColors.fg4)),
+          ),
+          const SizedBox(width: 6),
           if (e.lead != null) ...[e.lead!, const SizedBox(width: 6)],
           Expanded(
             child: Text(e.label,
@@ -483,12 +478,12 @@ class DeskQueueCard extends StatelessWidget {
           ),
           if (e.extra != null) ...[const SizedBox(width: 8), e.extra!],
           const SizedBox(width: 6),
-          DeskIconButton('arrow-up',
-              tooltip: 'Interrupt and send', onTap: e.onSendNow, iconSize: 13),
-          DeskIconButton('edit',
-              tooltip: 'Edit', onTap: e.onEdit, iconSize: 13),
+          Tooltip(
+              message: 'Interrupt and send',
+              child: _textBtn('Send now', e.onSendNow)),
+          _textBtn('Edit', e.onEdit),
           DeskIconButton('x',
-              tooltip: 'Remove', onTap: e.onRemove, iconSize: 13),
+              tooltip: 'Remove', onTap: e.onRemove, iconSize: 12),
         ]),
       );
 }

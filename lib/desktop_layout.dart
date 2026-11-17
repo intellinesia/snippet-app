@@ -209,8 +209,10 @@ class SettingsColumn extends StatelessWidget {
       child: Align(
         alignment: kMobile ? Alignment.topCenter : Alignment.topLeft,
         child: ConstrainedBox(
-          constraints:
-              const BoxConstraints(maxWidth: Grouped.contentMaxWidth - 48),
+          // The dialog bounds desktop; only the phone caps the column.
+          constraints: BoxConstraints(
+              maxWidth:
+                  kMobile ? Grouped.contentMaxWidth - 48 : double.infinity),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: children,

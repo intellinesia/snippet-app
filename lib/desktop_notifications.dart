@@ -476,25 +476,16 @@ class _NotificationBellState extends State<NotificationBell> {
                         size: 15,
                         color: _hover || _open ? AppColors.fg1 : AppColors.fg3),
                   ),
+                  // A dot, not a count: the popover lists them.
                   if (n > 0)
                     Positioned(
-                      right: -2,
-                      top: -2,
+                      right: 5,
+                      top: 5,
                       child: Container(
-                        constraints:
-                            const BoxConstraints(minWidth: 15, minHeight: 15),
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
-                        alignment: Alignment.center,
+                        width: 7,
+                        height: 7,
                         decoration: BoxDecoration(
-                          color: AppColors.run,
-                          borderRadius: BorderRadius.circular(8),
-                          border:
-                              Border.all(color: AppColors.windowBg, width: 2),
-                        ),
-                        child: Text('$n',
-                            style: sans(9.5,
-                                weight: W.title,
-                                color: const Color(0xFF1A1000))),
+                            color: AppColors.run, shape: BoxShape.circle),
                       ),
                     ),
                 ]),

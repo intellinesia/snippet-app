@@ -56,7 +56,7 @@ class SessionChatHeader extends StatelessWidget {
                     child: name),
           ),
           const SizedBox(width: 10),
-          _StatusPill(status: status, startedAt: startedAt),
+          SessionStatusPill(status: status, startedAt: startedAt),
           if ((sub ?? '').isNotEmpty) ...[
             const SizedBox(width: 8),
             Flexible(
@@ -75,16 +75,16 @@ class SessionChatHeader extends StatelessWidget {
   }
 }
 
-class _StatusPill extends StatefulWidget {
-  const _StatusPill({required this.status, this.startedAt});
+class SessionStatusPill extends StatefulWidget {
+  const SessionStatusPill({super.key, required this.status, this.startedAt});
   final String status;
   final DateTime? startedAt;
 
   @override
-  State<_StatusPill> createState() => _StatusPillState();
+  State<SessionStatusPill> createState() => SessionStatusPillState();
 }
 
-class _StatusPillState extends State<_StatusPill> {
+class SessionStatusPillState extends State<SessionStatusPill> {
   Timer? _tick;
 
   bool get _running => widget.status == 'running';
@@ -96,8 +96,8 @@ class _StatusPillState extends State<_StatusPill> {
   }
 
   @override
-  void didUpdateWidget(_StatusPill old) {
-    super.didUpdateWidget(old);
+  void didUpdateWidget(SessionStatusPill oldWidget) {
+    super.didUpdateWidget(oldWidget);
     _sync();
   }
 
@@ -162,5 +162,57 @@ class _StatusPillState extends State<_StatusPill> {
             softWrap: false),
       ]),
     );
+  }
+}
+
+/// Window-bar tools each desktop session publishes; the shell shows the
+/// active tab's, so the session has no header row of its own.
+class SessionBarTools extends ChangeNotifier {
+  final Map<String, Widget> _tools = {};
+  Widget? of(String? id) => id == null ? null : _tools[id];
+  void publish(String id, Widget? w) {
+    if (w == null) {
+      if (_tools.remove(id) == null) return;
+    } else {
+      _tools[id] = w;
+    }
+    notifyListeners();
+  }
+}
+
+final SessionBarTools sessionBarTools = SessionBarTools();
+
+/// Publishes [child] to [sessionBarTools] after each build; draws nothing.
+class SessionBarPublisher extends StatefulWidget {
+  const SessionBarPublisher(
+      {super.key, required this.sessionId, required this.child});
+  final String sessionId;
+  final Widget child;
+
+  @override
+  State<SessionBarPublisher> createState() => _SessionBarPublisherState();
+}
+
+class _SessionBarPublisherState extends State<SessionBarPublisher> {
+  bool _queued = false;
+
+  @override
+  void dispose() {
+    final id = widget.sessionId;
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => sessionBarTools.publish(id, null));
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_queued) {
+      _queued = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _queued = false;
+        if (mounted) sessionBarTools.publish(widget.sessionId, widget.child);
+      });
+    }
+    return const SizedBox.shrink();
   }
 }

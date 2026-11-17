@@ -171,15 +171,10 @@ class _WakesScreenState extends State<WakesScreen> {
           return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Same inset as SettingsColumn, so it lines up with every page.
                 Padding(
-                  padding: EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 0),
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 680),
-                      child: SettingsHeader(title: title, subtitle: subtitle),
-                    ),
-                  ),
+                  padding: const EdgeInsets.fromLTRB(28, 18, 28, 0),
+                  child: SettingsHeader(title: title, subtitle: subtitle),
                 ),
                 const Expanded(child: empty),
               ]);

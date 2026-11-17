@@ -2031,10 +2031,14 @@ class _SessionScreenState extends State<SessionScreen>
                                                     top: 0,
                                                     left: 0,
                                                     right: 0,
-                                                    child: _deskHeaderBar(
-                                                        s, running,
-                                                        rail: _railVisible(
-                                                            column.maxWidth)),
+                                                    child: SessionBarPublisher(
+                                                        sessionId:
+                                                            widget.sessionId,
+                                                        child: _deskHeaderBar(
+                                                            s, running,
+                                                            rail: _railVisible(
+                                                                column
+                                                                    .maxWidth))),
                                                   ),
                                               ]),
                                         ),

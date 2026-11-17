@@ -1346,7 +1346,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           ),
           Positioned(
             right: 16,
-            top: SessionChatHeader.height - 4,
+            top: 8,
             child: _sessionRail(s, floating: true),
           ),
         ]);
@@ -1543,7 +1543,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   // transcript. The tab strip carries the title; the phone keeps its own chrome.
   bool get _deskHeader => !kMobile && !widget.readOnly;
 
-  double get _deskHeaderHeight => SessionChatHeader.height;
+  // No header row on desktop; the window bar carries status and actions.
+  double get _deskHeaderHeight => 8;
 
   /// With the session panel open, its header holds the actions; the chat
   /// header carries them only when the panel is hidden or does not fit, and
@@ -1557,76 +1558,56 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         final hasPanel =
             !widget.readOnly && _inboxAgentId(widget.sessionId) == null;
         final docked = rail && !collapsed;
-        final Widget? toggle = !hasPanel || docked
+        final Widget? toggle = !hasPanel
             ? null
             : IconBtn('sidebar',
                 size: 30,
                 iconSize: 15,
-                active: !rail && floating,
-                tooltip: rail || !floating
-                    ? 'Show session panel'
-                    : 'Hide session panel', onTap: () {
+                active: docked || (!rail && floating),
+                tooltip: docked || (!rail && floating)
+                    ? 'Hide session panel'
+                    : 'Show session panel', onTap: () {
                 if (rail) {
-                  setSessionRailCollapsed(false);
+                  setSessionRailCollapsed(!collapsed);
                 } else {
                   sessionRailFloating.value = !floating;
                 }
               });
+        final showActions = !docked && !(!rail && floating);
         return _deskHeaderBarWith(s, running,
-            actions: !docked, toggle: toggle, hidden: rail && collapsed);
+            actions: showActions, toggle: toggle);
       },
     );
   }
 
   Widget _deskHeaderBarWith(HarnessState? s, bool running,
-      {required bool actions, Widget? toggle, bool hidden = false}) {
+      {required bool actions, Widget? toggle}) {
     final mc = _isMissionControl;
     final status = s?.pendingQuestion != null
         ? 'needs_you'
         : running
             ? 'running'
             : (s?.status ?? 'idle');
-    final ws = s?.workspace.trim() ?? '';
-    final agent = (_meAgentName ?? '').trim().isEmpty
-        ? (_me?.displayAgentId ?? '')
-        : _meAgentName!.trim();
-    final sub = mc
-        ? [
-            'Coordinator',
-            if ((_mcInFlight ?? 0) > 0) '${_mcInFlight!} tasks in flight',
-          ].join(' \u00b7 ')
-        : hidden
-            ? ''
-            : [
-                if (agent.isNotEmpty) agent,
-                if (ws.isNotEmpty) lastPathSegment(ws, ifEmpty: ws),
-              ].join(' \u00b7 ');
-    return SessionChatHeader(
-      agentId: mc ? 'mission-control' : (_me?.displayAgentId ?? 'snippet'),
-      title: mc ? 'Mission Control' : (_title.isEmpty ? 'Session' : _title),
-      status: mc && !running ? 'idle' : status,
-      startedAt: DateTime.tryParse(s?.turnStartedAt ?? ''),
-      sub: sub,
-      onTitleTap: mc ? widget.onDeskInfo : null,
-      actions: !actions
-          ? null
-          : Row(mainAxisSize: MainAxisSize.min, children: [
-              if (mc)
-                _mcHeaderActions(s)
-              else ...[
-                _workspaceChips(s),
-                _sessionIconActions(s),
-              ],
-              if (toggle != null) ...[
-                Container(
-                    width: 1,
-                    height: 18,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    color: AppColors.lineStrong),
-                toggle,
-              ],
-            ]),
-    );
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      SessionStatusPill(
+          status: mc && !running ? 'idle' : status,
+          startedAt: DateTime.tryParse(s?.turnStartedAt ?? '')),
+      Container(
+          width: 1,
+          height: 18,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          color: AppColors.lineStrong),
+      if (actions) ...[
+        if (mc)
+          _mcHeaderActions(s)
+        else ...[
+          _workspaceChips(s),
+          const SizedBox(width: 4),
+          _sessionIconActions(s),
+        ],
+      ],
+      if (toggle != null) toggle,
+    ]);
   }
 
   Widget _workspaceChips(HarnessState? s) => Row(
