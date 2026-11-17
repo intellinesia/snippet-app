@@ -15,6 +15,10 @@ import '../widgets.dart';
 const String kSessionRailCollapsedPref = 'session_rail_collapsed';
 const double kSessionRailWidth = 288;
 
+/// Window-bar right padding plus the gap after its last tool, so the panel's
+/// right edge lines up with the toggle button above it.
+double get kSessionRailEdgeInset => S.of(10) + S.s2;
+
 /// Chat must keep at least this much room beside the rail.
 const double kSessionRailMinChat = 520;
 
@@ -225,7 +229,7 @@ class _SessionRailState extends State<SessionRail> {
         if (collapsed) return const SizedBox.shrink();
         return LayoutBuilder(
           builder: (_, box) => Padding(
-            padding: EdgeInsets.fromLTRB(24, 10, 0, S.s12),
+            padding: EdgeInsets.fromLTRB(24, 10, kSessionRailEdgeInset, S.s12),
             child: Align(
               alignment: Alignment.topCenter,
               child: _card(box.maxHeight - 10 - S.s12),

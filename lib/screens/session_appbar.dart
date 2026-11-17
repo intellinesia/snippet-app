@@ -1317,10 +1317,18 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         !widget.readOnly && _inboxAgentId(widget.sessionId) == null;
     if (kMobile || (!paired && !hasPanel)) return Expanded(child: child);
     // The transcript keeps a 20px gutter inside the pane.
-    return Flexible(
-        child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: (paired ? 680 : 760) + 40),
-            child: child));
+    // Chat centres in the space left of the panel; the panel itself hugs the edge under its toggle.
+    return Expanded(
+        child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+          Flexible(
+              child: ConstrainedBox(
+                  constraints:
+                      BoxConstraints(maxWidth: (paired ? 680 : 760) + 40),
+                  child: child)),
+        ]));
   }
 
   Widget _passThrough(Widget w) => w;
@@ -1345,7 +1353,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
             ),
           ),
           Positioned(
-            right: 16,
+            right: kSessionRailEdgeInset,
             top: 8,
             child: _sessionRail(s, floating: true),
           ),
