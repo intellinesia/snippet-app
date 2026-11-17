@@ -230,8 +230,9 @@ Widget toolDetailView(BuildContext context,
 
   final rows = <Widget>[];
   if (status == 'error' && errMsg != null) {
-    rows.add(_hscroll(Text(_displayText(errMsg).trimRight(),
-        style: _code(AppColors.danger))));
+    // Errors are sentences: wrap them so the whole message reads.
+    rows.add(Text(_displayText(errMsg).trim(),
+        style: sans(_bodySize, height: 1.45, color: AppColors.danger)));
     rows.add(SizedBox(height: S.s8));
   }
 
