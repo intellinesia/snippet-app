@@ -493,6 +493,8 @@ List<Widget> _bashView(Map? a, Map? d, {required bool running, String? error}) {
   final labelled = (a?['label']?.toString() ?? '').trim().isNotEmpty;
   final showCommand = cmd.isNotEmpty &&
       (labelled || running || cmd.contains('\n') || cmd.length > 60);
+  // The command wraps so it reads in full; output scrolls to keep columns.
+  final cmdSpans = <InlineSpan>[];
   final spans = <InlineSpan>[];
   void line(String text, Color color) {
     if (spans.isNotEmpty) spans.add(const TextSpan(text: '\n'));
@@ -502,32 +504,39 @@ List<Widget> _bashView(Map? a, Map? d, {required bool running, String? error}) {
   if (showCommand) {
     final cmdLines = cmd.split('\n');
     for (var i = 0; i < cmdLines.length; i++) {
-      if (spans.isNotEmpty) spans.add(const TextSpan(text: '\n'));
-      spans.add(TextSpan(
+      if (cmdSpans.isNotEmpty) cmdSpans.add(const TextSpan(text: '\n'));
+      cmdSpans.add(TextSpan(
           text: i == 0 ? '\$ ' : '  ', style: TextStyle(color: AppColors.fg4)));
-      spans.add(
+      cmdSpans.add(
           TextSpan(text: cmdLines[i], style: TextStyle(color: AppColors.fg1)));
     }
   }
   if (stdout.isNotEmpty) {
-    if (showCommand) spans.add(const TextSpan(text: '\n'));
     for (final l in stdout.split('\n')) {
       line(l, _errorLine.hasMatch(l) ? AppColors.danger : AppColors.fg2);
     }
   }
   if (stderr.isNotEmpty) {
-    if (showCommand || stdout.isNotEmpty) spans.add(const TextSpan(text: '\n'));
+    if (stdout.isNotEmpty) spans.add(const TextSpan(text: '\n'));
     for (final l in stderr.split('\n')) {
       line(l, AppColors.danger);
     }
   }
+  final command = cmdSpans.isEmpty
+      ? null
+      : Text.rich(TextSpan(style: _code(), children: cmdSpans));
   if (spans.isEmpty) {
     return [
-      Text(running ? 'No output yet' : 'No output',
-          style: sans(_bodySize, color: AppColors.fg3))
+      if (command != null) command,
+      if (command == null)
+        Text(running ? 'No output yet' : 'No output',
+            style: sans(_bodySize, color: AppColors.fg3))
     ];
   }
-  return [_hscroll(Text.rich(TextSpan(style: _code(), children: spans)))];
+  return [
+    if (command != null) ...[command, const SizedBox(height: 8)],
+    _hscroll(Text.rich(TextSpan(style: _code(), children: spans))),
+  ];
 }
 
 Widget _numberedCode(String text, {int start = 1}) {
@@ -959,7 +968,12 @@ List<_DLine> _diff(String aStr, String bStr) {
   final suffix = [
     for (final l in a.skip(a.length - tail)) _DLine(_DKind.ctx, l)
   ];
-  return [...prefix, ..._diffMiddle(a.sublist(head, a.length - tail), b.sublist(head, b.length - tail)), ...suffix];
+  return [
+    ...prefix,
+    ..._diffMiddle(
+        a.sublist(head, a.length - tail), b.sublist(head, b.length - tail)),
+    ...suffix
+  ];
 }
 
 List<_DLine> _diffMiddle(List<String> a, List<String> b) {

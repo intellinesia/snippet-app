@@ -389,7 +389,8 @@ class _DenseToolRowState extends State<DenseToolRow> {
       behavior: HitTestBehavior.opaque,
       onTap: canExpand ? _toggle : null,
       child: Container(
-        constraints: BoxConstraints(minHeight: kMobile ? (Grouped.compact ? 46 : 52) : 44),
+        constraints: BoxConstraints(
+            minHeight: kMobile ? (Grouped.compact ? 46 : 52) : 44),
         padding: EdgeInsets.symmetric(
             horizontal: Grouped.padX, vertical: kMobile ? 8 : 6),
         decoration: BoxDecoration(color: Grouped.row, borderRadius: radius),
@@ -417,7 +418,8 @@ class _DenseToolRowState extends State<DenseToolRow> {
                     ]),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(kMobile ? (Grouped.compact ? 14 : 15) : 13, height: 20 / 15),
+                    style: sans(kMobile ? (Grouped.compact ? 14 : 15) : 13,
+                        height: 20 / 15),
                   ),
                 ),
                 if (value != null) ...[SizedBox(width: S.s12), value],
@@ -482,12 +484,9 @@ class _StepDetailState extends State<_StepDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.of(10)),
-          decoration: BoxDecoration(
-            color: AppColors.bg,
-            borderRadius: BorderRadius.circular(12),
-          ),
+        // No inner box: the step's own row is the surface.
+        Padding(
+          padding: EdgeInsets.only(top: S.s2),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -523,24 +522,17 @@ class _StepDetailState extends State<_StepDetail> {
         ),
         if (meta.isNotEmpty || copy.isNotEmpty)
           Padding(
-            padding: EdgeInsets.only(top: S.s6, left: S.s2),
+            padding: EdgeInsets.only(top: S.s6),
             child: Row(children: [
-              if (meta.isNotEmpty) Text(meta.join(' · '), style: metaStyle),
-              if (meta.isNotEmpty && copy.isNotEmpty)
-                Text(' · ', style: metaStyle),
-              if (copy.isNotEmpty)
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    Clipboard.setData(ClipboardData(text: copy));
-                    toast(context, 'Copied');
-                  },
-                  child: Text('Copy',
-                      style: metaStyle.copyWith(
-                          decoration: TextDecoration.underline,
-                          decorationColor: AppColors.fg4)),
-                ),
+              if (meta.isNotEmpty)
+                Expanded(
+                    child: Text(meta.join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: metaStyle))
+              else
+                const Spacer(),
+              if (copy.isNotEmpty) _CopyIcon(text: copy),
             ]),
           ),
       ],
@@ -1263,4 +1255,43 @@ class _Rise extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A quiet copy affordance: an icon that turns into a tick once copied.
+class _CopyIcon extends StatefulWidget {
+  const _CopyIcon({required this.text});
+  final String text;
+  @override
+  State<_CopyIcon> createState() => _CopyIconState();
+}
+
+class _CopyIconState extends State<_CopyIcon> {
+  bool _done = false;
+
+  void _copy() {
+    HapticFeedback.selectionClick();
+    Clipboard.setData(ClipboardData(text: widget.text));
+    setState(() => _done = true);
+    Future.delayed(const Duration(milliseconds: 1400), () {
+      if (mounted) setState(() => _done = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: _done ? 'Copied' : 'Copy',
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _copy,
+          child: SizedBox(
+            width: 32,
+            height: 28,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: AppIcon(_done ? 'check' : 'copy',
+                  size: 15, color: _done ? AppColors.ok : AppColors.fg4),
+            ),
+          ),
+        ),
+      );
 }
