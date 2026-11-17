@@ -515,18 +515,30 @@ class _MainTabsStripState extends State<MainTabsStrip> {
             ),
           );
 
+      // Widths above are estimates; the tabs clip rather than overrun the bar,
+      // and + always stays visible.
       return Row(children: [
-        for (final t in mc) chip(t),
-        for (final t in visible) chip(t),
-        if (overflow)
-          Padding(
-            padding: const EdgeInsets.only(right: _gap),
-            child: _MoreButton(
-              key: _moreKey,
-              count: hidden.length,
-              onTap: () => _openMore(hidden),
-            ),
+        ConstrainedBox(
+          constraints: BoxConstraints(
+              maxWidth: (box.maxWidth - plusW).clamp(0.0, double.infinity)),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            child: Row(children: [
+              for (final t in mc) chip(t),
+              for (final t in visible) chip(t),
+              if (overflow)
+                Padding(
+                  padding: const EdgeInsets.only(right: _gap),
+                  child: _MoreButton(
+                    key: _moreKey,
+                    count: hidden.length,
+                    onTap: () => _openMore(hidden),
+                  ),
+                ),
+            ]),
           ),
+        ),
         Center(
           child: IconBtn(
             'plus',
