@@ -132,6 +132,7 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
 
   Future<void> _stopRecording() async {
     if (!_isRecording) return;
+    final take = _recordingTake;
     if (mounted) _setState(() => _isRecording = false);
     _amplitudeSub?.cancel();
     _amplitudeSub = null;
@@ -145,6 +146,8 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
         return;
       }
       final bytes = await _waitForRecordingFile(path);
+      // Discarded while the encoder finished: do not bring the take back.
+      if (take != _recordingTake) return;
       if (bytes == null || bytes.isEmpty) {
         await _discardRecording();
         _toast('The recording was empty.');
@@ -257,17 +260,32 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
     if (await _confirmRecording()) await _startRecording();
   }
 
+  // Clear the pill first; the recorder, player and file clean up behind it.
   Future<void> _discardRecording() async {
+    _recordingTake++;
     final path = _recordingPath;
-    if (_isRecording) {
-      try {
-        await _recorder.cancel();
-      } catch (_) {}
-    }
+    final wasRecording = _isRecording;
     _amplitudeSub?.cancel();
     _amplitudeSub = null;
     _recordingTimer?.cancel();
     _recordingTimer = null;
+    void clear() {
+      _isRecording = false;
+      _recordingPath = null;
+      _recordingBytes = null;
+      _recordingElapsed = Duration.zero;
+      _playbackPosition = Duration.zero;
+      _playbackDuration = Duration.zero;
+      _waveform.clear();
+      _isPlayingRecording = false;
+    }
+
+    mounted ? _setState(clear) : clear();
+    if (wasRecording) {
+      try {
+        await _recorder.cancel();
+      } catch (_) {}
+    }
     try {
       await _audioPlayer.stop();
     } catch (_) {}
@@ -276,18 +294,6 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
         final file = File(path);
         if (await file.exists()) await file.delete();
       } catch (_) {}
-    }
-    if (mounted) {
-      _setState(() {
-        _isRecording = false;
-        _recordingPath = null;
-        _recordingBytes = null;
-        _recordingElapsed = Duration.zero;
-        _playbackPosition = Duration.zero;
-        _playbackDuration = Duration.zero;
-        _waveform.clear();
-        _isPlayingRecording = false;
-      });
     }
   }
 

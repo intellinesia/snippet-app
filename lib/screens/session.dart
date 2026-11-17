@@ -426,6 +426,8 @@ class _SessionScreenState extends State<SessionScreen>
   String? _recordingPath;
   Uint8List? _recordingBytes;
   Duration _recordingElapsed = Duration.zero;
+  // Bumped on discard so a stop still finishing does not restore the take.
+  int _recordingTake = 0;
   final ValueNotifier<int> _recorderTick = ValueNotifier(0);
   Duration _playbackPosition = Duration.zero;
   Duration _playbackDuration = Duration.zero;

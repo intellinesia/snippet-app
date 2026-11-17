@@ -287,7 +287,8 @@ class ComposerVoicePill extends StatelessWidget {
         const SizedBox(width: 6),
       ],
       Text(time,
-          style: codeMono(13,
+          style: sans(14,
+              tabular: true,
               color: recording ? AppColors.fg1 : AppColors.fg3)),
     ]);
     return ComposerPillSurface(

@@ -52,6 +52,7 @@ class VoiceNoteController extends ChangeNotifier {
   bool _isPlayingRecording = false;
   final WaveBuffer _waveform = WaveBuffer();
   bool _disposed = false;
+  int _take = 0;
 
   bool get isRecording => _isRecording;
   bool get hasTake => _recordingPath != null || _recordingBytes != null;
@@ -229,6 +230,7 @@ class VoiceNoteController extends ChangeNotifier {
 
   Future<void> stop() async {
     if (!_isRecording) return;
+    final take = _take;
     _isRecording = false;
     _notify();
     _amplitudeSub?.cancel();
@@ -243,6 +245,8 @@ class VoiceNoteController extends ChangeNotifier {
         return;
       }
       final bytes = await _waitForRecordingFile(path);
+      // Discarded while the encoder finished: do not bring the take back.
+      if (take != _take) return;
       if (bytes == null || bytes.isEmpty) {
         await discard();
         _toast('The recording was empty.');
@@ -281,6 +285,7 @@ class VoiceNoteController extends ChangeNotifier {
   }
 
   Future<void> discard() async {
+    _take++;
     final path = _recordingPath;
     final wasRecording = _isRecording;
     _isRecording = false;
