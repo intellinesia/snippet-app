@@ -848,7 +848,7 @@ class SessionListRow extends StatelessWidget {
         : _HoverBuilder(
             builder: (hover) => HoverSurface(
                   selected: selecting ? checked : selected,
-                  radius: 10,
+                  radius: R.of(10),
                   selectedColor: C7.row,
                   hoverColor: C7.row.withValues(alpha: 0.5),
                   onTap: onTap,

@@ -656,11 +656,11 @@ class DeskRow extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 2),
           child: Material(
             color: selected ? C7.row : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(R.of(10)),
             child: InkWell(
               onTap: onTap,
               onLongPress: onLongPress,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(R.of(10)),
               hoverColor: C7.row.withValues(alpha: 0.5),
               child: SizedBox(
                 height: 44,

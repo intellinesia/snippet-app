@@ -1531,7 +1531,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 color: C7.row,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(R.of(10)),
               ),
               child: Row(children: [
                 _segCell(
@@ -1633,7 +1633,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: C7.row,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(R.of(10)),
       ),
       child: child,
     );

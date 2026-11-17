@@ -413,7 +413,7 @@ class _TaskBoardState extends State<TaskBoard> {
             padding: const EdgeInsets.symmetric(vertical: 4),
             decoration: BoxDecoration(
                 color: AppColors.surface2,
-                borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(R.of(10))),
             child: Column(children: rows),
           ),
         ]),
