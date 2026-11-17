@@ -817,15 +817,16 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   // context and Git actions live in the clickable repository bar above.
   // Set an autonomous /goal: the agent drives toward it on its own until it's
   // done, you cancel, or it's rate-limited. Sent as a LoopInput over the socket.
-  Future<void> _setGoal() async {
+  Future<void> _setGoal({String initial = ''}) async {
     final text = await promptText(context,
-        title: 'Set goal',
+        title: initial.isEmpty ? 'Set goal' : 'Edit goal',
+        initial: initial,
         hint: 'What should the agent work toward?',
         saveLabel: 'Set goal',
         minLines: 2,
         maxLines: 4);
     final t = text?.trim();
-    if (t == null || t.isEmpty) return;
+    if (t == null || t.isEmpty || t == initial.trim()) return;
     _toast('Submitting goal…');
     _send({'kind': 'set_goal', 'value': t});
     _toast('Goal set — the agent will drive toward it');
@@ -1417,10 +1418,16 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       onDelete: mc || widget.readOnly || _inboxAgentId(widget.sessionId) != null
           ? null
           : () => _deleteSession((f) => f()),
+      onSetGoal: mc || widget.readOnly ? null : _setGoal,
+      onEditGoal: mc || widget.readOnly || !goalOn
+          ? null
+          : () => _setGoal(initial: s!.goal!.text),
+      onResumeGoal: mc || widget.readOnly ? null : _resumeGoal,
+      onEndGoal: mc || widget.readOnly ? null : _cancelGoal,
       providers: _profileProviders,
       ownProfile: profile.isEmpty ? null : profile,
       ownAgent: _me?.displayAgentId ?? 'snippet',
-      headerActions: mc ? _mcHeaderActions(s) : _sessionIconActions(s),
+      headerActions: mc ? _mcHeaderActions(s) : null,
       headerChips: mc ? null : _workspaceChips(s),
     );
   }
@@ -1649,14 +1656,42 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         ],
       );
 
+  /// Opens the session panel, docked or floating, whichever fits.
+  void _showPanel() {
+    if (sessionRailCollapsed.value) setSessionRailCollapsed(false);
+    sessionRailFloating.value = true;
+  }
+
+  // Panel closed: the goal icon carries a dot while a goal runs and opens the
+  // panel, where the goal and every session action live.
   Widget _sessionIconActions(HarnessState? s) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconBtn('goal',
-              size: 30,
-              iconSize: 15,
-              tooltip: 'Goal',
-              onTap: () => _performMacAction('goal')),
+          Stack(clipBehavior: Clip.none, children: [
+            IconBtn('goal',
+                size: 30,
+                iconSize: 15,
+                tooltip: (s?.goal?.ongoing ?? false)
+                    ? 'Goal: ${s!.goal!.text}'
+                    : 'Set a goal',
+                onTap: () =>
+                    (s?.goal?.ongoing ?? false) ? _showPanel() : _setGoal()),
+            if (s?.goal?.ongoing ?? false)
+              Positioned(
+                right: 6,
+                top: 6,
+                child: IgnorePointer(
+                  child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                          color: s!.goal!.paused
+                              ? AppColors.fg3
+                              : AppColors.accent,
+                          shape: BoxShape.circle)),
+                ),
+              ),
+          ]),
           if (!_isMissionControl)
             IconBtn('terminal',
                 size: 30,
@@ -1664,14 +1699,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                 tooltip: 'Terminal',
                 active: _termOpen && _terms.isNotEmpty,
                 onTap: _openTerm),
-          widget.deskActions?.call() ??
-              Builder(
-                builder: (ctx) => IconBtn('more-horizontal',
-                    size: 30,
-                    iconSize: 15,
-                    tooltip: 'Session actions',
-                    onTap: () => _openActions(s, anchor: ctx)),
-              ),
+          if (widget.deskActions != null) widget.deskActions!(),
         ],
       );
 

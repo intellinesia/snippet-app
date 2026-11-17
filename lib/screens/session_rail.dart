@@ -79,6 +79,10 @@ class SessionRail extends StatefulWidget {
     this.onDeliverables,
     this.onRecurring,
     this.onDelete,
+    this.onSetGoal,
+    this.onEditGoal,
+    this.onResumeGoal,
+    this.onEndGoal,
     this.providers = const {},
     this.ownProfile,
     this.ownAgent,
@@ -116,6 +120,10 @@ class SessionRail extends StatefulWidget {
   final VoidCallback? onDeliverables;
   final VoidCallback? onRecurring;
   final VoidCallback? onDelete;
+  final VoidCallback? onSetGoal;
+  final VoidCallback? onEditGoal;
+  final VoidCallback? onResumeGoal;
+  final VoidCallback? onEndGoal;
 
   /// Profile name to provider, for the lane rows' marks.
   final Map<String, String> providers;
@@ -317,43 +325,216 @@ class _SessionRailState extends State<SessionRail> {
         onLabel: widget.onChanges);
     add('Usage', _usageRows(s), open: false);
     add('Next without you', _nextRows(), open: false);
-    final w = widget;
-    add(
-        'Session actions',
-        [
-          if (w.onHandOff != null)
-            _RailRow(
-                icon: 'users',
-                label: 'Hand off to another agent',
-                onTap: w.onHandOff),
-          if (w.onFork != null)
-            _RailRow(
-                icon: 'git-branch', label: 'Fork from here', onTap: w.onFork),
-          if (w.onCheckpoints != null)
-            _RailRow(
-                icon: 'history', label: 'Checkpoints', onTap: w.onCheckpoints),
-          if (w.onMemory != null)
-            _RailRow(icon: 'brain', label: 'Memory', onTap: w.onMemory),
-          if (w.onDeliverables != null)
-            _RailRow(
-                icon: 'folder', label: 'Shared files', onTap: w.onDeliverables),
-          if (w.onProcesses != null)
-            _RailRow(
-                icon: 'activity', label: 'Processes', onTap: w.onProcesses),
-          if (w.onRecurring != null)
-            _RailRow(icon: 'repeat', label: 'Scheduled', onTap: w.onRecurring),
-          if (w.onCompact != null)
-            _RailRow(
-                icon: 'minimize', label: 'Compact history', onTap: w.onCompact),
-          if (w.onDelete != null)
-            _RailRow(
-                icon: 'trash',
-                label: 'Delete session',
-                danger: true,
-                onTap: w.onDelete),
-        ],
-        open: false);
     return out;
+  }
+
+  /// The goal sits at the top of the panel: its text, its state and what you
+  /// can do to it. The daemon has no pause; interrupting the run pauses it.
+  Widget _goalCard() {
+    final g = widget.state?.goal;
+    if (g == null || !g.ongoing) {
+      if (widget.onSetGoal == null) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+        child: InkWell(
+          onTap: widget.onSetGoal,
+          borderRadius: BorderRadius.circular(R.of(14)),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(14, 11, 12, 11),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(R.of(14)),
+              border: Border.all(color: AppColors.lineStrong),
+            ),
+            child: Row(children: [
+              AppIcon('goal', size: 15, color: AppColors.fg4),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Set a goal', style: sans(13, color: AppColors.fg2)),
+                      const SizedBox(height: 2),
+                      Text('Works toward it without you',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(11.5, color: AppColors.fg4)),
+                    ]),
+              ),
+              AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+            ]),
+          ),
+        ),
+      );
+    }
+    final paused = g.paused;
+    final turns = g.autonomousTurns;
+    final state = paused
+        ? 'Paused'
+        : turns > 0
+            ? 'Active · $turns turn${turns == 1 ? '' : 's'}'
+            : 'Active';
+    final tone = paused ? AppColors.fg3 : AppColors.accent;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(R.of(14)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          AppIcon('goal', size: 12, color: AppColors.fg4),
+          const SizedBox(width: 6),
+          Text('Goal', style: sans(11.5, color: AppColors.fg4)),
+          const SizedBox(width: 8),
+          Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: tone, shape: BoxShape.circle)),
+          const SizedBox(width: 5),
+          Text(state, style: sans(11.5, color: tone, tabular: true)),
+        ]),
+        const SizedBox(height: 8),
+        Text(g.text,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: sans(13.5, height: 1.45, color: AppColors.fg1)),
+        const SizedBox(height: 10),
+        Row(children: [
+          if (paused && widget.onResumeGoal != null) ...[
+            _goalBtn('play', 'Resume', widget.onResumeGoal),
+            const SizedBox(width: 6),
+          ],
+          if (widget.onEditGoal != null) ...[
+            _goalBtn('edit', 'Edit', widget.onEditGoal),
+            const SizedBox(width: 6),
+          ],
+          if (widget.onEndGoal != null)
+            _goalBtn('check', 'End goal', widget.onEndGoal, quiet: true),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _goalBtn(String icon, String label, VoidCallback? onTap,
+      {bool quiet = false}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(R.of(9)),
+      child: Container(
+        height: 28,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: quiet ? null : AppColors.surface3,
+          borderRadius: BorderRadius.circular(R.of(9)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          AppIcon(icon, size: 12, color: AppColors.fg3),
+          const SizedBox(width: 6),
+          Text(label, style: sans(12, color: AppColors.fg2)),
+        ]),
+      ),
+    );
+  }
+
+  /// The common session actions one click away; the rest behind More.
+  Widget _actionStrip() {
+    final w = widget;
+    final cells = <(String, String, VoidCallback?)>[
+      if (w.onHandOff != null) ('users', 'Hand off', w.onHandOff),
+      if (w.onFork != null) ('git-branch', 'Fork', w.onFork),
+      if (w.onCheckpoints != null) ('history', 'Rewind', w.onCheckpoints),
+      if (w.onCompact != null) ('minimize', 'Compact', w.onCompact),
+    ];
+    final more = <(String, String, VoidCallback?)>[
+      if (w.onMemory != null) ('brain', 'Memory', w.onMemory),
+      if (w.onDeliverables != null)
+        ('folder', 'Shared files', w.onDeliverables),
+      if (w.onProcesses != null) ('activity', 'Processes', w.onProcesses),
+      if (w.onRecurring != null) ('repeat', 'Scheduled', w.onRecurring),
+      if (w.onPullRequests != null)
+        ('pull-request', 'Pull requests', w.onPullRequests),
+    ];
+    if (cells.isEmpty && more.isEmpty && w.onDelete == null) {
+      return const SizedBox.shrink();
+    }
+    Widget cell(String icon, String label, void Function(BuildContext) tap) =>
+        Expanded(
+          child: Builder(
+            builder: (ctx) => Material(
+              color: AppColors.surface2,
+              child: InkWell(
+                onTap: () => tap(ctx),
+                hoverColor: AppColors.surface3,
+                child: SizedBox(
+                  height: 56,
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        AppIcon(icon, size: 15, color: AppColors.fg3),
+                        const SizedBox(height: 5),
+                        Text(label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(11, color: AppColors.fg3)),
+                      ]),
+                ),
+              ),
+            ),
+          ),
+        );
+    final row = <Widget>[];
+    for (final c in cells) {
+      if (row.isNotEmpty) row.add(const SizedBox(width: 2));
+      row.add(cell(c.$1, c.$2, (_) => c.$3?.call()));
+    }
+    if (more.isNotEmpty || w.onDelete != null) {
+      if (row.isNotEmpty) row.add(const SizedBox(width: 2));
+      row.add(cell('more-horizontal', 'More', (ctx) => _openMore(ctx, more)));
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(R.of(12)),
+        child: Row(children: row),
+      ),
+    );
+  }
+
+  void _openMore(
+      BuildContext anchor, List<(String, String, VoidCallback?)> items) {
+    void run(VoidCallback? f) {
+      Navigator.of(anchor, rootNavigator: true).pop();
+      f?.call();
+    }
+
+    showAnchoredPanel<void>(anchor,
+        width: 236,
+        maxHeight: 360,
+        alignRight: true,
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            for (final i in items)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child:
+                    _RailRow(icon: i.$1, label: i.$2, onTap: () => run(i.$3)),
+              ),
+            if (widget.onDelete != null) ...[
+              if (items.isNotEmpty)
+                Divider(height: 9, thickness: 1, color: AppColors.line),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: _RailRow(
+                    icon: 'trash',
+                    label: 'Delete session',
+                    danger: true,
+                    onTap: () => run(widget.onDelete)),
+              ),
+            ],
+          ]),
+        ));
   }
 
   Widget _header() {
@@ -369,7 +550,13 @@ class _SessionRailState extends State<SessionRail> {
             child: Text(mc ? 'Mission Control' : 'Session',
                 style: sans(13, weight: W.label, color: AppColors.fg1)),
           ),
-          if (widget.headerActions != null) widget.headerActions!,
+          if (mc && widget.headerActions != null) widget.headerActions!,
+          if (!mc && widget.onShell != null)
+            IconBtn('terminal',
+                size: 30,
+                iconSize: 15,
+                tooltip: 'Terminal',
+                onTap: widget.onShell),
           if (widget.floating)
             IconBtn('x',
                 size: 30,
@@ -378,6 +565,8 @@ class _SessionRailState extends State<SessionRail> {
                 onTap: () => sessionRailFloating.value = false),
         ]),
       ),
+      if (!mc) _goalCard(),
+      if (!mc) _actionStrip(),
       if (widget.headerChips != null)
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 2),
@@ -589,17 +778,8 @@ class _SessionRailState extends State<SessionRail> {
   }
 
   List<Widget> _nextRows() {
-    final goal = widget.state?.goal;
-    final goalOn = goal?.ongoing ?? false;
     final wake = _wake;
     return [
-      if (goalOn)
-        _RailRow(
-          icon: 'goal',
-          label: 'Goal',
-          value: goal!.paused ? 'Paused' : 'Working',
-          onTap: widget.onGoal,
-        ),
       if (_autonomous != null && widget.onAutonomy != null)
         _RailRow(
             icon: 'activity',
