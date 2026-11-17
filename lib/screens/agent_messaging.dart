@@ -1359,7 +1359,12 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     // The local human is the only `human` actor, so everything else is the peer.
     final mine = e.actorKind == 'human';
     final at = _eventTime(e);
-    final answerLine = questionAnswerSystemLine(e);
+    // A restart notice is the harness, not the agent: a system line.
+    final answerLine = !mine &&
+            e.body.trim().startsWith('Snippet restarted while') &&
+            e.body.trim().endsWith('it will pick this up.')
+        ? 'Snippet restarted mid-reply; it will pick this up'
+        : questionAnswerSystemLine(e);
     if (answerLine != null) {
       return KeyedSubtree(
         key: e.eventId.isEmpty ? null : _keyForEvent(e.eventId),

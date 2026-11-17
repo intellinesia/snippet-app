@@ -90,6 +90,7 @@ import 'mission_control/widgets/autonomy_panel.dart';
 import 'mission_control/mission_control_state.dart'
     show
         isDedicatedMcSession,
+        parseTaskOffer,
         queuedEnvelopeLabel,
         parseMissionEnvelope,
         parseAutonomousRound,

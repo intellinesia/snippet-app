@@ -287,6 +287,22 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           }
           final direct = parseDirectMessage(text);
           if (direct != null) {
+            // Your own plain message reads as your bubble, not a card.
+            if (direct.fromLabel == 'you' &&
+                !direct.isReply &&
+                !direct.urgent &&
+                parseTaskOffer(direct.body) == null &&
+                direct.body.trim().isNotEmpty) {
+              addEvent(
+                  key,
+                  Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Bubble(
+                          mine: true,
+                          text: direct.body.trim(),
+                          client: widget.client)));
+              break;
+            }
             addEvent(key, DirectMessageCard(message: direct));
             break;
           }
@@ -631,6 +647,25 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           endTools(key);
           // Don't render "interrupted" decisions — just noise in the chat.
           if (_s(e['step']) == 'interrupted') break;
+          // One quiet line per run of restart notices.
+          if (_isRestartNote(_s(e['reasoning']))) {
+            var prev = idx - 1;
+            while (prev >= 0 &&
+                const {'model_error', 'status'}
+                    .contains(events[prev]['kind'])) {
+              prev--;
+            }
+            if (prev >= 0 &&
+                events[prev]['kind'] == 'system_decision' &&
+                _isRestartNote(_s(events[prev]['reasoning']))) {
+              break;
+            }
+            addEvent(
+                key,
+                const NoteLine('Snippet restarted mid-turn; the next message '
+                    'picks it up'));
+            break;
+          }
           addEvent(
               key,
               SystemRow(
@@ -1236,6 +1271,8 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
     );
   }
 }
+
+bool _isRestartNote(String s) => s.trim().startsWith('Snippet restarted while');
 
 /// The gap between any two transcript items.
 double get transcriptGap => kMobile ? 12 : 14;
