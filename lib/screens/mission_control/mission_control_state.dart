@@ -275,7 +275,8 @@ class QuietWakeRun {
 }
 
 final _quietOpening = RegExp(
-  r'^(nothing|still quiet|quiet|same quiet|no changes?)\b',
+  r'^(nothing|still quiet|quiet|same quiet|no changes?|no action|'
+  r'staying quiet|still waiting)\b',
   caseSensitive: false,
 );
 final _needsAttention = RegExp(

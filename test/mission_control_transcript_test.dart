@@ -4,10 +4,12 @@ import 'package:snippet/screens/mission_control/mission_control_state.dart';
 import 'package:snippet/screens/session_coordination_cards.dart';
 import 'package:snippet/theme.dart';
 
-Map<String, dynamic> _input(String text) => {'kind': 'user_input', 'text': text};
-Map<String, dynamic> _reply(String text) => {'kind': 'assistant_text', 'text': text};
-Map<String, dynamic> _wake(String time, {String extra = ''}) =>
-    _input('[automated_wake]\ntime: Thu 05 Nov $time (UTC+05:30)\nlast wake: 1h ago\n$extra');
+Map<String, dynamic> _input(String text) =>
+    {'kind': 'user_input', 'text': text};
+Map<String, dynamic> _reply(String text) =>
+    {'kind': 'assistant_text', 'text': text};
+Map<String, dynamic> _wake(String time, {String extra = ''}) => _input(
+    '[automated_wake]\ntime: Thu 05 Nov $time (UTC+05:30)\nlast wake: 1h ago\n$extra');
 
 String _report(String status, String summary, {String id = 'task-1'}) =>
     '[mission_task_report]\ntask_id: $id\ntitle: Quarry post\nstatus: $status\n'
@@ -116,21 +118,26 @@ void main() {
     });
 
     test('an idle stall reads plainly and keeps the last message', () {
-      final e = parseMissionEnvelope(_report('stalled',
+      final e = parseMissionEnvelope(_report(
+          'stalled',
           'stalled 18 min: no progress since 2026-11-02T14:00:48.182818546+00:00; '
-          'its session went idle without reporting; its last message was:\n'
-          'The shim is hung.\nIf that asks for something, answer_worker (session_id x) '
-          'if you can settle it, otherwise ask the user; if it just stopped, retry_mission_task.'))!;
-      expect(e.summary,
+              'its session went idle without reporting; its last message was:\n'
+              'The shim is hung.\nIf that asks for something, answer_worker (session_id x) '
+              'if you can settle it, otherwise ask the user; if it just stopped, retry_mission_task.'))!;
+      expect(
+          e.summary,
           'No progress for 18 min. Its session went idle without reporting.\n\n'
           'Its last message:\n\nThe shim is hung.');
     });
 
-    test('a waiting stall drops the instructions meant for Mission Control', () {
-      final e = parseMissionEnvelope(_report('stalled',
+    test('a waiting stall drops the instructions meant for Mission Control',
+        () {
+      final e = parseMissionEnvelope(_report(
+          'stalled',
           'stalled 20 min: no progress since 2026-11-04T04:52:56+00:00; its session is '
-          'waiting_for_input; check it with inspect_session, then retry_mission_task, answer it or cancel.'))!;
-      expect(e.summary, 'No progress for 20 min. Its session is waiting for input.');
+              'waiting_for_input; check it with inspect_session, then retry_mission_task, answer it or cancel.'))!;
+      expect(e.summary,
+          'No progress for 20 min. Its session is waiting for input.');
     });
   });
 
@@ -144,7 +151,8 @@ void main() {
     expect(stale, {0, 2});
   });
 
-  testWidgets('the quiet row summarises and opens to the replies', (tester) async {
+  testWidgets('the quiet row summarises and opens to the replies',
+      (tester) async {
     await tester.pumpWidget(MaterialApp(
       theme: buildAppTheme(),
       home: const Scaffold(
@@ -156,12 +164,10 @@ void main() {
         ),
       ),
     ));
-    expect(find.text('Woke 2 times \u00b7 nothing new', findRichText: true),
-        findsOneWidget);
-    expect(find.text('Thu 09:58 to 18:58'), findsOneWidget);
+    expect(find.text('2 quiet wakes'), findsOneWidget);
+    expect(find.text('09:58 to 18:58'), findsOneWidget);
     expect(find.text('Still quiet.'), findsNothing);
-    await tester.tap(
-        find.text('Woke 2 times \u00b7 nothing new', findRichText: true));
+    await tester.tap(find.text('2 quiet wakes'));
     await tester.pump();
     expect(find.text('Still quiet.'), findsOneWidget);
   });

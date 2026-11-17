@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
@@ -30,6 +31,10 @@ final ValueNotifier<bool> sessionRailCollapsed = ValueNotifier<bool>(false);
 
 /// The panel as a floating card, for windows too narrow to dock it.
 final ValueNotifier<bool> sessionRailFloating = ValueNotifier<bool>(false);
+
+/// Set from outside the panel (the bar's goal icon) to open the goal editor
+/// in place once the panel is showing; the panel clears it.
+final ValueNotifier<bool> sessionGoalEditRequest = ValueNotifier<bool>(false);
 bool _railPrefLoaded = false;
 
 Future<void> loadSessionRailPref() async {
@@ -79,8 +84,8 @@ class SessionRail extends StatefulWidget {
     this.onDeliverables,
     this.onRecurring,
     this.onDelete,
-    this.onSetGoal,
-    this.onEditGoal,
+    this.onAnswer,
+    this.onSubmitGoal,
     this.onResumeGoal,
     this.onEndGoal,
     this.providers = const {},
@@ -120,8 +125,12 @@ class SessionRail extends StatefulWidget {
   final VoidCallback? onDeliverables;
   final VoidCallback? onRecurring;
   final VoidCallback? onDelete;
-  final VoidCallback? onSetGoal;
-  final VoidCallback? onEditGoal;
+
+  /// Sends the answer to Mission Control's pending question.
+  final void Function(String answer)? onAnswer;
+
+  /// Sets or replaces the goal; the editor lives inside the goal card.
+  final ValueChanged<String>? onSubmitGoal;
   final VoidCallback? onResumeGoal;
   final VoidCallback? onEndGoal;
 
@@ -150,11 +159,50 @@ class _SessionRailState extends State<SessionRail> {
   int _gen = 0;
   int _liveGen = 0;
 
+  bool _editingGoal = false;
+  final _goalText = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     loadSessionRailPref();
     _load();
+    sessionGoalEditRequest.addListener(_onGoalEditRequest);
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => mounted ? _onGoalEditRequest() : null);
+  }
+
+  @override
+  void dispose() {
+    sessionGoalEditRequest.removeListener(_onGoalEditRequest);
+    _goalText.dispose();
+    super.dispose();
+  }
+
+  void _onGoalEditRequest() {
+    if (!sessionGoalEditRequest.value || widget.onSubmitGoal == null) return;
+    sessionGoalEditRequest.value = false;
+    _startGoalEdit();
+  }
+
+  void _startGoalEdit() {
+    final g = widget.state?.goal;
+    final initial = g != null && g.ongoing ? g.text : '';
+    _goalText.text = initial;
+    _goalText.selection =
+        TextSelection(baseOffset: 0, extentOffset: initial.length);
+    setState(() => _editingGoal = true);
+  }
+
+  void _cancelGoalEdit() => setState(() => _editingGoal = false);
+
+  void _submitGoal() {
+    final t = _goalText.text.trim();
+    if (t.isEmpty) return;
+    final g = widget.state?.goal;
+    final current = g != null && g.ongoing ? g.text.trim() : '';
+    if (t != current) widget.onSubmitGoal?.call(t);
+    setState(() => _editingGoal = false);
   }
 
   @override
@@ -297,12 +345,15 @@ class _SessionRailState extends State<SessionRail> {
 
     if (mc) {
       final n = _tasks.length;
-      add('In flight', _flightRows(),
-          meta: n == 0 ? null : '$n task${n == 1 ? '' : 's'}');
-      add('Autonomy', _autonomyRows());
-      add('Automated wakes', _wakeRows(),
-          link: 'Edit', onLabel: widget.onAutonomy);
-      add('Model', _modelRows(s));
+      add('In flight', _flightRows(), meta: n == 0 ? null : '$n');
+      add('Next', _wakeRows());
+      add('Autonomy', _autonomyRows(), open: false);
+      final ctx = _contextPct(s);
+      add('Model', _modelRows(s),
+          open: false,
+          meta: ctx == null
+              ? widget.profileLabel
+              : '${widget.profileLabel} · ${ctx.round()}%');
       return out;
     }
     final plan = _plan(s);
@@ -332,12 +383,15 @@ class _SessionRailState extends State<SessionRail> {
   /// can do to it. The daemon has no pause; interrupting the run pauses it.
   Widget _goalCard() {
     final g = widget.state?.goal;
+    if (_editingGoal && widget.onSubmitGoal != null) {
+      return _goalEditor(g != null && g.ongoing);
+    }
     if (g == null || !g.ongoing) {
-      if (widget.onSetGoal == null) return const SizedBox.shrink();
+      if (widget.onSubmitGoal == null) return const SizedBox.shrink();
       return Padding(
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
         child: InkWell(
-          onTap: widget.onSetGoal,
+          onTap: _startGoalEdit,
           borderRadius: BorderRadius.circular(R.of(14)),
           child: Container(
             padding: const EdgeInsets.fromLTRB(14, 11, 12, 11),
@@ -405,12 +459,70 @@ class _SessionRailState extends State<SessionRail> {
             _goalBtn('play', 'Resume', widget.onResumeGoal),
             const SizedBox(width: 6),
           ],
-          if (widget.onEditGoal != null) ...[
-            _goalBtn('edit', 'Edit', widget.onEditGoal),
+          if (widget.onSubmitGoal != null) ...[
+            _goalBtn('edit', 'Edit', _startGoalEdit),
             const SizedBox(width: 6),
           ],
           if (widget.onEndGoal != null)
             _goalBtn('check', 'End goal', widget.onEndGoal, quiet: true),
+        ]),
+      ]),
+    );
+  }
+
+  /// The goal is written where it will live: the card becomes the editor.
+  /// Ctrl or Cmd+Enter sets it, Escape cancels.
+  Widget _goalEditor(bool replacing) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(R.of(14)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          AppIcon('goal', size: 12, color: AppColors.fg4),
+          const SizedBox(width: 6),
+          Text(replacing ? 'Edit goal' : 'New goal',
+              style: sans(11.5, color: AppColors.fg4)),
+        ]),
+        const SizedBox(height: 8),
+        CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.escape): _cancelGoalEdit,
+            const SingleActivator(LogicalKeyboardKey.enter, control: true):
+                _submitGoal,
+            const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+                _submitGoal,
+          },
+          child: AppField(
+            controller: _goalText,
+            hint: 'What should the agent work toward?',
+            autofocus: true,
+            minLines: 3,
+            maxLines: 6,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+            replacing
+                ? 'Replaces the current goal.'
+                : 'Works toward it without you until done or ended.',
+            style: sans(11.5, color: AppColors.fg4)),
+        const SizedBox(height: 10),
+        Row(children: [
+          const Spacer(),
+          Btn('Cancel',
+              small: true, variant: BtnVariant.surface, onTap: _cancelGoalEdit),
+          const SizedBox(width: 6),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _goalText,
+            builder: (_, v, __) => Btn(replacing ? 'Save' : 'Set goal',
+                small: true,
+                disabled: v.text.trim().isEmpty,
+                onTap: _submitGoal),
+          ),
         ]),
       ]),
     );
@@ -537,6 +649,98 @@ class _SessionRailState extends State<SessionRail> {
         ));
   }
 
+  /// A single pending question, with its options when it has them.
+  Widget _needsYouCard() {
+    final qs = widget.state?.pendingQuestion?['questions'];
+    if (qs is! List || qs.isEmpty || qs.first is! Map) {
+      return const SizedBox.shrink();
+    }
+    final q = qs.first as Map;
+    final text = '${q['text'] ?? ''}'.trim();
+    if (text.isEmpty) return const SizedBox.shrink();
+    final ak = q['answer_kind'] is Map ? q['answer_kind'] as Map : const {};
+    final kind = '${ak['kind'] ?? 'free_text'}';
+    String label(Object? v) => '${v ?? ''}'.trim();
+    final options = qs.length > 1
+        ? <String>[]
+        : switch (kind) {
+            'yes_no' => ['Yes', 'No'],
+            'confirm' => [
+                label(ak['confirm_label']).isEmpty
+                    ? 'Confirm'
+                    : label(ak['confirm_label']),
+                label(ak['cancel_label']).isEmpty
+                    ? 'Cancel'
+                    : label(ak['cancel_label']),
+              ],
+            'single_choice' => [
+                for (final c
+                    in (ak['choices'] as List? ?? const []).whereType<Map>())
+                  if (label(c['label']).isNotEmpty) label(c['label'])
+              ],
+            _ => <String>[],
+          };
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: AppColors.run.withValues(alpha: 0.08),
+        border: Border.all(color: AppColors.run.withValues(alpha: 0.25)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          _Dot(AppColors.run),
+          const SizedBox(width: 6),
+          Text('Needs you', style: sans(11.5, color: AppColors.run)),
+        ]),
+        const SizedBox(height: 6),
+        Text(text,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: sans(13.5, color: AppColors.fg1)),
+        if (options.isNotEmpty && widget.onAnswer != null) ...[
+          const SizedBox(height: 10),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final o in options)
+              InkWell(
+                onTap: () => widget.onAnswer!('$text\n→ $o'),
+                borderRadius: BorderRadius.circular(9),
+                child: Container(
+                  height: 28,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                      color: AppColors.surface3,
+                      borderRadius: BorderRadius.circular(9)),
+                  child: Text(o, style: sans(12, color: AppColors.fg1)),
+                ),
+              ),
+          ]),
+        ],
+      ]),
+    );
+  }
+
+  double? _contextPct(HarnessState? s) => s != null &&
+          s.contextWindow > 0 &&
+          s.lastPromptTokens > 0
+      ? (s.lastPromptTokens / s.contextWindow * 100).clamp(0, 100).toDouble()
+      : null;
+
+  String _nextWakeText(WakeSchedule w) {
+    if (!w.enabled) return 'Paused';
+    if (w.queued) return 'Queued';
+    if (w.nextRunAt <= 0) return w.scheduleText;
+    final d = DateTime.fromMillisecondsSinceEpoch(w.nextRunAt * 1000);
+    final n = DateTime.now();
+    final hm =
+        '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+    return d.year == n.year && d.month == n.month && d.day == n.day
+        ? hm
+        : '${d.day}/${d.month} $hm';
+  }
+
   Widget _header() {
     final mc = widget.isMissionControl;
     final t = _tasks.where((t) => t.sessionId == widget.sessionId).firstOrNull;
@@ -565,6 +769,7 @@ class _SessionRailState extends State<SessionRail> {
                 onTap: () => sessionRailFloating.value = false),
         ]),
       ),
+      if (mc) _needsYouCard(),
       if (!mc) _goalCard(),
       if (!mc) _actionStrip(),
       if (widget.headerChips != null)
@@ -863,24 +1068,24 @@ class _SessionRailState extends State<SessionRail> {
   List<Widget> _wakeRows() {
     final wake = _wake;
     return [
+      _RailRow(
+        icon: 'scheduled',
+        label: wake?.scheduleText.isNotEmpty == true
+            ? wake!.scheduleText
+            : 'Next wake',
+        value: !_wakeKnown
+            ? null
+            : wake == null
+                ? 'None'
+                : _nextWakeText(wake),
+        onTap: widget.onWakes,
+      ),
       if (_autonomous != null)
         _RailRow(
             icon: 'activity',
             label: 'Automated wakes',
             value: _autonomous! ? 'On' : 'Off',
             onTap: widget.onAutonomy),
-      _RailRow(
-        icon: 'scheduled',
-        label: 'Wakes',
-        value: !_wakeKnown
-            ? null
-            : wake == null
-                ? 'None'
-                : wake.enabled
-                    ? wake.scheduleText
-                    : 'Paused',
-        onTap: widget.onWakes,
-      ),
     ];
   }
 

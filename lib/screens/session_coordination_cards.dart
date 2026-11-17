@@ -528,7 +528,8 @@ class BoardMessageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final from = message.fromId.trim().isEmpty ? 'Someone' : _who(message.fromId);
+    final from =
+        message.fromId.trim().isEmpty ? 'Someone' : _who(message.fromId);
     return _ThreadCard(
       icon: 'coordination',
       tone: Tone.neutral,
@@ -690,15 +691,16 @@ class QuietWakesRow extends StatefulWidget {
 class _QuietWakesRowState extends State<QuietWakesRow> {
   bool _open = false;
 
+  // The day is dropped when the run stays within one day.
   String get _span {
     final wakes = widget.run.wakes;
     final first = _roundTime(wakes.first.time);
-    if (wakes.length == 1) return first;
+    final firstTime = first.split(' ').last;
+    if (wakes.length == 1) return firstTime;
     final last = _roundTime(wakes.last.time);
-    final firstDay = first.split(' ').first;
-    return last.startsWith('$firstDay ')
-        ? '$first to ${last.substring(firstDay.length + 1)}'
-        : '$first to $last';
+    final lastTime = last.split(' ').last;
+    final sameDay = first.split(' ').first == last.split(' ').first;
+    return sameDay ? '$firstTime to $lastTime' : '$first to $last';
   }
 
   @override
@@ -708,13 +710,35 @@ class _QuietWakesRowState extends State<QuietWakesRow> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SignalRow(
-          icon: 'clock',
-          text: wakes.length == 1
-              ? 'Woke on schedule \u00b7 nothing new'
-              : 'Woke ${wakes.length} times \u00b7 nothing new',
-          time: _span,
+        InkWell(
           onTap: () => setState(() => _open = !_open),
+          borderRadius: BorderRadius.circular(R.md),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 36),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+                color: AppColors.surface2,
+                borderRadius: BorderRadius.circular(R.md)),
+            child: Row(children: [
+              AnimatedRotation(
+                turns: _open ? 0.25 : 0,
+                duration: Motion.fast,
+                child: AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+              ),
+              const SizedBox(width: 8),
+              Text('${wakes.length} quiet wake${wakes.length == 1 ? '' : 's'}',
+                  style: sans(meta, weight: W.label, color: AppColors.fg2)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('nothing new, nothing to action',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(meta, color: AppColors.fg4)),
+              ),
+              const SizedBox(width: 8),
+              Text(_span, style: mono(meta - 1, color: AppColors.fg4)),
+            ]),
+          ),
         ),
         if (_open)
           for (final wake in wakes)
@@ -1134,7 +1158,7 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
 
     final radius = BorderRadius.circular(R.of(14));
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: S.s4),
+      padding: EdgeInsets.zero,
       child: Material(
         color: AppColors.surface1,
         shape: RoundedRectangleBorder(
@@ -1228,7 +1252,7 @@ class _AgentBubble extends StatelessWidget {
       ],
     );
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: S.s4),
+      padding: EdgeInsets.zero,
       child: LayoutBuilder(builder: (context, box) {
         final cap = (box.maxWidth.isFinite ? box.maxWidth * 0.8 : 560.0)
             .clamp(0.0, 600.0);

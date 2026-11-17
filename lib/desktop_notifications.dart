@@ -430,6 +430,12 @@ class _NotificationBellState extends State<NotificationBell> {
     if (box == null) return;
     final origin = box.localToGlobal(Offset.zero);
     final size = MediaQuery.of(context).size;
+    // Open from the bell's own edge: left-aligned when it sits in the left
+    // half (the sidebar), right-aligned otherwise, always inside the window.
+    final w = 420.0.clamp(240.0, size.width - 20);
+    final fromLeft = origin.dx + box.size.width / 2 < size.width / 2;
+    final left = (fromLeft ? origin.dx : origin.dx + box.size.width - w)
+        .clamp(10.0, (size.width - w - 10).clamp(10.0, size.width));
     setState(() => _open = true);
     await showGeneralDialog(
       context: context,
@@ -439,9 +445,9 @@ class _NotificationBellState extends State<NotificationBell> {
       transitionDuration: Motion.press,
       pageBuilder: (ctx, _, __) => Stack(children: [
         Positioned(
-          right: (size.width - origin.dx - box.size.width).clamp(10.0, 600.0),
+          left: left,
           top: origin.dy + box.size.height + 4,
-          width: 420,
+          width: w,
           child: _BellPopover(onClose: () => Navigator.of(ctx).pop()),
         ),
       ]),

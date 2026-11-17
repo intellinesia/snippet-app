@@ -832,6 +832,21 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     _toast('Goal set — the agent will drive toward it');
   }
 
+  void _submitGoal(String t) {
+    _send({'kind': 'set_goal', 'value': t});
+    _toast('Goal set — the agent will drive toward it');
+  }
+
+  /// Desktop writes the goal inside the panel; the phone keeps its sheet.
+  void _editGoal() {
+    if (kMobile) {
+      _setGoal();
+      return;
+    }
+    sessionGoalEditRequest.value = true;
+    _showPanel();
+  }
+
   void _resumeGoal() {
     _send({'kind': 'resume_goal'});
     _toast('Resuming the goal');
@@ -945,7 +960,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         } else if (s?.goal?.ongoing ?? false) {
           _cancelGoal();
         } else {
-          _setGoal();
+          _editGoal();
         }
         return;
       case 'resume_goal':
@@ -1390,6 +1405,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         }
       },
       onCycleResume: _cycleResumeMode,
+      onAnswer:
+          mc ? (v) => _sendDecision({'kind': 'answer', 'value': v}) : null,
       onAutonomy: mc ? _openAutonomy : null,
       onChanges: mc
           ? null
@@ -1418,10 +1435,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       onDelete: mc || widget.readOnly || _inboxAgentId(widget.sessionId) != null
           ? null
           : () => _deleteSession((f) => f()),
-      onSetGoal: mc || widget.readOnly ? null : _setGoal,
-      onEditGoal: mc || widget.readOnly || !goalOn
-          ? null
-          : () => _setGoal(initial: s!.goal!.text),
+      onSubmitGoal: mc || widget.readOnly ? null : _submitGoal,
       onResumeGoal: mc || widget.readOnly ? null : _resumeGoal,
       onEndGoal: mc || widget.readOnly ? null : _cancelGoal,
       providers: _profileProviders,
@@ -1675,7 +1689,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                     ? 'Goal: ${s!.goal!.text}'
                     : 'Set a goal',
                 onTap: () =>
-                    (s?.goal?.ongoing ?? false) ? _showPanel() : _setGoal()),
+                    (s?.goal?.ongoing ?? false) ? _showPanel() : _editGoal()),
             if (s?.goal?.ongoing ?? false)
               Positioned(
                 right: 6,

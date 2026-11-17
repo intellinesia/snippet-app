@@ -31,9 +31,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           t.readout!,
           origin == null ? null : _macSessionStatuses[origin]?.state,
           origin == null ? null : _macSessionControls[origin],
-          deskTrailing: visible && t == _activeTab && t.readout!.isAgent
-              ? _agentHeaderTrailing(t)
-              : null,
+          deskTrailing: null,
           onDeskInfo: t.readout!.isAgent ? _showAgentInfo : null,
         ),
       );
@@ -572,42 +570,21 @@ extension _DesktopShellPanesExt on _DesktopShellState {
 
   Widget _emptyPaneHint() => const EmptyPaneHint();
 
-  Widget _agentHeaderTrailing(_ShellTab t) {
-    final tools = buildShellRailTools(
-      activeTab: t,
-      macSessionStatus: _macSessionStatuses[t.key],
-      onSessionAction: _dispatchSessionAction,
-      onOpenGoalPopover: _openGoalPopover,
-      onAgentAction: _agentAction,
-    );
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ...tools,
-        if (_activeTab?.readout?.agent != null) ...[
-          if (tools.isNotEmpty) SizedBox(width: S.s4),
-          Tooltip(
-            message: _panelHidden ? 'Show panel' : 'Hide panel',
-            child: Material(
-              color: _panelHidden ? Colors.transparent : AppColors.surface2,
-              borderRadius: BorderRadius.circular(R.md),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(R.md),
-                onTap: _togglePanel,
-                child: SizedBox.square(
-                  dimension: 28,
-                  child: Center(
-                    child: AppIcon('panel-right',
-                        size: 16,
-                        color: _panelHidden ? AppColors.fg3 : AppColors.fg1),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+  /// Agent tabs: the Chat | Work switch and the panel toggle, in the window bar.
+  Widget _agentBarTools(_ShellTab t) {
+    final a = t.readout!.agent!;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      if (a.id != 'mission-control') ...[
+        AgentViewSwitch(agentId: a.id),
+        SizedBox(width: S.s6),
       ],
-    );
+      IconBtn('sidebar',
+          size: 30,
+          iconSize: 15,
+          active: !_panelHidden,
+          tooltip: _panelHidden ? 'Show agent panel' : 'Hide agent panel',
+          onTap: _togglePanel),
+    ]);
   }
 
   Widget _rightTabBody(
@@ -942,6 +919,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               builder: (_, __) =>
                   sessionBarTools.of(_activeTab?.sessionId) ??
                   const SizedBox.shrink()),
+          if (_activeTab?.readout?.agent != null) _agentBarTools(_activeTab!),
           if (_sidebarHidden) ..._railTools(),
         ],
         reserveWindowControls: kMacOS,

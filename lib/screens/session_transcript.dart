@@ -42,10 +42,16 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       if (v >= (newestArtifact[id] ?? 0)) newestArtifact[id] = v;
     }
 
+    // Items are spaced here, not per widget, so every pair of neighbours
+    // gets the same gap.
+    Widget spaced(Widget child) => Padding(
+        padding: EdgeInsets.symmetric(vertical: transcriptGap / 2),
+        child: child);
+
     void addEvent(String key, Widget child) {
       out.add(KeyedSubtree(
         key: ValueKey(key),
-        child: child,
+        child: spaced(child),
       ));
     }
 
@@ -107,7 +113,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       final open = _toolRunOpen[toolKey] ?? false;
       out.add(KeyedSubtree(
         key: ValueKey(toolKey),
-        child: CollapsedActivity(
+        child: spaced(CollapsedActivity(
           List.of(run),
           running: running,
           open: open,
@@ -119,7 +125,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
               _transcriptDirty = true;
             });
           },
-        ),
+        )),
       ));
       run.clear();
       runStartKey = null;
@@ -342,7 +348,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             addEvent(
                 key,
                 Padding(
-                    padding: EdgeInsets.only(top: S.s4, bottom: S.s20),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
                     child: AmbientTurnCard(turn: ambient)));
             break;
           }
@@ -355,7 +361,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
               key,
               KeyedSubtree(
                 child: Padding(
-                    padding: EdgeInsets.only(top: S.s4, bottom: S.s20),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
                     child:
                         Bubble(mine: true, text: text, client: widget.client)),
               ));
@@ -390,7 +396,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           addEvent(
               key,
               Padding(
-                  padding: EdgeInsets.only(top: S.s4, bottom: S.s4),
+                  padding: EdgeInsets.zero,
                   child: e['quiet'] == true
                       ? QuietAside(text: reply)
                       : idx == lastReply &&
@@ -616,9 +622,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             addEvent(
                 key,
                 Padding(
-                  padding: kMobile
-                      ? EdgeInsets.symmetric(vertical: S.s12)
-                      : const EdgeInsets.only(top: 4, bottom: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
                   child: PlanProgressCard(
                       steps: steps, explanation: _s(e['explanation'])),
                 ));
@@ -1203,36 +1207,29 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
     ];
     // Desktop shows a live run as plain rows; a long one keeps its header.
     if (!kMobile && widget.running && widget.rows.length <= 8) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 4, bottom: 16),
-        child: WorkSteps(rows: widget.rows, header: false),
-      );
+      return WorkSteps(rows: widget.rows, header: false);
     }
     final open = _open;
-    return Padding(
-        padding: kMobile
-            ? EdgeInsets.zero
-            : const EdgeInsets.only(top: 4, bottom: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            WorkLine(
-                steps: steps,
-                running: widget.running,
-                open: open,
-                onTap: _toggle),
-            AnimatedSize(
-              duration: Motion.fast,
-              curve: Curves.easeOutCubic,
-              alignment: Alignment.topCenter,
-              child: open
-                  ? WorkSteps(rows: widget.rows)
-                  : const SizedBox(width: double.infinity),
-            ),
-          ],
-        ));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        WorkLine(
+            steps: steps, running: widget.running, open: open, onTap: _toggle),
+        AnimatedSize(
+          duration: Motion.fast,
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: open
+              ? WorkSteps(rows: widget.rows)
+              : const SizedBox(width: double.infinity),
+        ),
+      ],
+    );
   }
 }
+
+/// The gap between any two transcript items.
+double get transcriptGap => kMobile ? 12 : 14;
 
 DateTime? _eventTime(Map e) {
   final v = e['at'] ?? e['created_at'];
@@ -1265,7 +1262,7 @@ class _TurnFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = sans(12, color: AppColors.fg4);
     return Padding(
-      padding: const EdgeInsets.only(top: 2, bottom: 6),
+      padding: const EdgeInsets.only(top: 2),
       child: Row(children: [
         Text('Finished', style: style),
         if (took != null) ...[

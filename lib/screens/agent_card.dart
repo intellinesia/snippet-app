@@ -12,7 +12,6 @@ import '../presence.dart';
 import '../composer/composer_pill.dart' show C7;
 import '../theme.dart';
 import '../widgets.dart';
-import '../motion.dart';
 import '../mochi.dart';
 import '../settings_form.dart' show Grouped;
 import 'agent_reach_panel.dart';
@@ -50,8 +49,7 @@ String cleanAgentStatusText(String text,
     {Map<String, String> groupTitles = const {}}) {
   var t = flattenMarkdown(text);
   t = t.replaceAllMapped(
-      RegExp(r'\bgroup:([0-9A-Za-z][0-9A-Za-z-]*)', caseSensitive: false),
-      (m) {
+      RegExp(r'\bgroup:([0-9A-Za-z][0-9A-Za-z-]*)', caseSensitive: false), (m) {
     final title = groupTitles[m[1] ?? '']?.trim() ?? '';
     return title.isEmpty ? '' : title;
   });
@@ -95,8 +93,18 @@ String agentRowTime(DateTime? at, {DateTime? now}) {
   final n = (now ?? DateTime.now()).toLocal();
   if (n.difference(at) < const Duration(minutes: 1)) return 'now';
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec'
   ];
   if (at.year == n.year && at.month == n.month && at.day == n.day) {
     return clock12(at);
@@ -128,6 +136,9 @@ class AgentCard extends StatefulWidget {
   /// Phone: the section it sits in, when the list already decided it.
   final AgentGroup? group;
 
+  /// Desktop: draw the row on the selected surface.
+  final bool selected;
+
   const AgentCard({
     super.key,
     required this.client,
@@ -140,6 +151,7 @@ class AgentCard extends StatefulWidget {
     this.onTogglePin,
     this.crew,
     this.group,
+    this.selected = false,
   });
 
   @override
@@ -361,9 +373,6 @@ class _AgentCardState extends State<AgentCard> {
     final blocked =
         _count({TaskStatus.blocked, TaskStatus.failed}, {'blocked', 'failed'});
     final last = agent.lastMessage;
-    final line = last == null
-        ? 'No messages yet'
-        : (last.fromUser ? 'You: ${last.text}' : last.text);
     final (String, Color)? summary = !agent.available
         ? ('Paused', AppColors.fg3)
         : blocked > 0
@@ -378,10 +387,11 @@ class _AgentCardState extends State<AgentCard> {
       final group = widget.group ?? agentGroupFor(agent, presence: presence);
       final status = _phoneLine(agent, crew, presence);
       final lead = crew?.lead;
-      final time = crew != null && crew.state != CrewState.standingBy && lead != null
-          ? agentRowTime(
-              DateTime.fromMillisecondsSinceEpoch(lead.lastActive * 1000))
-          : agentRowTime(agent.lastMessage?.at);
+      final time =
+          crew != null && crew.state != CrewState.standingBy && lead != null
+              ? agentRowTime(
+                  DateTime.fromMillisecondsSinceEpoch(lead.lastActive * 1000))
+              : agentRowTime(agent.lastMessage?.at);
       final needs = group == AgentGroup.needsYou;
       final busy = group == AgentGroup.working;
       final characterState = !agent.available
@@ -430,9 +440,8 @@ class _AgentCardState extends State<AgentCard> {
                       child: Text(name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TeamRow.titleStyle(agent.available
-                              ? AppColors.fg1
-                              : AppColors.fg3)),
+                          style: TeamRow.titleStyle(
+                              agent.available ? AppColors.fg1 : AppColors.fg3)),
                     ),
                     if (_isPinned) ...[
                       SizedBox(width: S.s6),
@@ -484,67 +493,170 @@ class _AgentCardState extends State<AgentCard> {
         ),
       );
     }
-    final deskTime = agentRowTime(last?.at);
-    final ring = agent.available && working > 0;
-    final dot = !agent.available
-        ? AppColors.fg4
-        : blocked > 0
-            ? AppColors.danger
-            : null;
-    return DeskRow(
-      onTap: widget.onOpen,
-      onLongPress: () {
-        holdHaptic();
-        _actions(null);
-      },
+    final ring = agent.available &&
+        (widget.group != null
+            ? widget.group == AgentGroup.working
+            : working > 0);
+    final presence = widget.client.presence.presenceForAgentId(agent.id);
+    final group = widget.group ?? agentGroupFor(agent, presence: presence);
+    final needs = group == AgentGroup.needsYou;
+    final crew = widget.crew;
+    final lead = crew?.lead;
+    final time =
+        crew != null && crew.state != CrewState.standingBy && lead != null
+            ? agentRowTime(
+                DateTime.fromMillisecondsSinceEpoch(lead.lastActive * 1000))
+            : agentRowTime(last?.at);
+    final detail = agent.presence?.detail.trim() ?? '';
+    var line2 = _phoneLine(agent, crew, presence);
+    if (ring && crew == null && detail.isNotEmpty) line2 = detail;
+    final role = agent.capabilities.firstOrNull ??
+        (agent.kind == 'worker' ? '' : agent.kind);
+    final line2Color = needs
+        ? AppColors.run
+        : ring
+            ? AppColors.accent
+            : AppColors.fg3;
+    final dot = !agent.available ? AppColors.fg4 : null;
+    return GestureDetector(
       onSecondaryTapUp: (d) => _actions(d.globalPosition),
-      dim: !agent.available,
-      time: deskTime,
-      avatar: Stack(clipBehavior: Clip.none, children: [
-        Center(child: AgentMochi(agent.id, size: 20)),
-        if (ring)
-          const Positioned(
-              left: -3,
-              top: -3,
-              right: -3,
-              bottom: -3,
-              child: WorkingRing(key: ValueKey('agent-working'))),
-        if (dot != null)
-          Positioned(
-            right: 1,
-            bottom: 1,
-            child: Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                color: dot,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.windowBg, width: 2),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 2),
+        child: Material(
+          color: widget.selected ? AppColors.surface2 : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            onTap: widget.onOpen,
+            onLongPress: () {
+              holdHaptic();
+              _actions(null);
+            },
+            borderRadius: BorderRadius.circular(12),
+            hoverColor: AppColors.surface2.withValues(alpha: 0.5),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 52),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                child: Opacity(
+                  opacity: agent.available ? 1 : 0.55,
+                  child: Row(children: [
+                    SizedBox.square(
+                      dimension: 30,
+                      child: Stack(clipBehavior: Clip.none, children: [
+                        Center(child: AgentMochi(agent.id, size: 30)),
+                        if (ring)
+                          const Positioned(
+                              left: -3,
+                              top: -3,
+                              right: -3,
+                              bottom: -3,
+                              child:
+                                  WorkingRing(key: ValueKey('agent-working'))),
+                        if (dot != null)
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: dot,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: AppColors.windowBg, width: 2),
+                              ),
+                            ),
+                          ),
+                      ]),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(children: [
+                            Flexible(
+                              flex: 0,
+                              child: Text(name,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: DeskRow.nameStyle(agent.available
+                                      ? AppColors.fg1
+                                      : AppColors.fg3)),
+                            ),
+                            if (role.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(role,
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: sans(11.5, color: AppColors.fg3)),
+                              ),
+                            ],
+                            if (_isPinned) ...[
+                              const SizedBox(width: 6),
+                              AppIcon('pin', size: 11, color: AppColors.fg3),
+                            ],
+                            if (role.isEmpty) const Spacer(),
+                            if (time.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 6),
+                                child: Text(time,
+                                    maxLines: 1,
+                                    style: sans(11,
+                                        color: AppColors.fg4, tabular: true)),
+                              ),
+                          ]),
+                          const SizedBox(height: 2),
+                          Row(children: [
+                            Expanded(
+                              child: Text.rich(
+                                  markdownPreviewSpan(
+                                      line2,
+                                      sans(12,
+                                          height: 16 / 12, color: line2Color)),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                            ),
+                            if (needs && agent.needsYou > 0) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                key: const ValueKey('agent-needs-count'),
+                                constraints: const BoxConstraints(minWidth: 16),
+                                height: 16,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 4),
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                    color:
+                                        AppColors.run.withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(8)),
+                                child: Text('${agent.needsYou}',
+                                    style: sans(10.5,
+                                        weight: FontWeight.w600,
+                                        color: AppColors.run,
+                                        tabular: true)),
+                              ),
+                            ] else if (blocked > 0 || !agent.available) ...[
+                              const SizedBox(width: 6),
+                              Text(summaryText,
+                                  style: sans(metaSize,
+                                      color: summaryColor, tabular: true)),
+                            ],
+                          ]),
+                        ],
+                      ),
+                    ),
+                  ]),
+                ),
               ),
             ),
           ),
-      ]),
-      title: Row(children: [
-        Flexible(
-          child: Text(name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: DeskRow.nameStyle(
-                  agent.available ? AppColors.fg1 : AppColors.fg3)),
         ),
-        if (_isPinned) ...[
-          SizedBox(width: S.s6),
-          AppIcon('pin', size: 11, color: AppColors.fg3),
-        ],
-      ]),
-      subtitle: Text.rich(
-          markdownPreviewSpan(line, DeskRow.previewStyle()),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis),
-      trailing: summary == null
-          ? null
-          : SwapText(summaryText,
-              style: sans(metaSize, color: summaryColor, tabular: true)),
+      ),
     );
   }
 }
@@ -647,7 +759,8 @@ class DeskRow extends StatelessWidget {
 
   static TextStyle nameStyle([Color? c]) =>
       sans(13, weight: W.label, color: c ?? AppColors.fg1);
-  static TextStyle previewStyle() => sans(12, height: 16 / 12, color: AppColors.fg3);
+  static TextStyle previewStyle() =>
+      sans(12, height: 16 / 12, color: AppColors.fg3);
 
   @override
   Widget build(BuildContext context) => GestureDetector(

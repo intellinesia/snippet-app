@@ -98,15 +98,18 @@ class AgentsSidebarPanel extends StatefulWidget {
 
 /// Last list per daemon, so a remounted panel paints at once and refreshes
 /// quietly.
-final _memo = <String, ({
+final _memo = <String,
+    ({
   List<CoordinationAgent> agents,
   Map<String, AgentLastMessage?>? dmLast,
   AgentLastMessage? mcLast,
+  CoordinationAgent? mc,
 })>{};
 
 class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   List<CoordinationAgent> agents = const [];
   AgentLastMessage? _mcLast;
+  CoordinationAgent? _mc;
   DateTime? _shownAt;
 
   String? error;
@@ -131,15 +134,17 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       },
     );
     final memo = _memo[widget.client.baseUrl];
-    final cached = memo == null ? widget.client.cachedCoordinationAgents() : null;
+    final cached =
+        memo == null ? widget.client.cachedCoordinationAgents() : null;
     if (memo != null) {
       agents = memo.agents;
       _dmLast = memo.dmLast;
       _mcLast = memo.mcLast;
+      _mc = memo.mc;
     } else if (cached != null) {
       agents = cached.where((a) => !a.isMissionControl).toList();
-      _mcLast =
-          cached.where((a) => a.isMissionControl).firstOrNull?.lastMessage;
+      _mc = cached.where((a) => a.isMissionControl).firstOrNull;
+      _mcLast = _mc?.lastMessage;
     }
     // Seeded rows were already seen; don't replay the entrance.
     if (agents.isNotEmpty) _shownAt = DateTime.fromMillisecondsSinceEpoch(0);
@@ -247,8 +252,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       );
       return;
     }
-    final overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
     final pos = point ?? overlay.size.center(Offset.zero);
     final picked = await showAppMenu<String>(
       context,
@@ -294,7 +298,8 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             if (!a.isMissionControl)
               _dmLast == null ? a : a.withLastMessage(_dmLast![a.id]),
         ];
-        _mcLast = all.where((a) => a.isMissionControl).firstOrNull?.lastMessage;
+        _mc = all.where((a) => a.isMissionControl).firstOrNull;
+        _mcLast = _mc?.lastMessage;
         error = null;
       });
       _remember();
@@ -307,7 +312,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   }
 
   void _remember() => _memo[widget.client.baseUrl] =
-      (agents: agents, dmLast: _dmLast, mcLast: _mcLast);
+      (agents: agents, dmLast: _dmLast, mcLast: _mcLast, mc: _mc);
 
   /// Agent id to the newest message in your direct thread with it. The
   /// daemon's own preview also counts session turns ("Posted."), which is not
@@ -411,6 +416,21 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     }
   }
 
+  /// Totals for the Mission Control strip, from the agents' own counts. The
+  /// daemon keeps finished work for 7 days, so "came back" is null (cell
+  /// dropped) when no agent reports counts at all.
+  McStats _crewStats() {
+    final all = [...agents, if (_mc != null) _mc!];
+    final counted = all.where((a) => a.taskCounts != null);
+    return McStats(
+      inFlight: all.fold(0, (n, a) => n + a.tasksIn({'in_progress'})),
+      needsYou: agents.fold(0, (n, a) => n + a.needsYou),
+      cameBack: counted.isEmpty
+          ? null
+          : counted.fold<int>(0, (n, a) => n + a.tasksIn({'done'})),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final q = effectiveQuery.toLowerCase();
@@ -423,6 +443,8 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             session: mc,
             lastMessage: _mcLast,
             onOpen: onOpenMc,
+            presenceDetail: _mc?.presence?.detail,
+            stats: _crewStats(),
           )
         : null;
     // The phone's v5 header avatar is the Mission Control entry point, so the
@@ -550,18 +572,6 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
           onLongPress: () => _groupActions(g),
           nameOf: agentName,
         ),
-      );
-    }
-
-    Widget row(int i) {
-      final e = entries[i].item;
-      final Widget child =
-          e is CoordinationAgent ? agentTile(e) : groupTile(e as GroupSummary);
-      return Appear(
-        key: ValueKey('appear-${child.key}'),
-        index: i,
-        since: _shownAt,
-        child: child,
       );
     }
 
@@ -717,38 +727,110 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       );
     }
 
-    final desktopChildren = [
-      for (var i = 0; i < entries.length; i++) row(i),
-    ];
-
     return Container(
-      color: kMobile ? AppColors.pageBg : Colors.transparent,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 12, 12, 4),
-            child: Row(children: [
-              Expanded(
-                  child: Text('Agents',
-                      style: sans(11, color: AppColors.fg4))),
-            ]),
-          ),
-          Expanded(
-            child: PullToRefresh(
-              onRefresh: refresh,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(6, 0, 6, 18),
-                children: [
-                  if (mcCard != null) mcCard,
-                  ...desktopChildren,
-                  if (emptyState != null) emptyState,
-                ],
-              ),
-            ),
-          ),
-        ],
+      color: Colors.transparent,
+      child: PullToRefresh(
+        onRefresh: refresh,
+        child: ListenableBuilder(
+          listenable: widget.client.presence,
+          builder: (context, _) {
+            final presence = widget.client.presence;
+            final sessions = widget.sessions;
+            final crew = sessions == null
+                ? const <String, CrewEntry>{}
+                : {
+                    for (final e in deriveCrew(
+                        agents,
+                        [
+                          for (final s in sessions)
+                            if (!s.settled) s
+                        ],
+                        presence: presence))
+                      e.agent.id: e,
+                  };
+            AgentGroup bucketOf(CoordinationAgent a) {
+              final g = switch (crew[a.id]?.state) {
+                CrewState.needsYou => AgentGroup.needsYou,
+                CrewState.working => AgentGroup.working,
+                _ =>
+                  agentGroupFor(a, presence: presence.presenceForAgentId(a.id)),
+              };
+              return g == AgentGroup.recent && a.available && a.needsYou > 0
+                  ? AgentGroup.needsYou
+                  : g;
+            }
+
+            Widget tile(int i, AgentGroup bucket) {
+              final e = entries[i].item;
+              final Widget child = e is CoordinationAgent
+                  ? agentTile(e, crew: crew[e.id], group: bucket)
+                  : groupTile(e as GroupSummary);
+              return Appear(
+                key: ValueKey('appear-${child.key}'),
+                index: i,
+                since: _shownAt,
+                child: child,
+              );
+            }
+
+            final children = <Widget>[if (mcCard != null) mcCard];
+            void section(String? title, List<Widget> rows) {
+              if (rows.isEmpty) return;
+              if (title != null) {
+                children.add(Padding(
+                  key: ValueKey('agents-section-$title'),
+                  padding: const EdgeInsets.fromLTRB(8, 14, 8, 4),
+                  child: Row(children: [
+                    Text(title, style: sans(11, color: AppColors.fg3)),
+                    const SizedBox(width: 6),
+                    Text('${rows.length}',
+                        style: sans(11, color: AppColors.fg4, tabular: true)),
+                  ]),
+                ));
+              }
+              children.addAll(rows);
+            }
+
+            if (q.isNotEmpty) {
+              section(null, [
+                for (var i = 0; i < entries.length; i++)
+                  tile(
+                      i,
+                      entries[i].item is CoordinationAgent
+                          ? bucketOf(entries[i].item as CoordinationAgent)
+                          : AgentGroup.recent),
+              ]);
+            } else {
+              final pinned = <Widget>[];
+              final buckets = <AgentGroup, List<Widget>>{
+                for (final g in AgentGroup.values) g: <Widget>[],
+              };
+              final chatGroups = <Widget>[];
+              for (var i = 0; i < entries.length; i++) {
+                final item = entries[i].item;
+                if (item is! CoordinationAgent) {
+                  (entries[i].pinnedAt != null ? pinned : chatGroups)
+                      .add(tile(i, AgentGroup.recent));
+                  continue;
+                }
+                final bucket = bucketOf(item);
+                (entries[i].pinnedAt != null ? pinned : buckets[bucket]!)
+                    .add(tile(i, bucket));
+              }
+              section('Pinned', pinned);
+              section('Needs you', buckets[AgentGroup.needsYou]!);
+              section('Working', buckets[AgentGroup.working]!);
+              section('Quiet', buckets[AgentGroup.recent]!);
+              section('Groups', chatGroups);
+            }
+            if (emptyState != null) children.add(emptyState);
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(6, 6, 6, 18),
+              children: children,
+            );
+          },
+        ),
       ),
     );
   }
@@ -759,8 +841,8 @@ class _EmptySearch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            kMobile ? 0 : S.s20, kMobile ? S.s8 : S.s24, kMobile ? 0 : S.s20, S.s20),
+        padding: EdgeInsets.fromLTRB(kMobile ? 0 : S.s20,
+            kMobile ? S.s8 : S.s24, kMobile ? 0 : S.s20, S.s20),
         child: Text(
           'No agents match the search.',
           style: sans(12, color: AppColors.fg3, height: 1.5),
@@ -771,8 +853,8 @@ class _EmptySearch extends StatelessWidget {
 class _EmptyTeam extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            kMobile ? 0 : S.s20, kMobile ? S.s8 : S.s24, kMobile ? 0 : S.s20, S.s20),
+        padding: EdgeInsets.fromLTRB(kMobile ? 0 : S.s20,
+            kMobile ? S.s8 : S.s24, kMobile ? 0 : S.s20, S.s20),
         child: Text(
           'No agents yet.\n\nBuild one and it appears here, along with the '
           'sessions it is working in.',
@@ -821,8 +903,7 @@ class _CreateMenu extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(title,
-                      style: sans(15,
-                          weight: W.label, color: AppColors.fg1)),
+                      style: sans(15, weight: W.label, color: AppColors.fg1)),
                   SizedBox(height: S.of(1)),
                   Text(subtitle,
                       maxLines: 1,
@@ -881,29 +962,29 @@ class _CreateMenu extends StatelessWidget {
               'Several agents in one conversation'),
         ])
       : Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _item(
-            context,
-            'agent',
-            'bot',
-            AppColors.accentBg,
-            AppColors.accent,
-            'New agent',
-            'A specialist with its own model and memory',
-          ),
-          Divider(height: 1, thickness: 1, color: AppColors.line),
-          _item(
-            context,
-            'group',
-            'users',
-            AppColors.surface3,
-            AppColors.fg1,
-            'New group',
-            'Several agents in one conversation',
-          ),
-        ],
-      );
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _item(
+              context,
+              'agent',
+              'bot',
+              AppColors.accentBg,
+              AppColors.accent,
+              'New agent',
+              'A specialist with its own model and memory',
+            ),
+            Divider(height: 1, thickness: 1, color: AppColors.line),
+            _item(
+              context,
+              'group',
+              'users',
+              AppColors.surface3,
+              AppColors.fg1,
+              'New group',
+              'Several agents in one conversation',
+            ),
+          ],
+        );
 }
 
 /// The one agent of a fresh team, large, above the list.
@@ -979,8 +1060,7 @@ class _NoAgentsHero extends StatelessWidget {
                   height: 26 / 20,
                   color: AppColors.fg1)),
           Text('Start from one below, or describe your own.',
-              textAlign: TextAlign.center,
-              style: TeamRow.subtitleStyle()),
+              textAlign: TextAlign.center, style: TeamRow.subtitleStyle()),
         ]),
       );
 }
@@ -1026,8 +1106,8 @@ class _AddAgentRow extends StatelessWidget {
             decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.fg1.withValues(alpha: 0.06)),
-            child: Center(
-                child: AppIcon('plus', size: 18, color: AppColors.fg2)),
+            child:
+                Center(child: AppIcon('plus', size: 18, color: AppColors.fg2)),
           ),
         ]),
       );

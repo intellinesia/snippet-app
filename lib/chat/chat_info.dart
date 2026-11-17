@@ -31,7 +31,9 @@ import '../screens/agent_panel.dart'
         pr;
 import '../crew_widgets.dart' show showCrewAgentMenu;
 import '../shell_panel.dart' show ShellRequestScope;
-import '../screens/tasks/tasks_panel.dart' show openTaskCountFor;
+import '../screens/tasks/tasks_panel.dart' show TasksPanel, openTaskCountFor;
+import '../screens/tasks/task_common.dart' show openTaskDetail;
+import 'agent_panel_body.dart';
 import '../settings_form.dart'
     show Grouped, SettingsGroup, SettingsHero, SettingsRow;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -707,6 +709,99 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
     );
   }
 
+  void _openTasks(BuildContext ctx) {
+    DockedInfoNav.maybeOf(ctx)?.push(
+        'Tasks',
+        (c) => TasksPanel(
+              client: widget.client,
+              agentIds: {widget.agentId},
+              phoneHeader: false,
+              onOpenTask: (t) => openTaskDetail(c, widget.client, t.id),
+            ),
+        scroll: false);
+  }
+
+  /// The docked desktop page: identity, presence, quick links, accordions.
+  Widget _dockedBody(BuildContext ctx) {
+    final agent = widget.agent;
+    final mc = _mc;
+    final profile = (agent?.profile ?? '').trim();
+    final role = _mc
+        ? 'Coordinator'
+        : (agent?.capabilities.isNotEmpty ?? false)
+            ? agent!.capabilities.first
+            : '';
+    final sub = [
+      if (role.isNotEmpty) role,
+      profile.isNotEmpty ? profile : 'Routing default',
+    ].join(' \u00b7 ');
+    final rows = <AgentSettingRow>[
+      if (agent != null && !mc)
+        AgentSettingRow(
+            'cpu',
+            'Model and context',
+            _modelsLine(agent),
+            () => showAgentProfileSettings(ctx,
+                client: widget.client,
+                agent: agent,
+                name: widget.name,
+                onChanged: widget.onChanged)),
+      if (mc && widget.onAutonomy != null)
+        AgentSettingRow('activity', 'Automated wakes',
+            'What wakes it without you', widget.onAutonomy!),
+      if (mc && widget.onScheduled != null)
+        AgentSettingRow('scheduled', 'Scheduled',
+            'Recurring goals and messages', widget.onScheduled!),
+      if (!mc)
+        AgentSettingRow(
+            'repeat',
+            'Wakes and reporting',
+            'When it wakes and who it tells',
+            () => showAgentWakeSettings(ctx,
+                client: widget.client,
+                owner: widget.agentId,
+                name: widget.name,
+                onChanged: widget.onChanged)),
+      AgentSettingRow(
+          'bell',
+          'How it reaches you',
+          'Notifications and where each kind goes',
+          () => showAgentReachSettings(ctx,
+              client: widget.client,
+              agentId: widget.agentId,
+              name: widget.name)),
+      AgentSettingRow('sparkles', 'Appearance',
+          'Avatar and colour across the app', () => _openAppearance(ctx)),
+    ];
+    return AgentPanelBody(
+      client: widget.client,
+      agentId: widget.agentId,
+      name: widget.name,
+      sub: sub,
+      agent: agent,
+      settings: rows,
+      header: mc && widget.onCompact != null
+          ? _ContextMeter(
+              used: widget.contextUsed,
+              window: widget.contextWindow,
+              onCompact: widget.onCompact!)
+          : null,
+      onInbox:
+          widget.onOpenInbox == null ? null : () => _go(widget.onOpenInbox!),
+      onBoard:
+          widget.onOpenBoard == null ? null : () => _go(widget.onOpenBoard!),
+      onMemory: () => _openMemory(ctx),
+      onTasks: () => _openTasks(ctx),
+      onDesk: widget.onOpenDesk,
+      onNickname: agent != null && !mc ? () => _editNickname(ctx) : null,
+      onDelete: agent != null && !mc ? () => _deleteAgent(ctx) : null,
+      onHeroLongPress: () {
+        Clipboard.setData(ClipboardData(text: widget.agentId));
+        toast(context, 'Agent ID copied');
+      },
+    );
+  }
+
   Widget _hero() {
     final agent = widget.agent;
     final profile = (agent?.profile ?? '').trim();
@@ -782,7 +877,8 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
           onClose: widget.docked || !kMobile ? widget.onClose : null,
           closeIcon: 'panel-right',
           closeTooltip: 'Hide panel',
-          actions: kMobile
+          bare: !kMobile && widget.docked,
+          actions: kMobile || widget.docked
               ? const []
               : [
                   if (widget.onOpenDesk != null && !_mc)
@@ -800,7 +896,9 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
                                   _close();
                                 }))),
                 ],
-          children: [_hero(), _groups(ctx)],
+          children: !kMobile && widget.docked
+              ? [_dockedBody(ctx)]
+              : [_hero(), _groups(ctx)],
         );
     final nav = DockedInfoNav(
       push: _pushNested,
@@ -827,8 +925,11 @@ class _AgentPageFrame extends StatelessWidget {
     this.scroll = true,
     this.closeIcon = 'x',
     this.closeTooltip = 'Close',
+    this.bare = false,
   });
 
+  /// Desktop only: no bar, the shell owns the panel toggle.
+  final bool bare;
   final String title;
   final List<Widget> children;
   final VoidCallback? onBack;
@@ -875,15 +976,18 @@ class _AgentPageFrame extends StatelessWidget {
   /// The docked card page: a 44px bar, then content that sizes to itself up to
   /// the panel's height.
   Widget _desktop(BuildContext context) {
-    final room = (_PanelMax.of(context) - 44).clamp(120.0, 4000.0);
-    final bar = PanelBar(
-      title: title,
-      onBack: onBack,
-      actions: [
-        ...actions,
-        if (onClose != null) PanelBarButton(closeIcon, closeTooltip, onClose),
-      ],
-    );
+    final room = (_PanelMax.of(context) - (bare ? 0 : 44)).clamp(120.0, 4000.0);
+    final bar = bare
+        ? const SizedBox.shrink()
+        : PanelBar(
+            title: title,
+            onBack: onBack,
+            actions: [
+              ...actions,
+              if (onClose != null)
+                PanelBarButton(closeIcon, closeTooltip, onClose),
+            ],
+          );
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,

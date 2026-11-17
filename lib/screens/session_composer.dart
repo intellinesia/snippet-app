@@ -781,7 +781,11 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   }
 
   Widget _composerCard(bool running) {
-    final agent = (_meAgentName ?? '').trim();
+    var agent = (_meAgentName ?? '').trim();
+    // A desk session belongs to its agent; never address it as "Snippet".
+    if (agent.isEmpty && _inboxAgentId(widget.sessionId) != null) {
+      agent = widget.title.trim();
+    }
     final hint = _isMissionControl
         ? 'Ask Mission Control…'
         : running

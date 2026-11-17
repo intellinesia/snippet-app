@@ -792,7 +792,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                 idleCast: false,
                 wholeTeam: true)
             : null,
-        sessions: kMobile ? widget.sessions : null,
+        sessions: widget.sessions,
         onSearchChanged: (v) => setState(() {
           _agentFilterQuery = v;
           if (_agentSearchCtl.text != v) _agentSearchCtl.text = v;

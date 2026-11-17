@@ -10,7 +10,9 @@ import '../platform.dart';
 import '../theme.dart';
 import '../tool_sheet.dart';
 import '../widgets.dart';
+import 'agent_view_mode.dart';
 import 'mission_control/coordination_agent_detail.dart';
+import 'session.dart' show SessionScreen;
 import 'shell_models.dart';
 import 'shell_nav.dart';
 import 'shell_window_bar.dart';
@@ -551,13 +553,28 @@ class RightTabBody extends StatelessWidget {
     }
     final agent = tab.agent;
     if (agent != null) {
-      return CoordinationAgentDetail(
+      final chat = CoordinationAgentDetail(
         agent: agent,
         client: client,
         embedded: true,
         tabHeader: true,
         deskTrailing: deskTrailing,
         onDeskInfo: onDeskInfo,
+      );
+      final c = client;
+      if (c == null) return chat;
+      // Work is the agent's desk session in place: one page, two views.
+      return ValueListenableBuilder<Set<String>>(
+        valueListenable: agentWorkView,
+        builder: (_, work, __) => work.contains(agent.id)
+            ? SessionScreen(
+                key: ValueKey('agent-work-${agent.id}'),
+                client: c,
+                sessionId: 'inbox-${agent.id}',
+                title: agent.displayName,
+                embedded: true,
+              )
+            : chat,
       );
     }
     return const SizedBox.shrink();
