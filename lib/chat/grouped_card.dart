@@ -51,6 +51,8 @@ class GroupedCardHeader extends StatelessWidget {
     required this.icon,
     required this.title,
     this.sub = '',
+    this.subLead = '',
+    this.subLeadColor,
     this.iconColor,
     this.trailing,
     this.onTap,
@@ -59,6 +61,10 @@ class GroupedCardHeader extends StatelessWidget {
   final String icon;
   final String title;
   final String sub;
+
+  /// A status word that opens the sub line in its own colour.
+  final String subLead;
+  final Color? subLeadColor;
   final Color? iconColor;
   final Widget? trailing;
   final VoidCallback? onTap;
@@ -87,10 +93,20 @@ class GroupedCardHeader extends StatelessWidget {
                   style: sans(kMobile ? 16 : 14,
                       height: kMobile ? 22 / 16 : 20 / 14,
                       color: AppColors.fg1)),
-              if (sub.isNotEmpty)
+              if (sub.isNotEmpty || subLead.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
-                  child: Text(sub,
+                  child: Text.rich(
+                      TextSpan(children: [
+                        if (subLead.isNotEmpty)
+                          TextSpan(
+                              text: subLead,
+                              style: TextStyle(
+                                  color: subLeadColor ?? AppColors.fg3)),
+                        if (subLead.isNotEmpty && sub.isNotEmpty)
+                          const TextSpan(text: ' \u00b7 '),
+                        TextSpan(text: sub),
+                      ]),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(kMobile ? 14 : 13,

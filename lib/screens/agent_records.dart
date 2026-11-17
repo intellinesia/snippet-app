@@ -714,7 +714,7 @@ class _WorkTile extends StatelessWidget {
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: EdgeInsets.fromLTRB(
               Grouped.padX, 14, Grouped.padX, 14),
           child: Column(
             mainAxisSize: MainAxisSize.min,

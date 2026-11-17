@@ -4,6 +4,7 @@ import '../ambient_loop.dart';
 import '../models.dart';
 import '../platform.dart';
 import '../settled_sessions.dart';
+import '../composer/composer_pill.dart' show C7;
 import '../theme.dart';
 import '../widgets.dart';
 import 'shell_nav.dart';
@@ -150,7 +151,8 @@ class SessionPrActionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = sessionPrColor(pr);
-    final showActions = pr.state == 'open' && (onReview != null || onMerge != null);
+    final showActions =
+        pr.state == 'open' && (onReview != null || onMerge != null);
     final btnHeight = mobile ? M.minTarget : 28.0;
     return Row(
       children: [
@@ -332,19 +334,19 @@ class _SessionGroupHeaderState extends State<SessionGroupHeader> {
           child: widget.onToggle == null
               ? row
               : kMobile
-              ? GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    pickHaptic();
-                    widget.onToggle!();
-                  },
-                  child: row,
-                )
-              : HoverSurface(
-                  radius: 8,
-                  onTap: widget.onToggle,
-                  child: row,
-                ),
+                  ? GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        pickHaptic();
+                        widget.onToggle!();
+                      },
+                      child: row,
+                    )
+                  : HoverSurface(
+                      radius: 8,
+                      onTap: widget.onToggle,
+                      child: row,
+                    ),
         ),
       ),
     );
@@ -374,6 +376,8 @@ class SessionListRow extends StatelessWidget {
     this.leading,
     this.onReviewPr,
     this.onMergePr,
+    this.onTogglePin,
+    this.onMore,
   });
 
   final SessionInfo session;
@@ -401,6 +405,10 @@ class SessionListRow extends StatelessWidget {
 
   final VoidCallback? onReviewPr;
   final VoidCallback? onMergePr;
+
+  /// Desktop hover actions: pin and the existing right-click menu.
+  final VoidCallback? onTogglePin;
+  final void Function(Offset position)? onMore;
 
   @override
   Widget build(BuildContext context) {
@@ -434,8 +442,7 @@ class SessionListRow extends StatelessWidget {
         ? sessionWakeLabel(s.nextWakeAt)
         : null;
     final progressText = working ? sessionProgressLabel(s) : null;
-    final hasExtraLine =
-        progressText != null || pr != null || wakeText != null;
+    final hasExtraLine = progressText != null || pr != null || wakeText != null;
     final cameBackSummary =
         sessionCameBack(s) ? (s.resultSummary?.trim() ?? '') : '';
     final hasMeta = showProject ||
@@ -510,69 +517,74 @@ class SessionListRow extends StatelessWidget {
                               style: TS.meta(AppColors.fg2)),
                         )
                       : Row(children: [
-                    if (attn != null) ...[
-                      _StateLabel(state: attn),
-                      if (showProject || branch.isNotEmpty || diff != null || noRepo)
-                        SizedBox(width: S.s8),
-                    ],
-                    if (showProject) ...[
-                      _ProjectChip(label: projectLabel(s)),
-                      if (branch.isNotEmpty) ...[
-                        SizedBox(width: S.s8),
-                        AppIcon('git-branch', size: 11, color: AppColors.fg4),
-                        SizedBox(width: S.s4),
-                        Flexible(
-                          child: Text(branch,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TS.meta()),
-                        ),
-                      ],
-                    ] else ...[
-                      if (branch.isNotEmpty)
-                        Expanded(
-                          child: Row(children: [
-                            AppIcon('git-branch',
-                                size: 11, color: AppColors.fg4),
-                            SizedBox(width: S.s4),
-                            Flexible(
-                              child: Text(branch,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TS.meta()),
-                            ),
-                          ]),
-                        )
-                      else if (noRepo)
-                        Expanded(
-                          child: Row(children: [
-                            AppIcon('folder-x',
-                                size: 11, color: AppColors.fg4),
-                            SizedBox(width: S.s4),
-                            Flexible(
-                              child: Text('No git repo',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TS.meta(AppColors.fg4)),
-                            ),
-                          ]),
-                        )
-                      else if (diff != null)
-                        const Spacer(),
-                      if (diff != null) ...[
-                        if (branch.isNotEmpty || noRepo)
-                          SizedBox(width: S.s8),
-                        if (diff.added > 0)
-                          Text('+${compactCount(diff.added)}',
-                              maxLines: 1, style: TS.meta(AppColors.ok)),
-                        if (diff.added > 0 && diff.removed > 0)
-                          SizedBox(width: S.s4),
-                        if (diff.removed > 0)
-                          Text('-${compactCount(diff.removed)}',
-                              maxLines: 1, style: TS.meta(AppColors.danger)),
-                      ],
-                    ],
-                  ]),
+                          if (attn != null) ...[
+                            _StateLabel(state: attn),
+                            if (showProject ||
+                                branch.isNotEmpty ||
+                                diff != null ||
+                                noRepo)
+                              SizedBox(width: S.s8),
+                          ],
+                          if (showProject) ...[
+                            _ProjectChip(label: projectLabel(s)),
+                            if (branch.isNotEmpty) ...[
+                              SizedBox(width: S.s8),
+                              AppIcon('git-branch',
+                                  size: 11, color: AppColors.fg4),
+                              SizedBox(width: S.s4),
+                              Flexible(
+                                child: Text(branch,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TS.meta()),
+                              ),
+                            ],
+                          ] else ...[
+                            if (branch.isNotEmpty)
+                              Expanded(
+                                child: Row(children: [
+                                  AppIcon('git-branch',
+                                      size: 11, color: AppColors.fg4),
+                                  SizedBox(width: S.s4),
+                                  Flexible(
+                                    child: Text(branch,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TS.meta()),
+                                  ),
+                                ]),
+                              )
+                            else if (noRepo)
+                              Expanded(
+                                child: Row(children: [
+                                  AppIcon('folder-x',
+                                      size: 11, color: AppColors.fg4),
+                                  SizedBox(width: S.s4),
+                                  Flexible(
+                                    child: Text('No git repo',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TS.meta(AppColors.fg4)),
+                                  ),
+                                ]),
+                              )
+                            else if (diff != null)
+                              const Spacer(),
+                            if (diff != null) ...[
+                              if (branch.isNotEmpty || noRepo)
+                                SizedBox(width: S.s8),
+                              if (diff.added > 0)
+                                Text('+${compactCount(diff.added)}',
+                                    maxLines: 1, style: TS.meta(AppColors.ok)),
+                              if (diff.added > 0 && diff.removed > 0)
+                                SizedBox(width: S.s4),
+                              if (diff.removed > 0)
+                                Text('-${compactCount(diff.removed)}',
+                                    maxLines: 1,
+                                    style: TS.meta(AppColors.danger)),
+                            ],
+                          ],
+                        ]),
                 ),
               if (hasExtraLine) ...[
                 const SizedBox(height: 2),
@@ -602,6 +614,101 @@ class SessionListRow extends StatelessWidget {
         ),
       ],
     );
+
+    // Round 5 density: one 32px line, the status inline after the title.
+    final compact = !kMobile && !hasExtraLine && cameBackSummary.isEmpty;
+    Widget compactContent(bool hover) {
+      final statusStyle = sans(12, color: AppColors.fg4);
+      final place = showProject
+          ? projectLabel(s)
+          : branch.isNotEmpty
+              ? branch
+              : noRepo
+                  ? 'No git repo'
+                  : '';
+      Widget action(String icon, String tip, VoidCallback? tap) => Tooltip(
+            message: tip,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: tap,
+              child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: Center(
+                      child: AppIcon(icon, size: 16, color: AppColors.fg3))),
+            ),
+          );
+      return Row(children: [
+        if (leading != null) ...[
+          SizedBox(width: 20, height: 20, child: Center(child: leading)),
+          const SizedBox(width: 8),
+        ],
+        Expanded(
+            child: Row(children: [
+          Flexible(
+            flex: 4,
+            child: renameField ??
+                Text(title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: sans(13,
+                        weight: settled || untitled ? W.body : W.label,
+                        color: settled || untitled
+                            ? AppColors.fg3
+                            : AppColors.fg1)),
+          ),
+          if (pinned && renameField == null) ...[
+            const SizedBox(width: 6),
+            AppIcon('pin', size: 11, color: AppColors.fg3),
+          ],
+          if (renameField == null) ...[
+            if (attn != null) ...[
+              const SizedBox(width: 8),
+              _StateLabel(state: attn),
+            ],
+            if (place.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Flexible(
+                flex: 1,
+                child: Text(place,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: statusStyle),
+              ),
+            ],
+            if (diff != null) ...[
+              const SizedBox(width: 6),
+              if (diff.added > 0)
+                Text('+${compactCount(diff.added)}',
+                    maxLines: 1, style: sans(12, color: AppColors.ok)),
+              if (diff.added > 0 && diff.removed > 0) const SizedBox(width: 3),
+              if (diff.removed > 0)
+                Text('-${compactCount(diff.removed)}',
+                    maxLines: 1, style: sans(12, color: AppColors.danger)),
+            ],
+          ],
+        ])),
+        if (renameField == null)
+          if (hover && !selecting) ...[
+            if (onTogglePin != null)
+              action('pin', pinned ? 'Unpin' : 'Pin', onTogglePin),
+            if (onMore != null)
+              Builder(
+                builder: (ctx) => action('more-horizontal', 'More', () {
+                  final box = ctx.findRenderObject() as RenderBox;
+                  onMore!(box.localToGlobal(Offset(0, box.size.height)));
+                }),
+              ),
+          ] else if (working) ...[
+            const SizedBox(width: 8),
+            const WorkingDots(),
+          ] else if (timeText.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            Text(timeText,
+                maxLines: 1, style: sans(11, color: timeColor, tabular: true)),
+          ],
+      ]);
+    }
 
     void longPress() {
       holdHaptic();
@@ -640,7 +747,8 @@ class SessionListRow extends StatelessWidget {
                   highlightColor: Colors.transparent,
                   hoverColor: Colors.transparent,
                   focusColor: Colors.transparent,
-                  overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+                  overlayColor:
+                      const WidgetStatePropertyAll(Colors.transparent),
                   onLongPress: onLongPress == null ? null : longPress,
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     ConstrainedBox(
@@ -660,21 +768,26 @@ class SessionListRow extends StatelessWidget {
               ),
             ),
           ])
-        : HoverSurface(
-            selected: selecting ? checked : selected,
-            radius: 8,
-            onTap: onTap,
-            onLongPress: onLongPress == null ? null : longPress,
-            onSecondaryTapDown: onSecondaryTapDown,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                    horizontal: S.of(10), vertical: S.of(hasExtraLine ? 5.0 : 4.0)),
-                child: Align(alignment: Alignment.centerLeft, child: content),
-              ),
-            ),
-          );
+        : _HoverBuilder(
+            builder: (hover) => HoverSurface(
+                  selected: selecting ? checked : selected,
+                  radius: 10,
+                  selectedColor: C7.row,
+                  hoverColor: C7.row.withValues(alpha: 0.5),
+                  onTap: onTap,
+                  onLongPress: onLongPress == null ? null : longPress,
+                  onSecondaryTapDown: onSecondaryTapDown,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: compact ? 32 : 44),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 8, vertical: compact ? 5.0 : 4.0),
+                      child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: compact ? compactContent(hover) : content),
+                    ),
+                  ),
+                ));
 
     return Semantics(
       container: true,
@@ -792,4 +905,25 @@ class _WorkingDotsState extends State<WorkingDots> {
       ),
     );
   }
+}
+
+/// Hands its builder the hover state of the pointer over the whole row.
+class _HoverBuilder extends StatefulWidget {
+  const _HoverBuilder({required this.builder});
+
+  final Widget Function(bool hover) builder;
+
+  @override
+  State<_HoverBuilder> createState() => _HoverBuilderState();
+}
+
+class _HoverBuilderState extends State<_HoverBuilder> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: widget.builder(_hover),
+      );
 }

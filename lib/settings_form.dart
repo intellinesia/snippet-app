@@ -27,17 +27,17 @@ abstract final class Grouped {
 
   // Geometry.
   static const double gutter = 12;
-  static double get rowMin => _phone ? _ph(64, 56) : 52;
-  static double get rowMinTwoLine => _phone ? _ph(76, 66) : 60;
-  static const double padX = 16;
-  static double get padY => _phone ? _ph(10, 8) : 8;
-  static double get icon => _phone ? _ph(22, 20) : 18;
-  static double get iconGap => _phone ? _ph(14, 12) : 12;
+  static double get rowMin => _phone ? _ph(64, 56) : 36;
+  static double get rowMinTwoLine => _phone ? _ph(76, 66) : 44;
+  static double get padX => _phone ? 16 : 12;
+  static double get padY => _phone ? _ph(10, 8) : 4;
+  static double get icon => _phone ? _ph(22, 20) : 16;
+  static double get iconGap => _phone ? _ph(14, 12) : 10;
   static const double chevron = 16;
-  static double get radiusEnd => _phone ? _ph(20, 18) : 16;
+  static double get radiusEnd => _phone ? _ph(20, 18) : 10;
   static const double radiusInner = 4;
   static const double gap = 2;
-  static double get sectionGap => _phone ? 28 : 24;
+  static double get sectionGap => _phone ? 28 : 20;
   static const double labelGap = 8;
   static const double footGap = 8;
   static const double headerHeight = 56;
@@ -47,20 +47,20 @@ abstract final class Grouped {
   static const double avatarCharacter = 84;
   static const double leadCharacter = 32;
   static const double contentMaxWidth = 680;
-  static const double sidebarWidth = 248;
-  static const double navRowHeight = 40;
+  static const double sidebarWidth = 224;
+  static const double navRowHeight = 30;
 
   // Type: whole-pixel sizes with their line heights.
   static const double pageTitleSize = 17;
   static double get heroSize => _phone ? 24 : 20;
-  static double get titleSize => _phone ? _ph(17, 16) : 15;
-  static double get titleLine => _phone ? _ph(22, 21) : 20;
-  static double get subSize => _phone ? _ph(15, 14) : 13;
-  static double get subLine => _phone ? _ph(20, 19) : 18;
-  static double get valueSize => _phone ? _ph(15, 14) : 13;
-  static double get labelSize => _phone ? _ph(15, 14) : 13;
-  static double get footSize => _phone ? 14 : 13;
-  static double get footLine => _phone ? 20 : 18;
+  static double get titleSize => _phone ? _ph(17, 16) : 13;
+  static double get titleLine => _phone ? _ph(22, 21) : 18;
+  static double get subSize => _phone ? _ph(15, 14) : 12;
+  static double get subLine => _phone ? _ph(20, 19) : 16;
+  static double get valueSize => _phone ? _ph(15, 14) : 12;
+  static double get labelSize => _phone ? _ph(15, 14) : 12;
+  static double get footSize => _phone ? 14 : 12;
+  static double get footLine => _phone ? 20 : 16;
 
   // Colours, derived from the active theme so every palette keeps working.
   static Color _over(double a) =>
@@ -215,7 +215,7 @@ class SettingsSectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
             Grouped.padX, 0, Grouped.padX, Grouped.labelGap),
         child: Semantics(
           header: true,
@@ -244,7 +244,7 @@ class SettingsFootnote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
             Grouped.padX, Grouped.footGap, Grouped.padX, 0),
         child: Text(text, style: Grouped.footStyle()),
       );

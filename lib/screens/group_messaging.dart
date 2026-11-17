@@ -30,7 +30,7 @@ import '../chat/chat_style.dart';
 import '../chat/group_notice.dart';
 import '../chat/stage_bar.dart';
 import '../chat/stage_header.dart';
-import 'agent_card.dart' show TeamRow, agentRowTime;
+import 'agent_card.dart' show DeskRow, TeamRow, agentRowTime;
 import 'agent_questions_card.dart' show questionAnswerSystemLine;
 import 'agent_thread_cards.dart' show agentThreadEventCard;
 import 'tasks/tasks_panel.dart' show openTasksPage, openTaskCountFor;
@@ -247,7 +247,6 @@ class GroupRow extends StatelessWidget {
     final status = nameOf == null ? null : groupActivityStatus(group, nameOf);
     final sub = status ?? group.preview ?? line;
     final shown = agents.take(4).toList();
-    final extra = agents.length - shown.length;
     final unread = group.unread;
     if (kMobile) {
       final at = DateTime.tryParse(group.lastEventAt ?? '')?.toLocal();
@@ -300,87 +299,31 @@ class GroupRow extends StatelessWidget {
         ]),
       );
     }
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(R.md),
-      child: InkWell(
-        onTap: onTap,
-        onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(R.md),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(S.s8, S.of(7), S.of(10), S.of(7)),
-          child: Row(children: [
-            SizedBox(
-              width: 32,
-              height: 32,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    decoration: avatarDecoration(32, color: AppColors.surface2),
-                    alignment: Alignment.center,
-                    child: shown.isEmpty
-                        ? const AppIcon('users', size: 15)
-                        : AgentMochi(shown.first, size: 20),
-                  ),
-                  if (shown.length > 1 || extra > 0)
-                    Positioned(
-                      right: -4,
-                      bottom: -4,
-                      child: Container(
-                        width: 16,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: AppColors.surface3,
-                          shape: BoxShape.circle,
-                          border:
-                              Border.all(color: AppColors.windowBg, width: 1),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                            '${shown.length - 1 + (extra > 0 ? extra : 0)}',
-                            style: sans(8, color: AppColors.fg2)),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            SizedBox(width: S.of(10)),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(children: [
-                    Expanded(
-                      child: Text(name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              sans(13, weight: W.body, color: AppColors.fg1)),
-                    ),
-                    if (pinned) ...[
-                      SizedBox(width: S.s6),
-                      AppIcon('pin', size: 11, color: AppColors.fg3),
-                    ],
-                    if (unread > 0) ...[
-                      SizedBox(width: S.s6),
-                      Text('$unread',
-                          style:
-                              sans(11, color: AppColors.accent, tabular: true)),
-                    ],
-                  ]),
-                  SizedBox(height: S.s2),
-                  Text.rich(
-                      markdownPreviewSpan(sub, sans(11, color: AppColors.fg3)),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                ],
-              ),
-            ),
-          ]),
+    return DeskRow(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      time: agentRowTime(DateTime.tryParse(group.lastEventAt ?? '')?.toLocal()),
+      avatar: shown.isEmpty
+          ? const Center(child: AppIcon('users', size: 16))
+          : Center(child: AgentMochi(shown.first, size: 20)),
+      title: Row(children: [
+        Flexible(
+          child: Text(name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: DeskRow.nameStyle()),
         ),
-      ),
+        if (pinned) ...[
+          SizedBox(width: S.s6),
+          AppIcon('pin', size: 11, color: AppColors.fg3),
+        ],
+      ]),
+      subtitle: Text.rich(markdownPreviewSpan(sub, DeskRow.previewStyle()),
+          maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: unread > 0
+          ? Text('$unread',
+              style: sans(12, color: AppColors.accent, tabular: true))
+          : null,
     );
   }
 }

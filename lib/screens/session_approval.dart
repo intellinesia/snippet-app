@@ -1096,7 +1096,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(
+            padding: EdgeInsets.fromLTRB(
                 Grouped.padX, Grouped.padX, Grouped.padX, 8),
             child: Row(children: [
               GroupedCircleButton(
@@ -1112,7 +1112,7 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
             ]),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Grouped.padX),
+            padding: EdgeInsets.symmetric(horizontal: Grouped.padX),
             child: sub.body(context, () => setState(() => _sub = null)),
           ),
         ],

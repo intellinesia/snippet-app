@@ -473,14 +473,6 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       );
     }
 
-    final createBtn = Builder(
-      builder: (ctx) => ShellSectionAction(
-        icon: 'plus',
-        tooltip: 'New agent or group',
-        onTap: busy ? null : () => openCreateMenu(ctx, above: false),
-      ),
-    );
-
     if (agents.isNotEmpty) _shownAt ??= DateTime.now();
     final ordered = (q.isEmpty
         ? [...agents]
@@ -735,18 +727,20 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ShellSectionHeader(
-            label: 'Agents',
-            actions: [
-              createBtn,
-            ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 12, 12, 4),
+            child: Row(children: [
+              Expanded(
+                  child: Text('Agents',
+                      style: sans(11, color: AppColors.fg4))),
+            ]),
           ),
           Expanded(
             child: PullToRefresh(
               onRefresh: refresh,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(S.s8, S.s4, S.s8, S.of(18)),
+                padding: const EdgeInsets.fromLTRB(6, 0, 6, 18),
                 children: [
                   if (mcCard != null) mcCard,
                   ...desktopChildren,

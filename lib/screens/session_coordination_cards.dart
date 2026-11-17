@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../markdown_preview.dart' show plainPreview;
 import '../platform.dart';
+import '../plan_card.dart';
+import '../settings_form.dart' show Grouped;
 import '../transcript_card.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -146,6 +149,9 @@ class _ThreadCard extends StatelessWidget {
   final String body;
   final String? reference;
   final String? footer;
+
+  /// When the sender is an agent, its character leads the card.
+  final String? agentId;
   const _ThreadCard({
     required this.icon,
     required this.tone,
@@ -155,28 +161,176 @@ class _ThreadCard extends StatelessWidget {
     required this.body,
     this.reference,
     this.footer,
+    this.agentId,
   });
 
   @override
   Widget build(BuildContext context) {
     final ref = reference?.trim() ?? '';
     final foot = footer?.trim() ?? '';
-    return TranscriptCard(
-      icon: icon,
-      tone: tone,
-      kind: ref.isEmpty ? kind : '$kind · $ref',
-      status: status,
-      title: title,
-      footer: foot.isEmpty
-          ? null
-          : Text(foot,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(TranscriptCard.metaSize,
-                  height: 1.35, color: AppColors.fg4)),
-      child: body.trim().isEmpty ? null : CardMarkdownBody(body: body),
+    final head = title?.trim() ?? '';
+    final stat = status?.trim() ?? '';
+    final (fg, bg) = toneColors(tone);
+    final agent = agentId?.trim() ?? '';
+    final meta = sans(kMobile ? 13 : 12, height: 1.4, color: AppColors.fg3);
+    final lead = agent.isNotEmpty
+        ? AgentMochi(agent, size: kMobile ? 22 : 20)
+        : AppIcon(icon, size: kMobile ? 18 : 16, color: fg);
+    return Container(
+      width: double.infinity,
+      padding: kMobile
+          ? EdgeInsets.fromLTRB(S.of(16), S.of(14), S.of(16), S.of(14))
+          : EdgeInsets.all(S.of(12)),
+      decoration: BoxDecoration(
+        color: Grouped.row,
+        borderRadius: BorderRadius.circular(R.of(kMobile ? 20 : 13)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(children: [
+            lead,
+            SizedBox(width: S.s8),
+            Expanded(
+              child: Row(children: [
+                Flexible(
+                  child: Text(kind,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: meta),
+                ),
+                if (ref.isNotEmpty) ...[
+                  SizedBox(width: S.s8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                        color: AppColors.hover,
+                        borderRadius: BorderRadius.circular(6)),
+                    child: Text(ref,
+                        maxLines: 1,
+                        style: mono(kMobile ? 12 : 11, color: AppColors.fg2)),
+                  ),
+                ],
+              ]),
+            ),
+            if (stat.isNotEmpty)
+              Container(
+                margin: EdgeInsets.only(left: S.s8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                    color: bg, borderRadius: BorderRadius.circular(999)),
+                child: Text(stat,
+                    maxLines: 1,
+                    style: sans(kMobile ? 12 : 11,
+                        height: 1.4, weight: W.label, color: fg)),
+              ),
+          ]),
+          if (head.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(top: S.s8),
+              child: Text(head,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(kMobile ? 16 : 14,
+                      height: kMobile ? 22 / 16 : 20 / 14,
+                      weight: W.strong,
+                      color: AppColors.fg1)),
+            ),
+          if (body.trim().isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(top: head.isEmpty ? S.s8 : S.s4),
+              child: _PreviewBody(body: body),
+            ),
+          if (foot.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(top: S.s8),
+              child: Text(foot,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(kMobile ? 13 : 12,
+                      height: 1.35, color: AppColors.fg4)),
+            ),
+        ],
+      ),
     );
   }
+}
+
+/// Two plain lines; Show more swaps in the full markdown (blockquotes kept).
+class _PreviewBody extends StatefulWidget {
+  const _PreviewBody({required this.body});
+  final String body;
+
+  @override
+  State<_PreviewBody> createState() => _PreviewBodyState();
+}
+
+class _PreviewBodyState extends State<_PreviewBody> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final body = widget.body.trim();
+    final plain = plainPreview(body);
+    final long = body.length > 110 || '\n'.allMatches(body).length > 1;
+    final style = sans(kMobile ? 14 : 13,
+        height: kMobile ? 20 / 14 : 18 / 13, color: AppColors.fg2);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AnimatedSize(
+          duration: Motion.fast,
+          curve: Motion.enter,
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: double.infinity,
+            child: _open || !long
+                ? CardMarkdownBody(body: body, collapsible: false)
+                : Text(plain,
+                    maxLines: 2, overflow: TextOverflow.ellipsis, style: style),
+          ),
+        ),
+        if (long)
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _open = !_open),
+            child: Padding(
+              padding: EdgeInsets.only(top: S.s4),
+              child: Text(_open ? 'Show less' : 'Show more',
+                  style: sans(kMobile ? 13 : 12,
+                      weight: W.label, color: AppColors.fg2)),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// The agent id behind a sender label, or null for sessions, you and unknowns.
+String? _agentOf(String raw) {
+  var t = raw.trim();
+  if (t.startsWith('agent:')) t = t.substring(6);
+  if (t.isEmpty || t == 'you' || t == 'local' || t == 'human') return null;
+  if (t.contains(':') || t.contains('/')) return null;
+  return t;
+}
+
+/// Names a sender without raw ids: `session:snippet-mobile-8f8d29/conversations/x`
+/// reads "the snippet-mobile session"; `agent:x` reads the agent's name.
+String _who(String raw) {
+  final t = raw.trim();
+  if (t.isEmpty) return 'someone';
+  if (t == 'you') return t;
+  if (t.startsWith('session:')) {
+    var id = t.substring(8);
+    final slash = id.indexOf('/');
+    if (slash >= 0) id = id.substring(0, slash);
+    id = id.replaceFirst(RegExp(r'-[0-9a-f]{8,}$'), '');
+    return id.isEmpty ? 'a session' : 'the $id session';
+  }
+  return agentDisplayName(t);
 }
 
 String _short(String id) => id.length > 8 ? id.substring(0, 8) : id;
@@ -213,7 +367,7 @@ class MissionEnvelopeCard extends StatelessWidget {
       return _ThreadCard(
         icon: findings ? 'alert-triangle' : 'eye',
         tone: findings ? Tone.run : Tone.accent,
-        kind: findings ? 'Review findings$round' : 'Review request$round',
+        kind: findings ? 'Findings$round' : 'Review$round',
         reference: envelope.taskId.isEmpty ? null : _short(envelope.taskId),
         title: envelope.title.isEmpty ? 'Task' : envelope.title,
         status: findings ? 'Changes asked' : 'To review',
@@ -222,16 +376,27 @@ class MissionEnvelopeCard extends StatelessWidget {
     }
     if (envelope.isPlan) {
       final steps = parsePlanSteps(envelope.summary);
-      final done = steps.where((s) => s.$2 == PlanStep.done).length;
-      return TranscriptCard(
+      if (steps.isNotEmpty) {
+        return PlanProgressCard(steps: [
+          for (final (t, st) in steps)
+            {
+              'step': t,
+              'status': switch (st) {
+                PlanStep.done => 'completed',
+                PlanStep.now => 'in_progress',
+                PlanStep.todo => 'pending',
+              },
+            },
+        ]);
+      }
+      return _ThreadCard(
         icon: 'list',
         tone: Tone.accent,
-        kind: envelope.taskId.isEmpty
-            ? 'Worker plan'
-            : 'Worker plan · ${_short(envelope.taskId)}',
+        kind: 'Worker plan',
+        reference: envelope.taskId.isEmpty ? null : _short(envelope.taskId),
         title: envelope.title.isEmpty ? 'Task' : envelope.title,
-        status: steps.isEmpty ? 'Plan' : '$done/${steps.length}',
-        child: steps.isEmpty ? null : PlanChecklist(steps: steps),
+        status: 'Plan',
+        body: '',
       );
     }
     return _ThreadCard(
@@ -243,7 +408,7 @@ class MissionEnvelopeCard extends StatelessWidget {
               ? 'Worker plan'
               : envelope.isReport
                   ? 'Task report'
-                  : 'Task from Mission Control',
+                  : 'Mission Control',
       reference: envelope.taskId.isEmpty ? null : _short(envelope.taskId),
       title: envelope.title.isEmpty
           ? (envelope.isRecurring ? 'Scheduled run' : 'Task')
@@ -363,11 +528,12 @@ class BoardMessageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final from = message.fromId.trim().isEmpty ? 'Someone' : message.fromId;
+    final from = message.fromId.trim().isEmpty ? 'Someone' : _who(message.fromId);
     return _ThreadCard(
       icon: 'coordination',
       tone: Tone.neutral,
-      kind: 'Board · $from',
+      agentId: _agentOf(message.fromId),
+      kind: 'Board \u00b7 $from',
       reference: message.threadId.isEmpty ? null : _threadRef(message.threadId),
       status: 'Posted',
       body: message.body,
@@ -381,14 +547,14 @@ class DirectMessageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final from = message.fromLabel;
-    final who = from == 'you' ? 'You' : from;
+    final who = _who(message.fromLabel);
     final offer = message.isReply ? null : parseTaskOffer(message.body);
     if (offer != null) {
       return _ThreadCard(
         icon: 'agent',
+        agentId: _agentOf(message.fromId),
         tone: Tone.run,
-        kind: 'Task offer from $who',
+        kind: who == 'you' ? 'Task offer' : 'Task offer from $who',
         title: offer.title.isEmpty ? null : offer.title,
         reference: offer.taskId.isEmpty ? null : _short(offer.taskId),
         status: 'Offered',
@@ -400,14 +566,15 @@ class DirectMessageCard extends StatelessWidget {
     final label =
         typed.isEmpty ? '' : '${typed[0].toUpperCase()}${typed.substring(1)}';
     return _ThreadCard(
+      agentId: _agentOf(message.fromId),
       icon: message.isReply ? 'corner-down-right' : 'message',
       tone: message.urgent ? Tone.danger : Tone.accent,
-      kind: message.isReply ? 'Reply from $who' : 'Message from $who',
+      kind: who == 'you'
+          ? 'Your message'
+          : (message.isReply ? 'Reply from $who' : 'From $who'),
       status: message.urgent
           ? (label.isEmpty ? 'Urgent' : '$label, urgent')
-          : (label.isNotEmpty
-              ? label
-              : (message.isReply ? 'Reply' : 'Message')),
+          : (label.isNotEmpty ? label : null),
       body: message.body,
     );
   }
@@ -436,7 +603,7 @@ class GroupMessageCard extends StatelessWidget {
     return _ThreadCard(
       icon: 'users',
       tone: m.replyExpected ? Tone.run : Tone.accent,
-      kind: '${m.fromLabel} in $group',
+      kind: '${_who(m.fromLabel)} in $group',
       status: m.replyExpected
           ? 'Reply expected'
           : (m.mentions.isNotEmpty

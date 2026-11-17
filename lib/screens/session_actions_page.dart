@@ -146,7 +146,7 @@ class _SessionGoalPageState extends State<SessionGoalPage> {
         header: goal.paused ? 'Paused' : 'Working',
         children: [
           Padding(
-            padding: const EdgeInsets.all(Grouped.padX),
+            padding: EdgeInsets.all(Grouped.padX),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -167,7 +167,7 @@ class _SessionGoalPageState extends State<SessionGoalPage> {
       footer: 'The agent works toward it on its own until it is done.',
       children: [
         Padding(
-          padding: const EdgeInsets.all(Grouped.padX),
+          padding: EdgeInsets.all(Grouped.padX),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

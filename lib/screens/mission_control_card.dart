@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'agent_card.dart' show WorkingRing;
+import 'agent_card.dart' show DeskRow, WorkingRing, agentRowTime;
 import '../api.dart';
 import '../mochi.dart';
 import '../models.dart';
@@ -20,6 +20,7 @@ class MissionControlCard extends StatefulWidget {
   final SessionInfo session;
   final VoidCallback onOpen;
   final AgentLastMessage? lastMessage;
+  final bool selected;
 
   const MissionControlCard({
     super.key,
@@ -27,6 +28,7 @@ class MissionControlCard extends StatefulWidget {
     required this.session,
     required this.onOpen,
     this.lastMessage,
+    this.selected = false,
   });
 
   @override
@@ -118,70 +120,44 @@ class _MissionControlCardState extends State<MissionControlCard> {
       final line = last == null
           ? 'Plans, routes and follows up on your work'
           : (last.fromUser ? 'You: ${last.text}' : last.text);
-      return Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(R.md),
-        child: InkWell(
-          onTap: widget.onOpen,
-          borderRadius: BorderRadius.circular(R.md),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(S.s8, S.of(7), S.of(10), S.of(7)),
-            child: Row(children: [
-              SizedBox.square(
-                dimension: 32,
-                child: Stack(clipBehavior: Clip.none, children: [
-                  Container(
-                    decoration:
-                        avatarDecoration(32, color: AppColors.surface2),
-                    alignment: Alignment.center,
-                    child: const AgentMochi('mission-control', size: 20),
-                  ),
-                  if (working)
-                    const Positioned(
-                        left: -3,
-                        top: -3,
-                        right: -3,
-                        bottom: -3,
-                        child: WorkingRing(key: ValueKey('mc-working'))),
-                  if (waiting)
-                    Positioned(
-                      right: -1,
-                      bottom: -1,
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: AppColors.run,
-                          shape: BoxShape.circle,
-                          border:
-                              Border.all(color: AppColors.windowBg, width: 2),
-                        ),
-                      ),
-                    ),
-                ]),
-              ),
-              SizedBox(width: S.of(10)),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('Mission Control',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(13, weight: W.body, color: AppColors.fg1)),
-                    SizedBox(height: S.s2),
-                    SwapText(waiting ? 'Waiting on you' : line,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(12,
-                            color: waiting ? AppColors.run : AppColors.fg3)),
-                  ],
+      return DeskRow(
+        onTap: widget.onOpen,
+        selected: widget.selected,
+        avatar: Stack(clipBehavior: Clip.none, children: [
+          const Center(child: AgentMochi('mission-control', size: 20)),
+          if (working)
+            const Positioned(
+                left: -3,
+                top: -3,
+                right: -3,
+                bottom: -3,
+                child: WorkingRing(key: ValueKey('mc-working'))),
+          if (waiting)
+            Positioned(
+              right: 1,
+              bottom: 1,
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: AppColors.run,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.windowBg, width: 2),
                 ),
               ),
-            ]),
-          ),
-        ),
+            ),
+        ]),
+        time: agentRowTime(last?.at),
+        title: Text('Mission Control',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: DeskRow.nameStyle()),
+        subtitle: SwapText(waiting ? 'Waiting on you' : line,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: waiting
+                ? DeskRow.previewStyle().copyWith(color: AppColors.run)
+                : DeskRow.previewStyle()),
       );
     }
     return Padding(

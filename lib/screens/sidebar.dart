@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import '../desktop_look.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api.dart';
+import '../composer/composer_pill.dart' show C7;
 import '../drafts.dart';
 import '../models.dart';
 import '../pins.dart';
@@ -1433,6 +1433,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       showProject: showProject,
       renameField: renaming ? _inlineRenameField(s, compact: !kMobile) : null,
       leading: _agentBadge(s),
+      onTogglePin: kMobile || isDedicatedMcSession(s.id)
+          ? null
+          : () => Pins.instance.toggle(Pins.session, s.id, host: _pinHost),
+      onMore: kMobile || isDedicatedMcSession(s.id)
+          ? null
+          : (p) => _sessionActions(s, position: p),
       onReviewPr: s.pr?.state == 'open' && widget.client != null
           ? () => _reviewSessionPr(s)
           : null,
@@ -1499,31 +1505,45 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     final agentsAvailable =
         widget.client != null && _desktopAgentsAvailable(context);
     return Padding(
-      padding: EdgeInsets.fromLTRB(S.of(10), S.s2, S.of(10), S.s6),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 2),
       child: Column(children: [
-        Container(
-          height: 28,
-          padding: EdgeInsets.all(S.s2),
-          decoration: BoxDecoration(
-            color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(R.of(9)),
-            border: Border.all(color: AppColors.line),
+        Row(children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: C7.row,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(children: [
+                _segCell(
+                    'Sessions',
+                    !agentsFirst,
+                    const ValueKey('sidebar-mode-sessions'),
+                    () => setSidebarAgentsFirst(false)),
+                _segCell(
+                    'Agents',
+                    agentsFirst,
+                    const ValueKey('sidebar-mode-agents'),
+                    agentsAvailable ? () => setSidebarAgentsFirst(true) : null),
+              ]),
+            ),
           ),
-          child: Row(children: [
-            _segCell(
-                'Sessions',
-                !agentsFirst,
-                const ValueKey('sidebar-mode-sessions'),
-                () => setSidebarAgentsFirst(false)),
-            SizedBox(width: S.s2),
-            _segCell(
-                'Agents',
-                agentsFirst,
-                const ValueKey('sidebar-mode-agents'),
-                agentsAvailable ? () => setSidebarAgentsFirst(true) : null),
-          ]),
-        ),
-        SizedBox(height: S.s8),
+          const SizedBox(width: 8),
+          Builder(
+            builder: (btnCtx) => IconBtn('plus',
+                size: 32,
+                iconSize: 16,
+                tooltip: agentsFirst ? 'New agent or group' : 'New session',
+                onTap: widget.client == null
+                    ? null
+                    : agentsFirst
+                        ? () => _agentsPanelKey.currentState
+                            ?.openCreateMenu(btnCtx, above: false)
+                        : widget.onNewSession),
+          ),
+        ]),
+        const SizedBox(height: 8),
         _sidebarSearch(agentsFirst: agentsFirst),
       ]),
     );
@@ -1541,14 +1561,14 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             onTap: onTap,
             child: AnimatedContainer(
               duration: Motion.quick,
-              height: 24,
+              height: 28,
               decoration: BoxDecoration(
-                color: on ? AppColors.surface2 : Colors.transparent,
-                borderRadius: BorderRadius.circular(R.of(7)),
+                color: on ? C7.rowHi : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
               ),
               alignment: Alignment.center,
               child: Text(label,
-                  style: sans(12, color: on ? AppColors.fg1 : AppColors.fg4)),
+                  style: sans(13, color: on ? AppColors.fg1 : AppColors.fg3)),
             ),
           ),
         ),
@@ -1562,12 +1582,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       return _searchBox(
         onTap: palette,
         child: Row(children: [
-          AppIcon('search', size: 14, color: AppColors.fg4),
-          SizedBox(width: S.s8),
+          AppIcon('search', size: 16, color: AppColors.fg4),
+          const SizedBox(width: 8),
           Expanded(
-            child: Text('Search', style: sans(12, color: AppColors.fg4)),
+            child: Text('Search', style: sans(13, color: AppColors.fg4)),
           ),
-          Text(kMacOS ? '⌘K' : 'Ctrl+K', style: mono(11, color: AppColors.fg4)),
+          Text(kMacOS ? '⌘K' : 'Ctrl K', style: sans(11, color: AppColors.fg4)),
         ]),
       );
     }
@@ -1575,20 +1595,20 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     final focus = agentsFirst ? _agentSearchFocus : _desktopChatsSearchFocus;
     return _searchBox(
       child: Row(children: [
-        AppIcon('search', size: 14, color: AppColors.fg4),
-        SizedBox(width: S.s8),
+        AppIcon('search', size: 16, color: AppColors.fg4),
+        const SizedBox(width: 8),
         Expanded(
           child: TextField(
             controller: ctl,
             focusNode: focus,
             onChanged: (v) => setState(
                 () => agentsFirst ? _agentFilterQuery = v : _filterQuery = v),
-            style: sans(12, color: AppColors.fg1),
+            style: sans(13, color: AppColors.fg1),
             decoration: InputDecoration(
               isCollapsed: true,
               border: InputBorder.none,
               hintText: agentsFirst ? 'Search agents' : 'Search chats',
-              hintStyle: sans(12, color: AppColors.fg4),
+              hintStyle: sans(13, color: AppColors.fg4),
             ),
           ),
         ),
@@ -1603,19 +1623,14 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   }
 
   Widget _searchBox({VoidCallback? onTap, required Widget child}) {
-    final box = Tactile(
-      radius: BorderRadius.circular(R.md),
-      kind: TactileKind.inset,
-      child: Container(
-        height: 28,
-        padding: EdgeInsets.symmetric(horizontal: S.of(9)),
-        decoration: BoxDecoration(
-          color: AppColors.surface1,
-          borderRadius: BorderRadius.circular(R.md),
-          border: Border.all(color: AppColors.line),
-        ),
-        child: child,
+    final box = Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: C7.row,
+        borderRadius: BorderRadius.circular(10),
       ),
+      child: child,
     );
     if (onTap == null) return box;
     return Tooltip(
@@ -1655,7 +1670,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           onRefresh: () async => widget.onRefreshSessions(),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(S.s8, 0, S.s8, S.s8),
+            padding: const EdgeInsets.fromLTRB(6, 2, 6, 8),
             children: [
               if (!hasClient)
                 const SidebarEmpty('Add a machine to begin.')

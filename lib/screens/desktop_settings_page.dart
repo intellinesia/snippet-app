@@ -148,6 +148,10 @@ const List<(String, List<_NavEntry>)> _groups = [
   ),
 ];
 
+/// Round 5 density: a 224 rail of 30px rows.
+const double _navWidth = 224;
+const double _navRowHeight = 30;
+
 class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
   late SettingsPage _section = widget.initialSection ?? SettingsPage.general;
 
@@ -194,7 +198,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                width: Grouped.sidebarWidth,
+                width: _navWidth,
                 decoration: BoxDecoration(
                   color: AppColors.tint1,
                   border: Border(right: borderSide),
@@ -203,8 +207,9 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 26, 24, 4),
-                      child: Text('Settings', style: Grouped.pageTitleStyle()),
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                      child: Text('Settings',
+                          style: sans(17, weight: FontWeight.w600, color: AppColors.fg1)),
                     ),
                     Expanded(
                       child: ListView(
@@ -212,9 +217,9 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                         children: [
                           for (final (group, entries) in _groups) ...[
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(12, 16, 12, 6),
+                              padding: const EdgeInsets.fromLTRB(12, 14, 12, 4),
                               child: Text(group,
-                                  style: sans(13, color: Grouped.label)),
+                                  style: sans(12, color: Grouped.label)),
                             ),
                             for (final entry in entries)
                               _NavRow(
@@ -286,7 +291,7 @@ class _NavRow extends StatelessWidget {
     final iconColor = selected ? AppColors.fg1 : Grouped.iconColor;
     final radius = R.of(12);
     return Padding(
-      padding: EdgeInsets.only(bottom: S.s2),
+      padding: const EdgeInsets.only(bottom: 2),
       child: HoverSurface(
         onTap: onTap,
         selected: selected,
@@ -294,19 +299,20 @@ class _NavRow extends StatelessWidget {
         selectedColor: Grouped.row,
         hoverColor: AppColors.fg1.withValues(alpha: 0.035),
         child: SizedBox(
-          height: Grouped.navRowHeight,
+          height: _navRowHeight,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(children: [
-              SettingsIcon(entry.icon,
-                  iconData: entry.iconData, color: iconColor),
+              entry.iconData != null
+                  ? Icon(entry.iconData, size: 16, color: iconColor)
+                  : AppIcon(entry.icon!, size: 16, color: iconColor),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   entry.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(15, color: AppColors.fg1),
+                  style: sans(13, color: AppColors.fg1),
                 ),
               ),
             ]),

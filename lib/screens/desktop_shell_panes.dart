@@ -851,7 +851,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   Widget _sidebarFooter() {
     final healthy = _active == null ? null : _health[_active!.url];
     return Padding(
-      padding: EdgeInsets.fromLTRB(S.of(10), S.s8, S.of(10), S.s8),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
       child: Row(children: [
         Expanded(
           child: HoverSurface(
@@ -860,7 +860,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             hoverColor: AppColors.surface2,
             onTap: _instances.isEmpty ? _addInstanceFlow : _openTopMachines,
             child: Container(
-              height: 28,
+              height: 36,
               padding: EdgeInsets.symmetric(horizontal: S.of(10)),
               child: Row(children: [
                 SizedBox(
@@ -893,7 +893,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                               : _active!.name),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(12, color: AppColors.fg2)),
+                      style: sans(14, color: AppColors.fg1)),
                 ),
               ]),
             ),

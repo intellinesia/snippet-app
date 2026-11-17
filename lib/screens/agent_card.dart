@@ -9,10 +9,12 @@ import '../models.dart';
 import '../pins.dart';
 import '../platform.dart';
 import '../presence.dart';
+import '../composer/composer_pill.dart' show C7;
 import '../theme.dart';
 import '../widgets.dart';
 import '../motion.dart';
 import '../mochi.dart';
+import '../settings_form.dart' show Grouped;
 import 'agent_reach_panel.dart';
 import 'agent_wake_panel.dart';
 import 'agent_appearance.dart';
@@ -369,8 +371,7 @@ class _AgentCardState extends State<AgentCard> {
             : null;
     final summaryText = summary?.$1 ?? '';
     final summaryColor = summary?.$2 ?? AppColors.fg4;
-    final nameSize = kMobile ? 15.5 : 13.0;
-    final metaSize = kMobile ? 13.0 : 11.5;
+    const metaSize = 12.0;
     if (kMobile) {
       final presence = widget.client.presence.presenceForAgentId(agent.id);
       final crew = widget.crew;
@@ -490,108 +491,60 @@ class _AgentCardState extends State<AgentCard> {
         : blocked > 0
             ? AppColors.danger
             : null;
-    return GestureDetector(
+    return DeskRow(
+      onTap: widget.onOpen,
+      onLongPress: () {
+        holdHaptic();
+        _actions(null);
+      },
       onSecondaryTapUp: (d) => _actions(d.globalPosition),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(R.md),
-        child: InkWell(
-          onTap: widget.onOpen,
-          onLongPress: () {
-            holdHaptic();
-            _actions(null);
-          },
-          borderRadius: BorderRadius.circular(R.md),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(S.s8, S.of(7), S.of(10), S.of(7)),
-            child: Row(children: [
-              Opacity(
-                opacity: agent.available ? 1 : 0.5,
-                child: SizedBox.square(
-                  dimension: 32,
-                  child: Stack(clipBehavior: Clip.none, children: [
-                    Container(
-                      decoration:
-                          avatarDecoration(32, color: AppColors.surface2),
-                      alignment: Alignment.center,
-                      child: AgentMochi(agent.id, size: 20),
-                    ),
-                    if (ring)
-                      const Positioned(
-                          left: -3,
-                          top: -3,
-                          right: -3,
-                          bottom: -3,
-                          child: WorkingRing(key: ValueKey('agent-working'))),
-                    if (dot != null)
-                      Positioned(
-                        right: -1,
-                        bottom: -1,
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            color: dot,
-                            shape: BoxShape.circle,
-                            border:
-                                Border.all(color: AppColors.windowBg, width: 2),
-                          ),
-                        ),
-                      ),
-                  ]),
-                ),
+      dim: !agent.available,
+      time: deskTime,
+      avatar: Stack(clipBehavior: Clip.none, children: [
+        Center(child: AgentMochi(agent.id, size: 20)),
+        if (ring)
+          const Positioned(
+              left: -3,
+              top: -3,
+              right: -3,
+              bottom: -3,
+              child: WorkingRing(key: ValueKey('agent-working'))),
+        if (dot != null)
+          Positioned(
+            right: 1,
+            bottom: 1,
+            child: Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: dot,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.windowBg, width: 2),
               ),
-              SizedBox(width: S.of(10)),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(children: [
-                      Expanded(
-                        child: Text(name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(nameSize,
-                                weight: W.body,
-                                color: agent.available
-                                    ? AppColors.fg1
-                                    : AppColors.fg3)),
-                      ),
-                      if (_isPinned) ...[
-                        SizedBox(width: S.s6),
-                        AppIcon('pin', size: 11, color: AppColors.fg3),
-                      ],
-                      if (deskTime.isNotEmpty) ...[
-                        SizedBox(width: S.s6),
-                        Text(deskTime,
-                            style: sans(metaSize,
-                                color: AppColors.fg4, tabular: true)),
-                      ],
-                    ]),
-                    SizedBox(height: S.s2),
-                    Row(children: [
-                      Expanded(
-                        child: Text.rich(
-                            markdownPreviewSpan(
-                                line, sans(metaSize, color: AppColors.fg3)),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
-                      ),
-                      if (summary != null) ...[
-                        SizedBox(width: S.s8),
-                        SwapText(summaryText,
-                            style: sans(metaSize,
-                                color: summaryColor, tabular: true)),
-                      ],
-                    ]),
-                  ],
-                ),
-              ),
-            ]),
+            ),
           ),
+      ]),
+      title: Row(children: [
+        Flexible(
+          child: Text(name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: DeskRow.nameStyle(
+                  agent.available ? AppColors.fg1 : AppColors.fg3)),
         ),
-      ),
+        if (_isPinned) ...[
+          SizedBox(width: S.s6),
+          AppIcon('pin', size: 11, color: AppColors.fg3),
+        ],
+      ]),
+      subtitle: Text.rich(
+          markdownPreviewSpan(line, DeskRow.previewStyle()),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis),
+      trailing: summary == null
+          ? null
+          : SwapText(summaryText,
+              style: sans(metaSize, color: summaryColor, tabular: true)),
     );
   }
 }
@@ -663,6 +616,107 @@ class _RingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_RingPainter old) => old.color != color;
+}
+
+/// Desktop sidebar row: 60px, radius 14, 2px gap, selected on the row surface.
+class DeskRow extends StatelessWidget {
+  const DeskRow({
+    super.key,
+    required this.avatar,
+    required this.title,
+    required this.subtitle,
+    this.time = '',
+    this.trailing,
+    this.selected = false,
+    this.dim = false,
+    this.onTap,
+    this.onLongPress,
+    this.onSecondaryTapUp,
+  });
+
+  final Widget avatar;
+  final Widget title;
+  final Widget subtitle;
+  final String time;
+  final Widget? trailing;
+  final bool selected;
+  final bool dim;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final GestureTapUpCallback? onSecondaryTapUp;
+
+  static TextStyle nameStyle([Color? c]) =>
+      sans(13, weight: W.label, color: c ?? AppColors.fg1);
+  static TextStyle previewStyle() => sans(12, height: 16 / 12, color: AppColors.fg3);
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onSecondaryTapUp: onSecondaryTapUp,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 2),
+          child: Material(
+            color: selected ? C7.row : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            child: InkWell(
+              onTap: onTap,
+              onLongPress: onLongPress,
+              borderRadius: BorderRadius.circular(10),
+              hoverColor: C7.row.withValues(alpha: 0.5),
+              child: SizedBox(
+                height: 44,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Opacity(
+                    opacity: dim ? 0.55 : 1,
+                    child: Row(children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle, color: Grouped.plate),
+                        alignment: Alignment.center,
+                        child: avatar,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Expanded(child: title),
+                                  if (time.isNotEmpty) ...[
+                                    const SizedBox(width: 8),
+                                    Text(time,
+                                        maxLines: 1,
+                                        style: sans(11,
+                                            color: AppColors.fg4,
+                                            tabular: true)),
+                                  ],
+                                ]),
+                            const SizedBox(height: 2),
+                            Row(children: [
+                              Expanded(child: subtitle),
+                              if (trailing != null) ...[
+                                const SizedBox(width: 8),
+                                trailing!,
+                              ],
+                            ]),
+                          ],
+                        ),
+                      ),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 /// Phone grouped rows: each row its own surface on the page, 2px apart, the

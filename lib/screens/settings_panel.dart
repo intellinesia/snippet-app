@@ -1715,138 +1715,33 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     ];
   }
 
-  Widget _v5Card(List<Widget> children) {
-    final rows = <Widget>[];
-    for (var i = 0; i < children.length; i++) {
-      rows.add(children[i]);
-      if (i < children.length - 1) {
-        rows.add(Container(height: 1, color: AppColors.line));
-      }
-    }
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: AppColors.tint1,
-        borderRadius: BorderRadius.circular(R.lg),
-      ),
-      foregroundDecoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(R.lg),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: rows,
-        ),
-      ),
-    );
-  }
-
-  /// Desktop group caption, as `.dk4 .sec`.
-  Widget _v5Caption(String text) => Padding(
-        padding: EdgeInsets.fromLTRB(S.s4, S.s16, 0, S.s6),
-        child: Text(text, style: sans(12, color: AppColors.fg3)),
-      );
-
-  /// A compact desktop row: 22px tile, title with its detail on one line,
-  /// a muted value and a chevron when it leads somewhere.
-  Widget _v5Row({
-    Widget? leading,
-    required String title,
-    String? subtitle,
-    String? value,
-    Widget? trailing,
-    VoidCallback? onTap,
-    Color? titleColor,
-    bool chevron = false,
-  }) {
-    final body = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 36),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: S.of(12), vertical: S.s4),
-        child: Row(children: [
-          if (leading != null) ...[leading, SizedBox(width: S.s8)],
-          Text(title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(13,
-                  weight: W.label, color: titleColor ?? AppColors.fg1)),
-          SizedBox(width: S.s8),
-          Expanded(
-            child: subtitle == null || subtitle.isEmpty
-                ? const SizedBox.shrink()
-                : Text(subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(12, color: AppColors.fg3)),
-          ),
-          if (value != null) ...[
-            SizedBox(width: S.s8),
-            Text(value, style: sans(12, color: AppColors.fg3)),
-          ],
-          if (trailing != null) ...[SizedBox(width: S.s8), trailing],
-          if (chevron) ...[
-            SizedBox(width: S.s6),
-            AppIcon('chevron-right', size: 14, color: AppColors.fg4),
-          ],
-        ]),
-      ),
-    );
-    if (onTap == null) return body;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(onTap: onTap, child: body),
-    );
-  }
-
-  Widget _v5Tile({IconData? iconData, String? icon, bool ok = false}) {
-    final color = ok ? AppColors.ok : AppColors.fg2;
-    return Container(
-      width: 22,
-      height: 22,
-      decoration: BoxDecoration(
-        color: ok ? AppColors.ok.withValues(alpha: 0.13) : AppColors.tint2,
-        borderRadius: BorderRadius.circular(R.sm),
-      ),
-      child: Center(
-        child: iconData != null
-            ? Icon(iconData, size: 14, color: color)
-            : AppIcon(icon!, size: 14, color: color),
-      ),
-    );
-  }
-
   Widget _v5MachineRow(Instance i) {
     final isActive = i.url == widget.active?.url;
     final connected = _health[i.url] ?? isActive;
     if (_renamingUrl == i.url) {
-      return Padding(
-        padding: EdgeInsets.symmetric(horizontal: S.of(12), vertical: S.s4),
-        child: Row(children: [
-          _v5Tile(iconData: LucideIcons.laptop, ok: isActive),
-          SizedBox(width: S.s8),
-          Expanded(
-            child: InlineEditField(
-              controller: _renameController,
-              hint: 'Machine name',
-              commitOnTapOutside: false,
-              showActions: true,
-              onSubmit: () => _commitRename(i),
-              onCancel: () => setState(() => _renamingUrl = null),
-            ),
-          ),
-        ]),
+      return SettingsRow(
+        label: i.label,
+        iconData: LucideIcons.laptop300,
+        iconColor: isActive ? AppColors.ok : null,
+        labelWidget: InlineEditField(
+          controller: _renameController,
+          hint: 'Machine name',
+          commitOnTapOutside: false,
+          showActions: true,
+          onSubmit: () => _commitRename(i),
+          onCancel: () => setState(() => _renamingUrl = null),
+        ),
       );
     }
     final canConnect = !isActive && widget.onSelect != null;
     final live = _liveCount;
     final host = hostOf(i.url);
     return Builder(
-      builder: (anchor) => _v5Row(
-        leading: _v5Tile(iconData: LucideIcons.laptop, ok: isActive),
-        title: i.label.isEmpty ? host : i.label,
-        subtitle: isActive && live != null ? '$host · $live live' : host,
+      builder: (anchor) => SettingsRow(
+        iconData: LucideIcons.laptop300,
+        iconColor: isActive ? AppColors.ok : null,
+        label: i.label.isEmpty ? host : i.label,
+        sub: isActive && live != null ? '$host · $live live' : host,
         value: isActive
             ? 'Active'
             : !connected
@@ -1854,6 +1749,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
                 : canConnect
                     ? 'Connect'
                     : null,
+        chevron: true,
         // The row is the menu: Connect, Rename and Remove.
         onTap: () => _showMachineMenu(
           context,
@@ -1891,41 +1787,51 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   List<Widget> _v5General() {
     final manual = _manual;
     return [
-      _v5Caption('Machines'),
-      _v5Card([
-        if (_instances.isEmpty)
-          _v5Row(
-            leading: _v5Tile(iconData: LucideIcons.laptop),
-            title: 'No saved machines',
-            subtitle: 'Run snippet serve on one and add its link.',
-          )
-        else
-          for (final i in _instances) _v5MachineRow(i),
-      ]),
-      _v5Caption('Approvals'),
-      _v5Card([
-        _v5Row(
-          title: 'Approvals',
-          subtitle: 'Applies to every session on this machine',
-          value: manual == null ? null : (manual ? 'Ask' : 'Yolo'),
-          chevron: true,
-          onTap: manual == null ? null : _pickApprovals,
-        ),
-      ]),
-      if (kCanNotify) ...[
-        _v5Caption('Notifications'),
-        _v5Card([
-          _v5Row(
-            title: 'Notifications',
-            subtitle: 'When a chat needs you or finishes',
-            onTap: _notifBusy ? null : () => _toggleNotif(!_notif),
-            trailing: _notifBusy
-                ? const DelayedSpinner(size: 18)
-                : SettingsSwitch(
-                    value: _notif, onChanged: _notifBusy ? null : _toggleNotif),
+      SettingsGroup(
+        header: 'Machines',
+        footer:
+            'Snippet talks to the daemon on each machine. Run snippet serve on a new one and add its link.',
+        children: [
+          if (_instances.isEmpty)
+            const SettingsRow(
+              iconData: LucideIcons.laptop300,
+              label: 'No saved machines',
+              sub: 'Run snippet serve on one and add its link.',
+            )
+          else
+            for (final i in _instances) _v5MachineRow(i),
+        ],
+      ),
+      SettingsGroup(
+        header: 'Approvals',
+        children: [
+          SettingsRow(
+            icon: 'shield',
+            label: 'Approvals',
+            sub: 'Applies to every session on this machine',
+            value: manual == null ? null : (manual ? 'Ask' : 'Yolo'),
+            chevron: true,
+            onTap: manual == null ? null : _pickApprovals,
           ),
-        ]),
-      ],
+        ],
+      ),
+      if (kCanNotify)
+        SettingsGroup(
+          header: 'Notifications',
+          children: [
+            SettingsRow(
+              icon: 'bell',
+              label: 'Notifications',
+              sub: 'When a chat needs you or finishes',
+              onTap: _notifBusy ? null : () => _toggleNotif(!_notif),
+              trailing: _notifBusy
+                  ? const DelayedSpinner(size: 18)
+                  : SettingsSwitch(
+                      value: _notif,
+                      onChanged: _notifBusy ? null : _toggleNotif),
+            ),
+          ],
+        ),
     ];
   }
 
