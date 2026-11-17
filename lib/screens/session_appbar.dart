@@ -482,9 +482,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TS
-                  .caption(AppColors.fg3)
-                  .copyWith(fontSize: 12, height: 1.2),
+              style:
+                  TS.caption(AppColors.fg3).copyWith(fontSize: 12, height: 1.2),
             ),
           ),
         ]);
@@ -738,7 +737,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     final t = _terms[i];
     final cwd = _termCwd;
     final branch = _termBranch;
-    final sub = [if (cwd.isNotEmpty) cwd, if (branch != null) branch].join(' · ');
+    final sub =
+        [if (cwd.isNotEmpty) cwd, if (branch != null) branch].join(' · ');
     return Material(
       color: AppColors.canvas,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -805,8 +805,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
 
   List<TermTab> get _termTabs => [
         for (final t in _terms)
-          TermTab(t.title,
-              termDotColor(alive: t.alive, ended: t.ended)),
+          TermTab(t.title, termDotColor(alive: t.alive, ended: t.ended)),
       ];
 
   void _selectTermTab(int n) {
@@ -852,9 +851,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         child: SessionHandOffSheet(
           client: widget.client,
           sessionId: widget.sessionId,
-          onHandedOff: (name, pending) => _toast(pending
-              ? 'Hands to $name after this turn'
-              : 'Handed to $name'),
+          onHandedOff: (name, pending) => _toast(
+              pending ? 'Hands to $name after this turn' : 'Handed to $name'),
         ));
   }
 
@@ -887,9 +885,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           builder: (_, close) => SingleChildScrollView(
               padding: EdgeInsets.all(S.s12),
               child: AgentWakePanel(
-                  client: widget.client,
-                  owner: widget.sessionId,
-                  name: name)));
+                  client: widget.client, owner: widget.sessionId, name: name)));
       return;
     }
     showAgentWakeSettings(context,
@@ -1184,9 +1180,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         s?.events ?? const <Map<String, dynamic>>[], fileChanges(changeSteps));
     final me = _me;
     final agentId = me?.displayAgentId ?? 'snippet';
-    final agentName = (_meAgentName ?? '').trim().isEmpty
-        ? agentId
-        : _meAgentName!.trim();
+    final agentName =
+        (_meAgentName ?? '').trim().isEmpty ? agentId : _meAgentName!.trim();
     final changedCount = fileChanges(changeSteps).length + shell.length;
     return _SessionActionsPanel(
       session: s,
@@ -1228,8 +1223,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       hideCheckpoints: _isMissionControl,
       autoSettle: _isMissionControl || widget.readOnly ? null : !_keepAwake,
       onAutoSettle: _setAutoSettle,
-      resumeMode:
-          _isMissionControl || widget.readOnly ? null : _resumeMode,
+      resumeMode: _isMissionControl || widget.readOnly ? null : _resumeMode,
       onResumeMode: (m) => _setResumeMode(m),
       onAutonomy: _isMissionControl ? () => navigate!(_openAutonomy) : null,
       onWakes: () => run(_openWakes),
@@ -1347,6 +1341,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           open != null ? open('checkpoints') : _showCheckpoints(),
       onMemory: () => _performMacAction('memory'),
       onOpenTask: (id) => openTaskDetail(context, widget.client, id),
+      headerActions: mc ? _mcHeaderActions(s) : _sessionIconActions(s),
+      headerChips: mc ? null : _workspaceChips(s),
     );
   }
 
@@ -1478,7 +1474,26 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   double get _deskHeaderHeight =>
       _isMissionControl ? ChatHeader.overlap - 8 : _kDeskHeaderH;
 
-  Widget _deskHeaderBar(HarnessState? s, bool running) {
+  /// With the session panel open, its header holds the actions; the chat
+  /// header carries them only when the panel is hidden or does not fit.
+  Widget _deskHeaderBar(HarnessState? s, bool running, {bool rail = false}) {
+    if (!rail) return _deskHeaderBarWith(s, running, actions: true);
+    return ValueListenableBuilder<bool>(
+      valueListenable: sessionRailCollapsed,
+      builder: (_, collapsed, __) => _deskHeaderBarWith(s, running,
+          actions: collapsed, showPanel: collapsed),
+    );
+  }
+
+  Widget _deskHeaderBarWith(HarnessState? s, bool running,
+      {required bool actions, bool showPanel = false}) {
+    final toggle = showPanel
+        ? IconBtn('sidebar',
+            size: 30,
+            iconSize: 15,
+            tooltip: 'Show session panel',
+            onTap: () => setSessionRailCollapsed(false))
+        : null;
     if (_isMissionControl) {
       return ChatHeader(
         agentIds: const ['mission-control'],
@@ -1486,24 +1501,35 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         status: ChatHeader.statusText(running ? 'Working' : 'Active'),
         onTitleTap: widget.onDeskInfo,
         titleHint: 'Info',
-        trailing: Padding(
-          padding: EdgeInsets.only(top: S.s4),
-          child: _mcHeaderActions(s),
-        ),
+        trailing: actions
+            ? Padding(
+                padding: EdgeInsets.only(top: S.s4),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  _mcHeaderActions(s),
+                  if (toggle != null) toggle,
+                ]),
+              )
+            : null,
       );
     }
-    final actions = _isMissionControl
-        ? _mcHeaderActions(s)
-        : _sessionHeaderActions(s);
     return SizedBox(
       height: _kDeskHeaderH,
-      child: Stack(clipBehavior: Clip.none, children: [
-        Positioned(right: 12, top: 7, child: actions),
-      ]),
+      child: actions
+          ? Stack(clipBehavior: Clip.none, children: [
+              Positioned(
+                  right: 12,
+                  top: 7,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    _workspaceChips(s),
+                    _sessionIconActions(s),
+                    if (toggle != null) toggle,
+                  ])),
+            ])
+          : null,
     );
   }
 
-  Widget _sessionHeaderActions(HarnessState? s) => Row(
+  Widget _workspaceChips(HarnessState? s) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (!kMobile && (s?.workspace ?? '').isNotEmpty) ...[
@@ -1525,6 +1551,12 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               onOpenWorkspace: widget.onOpenWorkspace,
             ),
           ],
+        ],
+      );
+
+  Widget _sessionIconActions(HarnessState? s) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
           IconBtn('goal',
               size: 30,
               iconSize: 15,
@@ -1814,9 +1846,12 @@ class _DockTabState extends State<_DockTab> {
 String? lanePillLabel(List<LaneInfo> lanes) {
   final running = lanes.where((l) => l.running).toList();
   if (running.isEmpty) return null;
-  final since = running.map((l) => l.startedAt).reduce((a, b) => a.compareTo(b) <= 0 ? a : b);
+  final since = running
+      .map((l) => l.startedAt)
+      .reduce((a, b) => a.compareTo(b) <= 0 ? a : b);
   final batch = lanes
-      .where((l) => l.status != 'cancelled' && l.startedAt.compareTo(since) >= 0)
+      .where(
+          (l) => l.status != 'cancelled' && l.startedAt.compareTo(since) >= 0)
       .toList();
   final done = batch.where((l) => l.status == 'completed').length;
   final n = batch.length;

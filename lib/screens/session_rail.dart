@@ -63,6 +63,8 @@ class SessionRail extends StatefulWidget {
     this.onCheckpoints,
     this.onMemory,
     this.onOpenTask,
+    this.headerActions,
+    this.headerChips,
   });
 
   final DaemonClient client;
@@ -86,6 +88,12 @@ class SessionRail extends StatefulWidget {
   final VoidCallback? onCheckpoints;
   final VoidCallback? onMemory;
   final void Function(String taskId)? onOpenTask;
+
+  /// Session actions (goal, tools, more) shown beside the panel's title.
+  final Widget? headerActions;
+
+  /// Files and git chips shown under the panel's title.
+  final Widget? headerChips;
 
   @override
   State<SessionRail> createState() => _SessionRailState();
@@ -190,21 +198,12 @@ class _SessionRailState extends State<SessionRail> {
     return ValueListenableBuilder<bool>(
       valueListenable: sessionRailCollapsed,
       builder: (_, collapsed, __) {
-        if (collapsed) {
-          return Padding(
-            padding: EdgeInsets.fromLTRB(0, 52, S.of(10), 0),
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: _RailToggle(
-                  tooltip: 'Show session rail',
-                  onTap: () => setSessionRailCollapsed(false)),
-            ),
-          );
-        }
+        // Hidden: the chat header carries the actions and the show toggle.
+        if (collapsed) return const SizedBox.shrink();
         return SizedBox(
           width: kSessionRailWidth + 10,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(0, 52, S.of(10), S.s12),
+            padding: EdgeInsets.fromLTRB(0, S.s8, S.of(10), S.s12),
             child: Align(
               alignment: Alignment.topCenter,
               child: Glass(
@@ -282,11 +281,18 @@ class _SessionRailState extends State<SessionRail> {
                 overflow: TextOverflow.ellipsis,
                 style: mono(11, color: AppColors.fg4)),
           ),
+          if (widget.headerActions != null) widget.headerActions!,
           _RailToggle(
               tooltip: 'Hide session panel',
               small: true,
               onTap: () => setSessionRailCollapsed(true)),
         ]),
+        if (widget.headerChips != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Align(
+                alignment: Alignment.centerLeft, child: widget.headerChips),
+          ),
         if (t != null && widget.onOpenTask != null)
           Padding(
             padding: const EdgeInsets.only(top: 6),
