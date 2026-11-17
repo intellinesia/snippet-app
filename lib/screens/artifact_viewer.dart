@@ -10,6 +10,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../api.dart';
 import '../chat/chat_card.dart';
+import '../chat/grouped_card.dart';
+import '../markdown_preview.dart' show plainPreview;
 import '../gesture_physics.dart';
 import '../models.dart';
 import '../panel.dart';
@@ -202,15 +204,6 @@ String _artifactKindLabel(String kind) => switch (kind) {
       _ => 'File',
     };
 
-Widget _artifactIconTile(String kind) => Container(
-      width: 40,
-      height: 40,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-          color: AppColors.surface3, borderRadius: BorderRadius.circular(R.card)),
-      child: AppIcon(artifactIcon(kind), size: 20, color: AppColors.fg2),
-    );
-
 /// An artifact in the transcript: a card with a preview and a footer.
 class ArtifactRow extends StatefulWidget {
   const ArtifactRow({
@@ -265,21 +258,25 @@ class _ArtifactRowState extends State<ArtifactRow> {
       id: widget.id,
       version: widget.version);
 
-  String get _meta => [
-        _artifactKindLabel(widget.kind),
-        'v${widget.version}',
-        if (widget.caption.isNotEmpty) widget.caption
-      ].join(' · ');
+  String get _meta => '${_artifactKindLabel(widget.kind)} · v${widget.version}';
 
-  Widget _compact(BuildContext context) => ChatCard(children: [
-        ChatCardFooter(
-          title: widget.title,
-          meta: _meta,
-          leading: _artifactIconTile(widget.kind),
-          divider: false,
-          onTap: () => _open(context),
-        ),
-      ]);
+  Widget _header(BuildContext context) => GroupedCardHeader(
+        icon: artifactIcon(widget.kind),
+        title: widget.title,
+        sub: _meta,
+        trailing: GroupedCardHeader.chevron(),
+        onTap: () => _open(context),
+      );
+
+  Widget _compact(BuildContext context, {String? text}) {
+    final plain = plainPreview(
+        (text ?? '').trim().isNotEmpty ? text! : widget.caption);
+    return GroupedCard(segments: [
+      _header(context),
+      if (plain.isNotEmpty)
+        GroupedCardBody(text: plain, onTap: () => _open(context)),
+    ]);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -294,10 +291,13 @@ class _ArtifactRowState extends State<ArtifactRow> {
           return _compact(context);
         }
         final d = snap.data;
-        Widget body;
+        if (d != null && d.uri == null) {
+          return _compact(context, text: d.text);
+        }
+        final Widget body;
         if (d == null) {
           body = const ArtifactSkeleton(fill: true);
-        } else if (d.uri != null) {
+        } else {
           body = Image.network(
             d.uri!,
             fit: BoxFit.cover,
@@ -315,21 +315,12 @@ class _ArtifactRowState extends State<ArtifactRow> {
               );
             },
           );
-        } else {
-          body = _TextPreview(text: d.text ?? '');
         }
-        return ChatCard(children: [
-          Container(
-            height: 150,
-            width: double.infinity,
-            clipBehavior: Clip.hardEdge,
-            decoration: BoxDecoration(color: AppColors.surface2),
-            child: body,
-          ),
-          ChatCardFooter(
-            title: widget.title,
-            meta: _meta,
+        return GroupedCard(segments: [
+          _header(context),
+          GestureDetector(
             onTap: () => _open(context),
+            child: SizedBox(height: 150, width: double.infinity, child: body),
           ),
         ]);
       },
@@ -341,66 +332,6 @@ class _ArtifactPreview {
   const _ArtifactPreview({this.uri, this.text});
   final String? uri;
   final String? text;
-}
-
-class _TextPreview extends StatelessWidget {
-  const _TextPreview({required this.text});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final lines = text.trim().split('\n');
-    var i = lines.indexWhere((l) => l.trim().isNotEmpty);
-    if (i < 0) i = 0;
-    final first = lines.isEmpty ? '' : lines[i].replaceFirst(RegExp(r'^#+\s*'), '');
-    final rest = lines.skip(i + 1).join('\n').trim();
-    return Stack(children: [
-      Positioned.fill(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(S.s16, S.of(14), S.s16, 0),
-          child: SingleChildScrollView(
-            physics: const NeverScrollableScrollPhysics(),
-            child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(first,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(15, weight: W.strong, color: AppColors.fg2)),
-              if (rest.isNotEmpty) ...[
-                SizedBox(height: S.s6),
-                Text(rest,
-                    maxLines: 8,
-                    overflow: TextOverflow.clip,
-                    style: sans(12, color: AppColors.fg3)),
-              ],
-            ],
-          ),
-          ),
-        ),
-      ),
-      Positioned(
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: 48,
-        child: IgnorePointer(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppColors.surface2.withValues(alpha: 0),
-                  AppColors.surface2
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    ]);
-  }
 }
 
 bool artifactShowsInline(String kind, String? display) {

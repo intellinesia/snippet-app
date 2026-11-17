@@ -5,6 +5,8 @@ import '../approval_code.dart';
 import '../chat/chat_card.dart';
 import '../mochi.dart';
 import '../chat/decided_card.dart';
+import '../chat/grouped_card.dart';
+import '../markdown_preview.dart' show plainPreview;
 import '../chat/chat_style.dart';
 import '../media_views.dart';
 import '../models.dart';
@@ -12,6 +14,7 @@ import '../notification_text.dart';
 import '../panel.dart';
 import '../platform.dart';
 import '../session_quick_send.dart';
+import '../settings_form.dart' show Grouped;
 import '../shell_panel.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
@@ -21,7 +24,6 @@ import 'agent_questions_card.dart';
 import 'artifact_viewer.dart';
 import 'presented_file_card.dart';
 import 'session.dart' show SessionScreen;
-import 'session_coordination_cards.dart' show CardMarkdownBody;
 
 String daemonRelativeUrl(DaemonClient client, String url) {
   final raw = url.trim();
@@ -504,8 +506,7 @@ Widget _approvalCard(CoordinationEvent e, Map<dynamic, dynamic> approval) {
     raw,
     fullCommand: command.isNotEmpty ? command : null,
   );
-  final statusRaw = (approval['status'] ?? '').toString().trim();
-  final (statusLabel, icon) = switch (statusRaw.toLowerCase()) {
+  final state = switch ('${approval['status'] ?? ''}'.trim().toLowerCase()) {
     'approved' ||
     'allowed' ||
     'allow' ||
@@ -513,55 +514,73 @@ Widget _approvalCard(CoordinationEvent e, Map<dynamic, dynamic> approval) {
     'approve_all' ||
     'approved_rule' ||
     'approve_rule' =>
-      (
-        'Approved',
-        'check-circle',
-      ),
-    'denied' || 'rejected' || 'deny' || 'reject' => (
-        'Denied',
-        'x-circle',
-      ),
-    'pending' || 'waiting' || '' => (
-        'Pending',
-        parsed.secrets.isNotEmpty ? 'lock-key' : 'shield',
-      ),
-    _ => (
-        '${statusRaw[0].toUpperCase()}${statusRaw.substring(1)}',
-        'shield',
-      ),
+      'approved',
+    'denied' || 'rejected' || 'deny' || 'reject' => 'declined',
+    _ => 'waiting',
   };
-  final code = parsed.shownCommand;
-  final showSummaryTitle =
-      summary.isNotEmpty && command.isNotEmpty && summary != command;
-  return _chatCardShell(
-    icon: icon,
-    label: statusLabel.isEmpty ? 'Approval' : 'Approval \u00b7 $statusLabel',
-    title: showSummaryTitle ? summary : null,
-    child: (code.isEmpty && parsed.secrets.isEmpty)
-        ? null
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (code.isNotEmpty)
-                ApprovalCode(
-                  code: code,
-                  shell: command.isNotEmpty,
-                  collapsedLines: 4,
-                ),
-              if (parsed.secrets.isNotEmpty) ...[
-                if (code.isNotEmpty) SizedBox(height: S.s6),
-                Wrap(
-                  spacing: S.s6,
-                  runSpacing: S.s4,
-                  children: [
-                    for (final name in parsed.secrets)
-                      Tag(name, tone: Tone.run, icon: 'key', mono: true),
-                  ],
-                ),
-              ],
-            ],
-          ),
+  final from = [
+    '${approval['task_title'] ?? ''}'.trim(),
+    '${e.payload['context'] ?? ''}'.trim(),
+  ].where((x) => x.isNotEmpty).join(' \u00b7 ');
+  final isCommand = command.isNotEmpty;
+  final title = isCommand
+      ? (state == 'waiting' ? 'Run a command' : 'Ran a command')
+      : (summary.isNotEmpty ? summary : parsed.headline('')).trim();
+  return _approvalSegments(
+    state: state,
+    title: title,
+    from: from,
+    code: parsed.shownCommand,
+    secrets: parsed.secrets,
   );
+}
+
+Widget _approvalSegments({
+  required String state,
+  required String title,
+  required String from,
+  required String code,
+  List<String> secrets = const [],
+  Widget? trailing,
+  List<Widget> extra = const [],
+}) {
+  final label = switch (state) {
+    'approved' => 'Approved',
+    'declined' => 'Declined',
+    'outdated' => 'No longer waiting on this',
+    _ => 'Waiting for approval',
+  };
+  final first = code.split('\n').first;
+  return GroupedCard(segments: [
+    GroupedCardHeader(
+      icon: 'square-terminal',
+      title: title,
+      sub: from.isEmpty || state == 'outdated' ? label : '$label \u00b7 $from',
+      trailing: trailing ??
+          switch (state) {
+            'approved' =>
+              AppIcon('check-circle', size: Grouped.icon, color: AppColors.ok),
+            'declined' =>
+              AppIcon('x-circle', size: Grouped.icon, color: AppColors.danger),
+            _ => null,
+          },
+    ),
+    if (first.isNotEmpty)
+      GroupedCardBody(
+        child: Text(first,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: codeMono(kMobile ? 13 : 12, color: AppColors.fg2)),
+      ),
+    if (secrets.isNotEmpty)
+      GroupedCardBody(
+        child: Wrap(spacing: S.s6, runSpacing: S.s4, children: [
+          for (final name in secrets)
+            Tag(name, tone: Tone.run, icon: 'key', mono: true),
+        ]),
+      ),
+    ...extra,
+  ]);
 }
 
 class _TaskCardCache {
@@ -1119,13 +1138,15 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
         'denied' => DecidedKind.denied,
         _ => DecidedKind.denied,
       };
-      return DecidedCard(
-        kind: kind,
-        title: line,
-        code: isCommand,
-        subtitle: kind == DecidedKind.outdated
-            ? 'No longer waiting on this'
-            : (from.isNotEmpty ? from : null),
+      return _approvalSegments(
+        state: switch (kind) {
+          DecidedKind.approved => 'approved',
+          DecidedKind.outdated => 'outdated',
+          _ => 'declined',
+        },
+        title: isCommand ? 'Ran a command' : line,
+        from: from,
+        code: isCommand ? parsed.shownCommand : '',
       );
     }
     final taskId = _s('task_id');
@@ -1139,66 +1160,40 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
     final asked = approvalTitle(widget.approval['title']);
     final reason = _s('reason');
     final ruleLabel = approvalRuleLabel(widget.approval['rule']);
-    return Container(
-      width: double.infinity,
-      margin: EdgeInsets.symmetric(vertical: S.s2),
-      padding: EdgeInsets.all(S.s12),
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.card),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(children: [
-            Expanded(
-              child: DeskRequestHead(
-                  agentId: widget.agentId, line: head.isNotEmpty ? head : from),
-            ),
-            if (counter != null) ChatCardPill(counter),
-          ]),
-          SizedBox(height: S.s6),
-          if (asked != null) ...[
-            Text(asked,
-                style: sans(kMobile ? 15 : 14,
-                    weight: W.strong, height: 1.3, color: AppColors.fg1)),
-            SizedBox(height: reason.isEmpty ? S.s6 : S.s2),
-          ],
-          if (reason.isNotEmpty) ...[
-            Text(reason,
-                style:
-                    sans(kMobile ? 14 : 13, height: 1.4, color: AppColors.fg2)),
-            SizedBox(height: S.s6),
-          ],
-          if (asked == null && parsed.shownCommand.isNotEmpty && !isCommand) ...[
-            Text(title, style: sans(kMobile ? 14 : 13, color: AppColors.fg1)),
-            SizedBox(height: S.s4),
-          ],
-          // One-line commands read plainly; long-press selects to copy.
-          if (parsed.shownCommand.isNotEmpty &&
-              !parsed.shownCommand.contains('\n'))
-            SelectableText(parsed.shownCommand,
-                style: codeMono(kMobile ? 13 : 12, color: AppColors.fg1))
-          else if (parsed.shownCommand.isNotEmpty)
-            ApprovalCode(code: parsed.shownCommand, collapsedLines: 4)
-          else if (asked == null)
-            Text(title, style: sans(kMobile ? 14 : 13, color: AppColors.fg1)),
-          if (parsed.secrets.isNotEmpty) ...[
-            SizedBox(height: S.s6),
-            Wrap(spacing: S.s6, runSpacing: S.s4, children: [
+    final multiline = parsed.shownCommand.contains('\n');
+    final where = head.isNotEmpty ? head : from;
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: S.s2),
+      child: GroupedCard(segments: [
+        GroupedCardHeader(
+          icon: parsed.secrets.isNotEmpty ? 'lock-key' : 'square-terminal',
+          title: asked ?? (isCommand ? 'Run a command' : title),
+          sub: where.isEmpty
+              ? 'Waiting for approval'
+              : 'Waiting for approval \u00b7 $where',
+          trailing: counter == null ? null : ChatCardPill(counter),
+        ),
+        if (parsed.shownCommand.isNotEmpty)
+          GroupedCardBody(
+            child: multiline
+                ? ApprovalCode(code: parsed.shownCommand, collapsedLines: 4)
+                : SelectableText(parsed.shownCommand,
+                    maxLines: 3,
+                    style: codeMono(kMobile ? 13 : 12, color: AppColors.fg1)),
+          ),
+        if (reason.isNotEmpty || context_.isNotEmpty)
+          GroupedCardBody(
+            text: [reason, context_].where((x) => x.isNotEmpty).join('\n'),
+          ),
+        if (parsed.secrets.isNotEmpty)
+          GroupedCardBody(
+            child: Wrap(spacing: S.s6, runSpacing: S.s4, children: [
               for (final name in parsed.secrets)
                 Tag(name, tone: Tone.run, icon: 'key', mono: true),
             ]),
-          ],
-          if (context_.isNotEmpty) ...[
-            SizedBox(height: S.s6),
-            Text(context_,
-                style: sans(kMobile ? 14 : 13, color: AppColors.fg2)),
-          ],
-          SizedBox(height: S.s12),
-          _DeskDecideButtons(
+          ),
+        GroupedCardBody(
+          child: _DeskDecideButtons(
             agentId: widget.agentId.isNotEmpty
                 ? widget.agentId
                 : widget.event.actorId,
@@ -1210,8 +1205,8 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
                 : 'Always allow $ruleLabel in this session',
             onLink: () => _decide(true, rule: true),
           ),
-        ],
-      ),
+        ),
+      ]),
     );
   }
 }
@@ -1338,16 +1333,27 @@ class TaskResultCard extends StatelessWidget {
 
   String _s(String key) => '${result[key] ?? ''}'.trim();
 
-  (String, ChatCardTone) _status() => switch (_s('status').toLowerCase()) {
-        'done' => ('Done', ChatCardTone.ok),
-        'blocked' => ('Blocked', ChatCardTone.warn),
-        'failed' => ('Failed', ChatCardTone.danger),
+  (String, String, Color) _status() => switch (_s('status').toLowerCase()) {
+        'done' => ('Task done', 'check-circle', AppColors.ok),
+        'blocked' => ('Task blocked', 'alert-circle', AppColors.run),
+        'failed' => ('Task failed', 'x-circle', AppColors.danger),
         final other when other.isNotEmpty => (
-            '${other[0].toUpperCase()}${other.substring(1)}',
-            ChatCardTone.neutral,
+            'Task ${other.toLowerCase()}',
+            'clock',
+            AppColors.fg3,
           ),
-        _ => ('', ChatCardTone.neutral),
+        _ => ('Task', 'clock', AppColors.fg3),
       };
+
+  String _date() {
+    final t = DateTime.tryParse(event.createdAt)?.toLocal();
+    if (t == null) return '';
+    const m = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return '${t.day} ${m[t.month - 1]}';
+  }
 
   void _openSession(BuildContext context, String sessionId, String title) {
     if (sessionId.isEmpty) return;
@@ -1385,47 +1391,21 @@ class TaskResultCard extends StatelessWidget {
         ? rawSummary
         : (rawTitle.isNotEmpty && fallback != rawTitle ? fallback : '');
     final sessionId = _s('session_id');
-    final (statusLabel, tone) = _status();
-    final trailing = (statusLabel.isEmpty && sessionId.isEmpty)
-        ? null
-        : Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (statusLabel.isNotEmpty) ChatCardPill(statusLabel, tone: tone),
-              if (sessionId.isNotEmpty) ...[
-                if (statusLabel.isNotEmpty) SizedBox(width: S.s6),
-                AppIcon('chevron-right', size: 15, color: AppColors.fg4),
-              ],
-            ],
-          );
-    final content = Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ChatCardHeader(
-          title: title,
-          large: false,
-          padBottom: summary.isEmpty,
-          trailing: trailing,
-        ),
-        if (summary.isNotEmpty) ...[
-          SizedBox(height: S.s6),
-          ChatCardBody(
-            child: CardMarkdownBody(body: summary, selectable: false),
-          ),
-        ],
-      ],
-    );
-    return ChatCard(
-      children: [
-        if (sessionId.isNotEmpty)
-          InkWell(
-            onTap: () => _openSession(context, sessionId, title),
-            child: content,
-          )
-        else
-          content,
-      ],
-    );
+    final (statusLabel, icon, color) = _status();
+    final date = _date();
+    final tap =
+        sessionId.isEmpty ? null : () => _openSession(context, sessionId, title);
+    final plain = plainPreview(summary);
+    return GroupedCard(segments: [
+      GroupedCardHeader(
+        icon: icon,
+        iconColor: color,
+        title: title,
+        sub: date.isEmpty ? statusLabel : '$statusLabel \u00b7 $date',
+        trailing: sessionId.isEmpty ? null : GroupedCardHeader.chevron(),
+        onTap: tap,
+      ),
+      if (plain.isNotEmpty) GroupedCardBody(text: plain, maxLines: 2, onTap: tap),
+    ]);
   }
 }

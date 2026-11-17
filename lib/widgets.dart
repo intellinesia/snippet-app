@@ -2540,6 +2540,7 @@ const _lucide = <String, IconData>{
   'git-fork': LucideIcons.gitFork300,
   'worktree': LucideIcons.gitFork300,
   'terminal': LucideIcons.terminal300,
+  'square-terminal': LucideIcons.squareTerminal300,
   'grip': LucideIcons.gripVertical300,
   'sidebar': LucideIcons.panelLeft300,
   'panel-left': LucideIcons.panelLeft300,

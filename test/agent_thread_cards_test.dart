@@ -11,6 +11,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/approval_code.dart';
 import 'package:snippet/chat/chat_card.dart';
+import 'package:snippet/chat/grouped_card.dart';
 import 'package:snippet/chat/chat_style.dart';
 import 'package:snippet/media_views.dart';
 import 'package:snippet/models.dart';
@@ -236,7 +237,7 @@ void main() {
       artifacts: const [info],
     );
 
-    expect(find.byType(ChatCardFooter), findsOneWidget);
+    expect(find.byType(GroupedCardHeader), findsOneWidget);
     expect(find.byType(ArtifactRow), findsOneWidget);
     expect(find.text('Harness Map'), findsOneWidget);
     expect(find.textContaining('Document · v2'), findsOneWidget);
@@ -312,9 +313,9 @@ void main() {
       }),
     ]);
 
-    expect(find.byType(ApprovalCode), findsOneWidget);
-    expect(find.text('Check working tree'), findsOneWidget);
-    expect(find.text('Approval \u00b7 Approved'), findsOneWidget);
+    expect(find.text('git status --short'), findsOneWidget);
+    expect(find.text('Ran a command'), findsOneWidget);
+    expect(find.text('Approved'), findsOneWidget);
 
     expect(
       find.textContaining('Growth edited 1 file, ran 1 command, read 1 file',
@@ -568,7 +569,8 @@ void main() {
         client: _Client(const []), agentId: 'builder');
     expect(card, isA<DeskApprovalCard>());
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: card!)));
-    expect(find.text('t1 · Auth cleanup · Fix login'), findsOneWidget);
+    expect(find.text('Waiting for approval · t1 · Auth cleanup · Fix login'),
+        findsOneWidget);
     expect(find.text('Needs the full suite before the PR.'), findsOneWidget);
     expect(find.text('Approve'), findsOneWidget);
     expect(find.text('Deny'), findsOneWidget);
@@ -621,18 +623,9 @@ void main() {
     expect(find.text('Push release'), findsOneWidget);
     expect(find.text('Run suite'), findsOneWidget);
 
-    expect(t.widget<ChatCardPill>(find.ancestor(
-      of: find.text('Done'),
-      matching: find.byType(ChatCardPill),
-    )).tone, ChatCardTone.ok);
-    expect(t.widget<ChatCardPill>(find.ancestor(
-      of: find.text('Blocked'),
-      matching: find.byType(ChatCardPill),
-    )).tone, ChatCardTone.warn);
-    expect(t.widget<ChatCardPill>(find.ancestor(
-      of: find.text('Failed'),
-      matching: find.byType(ChatCardPill),
-    )).tone, ChatCardTone.danger);
+    expect(find.textContaining('Task done'), findsOneWidget);
+    expect(find.textContaining('Task blocked'), findsOneWidget);
+    expect(find.textContaining('Task failed'), findsOneWidget);
 
     await t.tap(find.text('Push release'));
     await t.pump();
@@ -724,7 +717,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('c1')),
-          matching: find.text('Approved'),
+          matching: find.textContaining('Approved'),
         ),
         findsOneWidget,
       );
@@ -739,7 +732,7 @@ void main() {
 
     for (final c in [
       (state: 'approved', label: 'Approved'),
-      (state: 'denied', label: 'Denied'),
+      (state: 'denied', label: 'Declined'),
       (state: 'outdated', label: 'No longer waiting on this'),
     ]) {
       testWidgets('renders stored outcome ${c.state} with no network call',
@@ -761,7 +754,7 @@ void main() {
         await t.pump();
 
         expect(client.sessionsCalls, 0);
-        expect(find.text(c.label), findsOneWidget);
+        expect(find.textContaining(c.label), findsOneWidget);
         expect(find.text('Approve'), findsNothing);
         expect(find.text('Deny'), findsNothing);
       });
@@ -779,7 +772,7 @@ void main() {
       final before = client.threadPageCalls;
 
       expect(find.text('Approve'), findsOneWidget);
-      expect(find.text('Approved'), findsNothing);
+      expect(find.textContaining('Approved'), findsNothing);
 
       client.thread = [resolved];
       client.deviceEvents.add({
@@ -800,7 +793,7 @@ void main() {
       await t.pump();
 
       expect(client.threadPageCalls, before + 1);
-      expect(find.text('Approved'), findsOneWidget);
+      expect(find.textContaining('Approved'), findsOneWidget);
       expect(find.text('Approve'), findsNothing);
       await t.pumpWidget(const SizedBox());
     });
@@ -885,11 +878,10 @@ void main() {
       ),
     ));
 
-    expect(find.text('Approved'), findsOneWidget);
-    expect(find.text('Denied'), findsOneWidget);
+    expect(find.textContaining('Approved'), findsOneWidget);
+    expect(find.textContaining('Declined'), findsNWidgets(2));
     expect(find.text('No longer waiting on this'), findsOneWidget);
-    expect(find.text('Approval · Denied'), findsOneWidget);
-    expect(find.text('Approval · Rejected'), findsNothing);
+    expect(find.textContaining('Rejected'), findsNothing);
     expect(find.text('Approve'), findsNothing);
     await t.pumpWidget(const SizedBox());
   });

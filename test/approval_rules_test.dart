@@ -270,7 +270,7 @@ void main() {
       final sent = _sentKinds(ch).single;
       expect(sent['kind'], 'approve_rule');
       expect(sent['via'], 'desk');
-      expect(find.text('Approved'), findsOneWidget);
+      expect(find.textContaining('Approved'), findsOneWidget);
       expect(find.text('Approve'), findsNothing);
     });
 
@@ -286,7 +286,7 @@ void main() {
       final e = ev();
       (e.payload['approval'] as Map)['outcome'] = {'state': 'approved_rule'};
       await pump(t, e);
-      expect(find.text('Approved'), findsOneWidget);
+      expect(find.textContaining('Approved'), findsOneWidget);
       expect(find.text('Approve'), findsNothing);
     });
   });

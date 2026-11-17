@@ -418,7 +418,8 @@ void main() {
         findsOneWidget,
       );
       expect(find.byType(AgentMochi), findsWidgets);
-      expect(find.text('t1 · Auth fix · Worker session'), findsOneWidget);
+      expect(find.text('Waiting for approval · t1 · Auth fix · Worker session'),
+          findsOneWidget);
 
       await tester.tap(find.text('Approve'));
       await tester.pump(const Duration(milliseconds: 50));
@@ -426,7 +427,7 @@ void main() {
 
       final sent = jsonDecode(ch.sent.single as String) as Map;
       expect(sent['kind'], 'approve');
-      expect(find.text('Approved'), findsOneWidget);
+      expect(find.textContaining('Approved'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox());
       debugDefaultTargetPlatformOverride = null;
@@ -679,7 +680,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Build API'), findsOneWidget);
-      expect(find.text('Done'), findsOneWidget);
+      expect(find.textContaining('Task done'), findsOneWidget);
       expect(find.textContaining('Shipped'), findsOneWidget);
 
       await tester.tap(find.byType(TaskResultCard));
