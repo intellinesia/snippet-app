@@ -1041,19 +1041,24 @@ class _ImageViewerState extends State<_ImageViewer>
         if (_zoomed != _wasZoomed) setState(() => _wasZoomed = _zoomed);
       },
       onInteractionEnd: (_) => setState(() => _wasZoomed = _zoomed),
-      child: Center(
-        child: Image(
-          image: ResizeImage.resizeIfNeeded(
-            (size.width * dpr).round().clamp(720, 2400),
-            null,
-            widget.client.imageProvider(widget.paths[i]),
+      // At rest the image stays clear of the status and navigation bars.
+      child: Padding(
+        padding: MediaQuery.viewPaddingOf(context),
+        child: Center(
+          child: Image(
+            image: ResizeImage.resizeIfNeeded(
+              (size.width * dpr).round().clamp(720, 2400),
+              null,
+              widget.client.imageProvider(widget.paths[i]),
+            ),
+            fit: BoxFit.contain,
+            loadingBuilder: (_, child, progress) => progress == null
+                ? child
+                : const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2)),
+            errorBuilder: (_, __, ___) => Text("Can't load this image",
+                style: sans(13, color: Colors.white70)),
           ),
-          fit: BoxFit.contain,
-          loadingBuilder: (_, child, progress) => progress == null
-              ? child
-              : const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-          errorBuilder: (_, __, ___) => Text("Can't load this image",
-              style: sans(13, color: Colors.white70)),
         ),
       ),
     );
