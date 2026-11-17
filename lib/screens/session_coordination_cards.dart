@@ -68,6 +68,10 @@ class _CardMarkdownBodyState extends State<CardMarkdownBody> {
       blockSpacing: 4,
       listIndent: 16,
       listBulletPadding: EdgeInsets.only(right: S.s4),
+      blockquote: text.copyWith(color: AppColors.fg2),
+      blockquotePadding: const EdgeInsets.fromLTRB(12, 2, 0, 2),
+      blockquoteDecoration: BoxDecoration(
+          border: Border(left: BorderSide(color: AppColors.border2, width: 2))),
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

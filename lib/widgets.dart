@@ -102,8 +102,8 @@ class Pills<T> extends StatelessWidget {
                       },
                 child: AnimatedContainer(
                   duration: Motion.quick,
-                  padding:
-                      EdgeInsets.symmetric(horizontal: S.of(13), vertical: S.s8),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: S.of(13), vertical: S.s8),
                   decoration: BoxDecoration(
                     color: selected == val
                         ? AppColors.surface3
@@ -137,8 +137,8 @@ class Pills<T> extends StatelessWidget {
                         onSelect!(val);
                       },
                 child: Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s4),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: S.of(10), vertical: S.s4),
                   decoration: BoxDecoration(
                     // Selection is a NEUTRAL surface step, not the accent. The
                     // accent is reserved for STATE (running, needs-attention), so
@@ -173,8 +173,35 @@ final _codedLink = RegExp(r'`(\[[^\]`]+\]\((?:session|artifact):[^)\s`]+\))`');
 final _diffFenceOpenRe = RegExp(r'^([ \t]{0,3})(`{3,})(diff|patch)\s*$');
 final _innerBacktickLineRe = RegExp(r'^[ +\-]?[ \t]*`{3,}');
 
-String unwrapCodedLinks(String md) =>
-    _widenDiffFences(md.replaceAllMapped(_codedLink, (m) => m.group(1)!));
+String unwrapCodedLinks(String md) => _widenDiffFences(
+    quoteForwarded(md).replaceAllMapped(_codedLink, (m) => m.group(1)!));
+
+final _forwardedRe = RegExp(
+    r'\[forwarded from ([^\]\s]+) in ([^\],]+),[^\]]*\]\s*([\s\S]*?)\s*\[/forwarded\]');
+
+/// The daemon's `[forwarded from a:b in thread, ts] … [/forwarded]` envelope as
+/// a named quote, so a forward reads as one rather than as raw markers.
+String quoteForwarded(String md) {
+  if (!md.contains('[forwarded from ')) return md;
+  return md.replaceAllMapped(_forwardedRe, (m) {
+    final from = _forwardName(m.group(1)!);
+    final where = m.group(2)!.trim();
+    final place = where.startsWith('group:')
+        ? ' in a group'
+        : (where.startsWith('task:') ? ' in a task room' : '');
+    final body =
+        m.group(3)!.split('\n').map((l) => l.isEmpty ? '>' : '> $l').join('\n');
+    return '*Forwarded from $from$place*\n\n$body\n\n';
+  });
+}
+
+String _forwardName(String actor) {
+  final i = actor.indexOf(':');
+  final kind = i < 0 ? '' : actor.substring(0, i);
+  final id = i < 0 ? actor : actor.substring(i + 1);
+  if (kind == 'human') return 'you';
+  return id;
+}
 
 /// Unified diffs of Markdown files often contain unchanged context lines like
 /// ` ``` ` (1 leading space + 3 backticks), which CommonMark treats as closing
@@ -647,11 +674,7 @@ class AppCard extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;
   final EdgeInsetsGeometry? padding;
-  const AppCard(
-      {super.key,
-      required this.child,
-      this.onTap,
-      this.padding});
+  const AppCard({super.key, required this.child, this.onTap, this.padding});
   @override
   Widget build(BuildContext context) {
     Theme.of(context); // Rebuild on theme change
@@ -767,34 +790,35 @@ class Btn extends StatelessWidget {
         enabled: !disabled && onTap != null,
         child: Tactile(
           radius: BorderRadius.circular(radius),
-          enabled: variant == BtnVariant.primary ||
-              variant == BtnVariant.secondary,
+          enabled:
+              variant == BtnVariant.primary || variant == BtnVariant.secondary,
           child: Material(
-          color: bg,
-          borderRadius: BorderRadius.circular(radius),
-          child: InkWell(
-            onTap: disabled || onTap == null
-                ? null
-                : () {
-                    tapHaptic();
-                    onTap!();
-                  },
+            color: bg,
             borderRadius: BorderRadius.circular(radius),
-            child: Container(
-              height: h,
-              width: full ? double.infinity : null,
-              padding: EdgeInsets.symmetric(horizontal: small ? S.s12 : S.s16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(radius),
-                border:
-                    bd != null && !(kMobile && variant == BtnVariant.secondary)
-                        ? Border.all(color: bd)
-                        : null,
+            child: InkWell(
+              onTap: disabled || onTap == null
+                  ? null
+                  : () {
+                      tapHaptic();
+                      onTap!();
+                    },
+              borderRadius: BorderRadius.circular(radius),
+              child: Container(
+                height: h,
+                width: full ? double.infinity : null,
+                padding:
+                    EdgeInsets.symmetric(horizontal: small ? S.s12 : S.s16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(radius),
+                  border: bd != null &&
+                          !(kMobile && variant == BtnVariant.secondary)
+                      ? Border.all(color: bd)
+                      : null,
+                ),
+                child: child,
               ),
-              child: child,
             ),
           ),
-        ),
         ),
       ),
     );
@@ -827,7 +851,8 @@ class PillBtn extends StatelessWidget {
             borderRadius: BorderRadius.circular(kMobile ? R.pill : R.md),
             child: Container(
               height: kMobile ? 48 : 28,
-              padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s20 : S.s12),
+              padding:
+                  EdgeInsets.symmetric(horizontal: kMobile ? S.s20 : S.s12),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 if (icon != null) ...[
                   AppIcon(icon!,
@@ -1027,7 +1052,8 @@ class _PressableState extends State<Pressable> with TickerProviderStateMixin {
         child: out,
         // Always wrapped: adding the Transform on press remounted the child
         // and dropped the tap in flight.
-        builder: (_, child) => Transform.scale(scale: _scale.value, child: child),
+        builder: (_, child) =>
+            Transform.scale(scale: _scale.value, child: child),
       ),
     );
   }
@@ -1081,9 +1107,8 @@ class _SpringExpandState extends State<SpringExpand>
           if (h == 0 && !widget.open) {
             return const SizedBox(width: double.infinity);
           }
-          final fade = widget.open
-              ? ((h - 0.25) / 0.75).clamp(0.0, 1.0)
-              : h * h;
+          final fade =
+              widget.open ? ((h - 0.25) / 0.75).clamp(0.0, 1.0) : h * h;
           return ClipRect(
             child: Align(
               alignment: Alignment.topCenter,
@@ -1609,7 +1634,8 @@ void _messageActions(BuildContext context, String text) {
   final preview = text.replaceAll(RegExp(r'\s+'), ' ').trim();
   showAppSheet(context,
       title: 'Message',
-      subtitle: preview.length > 60 ? '${preview.substring(0, 60)}\u2026' : preview,
+      subtitle:
+          preview.length > 60 ? '${preview.substring(0, 60)}\u2026' : preview,
       child: SheetActions([
         SheetAction('clipboard', 'Copy', () {
           Navigator.pop(context);
@@ -1747,7 +1773,9 @@ class Bubble extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: S.s2),
         child: onLongPress != null
             ? GestureDetector(onLongPress: onLongPress, child: bubble)
-            : (selectable ? _LongPressCopy(text: shown, child: bubble) : bubble),
+            : (selectable
+                ? _LongPressCopy(text: shown, child: bubble)
+                : bubble),
       );
     }
 
@@ -1823,8 +1851,10 @@ class Bubble extends StatelessWidget {
             else if (shown.isNotEmpty)
               Container(
                 padding: kMobile
-                    ? EdgeInsets.fromLTRB(S.of(15), S.of(10), S.of(15), S.of(11))
-                    : EdgeInsets.fromLTRB(S.of(14), S.of(9), S.of(14), S.of(10)),
+                    ? EdgeInsets.fromLTRB(
+                        S.of(15), S.of(10), S.of(15), S.of(11))
+                    : EdgeInsets.fromLTRB(
+                        S.of(14), S.of(9), S.of(14), S.of(10)),
                 decoration: BoxDecoration(
                   color: AppColors.surface2,
                   borderRadius: kMobile
