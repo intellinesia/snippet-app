@@ -6,6 +6,8 @@ import '../models.dart';
 import '../settings_form.dart';
 import '../tool_activity.dart';
 import 'file_changes.dart' show sessionChangeSteps;
+import 'lanes.dart' show openLaneView;
+import '../mochi.dart' show AgentMochi;
 import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
@@ -67,6 +69,15 @@ class SessionRail extends StatefulWidget {
     this.onCheckpoints,
     this.onMemory,
     this.onOpenTask,
+    this.onHandOff,
+    this.onFork,
+    this.onCompact,
+    this.onDeliverables,
+    this.onRecurring,
+    this.onDelete,
+    this.providers = const {},
+    this.ownProfile,
+    this.ownAgent,
     this.headerActions,
     this.headerChips,
   });
@@ -95,6 +106,17 @@ class SessionRail extends StatefulWidget {
   final VoidCallback? onCheckpoints;
   final VoidCallback? onMemory;
   final void Function(String taskId)? onOpenTask;
+  final VoidCallback? onHandOff;
+  final VoidCallback? onFork;
+  final VoidCallback? onCompact;
+  final VoidCallback? onDeliverables;
+  final VoidCallback? onRecurring;
+  final VoidCallback? onDelete;
+
+  /// Profile name to provider, for the lane rows' marks.
+  final Map<String, String> providers;
+  final String? ownProfile;
+  final String? ownAgent;
 
   /// Session actions (goal, terminal, more) shown beside the panel's title.
   final Widget? headerActions;
@@ -289,6 +311,7 @@ class _SessionRailState extends State<SessionRail> {
         onLabel: widget.onChanges);
     add('Usage', _usageRows(s));
     add('Next without you', _nextRows());
+    add('Session', _sessionRows());
     return out;
   }
 
@@ -400,22 +423,64 @@ class _SessionRailState extends State<SessionRail> {
           ),
       ];
 
+  List<Widget> _sessionRows() {
+    final w = widget;
+    return [
+      if (w.onHandOff != null)
+        _RailRow(icon: 'users', label: 'Hand off', onTap: w.onHandOff),
+      if (w.onFork != null)
+        _RailRow(icon: 'git-branch', label: 'Fork from here', onTap: w.onFork),
+      if (w.onCheckpoints != null)
+        _RailRow(icon: 'history', label: 'Checkpoints', onTap: w.onCheckpoints),
+      if (w.onMemory != null)
+        _RailRow(icon: 'brain', label: 'Memory', onTap: w.onMemory),
+      if (w.onDeliverables != null)
+        _RailRow(
+            icon: 'folder', label: 'Shared files', onTap: w.onDeliverables),
+      if (w.onProcesses != null)
+        _RailRow(icon: 'activity', label: 'Processes', onTap: w.onProcesses),
+      if (w.onRecurring != null)
+        _RailRow(icon: 'repeat', label: 'Scheduled', onTap: w.onRecurring),
+      if (w.onCompact != null)
+        _RailRow(
+            icon: 'minimize', label: 'Compact history', onTap: w.onCompact),
+      if (w.onDelete != null)
+        _RailRow(
+            icon: 'trash',
+            label: 'Delete session',
+            danger: true,
+            onTap: w.onDelete),
+    ];
+  }
+
+  /// The lane's agent when it runs as another one, else its provider.
+  Widget _laneMark(LaneInfo l) {
+    final agent = (l.agent ?? '').trim();
+    if (agent.isNotEmpty && agent != widget.ownAgent) {
+      return AgentMochi(agent, size: 18);
+    }
+    final provider =
+        widget.providers[l.profile] ?? widget.providers[widget.ownProfile];
+    if (provider != null) return ProviderLogo(provider, size: 16);
+    return AgentMochi(widget.ownAgent ?? 'snippet', size: 18);
+  }
+
   List<Widget> _laneRows(List<LaneInfo> lanes) {
     lanes.sort((a, b) => (b.running ? 1 : 0) - (a.running ? 1 : 0));
     return [
       for (final l in lanes.take(4))
         InkWell(
-          onTap: widget.onLanes,
+          onTap: () => openLaneView(context, l,
+              client: widget.client,
+              sessionId: widget.sessionId,
+              liveLanes: () => widget.state?.lanes ?? [l]),
           borderRadius: BorderRadius.circular(R.md),
           hoverColor: AppColors.surface2,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 40),
             child: Row(children: [
-              _Dot(l.running
-                  ? AppColors.accent
-                  : l.status == 'failed'
-                      ? AppColors.danger
-                      : AppColors.ok),
+              SizedBox.square(
+                  dimension: 20, child: Center(child: _laneMark(l))),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -425,17 +490,26 @@ class _SessionRailState extends State<SessionRail> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: sans(13, color: AppColors.fg2)),
-                    Text(
-                        l.running
-                            ? ((l.activity ?? '').trim().isEmpty
-                                ? 'Running'
-                                : 'Running · ${l.activity!.trim()}')
-                            : l.status == 'failed'
-                                ? 'Failed'
-                                : 'Finished',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(11.5, color: AppColors.fg4)),
+                    Row(children: [
+                      _Dot(l.running
+                          ? AppColors.accent
+                          : l.status == 'failed'
+                              ? AppColors.danger
+                              : AppColors.ok),
+                      const SizedBox(width: 6),
+                      Expanded(
+                          child: Text(
+                              l.running
+                                  ? ((l.activity ?? '').trim().isEmpty
+                                      ? 'Running'
+                                      : 'Running · ${l.activity!.trim()}')
+                                  : l.status == 'failed'
+                                      ? 'Failed'
+                                      : 'Finished',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(11.5, color: AppColors.fg4))),
+                    ]),
                   ],
                 ),
               ),
@@ -822,6 +896,7 @@ class _RailRow extends StatelessWidget {
     this.value,
     this.trailing,
     this.chevron = false,
+    this.danger = false,
     this.onTap,
   });
   final String icon;
@@ -829,6 +904,7 @@ class _RailRow extends StatelessWidget {
   final String? value;
   final Widget? trailing;
   final bool chevron;
+  final bool danger;
   final VoidCallback? onTap;
 
   @override
@@ -840,13 +916,15 @@ class _RailRow extends StatelessWidget {
       child: SizedBox(
         height: 30,
         child: Row(children: [
-          AppIcon(icon, size: 14, color: AppColors.fg4),
+          AppIcon(icon,
+              size: 14, color: danger ? AppColors.danger : AppColors.fg4),
           const SizedBox(width: 10),
           Expanded(
             child: Text(label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(13, color: AppColors.fg2)),
+                style:
+                    sans(13, color: danger ? AppColors.danger : AppColors.fg2)),
           ),
           if (value != null) ...[
             const SizedBox(width: 8),

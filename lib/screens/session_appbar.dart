@@ -1353,6 +1353,10 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     final open = widget.onOpenRightPanel;
     final goalOn = s?.goal?.ongoing ?? false;
     final profile = (_currentProfile ?? widget.profile ?? '').trim();
+    if (!_railProvidersAsked) {
+      _railProvidersAsked = true;
+      _loadProviders();
+    }
     return SessionRail(
       client: widget.client,
       sessionId: widget.sessionId,
@@ -1387,6 +1391,20 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           open != null ? open('checkpoints') : _showCheckpoints(),
       onMemory: () => _performMacAction('memory'),
       onOpenTask: (id) => openTaskDetail(context, widget.client, id),
+      onHandOff:
+          mc || widget.readOnly || _inboxAgentId(widget.sessionId) != null
+              ? null
+              : _showHandOff,
+      onFork: mc || widget.readOnly ? null : () => _confirmFork(null),
+      onCompact: _confirmCompact,
+      onDeliverables: mc ? null : _openDeliverables,
+      onRecurring: _openRecurring,
+      onDelete: mc || widget.readOnly || _inboxAgentId(widget.sessionId) != null
+          ? null
+          : () => _deleteSession((f) => f()),
+      providers: _profileProviders,
+      ownProfile: profile.isEmpty ? null : profile,
+      ownAgent: _me?.displayAgentId ?? 'snippet',
       headerActions: mc ? _mcHeaderActions(s) : _sessionIconActions(s),
       headerChips: mc ? null : _workspaceChips(s),
     );

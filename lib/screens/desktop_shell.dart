@@ -328,9 +328,12 @@ class _DesktopShellState extends State<DesktopShell>
   /// Close ONE readout tab. Does not collapse the pane — other tabs may remain,
   /// and even an empty pane stays open so the next rail tap lands somewhere.
   Future<Object?> _openShellPanel(ShellPanelRequest request) {
-    if (!kMobile && request.purpose == ShellPanelPurpose.conversation) {
-      request.showSide = _showAgentInfo;
-      request.toggleSide = _togglePanel;
+    // Desktop has no right pane beside the chat and its panel: panels open as tabs.
+    if (!kMobile) {
+      if (request.purpose == ShellPanelPurpose.conversation) {
+        request.showSide = _showAgentInfo;
+        request.toggleSide = _togglePanel;
+      }
       _openReadoutTab(
           _RightTab.request(request, originTabKey: _activeTab?.key));
       return request.dismissed.future;

@@ -315,6 +315,7 @@ String? _inboxAgentId(String sessionId) {
 class _SessionScreenState extends State<SessionScreen>
     with WidgetsBindingObserver {
   Map<String, String> _profileProviders = const {};
+  bool _railProvidersAsked = false;
 
   final Set<Key> _shownRows = {};
   // Phone composer tray behind the "+" (session actions, hand off, fork).
