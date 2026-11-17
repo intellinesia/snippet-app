@@ -56,8 +56,6 @@ Future<void> showGoalPopover({
 List<Widget> buildShellRailTools({
   required ShellTab? activeTab,
   required MacSessionStatus? macSessionStatus,
-  required bool Function(RightPanel panel) isRightPanelActive,
-  required void Function(RightPanel panel) onToggleRightPanel,
   required void Function(String action, [String? extra]) onSessionAction,
   required void Function(BuildContext ctx) onOpenGoalPopover,
   void Function(String action)? onAgentAction,
@@ -181,13 +179,7 @@ List<Widget> buildShellRailTools({
           goalRunning
               ? item('goal', 'Cancel goal', () => onSessionAction('goal'))
               : item('goal', 'Set goal', () => onOpenGoalPopover(ctx)),
-          item('layers', 'Lanes', () => onToggleRightPanel(RightPanel.lanes),
-              detail: lanes > 0 ? '$lanes running' : null),
-          item('history', 'Checkpoints',
-              () => onToggleRightPanel(RightPanel.checkpoints)),
         ],
-        item('scheduled', 'Scheduled',
-            () => onToggleRightPanel(RightPanel.recurring)),
         if (win <= 0 || used <= 0)
           item('wrap', 'Compact history', () => onSessionAction('compact')),
         if (!mc) ...[
@@ -209,10 +201,7 @@ List<Widget> buildShellRailTools({
         'more-horizontal',
         tooltip: 'Session actions',
         badge: lanes > 0 ? '$lanes' : null,
-        active: goalRunning ||
-            isRightPanelActive(RightPanel.lanes) ||
-            isRightPanelActive(RightPanel.checkpoints) ||
-            isRightPanelActive(RightPanel.recurring),
+        active: goalRunning,
         onTap: tab == null ? null : () => openMenu(ctx),
       ),
     ),

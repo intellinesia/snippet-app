@@ -5,17 +5,12 @@ import '../chat_scene.dart';
 import '../api.dart';
 import '../shell_panel.dart';
 import '../media_views.dart';
-import 'file_viewer.dart';
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../tool_sheet.dart';
 import '../widgets.dart';
 import 'mission_control/coordination_agent_detail.dart';
-import 'recurring.dart';
-import '../tool_activity.dart';
-import 'file_changes.dart';
-import 'session_panels.dart';
 import 'shell_models.dart';
 import 'shell_nav.dart';
 import 'shell_window_bar.dart';
@@ -532,24 +527,6 @@ class RightTabBody extends StatelessWidget {
     this.onDeskInfo,
   });
 
-  // Turn-change paths are workspace-relative; the viewers want absolute ones.
-  void _openChanged(BuildContext context, String rel) {
-    final c = client;
-    if (c == null) return;
-    final ws = state?.workspace ?? '';
-    final full = rel.startsWith('/') || ws.isEmpty
-        ? rel
-        : '${ws.endsWith('/') ? ws : '$ws/'}$rel';
-    final name = rel.split('/').last;
-    if (openFileForViewing(context, client: c, path: full, name: name)) return;
-    final open = onOpenFile;
-    if (open != null) {
-      open(full, name);
-    } else {
-      presentFileOnDesktop(context, client: c, path: full, name: name);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final request = tab.request;
@@ -583,36 +560,6 @@ class RightTabBody extends StatelessWidget {
         onDeskInfo: onDeskInfo,
       );
     }
-    return switch (tab.panel) {
-      RightPanel.lanes => SessionLanesPanel(
-          lanes: state?.lanes ?? const [],
-          client: client,
-          sessionId: activeSessionId),
-      RightPanel.recurring => client == null
-          ? const EmptyPaneHint()
-          : RecurringScreen(
-              client: client!,
-              embedded: true,
-              pane: true,
-              sessionId: activeSessionId,
-              workspace: state?.workspace,
-            ),
-      RightPanel.checkpoints => SessionCheckpointsPanel(
-          client: client,
-          sessionId: activeSessionId,
-          checkpoints: state?.checkpoints.reversed.toList() ?? const [],
-          onRewind: (c) => controls?.performAction('rewind', c.id),
-          onFork: (c) => controls?.performAction('fork', c.id),
-          below: Builder(builder: (_) {
-            final ev = state?.events ?? const <Map<String, dynamic>>[];
-            final steps = sessionChangeSteps(ev);
-            return FileChangesSection(
-                steps: steps,
-                shell: shellChanges(ev, fileChanges(steps)),
-                onOpenFile: (rel) => _openChanged(context, rel));
-          }),
-        ),
-      RightPanel.none || RightPanel.files => const SizedBox.shrink(),
-    };
+    return const SizedBox.shrink();
   }
 }

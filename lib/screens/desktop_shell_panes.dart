@@ -97,6 +97,14 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       }
       return host.buildView(t.termId!, mobileKeys: kMobile);
     }
+    if (t.isWorkspace) {
+      return WorkspaceTab(
+        key: ValueKey('body-${t.key}'),
+        client: t.client,
+        sessionId: t.workspaceSession!,
+        workspacePath: t.workspacePath,
+      );
+    }
     if (t.isDiff) {
       return GitFileDiffView(
         key: ValueKey('body-${t.key}'),
@@ -119,7 +127,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       );
     }
     return SessionScreen(
-      onTogglePanel: _togglePanel,
+      onTogglePanel: null,
       onDeskInfo: t.isMissionControl ? _showAgentInfo : null,
       deskActions: primary
           ? () => Row(mainAxisSize: MainAxisSize.min, children: _headerTools(t))
@@ -160,19 +168,10 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       onShowPullRequests: !kMobile ? _openPrsTab : null,
       onTerminalHost:
           !kMobile ? (host, open) => _setTerminalHost(t.key, host, open) : null,
-      onOpenScheduled:
-          !kMobile ? () => _toggleRightPanel(_RightPanel.recurring) : null,
-      onOpenRightPanel: !kMobile
-          ? (panel) {
-              switch (panel) {
-                case 'changes':
-                  _dispatchSessionAction('file_changes');
-                case 'lanes':
-                  _toggleRightPanel(_RightPanel.lanes);
-                case 'checkpoints':
-                  _toggleRightPanel(_RightPanel.checkpoints);
-              }
-            }
+      onOpenRightPanel: null,
+      onOpenWorkspace: !kMobile ? _openActiveWorkspace : null,
+      onOpenDiffTab: !kMobile
+          ? (f) => _openDiffTab(t.client, t.instanceUrl, t.sessionId!, f)
           : null,
     );
   }
@@ -181,6 +180,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       t.isTerminal ||
       t.isFile ||
       t.isDiff ||
+      t.isWorkspace ||
       (kMobile && t.isBoard) ||
       t.isTask;
 
@@ -423,7 +423,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         contextWindow: mcState?.contextWindow ?? 0,
         onCompact: mc ? () => _dispatchSessionAction('compact') : null,
         onAutonomy: mc ? () => _dispatchSessionAction('autonomy') : null,
-        onScheduled: mc ? () => _toggleRightPanel(RightPanel.recurring) : null,
         client: tab.client,
         agent: agent,
         onHide: _togglePanel,
@@ -457,27 +456,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onExpandReadout: _openReadoutTab,
       );
     }
-    return SessionSidePanel(
-      client: tab.client,
-      workspacePath: _macSessionStatuses[tab.key]?.state?.workspace ??
-          _activeWorkspaceFolder() ??
-          '',
-      onOpenFile: (path, name) =>
-          _openFileTab(tab.client, tab.instanceUrl, path, name),
-      host: _termHosts[tab.key],
-      sessionId: tab.sessionId,
-      onTogglePanel: _toggleRightPanel,
-      onOpenDiff: (f) =>
-          _openDiffTab(tab.client, tab.instanceUrl, tab.sessionId!, f),
-      readouts: tabReadouts,
-      activeReadout: _activeKey[_Pane.right],
-      readoutBody: (r) => _rightTabBody(
-          r, _macSessionStatuses[tab.key]?.state, _macSessionControls[tab.key]),
-      onSelectReadout: (r) => _setState(() => _activeKey[_Pane.right] = r.key),
-      onCloseReadout: (r) => _closeRightTab(r.key),
-      onClearReadout: () => _setState(() => _activeKey.remove(_Pane.right)),
-      onExpandReadout: _openReadoutTab,
-    );
+    return null;
   }
 
   Widget _paneFallback(_Pane p) {
@@ -596,8 +575,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     final tools = buildShellRailTools(
       activeTab: t,
       macSessionStatus: _macSessionStatuses[t.key],
-      isRightPanelActive: _rightPanelActive,
-      onToggleRightPanel: _toggleRightPanel,
       onSessionAction: _dispatchSessionAction,
       onOpenGoalPopover: _openGoalPopover,
       onAgentAction: _agentAction,

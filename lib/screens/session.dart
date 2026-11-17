@@ -59,6 +59,7 @@ import 'artifact_viewer.dart';
 import 'tasks/task_common.dart' show openTaskDetail;
 import 'session_rail.dart';
 import 'pull_requests.dart';
+import 'workspace_popovers.dart';
 import '../github_models.dart';
 import 'presented_file_card.dart';
 import '../composer/attachment_preview.dart';
@@ -135,6 +136,12 @@ class SessionScreen extends StatefulWidget {
   /// When set, opening a file from the Files browser opens it as a shell tab
   /// instead of pushing an editor route.
   final void Function(String path, String name)? onOpenFileTab;
+
+  /// Opens a changed file's diff as a shell tab (git chip popover).
+  final void Function(GitFile file)? onOpenDiffTab;
+
+  /// Opens the full workspace pane (git chip popover footer).
+  final VoidCallback? onOpenWorkspace;
 
   /// Shows a tool batch in the desktop shell's side pane.
   final void Function(ValueListenable<ToolBatch> batch)? onOpenToolBatch;
@@ -229,6 +236,8 @@ class SessionScreen extends StatefulWidget {
       this.onMenu,
       this.mobileTopBar,
       this.onOpenFileTab,
+      this.onOpenDiffTab,
+      this.onOpenWorkspace,
       this.onOpenToolBatch,
       this.onOpenSession,
       this.onMacStatus,

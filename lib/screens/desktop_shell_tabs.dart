@@ -19,7 +19,11 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       if (!mounted) return;
       _store.saveOpenTabs(
         _tabs
-            .where((t) => !t.isPrs && !t.isDraft && !t.isReadout && !t.isTask)
+            .where((t) => !t.isPrs &&
+                !t.isDraft &&
+                !t.isReadout &&
+                !t.isTask &&
+                !t.isWorkspace)
             .map((t) => OpenTabDescriptor(
                   instanceUrl: t.instanceUrl,
                   sessionId: t.sessionId,
@@ -591,6 +595,37 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       }
     });
     _persistTabs();
+    _syncPage();
+  }
+
+  /// Opens the session's workspace tab, focusing the existing one if present.
+  void _openWorkspaceTab(DaemonClient client, String url, String sessionId,
+      String project, String path) {
+    final pane = _focusedPane;
+    final group = _activeGroupKeyFor(pane) ?? _activeTab?.key;
+    if (group == null) return;
+    final existing = _tabs.indexWhere(
+        (t) => t.isWorkspace && t.instanceUrl == url && t.workspaceSession == sessionId);
+    _setState(() {
+      if (existing >= 0) {
+        final t = _tabs[existing];
+        t
+          ..pane = pane
+          ..groupSessionKey = group;
+        _dockAux(pane, t.key);
+      } else {
+        _tabs.add(_ShellTab.workspace(
+          client: client,
+          instanceUrl: url,
+          session: sessionId,
+          project: project,
+          path: path,
+        )
+          ..pane = pane
+          ..groupSessionKey = group);
+        _dockAux(pane, _tabs.last.key);
+      }
+    });
     _syncPage();
   }
 

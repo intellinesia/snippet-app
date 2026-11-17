@@ -52,7 +52,7 @@ import 'session.dart';
 import 'mission_board_panel.dart';
 import 'pull_requests.dart';
 import 'session_list_row.dart' show sessionNeedsYou;
-import 'session_side_panel.dart';
+import 'workspace_tab.dart';
 import 'desktop_settings_page.dart';
 import 'settings_panel.dart';
 import 'shell_card_tab_strip.dart';
@@ -103,7 +103,6 @@ typedef _MobileHome = MobileHome;
 typedef _ShellTab = ShellTab;
 typedef _MacSessionStatus = MacSessionStatus;
 typedef _MacSessionControls = MacSessionControls;
-typedef _RightPanel = RightPanel;
 typedef _RightTab = RightTab;
 
 class _DesktopShellState extends State<DesktopShell>
@@ -290,50 +289,6 @@ class _DesktopShellState extends State<DesktopShell>
   /// through `_ShellTab.groupSessionKey`.
   final Map<_Pane, String> _groupRootKey = {};
 
-  /// True when this readout is the tab the pane is currently showing.
-  ///
-  /// Reads the pane's ONE selection slot, which docked `_ShellTab`s share — a
-  /// readout and a docked tab can never both be "active".
-  bool _rightPanelActive(_RightPanel p) {
-    final key = _RightTab.panel(p).key;
-    return _activeKey[_Pane.right] == key || _activeKey[_Pane.left] == key;
-  }
-
-  /// Open a readout in the pane, focusing it if it is already open.
-  ///
-  /// Toggling CLOSED when the same panel is already focused keeps the old
-  /// affordance (tap the lit button to dismiss), while a different panel ADDS a
-  /// tab instead of replacing one — that replacement was the bug.
-  void _toggleRightPanel(_RightPanel p) {
-    if (p == _RightPanel.none) return;
-    final key = _RightTab.panel(p).key;
-    setState(() {
-      _rightCollapsed = false;
-      // Focused already? Dismiss it, wherever it currently lives.
-      if (_activeKey[_Pane.right] == key) {
-        _closeRightTab(key);
-        return;
-      }
-      if (_activeKey[_Pane.left] == key) {
-        _closeRightTab(key);
-        return;
-      }
-      // The rail button opens a readout in the SECONDARY pane, so re-target it
-      // if a drag previously parked it on the left.
-      final existing = _rightTabs.where((t) => t.key == key).firstOrNull;
-      if (existing == null) {
-        _rightTabs.add(_RightTab.panel(p, originTabKey: _activeTab?.key));
-      } else {
-        existing.pane = _Pane.right;
-        existing.originTabKey = _activeTab?.key;
-      }
-      _activePane = _Pane.right;
-      _sidePanelHidden = false;
-      _agentPanelHidden = false;
-      _activeKey[_Pane.right] = key;
-    });
-  }
-
   /// A file opened from a side-pane readout goes to the main pane, next to the
   /// session, not over the readout it was opened from.
   void _openFileFromRightPane(String path, String name) {
@@ -359,7 +314,6 @@ class _DesktopShellState extends State<DesktopShell>
         existing.pane = _Pane.right;
       }
       _activePane = _Pane.right;
-      _sidePanelHidden = false;
       _activeKey[_Pane.right] = key;
     });
   }
@@ -385,8 +339,7 @@ class _DesktopShellState extends State<DesktopShell>
       if (existing == null) _rightTabs.add(tab);
       if (tab.pane == _Pane.right) {
         _rightCollapsed = false;
-        _sidePanelHidden = false;
-        _agentPanelHidden = false;
+          _agentPanelHidden = false;
       }
       _activePane = tab.pane;
       _activeKey[tab.pane] = tab.key;
@@ -452,8 +405,6 @@ class _DesktopShellState extends State<DesktopShell>
   ShellSection get _effectiveSection =>
       _hiddenSections.contains(_section) ? ShellSection.sessions : _section;
 
-  bool _sidePanelHidden = true;
-
   /// An agent tab's panel holds only the pages opened from its Actions menu.
   bool _agentPanelHidden = true;
 
@@ -467,15 +418,10 @@ class _DesktopShellState extends State<DesktopShell>
   bool get _dockedInfo =>
       _activeAgent != null || _activeTab?.readout?.request?.sidePanel != null;
 
-  bool get _panelHidden => _dockedInfo ? _agentPanelHidden : _sidePanelHidden;
+  bool get _panelHidden => _agentPanelHidden;
 
-  void _togglePanel() => setState(() {
-        if (_dockedInfo) {
-          _agentPanelHidden = !_agentPanelHidden;
-        } else {
-          _sidePanelHidden = !_sidePanelHidden;
-        }
-      });
+  void _togglePanel() =>
+      setState(() => _agentPanelHidden = !_agentPanelHidden);
 
   void _showAgentInfo() => setState(() {
         _agentPanelHidden = false;
@@ -519,8 +465,6 @@ class _DesktopShellState extends State<DesktopShell>
   List<Widget> _headerTools(_ShellTab t) => buildShellRailTools(
         activeTab: t,
         macSessionStatus: _macSessionStatuses[t.key],
-        isRightPanelActive: _rightPanelActive,
-        onToggleRightPanel: _toggleRightPanel,
         onSessionAction: _dispatchSessionAction,
         onOpenGoalPopover: _openGoalPopover,
       );
@@ -641,7 +585,6 @@ class _DesktopShellState extends State<DesktopShell>
     onOpenActiveFiles: _openActiveFiles,
     onOpenMacGit: _openMacGit,
     onToggleSidebar: _toggleSidebar,
-    onToggleRightPanel: _toggleSecondaryPane,
     onOpenCommandPalette: _openCommandPalette,
     onFocusComposer: () =>
         _macSessionControls[_activeTab?.key]?.performAction('focus_composer'),
@@ -936,8 +879,14 @@ class _DesktopShellState extends State<DesktopShell>
     _saveSidebarWidth();
   }
 
-  void _toggleSecondaryPane() {
-    setState(() => _rightCollapsed = !_rightCollapsed);
+  void _openActiveWorkspace() {
+    final tab = _activeTab;
+    final id = tab?.sessionId;
+    if (tab == null || id == null || tab.isMissionControl) return;
+    final ws = _macSessionStatuses[tab.key]?.state?.workspace.trim() ?? '';
+    final path = ws.isNotEmpty ? ws : (_activeWorkspaceFolder() ?? '');
+    _openWorkspaceTab(tab.client, tab.instanceUrl, id,
+        path.isEmpty ? '' : lastPathSegment(path, ifEmpty: path), path);
   }
 
   void _openActiveFiles() => _dispatchSessionAction('files');
@@ -999,13 +948,6 @@ class _DesktopShellState extends State<DesktopShell>
               keywords: const ['pr', 'github', 'review', 'merge']),
         act('artifacts', 'clipboard', 'Artifacts & files',
             keywords: const ['deliverables', 'shared']),
-        cmd('lanes', 'layers', 'Lanes',
-            () => _toggleRightPanel(_RightPanel.lanes),
-            kind: PaletteKind.session, keywords: const ['delegated']),
-        cmd('checkpoints', 'history', 'Checkpoints',
-            () => _toggleRightPanel(_RightPanel.checkpoints),
-            kind: PaletteKind.session,
-            keywords: const ['rewind', 'restore', 'fork']),
         goalOn
             ? act('goal', 'goal', 'Cancel goal')
             : act('goal', 'goal', 'Set a goal', keywords: const ['autonomous']),
@@ -1034,6 +976,11 @@ class _DesktopShellState extends State<DesktopShell>
         act('compact', 'wrap', 'Compact history'),
         act('memory', 'brain', 'Mission Control memory'),
       ],
+      if (inSession && !mc)
+        cmd('open-workspace', 'folder', 'Open workspace',
+            _openActiveWorkspace,
+            kind: PaletteKind.session,
+            keywords: const ['files', 'git', 'diff', 'commit', 'changes']),
       cmd('new-session', 'plus', 'New chat', _newSessionFlow,
           shortcut: kMacOS ? '⌘ N' : 'Ctrl+N',
           keywords: const ['session', 'create', 'new']),
@@ -1815,14 +1762,8 @@ class _DesktopShellState extends State<DesktopShell>
       _deleteActiveSession();
       return;
     }
-    if (action == 'file_changes' && !kMobile) {
-      setState(() => _sidePanelHidden = false);
-      SessionSidePanel.changesRequest.value++;
-      return;
-    }
-    if (action == 'files' && !kMobile) {
-      setState(() => _sidePanelHidden = false);
-      SessionSidePanel.filesRequest.value++;
+    if ((action == 'file_changes' || action == 'files') && !kMobile) {
+      _openActiveWorkspace();
       return;
     }
     final key = _activeTab?.key;

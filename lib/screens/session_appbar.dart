@@ -420,6 +420,16 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
             ));
   }
 
+  void _openWorkspaceFile(String full, String name) {
+    final open = widget.onOpenFileTab;
+    if (open != null) {
+      open(full, name);
+    } else {
+      presentFileOnDesktop(context,
+          client: widget.client, path: full, name: name);
+    }
+  }
+
   void _openChangedFile(String rel) {
     final ws = _state?.workspace ?? '';
     final full = rel.startsWith('/') || ws.isEmpty
@@ -1496,6 +1506,25 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   Widget _sessionHeaderActions(HarnessState? s) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (!kMobile && (s?.workspace ?? '').isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: FilesChip(
+                client: widget.client,
+                sessionId: widget.sessionId,
+                workspace: s!.workspace,
+                onOpenFile: _openWorkspaceFile,
+              ),
+            ),
+            GitChip(
+              client: widget.client,
+              sessionId: widget.sessionId,
+              turnStatus: s.status,
+              githubReady: _github != null,
+              onOpenDiff: widget.onOpenDiffTab,
+              onOpenWorkspace: widget.onOpenWorkspace,
+            ),
+          ],
           IconBtn('goal',
               size: 30,
               iconSize: 15,
@@ -1509,12 +1538,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                     tooltip: 'Session actions',
                     onTap: () => _openActions(s, anchor: ctx)),
               ),
-          if (widget.onTogglePanel != null)
-            IconBtn('panel-right',
-                size: 30,
-                iconSize: 15,
-                tooltip: 'Toggle panel',
-                onTap: widget.onTogglePanel),
         ],
       );
 
@@ -1529,12 +1552,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                     tooltip: 'Mission Control actions',
                     onTap: () => _openActions(s, anchor: ctx)),
               ),
-          if (widget.onTogglePanel != null)
-            IconBtn('panel-right',
-                size: 30,
-                iconSize: 15,
-                tooltip: 'Toggle panel',
-                onTap: widget.onTogglePanel),
         ],
       );
 }

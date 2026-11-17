@@ -79,6 +79,10 @@ class ShellTab {
 
   bool isDraft = false;
   String? draftFolder;
+
+  /// Set only for a workspace tab: the session whose repository it shows.
+  String? workspaceSession;
+  String workspacePath = '';
   RightTab? readout;
   String? readoutOrigin;
 
@@ -97,6 +101,21 @@ class ShellTab {
           title: tab.label.startsWith('Artifacts') ? 'Artifacts' : tab.label)
         ..readout = tab
         ..readoutOrigin = origin;
+
+  static ShellTab workspace({
+    required DaemonClient client,
+    required String instanceUrl,
+    required String session,
+    required String project,
+    required String path,
+  }) =>
+      ShellTab.session(
+          client: client,
+          instanceUrl: instanceUrl,
+          sessionId: null,
+          title: project.isEmpty ? 'Workspace' : 'Workspace · $project')
+        ..workspaceSession = session
+        ..workspacePath = path;
 
   static ShellTab draft({
     required DaemonClient client,
@@ -245,6 +264,7 @@ class ShellTab {
   bool get isFile => filePath != null;
   bool get isDiff => diffPath != null;
   bool get isTerminal => termId != null;
+  bool get isWorkspace => workspaceSession != null;
   bool get isMissionControl =>
       !isDraft &&
       !isReadout &&
@@ -254,6 +274,7 @@ class ShellTab {
       !isFile &&
       !isDiff &&
       !isTerminal &&
+      !isWorkspace &&
       isMissionControlTab(sessionId: sessionId, title: title);
   String get key => isReadout
       ? '$instanceUrl|readout|${readout!.key}'
@@ -263,6 +284,8 @@ class ShellTab {
       ? '$instanceUrl|new'
       : isPrs
       ? '$instanceUrl|prs'
+      : isWorkspace
+      ? '$instanceUrl|workspace|$workspaceSession'
       : isBoard
       ? '$instanceUrl|tasks-board'
       : isTerminal
@@ -294,6 +317,8 @@ String tabIconKind(ShellTab t) => t.isReadout
     ? 'pull-request'
     : t.isBoard
     ? 'kanban'
+    : t.isWorkspace
+    ? 'folder'
     : t.isMissionControl
         ? 'layers'
         : t.isTerminal
@@ -316,21 +341,11 @@ class MacSessionControls {
   const MacSessionControls(this.stop, this.performAction);
 }
 
-/// Session readouts that render in the secondary pane.
-///
-/// These were drawers. A drawer covers the transcript, but Lanes / Checkpoints
-/// are exactly the things you check WHILE reading a session — so they belong
-/// beside it, and tapping the same band button again closes the pane.
-///
-/// Usage is deliberately NOT here. It is a per-provider, account-wide view, so
-/// it lives in Settings → Usage rather than being reachable from a single
-/// conversation.
+/// The one pinned readout the secondary pane can host: the docked info panel
+/// of an agent or Mission Control tab.
 enum RightPanel {
   none('', ''),
-  files('Files', 'file'),
-  lanes('Lanes', 'layers'),
-  recurring('Scheduled', 'scheduled'),
-  checkpoints('Checkpoints', 'history');
+  files('Files', 'file');
 
   const RightPanel(this.label, this.icon);
   final String label;
