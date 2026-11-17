@@ -1837,7 +1837,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           if (!mine && run.first)
             ChatSenderName(
               _agentName(e.actorId),
-              indent: card != null ? 0 : ChatBubbleRow.avatarSize + 6,
+              indent: ChatBubbleRow.avatarSize + 6,
             ),
           MessageBubbleInteractive(
             text: e.body,
@@ -1895,7 +1895,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     );
   }
 
-  // Cards span the content width like the agent chat's, not a bubble's share.
+  // Cards share the bubbles' lane: same avatar column, same width cap.
   Widget _rowFor({
     required Widget? card,
     required bool mine,
@@ -1903,10 +1903,12 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     required bool avatarSlot,
     required Widget child,
   }) =>
-      card != null
-          ? child
-          : ChatBubbleRow(
-              mine: mine, avatar: avatar, avatarSlot: avatarSlot, child: child);
+      ChatBubbleRow(
+          mine: mine,
+          avatar: avatar,
+          avatarSlot: avatarSlot,
+          fill: card != null,
+          child: child);
 
   Widget _wideCap(Widget child) => kMobile
       ? child

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
+import 'package:snippet/chat/chat_style.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/group_messaging.dart';
 import 'package:snippet/swr.dart';
@@ -36,7 +37,7 @@ CoordinationEvent _e(String id, int seq, String kind, String actor,
     });
 
 void main() {
-  testWidgets('group cards span the content width', (t) async {
+  testWidgets('group cards share the bubble lane at a fixed width', (t) async {
     SharedPreferences.setMockInitialValues({});
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     t.view.physicalSize = const Size(390, 844);
@@ -78,13 +79,26 @@ void main() {
     for (var i = 0; i < 12; i++) {
       await t.pump(const Duration(milliseconds: 80));
     }
-    final widths = find
+    final lane = (358 * ChatColors.maxShare)
+        .clamp(0.0, 358 - ChatBubbleRow.avatarSize - 6)
+        .toDouble();
+    final card = find
         .ancestor(
             of: find.text('Runs deploy.sh'),
             matching: find.byType(DecoratedBox))
         .evaluate()
-        .map((e) => (e.renderObject as RenderBox).size.width);
-    expect(widths, contains(358.0));
+        .map((e) => e.renderObject as RenderBox)
+        .where((b) => (b.size.width - lane).abs() < .5);
+    expect(card, isNotEmpty);
+    final bubble = find
+        .ancestor(
+            of: find.text('Copy reads fine.'),
+            matching: find.byType(ChatBubble))
+        .evaluate()
+        .first
+        .renderObject as RenderBox;
+    expect(card.first.localToGlobal(Offset.zero).dx,
+        bubble.localToGlobal(Offset.zero).dx);
     debugDefaultTargetPlatformOverride = null;
   });
 }

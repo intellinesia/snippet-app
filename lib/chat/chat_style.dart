@@ -253,10 +253,14 @@ class ChatBubbleRow extends StatelessWidget {
     required this.child,
     this.avatar,
     this.avatarSlot = false,
+    this.fill = false,
   });
 
   final bool mine;
   final Widget child;
+
+  /// Take the whole bubble lane, for cards, so they match a full bubble's width.
+  final bool fill;
 
   /// A received run's sender, beside its last bubble (groups only).
   final Widget? avatar;
@@ -271,8 +275,10 @@ class ChatBubbleRow extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(builder: (_, box) {
         final max =
             box.maxWidth.isFinite ? box.maxWidth * ChatColors.maxShare : 520.0;
-        final bubble = ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: max), child: child);
+        final bubble = fill
+            ? SizedBox(width: max, child: child)
+            : ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: max), child: child);
         if (mine) {
           return Align(alignment: Alignment.centerRight, child: bubble);
         }
