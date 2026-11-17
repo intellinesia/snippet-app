@@ -303,9 +303,12 @@ class GroupRow extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       time: agentRowTime(DateTime.tryParse(group.lastEventAt ?? '')?.toLocal()),
+      plate: shown.length < 2,
       avatar: shown.isEmpty
           ? const Center(child: AppIcon('users', size: 16))
-          : Center(child: AgentMochi(shown.first, size: 20)),
+          : shown.length == 1
+              ? Center(child: AgentMochi(shown.first, size: 20))
+              : AgentCluster(ids: shown, size: 36),
       title: Row(children: [
         Flexible(
           child: Text(name,

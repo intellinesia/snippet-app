@@ -514,8 +514,6 @@ class _AgentCardState extends State<AgentCard> {
     final detail = agent.presence?.detail.trim() ?? '';
     var line2 = _phoneLine(agent, crew, presence);
     if (ring && crew == null && detail.isNotEmpty) line2 = detail;
-    final role = agent.capabilities.firstOrNull ??
-        (agent.kind == 'worker' ? '' : agent.kind);
     final line2Color = needs
         ? AppColors.run
         : ring
@@ -590,21 +588,11 @@ class _AgentCardState extends State<AgentCard> {
                                       ? AppColors.fg1
                                       : AppColors.fg3)),
                             ),
-                            if (role.isNotEmpty) ...[
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(role,
-                                    maxLines: 1,
-                                    softWrap: false,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: sans(11.5, color: AppColors.fg3)),
-                              ),
-                            ],
                             if (_isPinned) ...[
                               const SizedBox(width: 6),
                               AppIcon('pin', size: 11, color: AppColors.fg3),
                             ],
-                            if (role.isEmpty) const Spacer(),
+                            const Spacer(),
                             if (time.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(left: 6),
@@ -748,9 +736,13 @@ class DeskRow extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.onSecondaryTapUp,
+    this.plate = true,
   });
 
   final Widget avatar;
+
+  /// False draws [avatar] bare, e.g. a group's stacked members.
+  final bool plate;
   final Widget title;
   final Widget subtitle;
   final String time;
@@ -786,15 +778,20 @@ class DeskRow extends StatelessWidget {
                   child: Opacity(
                     opacity: dim ? 0.55 : 1,
                     child: Row(children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        clipBehavior: Clip.antiAlias,
-                        decoration: BoxDecoration(
-                            shape: BoxShape.circle, color: Grouped.plate),
-                        alignment: Alignment.center,
-                        child: avatar,
-                      ),
+                      plate
+                          ? Container(
+                              width: 28,
+                              height: 28,
+                              clipBehavior: Clip.antiAlias,
+                              decoration: BoxDecoration(
+                                  shape: BoxShape.circle, color: Grouped.plate),
+                              alignment: Alignment.center,
+                              child: avatar,
+                            )
+                          : SizedBox.square(
+                              dimension: 28,
+                              child: OverflowBox(
+                                  maxWidth: 36, maxHeight: 36, child: avatar)),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
