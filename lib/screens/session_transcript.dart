@@ -595,10 +595,15 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           final steps =
               (e['steps'] as List? ?? const []).whereType<Map>().toList();
           if (steps.isNotEmpty && idx == lastPlan) {
+            // Clear air around it, so it never reads as a step of the
+            // activity cards on either side.
             addEvent(
                 key,
-                PlanProgressCard(
-                    steps: steps, explanation: _s(e['explanation'])));
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: S.s12),
+                  child: PlanProgressCard(
+                      steps: steps, explanation: _s(e['explanation'])),
+                ));
           }
         case 'system_decision':
           endTools(key);
