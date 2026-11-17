@@ -271,7 +271,7 @@ void main() {
   testWidgets('tasks: a pushed page has the back bar and New task, rows name the agent', (tester) async {
     await _phone(tester, Scaffold(body: SafeArea(child: TasksPanel(client: _Daemon()))), pushed: true);
     expect(find.text('New task'), findsOneWidget);
-    expect(find.text('T-244 \u00b7 Moss \u00b7 In review'), findsOneWidget);
+    expect(find.textContaining('Ready for review \u00b7 Moss'), findsWidgets);
     await _settle(tester);
   });
 

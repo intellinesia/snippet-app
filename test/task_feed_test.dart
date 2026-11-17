@@ -58,6 +58,7 @@ void main() {
           ],
           onOpen: (_) {},
           onRefresh: () async {},
+          filter: const {TaskStatus.done},
           hasMore: (s) => s == TaskStatus.done,
           onLoadMore: (s) async => asked = s,
         ),
