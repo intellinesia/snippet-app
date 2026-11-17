@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import 'platform.dart';
+import 'shell_panel.dart' show openSessionInTab;
 import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'gesture_physics.dart';
 import 'api.dart';
@@ -316,6 +317,11 @@ void _openSessionLink(BuildContext context, Uri uri, String? text) {
       context.findAncestorWidgetOfExactType<SessionScreen>()?.onOpenSession;
   if (open != null) {
     open(id, title, null);
+    return;
+  }
+  final tab = openSessionInTab;
+  if (!kMobile && tab != null) {
+    tab(client, id, title);
     return;
   }
   presentScreen(context,

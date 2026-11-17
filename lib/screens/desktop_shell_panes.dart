@@ -828,7 +828,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             tooltip: kMacOS ? 'Hide sidebar (⌘B)' : 'Hide sidebar (Ctrl+B)',
             onTap: _toggleSidebar),
         SizedBox(width: S.s6),
-        _TbBtn(icon: 'list', tooltip: 'Tasks', onTap: _openTasksTab),
+        // Tasks has its tile below; the bell lives here while the sidebar shows.
+        const NotificationBell(),
         SizedBox(width: S.s6),
         ValueListenableBuilder<bool>(
           valueListenable: sidebarAgentsFirst,
@@ -935,7 +936,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         tabsRow: _mainTabsRow(),
         onOpenSettings: _openShellSettings,
         machineSwitcher: _topMachineSwitcher(),
-        tools: _railTools(),
+        tools: _sidebarHidden ? _railTools() : const [],
         reserveWindowControls: kMacOS,
       );
 

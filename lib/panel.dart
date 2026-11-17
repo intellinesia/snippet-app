@@ -35,10 +35,8 @@ Future<T?> presentScreen<T>(
   List<String>? iconAgentIds,
 }) {
   final host = ShellPanelScope.maybeOf(context);
-  if (!kMobile &&
-      style == PanelStyle.drawer &&
-      purpose != null &&
-      host != null) {
+  // Desktop opens every screen that names a purpose as a tab, never a dialog.
+  if (!kMobile && purpose != null && host != null) {
     return host
         .open(ShellPanelRequest(
           purpose: purpose,
@@ -56,8 +54,7 @@ Future<T?> presentScreen<T>(
     // A page, not a dialog, so it gets the back swipe and the page spring.
     return Navigator.of(context, rootNavigator: true).push<T>(AppPageRoute<T>(
       backSwipe: dismissible,
-      builder: (ctx) =>
-          _phonePage(builder(ctx, () => Navigator.of(ctx).pop())),
+      builder: (ctx) => _phonePage(builder(ctx, () => Navigator.of(ctx).pop())),
     ));
   }
   return showGeneralDialog<T>(

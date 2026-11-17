@@ -1038,7 +1038,8 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                           child: _trayPage(running)),
                     ),
                   if (_heldQueue.isNotEmpty) _queuedCard(),
-                  if (_attachments.isNotEmpty) _attachmentBar(),
+                  // Desktop draws attachments inside the composer card.
+                  if (kMobile && _attachments.isNotEmpty) _attachmentBar(),
                   if (_mentionQuery != null && !_isMissionControl)
                     _mentionList(),
                   if (top != null) top,

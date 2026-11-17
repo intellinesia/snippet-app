@@ -227,6 +227,8 @@ class _FileExplorerState extends State<FileExplorer> {
   // git in that directory; non-repos show a "No git here" message).
   void _openGit(String dir) => presentScreen(
         context,
+        purpose: ShellPanelPurpose.git,
+        panelId: dir,
         builder: (_, close) =>
             GitScreen(client: widget.client, folder: dir, onClose: close),
       );
@@ -503,7 +505,8 @@ class _FileExplorerState extends State<FileExplorer> {
                                   tooltip: 'New chat here',
                                   onTap: () => widget.onNewChat!(listing.path)),
                             if (listing != null)
-                              IconBtn(kMobile ? 'more-horizontal' : 'more-vertical',
+                              IconBtn(
+                                  kMobile ? 'more-horizontal' : 'more-vertical',
                                   tooltip: 'Folder actions',
                                   onTap: () =>
                                       _showFolderActions(listing.path)),
@@ -578,9 +581,8 @@ class _FileExplorerState extends State<FileExplorer> {
       },
       child: KeyedSubtree(
         key: ValueKey(listing.path),
-        child: kMobile && !_selecting
-            ? _phoneList(listing)
-            : _entryList(listing),
+        child:
+            kMobile && !_selecting ? _phoneList(listing) : _entryList(listing),
       ),
     );
   }
@@ -656,7 +658,8 @@ class _FileExplorerState extends State<FileExplorer> {
                   ? null
                   : () => _go(crumbs[i].$2, forward: false),
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: S.of(2), vertical: S.s4),
+                padding:
+                    EdgeInsets.symmetric(horizontal: S.of(2), vertical: S.s4),
                 child: Text(crumbs[i].$1,
                     style: sans(13,
                         weight: i == crumbs.length - 1 ? W.label : W.body,
@@ -751,8 +754,14 @@ class _FileExplorerState extends State<FileExplorer> {
 
   Widget _phoneList(FsListing listing) {
     final entries = _visibleEntries(listing);
-    final folders = [for (final e in entries) if (e.isDir) e];
-    final files = [for (final e in entries) if (!e.isDir) e];
+    final folders = [
+      for (final e in entries)
+        if (e.isDir) e
+    ];
+    final files = [
+      for (final e in entries)
+        if (!e.isDir) e
+    ];
     final gap = SizedBox(width: S.s8);
     return ListView(
       padding: EdgeInsets.fromLTRB(M.gutter, 0, M.gutter, S.s24),
@@ -763,7 +772,8 @@ class _FileExplorerState extends State<FileExplorer> {
         SizedBox(height: S.s12),
         Row(children: [
           if (widget.onNewChat != null) ...[
-            _phoneTile('plus', 'New chat', () => widget.onNewChat!(listing.path),
+            _phoneTile(
+                'plus', 'New chat', () => widget.onNewChat!(listing.path),
                 accent: true),
             gap,
           ],
@@ -780,7 +790,9 @@ class _FileExplorerState extends State<FileExplorer> {
           Padding(
             padding: EdgeInsets.only(top: S.s24),
             child: Text(
-                _filter.isEmpty ? 'This folder is empty.' : 'No matching files.',
+                _filter.isEmpty
+                    ? 'This folder is empty.'
+                    : 'No matching files.',
                 textAlign: TextAlign.center,
                 style: TS.ui(AppColors.fg3)),
           ),
@@ -995,6 +1007,7 @@ class _Row extends StatelessWidget {
     ];
     return parts.join(' · ');
   }
+
   @override
   Widget build(BuildContext context) {
     Theme.of(context); // Rebuild on theme change
@@ -1019,7 +1032,8 @@ class _Row extends StatelessWidget {
           // otherwise.
           height: kMobile ? M.rowHeight : 42,
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: kMobile ? M.rowPadH : S.of(14)),
+            padding: EdgeInsets.symmetric(
+                horizontal: kMobile ? M.rowPadH : S.of(14)),
             child: Row(children: [
               if (selecting) ...[
                 _checkbox(selected),

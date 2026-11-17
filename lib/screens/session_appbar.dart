@@ -1053,6 +1053,9 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           presentScreen<void>(context,
               maxWidth: 760,
               maxHeight: 640,
+              purpose: ShellPanelPurpose.changes,
+              originClient: widget.client,
+              originSessionId: widget.sessionId,
               builder: (_, close) => FileChangesScreen(
                   steps: steps, shell: shell, onOpenFile: _openChangedFile));
         }
@@ -1083,6 +1086,9 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         return;
       case 'git':
         presentScreen(context,
+            purpose: ShellPanelPurpose.git,
+            originClient: widget.client,
+            originSessionId: widget.sessionId,
             builder: (_, close) => GitScreen(
                 client: widget.client,
                 sessionId: widget.sessionId,
@@ -1381,7 +1387,9 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           ? null
           : () => open != null
               ? open('changes')
-              : _performMacAction('file_changes'),
+              : widget.onOpenWorkspace != null
+                  ? widget.onOpenWorkspace!()
+                  : _performMacAction('file_changes'),
       onGit: mc ? null : () => _performMacAction('git'),
       onPullRequests: _github == null ? null : _openPullRequests,
       onLanes: () => open != null ? open('lanes') : _showLanes(),

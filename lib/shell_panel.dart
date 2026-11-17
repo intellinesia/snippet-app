@@ -25,6 +25,8 @@ enum ShellPanelPurpose {
   autonomy,
   wakes,
   memory,
+  changes,
+  git,
   generic,
 }
 
@@ -76,6 +78,8 @@ class ShellPanelRequest {
         ShellPanelPurpose.lanes => id.isEmpty ? 'Delegated lanes' : 'Lane',
         ShellPanelPurpose.recurring => 'Scheduled jobs',
         ShellPanelPurpose.file => id.split('/').last,
+        ShellPanelPurpose.changes => 'Changes',
+        ShellPanelPurpose.git => 'Git',
         _ => '${purpose.name[0].toUpperCase()}${purpose.name.substring(1)}',
       };
   void complete() {

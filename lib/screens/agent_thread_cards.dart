@@ -1133,8 +1133,7 @@ class _DeskApprovalCardState extends State<DeskApprovalCard> {
     if (outcome.isNotEmpty) {
       final kind = switch (outcome) {
         'outdated' => DecidedKind.outdated,
-        'approved' || 'approved_all' || 'approved_rule' =>
-          DecidedKind.approved,
+        'approved' || 'approved_all' || 'approved_rule' => DecidedKind.approved,
         'denied' => DecidedKind.denied,
         _ => DecidedKind.denied,
       };
@@ -1349,8 +1348,18 @@ class TaskResultCard extends StatelessWidget {
     final t = DateTime.tryParse(event.createdAt)?.toLocal();
     if (t == null) return '';
     const m = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return '${t.day} ${m[t.month - 1]}';
   }
@@ -1393,8 +1402,9 @@ class TaskResultCard extends StatelessWidget {
     final sessionId = _s('session_id');
     final (statusLabel, icon, color) = _status();
     final date = _date();
-    final tap =
-        sessionId.isEmpty ? null : () => _openSession(context, sessionId, title);
+    final tap = sessionId.isEmpty
+        ? null
+        : () => _openSession(context, sessionId, title);
     final plain = plainPreview(summary);
     return GroupedCard(segments: [
       GroupedCardHeader(
@@ -1405,7 +1415,8 @@ class TaskResultCard extends StatelessWidget {
         trailing: sessionId.isEmpty ? null : GroupedCardHeader.chevron(),
         onTap: tap,
       ),
-      if (plain.isNotEmpty) GroupedCardBody(text: plain, maxLines: 2, onTap: tap),
+      if (plain.isNotEmpty)
+        GroupedCardBody(text: plain, maxLines: 2, onTap: tap),
     ]);
   }
 }

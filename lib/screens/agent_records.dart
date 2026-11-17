@@ -86,8 +86,8 @@ void _presentRecords(BuildContext host, String title, String agentName,
 
 /// Inbox or board as its own page. On a phone it stacks on whatever opened
 /// it, so back returns there.
-void openAgentRecordsPage(BuildContext host, String title, String agentName,
-    Widget Function() view) {
+void openAgentRecordsPage(
+    BuildContext host, String title, String agentName, Widget Function() view) {
   if (kMobile) {
     Navigator.of(host, rootNavigator: true).push<void>(AppPageRoute<void>(
         builder: (page) => _RecordsPage(
@@ -98,11 +98,11 @@ void openAgentRecordsPage(BuildContext host, String title, String agentName,
     return;
   }
   presentScreen(host,
-        style: PanelStyle.drawer,
-        maxWidth: 720,
-        maxHeight: 820,
-        builder: (_, close) => _RecordsPage(
-            title: title, subtitle: agentName, onClose: close, child: view()));
+      style: PanelStyle.drawer,
+      maxWidth: 720,
+      maxHeight: 820,
+      builder: (_, close) => _RecordsPage(
+          title: title, subtitle: agentName, onClose: close, child: view()));
 }
 
 /// Entries that arrived since the inbox was last opened, as the inbox itself
@@ -175,8 +175,8 @@ Future<void> openAgentActions(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: EdgeInsets.fromLTRB(
-                    Grouped.gutter, 8, Grouped.gutter, 0),
+                padding:
+                    EdgeInsets.fromLTRB(Grouped.gutter, 8, Grouped.gutter, 0),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: GroupedCircleButton(
@@ -330,8 +330,8 @@ class AgentActionsState extends State<AgentActions> {
             ? null
             : Row(children: [
                 Text(label,
-                    style: TS.rowTitle(
-                        danger ? AppColors.danger : AppColors.fg1)),
+                    style:
+                        TS.rowTitle(danger ? AppColors.danger : AppColors.fg1)),
                 SizedBox(width: S.s8),
                 Expanded(
                     child: Text(detail,
@@ -369,6 +369,8 @@ class AgentActionsState extends State<AgentActions> {
         'What this agent remembers',
         onTap: () => _run(
             (host) => presentScreen(host,
+                purpose: ShellPanelPurpose.memory,
+                panelId: 'agent:${widget.agentId}',
                 builder: (_, close) => MemoryScreen(
                     client: widget.client,
                     embedded: true,
@@ -404,8 +406,8 @@ class AgentActionsState extends State<AgentActions> {
     );
   }
 
-  Widget _sheetRow(BuildContext ctx, String label, String? value,
-          VoidCallback run) =>
+  Widget _sheetRow(
+          BuildContext ctx, String label, String? value, VoidCallback run) =>
       SettingsRow(
           label: label,
           value: value,
@@ -501,6 +503,8 @@ class AgentActionsState extends State<AgentActions> {
           sub: plural(mem, 'entry', 'entries'),
           onTap: () => _run(
               (host) => presentScreen(host,
+                  purpose: ShellPanelPurpose.memory,
+                  panelId: 'agent:$id',
                   builder: (_, close) => MemoryScreen(
                       client: client,
                       embedded: true,
@@ -598,8 +602,8 @@ class AgentActionsState extends State<AgentActions> {
         'When it wakes and who it tells');
     final reach = _setting('reach', 'bell', 'How it reaches you',
         'Notifications and where each kind goes');
-    final model = _setting(
-        'model', 'cpu', 'Models and context', 'Desk and task models, context length');
+    final model = _setting('model', 'cpu', 'Models and context',
+        'Desk and task models, context length');
     final nickname =
         _setting('nickname', 'edit', 'Nickname', 'What it is called here');
     final appearance = _setting('appearance', 'sparkles', 'Appearance',
@@ -613,8 +617,7 @@ class AgentActionsState extends State<AgentActions> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SettingsGroup(
-              header: 'Agent',
-              children: [_memory(), wakes, reach, model]),
+              header: 'Agent', children: [_memory(), wakes, reach, model]),
           SettingsGroup(
               header: 'Appearance', children: [nickname, appearance, delete]),
         ],
@@ -647,7 +650,8 @@ class AgentActionsState extends State<AgentActions> {
                     'Board',
                     () => AgentBoardView(
                         client: client, agentId: id, agentName: name))),
-          _row('chat', 'Desk session', 'The conversation where its mail arrives',
+          _row(
+              'chat', 'Desk session', 'The conversation where its mail arrives',
               onTap: () => _run(
                   (host) =>
                       _openSession(host, client, 'inbox-$id', '$name desk'),
@@ -673,8 +677,8 @@ class _TileGrid extends StatelessWidget {
         topRight: i == 1 ? end : inner,
         bottomLeft: i == 2 ? end : inner,
         bottomRight: i == 3 ? end : inner);
-    Widget cell(int i) => Expanded(
-        child: GroupedTile(radius: corner(i), child: tiles[i]));
+    Widget cell(int i) =>
+        Expanded(child: GroupedTile(radius: corner(i), child: tiles[i]));
     return Column(mainAxisSize: MainAxisSize.min, children: [
       IntrinsicHeight(
         child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -714,8 +718,7 @@ class _WorkTile extends StatelessWidget {
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(
-              Grouped.padX, 14, Grouped.padX, 14),
+          padding: EdgeInsets.fromLTRB(Grouped.padX, 14, Grouped.padX, 14),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -988,7 +991,8 @@ class _RecordListState<T> extends State<_RecordList<T>> {
     final content =
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
-        padding: EdgeInsets.fromLTRB(_gutter, kMobile ? S.s12 : S.of(10), _gutter, S.s8),
+        padding: EdgeInsets.fromLTRB(
+            _gutter, kMobile ? S.s12 : S.of(10), _gutter, S.s8),
         child: ListSearchField(
           controller: _search,
           hint: widget.hint,
@@ -1047,7 +1051,10 @@ class _RecordListState<T> extends State<_RecordList<T>> {
   }
 
   Widget _cardRows(List<Object> rows) {
-    final entries = [for (final r in rows) if (r is! String) r as T];
+    final entries = [
+      for (final r in rows)
+        if (r is! String) r as T
+    ];
     return Padding(
       padding: EdgeInsets.fromLTRB(_gutter, 0, _gutter, 0),
       child: Container(
@@ -1199,9 +1206,8 @@ class _SegBar extends StatelessWidget {
                         maxLines: 1,
                         style: sans(kMobile ? 13 : 12,
                             weight: i == selected ? W.label : W.body,
-                            color: i == selected
-                                ? AppColors.fg1
-                                : AppColors.fg3)),
+                            color:
+                                i == selected ? AppColors.fg1 : AppColors.fg3)),
                   ),
                 ),
               ),
@@ -1251,7 +1257,8 @@ class _DayHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(_gutter, first ? S.s8 : S.s20, _gutter, S.s4),
+        padding:
+            EdgeInsets.fromLTRB(_gutter, first ? S.s8 : S.s20, _gutter, S.s4),
         child: Text(label,
             style: sans(_meta, weight: W.label, color: AppColors.fg3)),
       );
@@ -1296,9 +1303,7 @@ class _StateTag extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
         decoration: BoxDecoration(
-          color: neutral
-              ? AppColors.surface3
-              : color.withValues(alpha: 0.13),
+          color: neutral ? AppColors.surface3 : color.withValues(alpha: 0.13),
           borderRadius: BorderRadius.circular(R.xs),
         ),
         child: Text(label,
@@ -1338,8 +1343,11 @@ class _RecordRow extends StatelessWidget {
           hoverColor: kMobile ? AppColors.surface1 : AppColors.tint3,
           child: Stack(children: [
             Padding(
-              padding: EdgeInsets.fromLTRB(_gutter + (kMobile ? S.s12 : S.s12),
-                  kMobile ? S.of(10) : S.s8, _gutter, kMobile ? S.of(10) : S.s8),
+              padding: EdgeInsets.fromLTRB(
+                  _gutter + (kMobile ? S.s12 : S.s12),
+                  kMobile ? S.of(10) : S.s8,
+                  _gutter,
+                  kMobile ? S.of(10) : S.s8),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -1378,12 +1386,12 @@ class _RecordRow extends StatelessWidget {
 
 /// One board row: a lead (kind pill or group title), the text, and its time.
 class _BoardRow extends StatelessWidget {
-  const _BoardRow(
-      {required this.lead,
-      required this.child,
-      required this.time,
-      required this.onTap,
-      });
+  const _BoardRow({
+    required this.lead,
+    required this.child,
+    required this.time,
+    required this.onTap,
+  });
 
   final Widget lead;
   final Widget child;
@@ -1471,7 +1479,8 @@ Future<void> _showRecord(
             sessionId: host.sessionId,
             title: title,
             builder: (_, close) => SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(S.of(14), S.of(10), S.of(14), S.s16),
+                padding:
+                    EdgeInsets.fromLTRB(S.of(14), S.of(10), S.of(14), S.s16),
                 child: body(close)),
           ))
           .then((_) {});

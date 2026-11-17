@@ -279,24 +279,24 @@ class ShellTab {
   String get key => isReadout
       ? '$instanceUrl|readout|${readout!.key}'
       : isTask
-      ? '$instanceUrl|task|$taskId'
-      : isDraft
-      ? '$instanceUrl|new'
-      : isPrs
-      ? '$instanceUrl|prs'
-      : isWorkspace
-      ? '$instanceUrl|workspace|$workspaceSession'
-      : isBoard
-      ? '$instanceUrl|tasks-board'
-      : isTerminal
-          ? '$instanceUrl|term|${termSessionKey ?? 'global'}|$termId'
-          : isDiff
-              ? '$instanceUrl|diff|$diffPath|$diffStaged'
-              : isFile
-                  ? '$instanceUrl|file|$filePath'
-                  : isMissionControl
-                      ? '$instanceUrl|mission-control'
-                      : '$instanceUrl|$sessionId';
+          ? '$instanceUrl|task|$taskId'
+          : isDraft
+              ? '$instanceUrl|new'
+              : isPrs
+                  ? '$instanceUrl|prs'
+                  : isWorkspace
+                      ? '$instanceUrl|workspace|$workspaceSession'
+                      : isBoard
+                          ? '$instanceUrl|tasks-board'
+                          : isTerminal
+                              ? '$instanceUrl|term|${termSessionKey ?? 'global'}|$termId'
+                              : isDiff
+                                  ? '$instanceUrl|diff|$diffPath|$diffStaged'
+                                  : isFile
+                                      ? '$instanceUrl|file|$filePath'
+                                      : isMissionControl
+                                          ? '$instanceUrl|mission-control'
+                                          : '$instanceUrl|$sessionId';
 }
 
 /// A group conversation tab's members, drawn as a character cluster.
@@ -310,24 +310,24 @@ List<String>? tabGroupAgentIds(ShellTab t) {
 String tabIconKind(ShellTab t) => t.isReadout
     ? t.readout!.icon
     : t.isTask
-    ? 'task'
-    : t.isDraft
-    ? 'chat-thread'
-    : t.isPrs
-    ? 'pull-request'
-    : t.isBoard
-    ? 'kanban'
-    : t.isWorkspace
-    ? 'folder'
-    : t.isMissionControl
-        ? 'layers'
-        : t.isTerminal
-            ? 'terminal'
-            : t.isDiff
-                ? 'git-branch'
-                : t.isFile
-                    ? 'file'
-                    : 'chat-thread';
+        ? 'task'
+        : t.isDraft
+            ? 'chat-thread'
+            : t.isPrs
+                ? 'pull-request'
+                : t.isBoard
+                    ? 'kanban'
+                    : t.isWorkspace
+                        ? 'folder'
+                        : t.isMissionControl
+                            ? 'layers'
+                            : t.isTerminal
+                                ? 'terminal'
+                                : t.isDiff
+                                    ? 'git-branch'
+                                    : t.isFile
+                                        ? 'file'
+                                        : 'chat-thread';
 
 class MacSessionStatus {
   final HarnessState? state;
@@ -424,6 +424,8 @@ class RightTab {
             'calendar-clock',
           ShellPanelPurpose.autonomy => 'activity',
           ShellPanelPurpose.file => 'file',
+          ShellPanelPurpose.changes => 'file-diff',
+          ShellPanelPurpose.git => 'git-branch',
           ShellPanelPurpose.task || ShellPanelPurpose.tasks => 'task',
           _ => 'layers',
         }

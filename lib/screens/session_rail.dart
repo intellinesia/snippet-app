@@ -269,13 +269,15 @@ class _SessionRailState extends State<SessionRail> {
     final out = <Widget>[_header()];
     var first = true;
     void add(String label, List<Widget> rows,
-        {String? meta, String? link, VoidCallback? onLabel}) {
+        {String? meta, String? link, VoidCallback? onLabel, bool open = true}) {
       if (rows.isEmpty) return;
       out.add(_RailGroup(
+          key: ValueKey('rail-$label'),
           label: label,
           meta: meta,
           link: link,
           onLabel: onLabel,
+          initiallyOpen: open,
           divider: !first || !mc,
           children: rows));
       first = false;
@@ -311,7 +313,55 @@ class _SessionRailState extends State<SessionRail> {
         onLabel: widget.onChanges);
     add('Usage', _usageRows(s));
     add('Next without you', _nextRows());
-    add('Session', _sessionRows());
+    final w = widget;
+    add(
+        'Actions',
+        [
+          if (w.onHandOff != null)
+            _RailRow(icon: 'users', label: 'Hand off', onTap: w.onHandOff),
+          if (w.onFork != null)
+            _RailRow(
+                icon: 'git-branch', label: 'Fork from here', onTap: w.onFork),
+          if (w.onRecurring != null)
+            _RailRow(icon: 'repeat', label: 'Scheduled', onTap: w.onRecurring),
+        ],
+        open: false);
+    add(
+        'Workspace',
+        [
+          if (w.onDeliverables != null)
+            _RailRow(
+                icon: 'folder', label: 'Shared files', onTap: w.onDeliverables),
+          if (w.onProcesses != null)
+            _RailRow(
+                icon: 'activity', label: 'Processes', onTap: w.onProcesses),
+          if (w.onShell != null)
+            _RailRow(icon: 'terminal', label: 'Terminal', onTap: w.onShell),
+        ],
+        open: false);
+    add(
+        'History',
+        [
+          if (w.onCheckpoints != null)
+            _RailRow(
+                icon: 'history', label: 'Checkpoints', onTap: w.onCheckpoints),
+          if (w.onMemory != null)
+            _RailRow(icon: 'brain', label: 'Memory', onTap: w.onMemory),
+          if (w.onCompact != null)
+            _RailRow(
+                icon: 'minimize', label: 'Compact history', onTap: w.onCompact),
+        ],
+        open: false);
+    if (w.onDelete != null) {
+      out.add(Padding(
+        padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+        child: _RailRow(
+            icon: 'trash',
+            label: 'Delete session',
+            danger: true,
+            onTap: w.onDelete),
+      ));
+    }
     return out;
   }
 
@@ -422,36 +472,6 @@ class _SessionRailState extends State<SessionRail> {
             ]),
           ),
       ];
-
-  List<Widget> _sessionRows() {
-    final w = widget;
-    return [
-      if (w.onHandOff != null)
-        _RailRow(icon: 'users', label: 'Hand off', onTap: w.onHandOff),
-      if (w.onFork != null)
-        _RailRow(icon: 'git-branch', label: 'Fork from here', onTap: w.onFork),
-      if (w.onCheckpoints != null)
-        _RailRow(icon: 'history', label: 'Checkpoints', onTap: w.onCheckpoints),
-      if (w.onMemory != null)
-        _RailRow(icon: 'brain', label: 'Memory', onTap: w.onMemory),
-      if (w.onDeliverables != null)
-        _RailRow(
-            icon: 'folder', label: 'Shared files', onTap: w.onDeliverables),
-      if (w.onProcesses != null)
-        _RailRow(icon: 'activity', label: 'Processes', onTap: w.onProcesses),
-      if (w.onRecurring != null)
-        _RailRow(icon: 'repeat', label: 'Scheduled', onTap: w.onRecurring),
-      if (w.onCompact != null)
-        _RailRow(
-            icon: 'minimize', label: 'Compact history', onTap: w.onCompact),
-      if (w.onDelete != null)
-        _RailRow(
-            icon: 'trash',
-            label: 'Delete session',
-            danger: true,
-            onTap: w.onDelete),
-    ];
-  }
 
   /// The lane's agent when it runs as another one, else its provider.
   Widget _laneMark(LaneInfo l) {
@@ -718,54 +738,120 @@ class _SessionRailState extends State<SessionRail> {
   }
 }
 
-class _RailGroup extends StatelessWidget {
+/// Section open/closed state, shared by every panel and kept across launches.
+final Map<String, bool> _railOpen = {};
+const String _railOpenPref = 'session_rail_open_';
+
+class _RailGroup extends StatefulWidget {
   const _RailGroup({
+    super.key,
     required this.label,
     required this.children,
     this.meta,
     this.link,
     this.onLabel,
     this.divider = true,
+    this.initiallyOpen = true,
   });
   final String label;
   final String? meta;
   final String? link;
   final VoidCallback? onLabel;
   final bool divider;
+  final bool initiallyOpen;
   final List<Widget> children;
 
   @override
+  State<_RailGroup> createState() => _RailGroupState();
+}
+
+class _RailGroupState extends State<_RailGroup> {
+  bool get _open => _railOpen[widget.label] ?? widget.initiallyOpen;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_railOpen.containsKey(widget.label)) {
+      SharedPreferences.getInstance().then((p) {
+        final v = p.getBool('$_railOpenPref${widget.label}');
+        if (v == null || !mounted) return;
+        setState(() => _railOpen[widget.label] = v);
+      });
+    }
+  }
+
+  Future<void> _toggle() async {
+    final v = !_open;
+    setState(() => _railOpen[widget.label] = v);
+    final p = await SharedPreferences.getInstance();
+    await p.setBool('$_railOpenPref${widget.label}', v);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final head = SizedBox(
-      height: 20,
-      child: Row(children: [
-        Text(label, style: sans(12, weight: W.label, color: AppColors.fg3)),
-        if (meta != null) ...[
-          const SizedBox(width: 8),
-          Text(meta!, style: sans(12, color: AppColors.fg4, tabular: true)),
-        ],
-        const Spacer(),
-        if (link != null) Text(link!, style: sans(11.5, color: AppColors.fg4)),
-        if (onLabel != null && link != null)
-          AppIcon('chevron-right', size: 12, color: AppColors.fg4),
-      ]),
+    final w = widget;
+    final open = _open;
+    final head = InkWell(
+      onTap: _toggle,
+      borderRadius: BorderRadius.circular(R.sm),
+      child: SizedBox(
+        height: 24,
+        child: Row(children: [
+          AnimatedRotation(
+            turns: open ? 0.25 : 0,
+            duration: Motion.fast,
+            child: AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+          ),
+          const SizedBox(width: 6),
+          Text(w.label, style: sans(12, weight: W.label, color: AppColors.fg3)),
+          if (w.meta != null) ...[
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(w.meta!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12, color: AppColors.fg4, tabular: true)),
+            ),
+          ],
+          const Spacer(),
+          if (w.link != null && w.onLabel != null)
+            InkWell(
+              onTap: w.onLabel,
+              borderRadius: BorderRadius.circular(R.sm),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text(w.link!, style: sans(11.5, color: AppColors.fg4)),
+                  AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+                ]),
+              ),
+            ),
+        ]),
+      ),
     );
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+      padding: EdgeInsets.fromLTRB(10, 8, 14, open ? 6 : 8),
       decoration: BoxDecoration(
-          border:
-              divider ? Border(top: BorderSide(color: AppColors.line)) : null),
+          border: w.divider
+              ? Border(top: BorderSide(color: AppColors.line))
+              : null),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          onLabel == null
-              ? head
-              : InkWell(
-                  onTap: onLabel,
-                  borderRadius: BorderRadius.circular(R.sm),
-                  child: head),
-          const SizedBox(height: 6),
-          ...children,
+          head,
+          AnimatedSize(
+            duration: Motion.fast,
+            curve: Motion.enter,
+            alignment: Alignment.topCenter,
+            child: open
+                ? Padding(
+                    padding: const EdgeInsets.only(left: 4, top: 4),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: w.children),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
         ],
       ),
     );
