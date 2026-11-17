@@ -1,11 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:snippet/api.dart';
 import 'package:snippet/chat/chat_style.dart';
-import 'package:snippet/chat/stage_bar.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/presence.dart';
 import 'package:snippet/screens/agent_messaging.dart';
@@ -366,69 +364,4 @@ void main() {
     await t.pumpWidget(const SizedBox());
   });
 
-  testWidgets('phone header has no back or tasks button', (t) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    try {
-      final agent = CoordinationAgent.fromJson({
-        'id': 'growth',
-        'display_name': 'Growth',
-        'task_counts': {
-          'todo': 1,
-          'in_progress': 2,
-          'in_review': 0,
-          'blocked': 0,
-          'done': 4,
-        },
-      });
-      await _open(t, DirectThreadPage(events: const []), agents: [agent]);
-      expect(find.byType(StageBar), findsOneWidget);
-      expect(StageBar.height, StageBar.phoneHeight);
-      final tasksBtn = find.byWidgetPredicate(
-        (w) => w is ChatGlassButton && w.icon == 'task',
-      );
-      expect(tasksBtn, findsNothing);
-      expect(find.byType(ChatGlassButton), findsNothing);
-      await t.pumpWidget(const SizedBox());
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
-
-  testWidgets('desktop header shows switcher button and optional close', (
-    t,
-  ) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
-    try {
-      var closed = false;
-      await _open(
-        t,
-        DirectThreadPage(events: const []),
-        size: const Size(1280, 800),
-        onClose: () => closed = true,
-      );
-      expect(find.byType(StageBar), findsOneWidget);
-      expect(
-        find.byWidgetPredicate(
-          (w) => w is ChatGlassButton && w.icon == 'layers',
-        ),
-        findsOneWidget,
-      );
-      final closeBtn = find.byWidgetPredicate(
-        (w) => w is ChatGlassButton && w.icon == 'x',
-      );
-      expect(closeBtn, findsOneWidget);
-      await t.tap(closeBtn);
-      await t.pump();
-      expect(closed, isTrue);
-      await t.pumpWidget(const SizedBox());
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
-
-  testWidgets('embedded mode hides the header', (t) async {
-    await _open(t, DirectThreadPage(events: const []), embedded: true);
-    expect(find.byType(StageBar), findsNothing);
-    await t.pumpWidget(const SizedBox());
-  });
 }

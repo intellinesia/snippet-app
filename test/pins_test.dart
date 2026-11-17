@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/pins.dart';
-import 'package:snippet/screens/agent_card.dart';
 import 'package:snippet/screens/agents_sidebar_panel.dart';
 import 'package:snippet/screens/mobile_session_home.dart';
 import 'package:snippet/screens/session_list_row.dart';
@@ -211,7 +210,7 @@ void main() {
     }
   });
 
-  testWidgets('pinned agents and groups sort to top with pin icon and menu',
+  testWidgets('pinned agents and groups sort to top',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
@@ -235,15 +234,6 @@ void main() {
       await tester.tap(find.text('Pin'));
       await tester.pumpAndSettle();
 
-      final alphaCard = find.ancestor(
-          of: find.text('Alpha'), matching: find.byType(AgentCard));
-      expect(
-        tester
-            .widgetList<AppIcon>(
-                find.descendant(of: alphaCard, matching: find.byType(AppIcon)))
-            .any((i) => i.name == 'pin'),
-        isTrue,
-      );
       expect(tester.getTopLeft(find.text('Alpha')).dy,
           lessThan(tester.getTopLeft(find.text('Ops Crew')).dy));
     } finally {

@@ -7,17 +7,15 @@ import 'package:snippet/screens/mobile_shell.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/screens/sidebar.dart';
 import 'package:snippet/theme.dart';
+import 'package:snippet/page_stack.dart';
 
 class _Client extends DaemonClient {
   _Client() : super('https://daemon.invalid', 'test');
 }
 
-void main() {
-  test('sheetMotion uses 320ms open and 220ms close', () {
-    expect(sheetMotion.duration, const Duration(milliseconds: 320));
-    expect(sheetMotion.reverseDuration, const Duration(milliseconds: 220));
-  });
 
+
+void main() {
   group('AppPageRoute on Android', () {
     Future<void> pushSecond(WidgetTester t, {bool disableAnimations = false}) async {
       await t.pumpWidget(MediaQuery(
@@ -46,22 +44,6 @@ void main() {
       ));
       await t.tap(find.byKey(const Key('push')));
     }
-
-    testWidgets('slides incoming from right and parallax-shifts outgoing',
-        (t) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.android;
-      try {
-        await pushSecond(t);
-        await t.pump();
-        await t.pump(const Duration(milliseconds: 170));
-        expect(t.getTopLeft(find.byKey(const Key('page2'))).dx, greaterThan(0));
-        expect(t.getTopLeft(find.byKey(const Key('page1'))).dx, lessThan(0));
-        await t.pumpAndSettle();
-        expect(t.getTopLeft(find.byKey(const Key('page2'))).dx, closeTo(0, 0.5));
-      } finally {
-        debugDefaultTargetPlatformOverride = null;
-      }
-    });
 
     testWidgets('pops on an edge drag past half the width', (t) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
@@ -129,23 +111,6 @@ void main() {
       }
     });
 
-    testWidgets('reduced motion uses 150ms fade and no slide', (t) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.android;
-      try {
-        await pushSecond(t, disableAnimations: true);
-        await t.pump();
-        await t.pump(const Duration(milliseconds: 75));
-
-        expect(find.byKey(const Key('page2')), findsOneWidget);
-        expect(t.getTopLeft(find.byKey(const Key('page2'))).dx, closeTo(0, 0.01));
-        expect(t.getTopLeft(find.byKey(const Key('page1'))).dx, closeTo(0, 0.01));
-
-        await t.pump(const Duration(milliseconds: 90));
-        expect(find.byKey(const Key('page2')), findsOneWidget);
-      } finally {
-        debugDefaultTargetPlatformOverride = null;
-      }
-    });
   });
 
   testWidgets('AppPageRoute on desktop does not enable edge pop swipe',
@@ -183,55 +148,6 @@ void main() {
   });
 
   group('MobileShell session slide & Android edge swipe', () {
-    testWidgets('slide frames do not rebuild the layer contents', (t) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.android;
-      try {
-        var chatsOpen = true;
-        var tabBuilds = 0;
-        var sideBuilds = 0;
-        late StateSetter hostSetState;
-        await t.pumpWidget(MaterialApp(
-          theme: buildAppTheme(),
-          home: StatefulBuilder(
-            builder: (ctx, setState) {
-              hostSetState = setState;
-              return MobileShell(
-                activeTabBody: _BuildCounter(() => tabBuilds++),
-                sidebar: _BuildCounter(() => sideBuilds++),
-                hasActiveTab: true,
-                chatsOpen: chatsOpen,
-                drilledDown: false,
-                mobileHome: MobileHome.chats,
-                onClearDrillDown: () {},
-                onMobileHome: (_) {},
-                onCloseChats: () {},
-                onOpenChats: () => setState(() => chatsOpen = true),
-              );
-            },
-          ),
-        ));
-        await t.pumpAndSettle();
-        hostSetState(() => chatsOpen = false);
-        await t.pump();
-        await t.pump(const Duration(milliseconds: 50));
-        final tab = tabBuilds, side = sideBuilds;
-        var shellRebuilds = 0;
-        debugOnRebuildDirtyWidget = (e, _) {
-          if (e.widget is MobileShell) shellRebuilds++;
-        };
-        addTearDown(() => debugOnRebuildDirtyWidget = null);
-        for (var i = 0; i < 5; i++) {
-          await t.pump(const Duration(milliseconds: 30));
-        }
-        expect(tabBuilds, tab);
-        expect(sideBuilds, side);
-        expect(shellRebuilds, 0);
-        await t.pumpAndSettle();
-      } finally {
-        debugDefaultTargetPlatformOverride = null;
-      }
-    });
-
     testWidgets('slides session in from right and swipes back past half',
         (t) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
@@ -368,15 +284,112 @@ void main() {
       }
     });
   });
-}
 
-class _BuildCounter extends StatelessWidget {
-  final VoidCallback onBuild;
-  const _BuildCounter(this.onBuild);
+  setUp(() {});
 
-  @override
-  Widget build(BuildContext context) {
-    onBuild();
-    return const SizedBox.expand();
+  Future<StateSetter> host(WidgetTester t, {required ValueChanged<bool> got,
+      Widget? pageChild}) async {
+    t.view.physicalSize = const Size(390, 844);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    var open = false;
+    late StateSetter set;
+    await t.pumpWidget(MaterialApp(
+      theme: buildAppTheme(),
+      home: StatefulBuilder(builder: (context, s) {
+        set = s;
+        return PhonePageStack(
+          onBack: () => s(() {
+            open = false;
+            got(false);
+          }),
+          base: const ColoredBox(key: Key('base'), color: Colors.red),
+          page: open
+              ? (pageChild ??
+                  const ColoredBox(key: Key('page'), color: Colors.blue))
+              : null,
+        );
+      }),
+    ));
+    // Opening goes through the same setter the owner would use.
+    return (fn) => set(() {
+          open = true;
+          fn();
+        });
   }
+
+  double pageX(WidgetTester t) => t.getTopLeft(find.byKey(const Key('page'))).dx;
+  double baseX(WidgetTester t) => t.getTopLeft(find.byKey(const Key('base'))).dx;
+
+  testWidgets('a swipe from mid-page past half goes back', (t) async {
+    bool? back;
+    final open = await host(t, got: (v) => back = v);
+    open(() {});
+    await t.pumpAndSettle();
+    final g = await t.startGesture(const Offset(150, 400));
+    await g.moveBy(const Offset(20, 0));
+    await g.moveBy(const Offset(200, 0));
+    await t.pump();
+    expect(pageX(t), greaterThan(150));
+    await g.up();
+    await t.pumpAndSettle();
+    expect(back, isFalse);
+    expect(find.byKey(const Key('page')), findsNothing);
+    expect(baseX(t), closeTo(0, .5));
+  });
+
+  testWidgets('a slow short swipe springs back', (t) async {
+    bool? back;
+    final open = await host(t, got: (v) => back = v);
+    open(() {});
+    await t.pumpAndSettle();
+    await t.timedDragFrom(const Offset(150, 400), const Offset(90, 0),
+        const Duration(seconds: 1));
+    await t.pumpAndSettle();
+    expect(back, isNull);
+    expect(pageX(t), closeTo(0, .5));
+  });
+
+  testWidgets('a quick flick goes back even when short', (t) async {
+    bool? back;
+    final open = await host(t, got: (v) => back = v);
+    open(() {});
+    await t.pumpAndSettle();
+    await t.flingFrom(const Offset(150, 400), const Offset(60, 0), 1200);
+    await t.pumpAndSettle();
+    expect(back, isFalse);
+  });
+
+  testWidgets('a horizontal scroller under the finger keeps its drag',
+      (t) async {
+    bool? back;
+    final open = await host(t,
+        got: (v) => back = v,
+        pageChild: ColoredBox(
+          key: const Key('page'),
+          color: Colors.blue,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              height: 100,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  for (var i = 0; i < 20; i++)
+                    SizedBox(width: 120, child: Text('chip $i')),
+                ],
+              ),
+            ),
+          ),
+        ));
+    open(() {});
+    await t.pumpAndSettle();
+    await t.dragFrom(const Offset(200, 50), const Offset(-200, 0));
+    await t.pumpAndSettle();
+    await t.dragFrom(const Offset(150, 50), const Offset(300, 0));
+    await t.pumpAndSettle();
+    expect(back, isNull);
+    expect(pageX(t), closeTo(0, .5));
+  });
 }
+

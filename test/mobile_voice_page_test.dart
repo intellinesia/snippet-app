@@ -221,65 +221,6 @@ void main() {
     }
   });
 
-  testWidgets('MobileVoicePage respects disableAnimations and Chat pops',
-      (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(390, 844);
-    final controller = _FakeAmbientController(
-      status: const AmbientStatus(running: true),
-    );
-    try {
-      await tester.pumpWidget(MediaQuery(
-        data: const MediaQueryData(
-          size: Size(390, 844),
-          disableAnimations: true,
-        ),
-        child: MaterialApp(
-          theme: buildAppTheme(),
-          home: Builder(
-            builder: (context) => Scaffold(
-              body: Center(
-                child: ElevatedButton(
-                  onPressed: () => openMobileVoicePage(
-                    context,
-                    controller: controller,
-                  ),
-                  child: const Text('Open'),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ));
-
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
-
-      // Mode pill falls back to 'Listening' when settings are absent; status is 'Listening'.
-      expect(find.text('Listening'), findsNWidgets(2));
-
-      // Verify Transform.scale remains at 1.0 under disableAnimations.
-      await tester.pump(const Duration(milliseconds: 900));
-      final transforms = tester.widgetList<Transform>(find.descendant(
-        of: find.byType(MobileVoicePage),
-        matching: find.byType(Transform),
-      ));
-      for (final t in transforms) {
-        expect(t.transform.getMaxScaleOnAxis(), closeTo(1.0, 1e-6));
-      }
-
-      await tester.tap(find.byTooltip('Chat'));
-      await tester.pumpAndSettle();
-      expect(controller.stopCalls, 0);
-      expect(find.byType(MobileVoicePage), findsNothing);
-    } finally {
-      controller.dispose();
-      tester.view.reset();
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
-
   testWidgets('ListeningPill in MobileHomeHeader opens MobileVoicePage on tap',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;

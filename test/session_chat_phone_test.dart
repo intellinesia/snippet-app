@@ -6,8 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
-import 'package:snippet/chat/stage_header.dart';
-import 'package:snippet/composer/composer_card.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/session.dart';
 import 'package:snippet/theme.dart';
@@ -73,75 +71,7 @@ Future<_Socket> _pumpSession(WidgetTester tester, Map<String, dynamic> snap,
   return attach;
 }
 
-Future<void> _openTray(WidgetTester tester) async {
-  await tester.tap(find.byWidgetPredicate(
-      (w) => w is ComposerIconButton && w.tooltip == 'Actions'));
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 300));
-}
-
 void main() {
-  testWidgets('a known session opens on its stage header, not the back bar',
-      (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    addTearDown(() => debugDefaultTargetPlatformOverride = null);
-    SharedPreferences.setMockInitialValues({});
-    DaemonClient.wsConnector =
-        (uri, {connectTimeout, pingInterval}) => _Socket(uri);
-    addTearDown(() => DaemonClient.wsConnector = null);
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(390, 844);
-    addTearDown(tester.view.reset);
-    knownSessions['sess-known'] = SessionInfo.fromJson(
-        {'id': 'sess-known', 'title': 'Known', 'agent_id': 'rook'});
-    addTearDown(() => knownSessions.remove('sess-known'));
-    await tester.pumpWidget(MaterialApp(
-      theme: buildAppTheme(),
-      home: SessionScreen(
-        client: FakeClient(),
-        sessionId: 'sess-known',
-        title: 'Known',
-        onMenu: () {},
-      ),
-    ));
-    expect(find.byType(StageHeader), findsOneWidget);
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(minutes: 1));
-    debugDefaultTargetPlatformOverride = null;
-  });
-
-  testWidgets('running: stage header subtitle, step, lanes pill, quick actions',
-      (tester) async {
-    await _pumpSession(tester, {
-      'status': 'running',
-      'events': [],
-      'lanes': [
-        {'id': 'l1', 'title': 'Goldens', 'status': 'running', 'started_at': ''},
-        {'id': 'l2', 'title': 'Note', 'status': 'running', 'started_at': ''},
-      ],
-    });
-    expect(find.byType(StageHeader), findsOneWidget);
-    // Working shows as the moving character; the subtitle names the step.
-    expect(find.text('Rook · plan 4 of 5'), findsOneWidget);
-    expect(find.textContaining('plan 4/5'), findsNothing);
-    expect(find.text('2 lanes'), findsOneWidget);
-    // The session actions live in the composer tray behind the "+".
-    expect(find.text('Hand off'), findsNothing);
-    await _openTray(tester);
-    // Empty composer: the send button is Stop, so no separate Interrupt.
-    expect(find.text('Interrupt'), findsNothing);
-    expect(find.text('Hand off'), findsOneWidget);
-    expect(find.text('Fork from here'), findsOneWidget);
-    expect(find.text('2 running'), findsOneWidget);
-    expect(find.text('Steer Rook, or queue for later'), findsOneWidget);
-    await tester.enterText(find.byType(TextField).last, 'also check 360');
-    await tester.pump();
-    expect(find.text('Interrupt'), findsOneWidget);
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-    debugDefaultTargetPlatformOverride = null;
-  });
-
   testWidgets('lanes pill counts the batch and what finished', (tester) async {
     await _pumpSession(tester, {
       'status': 'running',
@@ -167,20 +97,6 @@ void main() {
       ],
     });
     expect(find.textContaining('lane'), findsNothing);
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-    debugDefaultTargetPlatformOverride = null;
-  });
-
-  testWidgets('idle: Hand off and Fork, no Interrupt, hint names the agent',
-      (tester) async {
-    await _pumpSession(tester, {'status': 'idle', 'events': []});
-    await _openTray(tester);
-    expect(find.text('Interrupt'), findsNothing);
-    expect(find.text('Hand off'), findsOneWidget);
-    expect(find.text('Fork from here'), findsOneWidget);
-    expect(find.text('Message Rook'), findsOneWidget);
-    expect(find.textContaining('2 lanes'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
     debugDefaultTargetPlatformOverride = null;

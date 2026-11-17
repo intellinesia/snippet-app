@@ -1,8 +1,5 @@
-import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/ambient_loop.dart';
 import 'package:snippet/mochi.dart';
@@ -234,90 +231,4 @@ void main() {
     }
   });
 
-  testWidgets('render AgentCharacter states showcase to scratchpad',
-      (tester) async {
-    final outPath = Platform.environment['AGENT_CHAR_SHOT'];
-    if (outPath == null || outPath.isEmpty) return;
-
-    await CharacterRoster.load();
-    tester.view.devicePixelRatio = 2.0;
-    tester.view.physicalSize = const Size(440, 520) * 2.0;
-    addTearDown(tester.view.reset);
-
-    final boundaryKey = GlobalKey();
-    final rows = [
-      ('01', 'Rook · 01'),
-      ('04', 'Moss · 04 (glasses)'),
-      ('14', 'Mission Control · 14'),
-      ('19', 'Snippet · 19'),
-    ];
-    final states = [
-      (AgentCharacterState.idle, 'Idle'),
-      (AgentCharacterState.working, 'Working'),
-      (AgentCharacterState.waiting, 'Waiting'),
-      (AgentCharacterState.done, 'Done'),
-      (AgentCharacterState.needs, 'Needs'),
-    ];
-
-    await tester.pumpWidget(MaterialApp(
-      theme: buildAppTheme(),
-      home: Scaffold(
-        backgroundColor: AppColors.bg,
-        body: RepaintBoundary(
-          key: boundaryKey,
-          child: Container(
-            color: AppColors.bg,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final (cid, label) in rows) ...[
-                  Text(label, style: sans(12, color: AppColors.fg2)),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      for (final (st, stLabel) in states)
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            AgentCharacter(cid,
-                                size: 54,
-                                state: st,
-                                badge: st == AgentCharacterState.needs
-                                    ? '?'
-                                    : null),
-                            const SizedBox(height: 6),
-                            Text(stLabel,
-                                style: sans(11, color: AppColors.fg3)),
-                          ],
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    ));
-    await tester.pump();
-    // Precache every AssetImage so the rendered PNG contains real decoded pixels.
-    final ctx = tester.element(find.byKey(boundaryKey));
-    for (final img in tester.widgetList<Image>(find.byType(Image))) {
-      await tester.runAsync(() => precacheImage(img.image, ctx));
-    }
-    await tester.pump();
-
-    final boundary = boundaryKey.currentContext!.findRenderObject()!
-        as RenderRepaintBoundary;
-    final image = await tester.runAsync(() => boundary.toImage(pixelRatio: 2.0));
-    final data = await tester
-        .runAsync(() => image!.toByteData(format: ui.ImageByteFormat.png));
-    final file = File(outPath);
-    file.parent.createSync(recursive: true);
-    file.writeAsBytesSync(data!.buffer.asUint8List());
-  });
 }

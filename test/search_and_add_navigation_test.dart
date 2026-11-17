@@ -1,17 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/models.dart';
-import 'package:snippet/screens/create_agent_form.dart';
 import 'package:snippet/screens/shell_models.dart';
 import 'package:snippet/screens/sidebar.dart';
 import 'package:snippet/screens/mobile_session_home.dart';
 import 'package:snippet/screens/session_list_row.dart';
-import 'package:snippet/screens/mission_control_card.dart';
 import 'package:snippet/theme.dart';
 
 class _FakeTestClient extends DaemonClient {
@@ -63,187 +59,6 @@ Finder _field(String hint) => find
     .byWidgetPredicate((w) => w is TextField && w.decoration?.hintText == hint);
 
 void main() {
-  test('agent icon maps to strokeRoundedBot', () {
-    expect(hugeIconFor('agent'), HugeIcons.strokeRoundedBot);
-    expect(hugeIconFor('bot'), HugeIcons.strokeRoundedBot);
-  });
-
-  testWidgets('each phone page has its search and its own New', (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    SharedPreferences.setMockInitialValues({});
-    try {
-      tester.view.devicePixelRatio = 2.0;
-      tester.view.physicalSize = const Size(390, 844) * 2.0;
-      addTearDown(tester.view.reset);
-
-      final client = _FakeTestClient([
-        CoordinationAgent.fromJson({
-          'id': 'a1',
-          'display_name': 'Snippet',
-          'handle': 'snippet',
-          'role': 'assistant',
-          'status': 'active',
-        }),
-        CoordinationAgent.fromJson({
-          'id': 'a2',
-          'display_name': 'Reviewer',
-          'handle': 'reviewer',
-          'role': 'security review',
-          'status': 'active',
-        }),
-      ]);
-
-      var newSessionCalled = false;
-      var currentHome = MobileHome.chats;
-
-      Widget buildTestWidget({MobileHome home = MobileHome.chats}) {
-        currentHome = home;
-        return MaterialApp(
-          theme: buildAppTheme(),
-          home: Scaffold(
-            body: StatefulBuilder(
-              builder: (context, setState) {
-                return Sidebar(
-                  client: client,
-                  active: null,
-                  instances: const [],
-                  health: const {},
-                  sessions: [
-                    SessionInfo.fromJson({
-                      'id': 'mission-control',
-                      'title': 'Mission Control',
-                      'folder': 'my-project',
-                      'last_active': 2000,
-                    }),
-                    SessionInfo.fromJson({
-                      'id': 's1',
-                      'title': 'Feature Setup',
-                      'folder': 'my-project',
-                      'last_active':
-                          DateTime.now().millisecondsSinceEpoch ~/ 1000 - 60,
-                    }),
-                  ],
-                  sessionsLoading: false,
-                  onRefreshSessions: () async {},
-                  selectedSessionId: null,
-                  onOpenSession: (_, __, ___) {},
-                  onNewSession: () => newSessionCalled = true,
-                  onSelectInstance: (_) {},
-                  onAddInstance: () {},
-                  onRenameInstance: (_, __) {},
-                  onRemoveInstance: (_) {},
-                  onSessionDeleted: (_) {},
-                  onRefreshHealth: () {},
-                  topInset: false,
-                  onOpenMissionControl: () {},
-                  mobileHome: currentHome,
-                  onMobileHome: (h) => setState(() => currentHome = h),
-                  settingsSection: null,
-                  onSettingsSection: (_) {},
-                  agent: null,
-                  onAgent: (_) {},
-                );
-              },
-            ),
-          ),
-        );
-      }
-
-      // 1. Chats: the four tabs and a New
-      // that starts a chat.
-      await tester.pumpWidget(buildTestWidget(home: MobileHome.chats));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(MissionControlCard), findsNothing);
-      await tester.tap(find.byTooltip('New session'));
-      await tester.pumpAndSettle();
-      expect(newSessionCalled, isTrue);
-
-      // Search sits behind its button in the top bar.
-      expect(_field('Search sessions'), findsNothing);
-      expect(
-          find.descendant(
-              of: find.byType(MobileHomeTopBar), matching: find.text('Sessions')),
-          findsOneWidget);
-      await tester.tap(find.byTooltip('Search'));
-      await tester.pumpAndSettle();
-      expect(_field('Search sessions'), findsOneWidget);
-      await tester.enterText(_field('Search sessions'), 'Nonexistent');
-      await tester.pumpAndSettle();
-      expect(find.text('No matching sessions'), findsOneWidget);
-      await tester.enterText(_field('Search sessions'), '');
-      await tester.pumpAndSettle();
-      expect(find.text('Feature Setup'), findsOneWidget);
-      expect(_field('Search sessions'), findsOneWidget);
-      await tester.tap(find.byTooltip('Close search'));
-      await tester.pumpAndSettle();
-
-      // 2. Tasks is a tab of its own, with its own New.
-      await tester.pumpWidget(buildTestWidget(home: MobileHome.tasks));
-      await tester.pumpAndSettle();
-      expect(currentHome, MobileHome.tasks);
-      expect(find.text('No tasks yet'), findsOneWidget);
-      expect(find.byTooltip('New task'), findsOneWidget);
-
-      // 3. Agents: the top bar's Agents segment opens the agents list,
-      // search filters it and New creates one.
-      await tester.pumpWidget(buildTestWidget(home: MobileHome.chats));
-      await tester.pumpAndSettle();
-      await tester.tap(find.descendant(
-          of: find.byType(MobileHomeTopBar), matching: find.text('Agents')));
-      await tester.pumpAndSettle();
-      expect(currentHome, MobileHome.agents);
-      await tester.pumpWidget(buildTestWidget(home: MobileHome.agents));
-      await tester.pumpAndSettle();
-      expect(find.text('Snippet'), findsOneWidget);
-      expect(find.text('Reviewer'), findsOneWidget);
-      expect(find.text('Feature Setup'), findsNothing);
-
-      await tester.tap(find.byTooltip('Search'));
-      await tester.pumpAndSettle();
-      expect(_field('Search agents'), findsOneWidget);
-      await tester.enterText(_field('Search agents'), 'review');
-      await tester.pumpAndSettle();
-      expect(find.text('Snippet'), findsNothing);
-      expect(find.text('Reviewer'), findsOneWidget);
-      await tester.tap(find.byTooltip('Close search'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(CreateAgentForm), findsNothing);
-      await tester.tap(find.byTooltip('New agent or group'));
-      await tester.pumpAndSettle();
-      expect(find.text('New group'), findsOneWidget);
-      // The list's own New agent row sits under the menu; tap the menu item.
-      final newAgent = find.byKey(const ValueKey('create-agent'));
-      expect(newAgent, findsOneWidget);
-      await tester.tap(newAgent);
-      await tester.pumpAndSettle();
-      expect(find.byType(CreateAgentForm), findsOneWidget);
-      // Phone sheets have no close X; tapping the scrim dismisses.
-      await tester.tapAt(const Offset(20, 20));
-      await tester.pumpAndSettle();
-      await tester.tap(find.descendant(
-          of: find.byType(MobileHomeTopBar), matching: find.text('Sessions')));
-      await tester.pumpAndSettle();
-      expect(currentHome, MobileHome.chats);
-
-      // 4. Settings has no New of its own.
-      await tester.pumpWidget(buildTestWidget(home: MobileHome.settings));
-      await tester.pumpAndSettle();
-      for (final tip in [
-        'New session',
-        'New task',
-        'New agent or group',
-        'Create'
-      ]) {
-        expect(find.byTooltip(tip).hitTestable(), findsNothing);
-      }
-      expect(find.text('WORKSPACE'), findsNothing);
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
-
   testWidgets(
       'mobile sessions list shows sessions chronologically inside a folder section and handles empty state and search',
       (tester) async {

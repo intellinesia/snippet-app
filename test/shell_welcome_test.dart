@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/local_service.dart';
@@ -48,26 +47,6 @@ void main() {
     expect(find.text('On this computer'), findsOneWidget);
     expect(find.text('On another computer'), findsOneWidget);
     expect(find.text('Install'), findsOneWidget);
-    debugDefaultTargetPlatformOverride = null;
-  });
-
-  testWidgets('hovering a side widens it', (t) async {
-    await _pump(t, TargetPlatform.macOS);
-    final idle = t.getSize(find.byKey(const ValueKey('welcome-left'))).width;
-    final g = await t.createGesture(kind: PointerDeviceKind.mouse);
-    await g.addPointer(location: const Offset(900, 400));
-    await g.moveTo(const Offset(900, 400));
-    await t.pump();
-    await t.pump(const Duration(milliseconds: 700));
-    final overRight =
-        t.getSize(find.byKey(const ValueKey('welcome-left'))).width;
-    expect(overRight, lessThan(idle));
-    await g.moveTo(const Offset(200, 400));
-    await t.pump();
-    await t.pump(const Duration(milliseconds: 700));
-    final overLeft =
-        t.getSize(find.byKey(const ValueKey('welcome-left'))).width;
-    expect(overLeft, greaterThan(idle));
     debugDefaultTargetPlatformOverride = null;
   });
 

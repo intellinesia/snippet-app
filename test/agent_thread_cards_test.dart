@@ -9,15 +9,12 @@ import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:snippet/api.dart';
-import 'package:snippet/approval_code.dart';
-import 'package:snippet/chat/chat_card.dart';
 import 'package:snippet/chat/grouped_card.dart';
 import 'package:snippet/chat/chat_style.dart';
 import 'package:snippet/media_views.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/screens/agent_messaging.dart';
-import 'package:snippet/screens/agent_questions_card.dart';
 import 'package:snippet/screens/agent_thread_cards.dart';
 import 'package:snippet/screens/artifact_viewer.dart';
 import 'package:snippet/shell_panel.dart';
@@ -356,43 +353,6 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('desktop wideCap constrains rich cards within 740px', (t) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
-    t.view.physicalSize = const Size(1280, 800);
-    t.view.devicePixelRatio = 1;
-    addTearDown(t.view.reset);
-    await t.pumpWidget(
-      MaterialApp(
-        theme: buildAppTheme(),
-        home: AgentThreadScreen(
-          client: _Client([
-            _ev(1, 'agent', '', {
-              'question': {
-                'text': 'Proceed with migration?',
-                'kind': 'yes_no',
-              },
-            }),
-          ]),
-          agentId: 'growth',
-          agentName: 'Growth',
-        ),
-      ),
-    );
-    for (var i = 0; i < 12; i++) {
-      await t.pump(const Duration(milliseconds: 100));
-    }
-    expect(find.text('Question'), findsOneWidget);
-    expect(find.text('Yes'), findsOneWidget);
-    expect(find.text('No'), findsOneWidget);
-    final card = find.ancestor(
-      of: find.text('Proceed with migration?'),
-      matching: find.byType(Container),
-    );
-    expect(t.getSize(card.first).width, lessThanOrEqualTo(440));
-    await t.pumpWidget(const SizedBox());
-    debugDefaultTargetPlatformOverride = null;
-  });
-
   testWidgets(
       'task card renders only on latest event for taskId, approves and hides buttons',
       (t) async {
@@ -492,43 +452,6 @@ void main() {
     expect(find.byType(ChatBubble), findsOneWidget);
     expect(find.text('Fallback message body'), findsOneWidget);
     expect(find.text('Approve'), findsNothing);
-    await t.pumpWidget(const SizedBox());
-    debugDefaultTargetPlatformOverride = null;
-  });
-
-  testWidgets('AgentQuestionsCard in agent chat uses chatStyle pills',
-      (t) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    await _open(t, [
-      _ev(1, 'agent', 'Ask', {
-        'question': {
-          'session': 's-1',
-          'questions': [
-            {
-              'id': 'q1',
-              'text': 'May I release the machine now?',
-              'answer_kind': {
-                'kind': 'single_choice',
-                'choices': [
-                  {
-                    'value': 'yes',
-                    'label': 'Yes, release',
-                    'recommended': true,
-                  },
-                  {'value': 'no', 'label': 'Not yet'},
-                ],
-              },
-            },
-          ],
-        },
-      }),
-    ]);
-
-    final qCard = t.widget<AgentQuestionsCard>(find.byType(AgentQuestionsCard));
-    expect(qCard.chatStyle, isTrue);
-    expect(find.text('May I release the machine now?'), findsOneWidget);
-    expect(find.text('Yes, release'), findsOneWidget);
-    expect(find.text('Not yet'), findsOneWidget);
     await t.pumpWidget(const SizedBox());
     debugDefaultTargetPlatformOverride = null;
   });

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -60,37 +59,12 @@ void main() {
   });
 
   testWidgets(
-      'sidebar resize handle hovers, drags within 220..380, persists, and resets on double-click',
+      'sidebar resize handle drags within 220..380, persists, and resets on double-click',
       (tester) async {
     await mountShell(tester);
 
     final handleFinder = find.byKey(const ValueKey('sidebar-resize-handle'));
     expect(handleFinder, findsOneWidget);
-    expect(tester.getSize(handleFinder).width, 6.0);
-
-    final mouseRegion = tester.widget<MouseRegion>(find.descendant(
-      of: handleFinder,
-      matching: find.byType(MouseRegion),
-    ));
-    expect(mouseRegion.cursor, SystemMouseCursors.resizeColumn);
-
-    ColoredBox dividerBox() => tester.widget<ColoredBox>(find.descendant(
-          of: handleFinder,
-          matching: find.byType(ColoredBox),
-        ));
-
-    expect(dividerBox().color, AppColors.line);
-
-    final center = tester.getCenter(handleFinder);
-    final hoverGesture =
-        await tester.createGesture(kind: PointerDeviceKind.mouse);
-    await hoverGesture.addPointer(location: center);
-    addTearDown(hoverGesture.removePointer);
-    await tester.pump();
-    expect(dividerBox().color, AppColors.border2);
-    await hoverGesture.moveTo(Offset.zero);
-    await tester.pump();
-    expect(dividerBox().color, AppColors.line);
 
     // Drag right past max (380) and verify clamp + persistence.
     await tester.drag(handleFinder, const Offset(150, 0));

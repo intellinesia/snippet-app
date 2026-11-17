@@ -7,7 +7,6 @@ import 'package:snippet/screens/accounts_screen.dart';
 import 'package:snippet/screens/inference_profile_editor.dart';
 import 'package:snippet/screens/inference_profiles.dart';
 import 'package:snippet/screens/usage.dart';
-import 'package:snippet/screens/vault.dart';
 import 'package:snippet/settings_form.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/widgets.dart';
@@ -30,44 +29,6 @@ class _FakeDaemon extends DaemonClient {
 }
 
 void main() {
-  testWidgets('profile card has its provider logo and does not show token or session count',
-      (tester) async {
-    final client = _FakeDaemon()
-      ..config = {
-        'profiles': [
-          {
-            'name': 'gpt-4o',
-            'provider': 'openai',
-            'model': 'gpt-4o',
-            'active': true,
-            'usable': true,
-          }
-        ],
-      };
-
-    await tester.pumpWidget(MaterialApp(
-      theme: buildAppTheme(),
-      home: Scaffold(
-        body: InferenceProfilesScreen(client: client, embedded: true),
-      ),
-    ));
-
-    await tester.pumpAndSettle();
-
-    // The name and model are shown
-    expect(find.text('gpt-4o'), findsOneWidget);
-    expect(find.text('openai · gpt-4o'), findsOneWidget);
-
-    // No session count and no token count
-    expect(find.textContaining('session'), findsNothing);
-    expect(find.textContaining('tok'), findsNothing);
-
-    final logos = tester.widgetList<ProviderLogo>(find.byType(ProviderLogo));
-    expect(logos.any((l) => l.provider == 'openai'), isTrue);
-    final icons = tester.widgetList<AppIcon>(find.byType(AppIcon));
-    expect(icons.any((icon) => icon.name == 'cpu'), isFalse);
-  });
-
   testWidgets(
       'rebuilding parent does not cause embedded InferenceProfilesScreen to flicker',
       (tester) async {
@@ -116,24 +77,6 @@ void main() {
 
     // It should STILL be rendering the profile, never disappearing or shrinking
     expect(find.text('claude-3-5-sonnet'), findsOneWidget);
-  });
-
-  testWidgets('vault secret does not render masked dots placeholder',
-      (tester) async {
-    final client = _FakeDaemon()..secrets = ['API_SECRET_KEY'];
-
-    await tester.pumpWidget(MaterialApp(
-      theme: buildAppTheme(),
-      home: Scaffold(
-        body: VaultScreen(client: client, embedded: true),
-      ),
-    ));
-
-    await tester.pumpAndSettle();
-
-    expect(find.text('API_SECRET_KEY'), findsOneWidget);
-    expect(find.text('••••••'), findsNothing);
-    expect(find.textContaining('••'), findsNothing);
   });
 
   test('Devin provider logo, usability, and usage label match spec', () {

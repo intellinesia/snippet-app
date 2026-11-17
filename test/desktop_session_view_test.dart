@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/api.dart';
-import 'package:snippet/models.dart';
 import 'package:snippet/motion.dart';
 import 'package:snippet/screens/session.dart';
 import 'package:snippet/theme.dart';
@@ -134,6 +133,42 @@ Future<void> _disposeSession(WidgetTester tester) async {
   debugDefaultTargetPlatformOverride = null;
 }
 
+List<Widget> _activityRows() => [
+      for (var i = 0; i < 2; i++)
+        DenseToolRow(
+          tool: 'change_files',
+          args: {
+            'path': 'lib/f$i.dart',
+            'action': 'replace',
+            'find': 'a',
+            'with': 'b',
+          },
+          result: const {'status': 'ok'},
+        ),
+      for (var i = 0; i < 6; i++)
+        DenseToolRow(
+          tool: 'bash',
+          args: {'command': 'echo $i'},
+          result: const {'data': {'exit_code': 0}},
+        ),
+    ];
+
+void _usePhoneView() {
+  debugDefaultTargetPlatformOverride = TargetPlatform.android;
+  addTearDown(() => debugDefaultTargetPlatformOverride = null);
+}
+
+Future<void> _pumpRows(WidgetTester tester, Widget child) async {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(390, 844);
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(MaterialApp(
+    theme: buildAppTheme(),
+    home: Scaffold(body: child),
+  ));
+  await tester.pump();
+}
+
 void main() {
   test('activitySummary joins parts with dots in reading order', () {
     expect(activitySummary(const []), '');
@@ -254,75 +289,6 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('SessionContextBar hides zero counts and opens on tap',
-      (tester) async {
-    var termsTapped = 0;
-
-    await tester.pumpWidget(MaterialApp(
-      theme: buildAppTheme(),
-      home: Scaffold(
-        body: SessionContextBar(
-          termCount: 0,
-          termRunning: false,
-          onTapTerms: () => termsTapped++,
-        ),
-      ),
-    ));
-    expect(find.textContaining('Lanes'), findsNothing);
-    expect(find.textContaining('terminal'), findsNothing);
-
-    await tester.pumpWidget(MaterialApp(
-      theme: buildAppTheme(),
-      home: Scaffold(
-        body: SessionContextBar(
-          termCount: 2,
-          termRunning: true,
-          onTapTerms: () => termsTapped++,
-        ),
-      ),
-    ));
-    expect(find.textContaining('Lanes'), findsNothing);
-    expect(find.text('2 terminals'), findsOneWidget);
-
-    await tester.tap(find.text('2 terminals'));
-    expect(termsTapped, 1);
-  });
-
-  testWidgets('SessionContextFooter shows context, cache, and weekly stats',
-      (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      theme: buildAppTheme(),
-      home: Scaffold(
-        body: SessionContextFooter(
-          contextWindow: 200000,
-          lastPromptTokens: 160000,
-          cacheReadTokens: 42000,
-          totalTokens: 1200000,
-          rateSecondary: RateWindow.fromJson({
-            'used_percent': 7,
-            'window_minutes': 10080,
-          }),
-        ),
-      ),
-    ));
-    expect(find.text('80% context'), findsOneWidget);
-    expect(find.text('1.2M tokens \u00b7 42k cached'), findsOneWidget);
-    expect(find.text('7% this week'), findsOneWidget);
-
-    await tester.pumpWidget(MaterialApp(
-      theme: buildAppTheme(),
-      home: const Scaffold(
-        body: SessionContextFooter(
-          contextWindow: 0,
-          lastPromptTokens: 0,
-          cacheReadTokens: 0,
-        ),
-      ),
-    ));
-    expect(find.textContaining('context'), findsNothing);
-    expect(find.textContaining('cached'), findsNothing);
-  });
-
   for (final desktop in [true, false]) {
     testWidgets(
         'SessionScreen renders collapsed activity (${desktop ? 'desktop' : 'phone'})',
@@ -375,173 +341,82 @@ void main() {
     });
   }
 
-  testWidgets('Desktop SessionScreen shows ctxbar and cfoot, no header title',
-      (tester) async {
-    final socket = await _pumpSession(
-      tester,
-      platform: TargetPlatform.linux,
-      size: const Size(1280, 800),
-    );
-    socket.pushJson({
-      'wire': 'snapshot',
-      'status': 'idle',
-      'workspace': '/tmp/ws',
-      'context_window': 200000,
-      'last_prompt_tokens': 160000,
-      'cache_read_tokens': 42000,
-      'rate_limit': {
-        'secondary': {'used_percent': 7, 'window_minutes': 10080},
-      },
-      'lanes': [
-        {
-          'id': 'l1',
-          'title': 'Worker 1',
-          'status': 'running',
-          'started_at': '2026-11-12T20:00:00Z',
-        },
-        {
-          'id': 'l2',
-          'title': 'Worker 2',
-          'status': 'completed',
-          'started_at': '2026-11-12T20:00:00Z',
-        },
-      ],
-      'events': [
-        {'kind': 'user_input', 'text': 'hello'},
-      ],
-    });
-    socket.pushJson({
-      'wire': 'term',
-      'op': 'snapshot',
-      'id': '0',
-      'alive': true,
-    });
+  testWidgets('tapping the summary reveals the rows and tapping again hides '
+      'them', (tester) async {
+    _usePhoneView();
+    await _pumpRows(tester, CollapsedActivity(_activityRows()));
+
+    await tester.tap(
+        find.text('Edited f0.dart and f1.dart, ran echo', findRichText: true));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.byType(SessionContextBar), findsOneWidget);
-    expect(find.byType(SessionContextFooter), findsOneWidget);
-    expect(
-        find.descendant(
-            of: find.byType(SessionContextBar),
-            matching: find.textContaining('Lanes')),
-        findsNothing);
-    expect(find.text('1 terminal'), findsOneWidget);
-    expect(find.text('80% context'), findsOneWidget);
-    expect(find.textContaining('42k cached'), findsOneWidget);
-    expect(find.text('7% this week'), findsOneWidget);
+    expect(find.byType(DenseToolRow), findsNWidgets(8));
+    expect(find.text('Show'), findsNothing);
+    expect(find.text('Hide'), findsNothing);
 
-    // The tab strip carries the title; the desktop header is actions only.
-    expect(find.text('Test Session'), findsNothing);
+    await tester.tap(
+        find.text('Edited f0.dart and f1.dart, ran echo', findRichText: true));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
-    await _disposeSession(tester);
+    expect(find.byType(DenseToolRow), findsNothing);
+    debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('Desktop SessionScreen header shows the panel toggle',
-      (tester) async {
-    var panelToggles = 0;
-    final socket = await _pumpSession(
+  testWidgets('work summary shows outcome when collapsed and command '
+      'duration when expanded', (tester) async {
+    _usePhoneView();
+    await _pumpRows(
       tester,
-      platform: TargetPlatform.linux,
-      size: const Size(1280, 800),
-      onTogglePanel: () => panelToggles++,
+      CollapsedActivity(const [
+        DenseToolRow(
+          tool: 'read_file',
+          args: {'path': 'lib/a.dart'},
+          result: {'status': 'ok'},
+        ),
+        DenseToolRow(
+          tool: 'change_files',
+          args: {
+            'path': 'lib/a.dart',
+            'action': 'replace',
+            'find': 'old',
+            'with': 'new',
+          },
+          result: {'status': 'ok'},
+        ),
+        DenseToolRow(
+          tool: 'bash',
+          args: {'command': 'flutter test test/work_notes_test.dart'},
+          result: {
+            'status': 'ok',
+            'data': {
+              'exit_code': 0,
+              'duration_ms': 1400,
+              'stdout': '00:01 +7: All tests passed!',
+            },
+          },
+        ),
+      ]),
     );
-    socket.pushJson({
-      'wire': 'snapshot',
-      'status': 'running',
-      'workspace': '/tmp/ws',
-      'turn_started_at': DateTime.now()
-          .subtract(const Duration(minutes: 4))
-          .toUtc()
-          .toIso8601String(),
-      'events': [
-        {'kind': 'user_input', 'text': 'hello'},
-      ],
-    });
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Test Session'), findsNothing);
-    expect(find.byTooltip('Session actions'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('Toggle panel'));
-    await tester.pump();
-    expect(panelToggles, 1);
-
-    await _disposeSession(tester);
-  });
-
-  testWidgets('Desktop Mission Control shows usage in the composer footer',
-      (tester) async {
-    final socket = await _pumpSession(
-      tester,
-      platform: TargetPlatform.linux,
-      size: const Size(1280, 800),
-      sessionId: 'mission-control',
+    final summary = find.text(
+      'Read a.dart, edited a.dart, ran flutter test passed',
+      findRichText: true,
     );
-    socket.pushJson({
-      'wire': 'snapshot',
-      'status': 'idle',
-      'workspace': '/tmp/ws',
-      'context_window': 200000,
-      'last_prompt_tokens': 160000,
-      'rate_limit': {
-        'secondary': {'used_percent': 7, 'window_minutes': 10080},
-      },
-      'events': [
-        {'kind': 'user_input', 'text': 'hello'},
-      ],
-    });
+    expect(summary, findsOneWidget);
+
+    await tester.tap(summary);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.byType(SessionContextFooter), findsOneWidget);
-    expect(find.text('80% context'), findsOneWidget);
-    expect(find.text('7% this week'), findsOneWidget);
-
-    await _disposeSession(tester);
-  });
-
-  testWidgets('Phone SessionScreen hides desktop ctxbar and cfoot',
-      (tester) async {
-    final socket = await _pumpSession(
-      tester,
-      platform: TargetPlatform.android,
-      size: const Size(390, 844),
-    );
-    socket.pushJson({
-      'wire': 'snapshot',
-      'status': 'idle',
-      'workspace': '/tmp/ws',
-      'context_window': 200000,
-      'last_prompt_tokens': 160000,
-      'cache_read_tokens': 42000,
-      'lanes': [
-        {
-          'id': 'l1',
-          'title': 'Worker 1',
-          'status': 'running',
-          'started_at': '2026-11-12T20:00:00Z',
-        },
-      ],
-      'events': [],
-    });
-    socket.pushJson({
-      'wire': 'term',
-      'op': 'snapshot',
-      'id': '0',
-      'alive': true,
-    });
+    expect(find.byType(DenseToolRow), findsNWidgets(3));
+    await tester.tap(find.textContaining('flutter test test/work_notes_test.dart',
+        findRichText: true));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.byType(SessionContextBar), findsNothing);
-    expect(find.byType(SessionContextFooter), findsNothing);
-    expect(find.text('Lanes 1'), findsNothing);
-    expect(find.text('1 terminal'), findsNothing);
-    expect(find.text('80% context'), findsNothing);
-
-    await _disposeSession(tester);
+    expect(find.text('1.4s'), findsWidgets);
+    debugDefaultTargetPlatformOverride = null;
   });
-
 }

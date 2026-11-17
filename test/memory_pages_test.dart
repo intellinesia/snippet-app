@@ -7,7 +7,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:snippet/models.dart';
-import 'package:snippet/screens/desk_memory.dart';
 import 'package:snippet/screens/memory_entries.dart';
 import 'package:snippet/screens/memory_screen.dart';
 import 'package:snippet/theme.dart';
@@ -149,20 +148,4 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('desktop: drawer at 760 shows two panes', (t) async {
-    _view(t, TargetPlatform.macOS, const Size(1280, 800));
-    final c = _Client();
-    await t.pumpWidget(_app(Align(
-        alignment: Alignment.centerRight,
-        child: ColoredBox(
-            color: AppColors.bg,
-            child: SizedBox(
-            width: 760, child: DeskMemoryView(client: c, sessionId: 's'))))));
-    await t.pumpAndSettle();
-    await t.tap(find.text('build.md').first);
-    await t.pumpAndSettle();
-    expect(find.textContaining('SNIPPET_KEYSTORE'), findsWidgets);
-    await _shot(t, 'memory-desktop');
-    debugDefaultTargetPlatformOverride = null;
-  });
 }

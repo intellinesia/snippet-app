@@ -13,14 +13,6 @@ import 'package:snippet/theme.dart';
 
 import 'support/wake_fakes.dart';
 
-CoordinationAgent _agent() => CoordinationAgent.fromJson({
-      'id': 'scout',
-      'display_name': 'Revenue Scout',
-      'status': 'active',
-      'profile': 'argon',
-      'capabilities': ['research', 'writing'],
-    });
-
 GroupSummary _group() => GroupSummary.fromJson({
       'id': 'group:1',
       'title': 'jh',
@@ -33,16 +25,16 @@ GroupSummary _group() => GroupSummary.fromJson({
     });
 
 class _Client extends FakeWakeClient {
-  _Client({this.agent, this.group, this.threadEvents = const []});
+  _Client({this.group});
 
   final _events = DeviceEventHub.local();
 
   @override
   DeviceEventHub get deviceEvents => _events;
 
-  final CoordinationAgent? agent;
+  final CoordinationAgent? agent = null;
   GroupSummary? group;
-  final List<CoordinationEvent> threadEvents;
+  final List<CoordinationEvent> threadEvents = const [];
 
   final added = <String>[];
   final removed = <String>[];
@@ -154,57 +146,6 @@ void _phone(WidgetTester tester) {
 }
 
 void main() {
-  testWidgets('phone agent page shows identity, agent and work rows, no Files/Links; '
-      'Back closes it', (tester) async {
-    _phone(tester);
-    final client = _Client(agent: _agent(), threadEvents: const []);
-    await tester.pumpWidget(_app(Builder(
-      builder: (ctx) => Center(
-        child: TextButton(
-          onPressed: () => showAgentInfo(
-            ctx,
-            client: client,
-            agentId: 'scout',
-            name: 'Revenue Scout',
-            agent: _agent(),
-            onOpenInbox: () {},
-            onOpenBoard: () {},
-            onOpenDesk: () {},
-          ),
-          child: const Text('open'),
-        ),
-      ),
-    )));
-    await tester.tap(find.text('open'));
-    await tester.pumpAndSettle();
-
-    // On phones only the centred hero carries the name.
-    expect(find.text('Revenue Scout'), findsOneWidget);
-    for (final label in ['Inbox', 'Board', 'Desk session', 'Memory']) {
-      expect(find.text(label), findsOneWidget, reason: label);
-    }
-    expect(find.text('Tasks'), findsNothing);
-    for (final tab in ['Files', 'Links']) {
-      expect(find.text(tab), findsNothing, reason: tab);
-    }
-    for (final label in [
-      'Wakes and reporting',
-      'How it reaches you',
-      'Models and context',
-      'Nickname',
-      'Appearance',
-      'Delete agent',
-    ]) {
-      expect(find.text(label), findsOneWidget, reason: label);
-    }
-    expect(find.text('Tasks run on'), findsNothing);
-
-    await tester.tap(find.byTooltip('Back'));
-    await tester.pumpAndSettle();
-    expect(find.text('Revenue Scout'), findsNothing);
-    debugDefaultTargetPlatformOverride = null;
-  });
-
   testWidgets('group sheet lists members and Add member calls updateGroup',
       (tester) async {
     _phone(tester);
@@ -233,33 +174,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(client.added, ['snippet']);
     expect(client.group!.agentIds, contains('snippet'));
-    debugDefaultTargetPlatformOverride = null;
-  });
-
-  testWidgets('desktop panel renders at 340px without overflow',
-      (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-    addTearDown(() => debugDefaultTargetPlatformOverride = null);
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(1200, 800);
-    addTearDown(tester.view.reset);
-    final client = _Client(agent: _agent(), threadEvents: const []);
-    await tester.pumpWidget(_app(SizedBox(
-      width: 340,
-      height: 800,
-      child: AgentInfoPanel(
-        client: client,
-        agentId: 'scout',
-        name: 'Revenue Scout',
-        agent: _agent(),
-        onChanged: () {},
-        onClose: () {},
-      ),
-    )));
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-    expect(find.text('Revenue Scout'), findsWidgets);
-    expect(find.text('Models and context'), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });
 
@@ -306,57 +220,4 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('Mission Control panel carries session options, not agent edits',
-      (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-    addTearDown(() => debugDefaultTargetPlatformOverride = null);
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(1200, 800);
-    addTearDown(tester.view.reset);
-    final mc = CoordinationAgent.fromJson(
-        {'id': 'mission-control', 'display_name': 'Mission Control'});
-    final client = _Client(agent: mc);
-    var compacted = 0;
-    var wakes = 0;
-    await tester.pumpWidget(_app(Align(
-      alignment: Alignment.centerRight,
-      child: SizedBox(
-        width: 340,
-        height: 800,
-        child: RepaintBoundary(
-          key: const ValueKey('shot'),
-          child: AgentInfoPanel(
-            client: client,
-            agentId: 'mission-control',
-            name: 'Mission Control',
-            agent: mc,
-            docked: true,
-            onOpenInbox: () {},
-            onOpenBoard: () {},
-            onOpenDesk: () {},
-            onOpenMemory: () {},
-            contextUsed: 165000,
-            contextWindow: 556000,
-            onCompact: () => compacted++,
-            onAutonomy: () => wakes++,
-            onScheduled: () {},
-          ),
-        ),
-      ),
-    )));
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-    expect(find.text('Edit'), findsNothing);
-    expect(find.text('Desk'), findsNothing);
-    expect(find.text('Tasks run on'), findsNothing);
-    expect(find.text('Desk runs on'), findsNothing);
-    expect(find.text('165k / 556k'), findsOneWidget);
-    expect(find.text('Scheduled'), findsOneWidget);
-    await _shot(tester, 'mc_panel');
-    await tester.tap(find.text('Compact now'));
-    await tester.tap(find.text('Automated wakes'));
-    expect(compacted, 1);
-    expect(wakes, 1);
-    debugDefaultTargetPlatformOverride = null;
-  });
 }

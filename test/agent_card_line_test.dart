@@ -24,6 +24,13 @@ CoordinationAgent _agent({Map<String, dynamic>? last, int working = 0}) =>
       if (last != null) 'last_message': last,
     });
 
+CoordinationAgent _scout(Map<String, dynamic>? last) => CoordinationAgent.fromJson({
+      'id': 'x-scout',
+      'display_name': 'X Scout',
+      'handle': 'x_scout',
+      if (last != null) 'last_message': last,
+    });
+
 Future<void> _pump(WidgetTester t, CoordinationAgent a) async {
   debugDefaultTargetPlatformOverride = TargetPlatform.android;
   await t.pumpWidget(MaterialApp(
@@ -106,5 +113,38 @@ void main() {
     expect(agentRowTime(DateTime(2026, 11, 13, 8, 5), now: n), '8:05 am');
     expect(agentRowTime(DateTime(2026, 11, 12, 18, 36), now: n), 'Thu');
     expect(agentRowTime(DateTime(2026, 10, 2, 18, 36), now: n), '2 Oct');
+  });
+
+  test('withLastMessage swaps the preview and keeps the agent', () {
+    final a = CoordinationAgent.fromJson({
+      'id': 'scout',
+      'display_name': 'X Scout',
+      'last_message': {'text': 'Posted.', 'from': 'agent', 'at': '2026-11-13T08:00:00Z'},
+    });
+    final dm = a.withLastMessage(AgentLastMessage(
+        text: 'can you look at this?',
+        fromUser: true,
+        at: DateTime.utc(2026, 11, 13, 9)));
+    expect(dm.id, 'scout');
+    expect(dm.displayName, 'X Scout');
+    expect(dm.lastMessage?.text, 'can you look at this?');
+    expect(dm.lastMessage?.fromUser, isTrue);
+    expect(dm.lastMessage?.at, DateTime.utc(2026, 11, 13, 9));
+    expect(a.withLastMessage(null).lastMessage, isNull);
+  });
+
+  test('an idle agent shows its last message instead of what it finished', () {
+    final e = deriveCrew([_scout({'text': 'Draft is ready.', 'from': 'agent', 'at': '2026-11-08T10:00:00Z'})], const []).single;
+    expect(e.line, 'Draft is ready.');
+  });
+
+  test('your own last message is marked as yours', () {
+    final e = deriveCrew([_scout({'text': 'Check the 320px layout', 'from': 'user'})], const []).single;
+    expect(e.line, 'You: Check the 320px layout');
+  });
+
+  test('no preview falls back to the old line', () {
+    expect(deriveCrew([_scout(null)], const []).single.line, 'Standing by');
+    expect(deriveCrew([_scout({'text': '  ', 'from': 'agent'})], const []).single.line, 'Standing by');
   });
 }

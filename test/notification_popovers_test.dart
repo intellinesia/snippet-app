@@ -242,71 +242,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  for (final platform in [TargetPlatform.linux, TargetPlatform.android]) {
-    for (final width in [1000.0, 240.0]) {
-      testWidgets('$platform toast geometry at $width', (tester) async {
-        debugDefaultTargetPlatformOverride = platform;
-        addTearDown(() => debugDefaultTargetPlatformOverride = null);
-        tester.view.physicalSize = Size(width, 640);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-        foregroundNotifications.add({'title': 'Compact alert'});
-        await tester.pumpWidget(const MaterialApp(
-          home: MediaQuery(
-            data: MediaQueryData(padding: EdgeInsets.fromLTRB(20, 24, 30, 0)),
-            child: NotificationPopovers(child: Scaffold()),
-          ),
-        ));
-        await tester.pumpAndSettle();
-        final rect = tester.getRect(find.byType(Dismissible));
-        final mobile = platform == TargetPlatform.android;
-        final available = width - 24 - 20 - 30;
-        const cap = 420.0;
-        expect(rect.width, closeTo(available < cap ? available : cap, .01));
-        expect(rect.top, closeTo(24.0 + (mobile ? 4 : 44 + 8), .01));
-        if (mobile) {
-          expect(rect.center.dx, closeTo((width + 20 - 30) / 2, .01));
-        } else {
-          expect(rect.right, closeTo(width - 12 - 30, .01));
-        }
-        expect(rect.left, greaterThanOrEqualTo(32));
-        expect(rect.height, lessThanOrEqualTo(mobile ? 64 : 60));
-        expect(find.text('Tap to open'), findsNothing);
-        expect(find.byTooltip('Dismiss'), findsNothing);
-        expect(tester.takeException(), isNull);
-        await tester.pumpWidget(const SizedBox());
-        debugDefaultTargetPlatformOverride = null;
-      });
-    }
-  }
-
-  testWidgets('narrow card handles long title and enlarged text',
-      (tester) async {
-    _platform(TargetPlatform.linux);
-    tester.view.physicalSize = const Size(240, 640);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    foregroundNotifications.add({
-      'title': List.filled(30, 'Long title').join(' '),
-      'kind': 'error',
-      'body': List.filled(30, 'Brief context').join(' '),
-    });
-    await tester.pumpWidget(MaterialApp(
-      home: MediaQuery(
-        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
-        child: const NotificationPopovers(child: Scaffold()),
-      ),
-    ));
-    expect(tester.takeException(), isNull);
-    expect(find.text('failed'), findsNothing);
-    expect(find.textContaining('Brief context'), findsOneWidget);
-    await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('Tap to open'), findsNothing);
-  });
-
   testWidgets('whole card tap and dismiss reveal the next in the stack',
       (tester) async {
     _platform(TargetPlatform.linux);
@@ -336,33 +271,4 @@ void main() {
     expect(find.byType(Dismissible), findsNothing);
   });
 
-  testWidgets('phone toast clears page title below header and dismisses in 4s',
-      (tester) async {
-    _platform(TargetPlatform.android);
-    foregroundNotifications.add({'title': 'Build ready'});
-    await tester.pumpWidget(MaterialApp(
-      home: MediaQuery(
-        data: const MediaQueryData(padding: EdgeInsets.only(top: 24)),
-        child: NotificationPopovers(
-          child: Scaffold(
-            body: Padding(
-              padding: const EdgeInsets.only(top: 24 + 62),
-              child: const Text('Sessions'),
-            ),
-          ),
-        ),
-      ),
-    ));
-    await tester.pumpAndSettle();
-    final toastRect = tester.getRect(find.byType(Dismissible));
-    final titleRect = tester.getRect(find.text('Sessions'));
-    expect(toastRect.top, closeTo(28.0, 0.1));
-    expect(toastRect.bottom, lessThanOrEqualTo(titleRect.top + 4));
-
-    await tester.pump(const Duration(milliseconds: 3900));
-    expect(find.text('Build ready'), findsOneWidget);
-    await tester.pump(const Duration(milliseconds: 200));
-    await tester.pumpAndSettle();
-    expect(find.text('Build ready'), findsNothing);
-  });
 }

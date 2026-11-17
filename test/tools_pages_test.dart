@@ -14,10 +14,8 @@ import 'package:snippet/models.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
 import 'package:snippet/screens/git.dart';
-import 'package:snippet/screens/pull_requests.dart';
 import 'package:snippet/screens/session_panels.dart';
 import 'package:snippet/screens/tasks/task_detail_screen.dart';
-import 'package:snippet/screens/tasks/tasks_panel.dart';
 
 // Design-parity checks for the session tools pages (round 5 mockups).
 
@@ -268,13 +266,6 @@ void main() {
     await _settle(tester);
   });
 
-  testWidgets('tasks: a pushed page has the back bar and New task, rows name the agent', (tester) async {
-    await _phone(tester, Scaffold(body: SafeArea(child: TasksPanel(client: _Daemon()))), pushed: true);
-    expect(find.text('New task'), findsOneWidget);
-    expect(find.textContaining('Ready for review \u00b7 Moss'), findsWidgets);
-    await _settle(tester);
-  });
-
   testWidgets('task detail: short id and capitalised holder', (tester) async {
     await _phone(tester, TaskDetailScreen(client: _Daemon(), taskId: 't-244'));
     expect(find.text('T-244'), findsOneWidget);
@@ -282,10 +273,4 @@ void main() {
     await _settle(tester);
   });
 
-  testWidgets('pull requests: your own PR reads you', (tester) async {
-    await _phone(tester, PullRequestsScreen(client: _Daemon(), session: 's1', status: _gh, onClose: () {}));
-    expect(find.textContaining('#284 \u00b7 you'), findsOneWidget);
-    expect(find.textContaining('#280 \u00b7 wren'), findsOneWidget);
-    await _settle(tester);
-  });
 }

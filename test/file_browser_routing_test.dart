@@ -1,13 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:snippet/file_icons.dart';
 
 import 'package:snippet/api.dart';
 import 'package:snippet/swr.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/files.dart';
-import 'package:snippet/widgets.dart';
 
 /// The session's file browser is opened from `session.dart` with an
 /// `onOpenFile` callback that creates a shell TAB. That is a desktop concept:
@@ -117,55 +115,6 @@ void main() {
 
       expect(opened, ['/root/notes.txt'],
           reason: 'desktop keeps the tab behaviour the mobile fix must not break');
-    });
-  });
-
-  testWidgets('the folder path is shown once, not repeated in the header',
-      (tester) async {
-    await asPlatform(TargetPlatform.android, () async {
-      await pumpExplorer(tester);
-
-      // The banner carried the path as BOTH the app bar subtitle and the meta
-      // row under the divider, so the same long string appeared twice within
-      // ~40dp and the header read as broken.
-      // Round 5: the title names the folder and the breadcrumb ends on it in
-      // bold; the full path is never repeated as an app bar subtitle.
-      expect(find.text('root'), findsNWidgets(2));
-      expect(find.text('/root'), findsNothing);
-    });
-  });
-
-  testWidgets('media and documents get their own row glyphs', (tester) async {
-    await asPlatform(TargetPlatform.android, () async {
-      await pumpExplorer(tester);
-
-      Iterable<String> iconNamesFor(String fileName) {
-        final row = find.ancestor(
-          of: find.text(fileName),
-          matching: find.byType(Row),
-        );
-        final icons = find.descendant(of: row, matching: find.byType(AppIcon));
-        return tester.widgetList<AppIcon>(icons).map((i) => i.name);
-      }
-
-      // Media must not render as the generic fallback. `file-text` used to be
-      // returned for unrecognised names and has no case in the icon map, so
-      // every such file silently drew the map's fallback circle.
-      IconData? glyphFor(String fileName) {
-        final row = find.ancestor(
-          of: find.text(fileName),
-          matching: find.byType(Row),
-        );
-        final icons = find.descendant(of: row, matching: find.byType(Icon));
-        return tester.widgetList<Icon>(icons).firstOrNull?.icon;
-      }
-
-      expect(glyphFor('clip.mp4'), fileIconFor('clip.mp4').$1);
-      expect(glyphFor('song.mp3'), fileIconFor('song.mp3').$1);
-      expect(glyphFor('notes.pdf'), fileIconFor('notes.pdf').$1);
-      expect(glyphFor('notes.txt'), fileIconFor('notes.txt').$1);
-      expect(fileIconFor('clip.mp4').$1, isNot(fileIconFor('x.unknown').$1));
-      expect(iconNamesFor('lib'), contains('folder'));
     });
   });
 

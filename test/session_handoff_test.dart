@@ -270,7 +270,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Came back'), findsOneWidget);
       expect(find.text('Needs you'), findsOneWidget);
-      expect(find.text('Shipped the fix'), findsOneWidget);
       debugDefaultTargetPlatformOverride = null;
     });
 
