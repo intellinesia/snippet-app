@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -63,14 +64,21 @@ class NotificationStack extends StatelessWidget {
           if (current != null) current,
         ],
       ),
-      transitionBuilder: (child, animation) => FadeTransition(
-        opacity: animation,
-        child: ScaleTransition(
-          alignment: Alignment.topCenter,
-          scale: Tween(begin: .97, end: 1.0).animate(animation),
-          child: child,
-        ),
-      ),
+      transitionBuilder: (child, animation) {
+        // On the phone the pill grows into the panel instead of swapping widths.
+        if (kMobile && child.key == const ValueKey('expanded')) {
+          return _PillReveal(
+              animation: animation, pillWidth: _pillWidth, child: child);
+        }
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            alignment: Alignment.topCenter,
+            scale: Tween(begin: .97, end: 1.0).animate(animation),
+            child: child,
+          ),
+        );
+      },
       child: child,
     );
     // A zero-duration AnimatedSize re-dirties itself mid-layout.
@@ -365,4 +373,48 @@ class _QuietButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Reveals the expanded panel from a centred pill-sized window that widens and
+/// lengthens to the full panel, so opening reads as one surface growing.
+class _PillReveal extends AnimatedWidget {
+  const _PillReveal(
+      {required Animation<double> animation,
+      required this.pillWidth,
+      required this.child})
+      : super(listenable: animation);
+
+  final double pillWidth;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Motion.enter.transform((listenable as Animation<double>).value);
+    return Opacity(
+      opacity: (t * 2).clamp(0.0, 1.0),
+      child: ClipRRect(
+        clipper: _RevealClipper(t, pillWidth),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _RevealClipper extends CustomClipper<RRect> {
+  _RevealClipper(this.t, this.pillWidth);
+  final double t;
+  final double pillWidth;
+
+  @override
+  RRect getClip(Size size) {
+    final w = lerpDouble(math.min(pillWidth, size.width), size.width, t)!;
+    final h = lerpDouble(math.min(56, size.height), size.height, t)!;
+    final left = (size.width - w) / 2;
+    return RRect.fromRectAndRadius(
+        Rect.fromLTWH(left, 0, w, h), Radius.circular(lerpDouble(28, 24, t)!));
+  }
+
+  @override
+  bool shouldReclip(_RevealClipper old) =>
+      old.t != t || old.pillWidth != pillWidth;
 }
