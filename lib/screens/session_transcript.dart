@@ -149,10 +149,6 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     // A plan is drawn once, at its latest update, not once per update.
     final lastPlan = events.lastIndexWhere((e) => e['kind'] == 'plan_updated');
     final staleStalls = supersededStalls(events);
-    // Desktop closes a finished turn with a quiet footer under its last reply.
-    final lastReply = _state?.status == 'running' || kMobile
-        ? -1
-        : events.lastIndexWhere((e) => e['kind'] == 'assistant_text');
 
     final resultOf = <int, int>{};
     final pairedResults = <int>{};
@@ -415,19 +411,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                   padding: EdgeInsets.zero,
                   child: e['quiet'] == true
                       ? QuietAside(text: reply)
-                      : idx == lastReply &&
-                              !events.skip(idx + 1).any((x) =>
-                                  x['kind'] == 'user_input' ||
-                                  x['kind'] == 'steer')
-                          ? Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                  Bubble(mine: false, text: reply),
-                                  _TurnFooter(
-                                      text: reply,
-                                      took: _turnTook(events, idx)),
-                                ])
-                          : Bubble(mine: false, text: reply)));
+                      : Bubble(mine: false, text: reply)));
         case 'agent_message':
           endTools(key);
           final voiceNote = e['outbound'] == true
@@ -1276,75 +1260,3 @@ bool _isRestartNote(String s) => s.trim().startsWith('Snippet restarted while');
 
 /// The gap between any two transcript items.
 double get transcriptGap => kMobile ? 12 : 10;
-
-DateTime? _eventTime(Map e) {
-  final v = e['at'] ?? e['created_at'];
-  if (v is num) {
-    return DateTime.fromMillisecondsSinceEpoch(
-        v > 1e12 ? v.toInt() : (v * 1000).toInt());
-  }
-  return DateTime.tryParse('$v');
-}
-
-/// Time from the user's last message to the reply at [idx], when both carry one.
-Duration? _turnTook(List<Map<String, dynamic>> events, int idx) {
-  for (var i = idx - 1; i >= 0; i--) {
-    final k = events[i]['kind'];
-    if (k != 'user_input' && k != 'steer') continue;
-    final a = _eventTime(events[i]);
-    final b = _eventTime(events[idx]);
-    if (a == null || b == null || b.isBefore(a)) return null;
-    return b.difference(a);
-  }
-  return null;
-}
-
-class _TurnFooter extends StatefulWidget {
-  const _TurnFooter({required this.text, this.took});
-  final String text;
-  final Duration? took;
-
-  @override
-  State<_TurnFooter> createState() => _TurnFooterState();
-}
-
-class _TurnFooterState extends State<_TurnFooter> {
-  bool _copied = false;
-
-  Future<void> _copy() async {
-    await Clipboard.setData(ClipboardData(text: widget.text));
-    if (!mounted) return;
-    setState(() => _copied = true);
-    await Future<void>.delayed(const Duration(milliseconds: 1400));
-    if (mounted) setState(() => _copied = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final style = sans(12, color: AppColors.fg4);
-    final took = widget.took;
-    return Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: Row(children: [
-        Text('Finished', style: style),
-        if (took != null) ...[
-          const SizedBox(width: 8),
-          Container(
-              width: 3,
-              height: 3,
-              decoration:
-                  BoxDecoration(color: AppColors.fg4, shape: BoxShape.circle)),
-          const SizedBox(width: 8),
-          Text(formatWorkDuration(took), style: style),
-        ],
-        // Copy sits with the reply's footer, not stranded at the far edge.
-        const SizedBox(width: 6),
-        IconBtn(_copied ? 'check' : 'copy',
-            size: 24,
-            iconSize: 13,
-            tooltip: _copied ? 'Copied' : 'Copy reply',
-            onTap: _copy),
-      ]),
-    );
-  }
-}
