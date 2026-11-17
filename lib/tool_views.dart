@@ -361,46 +361,6 @@ List<String> toolMetaParts(ToolStep step) {
   return const [];
 }
 
-String toolCopyText(ToolStep step) {
-  final tool = toolBaseName(step.tool);
-  final a = step.args is Map ? step.args as Map : null;
-  final d = step.data;
-  String t(dynamic v) => v?.toString() ?? '';
-  switch (tool) {
-    case 'bash':
-      return [
-        t(a?['command']),
-        t(d?['stdout'] ?? d?['output_so_far']),
-        t(d?['stderr']),
-      ].where((v) => v.trim().isNotEmpty).join('\n');
-    case 'read_file':
-      final entries = d?['entries'];
-      return entries is List
-          ? entries.map((e) => e.toString().replaceAll('\t', '  ')).join('\n')
-          : t(d?['content']);
-    case 'change_files':
-      return step.changes
-          .map((c) => c['action'] == 'replace'
-              ? t(c['with'])
-              : c['action'] == 'create'
-                  ? t(c['content'])
-                  : '')
-          .where((v) => v.isNotEmpty)
-          .join('\n\n');
-    case 'search_content':
-      return _searchMatches(d)
-          .map((m) => '${m.path}:${m.line} ${m.text}')
-          .join('\n');
-    case 'web_read':
-      return t(d?['text']);
-    case 'web_search':
-      return _mapItems(d?['results'])
-          .map((r) => '${t(r['title'])}\n${t(r['url'])}')
-          .join('\n\n');
-  }
-  return '';
-}
-
 // ---- per-tool views ----
 
 Widget _fileLabel(String name, int adds, int dels, {String note = ''}) =>

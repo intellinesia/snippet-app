@@ -5,7 +5,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'ambient_loop.dart';
 import 'chat/signal_row.dart';
@@ -479,7 +478,6 @@ class _StepDetailState extends State<_StepDetail> {
     final lines = (_height / _lineHeight).round();
     final more = countsLines ? 'Show all $lines lines' : 'Show all';
     final meta = toolMetaParts(step);
-    final copy = toolCopyText(step);
     final metaStyle = sans(kMobile ? 12 : 12, color: AppColors.fg3);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -520,20 +518,11 @@ class _StepDetailState extends State<_StepDetail> {
             ],
           ),
         ),
-        if (meta.isNotEmpty || copy.isNotEmpty)
+        if (meta.isNotEmpty)
           Padding(
             padding: EdgeInsets.only(top: S.s6),
-            child: Row(children: [
-              if (meta.isNotEmpty)
-                Expanded(
-                    child: Text(meta.join(' · '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: metaStyle))
-              else
-                const Spacer(),
-              if (copy.isNotEmpty) _CopyIcon(text: copy),
-            ]),
+            child: Text(meta.join(' · '),
+                maxLines: 1, overflow: TextOverflow.ellipsis, style: metaStyle),
           ),
       ],
     );
@@ -1255,43 +1244,4 @@ class _Rise extends StatelessWidget {
       ),
     );
   }
-}
-
-/// A quiet copy affordance: an icon that turns into a tick once copied.
-class _CopyIcon extends StatefulWidget {
-  const _CopyIcon({required this.text});
-  final String text;
-  @override
-  State<_CopyIcon> createState() => _CopyIconState();
-}
-
-class _CopyIconState extends State<_CopyIcon> {
-  bool _done = false;
-
-  void _copy() {
-    HapticFeedback.selectionClick();
-    Clipboard.setData(ClipboardData(text: widget.text));
-    setState(() => _done = true);
-    Future.delayed(const Duration(milliseconds: 1400), () {
-      if (mounted) setState(() => _done = false);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) => Tooltip(
-        message: _done ? 'Copied' : 'Copy',
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _copy,
-          child: SizedBox(
-            width: 32,
-            height: 28,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: AppIcon(_done ? 'check' : 'copy',
-                  size: 15, color: _done ? AppColors.ok : AppColors.fg4),
-            ),
-          ),
-        ),
-      );
 }
