@@ -37,6 +37,10 @@ String defaultAgentCharacter(String agentId) {
 
 List<int> _utf8(String s) => const Utf8Codec().encode(s);
 
+/// Session id -> the agent working there, kept from the last session list so
+/// surfaces without the list (notifications) still show the right character.
+final Map<String, String> sessionAgents = {};
+
 /// The character an agent shows: its stored pick, else the daemon's default.
 String characterForAgent(String agentId) =>
     agentCharacterFor(agentId) ?? defaultAgentCharacter(agentId);

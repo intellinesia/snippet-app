@@ -56,8 +56,10 @@ String _agentOf(Map<String, dynamic> p) {
     final v = '${p[k] ?? ''}';
     if (v.isNotEmpty) return v;
   }
+  // The agent working in the session, never a character hashed from its id.
   final s = '${p['session'] ?? ''}';
-  return s.isEmpty ? 'snippet' : s;
+  if (s.startsWith('inbox-')) return s.substring(6);
+  return sessionAgents[s] ?? 'snippet';
 }
 
 class _Field extends StatelessWidget {

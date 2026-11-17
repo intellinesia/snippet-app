@@ -17,6 +17,7 @@ import '../presence.dart' show PresenceStore;
 import 'agent_view_mode.dart';
 import '../desktop_notifications.dart';
 import '../device_events.dart';
+import '../mochi.dart' show sessionAgents;
 import '../models.dart';
 import '../macos_notch.dart';
 import '../notifications.dart';
@@ -1351,6 +1352,10 @@ class _DesktopShellState extends State<DesktopShell>
       _liveStatus.merge(s, since: statusRevision);
       if (mounted) {
         final profiles = {for (final x in s) x.id: x.profile};
+        for (final x in s) {
+          final a = x.workerAgentId ?? x.agentId;
+          if (a != null && a.isNotEmpty) sessionAgents[x.id] = a;
+        }
         setState(() {
           _sessions = s;
           _sessionsLoading = false;
