@@ -210,6 +210,14 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       danger: false,
     );
     if (!ok || !mounted) return;
+    _compactNow();
+  }
+
+  void _compactNow() {
+    if (_state?.compacting == true) {
+      _toast('Already compacting');
+      return;
+    }
     _send({'kind': 'compact'});
     _toast('Compacting history');
   }
@@ -788,11 +796,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     }
     final hint = _isMissionControl
         ? 'Ask Mission Control…'
-        : running
-            ? (agent.isEmpty
-                ? 'Steer or queue a message'
-                : 'Steer $agent, or queue for later')
-            : (agent.isEmpty ? 'Reply to Snippet' : 'Message $agent');
+        : (agent.isEmpty ? 'Reply to Snippet' : 'Message $agent');
     if (!kMobile) return _deskComposerCard(running, hint);
     return KeyedSubtree(
       key: _composerCardKey,
@@ -841,7 +845,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   Widget _deskComposerCard(bool running, String hint) {
     final goal = _state?.goal?.ongoing == true;
     final rcpt = _recipientChip();
-    final mod = _isMac ? '\u2318\u21b5' : 'Ctrl \u21b5';
     return KeyedSubtree(
       key: _composerCardKey,
       child: ListenableBuilder(
@@ -891,11 +894,10 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                     ),
                   )
                 : null,
-            hint: !typing
+            // No send-mode legend; only the new-line key, while idle.
+            hint: !typing || running
                 ? null
-                : DeskHint(running
-                    ? [('\u21b5', 'queue'), (mod, 'interrupt')]
-                    : [('\u21e7\u21b5', 'new line')]),
+                : DeskHint([('\u21e7\u21b5', 'new line')]),
             mic: kCanRecord
                 ? DeskIconButton('mic', tooltip: 'Record', onTap: _onMicTap)
                 : null,
@@ -940,8 +942,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       onMore: reviewing ? () => unawaited(_recordMore()) : null,
     );
   }
-
-  bool get _isMac => defaultTargetPlatform == TargetPlatform.macOS;
 
   /// Stop when the agent runs and there is nothing to send, else send.
   Widget _deskAction(bool running) {

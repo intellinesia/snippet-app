@@ -55,11 +55,15 @@ class SessionHandOffPanel extends StatefulWidget {
     required this.sessionId,
     this.ownerId,
     this.onHandedOff,
+    this.list = false,
   });
 
   final DaemonClient client;
   final String sessionId;
   final String? ownerId;
+
+  /// Agents as compact rows, for narrow hosts such as the session panel.
+  final bool list;
 
   /// Called with the target's display name and whether the hand-off is
   /// pending once the daemon accepts it.
@@ -128,14 +132,11 @@ class _SessionHandOffPanelState extends State<SessionHandOffPanel> {
       _error = null;
     });
     try {
-      final res = await widget.client.handOffSession(widget.sessionId, to,
-          note: _note.text);
+      final res = await widget.client
+          .handOffSession(widget.sessionId, to, note: _note.text);
       if (!mounted) return;
-      final name = _agents
-              .where((a) => a.id == to)
-              .firstOrNull
-              ?.displayName ??
-          to;
+      final name =
+          _agents.where((a) => a.id == to).firstOrNull?.displayName ?? to;
       final pending = res['pending'] == true;
       widget.onHandedOff?.call(name, pending);
     } catch (e) {
@@ -168,12 +169,28 @@ class _SessionHandOffPanelState extends State<SessionHandOffPanel> {
             ),
           )
         else ...[
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: [
-              for (final a in _agents) _tile(a),
-            ]),
-          ),
+          if (widget.list)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 40 * 4.5),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SingleChildScrollView(
+                  child: Column(children: [
+                    for (var i = 0; i < _agents.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 2),
+                      _row(_agents[i]),
+                    ],
+                  ]),
+                ),
+              ),
+            )
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                for (final a in _agents) _tile(a),
+              ]),
+            ),
           const SizedBox(height: 12),
           AppField(
             controller: _note,
@@ -212,6 +229,45 @@ class _SessionHandOffPanelState extends State<SessionHandOffPanel> {
         : (AgentCharacterState.sleeping, 'asleep');
   }
 
+  Widget _row(CoordinationAgent a) {
+    final selected = _selected == a.id;
+    final (state, word) = _stateOf(a);
+    return Material(
+      color: AppColors.surface3,
+      child: InkWell(
+        onTap: _busy ? null : () => setState(() => _selected = a.id),
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: selected
+              ? BoxDecoration(
+                  border: Border.all(
+                      color: AppColors.accent.withValues(alpha: 0.4)))
+              : null,
+          child: Row(children: [
+            AgentMochi(a.id, size: 22, state: state),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(a.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12.5,
+                      color: selected ? AppColors.fg1 : AppColors.fg2)),
+            ),
+            if (word != null) ...[
+              const SizedBox(width: 6),
+              Text(word, style: sans(11, color: AppColors.fg4)),
+            ],
+            if (selected) ...[
+              const SizedBox(width: 6),
+              AppIcon('check', size: 13, color: AppColors.accent),
+            ],
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget _tile(CoordinationAgent a) {
     final selected = _selected == a.id;
     final (state, word) = _stateOf(a);
@@ -240,8 +296,7 @@ class _SessionHandOffPanelState extends State<SessionHandOffPanel> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: sans(12, weight: W.label, color: AppColors.fg1)),
-            if (word != null)
-              Text(word, style: sans(11, color: AppColors.fg3)),
+            if (word != null) Text(word, style: sans(11, color: AppColors.fg3)),
           ]),
         ),
       ),

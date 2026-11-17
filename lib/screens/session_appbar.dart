@@ -1151,6 +1151,10 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       confirmLabel: 'Delete',
     );
     if (!ok || !mounted) return;
+    await _deleteNow(close);
+  }
+
+  Future<void> _deleteNow(void Function(VoidCallback) close) async {
     try {
       await widget.client.deleteSession(widget.sessionId);
     } catch (e) {
@@ -1436,6 +1440,27 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           ? null
           : () => _deleteSession((f) => f()),
       onSubmitGoal: mc || widget.readOnly ? null : _submitGoal,
+      handOffPanel:
+          mc || widget.readOnly || _inboxAgentId(widget.sessionId) != null
+              ? null
+              : (close) => SessionHandOffPanel(
+                    client: widget.client,
+                    sessionId: widget.sessionId,
+                    list: true,
+                    onHandedOff: (name, pending) {
+                      close();
+                      _toast(pending
+                          ? 'Hands to $name after this turn'
+                          : 'Handed to $name');
+                    },
+                  ),
+      onForkNow: mc || widget.readOnly ? null : () => _forkFrom(null),
+      onRewindNow: _rewindTo,
+      onCompactNow: _compactNow,
+      onDeleteNow:
+          mc || widget.readOnly || _inboxAgentId(widget.sessionId) != null
+              ? null
+              : () => _deleteNow((f) => f()),
       onResumeGoal: mc || widget.readOnly ? null : _resumeGoal,
       onEndGoal: mc || widget.readOnly ? null : _cancelGoal,
       providers: _profileProviders,

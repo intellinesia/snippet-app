@@ -1016,6 +1016,10 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     );
     if (!ok) return;
     if (mounted) Navigator.pop(context); // close the sheet
+    await _rewindTo(c);
+  }
+
+  Future<void> _rewindTo(Checkpoint c) async {
     try {
       await widget.client.rewind(widget.sessionId, c.id);
       _toast('Workspace restored');
@@ -1141,7 +1145,12 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     lastChipOrigin = null;
     if (fromHere == null || !mounted) return;
     if (sheet) Navigator.pop(context);
-    final cut = fromHere ? c : null;
+    await _forkFrom(fromHere ? c : null);
+  }
+
+  /// Fork at [cut], or at the latest message when null, and open the fork.
+  Future<void> _forkFrom(Checkpoint? cut) async {
+    final events = _state?.events.length ?? 0;
     try {
       final result = await widget.client.forkSession(
         widget.sessionId,
@@ -1253,34 +1262,51 @@ Duration? _turnTook(List<Map<String, dynamic>> events, int idx) {
   return null;
 }
 
-class _TurnFooter extends StatelessWidget {
+class _TurnFooter extends StatefulWidget {
   const _TurnFooter({required this.text, this.took});
   final String text;
   final Duration? took;
 
   @override
+  State<_TurnFooter> createState() => _TurnFooterState();
+}
+
+class _TurnFooterState extends State<_TurnFooter> {
+  bool _copied = false;
+
+  Future<void> _copy() async {
+    await Clipboard.setData(ClipboardData(text: widget.text));
+    if (!mounted) return;
+    setState(() => _copied = true);
+    await Future<void>.delayed(const Duration(milliseconds: 1400));
+    if (mounted) setState(() => _copied = false);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final style = sans(12, color: AppColors.fg4);
+    final took = widget.took;
     return Padding(
       padding: const EdgeInsets.only(top: 2),
       child: Row(children: [
         Text('Finished', style: style),
         if (took != null) ...[
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Container(
               width: 3,
               height: 3,
               decoration:
                   BoxDecoration(color: AppColors.fg4, shape: BoxShape.circle)),
-          const SizedBox(width: 10),
-          Text(formatWorkDuration(took!), style: style),
+          const SizedBox(width: 8),
+          Text(formatWorkDuration(took), style: style),
         ],
-        const Spacer(),
-        IconBtn('clipboard', size: 24, iconSize: 13, tooltip: 'Copy reply',
-            onTap: () {
-          Clipboard.setData(ClipboardData(text: text));
-          toast(context, 'Copied');
-        }),
+        // Copy sits with the reply's footer, not stranded at the far edge.
+        const SizedBox(width: 6),
+        IconBtn(_copied ? 'check' : 'copy',
+            size: 24,
+            iconSize: 13,
+            tooltip: _copied ? 'Copied' : 'Copy reply',
+            onTap: _copy),
       ]),
     );
   }

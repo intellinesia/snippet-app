@@ -76,6 +76,11 @@ class SessionRail extends StatefulWidget {
     this.onShell,
     this.onAutonomy,
     this.onCheckpoints,
+    this.handOffPanel,
+    this.onForkNow,
+    this.onRewindNow,
+    this.onCompactNow,
+    this.onDeleteNow,
     this.onMemory,
     this.onOpenTask,
     this.onHandOff,
@@ -117,6 +122,14 @@ class SessionRail extends StatefulWidget {
   final VoidCallback? onShell;
   final VoidCallback? onAutonomy;
   final VoidCallback? onCheckpoints;
+
+  /// Inline bodies for the action strip: each opens under the strip instead
+  /// of a dialog. A null one falls back to its plain callback above.
+  final Widget Function(VoidCallback close)? handOffPanel;
+  final VoidCallback? onForkNow;
+  final Future<void> Function(Checkpoint c)? onRewindNow;
+  final VoidCallback? onCompactNow;
+  final VoidCallback? onDeleteNow;
   final VoidCallback? onMemory;
   final void Function(String taskId)? onOpenTask;
   final VoidCallback? onHandOff;
@@ -149,6 +162,51 @@ class SessionRail extends StatefulWidget {
   State<SessionRail> createState() => _SessionRailState();
 }
 
+/// "Delete session" that asks in place: the row turns into the question.
+class _DeleteInPlace extends StatefulWidget {
+  const _DeleteInPlace({required this.onDelete});
+  final VoidCallback onDelete;
+
+  @override
+  State<_DeleteInPlace> createState() => _DeleteInPlaceState();
+}
+
+class _DeleteInPlaceState extends State<_DeleteInPlace> {
+  bool _asking = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_asking) {
+      return _RailRow(
+          icon: 'trash',
+          label: 'Delete session',
+          danger: true,
+          onTap: () => setState(() => _asking = true));
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 6, 2, 4),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('Delete this session?',
+            style: sans(13, weight: W.title, color: AppColors.fg1)),
+        const SizedBox(height: 2),
+        Text('Removes the conversation. Files on disk stay.',
+            style: sans(11.5, color: AppColors.fg4)),
+        const SizedBox(height: 10),
+        Row(children: [
+          const Spacer(),
+          Btn('Cancel',
+              small: true,
+              variant: BtnVariant.surface,
+              onTap: () => setState(() => _asking = false)),
+          const SizedBox(width: 6),
+          Btn('Delete',
+              small: true, variant: BtnVariant.danger, onTap: widget.onDelete),
+        ]),
+      ]),
+    );
+  }
+}
+
 class _SessionRailState extends State<SessionRail> {
   GitStatus? _git;
   WakeSchedule? _wake;
@@ -160,6 +218,22 @@ class _SessionRailState extends State<SessionRail> {
   int _liveGen = 0;
 
   bool _editingGoal = false;
+
+  /// The strip action whose section is open under the strip, if any.
+  String? _openAction;
+
+  /// Checkpoint whose Rewind was tapped once and now asks to confirm.
+  String? _armedRewind;
+
+  void _closeAction() => setState(() {
+        _openAction = null;
+        _armedRewind = null;
+      });
+
+  void _toggleAction(String key) => setState(() {
+        _openAction = _openAction == key ? null : key;
+        _armedRewind = null;
+      });
   final _goalText = TextEditingController();
 
   @override
@@ -552,11 +626,37 @@ class _SessionRailState extends State<SessionRail> {
   /// The common session actions one click away; the rest behind More.
   Widget _actionStrip() {
     final w = widget;
-    final cells = <(String, String, VoidCallback?)>[
-      if (w.onHandOff != null) ('users', 'Hand off', w.onHandOff),
-      if (w.onFork != null) ('git-branch', 'Fork', w.onFork),
-      if (w.onCheckpoints != null) ('history', 'Rewind', w.onCheckpoints),
-      if (w.onCompact != null) ('minimize', 'Compact', w.onCompact),
+    VoidCallback? inline(String key, bool has, VoidCallback? fallback) =>
+        has ? () => _toggleAction(key) : fallback;
+    final cells = <(String, String, VoidCallback?, String)>[
+      if (w.onHandOff != null || w.handOffPanel != null)
+        (
+          'users',
+          'Hand off',
+          inline('handoff', w.handOffPanel != null, w.onHandOff),
+          'handoff'
+        ),
+      if (w.onFork != null || w.onForkNow != null)
+        (
+          'git-branch',
+          'Fork',
+          inline('fork', w.onForkNow != null, w.onFork),
+          'fork'
+        ),
+      if (w.onCheckpoints != null || w.onRewindNow != null)
+        (
+          'history',
+          'Rewind',
+          inline('rewind', w.onRewindNow != null, w.onCheckpoints),
+          'rewind'
+        ),
+      if (w.onCompact != null || w.onCompactNow != null)
+        (
+          'minimize',
+          'Compact',
+          inline('compact', w.onCompactNow != null, w.onCompact),
+          'compact'
+        ),
     ];
     final more = <(String, String, VoidCallback?)>[
       if (w.onMemory != null) ('brain', 'Memory', w.onMemory),
@@ -570,11 +670,12 @@ class _SessionRailState extends State<SessionRail> {
     if (cells.isEmpty && more.isEmpty && w.onDelete == null) {
       return const SizedBox.shrink();
     }
-    Widget cell(String icon, String label, void Function(BuildContext) tap) =>
+    Widget cell(String icon, String label, void Function(BuildContext) tap,
+            {bool on = false}) =>
         Expanded(
           child: Builder(
             builder: (ctx) => Material(
-              color: AppColors.surface2,
+              color: on ? AppColors.surface3 : AppColors.surface2,
               child: InkWell(
                 onTap: () => tap(ctx),
                 hoverColor: AppColors.surface3,
@@ -583,12 +684,15 @@ class _SessionRailState extends State<SessionRail> {
                   child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        AppIcon(icon, size: 15, color: AppColors.fg3),
+                        AppIcon(icon,
+                            size: 15,
+                            color: on ? AppColors.fg1 : AppColors.fg3),
                         const SizedBox(height: 5),
                         Text(label,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: sans(11, color: AppColors.fg3)),
+                            style: sans(11,
+                                color: on ? AppColors.fg1 : AppColors.fg3)),
                       ]),
                 ),
               ),
@@ -598,19 +702,196 @@ class _SessionRailState extends State<SessionRail> {
     final row = <Widget>[];
     for (final c in cells) {
       if (row.isNotEmpty) row.add(const SizedBox(width: 2));
-      row.add(cell(c.$1, c.$2, (_) => c.$3?.call()));
+      row.add(cell(c.$1, c.$2, (_) => c.$3?.call(), on: _openAction == c.$4));
     }
     if (more.isNotEmpty || w.onDelete != null) {
       if (row.isNotEmpty) row.add(const SizedBox(width: 2));
       row.add(cell('more-horizontal', 'More', (ctx) => _openMore(ctx, more)));
     }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(R.of(12)),
-        child: Row(children: row),
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(R.of(12)),
+          child: Row(children: row),
+        ),
+      ),
+      AnimatedSize(
+        duration: Motion.fast,
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topCenter,
+        child: _actionSection(),
+      ),
+    ]);
+  }
+
+  /// The open strip action, written where it happens: under the strip.
+  Widget _actionSection() {
+    final k = _openAction;
+    if (k == null) return const SizedBox(width: double.infinity);
+    final w = widget;
+    final (String title, String sub, Widget body) = switch (k) {
+      'handoff' => (
+          'Hand off to',
+          'They take this session after the current turn.',
+          w.handOffPanel?.call(_closeAction) ?? const SizedBox.shrink(),
+        ),
+      'fork' => (
+          'Fork this conversation',
+          'Copies everything so far into a new session. This one stays as '
+              'it is, and files on disk are shared.',
+          Row(children: [
+            const Spacer(),
+            Btn('Cancel',
+                small: true, variant: BtnVariant.surface, onTap: _closeAction),
+            const SizedBox(width: 6),
+            Btn('Fork', small: true, onTap: () {
+              _closeAction();
+              w.onForkNow?.call();
+            }),
+          ]),
+        ),
+      'rewind' => (
+          'Rewind to a checkpoint',
+          'Files return to that point; later changes are discarded.',
+          _rewindBody(),
+        ),
+      _ => (
+          'Compact history',
+          'Older history becomes a summary. Recent messages stay. '
+              'This cannot be undone.',
+          Row(children: [
+            const Spacer(),
+            Btn('Cancel',
+                small: true, variant: BtnVariant.surface, onTap: _closeAction),
+            const SizedBox(width: 6),
+            Btn('Compact', small: true, onTap: () {
+              _closeAction();
+              w.onCompactNow?.call();
+            }),
+          ]),
+        ),
+    };
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): _closeAction,
+      },
+      child: Focus(
+        autofocus: true,
+        child: Container(
+          key: ValueKey('rail-action-$k'),
+          margin: const EdgeInsets.fromLTRB(12, 2, 12, 0),
+          padding: const EdgeInsets.fromLTRB(12, 10, 8, 12),
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(R.of(12)),
+          ),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              Expanded(
+                child: Text(title,
+                    style: sans(13, weight: W.title, color: AppColors.fg1)),
+              ),
+              IconBtn('x',
+                  size: 24,
+                  iconSize: 12,
+                  tooltip: 'Close',
+                  onTap: _closeAction),
+            ]),
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Text(sub,
+                  style: sans(11.5, height: 1.45, color: AppColors.fg4)),
+            ),
+            const SizedBox(height: 10),
+            Padding(padding: const EdgeInsets.only(right: 4), child: body),
+          ]),
+        ),
       ),
     );
+  }
+
+  /// The latest checkpoints; Rewind asks once more in place before it acts.
+  Widget _rewindBody() {
+    final all = widget.state?.checkpoints ?? const <Checkpoint>[];
+    final recent = all.reversed.take(4).toList();
+    final more = widget.onCheckpoints;
+    if (recent.isEmpty) {
+      return Text('No checkpoints yet.',
+          style: sans(12.5, color: AppColors.fg3));
+    }
+    String when(Checkpoint c) {
+      final t = DateTime.tryParse(c.createdAt);
+      if (t == null) return '';
+      final r = relativeTime(t.millisecondsSinceEpoch ~/ 1000);
+      return r == 'now' ? 'just now' : '$r ago';
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Column(children: [
+          for (var i = 0; i < recent.length; i++) ...[
+            if (i > 0) const SizedBox(height: 2),
+            Builder(builder: (_) {
+              final c = recent[i];
+              final armed = _armedRewind == c.id;
+              return Container(
+                color: AppColors.surface3,
+                padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
+                child: Row(children: [
+                  Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(c.label.isEmpty ? c.id : c.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(12.5, color: AppColors.fg2)),
+                          if (when(c).isNotEmpty)
+                            Text(when(c),
+                                style: sans(11,
+                                    color: AppColors.fg4, tabular: true)),
+                        ]),
+                  ),
+                  const SizedBox(width: 6),
+                  Btn(armed ? 'Restore' : 'Rewind',
+                      small: true,
+                      variant: armed ? BtnVariant.primary : BtnVariant.surface,
+                      onTap: () {
+                    if (!armed) {
+                      setState(() => _armedRewind = c.id);
+                      return;
+                    }
+                    _closeAction();
+                    widget.onRewindNow?.call(c);
+                  }),
+                ]),
+              );
+            }),
+          ],
+        ]),
+      ),
+      if (more != null) ...[
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: InkWell(
+            onTap: () {
+              _closeAction();
+              more();
+            },
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Text('All checkpoints \u203a',
+                  style: sans(12, color: AppColors.fg4)),
+            ),
+          ),
+        ),
+      ],
+    ]);
   }
 
   void _openMore(
@@ -633,16 +914,18 @@ class _SessionRailState extends State<SessionRail> {
                 child:
                     _RailRow(icon: i.$1, label: i.$2, onTap: () => run(i.$3)),
               ),
-            if (widget.onDelete != null) ...[
+            if (widget.onDelete != null || widget.onDeleteNow != null) ...[
               if (items.isNotEmpty)
                 Divider(height: 9, thickness: 1, color: AppColors.line),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: _RailRow(
-                    icon: 'trash',
-                    label: 'Delete session',
-                    danger: true,
-                    onTap: () => run(widget.onDelete)),
+                child: widget.onDeleteNow == null
+                    ? _RailRow(
+                        icon: 'trash',
+                        label: 'Delete session',
+                        danger: true,
+                        onTap: () => run(widget.onDelete))
+                    : _DeleteInPlace(onDelete: () => run(widget.onDeleteNow)),
               ),
             ],
           ]),

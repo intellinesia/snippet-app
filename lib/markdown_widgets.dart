@@ -300,7 +300,7 @@ class _MdDiffBlockState extends State<_MdDiffBlock> {
                 ),
                 SizedBox(width: S.s2),
                 IconBtn(
-                  'clipboard',
+                  'copy',
                   size: 28,
                   iconSize: 13,
                   tooltip: 'Copy diff',
@@ -480,7 +480,7 @@ class _MdCodeBlockState extends State<_MdCodeBlock> {
                 ),
                 SizedBox(width: S.s2),
                 IconBtn(
-                  'clipboard',
+                  'copy',
                   size: 28,
                   iconSize: 13,
                   tooltip: 'Copy',
@@ -627,8 +627,8 @@ class _HoverToolsState extends State<_HoverTools> {
                         active: widget.wrap,
                         tooltip: widget.wrap ? 'Unwrap lines' : 'Wrap lines',
                         onTap: widget.onWrap),
-                    IconBtn('clipboard',
-                        size: 26, iconSize: 13, tooltip: 'Copy', onTap: () {
+                    IconBtn('copy', size: 26, iconSize: 13, tooltip: 'Copy',
+                        onTap: () {
                       Clipboard.setData(ClipboardData(text: widget.code));
                       toast(context, 'Copied');
                     }),
