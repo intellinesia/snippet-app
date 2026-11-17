@@ -392,10 +392,16 @@ extension _SessionScreenComposerExt on _SessionScreenState {
   // surface as AttachmentPill beside the text — same as a real Bubble.
   String _queuedText(String m) => hideAttachmentMarkers(m);
 
+  // The marker reads "— call view_image on this exact path to see it: <path>".
   List<String> _queuedImagePaths(String m) => [
         for (final x in RegExp(r'\[attached image —([^\]]*)\]').allMatches(m))
-          if ((x.group(1) ?? '').trim().isNotEmpty) x.group(1)!.trim()
+          if (_markerPath(x.group(1) ?? '') case final p when p.isNotEmpty) p
       ];
+
+  String _markerPath(String body) {
+    final i = body.lastIndexOf(': ');
+    return (i < 0 ? body : body.substring(i + 2)).trim();
+  }
 
   (int audio, int images, int files) _queuedAttachCounts(String m) {
     final matches =
