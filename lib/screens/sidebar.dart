@@ -1157,7 +1157,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
     liveSection('Needs you', needs);
     liveSection('Running', running);
-    liveSection('Came back', cameBack);
+    liveSection('Completed', cameBack);
     final liveIds = {
       for (final s in [...needs, ...cameBack, ...running]) s.id
     };
@@ -1337,7 +1337,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
       group('Needs you', needsYouRows, needsYou: true);
       group('Running', runningRows);
-      group('Came back', cameBackRows);
+      group('Completed', cameBackRows);
     } else {
       groupedSource = unpinned;
     }

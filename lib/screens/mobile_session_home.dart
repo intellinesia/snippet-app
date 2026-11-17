@@ -524,7 +524,7 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
       padding: EdgeInsets.only(bottom: S.of(10)),
       child: Semantics(
         button: true,
-        label: '${cameBack ? 'Came back' : footLeft}. $title',
+        label: '${cameBack ? 'Completed' : footLeft}. $title',
         child: Material(
           color: AppColors.surface2,
           borderRadius: BorderRadius.circular(R.of(20)),

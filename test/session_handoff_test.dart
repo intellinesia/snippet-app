@@ -255,7 +255,7 @@ void main() {
       );
     }
 
-    testWidgets('came-back rows group under Came back with their summary',
+    testWidgets('came-back rows group under Completed with their summary',
         (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.linux;
       await tester.pumpWidget(sidebar([
@@ -268,24 +268,24 @@ void main() {
         s('ask', status: 'waiting_for_input', at: 300),
       ]));
       await tester.pumpAndSettle();
-      expect(find.text('Came back'), findsOneWidget);
+      expect(find.text('Completed'), findsOneWidget);
       expect(find.text('Needs you'), findsOneWidget);
       debugDefaultTargetPlatformOverride = null;
     });
 
-    testWidgets('markSeen drops the row from Came back', (tester) async {
+    testWidgets('markSeen drops the row from Completed', (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.linux;
       final sessions = [
         s('done', cameBack: true, finishedAt: 100, summary: 'Shipped', at: 100),
       ];
       await tester.pumpWidget(sidebar(sessions));
       await tester.pumpAndSettle();
-      expect(find.text('Came back'), findsOneWidget);
+      expect(find.text('Completed'), findsOneWidget);
       // Simulate the optimistic patch the shell applies on sessionSeen.
       await tester.pumpWidget(sidebar(
           [for (final x in sessions) x.id == 'done' ? x.markSeen() : x]));
       await tester.pumpAndSettle();
-      expect(find.text('Came back'), findsNothing);
+      expect(find.text('Completed'), findsNothing);
       debugDefaultTargetPlatformOverride = null;
     });
   });
