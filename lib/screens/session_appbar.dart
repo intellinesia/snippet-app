@@ -1309,9 +1309,9 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       builder: (_, close) => ProcessesScreen(
           client: widget.client, sessionId: widget.sessionId, onClose: close));
 
-  /// The chat pane: capped to its reading width and centred, 680 of text
-  /// beside the session panel and 760 without it. Alone (phone, read-only,
-  /// inbox) it takes the full width.
+  /// The chat pane: 760 of text, centred, the same with or without the session
+  /// panel so opening it never reflows the transcript. Alone (phone,
+  /// read-only, inbox) it takes the full width.
   Widget _chatPane(bool paired, Widget child) {
     final hasPanel =
         !widget.readOnly && _inboxAgentId(widget.sessionId) == null;
@@ -1325,8 +1325,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
             children: [
           Flexible(
               child: ConstrainedBox(
-                  constraints:
-                      BoxConstraints(maxWidth: (paired ? 680 : 760) + 40),
+                  constraints: const BoxConstraints(maxWidth: 760 + 40),
                   child: child)),
         ]));
   }
