@@ -9,6 +9,7 @@ import 'package:snippet/goal_models.dart';
 import 'package:snippet/models.dart';
 import 'package:snippet/screens/goals/goal_detail_screen.dart';
 import 'package:snippet/screens/tasks/task_detail_screen.dart';
+import 'package:snippet/screens/tasks/task_sheet.dart';
 import 'package:snippet/swr.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -223,13 +224,13 @@ void main() {
           findsOneWidget);
     });
 
-    phoneTest('tapping a slice opens the task detail', (tester) async {
+    phoneTest('tapping a slice opens the task sheet', (tester) async {
       final c = _Daemon()
         ..taskJson = {'id': 't1', 'title': 'API models', 'status': 'done'};
       await _phone(tester, GoalDetailScreen(client: c, goalId: 'g1'));
       await tester.tap(find.byKey(const ValueKey('slice-1')));
       await tester.pumpAndSettle();
-      expect(find.byType(TaskDetailScreen), findsOneWidget);
+      expect(find.byType(TaskSheet), findsOneWidget);
     });
 
     phoneTest('task header shows its goal', (tester) async {
