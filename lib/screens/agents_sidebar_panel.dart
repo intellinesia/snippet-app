@@ -15,7 +15,6 @@ import 'create_agent_form.dart';
 import '../mochi.dart';
 import 'group_messaging.dart';
 import 'mission_control_card.dart';
-import 'shell_nav.dart';
 import '../pull_refresh.dart';
 import '../message_reactions.dart' show isReactionEvent;
 import '../motion.dart';
