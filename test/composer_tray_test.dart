@@ -1,3 +1,6 @@
+import 'package:flutter/rendering.dart';
+import 'dart:ui' as ui;
+import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
 
@@ -60,6 +63,8 @@ Future<void> _pumpSession(WidgetTester tester, Map<String, dynamic> snap) async 
   addTearDown(tester.view.reset);
   await tester.pumpWidget(MaterialApp(
     theme: buildAppTheme(),
+    builder: (_, child) =>
+        RepaintBoundary(key: const ValueKey('shot'), child: child!),
     home: SessionScreen(
       client: FakeClient(),
       sessionId: 'sess-t',
@@ -159,6 +164,12 @@ void main() {
     await tester.enterText(find.byType(TextField).last, 'also check 360');
     await tester.pump();
     expect(find.text('Interrupt'), findsOneWidget);
+    await _shot(tester, 'tray_phone');
+    tester.view.viewInsets = const FakeViewPadding(bottom: 330);
+    await _settle(tester);
+    await _shot(tester, 'tray_phone_keyboard');
+    tester.view.resetViewInsets();
+    await _settle(tester);
     // Interrupt sits at the top of the list.
     expect(tester.getTopLeft(find.text('Interrupt')).dy,
         lessThan(tester.getTopLeft(find.text('Files')).dy));
@@ -238,4 +249,16 @@ class _Sink implements WebSocketSink {
   Future close([int? closeCode, String? closeReason]) => Future.value();
   @override
   Future get done => Future.value();
+}
+
+Future<void> _shot(WidgetTester t, String name) async {
+  const dir = String.fromEnvironment('SHOT_DIR');
+  if (dir.isEmpty) return;
+  await t.runAsync(() async {
+    final b = t.renderObject<RenderRepaintBoundary>(
+        find.byKey(const ValueKey('shot')));
+    final img = await b.toImage(pixelRatio: 2);
+    final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
+    File('$dir/$name.png').writeAsBytesSync(bytes!.buffer.asUint8List());
+  });
 }

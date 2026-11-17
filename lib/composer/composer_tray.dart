@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../gesture_physics.dart';
+import '../settings_form.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'composer_pill.dart';
@@ -121,8 +122,8 @@ class _ComposerTrayState extends State<ComposerTray>
 
   void _dragUpdate(DragUpdateDetails d) {
     _k.stop();
-    _k.value = (_k.value - (d.primaryDelta ?? 0) / _sheetHeight)
-        .clamp(0.0, 1.0);
+    _k.value =
+        (_k.value - (d.primaryDelta ?? 0) / _sheetHeight).clamp(0.0, 1.0);
   }
 
   void _dragEnd(DragEndDetails d) {
@@ -168,23 +169,36 @@ class _ComposerTrayState extends State<ComposerTray>
               child: Container(
                 width: 36,
                 height: 4,
-                margin: EdgeInsets.only(top: S.s8, bottom: S.s12),
+                margin: EdgeInsets.only(top: S.s8, bottom: S.s8),
                 decoration: BoxDecoration(
                     color: AppColors.border2,
                     borderRadius: BorderRadius.circular(2)),
               ),
             ),
-            AnimatedSize(
-              duration: calm ? Duration.zero : Motion.base,
-              curve: Motion.enter,
-              alignment: Alignment.bottomCenter,
-              child: AnimatedSwitcher(
-                duration: calm ? Duration.zero : Motion.fast,
-                layoutBuilder: (current, previous) => Stack(
+            // Capped and scrollable, so long pages and a raised keyboard
+            // never push rows off screen.
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                  maxHeight: math.max(
+                      160.0,
+                      (MediaQuery.sizeOf(context).height -
+                              MediaQuery.viewInsetsOf(context).bottom) *
+                          0.55)),
+              child: SingleChildScrollView(
+                child: AnimatedSize(
+                  duration: calm ? Duration.zero : Motion.base,
+                  curve: Motion.enter,
                   alignment: Alignment.bottomCenter,
-                  children: [...previous, if (current != null) current],
+                  child: AnimatedSwitcher(
+                    duration: calm ? Duration.zero : Motion.fast,
+                    layoutBuilder: (current, previous) => Stack(
+                      alignment: Alignment.bottomCenter,
+                      children: [...previous, if (current != null) current],
+                    ),
+                    child:
+                        KeyedSubtree(key: ValueKey(_shownView), child: shown),
+                  ),
                 ),
-                child: KeyedSubtree(key: ValueKey(_shownView), child: shown),
               ),
             ),
           ],
@@ -209,8 +223,7 @@ class _ComposerTrayState extends State<ComposerTray>
                 behavior: HitTestBehavior.translucent,
                 onVerticalDragUpdate: c.open ? _dragUpdate : null,
                 onVerticalDragEnd: c.open ? _dragEnd : null,
-                child: _TrayMotion(
-                    k: calm ? 1 : k, calm: calm, child: content),
+                child: _TrayMotion(k: calm ? 1 : k, calm: calm, child: content),
               ),
             ),
           ),
@@ -248,7 +261,8 @@ class _SheetPainter extends CustomPainter {
     if (open <= 0) return;
     canvas.drawRect(
         Rect.fromLTRB(-bleed - _far, -_far, size.width + bleed + _far, 20),
-        Paint()..color = const Color(0xFF000000).withValues(alpha: 0.45 * open));
+        Paint()
+          ..color = const Color(0xFF000000).withValues(alpha: 0.45 * open));
     final r = RRect.fromRectAndCorners(
       Rect.fromLTRB(-bleed, 0, size.width + bleed, size.height + _far),
       topLeft: const Radius.circular(20),
@@ -342,11 +356,12 @@ class ComposerTrayRow extends StatelessWidget {
             onTap();
           },
           child: Container(
-            constraints: const BoxConstraints(minHeight: 58),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            constraints: BoxConstraints(minHeight: Grouped.compact ? 48 : 58),
+            padding: EdgeInsets.symmetric(
+                horizontal: Grouped.padX, vertical: Grouped.padY),
             child: Row(children: [
-              AppIcon(icon, size: 22, color: color ?? AppColors.fg2),
-              const SizedBox(width: 14),
+              AppIcon(icon, size: Grouped.icon, color: color ?? AppColors.fg2),
+              SizedBox(width: Grouped.iconGap),
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -355,21 +370,24 @@ class ComposerTrayRow extends StatelessWidget {
                     Text(label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(17,
-                            height: 22 / 17, color: color ?? AppColors.fg1)),
+                        style: sans(Grouped.titleSize,
+                            height: Grouped.titleLine / Grouped.titleSize,
+                            color: color ?? AppColors.fg1)),
                     if (subtitle != null)
                       Text(subtitle!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style:
-                              sans(15, height: 20 / 15, color: AppColors.fg3)),
+                          style: sans(Grouped.subSize,
+                              height: Grouped.subLine / Grouped.subSize,
+                              color: AppColors.fg3)),
                   ],
                 ),
               ),
               if (value != null) ...[
                 const SizedBox(width: 8),
                 Text(value!,
-                    style: sans(15, color: AppColors.fg3, tabular: true)),
+                    style: sans(Grouped.valueSize,
+                        color: AppColors.fg3, tabular: true)),
               ],
               if (chevron) ...[
                 const SizedBox(width: 10),

@@ -58,8 +58,8 @@ class ComposerQueueList extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 4, 0, 4),
               child: Text(label,
-                  style: sans(14,
-                      weight: strong ? W.label : null, color: color)),
+                  style:
+                      sans(14, weight: strong ? W.label : null, color: color)),
             ),
           ),
         );
@@ -73,8 +73,11 @@ class ComposerQueueList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (n > 1)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(6, 0, 6, 4),
+            // Its own surface, so the transcript never shows through the line.
+            Container(
+              decoration: BoxDecoration(
+                  color: AppColors.bg, borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.fromLTRB(6, 4, 6, 6),
               child: Row(children: [
                 Expanded(
                   child: Text('$n queued · sent in order after this step',
@@ -82,8 +85,7 @@ class ComposerQueueList extends StatelessWidget {
                       style: sans(14, height: 19 / 14, color: AppColors.fg3)),
                 ),
                 link('Clear', onClear, AppColors.fg2),
-                link('Send all now', onSendAll, AppColors.accent,
-                    strong: true),
+                link('Send all now', onSendAll, AppColors.accent, strong: true),
               ]),
             ),
           ConstrainedBox(
@@ -107,8 +109,7 @@ class ComposerQueueList extends StatelessWidget {
         if (n > 1) ...[
           SizedBox(
             width: 12,
-            child: Text('${i + 1}',
-                style: codeMono(12, color: AppColors.fg4)),
+            child: Text('${i + 1}', style: codeMono(12, color: AppColors.fg4)),
           ),
           const SizedBox(width: 8),
         ],
@@ -135,8 +136,8 @@ class ComposerQueueList extends StatelessWidget {
         if (e.extra != null) ...[const SizedBox(width: 6), e.extra!],
         const SizedBox(width: 4),
         Builder(
-          builder: (ctx) => _action('more-horizontal', 'More', AppColors.fg3,
-              () => e.onMore(ctx)),
+          builder: (ctx) => _action(
+              'more-horizontal', 'More', AppColors.fg3, () => e.onMore(ctx)),
         ),
         _action('arrow-up', 'Send now', AppColors.accent, e.onSend),
       ]),
