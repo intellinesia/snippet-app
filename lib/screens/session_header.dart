@@ -168,14 +168,18 @@ class SessionStatusPillState extends State<SessionStatusPill> {
 /// Window-bar tools each desktop session publishes; the shell shows the
 /// active tab's, so the session has no header row of its own.
 class SessionBarTools extends ChangeNotifier {
-  final Map<String, Widget> _tools = {};
-  Widget? of(String? id) => id == null ? null : _tools[id];
-  void publish(String id, Widget? w) {
-    if (w == null) {
-      if (_tools.remove(id) == null) return;
-    } else {
-      _tools[id] = w;
-    }
+  final Map<String, (Object, Widget)> _tools = {};
+  Widget? of(String? id) => id == null ? null : _tools[id]?.$2;
+  void publish(String id, Object owner, Widget w) {
+    _tools[id] = (owner, w);
+    notifyListeners();
+  }
+
+  // Only the current owner may clear: a rebuilt publisher registers before
+  // the old one is disposed.
+  void clear(String id, Object owner) {
+    if (_tools[id]?.$1 != owner) return;
+    _tools.remove(id);
     notifyListeners();
   }
 }
@@ -200,7 +204,7 @@ class _SessionBarPublisherState extends State<SessionBarPublisher> {
   void dispose() {
     final id = widget.sessionId;
     WidgetsBinding.instance
-        .addPostFrameCallback((_) => sessionBarTools.publish(id, null));
+        .addPostFrameCallback((_) => sessionBarTools.clear(id, this));
     super.dispose();
   }
 
@@ -210,7 +214,9 @@ class _SessionBarPublisherState extends State<SessionBarPublisher> {
       _queued = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _queued = false;
-        if (mounted) sessionBarTools.publish(widget.sessionId, widget.child);
+        if (mounted) {
+          sessionBarTools.publish(widget.sessionId, this, widget.child);
+        }
       });
     }
     return const SizedBox.shrink();
