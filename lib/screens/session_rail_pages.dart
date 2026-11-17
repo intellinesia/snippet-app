@@ -274,13 +274,13 @@ extension _RailPages on _SessionRailState {
               child: Row(children: [
                 tab(0, 'All', lanes.length),
                 tab(1, 'Running', run.length),
-                tab(2, 'Finished', done.length),
+                tab(2, 'Completed', done.length),
               ]),
             ),
           ),
           if (lanes.isEmpty) _empty('No lanes yet.'),
           if (_laneFilter != 2) group('Running', run),
-          if (_laneFilter != 1) group('Finished', done),
+          if (_laneFilter != 1) group('Completed', done),
           const SizedBox(height: 6),
         ];
       case 'jobs':
@@ -343,48 +343,7 @@ extension _RailPages on _SessionRailState {
           const SizedBox(height: 6),
         ];
       case 'wakes':
-        final wake = _wake;
-        return [
-          _subHeader('Wakes'),
-          _card2(
-              'Next wake',
-              [
-                Text(
-                    !_wakeKnown
-                        ? ''
-                        : wake == null
-                            ? 'No wake scheduled'
-                            : _nextWakeText(wake),
-                    style: sans(17, color: AppColors.fg1)),
-                if (wake != null && wake.scheduleText.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(wake.scheduleText,
-                      style: sans(12, color: AppColors.fg3)),
-                ],
-              ],
-              meta: wake == null
-                  ? null
-                  : wake.enabled
-                      ? 'On'
-                      : 'Paused'),
-          _navGroup(null, [
-            (f, l) => _navRow('scheduled', 'Manage wakes',
-                first: f, last: l, onTap: widget.onWakes),
-            if (_autonomous != null && widget.onAutonomy != null)
-              (f, l) => _navRow('activity', 'Automated wakes',
-                  value: _autonomous! ? 'On' : 'Off',
-                  first: f,
-                  last: l,
-                  onTap: widget.onAutonomy),
-            if (_warm != null)
-              (f, l) => _navRow('timer', 'Keep warm',
-                  first: f,
-                  last: l,
-                  trailing: SettingsSwitch(value: _warm!, onChanged: _setWarm),
-                  onTap: () => _setWarm(!_warm!)),
-          ]),
-          const SizedBox(height: 6),
-        ];
+        return _wakesPage();
       case 'usage':
         final provider = widget.providers[widget.ownProfile] ??
             widget.providers[widget.profileLabel];
@@ -503,7 +462,7 @@ extension _RailPages on _SessionRailState {
                                       : l.activity!.trim())
                                   : l.status == 'failed'
                                       ? 'Failed'
-                                      : 'Finished',
+                                      : 'Completed',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: sans(11.5, color: AppColors.fg4)),
@@ -677,5 +636,256 @@ extension _RailPages on _SessionRailState {
     final m = RegExp(r'^cd\s+\S+\s*(&&|;)\s*').firstMatch(c);
     if (m != null) c = c.substring(m.end);
     return c;
+  }
+
+  List<Widget> _wakesPage() {
+    final list = [..._wakes]..sort((a, b) {
+        if (a.enabled != b.enabled) return a.enabled ? -1 : 1;
+        return a.nextRunAt.compareTo(b.nextRunAt);
+      });
+    final next = list
+        .where((w) => w.enabled && w.nextRunAt > 0)
+        .fold<WakeSchedule?>(
+            null, (m, w) => m == null || w.nextRunAt < m.nextRunAt ? w : m);
+    return [
+      _subHeader('Wakes', meta: list.isEmpty ? null : '${list.length}'),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          decoration: BoxDecoration(
+              color: Grouped.row,
+              borderRadius: BorderRadius.circular(R.of(13))),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Next wake', style: sans(11.5, color: AppColors.fg4)),
+            const SizedBox(height: 4),
+            if (!_wakeKnown)
+              const SizedBox(height: 26)
+            else if (next == null)
+              Text('Nothing scheduled',
+                  style: sans(17, weight: W.title, color: AppColors.fg2))
+            else ...[
+              Text.rich(TextSpan(children: [
+                TextSpan(
+                    text: _wakeWhen(next.nextRunAt),
+                    style: mono(20, color: AppColors.fg1)),
+                TextSpan(
+                    text: '  ${_wakeIn(next.nextRunAt)}',
+                    style: sans(12, color: AppColors.accent)),
+              ])),
+              const SizedBox(height: 2),
+              Text(_wakeTitle(next),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(12.5, color: AppColors.fg3)),
+            ],
+          ]),
+        ),
+      ),
+      _groupLabel('Scheduled'),
+      for (var i = 0; i < list.length; i++) _wakeRow(list[i], i == 0, false),
+      _wakeAdd(first: list.isEmpty),
+      _navGroup('Behaviour', [
+        if (_autonomous != null && widget.onAutonomy != null)
+          (f, l) => _navRow('activity', 'Automated wakes',
+              value: _autonomous! ? 'On' : 'Off',
+              first: f,
+              last: l,
+              onTap: widget.onAutonomy),
+        if (_warm != null)
+          (f, l) => _navRow('timer', 'Keep warm',
+              first: f,
+              last: l,
+              trailing: SettingsSwitch(value: _warm!, onChanged: _setWarm),
+              onTap: () => _setWarm(!_warm!)),
+        (f, l) => _navRow('scheduled', 'All wakes',
+            first: f, last: l, onTap: widget.onWakes),
+      ]),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Text(
+            'Wakes run in this session with its history. A wake that finds nothing to do ends quietly.',
+            style: sans(11.5, height: 1.45, color: AppColors.fg4)),
+      ),
+    ];
+  }
+
+  Widget _groupLabel(String t) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 6),
+        child: Text(t, style: sans(12, color: AppColors.fg3)),
+      );
+
+  String _wakeTitle(WakeSchedule w) {
+    final t = w.title.trim().isNotEmpty ? w.title.trim() : w.brief.trim();
+    final line = t.split('\n').first;
+    return line.isEmpty ? (w.name ?? 'Wake') : line;
+  }
+
+  String _wakeWhen(int at) {
+    final d = DateTime.fromMillisecondsSinceEpoch(at * 1000);
+    final n = DateTime.now();
+    final hm =
+        '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+    if (d.year == n.year && d.month == n.month && d.day == n.day) return hm;
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return d.difference(n).inDays < 6
+        ? '${days[d.weekday - 1]} $hm'
+        : '${d.day}/${d.month} $hm';
+  }
+
+  String _wakeIn(int at) {
+    final m = (at * 1000 - DateTime.now().millisecondsSinceEpoch) ~/ 60000;
+    if (m <= 0) return 'due';
+    if (m < 60) return 'in ${m}m';
+    if (m < 60 * 24) return 'in ${m ~/ 60}h ${m % 60}m';
+    return 'in ${m ~/ (60 * 24)}d';
+  }
+
+  BorderRadius _rowRadius(bool first, bool last) {
+    final r = Radius.circular(R.of(13));
+    final s = Radius.circular(R.of(5));
+    return BorderRadius.vertical(top: first ? r : s, bottom: last ? r : s);
+  }
+
+  Widget _wakeRow(WakeSchedule w, bool first, bool last) => Padding(
+        padding: EdgeInsets.fromLTRB(12, first ? 0 : 2, 12, 0),
+        child: Material(
+          color: Grouped.row,
+          borderRadius: _rowRadius(first, last),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: widget.onWakes,
+            hoverColor: AppColors.fg1.withValues(alpha: 0.04),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
+              child: Row(children: [
+                AppIcon('scheduled', size: 15, color: AppColors.fg3),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_wakeTitle(w),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(13,
+                                color:
+                                    w.enabled ? AppColors.fg1 : AppColors.fg3)),
+                        Text(
+                            [
+                              if (w.enabled && w.nextRunAt > 0)
+                                _wakeWhen(w.nextRunAt),
+                              if (w.scheduleText.isNotEmpty) w.scheduleText,
+                              if (!w.enabled) 'paused',
+                            ].join(' · '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(11.5, color: AppColors.fg4)),
+                      ]),
+                ),
+                const SizedBox(width: 8),
+                SettingsSwitch(
+                    value: w.enabled, onChanged: (on) => _toggleWake(w, on)),
+              ]),
+            ),
+          ),
+        ),
+      );
+
+  Future<void> _toggleWake(WakeSchedule w, bool on) async {
+    try {
+      final saved = await widget.client.setWake(
+          w.owner, {'enabled': on, if (w.name != null) 'name': w.name});
+      _set(() => _wakes = [
+            for (final x in _wakes)
+              x.owner == w.owner && x.name == w.name ? saved : x
+          ]);
+    } catch (e) {
+      _set(() => _wakeError = '$e');
+    }
+  }
+
+  Widget _wakeAdd({required bool first}) {
+    Widget field(TextEditingController c, String hint, TextStyle st) =>
+        TextField(
+          controller: c,
+          style: st,
+          cursorColor: AppColors.accent,
+          onChanged: (_) => _set(() => _wakeError = null),
+          decoration: InputDecoration.collapsed(
+              hintText: hint, hintStyle: st.copyWith(color: AppColors.fg4)),
+        );
+    final ready = _wakeBrief.text.trim().isNotEmpty &&
+        _wakeSched.text.trim().isNotEmpty &&
+        !_wakeSaving;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(12, first ? 0 : 2, 12, 0),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+        decoration: BoxDecoration(
+            color: Grouped.row, borderRadius: _rowRadius(first, true)),
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            AppIcon('plus', size: 14, color: AppColors.fg3),
+            const SizedBox(width: 10),
+            Expanded(
+                child: field(_wakeBrief, 'What should it do?',
+                    sans(13, color: AppColors.fg1))),
+          ]),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(10, 7, 10, 7),
+                decoration: BoxDecoration(
+                    color: AppColors.fg1.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(R.of(8))),
+                child: field(_wakeSched, 'weekdays 09:00',
+                    mono(12, color: AppColors.fg1)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Btn('Add wake',
+                small: true, disabled: !ready, onTap: ready ? _addWake : null),
+          ]),
+          if (_wakeError != null) ...[
+            const SizedBox(height: 6),
+            Text(_wakeError!,
+                style: sans(11.5, height: 1.4, color: AppColors.danger)),
+          ],
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _addWake() async {
+    _set(() {
+      _wakeSaving = true;
+      _wakeError = null;
+    });
+    // The owner's unnamed wake is its default; further ones need a name.
+    final taken = _wakes.any((w) => w.name == null);
+    try {
+      final saved = await widget.client.setWake(widget.sessionId, {
+        if (taken)
+          'name': 'wake-${DateTime.now().millisecondsSinceEpoch % 1000000}',
+        'schedule': _wakeSched.text.trim(),
+        'brief': _wakeBrief.text.trim(),
+      });
+      _wakeBrief.clear();
+      _wakeSched.clear();
+      _set(() {
+        _wakes = [..._wakes, saved];
+        if (saved.name == null) _wake = saved;
+      });
+    } catch (e) {
+      final msg = '$e';
+      _set(() => _wakeError =
+          msg.replaceFirst(RegExp(r'^(Exception|ApiException):\s*'), ''));
+    } finally {
+      _set(() => _wakeSaving = false);
+    }
   }
 }

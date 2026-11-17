@@ -226,8 +226,15 @@ class _SessionRailState extends State<SessionRail> {
   String? _page;
   int _laneFilter = 0;
   List<Map<String, dynamic>> _procs = const [];
+  List<WakeSchedule> _wakes = const [];
+  final _wakeBrief = TextEditingController();
+  final _wakeSched = TextEditingController();
+  bool _wakeSaving = false;
+  String? _wakeError;
 
-  void _set(VoidCallback f) => setState(f);
+  void _set(VoidCallback f) {
+    if (mounted) setState(f);
+  }
 
   /// The strip action whose section is open under the strip, if any.
   String? _openAction;
@@ -260,6 +267,8 @@ class _SessionRailState extends State<SessionRail> {
   void dispose() {
     sessionGoalEditRequest.removeListener(_onGoalEditRequest);
     _goalText.dispose();
+    _wakeBrief.dispose();
+    _wakeSched.dispose();
     super.dispose();
   }
 
@@ -336,6 +345,7 @@ class _SessionRailState extends State<SessionRail> {
       _try(c.tasks(status: 'in_progress')),
       _try(c.mcAutonomy()),
       mc ? Future.value(null) : _try(c.bgList(id)),
+      mc ? Future.value(null) : _try(c.wakes()),
     ]);
     if (!mounted || gen != _gen) return;
     final auto = r[4] as Map<String, dynamic>?;
@@ -347,6 +357,13 @@ class _SessionRailState extends State<SessionRail> {
       _tasks = r[3] as List<TaskItem>? ?? const [];
       _autonomous = auto == null ? null : auto['on'] == true;
       _procs = r[5] as List<Map<String, dynamic>>? ?? _procs;
+      final wl = r[6] as WakeList?;
+      if (wl != null) {
+        _wakes = [
+          for (final w in wl.wakes)
+            if (w.owner == id) w
+        ];
+      }
     });
   }
 
@@ -518,8 +535,8 @@ class _SessionRailState extends State<SessionRail> {
           child: Container(
             padding: const EdgeInsets.fromLTRB(14, 11, 12, 11),
             decoration: BoxDecoration(
+              color: AppColors.surface2,
               borderRadius: BorderRadius.circular(R.of(14)),
-              border: Border.all(color: AppColors.lineStrong),
             ),
             child: Row(children: [
               AppIcon('goal', size: 15, color: AppColors.fg4),
@@ -1026,8 +1043,7 @@ class _SessionRailState extends State<SessionRail> {
       margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: AppColors.run.withValues(alpha: 0.08),
-        border: Border.all(color: AppColors.run.withValues(alpha: 0.25)),
+        color: AppColors.run.withValues(alpha: 0.11),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1251,7 +1267,7 @@ class _SessionRailState extends State<SessionRail> {
                                       : 'Running · ${l.activity!.trim()}')
                                   : l.status == 'failed'
                                       ? 'Failed'
-                                      : 'Finished',
+                                      : 'Completed',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: sans(11.5, color: AppColors.fg4))),

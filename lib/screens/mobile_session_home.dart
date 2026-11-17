@@ -549,8 +549,8 @@ class _LiveSessionCardState extends State<LiveSessionCard> {
                   },
             child: Container(
               decoration: BoxDecoration(
+                color: AppColors.surface2,
                 borderRadius: BorderRadius.circular(R.of(20)),
-                border: Border.all(color: AppColors.line),
               ),
               padding: EdgeInsets.fromLTRB(S.s16, S.of(14), S.s16, S.of(14)),
               child: Column(

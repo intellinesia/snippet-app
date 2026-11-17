@@ -66,9 +66,8 @@ class DecidedCard extends StatelessWidget {
       padding: EdgeInsets.symmetric(
           horizontal: S.s12, vertical: kMobile ? S.of(10) : S.s8),
       decoration: BoxDecoration(
-        color: AppColors.surface1,
+        color: AppColors.surface2,
         borderRadius: BorderRadius.circular(R.card),
-        border: Border.all(color: AppColors.border),
       ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'group_mute.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -89,6 +90,20 @@ Future<void> presentNotifications(Instance instance, NotificationInbox inbox,
     List<Map<String, dynamic>> received,
     {bool background = false}) async {
   received = await _takeCallEvents(instance, received, background);
+  var muted = const <String>{};
+  if (received.any((e) => e['kind'] == 'group_mention')) {
+    try {
+      muted = await loadMutedGroups();
+    } catch (_) {}
+  }
+  if (muted.isNotEmpty) {
+    received = [
+      for (final e in received)
+        if (e['kind'] != 'group_mention' ||
+            !muted.contains('${e['thread_id'] ?? ''}'))
+          e
+    ];
+  }
   if (received.isEmpty) return;
   if (!background && (notificationAppForeground || kMacOS)) {
     for (final event in received) {

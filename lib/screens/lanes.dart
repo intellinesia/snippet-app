@@ -390,7 +390,7 @@ class _AgentLanesView extends StatelessWidget {
       tag = 'Cancelled';
       rest = text;
     } else if (tagFinished) {
-      tag = 'Finished';
+      tag = 'Completed';
       tagColor = AppColors.ok;
       rest = text;
     } else {

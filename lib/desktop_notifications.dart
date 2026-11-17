@@ -225,7 +225,7 @@ class _DesktopNotificationCardState extends State<DesktopNotificationCard> {
         ? (label.isNotEmpty ? label : approval.headline(tool))
         : body;
     final tag = done
-        ? ('Finished', AppColors.ok)
+        ? ('Completed', AppColors.ok)
         : failed
             ? ('Failed', AppColors.danger)
             : null;

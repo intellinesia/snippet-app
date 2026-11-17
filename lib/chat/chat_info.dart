@@ -17,6 +17,8 @@ import '../screens/agent_wake_panel.dart' show showAgentWakeSettings;
 import '../screens/group_messaging.dart' show confirmDeleteGroup;
 import 'agent_cluster.dart';
 import '../screens/group_panel.dart';
+import '../group_mute.dart';
+import '../screens/artifact_viewer.dart' show openArtifact, artifactIcon;
 import '../screens/agent_profile_panel.dart' show showAgentProfileSettings;
 import '../desktop_layout.dart' show SettingsHeader;
 import '../screens/memory_screen.dart' show MemoryScreen;
@@ -36,7 +38,7 @@ import '../screens/tasks/tasks_panel.dart' show TasksPanel, openTaskCountFor;
 import '../screens/tasks/task_common.dart' show openTaskDetail;
 import 'agent_panel_body.dart';
 import '../settings_form.dart'
-    show Grouped, SettingsGroup, SettingsHero, SettingsRow;
+    show Grouped, SettingsGroup, SettingsHero, SettingsRow, SettingsSwitch;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Lets rows inside a docked [AgentInfoPanel] push a nested page instead of
@@ -1270,6 +1272,8 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   Map<String, CoordinationAgent> _byId = const {};
   bool _busy = false;
   int? _openTasks;
+  List<_SharedFile> _shared = const [];
+  bool _sharedAll = false;
   final _navKey = GlobalKey<NavigatorState>();
 
   void _pushNested(String title, WidgetBuilder body,
@@ -1284,7 +1288,79 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
   void initState() {
     super.initState();
     _loadAgents();
+    _loadShared();
+    loadMutedGroups();
   }
+
+  /// Artifacts agents shared into the group, newest first.
+  Future<void> _loadShared() async {
+    try {
+      final events = await widget.client.groupEventsAll(_group.id);
+      final out = <_SharedFile>[];
+      final seen = <String>{};
+      for (final e in events.reversed) {
+        final a = e.payload['artifact'];
+        if (a is! Map) continue;
+        final id = '${a['id'] ?? ''}'.trim();
+        final session = '${a['session'] ?? ''}'.trim();
+        if (id.isEmpty || session.isEmpty || !seen.add('$session/$id')) {
+          continue;
+        }
+        final title = '${a['title'] ?? ''}'.trim();
+        out.add(_SharedFile(
+          id: id,
+          session: session,
+          title: title.isEmpty ? id : title,
+          kind: '${a['kind'] ?? 'file'}',
+          from: e.actorId,
+          at: DateTime.tryParse(e.createdAt)?.toLocal(),
+        ));
+      }
+      if (mounted) setState(() => _shared = out);
+    } catch (_) {}
+  }
+
+  String _sharedMeta(_SharedFile f) {
+    final who = _byId[f.from]?.displayName.trim();
+    final t = f.at;
+    final when = t == null
+        ? ''
+        : '${t.day} ${const [
+            'Jan',
+            'Feb',
+            'Mar',
+            'Apr',
+            'May',
+            'Jun',
+            'Jul',
+            'Aug',
+            'Sep',
+            'Oct',
+            'Nov',
+            'Dec'
+          ][t.month - 1]}';
+    return [if (who != null && who.isNotEmpty) who else f.from, when]
+        .where((s) => s.isNotEmpty)
+        .join(' · ');
+  }
+
+  void _openShared(_SharedFile f) => openArtifact(context,
+      client: widget.client, session: f.session, id: f.id);
+
+  Widget _muteSwitch() => ValueListenableBuilder<Set<String>>(
+        valueListenable: mutedGroups,
+        builder: (_, muted, __) => SettingsSwitch(
+            value: muted.contains(_group.id),
+            onChanged: (on) => setGroupMuted(_group.id, on)),
+      );
+
+  Widget _label(String t, {String? meta}) => Padding(
+        padding: const EdgeInsets.fromLTRB(8, 14, 8, 6),
+        child: Row(children: [
+          Expanded(child: Text(t, style: sans(12, color: AppColors.fg3))),
+          if (meta != null) Text(meta, style: mono(11.5, color: AppColors.fg4)),
+        ]),
+      );
 
   /// Desktop: a nested page in the panel. Phone: a sheet.
   Future<String?> _pickFrom(String title, List<_PickItem> items, bool radios) {
@@ -1491,7 +1567,35 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
         ]),
         const PanelFootnote(
             'A lead answers first. Remove a member with the cross on its row.'),
+        if (_shared.isNotEmpty) ...[
+          _label('Shared files', meta: '${_shared.length}'),
+          PanelGroup(children: [
+            for (final f in _sharedAll ? _shared : _shared.take(4))
+              PanelRow(
+                minHeight: 44,
+                icon: artifactIcon(f.kind),
+                label: f.title,
+                sub: _sharedMeta(f),
+                chevron: true,
+                onTap: () => _openShared(f),
+              ),
+            if (_shared.length > 4)
+              PanelRow(
+                label: _sharedAll ? 'Show fewer' : 'Show all ${_shared.length}',
+                icon: _sharedAll ? 'chevron-up' : 'chevron-down',
+                onTap: () => setState(() => _sharedAll = !_sharedAll),
+              ),
+          ]),
+        ],
+        _label('This group'),
         PanelGroup(children: [
+          PanelRow(
+            minHeight: 44,
+            label: 'Mute',
+            icon: 'bell-off',
+            sub: 'No notifications for mentions; still shows in the sidebar',
+            trailing: _muteSwitch(),
+          ),
           PanelRow(
               label: 'Delete group',
               icon: 'trash',
@@ -1569,13 +1673,36 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
             ),
           ],
         ),
-        SettingsGroup(children: [
-          SettingsRow(
-              label: 'Delete group',
-              icon: 'trash',
-              danger: true,
-              onTap: _deleteGroup),
-        ]),
+        if (_shared.isNotEmpty)
+          SettingsGroup(header: 'Shared files', children: [
+            for (final f in _shared.take(_sharedAll ? _shared.length : 4))
+              SettingsRow(
+                label: f.title,
+                sub: _sharedMeta(f),
+                icon: artifactIcon(f.kind),
+                chevron: true,
+                onTap: () => _openShared(f),
+              ),
+            if (_shared.length > 4)
+              SettingsRow(
+                label: _sharedAll ? 'Show fewer' : 'Show all ${_shared.length}',
+                accent: true,
+                onTap: () => setState(() => _sharedAll = !_sharedAll),
+              ),
+          ]),
+        SettingsGroup(
+          footer:
+              'Muted groups still show in the list, without mention notifications.',
+          children: [
+            SettingsRow(
+                label: 'Mute', icon: 'bell-off', trailing: _muteSwitch()),
+            SettingsRow(
+                label: 'Delete group',
+                icon: 'trash',
+                danger: true,
+                onTap: _deleteGroup),
+          ],
+        ),
       ],
     );
   }
@@ -1651,8 +1778,8 @@ class _RenameButton extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: S.of(10)),
           alignment: Alignment.center,
           decoration: BoxDecoration(
+            color: AppColors.surface3,
             borderRadius: BorderRadius.circular(pr(8)),
-            border: Border.all(color: AppColors.lineStrong),
           ),
           child: Text('Rename', style: sans(12, color: AppColors.fg1)),
         ),
@@ -2128,4 +2255,20 @@ Future<void> _showDesktopInfo(
       );
     },
   );
+}
+
+class _SharedFile {
+  const _SharedFile(
+      {required this.id,
+      required this.session,
+      required this.title,
+      required this.kind,
+      required this.from,
+      this.at});
+  final String id;
+  final String session;
+  final String title;
+  final String kind;
+  final String from;
+  final DateTime? at;
 }

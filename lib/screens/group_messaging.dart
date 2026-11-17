@@ -495,7 +495,6 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
             decoration: BoxDecoration(
               color: AppColors.surface2,
               borderRadius: BorderRadius.circular(R.of(14)),
-              border: Border.all(color: AppColors.line),
             ),
             child: Material(
               color: Colors.transparent,

@@ -1228,9 +1228,8 @@ class _SessionActionsPanelState extends State<_SessionActionsPanel> {
     return Container(
       padding: EdgeInsets.all(S.of(14)),
       decoration: BoxDecoration(
-        color: AppColors.surface1,
+        color: AppColors.surface2,
         borderRadius: BorderRadius.circular(R.of(20)),
-        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1709,7 +1708,7 @@ class SessionFaceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: AppColors.surface1,
+        color: AppColors.surface2,
         borderRadius: BorderRadius.circular(R.of(16)),
         child: InkWell(
           borderRadius: BorderRadius.circular(R.of(16)),
@@ -1721,7 +1720,6 @@ class SessionFaceTile extends StatelessWidget {
             padding: EdgeInsets.all(S.of(12)),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(R.of(16)),
-              border: Border.all(color: AppColors.border),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

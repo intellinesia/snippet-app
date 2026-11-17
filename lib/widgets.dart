@@ -2037,9 +2037,8 @@ class NoteLine extends StatelessWidget {
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
           decoration: BoxDecoration(
-            color: Color.lerp(AppColors.surface1, tone, 0.06),
+            color: Color.lerp(AppColors.surface1, tone, 0.11),
             borderRadius: BorderRadius.circular(R.md),
-            border: Border.all(color: tone.withValues(alpha: 0.22)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -2518,6 +2517,7 @@ const _lucide = <String, IconData>{
   'arrow-up': LucideIcons.arrowUp300,
   'send': LucideIcons.send300,
   'bell': LucideIcons.bell300,
+  'bell-off': LucideIcons.bellOff300,
   'alert-circle': LucideIcons.circleAlert300,
   'message': LucideIcons.messageSquare300,
   'message-square': LucideIcons.messageSquare300,

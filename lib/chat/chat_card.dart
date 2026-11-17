@@ -62,9 +62,9 @@ class ChatCard extends StatelessWidget {
             child: Container(
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: AppColors.surface1,
+                // A surface step, not an outline, sets the card apart.
+                color: AppColors.surface2,
                 borderRadius: BorderRadius.circular(R.of(16)),
-                border: Border.all(color: AppColors.lineStrong),
               ),
               // Own Material so row hovers paint inside the rounded clip.
               child: Material(
@@ -402,14 +402,9 @@ class ChatCardPill extends StatelessWidget {
         color: filled
             ? AppColors.surface3
             : neutral
-                ? Colors.transparent
+                ? AppColors.surface3
                 : c.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(R.card),
-        border: filled
-            ? null
-            : Border.all(
-                color:
-                    neutral ? AppColors.lineStrong : c.withValues(alpha: 0.35)),
       ),
       child: Text(text,
           maxLines: 1, style: sans(12, color: filled ? AppColors.fg2 : c)),
