@@ -1699,7 +1699,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                 tooltip: 'Terminal',
                 active: _termOpen && _terms.isNotEmpty,
                 onTap: _openTerm),
-          if (widget.deskActions != null) widget.deskActions!(),
         ],
       );
 
