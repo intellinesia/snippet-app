@@ -16,6 +16,7 @@ import '../screens/agent_reach_panel.dart' show showAgentReachSettings;
 import '../screens/agent_wake_panel.dart' show showAgentWakeSettings;
 import '../screens/group_messaging.dart' show confirmDeleteGroup;
 import 'agent_cluster.dart';
+import '../screens/group_panel.dart';
 import '../screens/agent_profile_panel.dart' show showAgentProfileSettings;
 import '../desktop_layout.dart' show SettingsHeader;
 import '../screens/memory_screen.dart' show MemoryScreen;
@@ -1508,7 +1509,8 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
           ? AgentMochi(m.id, size: 24)
           : AppIcon('user', size: 16, color: AppColors.fg3),
       name: _name(m.id, m.kind),
-      role: m.isHuman ? null : (lead ? 'Lead' : 'Member'),
+      role: m.isHuman ? 'Owner' : (lead ? 'Lead' : 'Member'),
+      status: GroupMemberStatus(client: widget.client, member: m),
       onRemove: _busy || m.isHuman
           ? null
           : () => _update(() =>
@@ -1621,27 +1623,10 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
       closeIcon: 'panel-right',
       closeTooltip: 'Hide panel',
       children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(S.s12, S.s4, S.s12, S.s12),
-          child: Row(children: [
-            AgentCluster(ids: _group.agentIds, size: 52),
-            SizedBox(width: S.s12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(17, weight: W.strong, color: AppColors.fg1)),
-                  SizedBox(height: S.s2),
-                  Text(count, style: sans(12.5, color: AppColors.fg3)),
-                ],
-              ),
-            ),
-            SizedBox(width: S.s8),
-            _RenameButton(onTap: _busy ? null : _rename),
-          ]),
+        GroupPanelHero(
+          group: _group,
+          title: title,
+          trailing: _RenameButton(onTap: _busy ? null : _rename),
         ),
         _desktopInfo(),
       ],
@@ -1677,10 +1662,15 @@ class _RenameButton extends StatelessWidget {
 /// A member row: 24px avatar, name over its role, and a cross on hover.
 class _MemberRow extends StatefulWidget {
   const _MemberRow(
-      {required this.avatar, required this.name, this.role, this.onRemove});
+      {required this.avatar,
+      required this.name,
+      this.role,
+      this.status,
+      this.onRemove});
   final Widget avatar;
   final String name;
   final String? role;
+  final Widget? status;
   final VoidCallback? onRemove;
 
   @override
@@ -1700,13 +1690,9 @@ class _MemberRowState extends State<_MemberRow> {
               dimension: 24, child: Center(child: widget.avatar)),
           label: widget.name,
           sub: widget.role,
-          trailing: widget.onRemove == null
-              ? null
-              : Opacity(
-                  opacity: _hover ? 1 : 0,
-                  child:
-                      PanelBarButton('x', 'Remove from group', widget.onRemove),
-                ),
+          trailing: _hover && widget.onRemove != null
+              ? PanelBarButton('x', 'Remove from group', widget.onRemove)
+              : widget.status,
         ),
       );
 }

@@ -14,6 +14,8 @@ import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
 
+part 'session_rail_pages.dart';
+
 const String kSessionRailCollapsedPref = 'session_rail_collapsed';
 const double kSessionRailWidth = 288;
 
@@ -220,6 +222,13 @@ class _SessionRailState extends State<SessionRail> {
 
   bool _editingGoal = false;
 
+  /// Desktop drill-in page (lanes, jobs, checkpoints, wakes, usage); null is the root.
+  String? _page;
+  int _laneFilter = 0;
+  List<Map<String, dynamic>> _procs = const [];
+
+  void _set(VoidCallback f) => setState(f);
+
   /// The strip action whose section is open under the strip, if any.
   String? _openAction;
 
@@ -306,7 +315,12 @@ class _SessionRailState extends State<SessionRail> {
     final id = widget.sessionId;
     final git = await _try(c.gitStatus(id)) as GitStatus?;
     if (!mounted || gen != _liveGen) return;
-    setState(() => _git = git ?? _git);
+    final procs = await _try(c.bgList(id)) as List<Map<String, dynamic>>?;
+    if (!mounted || gen != _liveGen) return;
+    setState(() {
+      _git = git ?? _git;
+      _procs = procs ?? _procs;
+    });
   }
 
   Future<void> _load() async {
@@ -321,6 +335,7 @@ class _SessionRailState extends State<SessionRail> {
       _try(c.keepWarmFor(id)),
       _try(c.tasks(status: 'in_progress')),
       _try(c.mcAutonomy()),
+      mc ? Future.value(null) : _try(c.bgList(id)),
     ]);
     if (!mounted || gen != _gen) return;
     final auto = r[4] as Map<String, dynamic>?;
@@ -331,6 +346,7 @@ class _SessionRailState extends State<SessionRail> {
       _warm = (r[2] as KeepWarmEntry?)?.enabled ?? false;
       _tasks = r[3] as List<TaskItem>? ?? const [];
       _autonomous = auto == null ? null : auto['on'] == true;
+      _procs = r[5] as List<Map<String, dynamic>>? ?? _procs;
     });
   }
 
@@ -387,15 +403,46 @@ class _SessionRailState extends State<SessionRail> {
           borderRadius: BorderRadius.circular(R.of(16)),
           child: SingleChildScrollView(
             padding: const EdgeInsets.only(bottom: 6),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: _groups(),
+            // Pages slide in from the side they lead to; root comes back from the left.
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              layoutBuilder: (cur, prev) => Stack(
+                  alignment: Alignment.topCenter,
+                  children: [...prev, if (cur != null) cur]),
+              transitionBuilder: (child, anim) {
+                final isRoot = child.key == const ValueKey('rail-root');
+                final dx = isRoot ? -0.12 : 0.12;
+                return FadeTransition(
+                  opacity: anim,
+                  child: SlideTransition(
+                    position: Tween(begin: Offset(dx, 0), end: Offset.zero)
+                        .animate(anim),
+                    child: child,
+                  ),
+                );
+              },
+              child: Column(
+                key: ValueKey(
+                    _page == null || kMobile || widget.isMissionControl
+                        ? 'rail-root'
+                        : 'rail-$_page'),
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: _railBody(),
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  List<Widget> _railBody() {
+    if (kMobile || widget.isMissionControl) return _groups();
+    if (_page != null) return _subPage();
+    return _desktopRoot([_header()]);
   }
 
   List<Widget> _groups() {
@@ -497,11 +544,8 @@ class _SessionRailState extends State<SessionRail> {
     }
     final paused = g.paused;
     final turns = g.autonomousTurns;
-    final state = paused
-        ? 'Paused'
-        : turns > 0
-            ? 'Active · $turns turn${turns == 1 ? '' : 's'}'
-            : 'Active';
+    final state = paused ? 'Paused' : 'Active';
+    final turnsText = turns > 0 ? '$turns turn${turns == 1 ? '' : 's'}' : null;
     final tone = paused ? AppColors.fg3 : AppColors.accent;
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
@@ -522,6 +566,10 @@ class _SessionRailState extends State<SessionRail> {
               decoration: BoxDecoration(color: tone, shape: BoxShape.circle)),
           const SizedBox(width: 5),
           Text(state, style: sans(11.5, color: tone, tabular: true)),
+          if (turnsText != null) ...[
+            const Spacer(),
+            Text(turnsText, style: mono(11.5, color: AppColors.fg4)),
+          ],
         ]),
         const SizedBox(height: 8),
         Text(g.text,
@@ -593,7 +641,7 @@ class _SessionRailState extends State<SessionRail> {
           const SizedBox(width: 6),
           ValueListenableBuilder<TextEditingValue>(
             valueListenable: _goalText,
-            builder: (_, v, __) => Btn(replacing ? 'Save' : 'Set goal',
+            builder: (_, v, __) => Btn(replacing ? 'Save' : 'Start goal',
                 small: true,
                 disabled: v.text.trim().isEmpty,
                 onTap: _submitGoal),
@@ -709,18 +757,7 @@ class _SessionRailState extends State<SessionRail> {
     // sidebar and tab menus there.
     final row2 = <Widget>[];
     if (!kMobile) {
-      // PRs already have a home in the sidebar on desktop.
-      for (final m in more.where((m) => m.$2 != 'Pull requests')) {
-        if (row2.isNotEmpty) row2.add(const SizedBox(width: 2));
-        // Short names fit five cells; they match the sidebar's words.
-        final short = switch (m.$2) {
-          'Shared files' => 'Shared',
-          'Processes' => 'Jobs',
-          'Scheduled' => 'Wakes',
-          final l => l,
-        };
-        row2.add(cell(m.$1, short, (_) => m.$3?.call()));
-      }
+      // Desktop lists these as rows under the strip.
     } else if (more.isNotEmpty || w.onDelete != null) {
       if (row.isNotEmpty) row.add(const SizedBox(width: 2));
       row.add(cell('more-horizontal', 'More', (ctx) => _openMore(ctx, more)));

@@ -1406,6 +1406,59 @@ class TaskResultCard extends StatelessWidget {
         ? null
         : () => _openSession(context, sessionId, title);
     final plain = plainPreview(summary);
+    if (!kMobile) {
+      final blocked = _s('status').toLowerCase() == 'blocked';
+      return Material(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(R.lg),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: tap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(children: [
+                  AppIcon(icon, size: 16, color: color),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: sans(13,
+                                weight: FontWeight.w600, color: AppColors.fg1)),
+                        const SizedBox(height: 2),
+                        Text(
+                            date.isEmpty
+                                ? statusLabel
+                                : '$statusLabel \u00b7 $date',
+                            style: sans(12, color: AppColors.fg3)),
+                      ],
+                    ),
+                  ),
+                  if (sessionId.isNotEmpty)
+                    AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+                ]),
+                if (plain.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(plain,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: blocked
+                          ? mono(12, color: AppColors.fg2)
+                          : sans(13, height: 1.45, color: AppColors.fg2)),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return GroupedCard(segments: [
       GroupedCardHeader(
         icon: icon,

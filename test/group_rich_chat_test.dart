@@ -457,7 +457,7 @@ void main() {
       expect(find.byType(ComposerAttachmentTile), findsOneWidget);
       expect(find.text('notes.txt'), findsOneWidget);
 
-      await tester.tap(find.byType(ComposerSendButton));
+      await tester.tap(find.byType(DeskActionButton));
       for (var i = 0; i < 8; i++) {
         await tester.pump(const Duration(milliseconds: 60));
       }
@@ -524,7 +524,7 @@ void main() {
       }
       expect(find.byType(ComposerAttachmentTile), findsOneWidget);
 
-      await tester.tap(find.byType(ComposerSendButton));
+      await tester.tap(find.byType(DeskActionButton));
       for (var i = 0; i < 8; i++) {
         await tester.pump(const Duration(milliseconds: 60));
       }

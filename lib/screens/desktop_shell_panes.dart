@@ -611,6 +611,27 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     ]);
   }
 
+  /// Group tabs: the member count and the panel toggle, in the window bar.
+  Widget? _groupBarTools(_ShellTab? t) {
+    final r = t?.readout?.request;
+    if (r == null || !r.id.startsWith('group:') || r.sidePanel == null) {
+      return null;
+    }
+    final n = (r.iconAgentIds?.length ?? 0) + 1;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Padding(
+        padding: EdgeInsets.only(right: S.s8),
+        child: Text('$n members', style: sans(12, color: AppColors.fg3)),
+      ),
+      IconBtn('sidebar',
+          size: 30,
+          iconSize: 15,
+          active: !_panelHidden,
+          tooltip: _panelHidden ? 'Show group panel' : 'Hide group panel',
+          onTap: _togglePanel),
+    ]);
+  }
+
   Widget _rightTabBody(
     _RightTab t,
     HarnessState? s,
@@ -944,6 +965,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                   sessionBarTools.of(_activeTab?.sessionId) ??
                   const SizedBox.shrink()),
           if (_activeTab?.readout?.agent != null) _agentBarTools(_activeTab!),
+          if (_groupBarTools(_activeTab) case final w?) w,
           if (_sidebarHidden) ..._railTools(),
         ],
         reserveWindowControls: kMacOS,

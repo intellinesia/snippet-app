@@ -206,7 +206,7 @@ void main() {
     await tester.tap(find.text('Snippet'));
     await tester.pumpAndSettle();
     expect(client.added, ['snippet']);
-    expect(find.text('3 members'), findsOneWidget);
+    expect(find.textContaining("3 members"), findsOneWidget);
 
     await _shot(tester, 'group_members');
     await tester.tap(find.text('Lead').last);

@@ -1192,7 +1192,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final hideChrome = widget.embedded;
+    // Desktop: the tab, bar and panel carry the identity; no stage.
+    final hideChrome = widget.embedded || !kMobile;
     return Material(
       color: kMobile ? AppColors.pageCanvas : Colors.transparent,
       child: _chrome(
@@ -1695,6 +1696,58 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     }
   }
 
+  static const double _deskIndent = 28;
+
+  Widget _indented({required bool mine, required Widget child}) =>
+      kMobile || mine
+          ? child
+          : Padding(padding: EdgeInsets.only(left: _deskIndent), child: child);
+
+  /// Desktop: who spoke, at the top of their run.
+  Widget _runHeader(CoordinationEvent e) {
+    final at = _eventTime(e);
+    return Padding(
+      padding: EdgeInsets.only(bottom: S.s6),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        AgentDisc(id: e.actorId, size: 20),
+        SizedBox(width: S.s8),
+        Flexible(
+          child: Text(_agentName(e.actorId),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(13, weight: FontWeight.w600, color: AppColors.fg1)),
+        ),
+        if (e.actorId == _group.lead) ...[
+          SizedBox(width: S.s6),
+          Text('lead', style: sans(11, color: AppColors.fg4)),
+        ],
+        if (at != null) ...[
+          SizedBox(width: S.s8),
+          Text(_dayTimeStamp(at).$2, style: mono(11, color: AppColors.fg4)),
+        ],
+      ]),
+    );
+  }
+
+  /// Desktop: reactions as chips under the message, plus a quiet add chip.
+  Widget _deskReactions(CoordinationEvent e, List<ReactionGroup> reactions,
+      {required bool mine}) {
+    if (reactions.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: EdgeInsets.only(top: S.s6, left: mine ? 0 : _deskIndent),
+      child: Align(
+        alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+        child: Wrap(spacing: S.s4, runSpacing: S.s4, children: [
+          for (final r in reactions)
+            DeskReactionChip(
+                group: r, onTap: () => unawaited(_sendReaction(e, r.name))),
+          DeskReactionChip.add(
+              onTap: () => unawaited(_sendReaction(e, '\u{1F44D}'))),
+        ]),
+      ),
+    );
+  }
+
   Widget _withTapback(Widget bubble, Widget? chips, {required bool mine}) {
     if (chips == null) return bubble;
     return Padding(
@@ -1780,7 +1833,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           if (stamp != null) ChatSystemLine(stamp.$2, bold: stamp.$1),
-          if (!mine && run.first)
+          if (!mine && run.first && !kMobile)
+            _runHeader(e)
+          else if (!mine && run.first)
             Row(mainAxisSize: MainAxisSize.min, children: [
               Flexible(
                 child: ChatSenderName(
@@ -1788,38 +1843,41 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                   indent: ChatBubbleRow.avatarSize + 6,
                 ),
               ),
-              if (!kMobile && e.actorId == _group.lead)
-                Padding(
-                  padding: EdgeInsets.only(left: S.s6, top: S.s2),
-                  child: Text('Lead', style: sans(11, color: AppColors.fg4)),
-                ),
             ]),
-          MessageBubbleInteractive(
-            text: e.body,
-            mine: mine,
-            onReact: (name) => unawaited(_sendReaction(e, name)),
-            focusBuilder: (_) => buildContent(),
-            builder: (_, __, bubbleKey) => _rowFor(
-              card: card,
+          _indented(
               mine: mine,
-              avatar: !mine && run.last ? _senderAvatar(e.actorId) : null,
-              avatarSlot: !mine && !run.last,
-              child: _withTapback(
-                KeyedSubtree(
-                  key: bubbleKey,
-                  child: buildContent(),
-                ),
-                reactions.isEmpty
-                    ? null
-                    : MessageReactionChips(
-                        reactions: reactions,
-                        mine: mine,
-                        onReact: (name) => unawaited(_sendReaction(e, name)),
-                      ),
+              child: MessageBubbleInteractive(
+                text: e.body,
                 mine: mine,
-              ),
-            ),
-          ),
+                onReact: (name) => unawaited(_sendReaction(e, name)),
+                focusBuilder: (_) => buildContent(),
+                builder: (_, __, bubbleKey) => _rowFor(
+                  card: card,
+                  mine: mine,
+                  avatar: kMobile && !mine && run.last
+                      ? _senderAvatar(e.actorId)
+                      : null,
+                  avatarSlot: kMobile && !mine && !run.last,
+                  child: !kMobile
+                      ? KeyedSubtree(key: bubbleKey, child: buildContent())
+                      : _withTapback(
+                          KeyedSubtree(
+                            key: bubbleKey,
+                            child: buildContent(),
+                          ),
+                          reactions.isEmpty
+                              ? null
+                              : MessageReactionChips(
+                                  reactions: reactions,
+                                  mine: mine,
+                                  onReact: (name) =>
+                                      unawaited(_sendReaction(e, name)),
+                                ),
+                          mine: mine,
+                        ),
+                ),
+              )),
+          if (!kMobile) _deskReactions(e, reactions, mine: mine),
           if (choices.isNotEmpty)
             LayoutBuilder(
               builder: (_, box) {
@@ -1829,7 +1887,11 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                 return Padding(
                   padding: EdgeInsets.only(
                     top: S.s6,
-                    left: mine ? 0 : ChatBubbleRow.avatarSize + S.s6 + S.of(5),
+                    left: mine
+                        ? 0
+                        : kMobile
+                            ? ChatBubbleRow.avatarSize + S.s6 + S.of(5)
+                            : _deskIndent,
                     right: mine ? S.of(5) : 0,
                   ),
                   child: ConstrainedBox(
@@ -1858,72 +1920,136 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     required bool avatarSlot,
     required Widget child,
   }) =>
-      ChatBubbleRow(
-          mine: mine,
-          avatar: avatar,
-          avatarSlot: avatarSlot,
-          fill: card != null,
-          child: child);
+      // Desktop: received runs take the whole column, as in the agent chat.
+      !kMobile && !mine
+          ? Align(
+              alignment: Alignment.centerLeft,
+              child: card != null
+                  ? SizedBox(width: double.infinity, child: child)
+                  : child)
+          : ChatBubbleRow(
+              mine: mine,
+              avatar: avatar,
+              avatarSlot: avatarSlot,
+              fill: card != null,
+              child: child);
 
   Widget _wideCap(Widget child) => kMobile
       ? child
       : Center(
           child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 740),
+              constraints: const BoxConstraints(maxWidth: 720),
               child: SizedBox(width: double.infinity, child: child)));
 
-  Widget _composerCard() => ComposerCard(
-        text: _input,
-        field: CallbackShortcuts(
-          bindings: {
-            const SingleActivator(LogicalKeyboardKey.enter): () {
-              if (!kMobile) _send();
-            },
-            const SingleActivator(LogicalKeyboardKey.enter, meta: true): _send,
-            const SingleActivator(LogicalKeyboardKey.enter, control: true):
-                _send,
-          },
-          child: TextField(
-            controller: _input,
-            focusNode: _inputFocus,
-            minLines: 1,
-            maxLines: 8,
-            cursorColor: AppColors.accent,
-            onSubmitted: (_) {
-              if (!kMobile) _send();
-            },
-            style: TS.body(AppColors.fg1),
-            decoration: ComposerCard.decoration('Message the group…'),
-          ),
-        ),
-        attach: ComposerIconButton(
-          'plus',
-          tooltip: 'Attach',
-          onTap: () => unawaited(_attachments.pickFromSheet(context)),
-        ),
-        mic: kCanRecord
-            ? ComposerIconButton(
-                _voice.isRecording ? 'mic-off' : 'mic',
-                tooltip: 'Record',
-                onTap: () => unawaited(_voice.toggleRecording()),
-                color: _voice.isRecording ? AppColors.danger : null,
-              )
-            : null,
-        send: ListenableBuilder(
-          listenable: Listenable.merge([_input, _attachments]),
-          builder: (_, __) {
-            final canSend = (_input.text.trim().isNotEmpty ||
-                    _attachments.isNotEmpty ||
-                    _voice.isActive) &&
-                !_sending;
-            return ComposerSendButton(
-              enabled: canSend,
-              sending: _sending,
+  Widget _deskComposerCard() => ListenableBuilder(
+        listenable: Listenable.merge([_input, _attachments]),
+        builder: (_, __) {
+          final canSend = (_input.text.trim().isNotEmpty ||
+                  _attachments.isNotEmpty ||
+                  _voice.isActive) &&
+              !_sending;
+          return DeskComposerCard(
+            focus: _inputFocus,
+            field: CallbackShortcuts(
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.enter): _send,
+                const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+                    _send,
+                const SingleActivator(LogicalKeyboardKey.enter, control: true):
+                    _send,
+              },
+              child: TextField(
+                controller: _input,
+                focusNode: _inputFocus,
+                minLines: 1,
+                maxLines: 10,
+                cursorColor: AppColors.fg1,
+                onSubmitted: (_) => _send(),
+                style: DeskComposerCard.fieldStyle,
+                decoration: DeskComposerCard.decoration('Message the group'),
+              ),
+            ),
+            attach: DeskIconButton('plus',
+                tooltip: 'Attach',
+                onTap: () => unawaited(_attachments.pickFromSheet(context)),
+                iconSize: 16,
+                color: AppColors.fg2),
+            hint: Padding(
+              padding: EdgeInsets.only(right: S.s8),
+              child:
+                  Text('@ to mention', style: sans(12, color: AppColors.fg4)),
+            ),
+            mic: kCanRecord
+                ? DeskIconButton('mic',
+                    tooltip: 'Record',
+                    onTap: () => unawaited(_voice.toggleRecording()))
+                : null,
+            action: DeskActionButton(
+              icon: 'arrow-up',
+              tooltip: 'Send',
+              on: canSend,
+              busy: _sending,
               onTap: canSend ? _send : null,
-            );
-          },
-        ),
+            ),
+          );
+        },
       );
+
+  Widget _composerCard() => !kMobile
+      ? _deskComposerCard()
+      : ComposerCard(
+          text: _input,
+          field: CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.enter): () {
+                if (!kMobile) _send();
+              },
+              const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+                  _send,
+              const SingleActivator(LogicalKeyboardKey.enter, control: true):
+                  _send,
+            },
+            child: TextField(
+              controller: _input,
+              focusNode: _inputFocus,
+              minLines: 1,
+              maxLines: 8,
+              cursorColor: AppColors.accent,
+              onSubmitted: (_) {
+                if (!kMobile) _send();
+              },
+              style: TS.body(AppColors.fg1),
+              decoration: ComposerCard.decoration('Message the group…'),
+            ),
+          ),
+          attach: ComposerIconButton(
+            'plus',
+            tooltip: 'Attach',
+            onTap: () => unawaited(_attachments.pickFromSheet(context)),
+          ),
+          mic: kCanRecord
+              ? ComposerIconButton(
+                  _voice.isRecording ? 'mic-off' : 'mic',
+                  tooltip: 'Record',
+                  onTap: () => unawaited(_voice.toggleRecording()),
+                  color: _voice.isRecording ? AppColors.danger : null,
+                )
+              : null,
+          send: ListenableBuilder(
+            listenable: Listenable.merge([_input, _attachments]),
+            builder: (_, __) {
+              final canSend = (_input.text.trim().isNotEmpty ||
+                      _attachments.isNotEmpty ||
+                      _voice.isActive) &&
+                  !_sending;
+              return ComposerSendButton(
+                enabled: canSend,
+                sending: _sending,
+                onTap: canSend ? _send : null,
+              );
+            },
+          ),
+        );
 
   Widget _composer() {
     final mq = MediaQuery.of(context);

@@ -970,3 +970,65 @@ void showReactionPeople(BuildContext context, List<ReactionGroup> reactions) {
           ),
       ]));
 }
+
+/// Desktop reaction chip: 22px, line icon where one exists, count, accent
+/// tint when it is the user's own.
+class DeskReactionChip extends StatelessWidget {
+  const DeskReactionChip({super.key, required this.group, required this.onTap})
+      : _add = false;
+  const DeskReactionChip.add({super.key, required this.onTap})
+      : group = null,
+        _add = true;
+
+  final ReactionGroup? group;
+  final VoidCallback onTap;
+  final bool _add;
+
+  static const _icons = {
+    '\u2705': 'check',
+    '\u{1F44D}': 'thumbs-up',
+    '\u{1F440}': 'eye',
+    '\u2753': 'help-circle',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final g = group;
+    final mine = g?.mine ?? false;
+    final icon = _add ? 'plus' : _icons[g!.name];
+    final color = mine ? AppColors.accent : AppColors.fg3;
+    return Semantics(
+      button: true,
+      label: _add ? 'Add reaction' : '${g!.name} ${g.count}',
+      child: Material(
+        color: _add
+            ? Colors.transparent
+            : (mine ? AppColors.accentBg : AppColors.surface3),
+        shape: StadiumBorder(
+            side: _add ? BorderSide(color: AppColors.line) : BorderSide.none),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: SizedBox(
+            height: 22,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: _add ? 7 : 8),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (icon != null)
+                  AppIcon(icon, size: 12, color: color)
+                else
+                  Text(g!.name, style: _emojiStyle(12)),
+                if (!_add) ...[
+                  const SizedBox(width: 4),
+                  Text('${g!.count}',
+                      style: sans(11,
+                          tabular: true, weight: W.label, color: color)),
+                ],
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
