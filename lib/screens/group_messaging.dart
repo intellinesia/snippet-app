@@ -311,11 +311,10 @@ class GroupRow extends StatelessWidget {
               : SizedBox(
                   width: 36,
                   height: 22,
+                  // Bare characters, no disc behind each.
                   child: Stack(children: [
-                    AgentDisc(id: shown[0], size: 22),
-                    Positioned(
-                        left: 14,
-                        child: AgentDisc(id: shown[1], size: 22, ring: true)),
+                    AgentMochi(shown[0], size: 22),
+                    Positioned(left: 14, child: AgentMochi(shown[1], size: 22)),
                   ]),
                 ),
       wideAvatar: shown.length > 1,
