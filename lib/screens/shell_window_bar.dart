@@ -94,7 +94,9 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
     }
     if (groupIds != null) return AgentCluster(ids: groupIds, size: 17);
     if (widget.agentId != null && widget.agentId!.isNotEmpty) {
-      return AgentMochi(widget.agentId!, size: 15);
+      return ClipRRect(
+          borderRadius: BorderRadius.circular(R.of(4)),
+          child: AgentMochi(widget.agentId!, size: 16));
     }
     if (hasProvider) return ProviderLogo(widget.provider, size: 13);
     return SessionStateIcon(
@@ -114,8 +116,8 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
     final working = status == 'running' || needsInput;
     final closable = widget.canClose && widget.onClose != null;
     final bg = active
-        ? AppColors.surface2
-        : (_hover ? AppColors.surface1 : Colors.transparent);
+        ? AppColors.surface3
+        : (_hover ? AppColors.fg1.withValues(alpha: 0.07) : Colors.transparent);
 
     Widget cell(Widget child, {required double width}) => MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -126,11 +128,12 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
             child: AnimatedContainer(
               key: widget.chipKey,
               duration: Motion.quick,
-              height: 30,
+              curve: const Cubic(.23, 1, .32, 1),
+              height: 28,
               width: width,
               decoration: BoxDecoration(
                 color: bg,
-                borderRadius: BorderRadius.circular(R.sm),
+                borderRadius: BorderRadius.circular(R.of(6)),
               ),
               child: child,
             ),
@@ -150,11 +153,12 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
             child: AnimatedContainer(
               key: widget.chipKey,
               duration: Motion.quick,
-              height: 30,
+              curve: const Cubic(.23, 1, .32, 1),
+              height: 28,
               padding: EdgeInsets.symmetric(horizontal: S.s8),
               decoration: BoxDecoration(
                 color: bg,
-                borderRadius: BorderRadius.circular(R.sm),
+                borderRadius: BorderRadius.circular(R.of(6)),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 AgentMochi('mission-control', size: 18),
@@ -178,12 +182,13 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
         if (working)
           Positioned(
             left: 4,
-            top: 12.5,
+            top: 11,
             child: Container(
-              width: 5,
-              height: 5,
-              decoration:
-                  BoxDecoration(color: AppColors.run, shape: BoxShape.circle),
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                  color: needsInput ? AppColors.accent : AppColors.run,
+                  shape: BoxShape.circle),
             ),
           ),
         // Fill the cell so the row centres vertically.
@@ -867,11 +872,14 @@ class MacWindowBar extends StatelessWidget {
     return Container(
       height: 44,
       padding: EdgeInsets.fromLTRB(S.s8, 0, S.of(10), 0),
-      decoration: BoxDecoration(
-        color: AppColors.windowBg,
-        border: Border(
-            bottom: BorderSide(color: AppColors.line.withValues(alpha: 0.65))),
-      ),
+      decoration: kMobile
+          ? BoxDecoration(
+              color: AppColors.windowBg,
+              border: Border(
+                  bottom: BorderSide(
+                      color: AppColors.line.withValues(alpha: 0.65))),
+            )
+          : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

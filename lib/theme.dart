@@ -1806,6 +1806,8 @@ class AppColors {
       ? currentTheme.bg
       : Color.lerp(currentTheme.bg, currentTheme.surface1, 0.45)!
           .withValues(alpha: chromeAlpha ?? (solidChrome ? 1 : 0.92));
+  /// The inset desktop panel; phones keep the page background.
+  static Color get panelBg => kMobile ? currentTheme.bg : currentTheme.surface1;
   static Color get sidebarPanel => kMobile
       ? currentTheme.surface1
       : currentTheme.surface1.withValues(alpha: chromeAlpha ?? 0.92);

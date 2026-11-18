@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../platform.dart';
 import '../theme.dart';
 import 'shell_models.dart';
 import 'shell_nav.dart' show kPaneMinWidth;
@@ -264,7 +265,7 @@ class _ShellSplitViewState extends State<ShellSplitView> {
             ]),
           ),
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          child: _panel(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             if (widget.mainHeader != null) widget.mainHeader!,
             Expanded(
               child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -298,9 +299,24 @@ class _ShellSplitViewState extends State<ShellSplitView> {
                 ],
               ]),
             ),
-          ]),
+          ])),
         ),
       ]),
+    );
+  }
+
+  Widget _panel(Widget child) {
+    if (kMobile) return child;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(widget.sidebarHidden ? 8 : 0, 8, 8, 8),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.panelBg,
+          borderRadius: BorderRadius.circular(R.of(12)),
+        ),
+        child: ClipRRect(
+            borderRadius: BorderRadius.circular(R.of(12)), child: child),
+      ),
     );
   }
 }
@@ -332,7 +348,7 @@ class _SidebarResizeHandleState extends State<_SidebarResizeHandle> {
         width: 1,
         height: double.infinity,
         child: ColoredBox(
-          color: _hover ? AppColors.border2 : AppColors.line,
+          color: _hover ? AppColors.border2 : Colors.transparent,
         ),
       ),
     );

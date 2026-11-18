@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 
 import '../api.dart';
-import '../mochi.dart';
 import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import '../transcript.dart' show LaneControlButton, LaneWho;
+import '../transcript.dart'
+    show LaneControlButton, LaneWho, RunSpinner, laneFirstSentence;
 import 'compact_btn.dart';
 import 'lanes.dart' show laneSections, openLaneView;
 
@@ -380,104 +380,151 @@ class _DeskLanesState extends State<_DeskLanes> {
   }
 
   Widget _lane(LaneInfo l) {
-    final color = switch (l.status) {
-      'running' => AppColors.accent,
-      'failed' => AppColors.danger,
-      'cancelled' || 'paused' => AppColors.fg4,
-      _ => AppColors.ok,
-    };
-    final status = switch (l.status) {
-      'running' => 'working',
-      'failed' => 'failed',
-      'cancelled' => 'cancelled',
-      'paused' => 'paused',
-      _ => 'done',
-    };
-    final task = (l.activity ?? '').trim().isNotEmpty
+    final running = l.running;
+    final failed = l.status == 'failed';
+    final stopped = l.status == 'cancelled' || l.status == 'paused';
+    final detail = (l.activity ?? '').trim().isNotEmpty
         ? l.activity!.trim()
-        : (l.summary ?? l.handoff ?? '').trim();
-    final steps = l.activityLog.length.clamp(0, 14);
-    return Padding(
-      padding: EdgeInsets.only(bottom: S.s8),
-      child: Material(
-        color: AppColors.tint1,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(R.lg),
-          side: BorderSide(color: AppColors.line),
+        : laneFirstSentence((l.summary ?? l.handoff ?? '').trim(), 60);
+    final elapsed = _elapsed(l.startedAt);
+    final (word, fg, bg) = running
+        ? (
+            elapsed.isEmpty ? 'Running' : elapsed,
+            AppColors.run,
+            AppColors.runBg
+          )
+        : failed
+            ? ('Failed', AppColors.danger, AppColors.dangerBg)
+            : stopped
+                ? (
+                    l.status == 'paused' ? 'Paused' : 'Cancelled',
+                    AppColors.fg3,
+                    AppColors.fg1.withValues(alpha: 0.07)
+                  )
+                : ('Completed', AppColors.ok, AppColors.okBg);
+    return InkWell(
+      splashFactory: NoSplash.splashFactory,
+      hoverColor: AppColors.surface3,
+      onTap: () => openLaneView(context, l,
+          client: widget.client,
+          sessionId: widget.sessionId,
+          liveLanes: () => widget.lanes),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border(
+              top: BorderSide(color: AppColors.fg1.withValues(alpha: 0.07))),
         ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(R.lg),
-          onTap: () => openLaneView(context, l,
-              client: widget.client,
-              sessionId: widget.sessionId,
-              liveLanes: () => widget.lanes),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(S.s12, S.of(11), S.s12, S.of(11)),
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(children: [
-                    AgentMochi(l.agent ?? l.id, size: 18),
-                    SizedBox(width: S.of(9)),
-                    Expanded(
-                      child: Text(l.title.isEmpty ? 'Lane' : l.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: sans(13, color: AppColors.fg1)),
-                    ),
-                    Text(status, style: sans(12, color: color)),
-                    if (widget.client != null &&
-                        widget.sessionId != null &&
-                        (l.running || l.retryable)) ...[
-                      SizedBox(width: S.s8),
-                      LaneControlButton(
-                        client: widget.client!,
-                        sessionId: widget.sessionId!,
-                        lane: l,
-                      ),
-                    ],
-                  ]),
-                  if (task.isNotEmpty) ...[
-                    SizedBox(height: S.of(7)),
-                    Text(task,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(13, height: 1.45, color: AppColors.fg3)),
-                  ],
-                  SizedBox(height: S.s8),
-                  Row(children: [
-                    for (var i = 0; i < 14; i++)
-                      Container(
-                        width: 5,
-                        height: 5,
-                        margin: EdgeInsets.only(right: S.of(3)),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: i < steps
-                              ? color
-                              : AppColors.fg1.withValues(alpha: 0.10),
-                        ),
-                      ),
-                    const Spacer(),
-                    SizedBox(width: S.s8),
-                    Flexible(
-                      flex: 0,
-                      child: LaneWho(
-                          client: widget.client,
-                          agent: l.agent,
-                          profile: (l.profile ?? '').isNotEmpty
-                              ? l.profile
-                              : widget.sessionProfile,
-                          maxTextWidth: 96),
-                    ),
-                    if (_elapsed(l.startedAt).isNotEmpty) ...[
-                      SizedBox(width: S.s8),
-                      Text(_elapsed(l.startedAt),
-                          style: mono(11, color: AppColors.fg4)),
-                    ],
-                  ]),
-                ]),
+        child: Row(children: [
+          SizedBox.square(
+            dimension: 16,
+            child: Center(
+              child: running
+                  ? const RunSpinner(size: 12)
+                  : AppIcon(
+                      failed
+                          ? 'x'
+                          : stopped
+                              ? 'minus'
+                              : 'check',
+                      size: 14,
+                      color: failed
+                          ? AppColors.danger
+                          : stopped
+                              ? AppColors.fg4
+                              : AppColors.ok),
+            ),
           ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(
+                    text: l.title.isEmpty ? 'Lane' : l.title,
+                    style: sans(13,
+                        weight: FontWeight.w500, color: AppColors.fg1)),
+                if (detail.isNotEmpty)
+                  TextSpan(
+                      text: ' \u00b7 $detail',
+                      style: sans(13, color: AppColors.fg3)),
+              ]),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Flexible(
+            flex: 0,
+            child: LaneWho(
+                client: widget.client,
+                agent: (l.profile ?? '').isNotEmpty
+                    ? l.profile
+                    : widget.sessionProfile,
+                profile: (l.profile ?? '').isNotEmpty
+                    ? l.profile
+                    : widget.sessionProfile,
+                textSize: 11.5,
+                color: AppColors.fg4,
+                maxTextWidth: 96),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+            decoration: BoxDecoration(
+                color: bg, borderRadius: BorderRadius.circular(R.of(3))),
+            child:
+                Text(word, style: sans(11, weight: FontWeight.w500, color: fg)),
+          ),
+          if (widget.client != null &&
+              widget.sessionId != null &&
+              (running || l.retryable)) ...[
+            const SizedBox(width: 6),
+            LaneControlButton(
+              client: widget.client!,
+              sessionId: widget.sessionId!,
+              lane: l,
+              quiet: true,
+            ),
+          ],
+        ]),
+      ),
+    );
+  }
+
+  Widget _card(List<LaneInfo> lanes) {
+    final running = lanes.where((l) => l.running).length;
+    final done = lanes.where((l) => l.status == 'completed').length;
+    final parts = [
+      if (running > 0) '$running running',
+      if (done > 0) '$done completed',
+      if (running + done < lanes.length)
+        '${lanes.length - running - done} other',
+    ];
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(R.of(8)),
+      child: ColoredBox(
+        color: AppColors.surface2,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              child: Row(children: [
+                AppIcon('layers', size: 14, color: AppColors.fg3),
+                const SizedBox(width: 8),
+                Text('Lanes',
+                    style: sans(13, weight: W.label, color: AppColors.fg1)),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(parts.join(', '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, color: AppColors.fg3)),
+                ),
+              ]),
+            ),
+            for (final l in lanes) _lane(l),
+          ],
         ),
       ),
     );
@@ -486,21 +533,18 @@ class _DeskLanesState extends State<_DeskLanes> {
   @override
   Widget build(BuildContext context) {
     final lanes = widget.lanes;
-    final running = lanes.where((l) => l.running).length;
     return ListView(
       padding: EdgeInsets.fromLTRB(S.of(14), 0, S.of(14), S.s24),
       children: [
-        _paneLabel(running > 0
-            ? 'Lanes · $running running'
-            : 'Lanes${lanes.isEmpty ? '' : ' · ${lanes.length}'}'),
-        if (lanes.isEmpty)
+        if (lanes.isEmpty) ...[
+          _paneLabel('Lanes'),
           Padding(
             padding: EdgeInsets.fromLTRB(S.s2, 0, S.s2, S.s4),
             child: Text('Parallel work this session hands off shows up here.',
                 style: sans(13, height: 1.5, color: AppColors.fg4)),
-          )
-        else
-          for (final l in lanes) _lane(l),
+          ),
+        ] else
+          _card(lanes),
         if (_jobs.isNotEmpty) ...[
           _paneLabel('Scheduled'),
           for (final j in _jobs.take(8))
