@@ -85,8 +85,9 @@ class _RingPainter extends CustomPainter {
 }
 
 class FailedPill extends StatelessWidget {
-  const FailedPill(this.count, {super.key, this.onTap});
+  const FailedPill(this.count, {super.key, this.onTap, this.compact = false});
   final int count;
+  final bool compact;
   final VoidCallback? onTap;
 
   @override
@@ -94,15 +95,16 @@ class FailedPill extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
-          height: 28,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          height: compact ? 24 : 28,
+          padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
           decoration: BoxDecoration(
               color: AppColors.dangerBg,
-              borderRadius: BorderRadius.circular(14)),
+              borderRadius: BorderRadius.circular(compact ? 12 : 14)),
           child: Center(
             widthFactor: 1,
             child: Text('$count failed',
-                style: sans(14, weight: W.label, color: AppColors.danger)),
+                style: sans(compact ? 13 : 14,
+                    weight: W.label, color: AppColors.danger)),
           ),
         ),
       );
@@ -236,32 +238,33 @@ class ActivityPill extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: () => onOpen(null),
       child: Container(
-        height: 56,
-        padding: const EdgeInsets.fromLTRB(12, 0, 18, 0),
+        height: 44,
+        padding: const EdgeInsets.fromLTRB(12, 0, 14, 0),
         decoration: BoxDecoration(
-            color: AppColors.surface2, borderRadius: BorderRadius.circular(28)),
+            color: AppColors.surface2, borderRadius: BorderRadius.circular(22)),
         child: Row(children: [
           RunRing(
             fraction: 1,
             color: AppColors.ok,
-            size: 32,
-            stroke: 3,
-            child: AppIcon('check', size: 16, color: AppColors.ok),
+            size: 22,
+            stroke: 2,
+            child: AppIcon('check', size: 11, color: AppColors.ok),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
-                t != null ? 'Worked for ${formatWorkDuration(t)}' : 'Worked',
+                t != null ? 'Done in ${formatWorkDuration(t)}' : 'Done',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(17, color: AppColors.fg2, tabular: true)),
+                style: sans(15, color: AppColors.fg2, tabular: true)),
           ),
           if (failed > 0) ...[
             const SizedBox(width: 10),
-            FailedPill(failed, onTap: () => onOpen(firstFailure(steps))),
+            FailedPill(failed,
+                compact: true, onTap: () => onOpen(firstFailure(steps))),
           ],
-          const SizedBox(width: 8),
-          AppIcon('chevron-right', size: 18, color: AppColors.fg4),
+          const SizedBox(width: 6),
+          AppIcon('chevron-right', size: 16, color: AppColors.fg4),
         ]),
       ),
     );
