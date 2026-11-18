@@ -536,7 +536,7 @@ class _AgentCardState extends State<AgentCard> {
       pinned: _isPinned,
       time: time,
       preview: line2,
-      needs: needs,
+      needs: needs || (last?.unread ?? false),
       trailing: needs && agent.needsYou > 0
           ? Container(
               key: const ValueKey('agent-needs-count'),
@@ -556,7 +556,14 @@ class _AgentCardState extends State<AgentCard> {
           : blocked > 0 || !agent.available
               ? Text(summaryText,
                   style: sans(metaSize, color: summaryColor, tabular: true))
-              : null,
+              : (last?.unread ?? false)
+                  ? Container(
+                      key: const ValueKey('agent-unread'),
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                          color: AppColors.accent, shape: BoxShape.circle))
+                  : null,
     );
   }
 }
@@ -672,20 +679,26 @@ class _AgentRowShellState extends State<AgentRowShell> {
                           crossAxisAlignment: CrossAxisAlignment.baseline,
                           textBaseline: TextBaseline.alphabetic,
                           children: [
-                            Flexible(
-                              child: Text(widget.name,
-                                  maxLines: 1,
-                                  softWrap: false,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: sans(13,
-                                      weight: FontWeight.w500,
-                                      color: AppColors.fg1)),
+                            // Expanded, not Flexible + Spacer: those split the
+                            // spare width and the times drift row to row.
+                            Expanded(
+                              child: Row(children: [
+                                Flexible(
+                                  child: Text(widget.name,
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: sans(13,
+                                          weight: FontWeight.w500,
+                                          color: AppColors.fg1)),
+                                ),
+                                if (widget.pinned) ...[
+                                  const SizedBox(width: 6),
+                                  AppIcon('pin',
+                                      size: 11, color: AppColors.fg4),
+                                ],
+                              ]),
                             ),
-                            if (widget.pinned) ...[
-                              const SizedBox(width: 6),
-                              AppIcon('pin', size: 11, color: AppColors.fg4),
-                            ],
-                            const Spacer(),
                             if (widget.time.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(left: 8),

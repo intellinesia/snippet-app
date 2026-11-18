@@ -1706,6 +1706,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               (_input.text.trim().isNotEmpty || _attachments.isNotEmpty) &&
                   !_sending;
           return DeskComposerCard(
+            attentionExclude: 'inbox-${widget.agentId}',
             focus: _inputFocus,
             banner: _replyTo == null
                 ? null

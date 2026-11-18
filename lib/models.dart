@@ -1296,11 +1296,18 @@ class NotificationMarker {
 }
 
 class AgentLastMessage {
-  const AgentLastMessage({required this.text, required this.fromUser, this.at});
+  const AgentLastMessage(
+      {required this.text,
+      required this.fromUser,
+      this.at,
+      this.unread = false});
 
   final String text;
   final bool fromUser;
   final DateTime? at;
+
+  /// The user has not read the newest messages in this direct thread.
+  final bool unread;
 
   static AgentLastMessage? tryParse(Object? j) {
     if (j is! Map) return null;
@@ -1629,9 +1636,8 @@ class GroupSummary {
         unread = (j['unread'] as num?)?.toInt() ?? 0,
         createdAt = j['created_at'] as String? ?? '',
         preview = _groupPreview(j['last_message']),
-        replying = ((j['replying'] as List?) ?? const [])
-            .whereType<String>()
-            .toList(),
+        replying =
+            ((j['replying'] as List?) ?? const []).whereType<String>().toList(),
         turnAgent = switch (j['turn']) {
           final Map t => t['agent'] as String?,
           _ => null,
@@ -1649,8 +1655,10 @@ class GroupSummary {
     return from.isEmpty ? body : '$from: $body';
   }
 
-  List<String> get agentIds =>
-      [for (final m in members) if (m.isAgent) m.id];
+  List<String> get agentIds => [
+        for (final m in members)
+          if (m.isAgent) m.id
+      ];
 
   bool get hasUnread => unread > 0;
 }
@@ -2146,8 +2154,9 @@ String? _optText(dynamic v) {
   return s.isEmpty ? null : s;
 }
 
-List<String> _textList(dynamic v) =>
-    v is List ? v.whereType<String>().where((e) => e.isNotEmpty).toList() : const [];
+List<String> _textList(dynamic v) => v is List
+    ? v.whereType<String>().where((e) => e.isNotEmpty).toList()
+    : const [];
 
 /// A task's links plus its resolved blockers.
 ///

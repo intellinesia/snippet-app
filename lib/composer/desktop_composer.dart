@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../desk_attention.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -226,6 +227,7 @@ class DeskComposerCard extends StatelessWidget {
     this.mic,
     this.focus,
     this.highlight = false,
+    this.attentionExclude,
   });
 
   final Widget field;
@@ -238,6 +240,9 @@ class DeskComposerCard extends StatelessWidget {
   final Widget? mic;
   final FocusNode? focus;
   final bool highlight;
+
+  /// The session on screen, left out of the attention bar.
+  final String? attentionExclude;
 
   static TextStyle get fieldStyle =>
       sans(13.5, height: 22 / 13.5, color: AppColors.fg1);
@@ -256,11 +261,9 @@ class DeskComposerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget card(bool focused) => Container(
           padding: const EdgeInsets.fromLTRB(12, 11, 6, 6),
-          decoration: _cardDecoration(
-              focus: focused || highlight,
-              keyboard: focused &&
-                  FocusManager.instance.highlightMode ==
-                      FocusHighlightMode.traditional),
+          // Typing flips Flutter into keyboard mode, so a focus ring here
+          // would show whenever you write; focus stays a faint hairline.
+          decoration: _cardDecoration(focus: focused || highlight),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -298,7 +301,14 @@ class DeskComposerCard extends StatelessWidget {
             color: Color.lerp(AppColors.panelBg, AppColors.fg1, 0.04),
             borderRadius: BorderRadius.circular(R.of(12)),
           ),
-          child: card(focused),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DeskAttentionBar(exclude: attentionExclude),
+              card(focused),
+            ],
+          ),
         );
     if (focus == null) return body(false);
     return ListenableBuilder(

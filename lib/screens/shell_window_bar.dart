@@ -920,6 +920,8 @@ class MacWindowBar extends StatelessWidget {
                   tool,
                   SizedBox(width: S.s2),
                 ],
+                SizedBox(width: S.s4),
+                machineSwitcher,
               ],
             ),
           ),

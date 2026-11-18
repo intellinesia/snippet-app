@@ -329,6 +329,10 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   Future<void> _loadDmLast() async {
     try {
       final threads = await widget.client.directThreads();
+      final unread = {
+        for (final t in threads)
+          if (t.peerKind == 'agent' && t.hasUnread) t.peerId
+      };
       final pages = await Future.wait([
         for (final t in threads)
           if (t.peerKind == 'agent')
@@ -353,6 +357,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 text: e.body.trim().split(RegExp(r'\s+')).join(' '),
                 fromUser: e.actorKind == 'human',
                 at: DateTime.tryParse(e.createdAt),
+                unread: unread.contains(id),
               );
       }
       if (!mounted) return;

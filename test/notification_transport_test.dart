@@ -9,10 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/device_events.dart';
 import 'package:snippet/notification_inbox.dart';
-import 'package:snippet/desktop_notifications.dart';
 import 'package:snippet/notification_popovers.dart';
 import 'package:snippet/notification_sync.dart';
-import 'package:snippet/widgets.dart' show AppIcon;
 import 'package:snippet/screens/desktop_shell.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -139,7 +137,8 @@ void main() {
     expect(DeviceEvent.decode(wire)!.notification, live);
     for (final socket in eventSockets) { socket.add(wire); }
     await until(() => delivered.length == 1, 'WS decoded, ingested and queued');
-    expect(find.text('Observed socket alert'), findsOneWidget);
+    // Desktop shows no toast; delivery is what counts.
+    expect(find.text('Observed socket alert'), findsNothing);
     expect(delivered.single['notification_id'], live['notification_id']);
     await tester.runAsync(() async {
       expect(await inbox!.db.query('inbox'), hasLength(1));
@@ -148,10 +147,6 @@ void main() {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
     await tester.pump();
     expect(delivered, hasLength(1));
-    // The desktop toast closes from its x, the last icon in the card.
-    await tester.tap(find.descendant(
-        of: find.byType(DesktopToast), matching: find.byType(AppIcon)).last);
-    await tester.pump(const Duration(milliseconds: 400));
     visibleNotificationSession.value = notificationSessionKey(url, 'transport-chat');
     for (final socket in eventSockets) {
       socket.add(jsonEncode({'kind': 'notification', 'notification': event(2, 'Same chat hidden')}));
@@ -178,7 +173,8 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     await until(() => pages > previousPages && delivered.length == 2,
         'reconnect HTTP recovery ingested and queued');
-    expect(find.text('Observed reconnect alert'), findsOneWidget);
+    // Desktop shows no toast; delivery is what counts.
+    expect(find.text('Observed reconnect alert'), findsNothing);
     await tester.runAsync(() async {
       expect(await inbox!.db.query('inbox'), hasLength(3));
     });

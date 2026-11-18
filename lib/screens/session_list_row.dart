@@ -374,6 +374,8 @@ class SessionListRow extends StatelessWidget {
     this.pinned = false,
     this.renameField,
     this.leading,
+    this.provider,
+    this.machine,
     this.onReviewPr,
     this.onMergePr,
     this.onTogglePin,
@@ -403,6 +405,10 @@ class SessionListRow extends StatelessWidget {
 
   /// Leading agent, provider or neutral mark aligned with the title line.
   final Widget? leading;
+
+  /// Desktop meta line: the profile's provider and the machine it runs on.
+  final String? provider;
+  final String? machine;
 
   final VoidCallback? onReviewPr;
   final VoidCallback? onMergePr;
@@ -666,8 +672,11 @@ class SessionListRow extends StatelessWidget {
                       : (selected || hover)
                           ? AppColors.fg1
                           : AppColors.fg2));
+      final machineName = (machine ?? '').trim();
       final showMeta = renameField == null &&
           (working ||
+              provider != null ||
+              machineName.isNotEmpty ||
               attnText.isNotEmpty ||
               folder.isNotEmpty ||
               extra.isNotEmpty ||
@@ -720,6 +729,14 @@ class SessionListRow extends StatelessWidget {
                   Spinner(size: 10, color: AppColors.run),
                   const SizedBox(width: 6),
                 ],
+                if (provider != null) ...[
+                  ProviderLogo(provider,
+                      size: 11,
+                      color: providerLogoIsColour(provider)
+                          ? null
+                          : AppColors.fg3),
+                  const SizedBox(width: 6),
+                ],
                 if (attnText.isNotEmpty) ...[
                   Flexible(
                     child: Text(attnText,
@@ -751,6 +768,20 @@ class SessionListRow extends StatelessWidget {
                   if (diff.removed > 0)
                     Text('-${compactCount(diff.removed)}',
                         maxLines: 1, style: sans(11, color: AppColors.danger)),
+                ],
+                if (machineName.isNotEmpty) ...[
+                  const Spacer(),
+                  const SizedBox(width: 6),
+                  AppIcon('monitor', size: 11, color: AppColors.fg4),
+                  const SizedBox(width: 4),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 72),
+                    child: Text(machineName,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: metaStyle),
+                  ),
                 ],
               ]),
             );
@@ -869,7 +900,25 @@ class SessionListRow extends StatelessWidget {
                           horizontal: 8, vertical: compact ? 7.0 : 4.0),
                       child: Align(
                           alignment: Alignment.centerLeft,
-                          child: compact ? compactContent(hover) : content),
+                          child: !compact
+                              ? content
+                              : leading == null
+                                  ? compactContent(hover)
+                                  : Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 1),
+                                            child: SizedBox.square(
+                                                dimension: 28,
+                                                child: Center(child: leading)),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                              child: compactContent(hover)),
+                                        ])),
                     ),
                   ),
                 ));

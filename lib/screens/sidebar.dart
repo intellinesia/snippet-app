@@ -1410,6 +1410,12 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     return '$lead${tail.join('/')}';
   }
 
+  String? _providerOf(SessionInfo s) {
+    final profile = s.profile ?? '';
+    final p = profile.isEmpty ? null : _profileProviders[profile];
+    return p != null && providerLogoAsset(p) != null ? p : null;
+  }
+
   Widget _agentBadge(SessionInfo s) {
     final agent = s.displayAgentId?.trim() ?? '';
     if (agent.isNotEmpty) {
@@ -1419,7 +1425,13 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           : sessionBusy(s)
               ? AgentCharacterState.working
               : AgentCharacterState.idle;
-      return AgentMochi(agent, size: kMobile ? 20.0 : 17.0, state: state);
+      if (!kMobile) {
+        // Desktop: the same 28 px rounded square as agent rows.
+        return ClipRRect(
+            borderRadius: BorderRadius.circular(7),
+            child: AgentMochi(agent, size: 28, state: state));
+      }
+      return AgentMochi(agent, size: 20.0, state: state);
     }
     final profile = s.profile ?? '';
     final provider = profile.isEmpty ? null : _profileProviders[profile];
@@ -1455,7 +1467,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       divider: divider && !(below != null && _selected.contains(below.id)),
       showProject: showProject,
       renameField: renaming ? _inlineRenameField(s, compact: !kMobile) : null,
-      leading: kMobile ? _agentBadge(s) : null,
+      leading: _agentBadge(s),
+      provider: kMobile ? null : _providerOf(s),
+      machine: kMobile ? null : widget.active?.label,
       onTogglePin: kMobile || isDedicatedMcSession(s.id)
           ? null
           : () => Pins.instance.toggle(Pins.session, s.id, host: _pinHost),
@@ -1635,12 +1649,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                   padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
                   children: [
                     if (hasClient) ...[
-                      SidebarSectionHeader(
-                        'Agents',
-                        addTooltip: 'New agent or group',
-                        addBuilder: (ctx) => _agentsPanelKey.currentState
-                            ?.openCreateMenu(ctx, above: false),
-                      ),
+                      // New agents and sessions come from the top + menu.
+                      const SidebarSectionHeader('Agents'),
                       _agentList(widget.client!,
                           missionControl: mc,
                           onOpenMissionControl: widget.onOpenMissionControl,
@@ -1648,8 +1658,6 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                     ],
                     SidebarSectionHeader(
                       'Sessions',
-                      addTooltip: 'New session',
-                      onAdd: widget.onNewSession,
                       moreTooltip: 'Session options',
                       moreBuilder: hasClient ? _sessionsMenu : null,
                     ),

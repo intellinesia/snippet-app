@@ -848,12 +848,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   }
 
   Widget _sidebarFooter() {
-    final healthy = _active == null ? null : _health[_active!.url];
-    final label = _active == null
-        ? 'Add machine'
-        : (_active!.label.isNotEmpty ? _active!.label : _active!.name);
-    final initial =
-        _active == null ? '+' : label.trim().characters.first.toUpperCase();
     final needsYou = [
       for (final s in _sessions ?? const <SessionInfo>[])
         if (sessionNeedsYou(s)) s
@@ -861,38 +855,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Tooltip(
-          message: label,
-          child: HoverSurface(
-            key: _topMachineKey,
-            radius: R.of(6),
-            hoverColor: AppColors.fg1.withValues(alpha: 0.12),
-            rest: AppColors.fg1.withValues(alpha: 0.07),
-            onTap: _instances.isEmpty ? _addInstanceFlow : _openTopMachines,
-            child: SizedBox.square(
-              dimension: 24,
-              child: Stack(clipBehavior: Clip.none, children: [
-                Center(
-                    child: Text(initial,
-                        style: sans(11,
-                            weight: FontWeight.w600, color: AppColors.fg2))),
-                Positioned(
-                  right: -2,
-                  bottom: -2,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: healthy == true ? AppColors.ok : AppColors.fg4,
-                      border: Border.all(color: AppColors.windowBg, width: 1.5),
-                    ),
-                  ),
-                ),
-              ]),
-            ),
-          ),
-        ),
         if (_client != null) ...[
           _footerFit(_FooterBtn(
               icon: 'task',
@@ -900,13 +862,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               badge: needsYou,
               onTap: _openTasksTab)),
           _footerFit(_FooterBtn(
-              icon: 'git-branch',
-              tooltip: 'Pull requests',
-              onTap: _openPullRequestsTile)),
-          _footerFit(_FooterBtn(
               icon: 'file', tooltip: 'Artifacts', onTap: _openArtifactsTile)),
-          _footerFit(_FooterBtn(
-              icon: 'clock', tooltip: 'Wakes', onTap: _openWakesTile)),
           _footerFit(ListenableBuilder(
             listenable: AmbientController.instance,
             builder: (_, __) {
