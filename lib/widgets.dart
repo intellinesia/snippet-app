@@ -1,3 +1,4 @@
+import 'app_icons_tabler.dart';
 import 'dart:async';
 import 'desktop_look.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -517,6 +518,16 @@ class AppIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     if (name.startsWith('provider:')) {
       return ProviderLogo(name.substring(9), size: size * visualScale);
+    }
+    final tabler = tablerIcons[name];
+    if (tabler != null) {
+      return SizedBox.square(
+        dimension: size,
+        child: Center(
+          child: Icon(tabler,
+              size: size * visualScale, color: color ?? AppColors.fg2),
+        ),
+      );
     }
     final line = _lucide[name];
     if (line != null) {
