@@ -1020,7 +1020,7 @@ class _FooterBtnState extends State<_FooterBtn> {
             ),
             child: Stack(alignment: Alignment.center, children: [
               AppIcon(widget.icon,
-                  size: 14,
+                  size: 16,
                   color: widget.active
                       ? AppColors.accent
                       : _hover
