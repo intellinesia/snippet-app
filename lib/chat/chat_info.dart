@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -1045,7 +1046,9 @@ class _DesktopPanelShell extends StatelessWidget {
             child: PanelCard(
               child: UnconstrainedBox(
                 constrainedAxis: Axis.horizontal,
-                child: child,
+                // flutter#192861: a tooltip in a shrink-wrapped overlay trips a
+                // debug-only size assertion that breaks the whole panel.
+                child: TooltipVisibility(visible: !kDebugMode, child: child),
               ),
             ),
           );
