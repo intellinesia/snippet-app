@@ -49,8 +49,8 @@ class RunRing extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox.square(
         dimension: size,
         child: CustomPaint(
-          painter: _RingPainter(fraction.clamp(0.0, 1.0), color,
-              AppColors.border2, stroke),
+          painter: _RingPainter(
+              fraction.clamp(0.0, 1.0), color, AppColors.border2, stroke),
           child: Center(child: child),
         ),
       );
@@ -153,63 +153,49 @@ class _ActivityDockState extends State<ActivityDock> {
     final done = steps.length - live.length;
     final failed = runFailures(steps);
     final elapsed = DateTime.now().difference(widget.run.startedAt);
-    final clock = formatWorkDuration(Duration(seconds: elapsed.inSeconds < 0 ? 0 : elapsed.inSeconds));
-    final position = live.length > 1
-        ? '${live.length} running'
-        : live.isEmpty
-            ? '$done done'
-            : 'step ${done + 1} of ${steps.length}';
+    final clock = formatWorkDuration(
+        Duration(seconds: elapsed.inSeconds < 0 ? 0 : elapsed.inSeconds));
+    final title = live.isNotEmpty ? liveStepText(live.last) : 'Working';
     return Padding(
       padding: EdgeInsets.only(bottom: S.s8),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => widget.onOpen(null),
         child: Container(
-          height: 68,
-          padding: const EdgeInsets.fromLTRB(12, 0, 18, 0),
+          height: 44,
+          padding: const EdgeInsets.fromLTRB(10, 0, 14, 0),
           decoration: BoxDecoration(
             color: AppColors.surface3,
-            borderRadius: BorderRadius.circular(34),
+            borderRadius: BorderRadius.circular(22),
             border: Border.all(color: AppColors.border2),
           ),
           child: Row(children: [
             RunRing(
-              fraction: steps.isEmpty ? 0 : done / steps.length,
+              fraction: done / steps.length,
               color: AppColors.run,
+              size: 26,
+              stroke: 2.5,
               child: Text('$done',
-                  style: sans(14,
+                  style: sans(11,
                       weight: W.label, color: AppColors.fg1, tabular: true)),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(live.isNotEmpty ? liveStepText(live.last) : 'Working',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(17, weight: W.label, color: AppColors.fg1)),
-                  const SizedBox(height: 1),
-                  Text.rich(
-                    TextSpan(children: [
-                      TextSpan(
-                          text: clock, style: TextStyle(color: AppColors.run)),
-                      TextSpan(text: ' · $position'),
-                    ]),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(14, color: AppColors.fg3, tabular: true),
-                  ),
-                ],
-              ),
-            ),
-            if (failed > 0) ...[
-              const SizedBox(width: 10),
-              FailedPill(failed, onTap: () => widget.onOpen(firstFailure(steps))),
-            ],
             const SizedBox(width: 10),
-            AppIcon('chevron-up', size: 18, color: AppColors.fg3),
+            Expanded(
+              child: Text(title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: sans(15, color: AppColors.fg1)),
+            ),
+            const SizedBox(width: 10),
+            Text(clock, style: sans(14, color: AppColors.run, tabular: true)),
+            if (failed > 0) ...[
+              const SizedBox(width: 8),
+              FailedPill(failed,
+                  compact: true,
+                  onTap: () => widget.onOpen(firstFailure(steps))),
+            ],
+            const SizedBox(width: 6),
+            AppIcon('chevron-up', size: 16, color: AppColors.fg3),
           ]),
         ),
       ),

@@ -439,6 +439,10 @@ class _SessionScreenState extends State<SessionScreen>
   // Last moment the model was seen working; a send soon after needs no cold check.
   DateTime? _warmSeenAt;
   String? _recordingPath;
+
+  /// The take's upload, started as soon as recording stops so Send is instant.
+  Future<String>? _takeUpload;
+  String? _takeName;
   Uint8List? _recordingBytes;
   Duration _recordingElapsed = Duration.zero;
   // Bumped on discard so a stop still finishing does not restore the take.

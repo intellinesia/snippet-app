@@ -188,7 +188,10 @@ class Diag {
       }
       final name =
           'snippet-diag-${DateTime.now().millisecondsSinceEpoch}.log';
-      await client.uploadFile(chunk, name: name, dir: '/tmp/snippet-diag');
+      // The lines just before it say what led up to it.
+      final ctx = from > 3000 ? from - 3000 : 0;
+      await client.uploadFile(all.sublist(ctx),
+          name: name, dir: '/tmp/snippet-diag');
       mark.writeAsStringSync('${all.length}');
     } catch (_) {
     } finally {

@@ -164,10 +164,21 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
         _recordingPath = path;
         _recordingBytes = bytes;
       }
+      _startTakeUpload(bytes);
     } catch (e) {
       await _discardRecording();
       _toast('Could not finish recording: $e');
     }
+  }
+
+  void _startTakeUpload(Uint8List bytes) {
+    final name =
+        'voice-${DateTime.now().microsecondsSinceEpoch}.$voiceNoteExtension';
+    _takeName = name;
+    final upload = widget.client.uploadFile(bytes, name: name);
+    upload.ignore();
+    _takeUpload = upload;
+    Diag.crumb('take upload started ${bytes.length}B');
   }
 
   /// Wait until [path] exists and is non-empty: encoders can finish after stop().
@@ -225,15 +236,17 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
         _toast('The recording was empty.');
         return false;
       }
+      final takeName = _takeName ??
+          'voice-${DateTime.now().microsecondsSinceEpoch}.$voiceNoteExtension';
       await Diag.span('recorder.ingest', () => _ingest([
         (
-
-          name:
-              'voice-${DateTime.now().microsecondsSinceEpoch}.$voiceNoteExtension',
+          name: takeName,
           localPath: null,
           readBytes: () async => bytes!,
         )
       ]));
+      _takeUpload = null;
+      _takeName = null;
       await Diag.span('player.stop', () => _audioPlayer.stop());
       if (path != null) {
         try {
@@ -269,6 +282,8 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
   // Clear the pill first; the recorder, player and file clean up behind it.
   Future<void> _discardRecording() async {
     _recordingTake++;
+    _takeUpload = null;
+    _takeName = null;
     final path = _recordingPath;
     final wasRecording = _isRecording;
     _amplitudeSub?.cancel();
@@ -513,8 +528,19 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
       final a = entries[i];
       try {
         final bytes = await p.readBytes();
-        final path = await Diag.span('upload ${bytes.length}B',
-            () => widget.client.uploadFile(bytes, name: p.name));
+        final early = p.name == _takeName ? _takeUpload : null;
+        String path;
+        if (early != null) {
+          try {
+            path = await Diag.span('upload (started early)', () => early);
+          } catch (_) {
+            path = await Diag.span('upload ${bytes.length}B retry',
+                () => widget.client.uploadFile(bytes, name: p.name));
+          }
+        } else {
+          path = await Diag.span('upload ${bytes.length}B',
+              () => widget.client.uploadFile(bytes, name: p.name));
+        }
         if (!mounted || generation != _attachmentGeneration) {
           // The composer moved on mid-upload: the file still belongs to the
           // session it was attached in, as part of that session's draft.
