@@ -150,14 +150,15 @@ class _ActivityDockState extends State<ActivityDock> {
     final steps = widget.run.batch.steps;
     if (steps.isEmpty) return const SizedBox.shrink();
     final live = steps.where((s) => s.running).toList();
-    final current = live.isNotEmpty ? live.last : steps.last;
     final done = steps.length - live.length;
     final failed = runFailures(steps);
     final elapsed = DateTime.now().difference(widget.run.startedAt);
     final clock = formatWorkDuration(Duration(seconds: elapsed.inSeconds < 0 ? 0 : elapsed.inSeconds));
     final position = live.length > 1
         ? '${live.length} running'
-        : 'step ${done + (live.isEmpty ? 0 : 1)} of ${steps.length}';
+        : live.isEmpty
+            ? '$done done'
+            : 'step ${done + 1} of ${steps.length}';
     return Padding(
       padding: EdgeInsets.only(bottom: S.s8),
       child: GestureDetector(
@@ -185,7 +186,7 @@ class _ActivityDockState extends State<ActivityDock> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(liveStepText(current),
+                  Text(live.isNotEmpty ? liveStepText(live.last) : 'Working',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(17, weight: W.label, color: AppColors.fg1)),

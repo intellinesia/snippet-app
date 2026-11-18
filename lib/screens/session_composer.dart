@@ -1040,7 +1040,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                           bleed: M.gutter,
                           child: _trayPage(running)),
                     ),
-                  if (kMobile && _dockRun != null)
+                  if (kMobile && _dockRun != null && _state?.status == 'running')
                     ActivityDock(run: _dockRun!, onOpen: _openLiveActivity),
                   if (_heldQueue.isNotEmpty) _queuedCard(),
                   // Attachments sit above the composer, never inside it.

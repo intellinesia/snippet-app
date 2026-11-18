@@ -98,7 +98,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             ToolStep(tool: w.tool, args: w.args, result: w.result),
         ];
         if (steps.isNotEmpty) {
-          if (running) {
+          // The newest run stays live between calls too, while the model thinks.
+          final live = isSessionRunning && curIdx >= events.length;
+          if (live) {
             int? startMs;
             for (var i = (runFirst ?? curIdx) - 1; i >= 0 && startMs == null; i--) {
               startMs = _eventMs(events[i]);

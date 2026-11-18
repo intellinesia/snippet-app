@@ -304,6 +304,28 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
+  testWidgets('phone keeps the dock between tool calls while the model thinks',
+      (tester) async {
+    final socket = await _pumpSession(tester,
+        platform: TargetPlatform.android, size: const Size(390, 844));
+    socket.pushJson({
+      'wire': 'snapshot',
+      'status': 'running',
+      'workspace': '/tmp/ws',
+      'events': [
+        {'kind': 'user_input', 'text': 'fix it'},
+        _bashCall('echo 1'),
+        _bashResult(),
+      ],
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.byType(ActivityDock), findsOneWidget);
+    expect(find.byType(ActivityPill), findsNothing);
+    await _disposeSession(tester);
+  });
+
   for (final desktop in [true, false]) {
     testWidgets(
         'SessionScreen renders collapsed activity (${desktop ? 'desktop' : 'phone'})',
