@@ -947,7 +947,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             child: Container(
               height: kMobile ? M.minTarget : 32,
               padding: EdgeInsets.fromLTRB(
-                  kMobile ? 0 : 8, 0, kMobile ? 0 : 8, 0),
+                  kMobile ? 0 : 8, 0, kMobile ? 0 : 5, 0),
+              // 5, not 8: the thin chevron glyph is inset ~3 px in its box.
               child: Row(children: [
                 Text('Settled',
                     style: TS.label(kMobile ? AppColors.fg3 : AppColors.fg4)),
@@ -961,7 +962,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                   duration: Motion.base,
                   curve: Curves.easeOutCubic,
                   child: AppIcon('chevron-right',
-                      size: 13, color: kMobile ? AppColors.fg3 : AppColors.fg4),
+                      size: kMobile ? 13 : 12,
+                      color: kMobile ? AppColors.fg3 : AppColors.fg4),
                 ),
               ]),
             ),
@@ -1548,7 +1550,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       return _searchBox(
         onTap: palette,
         child: Row(children: [
-          AppIcon('search', size: 14, color: AppColors.fg4),
+          AppIcon('search', size: 12, color: AppColors.fg4),
           const SizedBox(width: 8),
           Expanded(
             child: Text('Search', style: sans(13, color: AppColors.fg4)),
@@ -1560,7 +1562,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     final ctl = _desktopChatsSearchCtl;
     return _searchBox(
       child: Row(children: [
-        AppIcon('search', size: 14, color: AppColors.fg4),
+        AppIcon('search', size: 12, color: AppColors.fg4),
         const SizedBox(width: 8),
         Expanded(
           child: TextField(

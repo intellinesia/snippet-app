@@ -52,6 +52,7 @@ dependencies:
   snippet_render:
     path: packages/snippet_render
   flutter_soloud: ^4.1.7
+  tabler_icons_plus: ^3.52.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

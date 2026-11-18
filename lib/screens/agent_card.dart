@@ -607,8 +607,8 @@ class AgentRowShell extends StatefulWidget {
 
   final Widget avatar;
 
-  /// Draws the avatar unplated at 30 px, spilling past its 22 px slot, so a
-  /// group's stacked members stay legible while names keep one column.
+  /// Draws the avatar unplated in a 36x22 box spilling past the 28 px slot,
+  /// so a group's side-by-side faces stay full size while names line up.
   final bool wideAvatar;
   final String name;
   final String preview;
@@ -665,19 +665,26 @@ class _AgentRowShellState extends State<AgentRowShell> {
               // One line: avatar, name and last-message time; the avatar dot
               // and the trailing mark carry the state.
               child: Row(children: [
-                SizedBox.square(
-                  dimension: 22,
+                // 28 px slot, the session avatar's width, so agent names and
+                // session titles start at one x.
+                SizedBox(
+                  width: 28,
+                  height: 22,
                   child: Stack(clipBehavior: Clip.none, children: [
                     if (widget.wideAvatar)
                       Positioned(
                         left: -4,
-                        top: -4,
-                        width: 30,
-                        height: 30,
+                        top: 0,
+                        width: 36,
+                        height: 22,
                         child: widget.avatar,
                       )
                     else
-                      Positioned.fill(
+                      Positioned(
+                        left: 3,
+                        top: 0,
+                        width: 22,
+                        height: 22,
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(R.of(6)),
                           child: ColoredBox(
@@ -687,7 +694,7 @@ class _AgentRowShellState extends State<AgentRowShell> {
                       ),
                     if (widget.dot != null)
                       Positioned(
-                        right: -2,
+                        right: 1,
                         bottom: -2,
                         child: Container(
                           key: widget.dotKey,

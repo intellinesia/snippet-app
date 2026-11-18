@@ -837,7 +837,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                 tooltip: 'New session',
                 onTap: () => _showNewMenu(ctx)),
           ),
-          SizedBox(width: S.of(10)),
+          // 9 + half the 28 px button's spare 14 = 16, the row content edge.
+          const SizedBox(width: 9),
         ]),
       ),
       Padding(
@@ -853,7 +854,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         if (sessionNeedsYou(s)) s
     ].isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
+      padding: const EdgeInsets.fromLTRB(9, 6, 9, 10),
       // Settings on the left; the other tools packed at the right.
       // Flexible children would each claim spare width, so the right group
       // is one Expanded row packed to the end.
@@ -959,7 +960,7 @@ class _TbBtnState extends State<_TbBtn> {
             ),
             child: Center(
               child: AppIcon(widget.icon,
-                  size: 16, color: _hover ? AppColors.fg1 : AppColors.fg3),
+                  size: 14, color: _hover ? AppColors.fg1 : AppColors.fg3),
             ),
           ),
         ),
@@ -1018,7 +1019,7 @@ class _FooterBtnState extends State<_FooterBtn> {
             ),
             child: Stack(alignment: Alignment.center, children: [
               AppIcon(widget.icon,
-                  size: 16,
+                  size: 14,
                   color: widget.active
                       ? AppColors.accent
                       : _hover

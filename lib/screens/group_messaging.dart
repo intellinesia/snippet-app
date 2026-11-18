@@ -310,7 +310,16 @@ class GroupRow extends StatelessWidget {
           ? const Center(child: AppIcon('users', size: 14))
           : shown.length == 1
               ? AgentMochi(shown.first, size: 28)
-              : AgentCluster(ids: shown, size: 30),
+              : SizedBox(
+                  width: 36,
+                  height: 22,
+                  child: Stack(children: [
+                    AgentDisc(id: shown[0], size: 22),
+                    Positioned(
+                        left: 14,
+                        child: AgentDisc(id: shown[1], size: 22, ring: true)),
+                  ]),
+                ),
       wideAvatar: shown.length > 1,
       name: name,
       pinned: pinned,
