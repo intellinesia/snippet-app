@@ -1,6 +1,6 @@
 part of 'session.dart';
 
-const double kDesktopComposerWidth = 780;
+const double kDesktopComposerWidth = 960;
 
 extension _SessionScreenComposerExt on _SessionScreenState {
   void _send(Map<String, dynamic> m, {bool tracked = false}) {
