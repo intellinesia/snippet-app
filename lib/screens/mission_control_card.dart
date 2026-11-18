@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'agent_card.dart' show DeskRow, WorkingRing;
+import 'agent_card.dart' show AgentRowShell, agentRowAgo;
 import '../api.dart';
 import '../mochi.dart';
 import '../models.dart';
@@ -12,15 +12,6 @@ import '../widgets.dart';
 import '../motion.dart';
 import '../swr.dart';
 import 'shell_nav.dart' show sessionIsActive;
-
-/// Totals shown under the desktop Mission Control card. [cameBack] is null
-/// when the daemon sends no task counts, which drops that cell.
-class McStats {
-  const McStats({this.inFlight = 0, this.needsYou = 0, this.cameBack});
-  final int inFlight;
-  final int needsYou;
-  final int? cameBack;
-}
 
 /// Mission Control pinned at the top of the Chats list: what it is doing, one
 /// tap from opening it.
@@ -34,9 +25,6 @@ class MissionControlCard extends StatefulWidget {
   /// Desktop: the agent's presence detail, preferred over its last message.
   final String? presenceDetail;
 
-  /// Desktop: the strip under the card; omitted when null.
-  final McStats? stats;
-
   const MissionControlCard({
     super.key,
     required this.client,
@@ -45,7 +33,6 @@ class MissionControlCard extends StatefulWidget {
     this.lastMessage,
     this.selected = false,
     this.presenceDetail,
-    this.stats,
   });
 
   @override
@@ -127,25 +114,6 @@ class _MissionControlCardState extends State<MissionControlCard> {
     return 'Plans, routes and follows up on your work';
   }
 
-  Widget _statCell(String label, int n, Color color, {String? tip}) {
-    final cell = Container(
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-      decoration: BoxDecoration(
-          color: AppColors.surface2, borderRadius: BorderRadius.circular(9)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('$n',
-            style:
-                sans(15, weight: FontWeight.w600, color: color, tabular: true)),
-        Text(label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: sans(10.5, color: AppColors.fg3)),
-      ]),
-    );
-    return Expanded(
-        child: tip == null ? cell : Tooltip(message: tip, child: cell));
-  }
-
   @override
   Widget build(BuildContext context) {
     if (!kMobile) {
@@ -159,79 +127,23 @@ class _MissionControlCardState extends State<MissionControlCard> {
           : last != null
               ? (last.fromUser ? 'You: ${last.text}' : last.text)
               : _statusLine();
-      final stats = widget.stats;
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Container(
-          decoration: BoxDecoration(
-              color: widget.selected ? AppColors.surface2 : AppColors.surface1,
-              borderRadius: BorderRadius.circular(14)),
-          padding: const EdgeInsets.all(10),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Material(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-              child: InkWell(
-                key: const ValueKey('mc-card-open'),
-                borderRadius: BorderRadius.circular(10),
-                onTap: widget.onOpen,
-                child: Row(children: [
-                  SizedBox.square(
-                    dimension: 30,
-                    child: Stack(clipBehavior: Clip.none, children: [
-                      const Center(
-                          child: AgentMochi('mission-control', size: 30)),
-                      if (working)
-                        const Positioned(
-                            left: -3,
-                            top: -3,
-                            right: -3,
-                            bottom: -3,
-                            child: WorkingRing(key: ValueKey('mc-working'))),
-                    ]),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Mission Control',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: DeskRow.nameStyle()),
-                        const SizedBox(height: 1),
-                        SwapText(waiting ? 'Waiting on you' : line,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(12,
-                                height: 16 / 12,
-                                color:
-                                    waiting ? AppColors.run : AppColors.fg3)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  AppIcon('chevron-right', size: 14, color: AppColors.fg4),
-                ]),
-              ),
-            ),
-            if (stats != null) ...[
-              const SizedBox(height: 8),
-              Row(children: [
-                _statCell('in flight', stats.inFlight, AppColors.fg1),
-                const SizedBox(width: 2),
-                _statCell('needs you', stats.needsYou,
-                    stats.needsYou > 0 ? AppColors.run : AppColors.fg1),
-                if (stats.cameBack != null) ...[
-                  const SizedBox(width: 2),
-                  _statCell('completed', stats.cameBack!, AppColors.fg1,
-                      tip: 'Tasks finished in the last 7 days'),
-                ],
-              ]),
-            ],
-          ]),
-        ),
+      return AgentRowShell(
+        key: const ValueKey('mc-card-open'),
+        selected: widget.selected,
+        onTap: widget.onOpen,
+        avatar: const AgentMochi('mission-control', size: 28),
+        dot: waiting
+            ? AppColors.accent
+            : working
+                ? AppColors.run
+                : null,
+        dotKey: working ? const ValueKey('mc-working') : null,
+        name: 'Mission Control',
+        time: widget.lastMessage == null
+            ? ''
+            : agentRowAgo(widget.lastMessage!.at),
+        preview: waiting ? 'Waiting on you' : line,
+        needs: waiting,
       );
     }
     return Padding(

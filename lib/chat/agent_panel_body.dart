@@ -275,7 +275,7 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 11),
         decoration: BoxDecoration(
           color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(R.of(14)),
+          borderRadius: BorderRadius.circular(R.of(8)),
         ),
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -312,10 +312,12 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
     if (cells.isEmpty) return const SizedBox.shrink();
     final row = <Widget>[];
     for (final c in cells) {
-      if (row.isNotEmpty) row.add(const SizedBox(width: 2));
+      if (row.isNotEmpty) row.add(const SizedBox(width: 6));
       row.add(Expanded(
         child: Material(
           color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(R.of(8)),
+          clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: c.$3,
             hoverColor: AppColors.surface3,
@@ -338,10 +340,7 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
     }
     return Padding(
       padding: const EdgeInsets.only(top: 12),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(R.of(12)),
-        child: Row(children: row),
-      ),
+      child: Row(children: row),
     );
   }
 
@@ -675,8 +674,9 @@ class _SectionState extends State<_Section> {
     );
     final rows = <Widget>[];
     for (final c in widget.children) {
-      if (rows.isNotEmpty) rows.add(const SizedBox(height: 2));
-      rows.add(c);
+      if (rows.isNotEmpty) rows.add(const SizedBox(height: 6));
+      rows.add(
+          ClipRRect(borderRadius: BorderRadius.circular(R.of(8)), child: c));
     }
     return Container(
       padding: EdgeInsets.fromLTRB(10, 8, 10, open ? 8 : 8),
@@ -694,7 +694,7 @@ class _SectionState extends State<_Section> {
                 ? Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(R.of(12)),
+                      borderRadius: BorderRadius.circular(R.of(8)),
                       child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: rows),

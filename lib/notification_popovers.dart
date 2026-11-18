@@ -11,7 +11,6 @@ import 'theme.dart';
 import 'platform.dart';
 import 'notification_card.dart';
 import 'notification_text.dart';
-import 'desktop_notifications.dart';
 import 'notification_stack.dart';
 import 'session_quick_send.dart' show resolveInstanceForPayload;
 
@@ -123,6 +122,8 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
   }
 
   void _addPending(Map<String, dynamic> payload) {
+    // Desktop shows asks on the composer and messages as sidebar marks.
+    if (!kMobile) return;
     _pending.removeWhere((old) => toastSuperseded(old, payload));
     _pending.add(payload);
   }
@@ -234,26 +235,6 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
                     onAction: (a) => _callAction(call, a)),
               ),
             )))
-      else if (!kMobile)
-        Positioned(
-          right: S.s16,
-          bottom: 104,
-          width: 340,
-          child: items.isEmpty
-              ? const SizedBox.shrink()
-              : MouseRegion(
-                  onEnter: (_) => _setHold(pointer: true),
-                  onExit: (_) => _setHold(pointer: false),
-                  child: DesktopToast(
-                    key: ObjectKey(items.first),
-                    payload: items.first,
-                    extra: items.length - 1,
-                    onClose: () => _remove(items.first),
-                    onResolved: () => _remove(items.first),
-                    onHold: (hold) => _setHold(card: hold),
-                  ),
-                ),
-        )
       else
         Positioned(
             top: _anchorTop,

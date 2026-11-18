@@ -121,16 +121,18 @@ void main() {
       expect(sessionCameBack(s('a', cameBack: true)), isTrue);
       expect(sessionCameBack(s('a')), isFalse);
       expect(
-          sessionCameBack(s('a',
-              cameBack: true, status: 'waiting_for_input')),
+          sessionCameBack(s('a', cameBack: true, status: 'waiting_for_input')),
           isFalse);
-      expect(sessionCameBack(s('a', cameBack: true, agent: 'x')
-          .withStatus('in_review')), isFalse);
+      expect(
+          sessionCameBack(
+              s('a', cameBack: true, agent: 'x').withStatus('in_review')),
+          isFalse);
     });
 
     test('crew does not count idle plain sessions as snippet work', () {
       final crew = deriveCrew([
-        CoordinationAgent.fromJson({'id': 'snippet', 'display_name': 'Snippet'}),
+        CoordinationAgent.fromJson(
+            {'id': 'snippet', 'display_name': 'Snippet'}),
         CoordinationAgent.fromJson({'id': 'rook', 'display_name': 'Rook'}),
       ], [
         s('idle'), // plain idle session owned by snippet
@@ -168,8 +170,7 @@ void main() {
       expect(find.textContaining('you'), findsOneWidget);
     });
 
-    testWidgets('pending reads as takes over after this turn',
-        (tester) async {
+    testWidgets('pending reads as takes over after this turn', (tester) async {
       await tester.pumpWidget(wrap(const HandoffNotice(event: {
         'kind': 'session_handoff',
         'from': 'snippet',
@@ -204,8 +205,7 @@ void main() {
       expect(find.text('Paused'), findsNothing);
       expect(find.text('MC'), findsNothing);
       await tester.tap(find.text('Rook'));
-      await tester.enterText(
-          find.byType(TextField), 'finish the migration');
+      await tester.enterText(find.byType(TextField), 'finish the migration');
       client.result = {'session': 's1', 'pending': true};
       await tester.tap(find.text('Hand to Rook'));
       await tester.pumpAndSettle();
@@ -216,6 +216,12 @@ void main() {
   });
 
   group('sidebar came back', () {
+    // The agents section's SWR retry backoff outlives the tree; let it lapse.
+    Future<void> drain(WidgetTester tester) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(minutes: 2));
+    }
+
     Widget sidebar(List<SessionInfo> sessions) {
       return MaterialApp(
         theme: buildAppTheme(),
@@ -267,9 +273,10 @@ void main() {
         s('live', run: true, status: 'running', at: 200),
         s('ask', status: 'waiting_for_input', at: 300),
       ]));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
       expect(find.text('Completed'), findsOneWidget);
       expect(find.text('Needs you'), findsOneWidget);
+      await drain(tester);
       debugDefaultTargetPlatformOverride = null;
     });
 
@@ -279,13 +286,14 @@ void main() {
         s('done', cameBack: true, finishedAt: 100, summary: 'Shipped', at: 100),
       ];
       await tester.pumpWidget(sidebar(sessions));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
       expect(find.text('Completed'), findsOneWidget);
       // Simulate the optimistic patch the shell applies on sessionSeen.
       await tester.pumpWidget(sidebar(
           [for (final x in sessions) x.id == 'done' ? x.markSeen() : x]));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
       expect(find.text('Completed'), findsNothing);
+      await drain(tester);
       debugDefaultTargetPlatformOverride = null;
     });
   });

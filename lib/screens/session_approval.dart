@@ -202,6 +202,27 @@ class ApprovalBarState extends State<ApprovalBar> {
     ]);
   }
 
+  Widget _deskDecision(String label,
+          {required Color fill,
+          required Color hover,
+          required Color ink,
+          bool busy = false,
+          required VoidCallback? onTap}) =>
+      DeskButton(
+        height: 28,
+        onTap: busy ? null : onTap,
+        fill: fill,
+        hoverFill: hover,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (busy) ...[
+            Spinner(size: 12, color: ink),
+            const SizedBox(width: 6)
+          ],
+          Text(label, style: sans(12.5, weight: FontWeight.w500, color: ink)),
+        ]),
+      );
+
   @override
   Widget build(BuildContext context) {
     final req = _request;
@@ -283,13 +304,12 @@ class ApprovalBarState extends State<ApprovalBar> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               constraints: const BoxConstraints(maxHeight: 180),
               decoration: BoxDecoration(
-                color: AppColors.bg,
-                borderRadius: BorderRadius.circular(R.of(8)),
-                border: Border.all(color: AppColors.line),
+                color: AppColors.surface3,
+                borderRadius: BorderRadius.circular(R.of(6)),
               ),
               child: SingleChildScrollView(
                 child: SelectableText(detail,
-                    style: codeMono(12, height: 1.65, color: AppColors.fg1)),
+                    style: codeMono(11.5, height: 1.6, color: AppColors.fg2)),
               ),
             ),
           if (isVault)
@@ -314,11 +334,15 @@ class ApprovalBarState extends State<ApprovalBar> {
                     ),
                   ),
             buttons: [
-              DeskTextButton('Deny',
+              _deskDecision('Deny',
+                  fill: AppColors.fg1.withValues(alpha: 0.07),
+                  hover: AppColors.fg1.withValues(alpha: 0.11),
+                  ink: AppColors.fg1,
                   onTap: _sent ? null : () => _decide({'kind': 'deny'})),
-              DeskTextButton('Approve',
-                  kind: DeskBtnKind.primary,
-                  kbd: '\u21b5',
+              _deskDecision('Approve',
+                  fill: AppColors.accentFill,
+                  hover: AppColors.accentFill.withValues(alpha: 0.88),
+                  ink: AppColors.accentFg,
                   busy: _sent,
                   onTap: () =>
                       _decide({'kind': _always ? _alwaysKind : 'approve'})),

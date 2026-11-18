@@ -2,6 +2,7 @@ part of 'session_rail.dart';
 
 /// Desktop drill-in panel: a root of grouped rows and one page per area.
 extension _RailPages on _SessionRailState {
+  /// One destination as its own 8 px card: icon tile, title, quiet value.
   Widget _navRow(String icon, String label,
       {String? value,
       bool hot = false,
@@ -10,68 +11,69 @@ extension _RailPages on _SessionRailState {
       VoidCallback? onTap,
       bool first = false,
       bool last = false}) {
-    final r = Radius.circular(R.of(13));
-    final s = Radius.circular(R.of(5));
-    return Material(
-      color: Grouped.row,
-      borderRadius:
-          BorderRadius.vertical(top: first ? r : s, bottom: last ? r : s),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        hoverColor: AppColors.fg1.withValues(alpha: 0.04),
-        child: SizedBox(
-          height: 42,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(children: [
-              leading ?? AppIcon(icon, size: 16, color: AppColors.fg3),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(13, color: AppColors.fg1)),
-              ),
-              if (value != null) ...[
-                const SizedBox(width: 8),
-                Flexible(
-                  flex: 0,
-                  child: Text(value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: mono(12,
-                          color: hot ? AppColors.accent : AppColors.fg3,
-                          tabular: true)),
-                ),
-              ],
-              if (trailing != null) ...[
-                const SizedBox(width: 8),
-                trailing,
-              ] else if (onTap != null) ...[
-                const SizedBox(width: 8),
-                AppIcon('chevron-right', size: 12, color: AppColors.fg4),
-              ],
-            ]),
+    return _RailCard(
+      onTap: onTap,
+      child: Row(children: [
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.fg1.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(R.of(6)),
           ),
+          child: leading ?? AppIcon(icon, size: 15, color: AppColors.fg2),
         ),
-      ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(13, weight: FontWeight.w500, color: AppColors.fg1)),
+        ),
+        if (value != null) ...[
+          const SizedBox(width: 8),
+          Flexible(
+            flex: 0,
+            child: Text(value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(12,
+                    color: hot ? AppColors.accent : AppColors.fg3,
+                    tabular: true)),
+          ),
+        ],
+        if (trailing != null) ...[
+          const SizedBox(width: 8),
+          trailing,
+        ] else if (onTap != null) ...[
+          const SizedBox(width: 6),
+          AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+        ],
+      ]),
     );
   }
 
-  /// Rows as one group: 2px gaps, rounded only at the ends.
+  Widget _plab(String title, {String? meta}) => Padding(
+        padding: const EdgeInsets.fromLTRB(4, 10, 4, 4),
+        child: Row(children: [
+          Expanded(
+              child: Text(title,
+                  style:
+                      sans(12, weight: FontWeight.w500, color: AppColors.fg3))),
+          if (meta != null) Text(meta, style: sans(11.5, color: AppColors.fg4)),
+        ]),
+      );
+
+  /// Rows as separate cards, 6 px apart.
   Widget _navGroup(String? title, List<Widget Function(bool, bool)> rows) {
     if (rows.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      padding: const EdgeInsets.fromLTRB(0, 6, 0, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (title != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-            child: Text(title, style: sans(12, color: AppColors.fg3)),
-          ),
+        if (title != null) _plab(title),
         for (var i = 0; i < rows.length; i++) ...[
-          if (i > 0) const SizedBox(height: 2),
+          if (i > 0) const SizedBox(height: 6),
           rows[i](i == 0, i == rows.length - 1),
         ],
       ]),
@@ -80,24 +82,15 @@ extension _RailPages on _SessionRailState {
 
   Widget _card2(String? title, List<Widget> children, {String? meta}) =>
       Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+        padding: const EdgeInsets.fromLTRB(0, 6, 0, 0),
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          if (title != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
-              child: Row(children: [
-                Expanded(
-                    child: Text(title, style: sans(12, color: AppColors.fg3))),
-                if (meta != null)
-                  Text(meta, style: sans(11.5, color: AppColors.fg4)),
-              ]),
-            ),
+          if (title != null) _plab(title, meta: meta),
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-                color: Grouped.row,
-                borderRadius: BorderRadius.circular(R.of(13))),
+                color: AppColors.surface2,
+                borderRadius: BorderRadius.circular(R.of(8))),
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: children),
@@ -207,14 +200,13 @@ extension _RailPages on _SessionRailState {
   }
 
   Widget _subHeader(String title, {String? meta}) => Container(
-        padding: const EdgeInsets.fromLTRB(8, 8, 14, 8),
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.line))),
+        height: 40,
+        padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
         child: Row(children: [
           IconBtn('chevron-left',
               size: 30, iconSize: 15, tooltip: 'Back', onTap: () => _go(null)),
           const SizedBox(width: 4),
-          Text(title, style: sans(13, weight: W.label, color: AppColors.fg1)),
+          Text(title, style: sans(13, weight: W.strong, color: AppColors.fg1)),
           if (meta != null) ...[
             const SizedBox(width: 8),
             Text(meta, style: mono(12, color: AppColors.fg4)),

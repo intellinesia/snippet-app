@@ -163,16 +163,18 @@ class ComposerSendButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fill = !enabled
-        ? C7.rowHi
+        ? (kMobile ? C7.rowHi : AppColors.fg1.withValues(alpha: 0.07))
         : stop
-            ? AppColors.fg1
+            ? (kMobile ? AppColors.fg1 : AppColors.fg1.withValues(alpha: 0.11))
             : AppColors.accentFill;
     final ink = !enabled
         ? AppColors.fg4
         : stop
-            ? AppColors.bg
+            ? (kMobile ? AppColors.bg : AppColors.fg1)
             : AppColors.accentFg;
-    const ShapeBorder shape = CircleBorder();
+    final ShapeBorder shape = kMobile
+        ? const CircleBorder()
+        : RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.of(6)));
     return Material(
       color: fill,
       shape: shape,
@@ -185,7 +187,7 @@ class ComposerSendButton extends StatelessWidget {
               }
             : onTap,
         child: SizedBox.square(
-          dimension: C7.btn,
+          dimension: kMobile ? C7.btn : 28,
           child: Center(
             child: sending
                 ? Spinner(size: 16, color: ink)

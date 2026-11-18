@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:snippet/notification_inbox.dart';
 import 'package:flutter_test/flutter_test.dart' hide testWidgets;
 import 'package:flutter_test/flutter_test.dart' as ft show testWidgets;
-import 'package:snippet/desktop_notifications.dart';
 import 'package:snippet/notification_popovers.dart';
 import 'package:snippet/widgets.dart' show AppIcon;
 import 'package:snippet/notification_sync.dart';
@@ -158,29 +157,16 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('desktop toast shows one item, closes to the next and opens chat',
+  testWidgets('desktop shows no toast; asks live on the composer',
       (tester) async {
     _platform(TargetPlatform.linux);
-    final opened = <Map<String, dynamic>>[];
-    onNotifTap = opened.add;
     foregroundNotifications.add({'title': 'First', 'kind': 'done', 'session': 's1'});
-    foregroundNotifications.add({'title': 'Second', 'kind': 'done', 'session': 's2'});
+    foregroundNotifications.add({'title': 'Ask', 'kind': 'waiting', 'session': 's2'});
     await tester.pumpWidget(const MaterialApp(
         home: NotificationPopovers(child: Scaffold(body: Text('Home')))));
     await tester.pumpAndSettle();
-    expect(find.byType(DesktopToast), findsOneWidget);
-    expect(find.text('+1 more'), findsOneWidget);
-    final first = find.text('First').evaluate().isNotEmpty ? 'First' : 'Second';
-    final next = first == 'First' ? 'Second' : 'First';
-    await tester.tap(find.descendant(
-        of: find.byType(DesktopToast), matching: find.byType(AppIcon)).last);
-    await tester.pumpAndSettle();
-    expect(find.text(first), findsNothing);
-    expect(find.text(next), findsOneWidget);
-    await tester.tap(find.text('Open chat'));
-    await tester.pumpAndSettle();
-    expect(opened.single['title'], next);
-    expect(find.byType(DesktopToast), findsNothing);
+    expect(find.text('First'), findsNothing);
+    expect(find.text('Ask'), findsNothing);
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 10));
   });

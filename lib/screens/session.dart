@@ -72,6 +72,7 @@ import '../composer/attachment_tile.dart';
 import '../composer/composer_card.dart';
 import '../composer/composer_tray.dart';
 import '../media_views.dart';
+import 'agent_transcript_head.dart';
 import 'agent_messaging.dart';
 import 'package:xterm/xterm.dart';
 import 'files.dart';
@@ -1546,7 +1547,8 @@ class _SessionScreenState extends State<SessionScreen>
   double _composerH = 0;
 
   @override
-  Widget build(BuildContext context) => _isMissionControl
+  // Phones keep Mission Control as a chat; desktop reads it like any session.
+  Widget build(BuildContext context) => _isMissionControl && kMobile
       ? ChatBubbleScope(child: _buildScreen(context))
       : _buildScreen(context);
 
@@ -1771,6 +1773,22 @@ class _SessionScreenState extends State<SessionScreen>
                                                                               color: AppColors.fg1)),
                                                                     ]),
                                                               ),
+                                                            // Desktop: Mission Control's identity tops its history, like an agent thread.
+                                                            if (_isMissionControl &&
+                                                                !kMobile &&
+                                                                _transcriptStart ==
+                                                                    0 &&
+                                                                items
+                                                                    .isNotEmpty)
+                                                              const AgentTranscriptHead(
+                                                                  key: ValueKey(
+                                                                      'mc-head'),
+                                                                  agentId:
+                                                                      'mission-control',
+                                                                  name:
+                                                                      'Mission Control',
+                                                                  purpose:
+                                                                      'Coordinates your agents and sessions'),
                                                             if (_transcriptStart >
                                                                     0 &&
                                                                 items

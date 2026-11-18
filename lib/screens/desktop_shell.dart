@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../desk_attention.dart';
 import '../desktop_look.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -63,7 +64,6 @@ import 'artifact_viewer.dart' show SessionDeliverables;
 import 'wakes_screen.dart';
 import 'workspace_tab.dart';
 import 'desktop_settings_page.dart';
-import 'settings_panel.dart';
 import 'shell_card_tab_strip.dart';
 import 'shell_main_pane.dart';
 import 'shell_models.dart';
@@ -72,7 +72,7 @@ import 'shell_pane_view.dart';
 import 'shell_rail.dart';
 import 'shell_rail_tools.dart';
 import 'shell_shortcuts.dart';
-import 'sidebar.dart' show SidebarState;
+import 'sidebar.dart' show SidebarBrand;
 import 'sidebar_mode.dart';
 import 'shell_sidebar_host.dart';
 import 'shell_split_view.dart';
@@ -1862,7 +1862,6 @@ class _DesktopShellState extends State<DesktopShell>
     if (_drawerOpen) _scaffoldKey.currentState?.closeDrawer();
   }
 
-  final _topMachineKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -1892,107 +1891,113 @@ class _DesktopShellState extends State<DesktopShell>
     }
     if (kMobile) return _mobileShell();
     return WindowBackground(
-        child: ShellPanelScope(
-            open: _openShellPanel,
+        child: DeskAttentionScope(
             client: _client,
-            sessionId: _activeTab?.sessionId,
-            child: LayoutBuilder(builder: (context, c) {
-              _ShellTab? visibleTab;
-              if (c.maxWidth < kShellCompact) {
-                if (_activeIndex >= 0 && _activeIndex < _tabs.length) {
-                  visibleTab = _tabs[_activeIndex];
-                }
-              } else {
-                final pane = _focusedPane;
-                final tabs = _tabsIn(pane);
-                final key = _activeKey[pane];
-                final selected = tabs.where((t) => t.key == key).firstOrNull;
-                final readoutSelected =
-                    _rightTabs.any((r) => r.pane == pane && r.key == key);
-                visibleTab = selected ??
-                    (!readoutSelected && tabs.isNotEmpty ? tabs.first : null);
-              }
-              final visible = _appForeground &&
-                  visibleTab != null &&
-                  !_isAuxiliary(visibleTab) &&
-                  !visibleTab.isMissionControl;
-              reportVisibleNotificationSession(
-                  visible ? visibleTab.instanceUrl : null,
-                  visible ? visibleTab.sessionId : null);
-              // Narrow window → keep the native shell but collapse the sidebar to a drawer.
-              if (c.maxWidth < kShellCompact) {
-                // Full-width drawer on phones; a capped one on a shrunk desktop window.
-                final drawerW = kMobile
-                    ? c.maxWidth
-                    : (c.maxWidth * 0.86).clamp(280.0, 360.0);
-                // Back from an open session: reveal the sessions drawer FIRST, then a
-                // second back exits. (Only intercept when a session is open and the drawer
-                // is closed; from the open drawer or the home placeholder, back exits.)
-                return PopScope(
-                  canPop: _drawerOpen || _sessionId == null,
-                  onPopInvokedWithResult: (didPop, _) {
-                    if (didPop) return;
-                    _scaffoldKey.currentState?.openDrawer();
-                  },
-                  child: Scaffold(
-                    key: _scaffoldKey,
-                    backgroundColor: Colors.transparent,
-                    onDrawerChanged: (open) =>
-                        setState(() => _drawerOpen = open),
-                    // Keep drawer gestures confined to the physical edge. A wide edge
-                    // target competes with fast, slightly angled transcript scrolling.
-                    drawerEdgeDragWidth: kMobile ? 20 : 24,
-                    drawer: Drawer(
-                      width: drawerW,
-                      backgroundColor: AppColors.windowBg,
-                      shape: const RoundedRectangleBorder(),
-                      child: SafeArea(
-                          child: _sidebar(
-                              topInset: !kMacOS,
-                              onAfterPick: () =>
-                                  _scaffoldKey.currentState?.closeDrawer())),
-                    ),
-                    // Narrow: the toolbar's sidebar-toggle is at the far left under the
-                    // traffic lights, so inset the whole pane below them.
-                    body: SafeArea(
-                      child: Padding(
-                        padding:
-                            EdgeInsets.only(top: kMacOS ? kMacTitlebar : 0),
-                        child: _mainPane(
-                            onMenu: () =>
-                                _scaffoldKey.currentState?.openDrawer()),
+            asks: DeskAttentionScope.asksFrom(_sessions),
+            onOpen: (s) => _openSession(s.id, s.title, s.profile),
+            child: ShellPanelScope(
+                open: _openShellPanel,
+                client: _client,
+                sessionId: _activeTab?.sessionId,
+                child: LayoutBuilder(builder: (context, c) {
+                  _ShellTab? visibleTab;
+                  if (c.maxWidth < kShellCompact) {
+                    if (_activeIndex >= 0 && _activeIndex < _tabs.length) {
+                      visibleTab = _tabs[_activeIndex];
+                    }
+                  } else {
+                    final pane = _focusedPane;
+                    final tabs = _tabsIn(pane);
+                    final key = _activeKey[pane];
+                    final selected =
+                        tabs.where((t) => t.key == key).firstOrNull;
+                    final readoutSelected =
+                        _rightTabs.any((r) => r.pane == pane && r.key == key);
+                    visibleTab = selected ??
+                        (!readoutSelected && tabs.isNotEmpty
+                            ? tabs.first
+                            : null);
+                  }
+                  final visible = _appForeground &&
+                      visibleTab != null &&
+                      !_isAuxiliary(visibleTab) &&
+                      !visibleTab.isMissionControl;
+                  reportVisibleNotificationSession(
+                      visible ? visibleTab.instanceUrl : null,
+                      visible ? visibleTab.sessionId : null);
+                  // Narrow window → keep the native shell but collapse the sidebar to a drawer.
+                  if (c.maxWidth < kShellCompact) {
+                    // Full-width drawer on phones; a capped one on a shrunk desktop window.
+                    final drawerW = kMobile
+                        ? c.maxWidth
+                        : (c.maxWidth * 0.86).clamp(280.0, 360.0);
+                    // Back from an open session: reveal the sessions drawer FIRST, then a
+                    // second back exits. (Only intercept when a session is open and the drawer
+                    // is closed; from the open drawer or the home placeholder, back exits.)
+                    return PopScope(
+                      canPop: _drawerOpen || _sessionId == null,
+                      onPopInvokedWithResult: (didPop, _) {
+                        if (didPop) return;
+                        _scaffoldKey.currentState?.openDrawer();
+                      },
+                      child: Scaffold(
+                        key: _scaffoldKey,
+                        backgroundColor: Colors.transparent,
+                        onDrawerChanged: (open) =>
+                            setState(() => _drawerOpen = open),
+                        // Keep drawer gestures confined to the physical edge. A wide edge
+                        // target competes with fast, slightly angled transcript scrolling.
+                        drawerEdgeDragWidth: kMobile ? 20 : 24,
+                        drawer: Drawer(
+                          width: drawerW,
+                          backgroundColor: AppColors.windowBg,
+                          shape: const RoundedRectangleBorder(),
+                          child: SafeArea(
+                              child: _sidebar(
+                                  topInset: !kMacOS,
+                                  onAfterPick: () => _scaffoldKey.currentState
+                                      ?.closeDrawer())),
+                        ),
+                        // Narrow: the toolbar's sidebar-toggle is at the far left under the
+                        // traffic lights, so inset the whole pane below them.
+                        body: SafeArea(
+                          child: Padding(
+                            padding:
+                                EdgeInsets.only(top: kMacOS ? kMacTitlebar : 0),
+                            child: _mainPane(
+                                onMenu: () =>
+                                    _scaffoldKey.currentState?.openDrawer()),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                );
-              }
-              // Wide macOS uses a persistent sidebar column beside the content column.
-              // The tab strip belongs only to the content pane, so the sidebar can use
-              // the full height below the native title bar without an empty header gap.
-              if (kMacOS) {
-                return Scaffold(
-                  // The window paints the chrome surface; the reading pane inside it is
-                  // the darker canvas.
-                  backgroundColor: Colors.transparent,
-                  body: SafeArea(
-                    child: Column(children: [
-                      _bodyRow(topInset: false),
-                    ]),
-                  ),
-                );
-              }
+                    );
+                  }
+                  // Wide macOS uses a persistent sidebar column beside the content column.
+                  // The tab strip belongs only to the content pane, so the sidebar can use
+                  // the full height below the native title bar without an empty header gap.
+                  if (kMacOS) {
+                    return Scaffold(
+                      // The window paints the chrome surface; the reading pane inside it is
+                      // the darker canvas.
+                      backgroundColor: Colors.transparent,
+                      body: SafeArea(
+                        child: Column(children: [
+                          _bodyRow(topInset: false),
+                        ]),
+                      ),
+                    );
+                  }
 
-              return Scaffold(
-                backgroundColor: Colors.transparent,
-                body: SafeArea(
-                  child: Column(children: [
-                    _bodyRow(topInset: false),
-                  ]),
-                ),
-              );
-            })));
+                  return Scaffold(
+                    backgroundColor: Colors.transparent,
+                    body: SafeArea(
+                      child: Column(children: [
+                        _bodyRow(topInset: false),
+                      ]),
+                    ),
+                  );
+                }))));
   }
 }
 
-typedef _MachineList = MachineList;
 typedef _SettingsPage = SettingsPage;

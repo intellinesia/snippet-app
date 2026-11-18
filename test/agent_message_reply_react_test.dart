@@ -48,6 +48,10 @@ class _FakeClient extends DaemonClient {
   DeviceEventHub get deviceEvents => _events;
 
   @override
+  Future<ServerConfig> getConfig({bool force = false}) async =>
+      ServerConfig.fromJson({'profiles': []});
+
+  @override
   Future<DirectThreadPage> agentThreadPage({
     required String peerId,
     String actorKind = 'human',

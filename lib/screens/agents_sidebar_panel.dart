@@ -59,7 +59,12 @@ class AgentsSidebarPanel extends StatefulWidget {
     this.groupsKey,
     this.heroBuilder,
     this.sessions,
+    this.embedded = false,
   });
+
+  /// Desktop: non-scrolling rows (Mission Control, agents, groups) for a list
+  /// the sidebar scrolls itself; no hero and no Working/Quiet sections.
+  final bool embedded;
 
   /// Phone: live sessions, so rows show who is asking and what they work on.
   final List<SessionInfo>? sessions;
@@ -323,6 +328,10 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   Future<void> _loadDmLast() async {
     try {
       final threads = await widget.client.directThreads();
+      final unread = {
+        for (final t in threads)
+          if (t.peerKind == 'agent' && t.hasUnread) t.peerId
+      };
       final pages = await Future.wait([
         for (final t in threads)
           if (t.peerKind == 'agent')
@@ -347,6 +356,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 text: e.body.trim().split(RegExp(r'\s+')).join(' '),
                 fromUser: e.actorKind == 'human',
                 at: DateTime.tryParse(e.createdAt),
+                unread: unread.contains(id),
               );
       }
       if (!mounted) return;
@@ -420,18 +430,6 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   /// Totals for the Mission Control strip, from the agents' own counts. The
   /// daemon keeps finished work for 7 days, so "came back" is null (cell
   /// dropped) when no agent reports counts at all.
-  McStats _crewStats() {
-    final all = [...agents, if (_mc != null) _mc!];
-    final counted = all.where((a) => a.taskCounts != null);
-    return McStats(
-      inFlight: all.fold(0, (n, a) => n + a.tasksIn({'in_progress'})),
-      needsYou: agents.fold(0, (n, a) => n + a.needsYou),
-      cameBack: counted.isEmpty
-          ? null
-          : counted.fold<int>(0, (n, a) => n + a.tasksIn({'done'})),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final q = effectiveQuery.toLowerCase();
@@ -445,14 +443,13 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             lastMessage: _mcLast,
             onOpen: onOpenMc,
             presenceDetail: _mc?.presence?.detail,
-            stats: _crewStats(),
           )
         : null;
     // The phone's v5 header avatar is the Mission Control entry point, so the
     // pinned card only shows on desktop.
     final showMcCard = mcCard != null && !kMobile;
 
-    if (loading && agents.isEmpty && !showMcCard) {
+    if (!widget.embedded && loading && agents.isEmpty && !showMcCard) {
       return Container(
         color: kMobile ? AppColors.pageBg : Colors.transparent,
         alignment: Alignment.center,
@@ -461,7 +458,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             : Spinner(size: 20, color: AppColors.fg3),
       );
     }
-    if (error != null && agents.isEmpty && !showMcCard) {
+    if (!widget.embedded && error != null && agents.isEmpty && !showMcCard) {
       if (kMobile) {
         return Material(
           color: kMobile ? AppColors.pageBg : Colors.transparent,
@@ -596,6 +593,100 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 : kMobile
                     ? null
                     : _EmptyTeam();
+
+    if (widget.embedded && !kMobile) {
+      return ListenableBuilder(
+        listenable: widget.client.presence,
+        builder: (context, _) {
+          final presence = widget.client.presence;
+          final sessions = widget.sessions;
+          final crew = sessions == null
+              ? const <String, CrewEntry>{}
+              : {
+                  for (final e in deriveCrew(
+                      agents,
+                      [
+                        for (final s in sessions)
+                          if (!s.settled) s
+                      ],
+                      presence: presence))
+                    e.agent.id: e,
+                };
+          AgentGroup bucketOf(CoordinationAgent a) {
+            final g = switch (crew[a.id]?.state) {
+              CrewState.needsYou => AgentGroup.needsYou,
+              CrewState.working => AgentGroup.working,
+              _ =>
+                agentGroupFor(a, presence: presence.presenceForAgentId(a.id)),
+            };
+            return g == AgentGroup.recent && a.available && a.needsYou > 0
+                ? AgentGroup.needsYou
+                : g;
+          }
+
+          DateTime? seen(int? secs) => secs == null || secs <= 0
+              ? null
+              : DateTime.fromMillisecondsSinceEpoch(secs * 1000);
+          DateTime? latest(DateTime? a, DateTime? b) =>
+              a == null ? b : (b == null || a.isAfter(b) ? a : b);
+          // Sorted by the time each row shows: last message, or the live
+          // session's activity while it works. Mission Control sorts too.
+          final ranked = <({Widget row, DateTime? at, int? pinnedAt, int i})>[];
+          for (final e in entries) {
+            final item = e.item;
+            if (item is CoordinationAgent) {
+              final c = crew[item.id];
+              final live = c != null && c.state != CrewState.standingBy
+                  ? seen(c.lead?.lastActive)
+                  : null;
+              ranked.add((
+                row: agentTile(item, crew: c, group: bucketOf(item)),
+                at: latest(e.at, live),
+                pinnedAt: e.pinnedAt,
+                i: ranked.length,
+              ));
+            } else {
+              // Groups sit in the same list, ranked by their last event.
+              ranked.add((
+                row: groupTile(item as GroupSummary),
+                at: e.at,
+                pinnedAt: e.pinnedAt,
+                i: ranked.length,
+              ));
+            }
+          }
+          if (mcCard != null) {
+            ranked.add((
+              row: mcCard,
+              at: latest(_mcLast?.at, seen(mc?.lastActive)),
+              pinnedAt: null,
+              i: -1,
+            ));
+          }
+          ranked.sort((a, b) {
+            final ap = a.pinnedAt, bp = b.pinnedAt;
+            if (ap != bp) {
+              if (ap == null) return 1;
+              if (bp == null) return -1;
+              return bp.compareTo(ap);
+            }
+            if (a.at == b.at) return a.i.compareTo(b.i);
+            if (a.at == null) return 1;
+            if (b.at == null) return -1;
+            return b.at!.compareTo(a.at!);
+          });
+          final agentRows = [for (final r in ranked) r.row];
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ...agentRows,
+              if (emptyState != null && ranked.isEmpty) emptyState,
+            ],
+          );
+        },
+      );
+    }
 
     if (kMobile) {
       return PullToRefresh(

@@ -45,7 +45,7 @@ class PaneSurface extends StatelessWidget {
   Widget _surface(BuildContext context, bool clear) {
     return ClipRect(
       child: ColoredBox(
-        color: clear
+        color: clear || !kMobile
             ? Colors.transparent
             : pane == ShellPane.right
                 ? AppColors.windowBg
@@ -152,12 +152,15 @@ class _PaneResizeHandleState extends State<PaneResizeHandle> {
         alignment: Alignment.center,
         children: [
           // On a fill like the sidebar's border; bare, the wallpaper shows through.
-          Positioned.fill(child: ColoredBox(color: AppColors.windowBg)),
+          if (kMobile)
+            Positioned.fill(child: ColoredBox(color: AppColors.windowBg)),
           Positioned.fill(
             child: ColoredBox(
               color: _hover
                   ? kPaneSeamHoverColor
-                  : AppColors.line.withValues(alpha: 0.65),
+                  : kMobile
+                      ? AppColors.line.withValues(alpha: 0.65)
+                      : AppColors.fg1.withValues(alpha: 0.07),
             ),
           ),
           // Expanded invisible hit target for effortless grab & hover
@@ -557,7 +560,7 @@ class RightTabBody extends StatelessWidget {
         agent: agent,
         client: client,
         embedded: true,
-        // Desktop: the tab, bar and panel carry the identity; no stage.
+        // Desktop: no stage; the thread opens with a scrolling agent head.
         tabHeader: kMobile,
         deskTrailing: deskTrailing,
         onDeskInfo: onDeskInfo,

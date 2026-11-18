@@ -30,7 +30,7 @@ import '../chat/chat_style.dart';
 import '../chat/group_notice.dart';
 import '../chat/stage_bar.dart';
 import '../chat/stage_header.dart';
-import 'agent_card.dart' show DeskRow, TeamRow, agentRowTime;
+import 'agent_card.dart' show AgentRowShell, TeamRow, agentRowAgo, agentRowTime;
 import 'agent_questions_card.dart' show questionAnswerSystemLine;
 import 'agent_thread_cards.dart' show agentThreadEventCard;
 import 'tasks/tasks_panel.dart' show openTasksPage, openTaskCountFor;
@@ -299,33 +299,37 @@ class GroupRow extends StatelessWidget {
         ]),
       );
     }
-    return DeskRow(
+    // Same single line as the agent rows above it.
+    return AgentRowShell(
       onTap: onTap,
       onLongPress: onLongPress,
-      time: agentRowTime(DateTime.tryParse(group.lastEventAt ?? '')?.toLocal()),
-      plate: shown.length < 2,
+      time: agentRowAgo(DateTime.tryParse(group.lastEventAt ?? '')),
       avatar: shown.isEmpty
-          ? const Center(child: AppIcon('users', size: 16))
+          ? const Center(child: AppIcon('users', size: 14))
           : shown.length == 1
-              ? Center(child: AgentMochi(shown.first, size: 20))
-              : AgentCluster(ids: shown, size: 36),
-      title: Row(children: [
-        Flexible(
-          child: Text(name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: DeskRow.nameStyle()),
-        ),
-        if (pinned) ...[
-          SizedBox(width: S.s6),
-          AppIcon('pin', size: 11, color: AppColors.fg3),
-        ],
-      ]),
-      subtitle: Text.rich(markdownPreviewSpan(sub, DeskRow.previewStyle()),
-          maxLines: 1, overflow: TextOverflow.ellipsis),
+              ? AgentMochi(shown.first, size: 28)
+              : SizedBox(
+                  width: 36,
+                  height: 22,
+                  // Bare characters, no disc behind each.
+                  child: Stack(children: [
+                    AgentMochi(shown[0], size: 22),
+                    Positioned(left: 14, child: AgentMochi(shown[1], size: 22)),
+                  ]),
+                ),
+      wideAvatar: shown.length > 1,
+      name: name,
+      pinned: pinned,
+      preview: sub,
+      needs: unread > 0,
       trailing: unread > 0
-          ? Text('$unread',
-              style: sans(12, color: AppColors.accent, tabular: true))
+          ? Container(
+              key: const ValueKey('group-unread'),
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                  color: AppColors.accent, shape: BoxShape.circle),
+            )
           : null,
     );
   }

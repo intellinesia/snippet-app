@@ -853,6 +853,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
         builder: (_, __) {
           final typing = _input.text.isNotEmpty;
           return DeskComposerCard(
+            attentionExclude: widget.sessionId,
             highlight: _draggingFiles,
             focus: _inputFocus,
             banner: goal || rcpt != null

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../mochi.dart';
+import '../platform.dart';
 import '../theme.dart';
 
 /// Desktop chat header: orb, title, status pill and a quiet agent line, with
@@ -143,6 +144,28 @@ class SessionStatusPillState extends State<SessionStatusPill> {
       'failed' || 'error' => ('Failed', AppColors.danger, AppColors.dangerBg),
       _ => ('Finished', AppColors.fg3, AppColors.surface2),
     };
+    if (!kMobile) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (_running) ...[
+            Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(color: fg, shape: BoxShape.circle)),
+            const SizedBox(width: 6),
+          ],
+          Text(label,
+              style: sans(12,
+                  color: widget.status == 'failed' || widget.status == 'error'
+                      ? fg
+                      : AppColors.fg3,
+                  tabular: true),
+              maxLines: 1,
+              softWrap: false),
+        ]),
+      );
+    }
     return Container(
       height: 20,
       padding: const EdgeInsets.symmetric(horizontal: 7),

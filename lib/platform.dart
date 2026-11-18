@@ -44,9 +44,9 @@ bool get kWindows => !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 /// Height reserved for the macOS traffic lights when the sidebar has to clear
 /// the native window chrome (narrow layout, drawer).
 ///
-/// This is AppKit's own titlebar height: the lights are positioned natively and
-/// are NOT moved by the app.
-const double kMacTitlebar = 28.0;
+/// The runner centres the lights 26 pt from the top (MainFlutterWindow.swift,
+/// `paintedTitleBarHeight` 52), so they end near 32.
+const double kMacTitlebar = 34.0;
 
 /// The desktop layout (sidebar + panes) kicks in at/above this logical width.
 const double kDesktopBreakpoint = 900;

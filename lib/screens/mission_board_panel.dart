@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../platform.dart';
 
 import '../api.dart';
 import '../goal_models.dart';
@@ -163,7 +164,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
     final review = t.status == 'in_review';
     final (label, fg, bg) = _pill(t);
     final note = _note(t).line;
-    final radius = BorderRadius.circular(R.of(20));
+    final radius = BorderRadius.circular(R.of(kMobile ? 20 : 8));
     return Padding(
       key: ValueKey('board-card-${t.id}'),
       padding: EdgeInsets.fromLTRB(S.s16, 0, S.s16, S.s8),
@@ -171,19 +172,23 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         color: AppColors.surface2,
         shape: RoundedRectangleBorder(
           borderRadius: radius,
-          side: BorderSide(color: review ? AppColors.border2 : AppColors.border),
+          side: kMobile
+              ? BorderSide(color: review ? AppColors.border2 : AppColors.border)
+              : BorderSide.none,
         ),
         child: InkWell(
           borderRadius: radius,
           onTap: open,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(S.of(15), S.of(13), S.of(15), S.of(13)),
+            padding:
+                EdgeInsets.fromLTRB(S.of(15), S.of(13), S.of(15), S.of(13)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(children: [
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
                     decoration: BoxDecoration(
                       color: AppColors.surface3,
                       borderRadius: BorderRadius.circular(R.of(6)),
@@ -192,7 +197,8 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                   ),
                   SizedBox(width: S.s8),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s2),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: S.s8, vertical: S.s2),
                     decoration: BoxDecoration(
                       color: bg,
                       borderRadius: BorderRadius.circular(R.of(8)),
@@ -209,7 +215,9 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: sans(15,
-                        weight: W.label, height: 20 / 15, color: AppColors.fg1)),
+                        weight: W.label,
+                        height: 20 / 15,
+                        color: AppColors.fg1)),
                 SizedBox(height: S.s6),
                 Row(children: [
                   Expanded(
@@ -274,9 +282,9 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         child: Container(
           padding: EdgeInsets.all(S.s4),
           decoration: BoxDecoration(
-            color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(R.of(16)),
-            border: Border.all(color: AppColors.border),
+            color: kMobile ? AppColors.surface1 : AppColors.surface2,
+            borderRadius: BorderRadius.circular(R.of(kMobile ? 16 : 8)),
+            border: kMobile ? Border.all(color: AppColors.border) : null,
           ),
           child: Row(children: [
             for (final f in _BoardFilter.values)
@@ -290,13 +298,17 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                     height: 32,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: _filter == f ? AppColors.surface3 : Colors.transparent,
-                      borderRadius: BorderRadius.circular(R.of(12)),
+                      color: _filter == f
+                          ? AppColors.surface3
+                          : Colors.transparent,
+                      borderRadius:
+                          BorderRadius.circular(R.of(kMobile ? 12 : 6)),
                     ),
                     child: Text(f.label,
                         style: sans(13,
                             weight: _filter == f ? W.label : W.body,
-                            color: _filter == f ? AppColors.fg1 : AppColors.fg3)),
+                            color:
+                                _filter == f ? AppColors.fg1 : AppColors.fg3)),
                   ),
                 ),
               ),
@@ -311,9 +323,8 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
           t.status == 'blocked')
       .length;
 
-  RightTab? get _readout => widget.readouts
-      .where((r) => r.key == widget.activeReadout)
-      .firstOrNull;
+  RightTab? get _readout =>
+      widget.readouts.where((r) => r.key == widget.activeReadout).firstOrNull;
 
   Widget _seg(String text, bool on, VoidCallback onTap,
       {VoidCallback? onClose}) {
@@ -326,11 +337,11 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
           borderRadius: BorderRadius.circular(R.md),
           onTap: onTap,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(S.of(10), S.s6, onClose != null ? S.s6 : S.of(10), S.s6),
+            padding: EdgeInsets.fromLTRB(
+                S.of(10), S.s6, onClose != null ? S.s6 : S.of(10), S.s6),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(text,
-                  style: sans(13,
-                      color: on ? AppColors.fg1 : AppColors.fg3)),
+                  style: sans(13, color: on ? AppColors.fg1 : AppColors.fg3)),
               if (onClose != null) ...[
                 SizedBox(width: S.of(5)),
                 GestureDetector(
@@ -356,7 +367,8 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         padding: EdgeInsets.symmetric(horizontal: S.of(18)),
         alignment: Alignment.centerLeft,
         child: Row(children: [
-          Text('Task board', style: sans(13, weight: W.label, color: AppColors.fg2)),
+          Text('Task board',
+              style: sans(13, weight: W.label, color: AppColors.fg2)),
           const Spacer(),
           if (_activeCount > 0)
             Text('$_activeCount active',
@@ -433,21 +445,22 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
               padding: EdgeInsets.only(bottom: S.s24),
               children: [
                 _headerBar(),
-                if (doing.isEmpty && _jobs.isEmpty && done.isEmpty && _goals.isEmpty)
+                if (doing.isEmpty &&
+                    _jobs.isEmpty &&
+                    done.isEmpty &&
+                    _goals.isEmpty)
                   Padding(
                     padding: EdgeInsets.fromLTRB(S.s24, 120, S.s24, 0),
                     child: Column(children: [
                       const AgentMochi('mission-control', size: 72),
                       SizedBox(height: S.of(18)),
-                      Text('All quiet',
-                          style: sans(15, color: AppColors.fg1)),
+                      Text('All quiet', style: sans(15, color: AppColors.fg1)),
                       SizedBox(height: S.s6),
                       Text(
                           'Work your agents pick up, scheduled runs and '
                           'what finished today land here.',
                           textAlign: TextAlign.center,
-                          style: sans(13,
-                              height: 1.5, color: AppColors.fg4)),
+                          style: sans(13, height: 1.5, color: AppColors.fg4)),
                     ]),
                   ),
                 if (showFlight && _goals.isNotEmpty) ...[
@@ -478,7 +491,9 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                   Padding(
                     padding: EdgeInsets.fromLTRB(S.s16, S.s24, S.s16, 0),
                     child: Text(
-                        showReview ? 'Nothing waiting for review.' : 'Nothing finished yet.',
+                        showReview
+                            ? 'Nothing waiting for review.'
+                            : 'Nothing finished yet.',
                         textAlign: TextAlign.center,
                         style: sans(13, color: AppColors.fg4)),
                   ),
@@ -504,7 +519,8 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                 ],
                 if (showDone && done.isNotEmpty) ...[
                   _label(_filter == _BoardFilter.done ? 'Done' : 'Done today'),
-                  for (final t in done.take(_filter == _BoardFilter.done ? 30 : 8))
+                  for (final t
+                      in done.take(_filter == _BoardFilter.done ? 30 : 8))
                     _taskCard(t),
                 ],
               ],

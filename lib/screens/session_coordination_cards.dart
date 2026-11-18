@@ -1347,8 +1347,7 @@ class _AmbientTurnCardState extends State<AmbientTurnCard> {
                 padding: kMobile
                     ? EdgeInsets.fromLTRB(
                         S.of(15), S.of(10), S.of(15), S.of(11))
-                    : EdgeInsets.fromLTRB(
-                        S.of(14), S.of(9), S.of(14), S.of(10)),
+                    : const EdgeInsets.fromLTRB(11, 7, 11, 7),
                 decoration: BoxDecoration(
                   color: AppColors.surface2,
                   borderRadius: kMobile
@@ -1358,15 +1357,15 @@ class _AmbientTurnCardState extends State<AmbientTurnCard> {
                           bottomLeft: Radius.circular(R.of(20)),
                           bottomRight: Radius.circular(R.sm),
                         )
-                      : BorderRadius.circular(R.of(20)),
+                      : BorderRadius.circular(R.of(8)),
                 ),
                 child: SelectionArea(
                   child: Text(
                     turn.text,
                     textWidthBasis: TextWidthBasis.longestLine,
                     style: sans(
-                      kMobile ? 16 : 14,
-                      height: kMobile ? 24 / 16 : 22 / 14,
+                      kMobile ? 16 : 13.5,
+                      height: kMobile ? 24 / 16 : 21 / 13.5,
                       color: AppColors.fg1,
                     ),
                   ),

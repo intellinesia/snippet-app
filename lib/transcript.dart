@@ -250,8 +250,17 @@ class WorkSteps extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = _groupLookups(rows);
-    return Padding(
-      padding: EdgeInsets.only(top: header ? 2 : 0),
+    // Desktop: steps sit in under the fold line, on a faint rail.
+    final rail = !kMobile && header;
+    return Container(
+      margin: rail ? const EdgeInsets.only(left: 7) : null,
+      padding: EdgeInsets.only(top: header ? 2 : 0, left: rail ? 20 : 0),
+      decoration: rail
+          ? BoxDecoration(
+              border: Border(
+                  left:
+                      BorderSide(color: AppColors.fg1.withValues(alpha: 0.07))))
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -327,8 +336,14 @@ class _ExploreGroupState extends State<_ExploreGroup> {
           title: TextSpan(children: [
             TextSpan(
                 text: live ? 'Exploring' : 'Explored',
-                style: TextStyle(color: AppColors.fg1)),
-            TextSpan(text: ' $object', style: TextStyle(color: AppColors.fg3)),
+                style:
+                    TextStyle(color: kMobile ? AppColors.fg1 : AppColors.fg3)),
+            TextSpan(
+                text: ' $object',
+                style: kMobile
+                    ? TextStyle(color: AppColors.fg3)
+                    : TextStyle(
+                        color: AppColors.fg2, fontWeight: FontWeight.w500)),
           ]),
         ),
         SpringExpand(
@@ -442,7 +457,9 @@ enum _Object { text, path, code }
 
 /// Trailing facts of a step: lines, hits, +/− counts, a result, the time.
 List<Widget> _rowMeta(ToolStep step) {
-  final base = sans(kMobile ? 13 : 12, color: AppColors.fg4, tabular: true);
+  final base = kMobile
+      ? sans(13, color: AppColors.fg4, tabular: true)
+      : mono(11.5, color: AppColors.fg4);
   final chip = stepChip(step);
   final out = <Widget>[];
   if (chip != null && (chip.added > 0 || chip.removed > 0)) {
@@ -527,13 +544,21 @@ class _DenseToolRowState extends State<DenseToolRow> {
     final danger = stepChip(step)?.tone == StepChipTone.danger;
     final (verb, object, kind) = _rowParts(step);
     final live = step.running;
-    final objectStyle = switch (kind) {
-      _Object.path => sans(kMobile ? 15 : 13, color: AppColors.accent),
-      _Object.code =>
-        mono(kMobile ? 13 : 12.5, color: live ? AppColors.fg1 : AppColors.fg3),
-      _Object.text =>
-        sans(kMobile ? 15 : 13, color: live ? AppColors.fg1 : AppColors.fg3),
-    };
+    final objectStyle = !kMobile
+        ? switch (kind) {
+            _Object.code =>
+              mono(11.5, color: live ? AppColors.fg1 : AppColors.fg2),
+            _ => sans(13,
+                weight: FontWeight.w500,
+                color: live ? AppColors.fg1 : AppColors.fg2),
+          }
+        : switch (kind) {
+            _Object.path => sans(kMobile ? 15 : 13, color: AppColors.accent),
+            _Object.code => mono(kMobile ? 13 : 12.5,
+                color: live ? AppColors.fg1 : AppColors.fg3),
+            _Object.text => sans(kMobile ? 15 : 13,
+                color: live ? AppColors.fg1 : AppColors.fg3),
+          };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -544,7 +569,11 @@ class _DenseToolRowState extends State<DenseToolRow> {
             TextSpan(
                 text: verb,
                 style: TextStyle(
-                    color: danger ? AppColors.danger : AppColors.fg1)),
+                    color: danger
+                        ? AppColors.danger
+                        : kMobile || live
+                            ? AppColors.fg1
+                            : AppColors.fg3)),
             if (object.isNotEmpty)
               TextSpan(text: ' $object', style: objectStyle),
           ]),

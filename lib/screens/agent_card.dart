@@ -120,6 +120,28 @@ String agentRowTime(DateTime? at, {DateTime? now}) {
   return '${at.day} ${months[at.month - 1]}';
 }
 
+/// Desktop row time: how long ago, as 'now', '5m', '2h', '3d', '2w', '4mo', '1y'.
+String agentRowAgo(DateTime? at, {DateTime? now}) {
+  if (at == null) return '';
+  final d = (now ?? DateTime.now()).difference(at);
+  if (d.inMinutes < 1) return 'now';
+  if (d.inHours < 1) return '${d.inMinutes}m';
+  if (d.inDays < 1) return '${d.inHours}h';
+  if (d.inDays < 7) return '${d.inDays}d';
+  if (d.inDays < 30) return '${d.inDays ~/ 7}w';
+  if (d.inDays < 365) return '${d.inDays ~/ 30}mo';
+  return '${d.inDays ~/ 365}y';
+}
+
+/// The clock to sit beside [agentRowTime] when that shows only a day or date.
+String agentRowClock(DateTime? at, {DateTime? now}) {
+  if (at == null) return '';
+  at = at.toLocal();
+  final n = (now ?? DateTime.now()).toLocal();
+  final today = at.year == n.year && at.month == n.month && at.day == n.day;
+  return today ? '' : clock12(at);
+}
+
 /// One agent on the phone's Agents page, in the Mission Control card's shape:
 /// who it is, whether it is working, and its task counts.
 class AgentCard extends StatefulWidget {
@@ -352,7 +374,11 @@ class _AgentCardState extends State<AgentCard> {
     final titles = widget.groupTitles ?? const {};
     if (crew != null && crew.state != CrewState.standingBy) {
       final text = cleanAgentStatusText(crew.line, groupTitles: titles);
-      if (crew.state == CrewState.working) return text;
+      // Desktop keeps the last message; the working dot says it is busy.
+      if (crew.state == CrewState.working) {
+        if (kMobile) return text;
+        return agentStatusLine(agent, presence: presence, groupTitles: titles);
+      }
       final kind = crew.attention?['type'];
       return kind == 'approval'
           ? 'Approval: $text'
@@ -506,145 +532,237 @@ class _AgentCardState extends State<AgentCard> {
     final needs = group == AgentGroup.needsYou;
     final crew = widget.crew;
     final lead = crew?.lead;
-    final time =
+    final at =
         crew != null && crew.state != CrewState.standingBy && lead != null
-            ? agentRowTime(
-                DateTime.fromMillisecondsSinceEpoch(lead.lastActive * 1000))
-            : agentRowTime(last?.at);
+            ? DateTime.fromMillisecondsSinceEpoch(lead.lastActive * 1000)
+            : last?.at;
+    final time = kMobile ? agentRowTime(at) : agentRowAgo(at);
     final detail = agent.presence?.detail.trim() ?? '';
     var line2 = _phoneLine(agent, crew, presence);
-    if (ring && crew == null && detail.isNotEmpty) line2 = detail;
-    final line2Color = needs
-        ? AppColors.run
-        : ring
-            ? AppColors.accent
-            : AppColors.fg3;
-    final dot = !agent.available ? AppColors.fg4 : null;
-    return GestureDetector(
+    if (kMobile && ring && crew == null && detail.isNotEmpty) line2 = detail;
+    return AgentRowShell(
+      selected: widget.selected,
+      dim: !agent.available,
+      onTap: widget.onOpen,
+      onLongPress: () {
+        holdHaptic();
+        _actions(null);
+      },
       onSecondaryTapUp: (d) => _actions(d.globalPosition),
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 2),
-        child: Material(
-          color: widget.selected ? AppColors.surface2 : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          child: InkWell(
-            onTap: widget.onOpen,
-            onLongPress: () {
-              holdHaptic();
-              _actions(null);
-            },
-            borderRadius: BorderRadius.circular(12),
-            hoverColor: AppColors.surface2.withValues(alpha: 0.5),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 52),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-                child: Opacity(
-                  opacity: agent.available ? 1 : 0.55,
-                  child: Row(children: [
-                    SizedBox.square(
-                      dimension: 30,
-                      child: Stack(clipBehavior: Clip.none, children: [
-                        Center(child: AgentMochi(agent.id, size: 30)),
-                        if (ring)
-                          const Positioned(
-                              left: -3,
-                              top: -3,
-                              right: -3,
-                              bottom: -3,
-                              child:
-                                  WorkingRing(key: ValueKey('agent-working'))),
-                        if (dot != null)
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: dot,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: AppColors.windowBg, width: 2),
-                              ),
-                            ),
-                          ),
-                      ]),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(children: [
-                            Flexible(
-                              flex: 0,
-                              child: Text(name,
-                                  maxLines: 1,
-                                  softWrap: false,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: DeskRow.nameStyle(agent.available
-                                      ? AppColors.fg1
-                                      : AppColors.fg3)),
-                            ),
-                            if (_isPinned) ...[
-                              const SizedBox(width: 6),
-                              AppIcon('pin', size: 11, color: AppColors.fg3),
-                            ],
-                            const Spacer(),
-                            if (time.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 6),
-                                child: Text(time,
-                                    maxLines: 1,
-                                    style: sans(11,
-                                        color: AppColors.fg4, tabular: true)),
-                              ),
-                          ]),
-                          const SizedBox(height: 2),
-                          Row(children: [
-                            Expanded(
-                              child: Text.rich(
-                                  markdownPreviewSpan(
-                                      line2,
-                                      sans(12,
-                                          height: 16 / 12, color: line2Color)),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
-                            ),
-                            if (needs && agent.needsYou > 0) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                key: const ValueKey('agent-needs-count'),
-                                constraints: const BoxConstraints(minWidth: 16),
-                                height: 16,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 4),
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                    color:
-                                        AppColors.run.withValues(alpha: 0.18),
-                                    borderRadius: BorderRadius.circular(8)),
-                                child: Text('${agent.needsYou}',
-                                    style: sans(10.5,
-                                        weight: FontWeight.w600,
-                                        color: AppColors.run,
-                                        tabular: true)),
-                              ),
-                            ] else if (blocked > 0 || !agent.available) ...[
-                              const SizedBox(width: 6),
-                              Text(summaryText,
-                                  style: sans(metaSize,
-                                      color: summaryColor, tabular: true)),
-                            ],
-                          ]),
-                        ],
+      avatar: AgentMochi(agent.id, size: 28),
+      dot: !agent.available
+          ? null
+          : needs
+              ? AppColors.accent
+              : ring
+                  ? AppColors.run
+                  : null,
+      dotKey: ring && !needs ? const ValueKey('agent-working') : null,
+      name: name,
+      pinned: _isPinned,
+      time: time,
+      timeDetail: kMobile ? agentRowClock(at) : '',
+      preview: line2,
+      needs: needs || (last?.unread ?? false),
+      trailing: needs && agent.needsYou > 0
+          ? Container(
+              key: const ValueKey('agent-needs-count'),
+              constraints: const BoxConstraints(minWidth: 16),
+              height: 16,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                  color: AppColors.accentBg,
+                  borderRadius: BorderRadius.circular(R.of(3))),
+              child: Text('${agent.needsYou}',
+                  style: sans(10.5,
+                      weight: FontWeight.w600,
+                      color: AppColors.accent,
+                      tabular: true)),
+            )
+          : blocked > 0 || !agent.available
+              ? Text(summaryText,
+                  style: sans(metaSize, color: summaryColor, tabular: true))
+              : (last?.unread ?? false)
+                  ? Container(
+                      key: const ValueKey('agent-unread'),
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                          color: AppColors.accent, shape: BoxShape.circle))
+                  : null,
+    );
+  }
+}
+
+/// Desktop sidebar row for an agent or Mission Control: 28 px rounded-square
+/// avatar with a status dot, name and time, one preview line.
+class AgentRowShell extends StatefulWidget {
+  const AgentRowShell({
+    super.key,
+    required this.avatar,
+    required this.name,
+    required this.preview,
+    required this.onTap,
+    this.time = '',
+    this.timeDetail = '',
+    this.dot,
+    this.dotKey,
+    this.needs = false,
+    this.selected = false,
+    this.dim = false,
+    this.pinned = false,
+    this.trailing,
+    this.onLongPress,
+    this.onSecondaryTapUp,
+    this.wideAvatar = false,
+  });
+
+  final Widget avatar;
+
+  /// Draws the avatar unplated in a 36x22 box spilling past the 28 px slot,
+  /// so a group's side-by-side faces stay full size while names line up.
+  final bool wideAvatar;
+  final String name;
+  final String preview;
+  final String time;
+
+  /// Smaller clock after a day-only [time], e.g. "Sat" then "4:12 pm".
+  final String timeDetail;
+  final Color? dot;
+  final Key? dotKey;
+  final bool needs;
+  final bool selected;
+  final bool dim;
+  final bool pinned;
+  final Widget? trailing;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final GestureTapUpCallback? onSecondaryTapUp;
+
+  @override
+  State<AgentRowShell> createState() => _AgentRowShellState();
+}
+
+class _AgentRowShellState extends State<AgentRowShell> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final fill = widget.selected
+        ? AppColors.surface3
+        : _hover
+            ? AppColors.fg1.withValues(alpha: 0.07)
+            : Colors.transparent;
+    final ring = Color.alphaBlend(fill, AppColors.windowBg);
+    final still = reduceMotion(context);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
+        onSecondaryTapUp: widget.onSecondaryTapUp,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 1),
+          child: AnimatedContainer(
+            duration: still ? Duration.zero : const Duration(milliseconds: 150),
+            curve: const Cubic(0.23, 1, 0.32, 1),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+                color: fill, borderRadius: BorderRadius.circular(R.of(8))),
+            child: Opacity(
+              opacity: widget.dim ? 0.55 : 1,
+              // One line: avatar, name and last-message time; the avatar dot
+              // and the trailing mark carry the state.
+              child: Row(children: [
+                // 28 px slot, the session avatar's width, so agent names and
+                // session titles start at one x.
+                SizedBox(
+                  width: 28,
+                  height: 22,
+                  child: Stack(clipBehavior: Clip.none, children: [
+                    if (widget.wideAvatar)
+                      Positioned(
+                        left: -4,
+                        top: 0,
+                        width: 36,
+                        height: 22,
+                        child: widget.avatar,
+                      )
+                    else
+                      Positioned(
+                        left: 3,
+                        top: 0,
+                        width: 22,
+                        height: 22,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(R.of(6)),
+                          child: ColoredBox(
+                              color: AppColors.surface2,
+                              child: FittedBox(child: widget.avatar)),
+                        ),
                       ),
-                    ),
+                    if (widget.dot != null)
+                      Positioned(
+                        right: 1,
+                        bottom: -2,
+                        child: Container(
+                          key: widget.dotKey,
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            color: widget.dot,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: ring, width: 2),
+                          ),
+                        ),
+                      ),
                   ]),
                 ),
-              ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Row(children: [
+                    Flexible(
+                      child: Text(widget.name,
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(13,
+                              weight: FontWeight.w500,
+                              color: widget.needs
+                                  ? AppColors.fg1
+                                  : AppColors.fg2)),
+                    ),
+                    if (widget.pinned) ...[
+                      const SizedBox(width: 6),
+                      AppIcon('pin', size: 11, color: AppColors.fg4),
+                    ],
+                  ]),
+                ),
+                if (widget.trailing != null) ...[
+                  const SizedBox(width: 6),
+                  widget.trailing!,
+                ],
+                // Last at the edge so the times form one column.
+                if (widget.time.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: widget.time),
+                        if (widget.timeDetail.isNotEmpty)
+                          TextSpan(
+                              text: ' ${widget.timeDetail}',
+                              style: sans(10,
+                                  color: AppColors.fg4.withValues(alpha: 0.7),
+                                  tabular: true)),
+                      ]),
+                      maxLines: 1,
+                      style: sans(11, color: AppColors.fg4, tabular: true)),
+                ],
+              ]),
             ),
           ),
         ),

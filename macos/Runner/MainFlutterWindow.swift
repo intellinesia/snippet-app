@@ -327,9 +327,9 @@ enum MochiRenderer {
 }
 
 class MainFlutterWindow: NSWindow, NSWindowDelegate {
-  /// Height of the title bar the app paints itself. Must match
-  /// `kTitleBarHeight` in lib/platform.dart.
-  private let paintedTitleBarHeight: CGFloat = 40
+  /// Height of the title bar the app paints itself; the lights centre in it,
+  /// level with the Flutter sidebar row (52) and pane bar (8 + 36).
+  private let paintedTitleBarHeight: CGFloat = 52
 
   private var statusItem: NSStatusItem?
   private var ambientMenuItem: NSMenuItem?

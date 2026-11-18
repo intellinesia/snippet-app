@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'platform.dart';
 import 'settings_form.dart';
+import 'motion.dart';
 import 'theme.dart';
+import 'transcript.dart';
 import 'widgets.dart';
 
 /// The run's plan in the transcript: where it is, a segment per step and
@@ -165,95 +167,111 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
 }
 
 extension on _PlanProgressCardState {
-  /// Desktop: one bordered card, the heading and live step on top, steps below.
+  /// Desktop: a borderless surface card, header, segment bar, one row per step.
   Widget _desktop(List<_St> st, int cur, int next, int done, int total,
       bool finished, VoidCallback toggle) {
     final steps = widget.steps;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: toggle,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        decoration: BoxDecoration(
-          color: Grouped.row,
-          border: Border.all(color: AppColors.fg1.withValues(alpha: 0.06)),
-          borderRadius: BorderRadius.circular(R.of(20)),
-        ),
+    final live = finished ? -1 : cur;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(R.of(8)),
+      child: ColoredBox(
+        color: AppColors.surface2,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(children: [
-              AppIcon('list', size: 14, color: AppColors.fg4),
-              const SizedBox(width: 8),
-              Text(
-                  finished
-                      ? 'Plan done · $total of $total'
-                      : 'Plan ${cur + 1} of $total',
-                  style: sans(13, weight: W.label, color: AppColors.fg1)),
-              const Spacer(),
-              AppIcon(_open ? 'chevron-up' : 'chevron-down',
-                  size: 14, color: AppColors.fg4),
-            ]),
-            const SizedBox(height: 10),
-            _Segments(st, height: 3),
-            if (!finished && cur >= 0) ...[
-              const SizedBox(height: 10),
-              Text(_text(steps[cur]),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(13.5, height: 1.4, color: AppColors.fg1)),
-            ],
-            if (next >= 0 && !_open) ...[
-              const SizedBox(height: 2),
-              Text('Next: ${_text(steps[next])}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: sans(12, color: AppColors.fg4)),
-            ],
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: toggle,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                child: Row(children: [
+                  AppIcon('list', size: 14, color: AppColors.fg3),
+                  const SizedBox(width: 8),
+                  Text('Plan',
+                      style: sans(13, weight: W.label, color: AppColors.fg1)),
+                  const SizedBox(width: 8),
+                  Text('$done of $total',
+                      style: sans(12, color: AppColors.fg3)),
+                  const Spacer(),
+                  AppIcon(_open ? 'chevron-up' : 'chevron-down',
+                      size: 14, color: AppColors.fg4),
+                ]),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+              child: _Segments(st, height: 3, desktop: true),
+            ),
             if (_open) ...[
-              if (widget.explanation.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(widget.explanation,
-                    style: sans(12, height: 1.4, color: AppColors.fg3)),
-              ],
-              const SizedBox(height: 6),
-              for (var i = 0; i < total; i++)
+              if (widget.explanation.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 5),
-                  child: Row(children: [
-                    PlanStepDot(
-                        state: st[i] == _St.done
-                            ? 2
-                            : i == cur
-                                ? 1
-                                : 0,
-                        size: 16),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(_text(steps[i]),
-                          style: sans(13,
-                              height: 1.35,
-                              color: st[i] == _St.done
-                                  ? AppColors.fg4
-                                  : i == cur
-                                      ? AppColors.fg1
-                                      : AppColors.fg3)),
-                    ),
-                  ]),
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+                  child: Text(widget.explanation,
+                      style: sans(12, height: 1.4, color: AppColors.fg3)),
                 ),
-            ],
+              const SizedBox(height: 2),
+              for (var i = 0; i < total; i++)
+                _deskRow(_text(steps[i]), st[i], i == live),
+              const SizedBox(height: 6),
+            ] else if (live >= 0) ...[
+              _deskRow(_text(steps[live]), st[live], true),
+              const SizedBox(height: 6),
+            ] else
+              const SizedBox(height: 2),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _deskRow(String text, _St state, bool current) {
+    final isDone = state == _St.done;
+    final style = sans(13,
+            height: 1.35,
+            color: isDone
+                ? AppColors.fg3
+                : current
+                    ? AppColors.fg1
+                    : AppColors.fg2)
+        .copyWith(
+            decoration: isDone ? TextDecoration.lineThrough : null,
+            decorationColor: AppColors.fg4);
+    final label = Text(text, style: style);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      child: Row(children: [
+        SizedBox.square(
+          dimension: 16,
+          child: Center(
+            child: isDone
+                ? AppIcon('check', size: 14, color: AppColors.ok)
+                : current
+                    ? const RunSpinner(size: 12)
+                    : Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.fg4, width: 1.5),
+                        ),
+                      ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: current ? Shimmer(color: AppColors.fg1, child: label) : label,
+        ),
+      ]),
     );
   }
 }
 
 /// One short bar per step: done muted, live accent, the rest a track.
 class _Segments extends StatelessWidget {
-  const _Segments(this.st, {this.height = 4});
+  const _Segments(this.st, {this.height = 4, this.desktop = false});
   final List<_St> st;
   final double height;
+  final bool desktop;
 
   @override
   Widget build(BuildContext context) {
@@ -267,11 +285,17 @@ class _Segments extends StatelessWidget {
             height: height,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(2),
-              color: st[i] == _St.done
-                  ? AppColors.fg3
-                  : i == live
-                      ? AppColors.accent
-                      : Grouped.pillBorder,
+              color: desktop
+                  ? (st[i] == _St.done
+                      ? AppColors.ok
+                      : i == live
+                          ? AppColors.run
+                          : AppColors.fg1.withValues(alpha: 0.11))
+                  : st[i] == _St.done
+                      ? AppColors.fg3
+                      : i == live
+                          ? AppColors.accent
+                          : Grouped.pillBorder,
             ),
           ),
         ),

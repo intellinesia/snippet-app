@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 
 import '../chat/chat_info.dart' show showAgentInfo;
 import '../chat/choices.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart' show LucideIcons;
 import '../glass.dart';
 import '../ambient_loop.dart';
 import '../api.dart';
@@ -35,6 +36,7 @@ import '../chat/decided_card.dart';
 import 'agent_questions_card.dart';
 import 'agent_records.dart';
 import 'agent_thread_cards.dart';
+import 'agent_transcript_head.dart';
 import 'agent_view_switcher.dart';
 import '../chat_scene.dart' show SceneBackdrop;
 
@@ -369,7 +371,14 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   String? _fetchedLine;
+  CoordinationAgent? _agent;
   final GlobalKey _headerKey = GlobalKey();
+
+  /// Desktop thread view: the agent header scrolls with the transcript
+  /// instead of the floating stage bar.
+  // Desktop tabs too: the head scrolls with the thread, so it is not a stage.
+  bool get _deskHead => !kMobile && _view == AgentView.thread;
+  double get _chromeTop => _noChrome || _deskHead ? 0 : StageBar.height;
 
   void _loadLine() {
     widget.client.coordinationAgents().then((all) {
@@ -381,6 +390,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       ].join(' \u00b7 ');
       setState(() {
         _fetchedLine = line;
+        _agent = a;
       });
     }).catchError((_) {});
   }
@@ -636,6 +646,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     super.initState();
     _loadLine();
     _loadUnread();
+    if (!kMobile) _loadProviders();
     _thread = Swr<DirectThreadPage>(
       client: widget.client,
       key: 'agent-thread:${widget.agentId}',
@@ -969,12 +980,12 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                         Positioned.fill(
                             child: kMobile
                                 ? _viewBody()
-                                : hideChrome
+                                : hideChrome || _deskHead
                                     ? _viewBody()
                                     : TopFadeMask(
                                         clear: StageBar.height - 24,
                                         child: _viewBody())),
-                        if (!hideChrome)
+                        if (!hideChrome && !_deskHead)
                           Positioned(
                             left: 0,
                             right: 0,
@@ -1139,18 +1150,24 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   Widget _body() {
-    final topPad = _noChrome ? 12.0 : StageBar.height;
+    final topPad = _noChrome ? 12.0 : (_deskHead ? 8.0 : StageBar.height);
     if (_loading) {
-      return Padding(
-        padding: EdgeInsets.only(top: _noChrome ? 0 : StageBar.height),
-        child: const Center(
-          child: Spinner(size: 24),
+      return Column(children: [
+        if (_deskHead)
+          _wideCap(Padding(
+              padding: EdgeInsets.fromLTRB(S.s16, 8, S.s16, 0),
+              child: _agentHead())),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(top: _chromeTop),
+            child: const Center(child: Spinner(size: 24)),
+          ),
         ),
-      );
+      ]);
     }
     if (_error != null) {
       return Padding(
-        padding: EdgeInsets.only(top: _noChrome ? 0 : StageBar.height),
+        padding: EdgeInsets.only(top: _chromeTop),
         child: Center(
           child: Padding(
             padding: EdgeInsets.all(S.s24),
@@ -1179,8 +1196,12 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         onRefresh: () => _load(silent: true),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(top: _noChrome ? 0 : StageBar.height),
+          padding: EdgeInsets.only(top: _chromeTop),
           children: [
+            if (_deskHead)
+              _wideCap(Padding(
+                  padding: EdgeInsets.fromLTRB(S.s16, 8, S.s16, 0),
+                  child: _agentHead())),
             SizedBox(
               height: MediaQuery.sizeOf(context).height * 0.45,
               child: Center(
@@ -1215,10 +1236,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         scrollCacheExtent: ScrollCacheExtent.pixels(400),
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(S.s16, topPad, S.s16, S.s16),
-        itemCount: n + 1,
+        itemCount: n + (_deskHead ? 2 : 1),
         itemBuilder: (_, i) {
           if (i == 0) {
-            return _TypingSlot(
+            final slot = _TypingSlot(
               store: widget.client.presence,
               agentId: widget.agentId,
               enabled: _awaitingReply,
@@ -1227,7 +1248,13 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                 child: _wideCap(_typingRow()),
               ),
             );
+            if (!_deskHead) return slot;
+            return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [slot, _wideCap(_waitingLine())]);
           }
+          if (i == n + 1) return _wideCap(_agentHead());
           debugAgentMessageRowBuilds++;
           final at = n - i;
           final ev = visible[at];
@@ -1459,6 +1486,51 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             ],
           );
         }
+        if (!kMobile) {
+          // Desktop reads like a session: the agent as plain text, the user in
+          // an 8 px card with the time under it.
+          final body = _bubbleBody(e, mine: mine);
+          return Align(
+              alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment:
+                    mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                children: [
+                  if (quotedLine != null)
+                    Padding(
+                        padding: EdgeInsets.only(bottom: S.s2),
+                        child: quotedLine),
+                  _withTapback(
+                    KeyedSubtree(
+                      key: bubbleKey,
+                      child: mine
+                          ? ConstrainedBox(
+                              constraints: BoxConstraints(
+                                  maxWidth:
+                                      MediaQuery.sizeOf(context).width * 0.5),
+                              child: ChatBubble(
+                                  mine: true,
+                                  flat: true,
+                                  color: AppColors.surface2,
+                                  child: body),
+                            )
+                          : Padding(
+                              padding: EdgeInsets.symmetric(vertical: S.s2),
+                              child: body),
+                    ),
+                    chips,
+                    mine: mine,
+                  ),
+                  if (mine && tail && at != null)
+                    Padding(
+                      padding: EdgeInsets.only(top: S.s4),
+                      child: Text(_clockLabel(at),
+                          style: sans(11, color: AppColors.fg4)),
+                    ),
+                ],
+              ));
+        }
         return ChatBubbleRow(
           mine: mine,
           child: Column(
@@ -1540,11 +1612,101 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     );
   }
 
+  Widget _waitingLine() {
+    final p = widget.client.presence.presenceForAgentId(widget.agentId);
+    if (p == null || p.state != 'waiting') return const SizedBox.shrink();
+    final ask =
+        p.detail.isEmpty || p.detail == 'user' ? 'your reply' : p.detail;
+    return Padding(
+      key: const Key('agentWaitingLine'),
+      padding: EdgeInsets.symmetric(vertical: S.s12),
+      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(LucideIcons.hand300, size: 14, color: AppColors.accent),
+        SizedBox(width: S.s8),
+        Text('Waiting on', style: sans(12.5, color: AppColors.fg2)),
+        SizedBox(width: S.s4),
+        Flexible(
+          child: Text(ask,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: sans(12.5, color: AppColors.accent)),
+        ),
+      ]),
+    );
+  }
+
+  Map<String, String> _providers = const {};
+
+  Future<void> _loadProviders() async {
+    try {
+      final cfg = await widget.client.getConfig();
+      if (!mounted) return;
+      setState(() => _providers = {
+            for (final p in cfg.profiles) p.name: p.provider,
+          });
+    } catch (_) {}
+  }
+
+  /// Desktop: the agent's identity at the top of its transcript.
+  Widget _agentHead() {
+    final a = _agent;
+    final mc =
+        widget.agentId == 'mission-control' || (a?.isMissionControl ?? false);
+    final purpose = mc
+        ? 'Coordinates your agents and sessions'
+        : (a?.capabilities.isNotEmpty ?? false)
+            ? a!.capabilities.join(', ')
+            : (widget.subtitle ?? '').trim();
+    final model = a?.profile ?? '';
+    final open = a?.tasksIn({'in_progress', 'todo'}) ?? 0;
+    final done = a?.tasksIn({'done', 'completed'}) ?? 0;
+    final meta = [
+      if (open > 0) '$open open',
+      if (done > 0) '$done done',
+    ].join(' \u00b7 ');
+    Widget quiet(String icon, String tip, VoidCallback? onTap) =>
+        DeskIconButton(icon, tooltip: tip, onTap: onTap, iconSize: 15);
+    return AgentTranscriptHead(
+      key: const Key('agentHead'),
+      agentId: widget.agentId,
+      name: widget.agentName,
+      purpose: purpose,
+      model: model,
+      provider: _providers[model],
+      meta: meta,
+      actions: [
+        _HeadButton(label: 'View agent', onTap: widget.onDeskInfo ?? _openInfo),
+        // In a tab the window bar already switches Chat and Work.
+        if (!_noChrome)
+          Builder(
+            builder: (c) => Stack(clipBehavior: Clip.none, children: [
+              quiet('layers', 'Switch view', () => _openSwitcherMenu(c)),
+              if (_unread > 0)
+                Positioned(
+                    right: 4,
+                    top: 4,
+                    child: Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                            color: AppColors.accent, shape: BoxShape.circle))),
+            ]),
+          ),
+        if (widget.tabHeader && widget.deskTrailing != null) ...[
+          widget.deskTrailing!,
+        ],
+        if (!widget.embedded && widget.onClose != null) ...[
+          quiet('x', 'Close', widget.onClose),
+        ],
+      ],
+    );
+  }
+
   Widget _wideCap(Widget child) => kMobile
       ? child
       : Center(
           child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
+              constraints: const BoxConstraints(maxWidth: 960),
               child: SizedBox(width: double.infinity, child: child)));
 
   /// Desktop: the same two-row card as the desk, so Chat and Work match.
@@ -1555,6 +1717,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               (_input.text.trim().isNotEmpty || _attachments.isNotEmpty) &&
                   !_sending;
           return DeskComposerCard(
+            attentionExclude: 'inbox-${widget.agentId}',
             focus: _inputFocus,
             banner: _replyTo == null
                 ? null
@@ -1911,4 +2074,40 @@ class _TypingDotsState extends State<_TypingDots> {
       ),
     );
   }
+}
+
+/// The 28 px quiet "View agent" button in the desktop agent header.
+class _HeadButton extends StatefulWidget {
+  const _HeadButton({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  State<_HeadButton> createState() => _HeadButtonState();
+}
+
+class _HeadButtonState extends State<_HeadButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            curve: const Cubic(.23, 1, .32, 1),
+            height: 28,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.fg1.withValues(alpha: _hover ? 0.11 : 0.07),
+              borderRadius: BorderRadius.circular(R.of(6)),
+            ),
+            child: Text(widget.label, style: sans(12.5, color: AppColors.fg1)),
+          ),
+        ),
+      );
 }

@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../desk_attention.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
 /// Desktop composer surfaces: one calm card, pinned cards above it. The phone
 /// keeps the pill in composer_card.dart.
-const double _kCardRadius = 20;
+const double _kCardRadius = 8;
 
-BoxDecoration _cardDecoration({bool focus = false}) => BoxDecoration(
-      color: AppColors.surface1,
+/// Hairline at rest, one step up on mouse focus, an accent ring only for
+/// keyboard focus; the border is always 1px so nothing shifts.
+BoxDecoration _cardDecoration(
+        {bool focus = false, bool keyboard = false, bool hairline = true}) =>
+    BoxDecoration(
+      color: AppColors.surface2,
       borderRadius: BorderRadius.circular(R.of(_kCardRadius)),
-      border: Border.all(
-          color: focus
-              ? AppColors.fg4.withValues(alpha: 0.6)
-              : AppColors.lineStrong),
+      border: hairline
+          ? Border.all(
+              color: keyboard && focus
+                  ? AppColors.accent
+                  : AppColors.fg1.withValues(alpha: focus ? 0.11 : 0.07))
+          : null,
     );
 
 /// Small hover-aware square or pill button used across the desktop cards.
@@ -112,7 +119,7 @@ class DeskIconButton extends StatelessWidget {
       );
 }
 
-/// 30px square action: send (light fill, grey when off) or stop (soft fill).
+/// 28px square action: send (light fill, grey when off) or stop (soft fill).
 class DeskActionButton extends StatelessWidget {
   const DeskActionButton({
     super.key,
@@ -141,18 +148,18 @@ class DeskActionButton extends StatelessWidget {
       fill = AppColors.dangerBg;
       ink = AppColors.danger;
     } else if (soft) {
-      fill = AppColors.surface3;
+      fill = AppColors.fg1.withValues(alpha: 0.11);
       ink = AppColors.fg1;
     } else if (on) {
-      fill = AppColors.fg1;
-      ink = AppColors.bg;
+      fill = AppColors.accentFill;
+      ink = AppColors.accentFg;
     } else {
-      fill = AppColors.surface3;
+      fill = AppColors.fg1.withValues(alpha: 0.07);
       ink = AppColors.fg4;
     }
     return DeskButton(
-      size: 32,
-      radius: 16,
+      size: 28,
+      radius: R.of(6),
       fill: fill,
       hoverFill: on || soft || danger ? fill.withValues(alpha: 0.85) : fill,
       tooltip: tooltip,
@@ -220,6 +227,7 @@ class DeskComposerCard extends StatelessWidget {
     this.mic,
     this.focus,
     this.highlight = false,
+    this.attentionExclude,
   });
 
   final Widget field;
@@ -233,8 +241,11 @@ class DeskComposerCard extends StatelessWidget {
   final FocusNode? focus;
   final bool highlight;
 
+  /// The session on screen, left out of the attention bar.
+  final String? attentionExclude;
+
   static TextStyle get fieldStyle =>
-      sans(14, height: 22 / 14, color: AppColors.fg1);
+      sans(13.5, height: 22 / 13.5, color: AppColors.fg1);
 
   static InputDecoration decoration(String hint) => InputDecoration(
         isCollapsed: true,
@@ -248,8 +259,10 @@ class DeskComposerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget body(bool focused) => Container(
-          padding: const EdgeInsets.fromLTRB(14, 12, 10, 10),
+    Widget card(bool focused) => Container(
+          padding: const EdgeInsets.fromLTRB(12, 11, 6, 6),
+          // Typing flips Flutter into keyboard mode, so a focus ring here
+          // would show whenever you write; focus stays a faint hairline.
           decoration: _cardDecoration(focus: focused || highlight),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -262,7 +275,7 @@ class DeskComposerCard extends StatelessWidget {
                 ),
               if (attachments != null) attachments!,
               Padding(
-                padding: const EdgeInsets.fromLTRB(0, 0, 4, 10),
+                padding: const EdgeInsets.fromLTRB(0, 0, 6, 4),
                 child: field,
               ),
               Row(children: [
@@ -278,6 +291,22 @@ class DeskComposerCard extends StatelessWidget {
                 if (mic != null) ...[mic!, const SizedBox(width: 2)],
                 action,
               ]),
+            ],
+          ),
+        );
+    // The ground sits between the panel and the card.
+    Widget body(bool focused) => Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Color.lerp(AppColors.panelBg, AppColors.fg1, 0.04),
+            borderRadius: BorderRadius.circular(R.of(12)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DeskAttentionBar(exclude: attentionExclude),
+              card(focused),
             ],
           ),
         );
@@ -305,16 +334,17 @@ class DeskModelChip extends StatelessWidget {
   Widget build(BuildContext context) => DeskButton(
         onTap: onTap,
         tooltip: 'Model',
+        hoverFill: AppColors.fg1.withValues(alpha: 0.07),
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          AppIcon(icon, size: 14, color: AppColors.fg3),
+          AppIcon(icon, size: 14, color: AppColors.fg2),
           const SizedBox(width: 6),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 180),
             child: Text(label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(12, color: AppColors.fg3)),
+                style: sans(12.5, color: AppColors.fg2)),
           ),
           const SizedBox(width: 4),
           AppIcon('chevron-down', size: 12, color: AppColors.fg4),
@@ -605,7 +635,7 @@ class DeskPinCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         margin: const EdgeInsets.only(bottom: 8),
-        decoration: _cardDecoration(),
+        decoration: _cardDecoration(hairline: false),
         clipBehavior: Clip.antiAlias,
         child: Column(
           mainAxisSize: MainAxisSize.min,

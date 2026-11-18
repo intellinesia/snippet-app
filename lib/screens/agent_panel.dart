@@ -364,30 +364,40 @@ class AgentSidePanel extends StatelessWidget {
 
 double pr(double px) => R.of(px / 0.6);
 
-/// The floating card a docked panel lives in: surface1, hairline, 14px corners.
+/// The page a docked panel lives in. Docked it is flat on the inset panel;
+/// in a dialog it keeps the surface1 card.
 class PanelCard extends StatelessWidget {
-  const PanelCard({super.key, required this.child});
+  const PanelCard({super.key, required this.child, this.flat = false});
   final Widget child;
+  final bool flat;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.only(top: S.s12, right: S.s8, bottom: S.s12),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: Material(
-            color: AppColors.surface1,
-            clipBehavior: Clip.antiAlias,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(pr(14)),
-              side: BorderSide(color: AppColors.line),
-            ),
-            child: child,
-          ),
-        ),
+  Widget build(BuildContext context) {
+    if (flat) {
+      return Align(
+        alignment: Alignment.topCenter,
+        child: Material(type: MaterialType.transparency, child: child),
       );
+    }
+    return Padding(
+      padding: EdgeInsets.only(top: S.s12, right: S.s8, bottom: S.s12),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: Material(
+          color: AppColors.surface1,
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(pr(14)),
+            side: BorderSide(color: AppColors.line),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
 }
 
-/// The 44px bar: optional back, a title, then icon buttons on the right.
+/// The 40px bar: optional back, a title, then icon buttons on the right.
 class PanelBar extends StatelessWidget {
   const PanelBar({
     super.key,
@@ -401,7 +411,7 @@ class PanelBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: 44,
+        height: 40,
         child: Padding(
           padding: EdgeInsets.fromLTRB(S.s8, 0, S.s8, 0),
           child: Row(children: [
@@ -442,7 +452,7 @@ class PanelBarButton extends StatelessWidget {
       );
 }
 
-/// Rows on their own soft surfaces, 2px apart, large radius at the group ends.
+/// Rows as separate 8 px cards on surface2, 6 px apart.
 class PanelGroup extends StatelessWidget {
   const PanelGroup({super.key, required this.children, this.top = 0});
   final List<Widget> children;
@@ -450,8 +460,6 @@ class PanelGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final big = Radius.circular(pr(10));
-    final small = Radius.circular(pr(3));
     final n = children.length;
     return Padding(
       padding: EdgeInsets.fromLTRB(S.s8, top, S.s8, S.s8),
@@ -459,20 +467,8 @@ class PanelGroup extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var i = 0; i < n; i++) ...[
-            if (i > 0) const SizedBox(height: 2),
-            Material(
-              color: AppColors.surface2,
-              clipBehavior: Clip.antiAlias,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.only(
-                  topLeft: i == 0 ? big : small,
-                  topRight: i == 0 ? big : small,
-                  bottomLeft: i == n - 1 ? big : small,
-                  bottomRight: i == n - 1 ? big : small,
-                ),
-              ),
-              child: children[i],
-            ),
+            if (i > 0) const SizedBox(height: 6),
+            _HoverCard(child: children[i]),
           ],
         ],
       ),
@@ -480,7 +476,37 @@ class PanelGroup extends StatelessWidget {
   }
 }
 
-/// One row's content; the surface and corners come from [PanelGroup].
+/// A card that steps surface2 to surface3 on hover; the row inside paints
+/// nothing of its own.
+class _HoverCard extends StatefulWidget {
+  const _HoverCard({required this.child});
+  final Widget child;
+
+  @override
+  State<_HoverCard> createState() => _HoverCardState();
+}
+
+class _HoverCardState extends State<_HoverCard> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          curve: const Cubic(.23, 1, .32, 1),
+          decoration: BoxDecoration(
+            color: _hover ? AppColors.surface3 : AppColors.surface2,
+            borderRadius: BorderRadius.circular(R.of(8)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Material(type: MaterialType.transparency, child: widget.child),
+        ),
+      );
+}
+
+/// One row's content; the card comes from [PanelGroup].
 class PanelRow extends StatelessWidget {
   const PanelRow({
     super.key,
@@ -493,7 +519,7 @@ class PanelRow extends StatelessWidget {
     this.onTap,
     this.chevron = false,
     this.danger = false,
-    this.minHeight = 36,
+    this.minHeight = 44,
   });
   final String label;
   final String? sub;
@@ -508,17 +534,24 @@ class PanelRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = danger ? AppColors.danger : AppColors.fg3;
+    final tint = danger ? AppColors.danger : AppColors.fg2;
     final row = ConstrainedBox(
       constraints: BoxConstraints(minHeight: minHeight),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.of(7)),
+        padding: const EdgeInsets.all(8),
         child: Row(children: [
           if (leading != null) ...[leading!, SizedBox(width: S.of(10))],
           if (leading == null && icon != null) ...[
-            SizedBox(
-                width: 16,
-                child: Center(child: AppIcon(icon!, size: 15, color: tint))),
+            Container(
+              width: 28,
+              height: 28,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.fg1.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(R.of(6)),
+              ),
+              child: AppIcon(icon!, size: 15, color: tint),
+            ),
             SizedBox(width: S.of(10)),
           ],
           Expanded(
@@ -529,13 +562,14 @@ class PanelRow extends StatelessWidget {
                 Text(label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: sans(13.5,
+                    style: sans(13,
+                        weight: FontWeight.w500,
                         color: danger ? AppColors.danger : AppColors.fg1)),
                 if (sub != null && sub!.isNotEmpty)
                   Text(sub!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(12, color: AppColors.fg4)),
+                      style: sans(12, color: AppColors.fg3)),
               ],
             ),
           ),
@@ -546,7 +580,7 @@ class PanelRow extends StatelessWidget {
               child: Text(value!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(12.5, color: AppColors.fg3, tabular: true)),
+                  style: sans(12, color: AppColors.fg3, tabular: true)),
             ),
           ],
           if (trailing != null) ...[SizedBox(width: S.s8), trailing!],
@@ -560,7 +594,8 @@ class PanelRow extends StatelessWidget {
     if (onTap == null) return row;
     return InkWell(
       onTap: onTap,
-      hoverColor: AppColors.surface3.withValues(alpha: 0.5),
+      splashFactory: NoSplash.splashFactory,
+      hoverColor: Colors.transparent,
       child: row,
     );
   }
