@@ -25,6 +25,7 @@ class Diag {
   static Timer? _upload;
   static DateTime _last = DateTime.now();
   static bool _uploading = false;
+  static String _preTail = '';
 
   static bool get _on => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
@@ -40,6 +41,15 @@ class Diag {
         if (old.existsSync()) old.deleteSync();
         log.renameSync(old.path);
         File('${dir.path}/uploaded.txt').writeAsStringSync('0');
+      }
+      // What the previous run was doing last, kept in case it died.
+      if (log.existsSync() && log.lengthSync() > 0) {
+        final raf = log.openSync();
+        final len = raf.lengthSync();
+        final from = len > 12000 ? len - 12000 : 0;
+        raf.setPositionSync(from);
+        _preTail = utf8.decode(raf.readSync(len - from), allowMalformed: true);
+        raf.closeSync();
       }
       _file = log.openSync(mode: FileMode.append);
     } catch (_) {
@@ -131,11 +141,17 @@ class Diag {
       final since =
           seen.existsSync() ? int.tryParse(seen.readAsStringSync()) ?? 0 : 0;
       var newest = since;
+      var contextWritten = false;
       for (final e in list.whereType<Map>()) {
         final at = (e['timestamp'] as num?)?.toInt() ?? 0;
         if (at <= since) continue;
         if (at > newest) newest = at;
         _write('previous-exit', jsonEncode(e), ring: false);
+        final r = '${e['reason']}';
+        if (!contextWritten && (r.startsWith('CRASH') || r == 'ANR')) {
+          contextWritten = true;
+          _write('pre-crash-context', _preTail, ring: false);
+        }
       }
       seen.writeAsStringSync('$newest');
     } catch (_) {}
@@ -165,7 +181,7 @@ class Diag {
       final chunk = all.sublist(from);
       // Crumbs alone are noise: only send when something worth reading is in it.
       final text = utf8.decode(chunk, allowMalformed: true);
-      if (!RegExp(r'\[(ui-stall|slow-frame|slow-step|flutter-error|uncaught|previous-exit|java-crash)\]')
+      if (!RegExp(r'\[(ui-stall|slow-frame|slow-step|flutter-error|uncaught|previous-exit|java-crash|pre-crash-context)\]')
           .hasMatch(text)) {
         mark.writeAsStringSync('${all.length}');
         return;

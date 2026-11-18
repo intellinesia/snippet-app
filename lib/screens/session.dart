@@ -1012,6 +1012,7 @@ class _SessionScreenState extends State<SessionScreen>
   @override
   void initState() {
     super.initState();
+    Diag.crumb('session open ${widget.sessionId} "${widget.title}"');
     _title = _isMissionControl ? 'Mission Control' : widget.title;
     if (!kMobile) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1467,6 +1468,7 @@ class _SessionScreenState extends State<SessionScreen>
   @override
   void dispose() {
     _closed = true;
+    Diag.crumb('session close ${widget.sessionId}');
     _dockBatch.dispose();
     _tray.dispose();
     _agentEventsSub?.cancel();

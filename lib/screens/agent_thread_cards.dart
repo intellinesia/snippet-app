@@ -1,3 +1,4 @@
+import '../diagnostics.dart';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
@@ -1366,6 +1367,7 @@ class TaskResultCard extends StatelessWidget {
 
   void _openSession(BuildContext context, String sessionId, String title) {
     if (sessionId.isEmpty) return;
+    Diag.crumb('task card tap -> $sessionId "$title"');
     final tab = openSessionInTab;
     if (!kMobile && tab != null) {
       tab(client, sessionId, title);
