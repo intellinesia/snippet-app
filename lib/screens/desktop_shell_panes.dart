@@ -855,42 +855,49 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
       // Settings on the left; the other tools packed at the right.
-      child: Row(
-          spacing: 2,
-          children: [
-        _footerFit(_FooterBtn(
-            icon: 'settings', tooltip: 'Settings', onTap: _openShellSettings)),
-        const Spacer(),
-        if (_client != null) ...[
-          _footerFit(_FooterBtn(
-              icon: 'task',
-              tooltip: 'Tasks',
-              badge: needsYou,
-              onTap: _openTasksTab)),
-          _footerFit(_FooterBtn(
-              icon: 'file', tooltip: 'Artifacts', onTap: _openArtifactsTile)),
-          _footerFit(ListenableBuilder(
-            listenable: AmbientController.instance,
-            builder: (_, __) {
-              final on = AmbientController.instance.status.running;
-              return Builder(
-                builder: (ctx) => _FooterBtn(
-                    icon: 'mic',
-                    tooltip: on
-                        ? 'Ambient voice is listening'
-                        : 'Listen (ambient voice)',
-                    active: on,
-                    onTap: () => showAmbientStage(ctx, _client!)),
-              );
-            },
-          )),
-          _footerFit(Builder(
-            builder: (ctx) => _FooterBtn(
-                icon: 'gauge',
-                tooltip: 'Usage',
-                onTap: () => showUsagePopover(ctx, _client!)),
-          )),
-        ],
+      // Flexible children would each claim spare width, so the right group
+      // is one Expanded row packed to the end.
+      child: Row(children: [
+        _FooterBtn(
+            icon: 'settings', tooltip: 'Settings', onTap: _openShellSettings),
+        if (_client != null)
+          Expanded(
+            child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                spacing: 2,
+                children: [
+                  _footerFit(_FooterBtn(
+                      icon: 'task',
+                      tooltip: 'Tasks',
+                      badge: needsYou,
+                      onTap: _openTasksTab)),
+                  _footerFit(_FooterBtn(
+                      icon: 'file',
+                      tooltip: 'Artifacts',
+                      onTap: _openArtifactsTile)),
+                  _footerFit(ListenableBuilder(
+                    listenable: AmbientController.instance,
+                    builder: (_, __) {
+                      final on = AmbientController.instance.status.running;
+                      return Builder(
+                        builder: (ctx) => _FooterBtn(
+                            icon: 'mic',
+                            tooltip: on
+                                ? 'Ambient voice is listening'
+                                : 'Listen (ambient voice)',
+                            active: on,
+                            onTap: () => showAmbientStage(ctx, _client!)),
+                      );
+                    },
+                  )),
+                  _footerFit(Builder(
+                    builder: (ctx) => _FooterBtn(
+                        icon: 'gauge',
+                        tooltip: 'Usage',
+                        onTap: () => showUsagePopover(ctx, _client!)),
+                  )),
+                ]),
+          ),
       ]),
     );
   }
