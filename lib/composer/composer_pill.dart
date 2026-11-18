@@ -263,8 +263,11 @@ class ComposerVoicePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget track = SizedBox(height: 28, child: wave);
+    final bar = SizedBox(height: 28, child: wave);
+    Widget track = bar;
     if (!recording && onSeek != null) {
+      // Wraps [bar], not [track]: the builder runs later, when track is this
+      // LayoutBuilder itself, which recursed until the stack overflowed.
       track = LayoutBuilder(
         builder: (_, c) => GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -272,7 +275,7 @@ class ComposerVoicePill extends StatelessWidget {
               onSeek!((d.localPosition.dx / c.maxWidth).clamp(0.0, 1.0)),
           onHorizontalDragUpdate: (d) =>
               onSeek!((d.localPosition.dx / c.maxWidth).clamp(0.0, 1.0)),
-          child: SizedBox(height: C7.btn, child: Center(child: track)),
+          child: SizedBox(height: C7.btn, child: Center(child: bar)),
         ),
       );
     }

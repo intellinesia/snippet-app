@@ -22,6 +22,7 @@ class Diag {
   static RandomAccessFile? _file;
   static String? _dir;
   static Timer? _beat;
+  static DateTime _lastErrorAt = DateTime.fromMillisecondsSinceEpoch(0);
   static Timer? _upload;
   static DateTime _last = DateTime.now();
   static bool _uploading = false;
@@ -59,7 +60,15 @@ class Diag {
 
     final prev = FlutterError.onError;
     FlutterError.onError = (d) {
-      _write('flutter-error', '${d.exceptionAsString()}\n${d.stack}');
+      // Cheap and capped: a repeating layout error ran this per frame and per
+      // nesting level, and stringifying a deep stack each time froze the app.
+      final now = DateTime.now();
+      if (now.difference(_lastErrorAt).inSeconds >= 2) {
+        _lastErrorAt = now;
+        final msg = d.exceptionAsString();
+        _write('flutter-error',
+            msg.length > 300 ? msg.substring(0, 300) : msg);
+      }
       prev?.call(d);
     };
     ui.PlatformDispatcher.instance.onError = (e, s) {
