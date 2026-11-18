@@ -108,7 +108,8 @@ class GlassTopFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = color ?? AppColors.bg;
     final on = Glass.effectiveEnabled;
-    final edgeBlur = on && ThemeManager.instance.resolved.translucency.edgeBlur;
+    // Test: edge blur off while chasing a raster-thread crash on session open.
+    const edgeBlur = false &&  ThemeManager.instance.resolved.translucency.edgeBlur;
     final up = StatusInset.of(context);
     final frame = Stack(clipBehavior: Clip.none, children: [
       Positioned(
