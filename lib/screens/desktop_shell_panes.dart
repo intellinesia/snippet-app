@@ -854,11 +854,13 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     ].isNotEmpty;
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
-      // Grouped at the right with tight gaps, not spread across the row.
+      // Settings on the left; the other tools packed at the right.
       child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
           spacing: 2,
           children: [
+        _footerFit(_FooterBtn(
+            icon: 'settings', tooltip: 'Settings', onTap: _openShellSettings)),
+        const Spacer(),
         if (_client != null) ...[
           _footerFit(_FooterBtn(
               icon: 'task',
@@ -889,8 +891,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                 onTap: () => showUsagePopover(ctx, _client!)),
           )),
         ],
-        _footerFit(_FooterBtn(
-            icon: 'settings', tooltip: 'Settings', onTap: _openShellSettings)),
       ]),
     );
   }

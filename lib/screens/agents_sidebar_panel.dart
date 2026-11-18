@@ -625,25 +625,59 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 : g;
           }
 
-          final agentRows = <Widget>[];
+          DateTime? seen(int? secs) => secs == null || secs <= 0
+              ? null
+              : DateTime.fromMillisecondsSinceEpoch(secs * 1000);
+          DateTime? latest(DateTime? a, DateTime? b) =>
+              a == null ? b : (b == null || a.isAfter(b) ? a : b);
+          // Sorted by the time each row shows: last message, or the live
+          // session's activity while it works. Mission Control sorts too.
+          final ranked = <({Widget row, DateTime? at, int? pinnedAt, int i})>[];
           final groupRows = <Widget>[];
           for (final e in entries) {
             final item = e.item;
             if (item is CoordinationAgent) {
-              agentRows.add(
-                  agentTile(item, crew: crew[item.id], group: bucketOf(item)));
+              final c = crew[item.id];
+              final live = c != null && c.state != CrewState.standingBy
+                  ? seen(c.lead?.lastActive)
+                  : null;
+              ranked.add((
+                row: agentTile(item, crew: c, group: bucketOf(item)),
+                at: latest(e.at, live),
+                pinnedAt: e.pinnedAt,
+                i: ranked.length,
+              ));
             } else {
               groupRows.add(groupTile(item as GroupSummary));
             }
           }
+          if (mcCard != null) {
+            ranked.add((
+              row: mcCard,
+              at: latest(_mcLast?.at, seen(mc?.lastActive)),
+              pinnedAt: null,
+              i: -1,
+            ));
+          }
+          ranked.sort((a, b) {
+            final ap = a.pinnedAt, bp = b.pinnedAt;
+            if (ap != bp) {
+              if (ap == null) return 1;
+              if (bp == null) return -1;
+              return bp.compareTo(ap);
+            }
+            if (a.at == b.at) return a.i.compareTo(b.i);
+            if (a.at == null) return 1;
+            if (b.at == null) return -1;
+            return b.at!.compareTo(a.at!);
+          });
+          final agentRows = [for (final r in ranked) r.row];
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (mcCard != null) mcCard,
               ...agentRows,
-              if (emptyState != null && agentRows.isEmpty && mcCard == null)
-                emptyState,
+              if (emptyState != null && ranked.isEmpty) emptyState,
               if (groupRows.isNotEmpty) ...[
                 const SidebarSectionHeader('Groups'),
                 ...groupRows,

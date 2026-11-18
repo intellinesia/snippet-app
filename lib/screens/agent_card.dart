@@ -591,9 +591,14 @@ class AgentRowShell extends StatefulWidget {
     this.trailing,
     this.onLongPress,
     this.onSecondaryTapUp,
+    this.wideAvatar = false,
   });
 
   final Widget avatar;
+
+  /// Draws the avatar unplated at 30 px, spilling past its 22 px slot, so a
+  /// group's stacked members stay legible while names keep one column.
+  final bool wideAvatar;
   final String name;
   final String preview;
   final String time;
@@ -649,14 +654,23 @@ class _AgentRowShellState extends State<AgentRowShell> {
                 SizedBox.square(
                   dimension: 22,
                   child: Stack(clipBehavior: Clip.none, children: [
-                    Positioned.fill(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(R.of(6)),
-                        child: ColoredBox(
-                            color: AppColors.surface2,
-                            child: FittedBox(child: widget.avatar)),
+                    if (widget.wideAvatar)
+                      Positioned(
+                        left: -4,
+                        top: -4,
+                        width: 30,
+                        height: 30,
+                        child: widget.avatar,
+                      )
+                    else
+                      Positioned.fill(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(R.of(6)),
+                          child: ColoredBox(
+                              color: AppColors.surface2,
+                              child: FittedBox(child: widget.avatar)),
+                        ),
                       ),
-                    ),
                     if (widget.dot != null)
                       Positioned(
                         right: -2,
