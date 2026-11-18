@@ -451,7 +451,6 @@ class _StepRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tone = _stepTone(step);
-    final sub = _stepSub(step);
     final chip = stepChip(step);
     final failed = tone == _Tone.bad;
     Widget? meta;
@@ -464,10 +463,10 @@ class _StepRow extends StatelessWidget {
                 text: ' −${chip.removed}',
                 style: TextStyle(color: AppColors.danger)),
           ]),
-          style: sans(13.5, tabular: true));
+          style: sans(12.5, tabular: true));
     } else if (chip != null) {
       meta = Text(chip.text.split(' · ').last,
-          style: sans(15,
+          style: sans(13.5,
               color: switch (chip.tone) {
                 StepChipTone.ok => AppColors.ok,
                 StepChipTone.danger => AppColors.danger,
@@ -477,7 +476,7 @@ class _StepRow extends StatelessWidget {
     } else {
       final d = stepDuration(step);
       if (d != null)
-        meta = Text(d, style: sans(15, color: AppColors.fg3, tabular: true));
+        meta = Text(d, style: sans(13.5, color: AppColors.fg3, tabular: true));
     }
     final err = failed ? _errorLines(step) : const <String>[];
     return GestureDetector(
@@ -500,13 +499,8 @@ class _StepRow extends StatelessWidget {
                       Text(stepTitle(step),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(15.5,
+                          style: sans(14.5,
                               weight: W.label, color: AppColors.fg1)),
-                      if (sub != null)
-                        Text(sub,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: sans(13, color: AppColors.fg3)),
                     ],
                   ),
                 ),
