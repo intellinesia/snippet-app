@@ -16,7 +16,6 @@ import 'create_agent_form.dart';
 import '../mochi.dart';
 import 'group_messaging.dart';
 import 'mission_control_card.dart';
-import 'sidebar_tiles.dart' show SidebarSectionHeader;
 import '../pull_refresh.dart';
 import '../message_reactions.dart' show isReactionEvent;
 import '../motion.dart';
@@ -633,7 +632,6 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
           // Sorted by the time each row shows: last message, or the live
           // session's activity while it works. Mission Control sorts too.
           final ranked = <({Widget row, DateTime? at, int? pinnedAt, int i})>[];
-          final groupRows = <Widget>[];
           for (final e in entries) {
             final item = e.item;
             if (item is CoordinationAgent) {
@@ -648,7 +646,13 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 i: ranked.length,
               ));
             } else {
-              groupRows.add(groupTile(item as GroupSummary));
+              // Groups sit in the same list, ranked by their last event.
+              ranked.add((
+                row: groupTile(item as GroupSummary),
+                at: e.at,
+                pinnedAt: e.pinnedAt,
+                i: ranked.length,
+              ));
             }
           }
           if (mcCard != null) {
@@ -678,10 +682,6 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             children: [
               ...agentRows,
               if (emptyState != null && ranked.isEmpty) emptyState,
-              if (groupRows.isNotEmpty) ...[
-                const SidebarSectionHeader('Groups'),
-                ...groupRows,
-              ],
             ],
           );
         },
