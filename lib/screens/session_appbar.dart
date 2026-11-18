@@ -456,8 +456,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     if (_isMissionControl) {
       return _mcStageHeader(s, stuck);
     }
-    final keyboardUp = MediaQuery.viewInsetsOf(context).bottom > 0;
-    if (!offline && !keyboardUp && _me != null) {
+    // Stays the same with the keyboard up: swapping headers made it jump.
+    if (!offline && _me != null) {
       return _stageHeader(s, back);
     }
     final ws = s?.workspace.trim() ?? '';
