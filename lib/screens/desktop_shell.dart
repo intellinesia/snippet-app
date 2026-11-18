@@ -64,7 +64,6 @@ import 'artifact_viewer.dart' show SessionDeliverables;
 import 'wakes_screen.dart';
 import 'workspace_tab.dart';
 import 'desktop_settings_page.dart';
-import 'settings_panel.dart';
 import 'shell_card_tab_strip.dart';
 import 'shell_main_pane.dart';
 import 'shell_models.dart';
@@ -1863,7 +1862,6 @@ class _DesktopShellState extends State<DesktopShell>
     if (_drawerOpen) _scaffoldKey.currentState?.closeDrawer();
   }
 
-  final _topMachineKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -2002,5 +2000,4 @@ class _DesktopShellState extends State<DesktopShell>
   }
 }
 
-typedef _MachineList = MachineList;
 typedef _SettingsPage = SettingsPage;

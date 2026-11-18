@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../chat/agent_cluster.dart';
 import '../mochi.dart';
 
-import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -240,131 +239,6 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
               child: chip,
             )
           : chip,
-    );
-  }
-}
-
-/// The machine avatar and health indicator in the desktop window bar.
-class TopMachineSwitcher extends StatelessWidget {
-  final Instance? active;
-  final bool? isHealthy;
-  final bool hasInstances;
-  final VoidCallback onAdd;
-  final VoidCallback onOpenList;
-  final GlobalKey anchorKey;
-
-  const TopMachineSwitcher({
-    super.key,
-    required this.active,
-    required this.isHealthy,
-    required this.hasInstances,
-    required this.onAdd,
-    required this.onOpenList,
-    required this.anchorKey,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final a = active;
-    final initial = a == null || a.label.trim().isEmpty
-        ? '+'
-        : a.label.trim().characters.first.toUpperCase();
-
-    if (a != null) {
-      return Tooltip(
-        message: 'Switch machine',
-        child: Material(
-          key: anchorKey,
-          color: AppColors.tint1,
-          borderRadius: BorderRadius.circular(R.of(15)),
-          child: InkWell(
-            onTap: hasInstances ? onOpenList : onAdd,
-            borderRadius: BorderRadius.circular(R.of(15)),
-            child: Container(
-              height: 30,
-              padding: EdgeInsets.fromLTRB(S.of(5), 0, S.s12, 0),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Container(
-                  width: 20,
-                  height: 20,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AppColors.tint3,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(initial, style: sans(11, color: AppColors.fg1)),
-                ),
-                SizedBox(width: S.s8),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 140),
-                  child: Text(a.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(13, color: AppColors.fg2)),
-                ),
-                SizedBox(width: S.s8),
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: isHealthy == true ? AppColors.ok : AppColors.fg4,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ]),
-            ),
-          ),
-        ),
-      );
-    }
-    return Tooltip(
-      message: a == null ? 'Add machine' : 'Switch machine',
-      child: Material(
-        key: anchorKey,
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        child: InkWell(
-          onTap: hasInstances ? onOpenList : onAdd,
-          customBorder: const CircleBorder(),
-          child: SizedBox(
-            width: 26,
-            height: 26,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Center(
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.tint2,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      initial,
-                      style: sans(11, weight: W.title, color: AppColors.fg1),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 7,
-                    height: 7,
-                    decoration: BoxDecoration(
-                      color: isHealthy == true ? AppColors.ok : AppColors.fg4,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.paneBg, width: 1.5),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -848,7 +722,6 @@ class MacWindowBar extends StatelessWidget {
   final VoidCallback onNavigateForward;
   final Widget tabsRow;
   final VoidCallback onOpenSettings;
-  final Widget machineSwitcher;
   final List<Widget> tools;
   final bool reserveWindowControls;
 
@@ -862,7 +735,6 @@ class MacWindowBar extends StatelessWidget {
     required this.onNavigateForward,
     required this.tabsRow,
     required this.onOpenSettings,
-    required this.machineSwitcher,
     this.tools = const [],
     this.reserveWindowControls = true,
   });
@@ -920,8 +792,6 @@ class MacWindowBar extends StatelessWidget {
                   tool,
                   SizedBox(width: S.s2),
                 ],
-                SizedBox(width: S.s4),
-                machineSwitcher,
               ],
             ),
           ),
@@ -931,47 +801,3 @@ class MacWindowBar extends StatelessWidget {
   }
 }
 
-/// Displays the machines popover dialog anchored to [anchorKey].
-Future<void> showTopMachinesPopover({
-  required BuildContext context,
-  required GlobalKey anchorKey,
-  required Widget content,
-}) async {
-  final box = anchorKey.currentContext?.findRenderObject() as RenderBox?;
-  if (box == null) return;
-  final origin = box.localToGlobal(Offset.zero);
-  final size = MediaQuery.of(context).size;
-  final opensUp = origin.dy > size.height / 2;
-  await showGeneralDialog(
-    context: context,
-    barrierDismissible: true,
-    barrierLabel: 'machines',
-    barrierColor: Colors.transparent,
-    transitionDuration: Motion.press,
-    pageBuilder: (_, __, ___) => Stack(children: [
-      Positioned(
-        left: opensUp ? origin.dx.clamp(8.0, 600.0) : null,
-        right: opensUp
-            ? null
-            : (size.width - origin.dx - box.size.width).clamp(10.0, 500.0),
-        top: opensUp ? null : origin.dy + box.size.height + 4,
-        bottom: opensUp ? size.height - origin.dy + 6 : null,
-        width: 340,
-        child: Material(
-          color: AppColors.overlay,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(R.lg),
-              side: BorderSide(color: AppColors.line)),
-          elevation: 4,
-          shadowColor: Colors.black.withValues(alpha: 0.4),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(R.md),
-            ),
-            child: content,
-          ),
-        ),
-      ),
-    ]),
-  );
-}

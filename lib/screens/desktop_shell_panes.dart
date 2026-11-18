@@ -854,7 +854,11 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     ].isNotEmpty;
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
-      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      // Grouped at the right with tight gaps, not spread across the row.
+      child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          spacing: 2,
+          children: [
         if (_client != null) ...[
           _footerFit(_FooterBtn(
               icon: 'task',
@@ -900,7 +904,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         onNavigateForward: _navigateForward,
         tabsRow: _mainTabsRow(),
         onOpenSettings: _openShellSettings,
-        machineSwitcher: _topMachineSwitcher(),
         tools: [
           ListenableBuilder(
               listenable: sessionBarTools,
@@ -911,39 +914,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           if (_groupBarTools(_activeTab) case final w?) w,
         ],
         reserveWindowControls: kMacOS,
-      );
-
-  Widget _topMachineSwitcher() => TopMachineSwitcher(
-        active: _active,
-        isHealthy: _active == null ? null : _health[_active!.url],
-        hasInstances: _instances.isNotEmpty,
-        onAdd: _addInstanceFlow,
-        onOpenList: _openTopMachines,
-        anchorKey: _topMachineKey,
-      );
-
-  Future<void> _openTopMachines() async {
-    _refreshHealth();
-    await showTopMachinesPopover(
-      context: context,
-      anchorKey: _topMachineKey,
-      content: _MachineList(
-        instances: _instances,
-        active: _active,
-        health: _health,
-        onSelect: _selectInstance,
-        onAdd: _addInstanceFlow,
-        onManage: _manageMachine,
-        switchOnly: true,
-      ),
-    );
-  }
-
-  void _manageMachine(Instance i) => showManageMachineSheet(
-        context: context,
-        instance: i,
-        onRename: _renameInstance,
-        onRemove: _removeInstance,
       );
 }
 

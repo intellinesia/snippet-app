@@ -352,7 +352,11 @@ class _AgentCardState extends State<AgentCard> {
     final titles = widget.groupTitles ?? const {};
     if (crew != null && crew.state != CrewState.standingBy) {
       final text = cleanAgentStatusText(crew.line, groupTitles: titles);
-      if (crew.state == CrewState.working) return text;
+      // Desktop keeps the last message; the working dot says it is busy.
+      if (crew.state == CrewState.working) {
+        if (kMobile) return text;
+        return agentStatusLine(agent, presence: presence, groupTitles: titles);
+      }
       final kind = crew.attention?['type'];
       return kind == 'approval'
           ? 'Approval: $text'
@@ -513,7 +517,7 @@ class _AgentCardState extends State<AgentCard> {
             : agentRowTime(last?.at);
     final detail = agent.presence?.detail.trim() ?? '';
     var line2 = _phoneLine(agent, crew, presence);
-    if (ring && crew == null && detail.isNotEmpty) line2 = detail;
+    if (kMobile && ring && crew == null && detail.isNotEmpty) line2 = detail;
     return AgentRowShell(
       selected: widget.selected,
       dim: !agent.available,

@@ -947,7 +947,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
             child: Container(
               height: kMobile ? M.minTarget : 32,
               padding: EdgeInsets.fromLTRB(
-                  kMobile ? 0 : S.of(10), 0, kMobile ? 0 : S.of(10), 0),
+                  kMobile ? 0 : 8, 0, kMobile ? 0 : 8, 0),
               child: Row(children: [
                 Text('Settled',
                     style: TS.label(kMobile ? AppColors.fg3 : AppColors.fg4)),

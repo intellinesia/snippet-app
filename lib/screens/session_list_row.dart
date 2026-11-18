@@ -310,7 +310,7 @@ class _SessionGroupHeaderState extends State<SessionGroupHeader> {
         : Container(
             height: 30,
             alignment: Alignment.bottomLeft,
-            padding: EdgeInsets.fromLTRB(S.of(10), 0, S.of(10), S.s4),
+            padding: EdgeInsets.fromLTRB(8, 0, 8, S.s4),
             child: labelRow,
           );
 
@@ -629,25 +629,24 @@ class SessionListRow extends StatelessWidget {
     final compact = !kMobile;
     final approval = needsYou ? approvalOf(s.attention) : null;
     Widget compactContent(bool hover) {
-      final plan = s.plan;
-      final planRunning = working && plan != null && plan.total > 0;
-      String attnText = '';
-      if (attn != null) {
-        attnText = approval != null
-            ? approval.headline('${s.attention?['tool'] ?? ''}')
-            : attn.label;
-      }
-      final String extra;
-      if (planRunning && plan.done < plan.total) {
-        extra = 'step ${(plan.done + 1).clamp(1, plan.total)} of ${plan.total}';
-      } else if (pr != null) {
-        extra = 'PR #${pr.number}';
-      } else {
-        extra = branch;
-      }
+      // Fixed columns so provider, folder, branch and machine line up
+      // down the list; the bouncing agent already reads as working.
       final folder =
-          !showProject || s.projectFolder.trim().isEmpty ? '' : projectLabel(s);
+          s.projectFolder.trim().isEmpty ? '' : projectLabel(s);
       final metaStyle = sans(11, color: AppColors.fg4);
+      Widget metaField(String icon, String text) => text.isEmpty
+          ? const SizedBox.shrink()
+          : Row(mainAxisSize: MainAxisSize.min, children: [
+              AppIcon(icon, size: 11, color: AppColors.fg4),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(text,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                    style: metaStyle),
+              ),
+            ]);
       Widget action(String icon, String tip, VoidCallback? tap) => Tooltip(
             message: tip,
             child: GestureDetector(
@@ -674,13 +673,10 @@ class SessionListRow extends StatelessWidget {
                           : AppColors.fg2));
       final machineName = (machine ?? '').trim();
       final showMeta = renameField == null &&
-          (working ||
-              provider != null ||
+          (provider != null ||
               machineName.isNotEmpty ||
-              attnText.isNotEmpty ||
               folder.isNotEmpty ||
-              extra.isNotEmpty ||
-              diff != null);
+              branch.isNotEmpty);
       final line = Row(children: [
         Expanded(child: titleW),
         if (pinned && renameField == null) ...[
@@ -725,62 +721,25 @@ class SessionListRow extends StatelessWidget {
           : SizedBox(
               height: 15,
               child: Row(children: [
-                if (working) ...[
-                  Spinner(size: 10, color: AppColors.run),
-                  const SizedBox(width: 6),
-                ],
-                if (provider != null) ...[
-                  ProviderLogo(provider,
-                      size: 11,
-                      color: providerLogoIsColour(provider)
-                          ? null
-                          : AppColors.fg3),
-                  const SizedBox(width: 6),
-                ],
-                if (attnText.isNotEmpty) ...[
-                  Flexible(
-                    child: Text(attnText,
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(11, color: AppColors.accent)),
-                  ),
-                  const SizedBox(width: 6),
-                ],
-                if (folder.isNotEmpty)
-                  Flexible(child: WorkspaceChip(folder: folder)),
-                if (extra.isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(extra,
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.ellipsis,
-                        style: metaStyle),
-                  ),
-                ] else if (diff != null) ...[
-                  const SizedBox(width: 6),
-                  if (diff.added > 0)
-                    Text('+${compactCount(diff.added)}',
-                        maxLines: 1, style: sans(11, color: AppColors.ok)),
-                  if (diff.added > 0 && diff.removed > 0)
-                    const SizedBox(width: 4),
-                  if (diff.removed > 0)
-                    Text('-${compactCount(diff.removed)}',
-                        maxLines: 1, style: sans(11, color: AppColors.danger)),
-                ],
+                SizedBox(
+                  width: 12,
+                  child: provider == null
+                      ? null
+                      : ProviderLogo(provider,
+                          size: 11,
+                          color: providerLogoIsColour(provider)
+                              ? null
+                              : AppColors.fg3),
+                ),
+                const SizedBox(width: 6),
+                Expanded(child: metaField('folder', folder)),
+                const SizedBox(width: 8),
+                Expanded(child: metaField('git-branch', branch)),
                 if (machineName.isNotEmpty) ...[
-                  const Spacer(),
-                  const SizedBox(width: 6),
-                  AppIcon('monitor', size: 11, color: AppColors.fg4),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 8),
                   ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 72),
-                    child: Text(machineName,
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.ellipsis,
-                        style: metaStyle),
+                    constraints: const BoxConstraints(maxWidth: 80),
+                    child: metaField('monitor', machineName),
                   ),
                 ],
               ]),

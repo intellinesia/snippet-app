@@ -353,9 +353,10 @@ void main() {
         expect(posD, lessThan(posC));
         expect(posC, lessThan(posA));
         expect(posA, lessThan(posB));
-        expect(find.text('repo-alpha'), findsOneWidget);
-        expect(find.text('repo-beta'), findsOneWidget);
-        expect(find.text('repo-gamma'), findsOneWidget);
+        // The group header plus each row's folder field.
+        expect(find.text('repo-alpha'), findsNWidgets(3));
+        expect(find.text('repo-beta'), findsNWidgets(2));
+        expect(find.text('repo-gamma'), findsNWidgets(2));
         expect(find.text('/workspace/repo-alpha'), findsNothing);
       } finally {
         debugDefaultTargetPlatformOverride = null;
