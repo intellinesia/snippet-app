@@ -252,12 +252,16 @@ class ActivityPill extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-                t != null ? 'Done in ${formatWorkDuration(t)}' : 'Done',
+            child: Text(describeWork(steps).text,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(15, color: AppColors.fg2, tabular: true)),
+                style: sans(15, color: AppColors.fg2)),
           ),
+          if (t != null) ...[
+            const SizedBox(width: 10),
+            Text(formatWorkDuration(t),
+                style: sans(14, color: AppColors.fg4, tabular: true)),
+          ],
           if (failed > 0) ...[
             const SizedBox(width: 10),
             FailedPill(failed,
