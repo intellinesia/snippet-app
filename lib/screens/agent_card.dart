@@ -638,22 +638,23 @@ class _AgentRowShellState extends State<AgentRowShell> {
           child: AnimatedContainer(
             duration: still ? Duration.zero : const Duration(milliseconds: 150),
             curve: const Cubic(0.23, 1, 0.32, 1),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
                 color: fill, borderRadius: BorderRadius.circular(R.of(8))),
             child: Opacity(
               opacity: widget.dim ? 0.55 : 1,
-              child:
-                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // One line: avatar and name. Time and preview are left out;
+              // the avatar dot and the trailing mark carry the state.
+              child: Row(children: [
                 SizedBox.square(
-                  dimension: 28,
+                  dimension: 22,
                   child: Stack(clipBehavior: Clip.none, children: [
                     Positioned.fill(
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(R.of(7)),
+                        borderRadius: BorderRadius.circular(R.of(6)),
                         child: ColoredBox(
                             color: AppColors.surface2,
-                            child: Center(child: widget.avatar)),
+                            child: FittedBox(child: widget.avatar)),
                       ),
                     ),
                     if (widget.dot != null)
@@ -662,8 +663,8 @@ class _AgentRowShellState extends State<AgentRowShell> {
                         bottom: -2,
                         child: Container(
                           key: widget.dotKey,
-                          width: 10,
-                          height: 10,
+                          width: 9,
+                          height: 9,
                           decoration: BoxDecoration(
                             color: widget.dot,
                             shape: BoxShape.circle,
@@ -675,65 +676,28 @@ class _AgentRowShellState extends State<AgentRowShell> {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            // Expanded, not Flexible + Spacer: those split the
-                            // spare width and the times drift row to row.
-                            Expanded(
-                              child: Row(children: [
-                                Flexible(
-                                  child: Text(widget.name,
-                                      maxLines: 1,
-                                      softWrap: false,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: sans(13,
-                                          weight: FontWeight.w500,
-                                          color: AppColors.fg1)),
-                                ),
-                                if (widget.pinned) ...[
-                                  const SizedBox(width: 6),
-                                  AppIcon('pin',
-                                      size: 11, color: AppColors.fg4),
-                                ],
-                              ]),
-                            ),
-                            if (widget.time.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8),
-                                child: Text(widget.time,
-                                    maxLines: 1,
-                                    style: sans(11,
-                                        color: AppColors.fg4, tabular: true)),
-                              ),
-                          ]),
-                      const SizedBox(height: 1),
-                      Row(children: [
-                        Expanded(
-                          child: Text.rich(
-                              markdownPreviewSpan(
-                                  widget.preview,
-                                  sans(12,
-                                      height: 16 / 12,
-                                      color: widget.needs
-                                          ? AppColors.accent
-                                          : AppColors.fg3)),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
-                        ),
-                        if (widget.trailing != null) ...[
-                          const SizedBox(width: 6),
-                          widget.trailing!,
-                        ],
-                      ]),
+                  child: Row(children: [
+                    Flexible(
+                      child: Text(widget.name,
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          style: sans(13,
+                              weight: FontWeight.w500,
+                              color: widget.needs
+                                  ? AppColors.fg1
+                                  : AppColors.fg2)),
+                    ),
+                    if (widget.pinned) ...[
+                      const SizedBox(width: 6),
+                      AppIcon('pin', size: 11, color: AppColors.fg4),
                     ],
-                  ),
+                  ]),
                 ),
+                if (widget.trailing != null) ...[
+                  const SizedBox(width: 6),
+                  widget.trailing!,
+                ],
               ]),
             ),
           ),
