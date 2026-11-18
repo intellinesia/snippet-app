@@ -742,7 +742,8 @@ class MacWindowBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 44,
+      // 36 under the card's 8 px top inset centres it at 26, with the sidebar.
+      height: kMobile ? 44 : 36,
       padding: EdgeInsets.fromLTRB(S.s8, 0, S.of(10), 0),
       decoration: kMobile
           ? BoxDecoration(

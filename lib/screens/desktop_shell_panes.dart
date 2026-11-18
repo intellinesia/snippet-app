@@ -822,7 +822,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   Widget _sidebarTop() {
     return Column(mainAxisSize: MainAxisSize.min, children: [
       SizedBox(
-        height: 44,
+        // Centred at 26, level with the traffic lights and the pane bar.
+        height: kMobile ? 44 : 52,
         child: Row(children: [
           if (kMacOS) const SizedBox(width: 78) else SizedBox(width: S.of(14)),
           const Spacer(),
