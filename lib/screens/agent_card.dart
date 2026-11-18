@@ -120,6 +120,15 @@ String agentRowTime(DateTime? at, {DateTime? now}) {
   return '${at.day} ${months[at.month - 1]}';
 }
 
+/// The clock to sit beside [agentRowTime] when that shows only a day or date.
+String agentRowClock(DateTime? at, {DateTime? now}) {
+  if (at == null) return '';
+  at = at.toLocal();
+  final n = (now ?? DateTime.now()).toLocal();
+  final today = at.year == n.year && at.month == n.month && at.day == n.day;
+  return today ? '' : clock12(at);
+}
+
 /// One agent on the phone's Agents page, in the Mission Control card's shape:
 /// who it is, whether it is working, and its task counts.
 class AgentCard extends StatefulWidget {
@@ -510,11 +519,11 @@ class _AgentCardState extends State<AgentCard> {
     final needs = group == AgentGroup.needsYou;
     final crew = widget.crew;
     final lead = crew?.lead;
-    final time =
+    final at =
         crew != null && crew.state != CrewState.standingBy && lead != null
-            ? agentRowTime(
-                DateTime.fromMillisecondsSinceEpoch(lead.lastActive * 1000))
-            : agentRowTime(last?.at);
+            ? DateTime.fromMillisecondsSinceEpoch(lead.lastActive * 1000)
+            : last?.at;
+    final time = agentRowTime(at);
     final detail = agent.presence?.detail.trim() ?? '';
     var line2 = _phoneLine(agent, crew, presence);
     if (kMobile && ring && crew == null && detail.isNotEmpty) line2 = detail;
@@ -539,6 +548,7 @@ class _AgentCardState extends State<AgentCard> {
       name: name,
       pinned: _isPinned,
       time: time,
+      timeDetail: agentRowClock(at),
       preview: line2,
       needs: needs || (last?.unread ?? false),
       trailing: needs && agent.needsYou > 0
@@ -582,6 +592,7 @@ class AgentRowShell extends StatefulWidget {
     required this.preview,
     required this.onTap,
     this.time = '',
+    this.timeDetail = '',
     this.dot,
     this.dotKey,
     this.needs = false,
@@ -602,6 +613,9 @@ class AgentRowShell extends StatefulWidget {
   final String name;
   final String preview;
   final String time;
+
+  /// Smaller clock after a day-only [time], e.g. "Sat" then "4:12 pm".
+  final String timeDetail;
   final Color? dot;
   final Key? dotKey;
   final bool needs;
@@ -715,7 +729,16 @@ class _AgentRowShellState extends State<AgentRowShell> {
                 // Last at the edge so the times form one column.
                 if (widget.time.isNotEmpty) ...[
                   const SizedBox(width: 8),
-                  Text(widget.time,
+                  Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: widget.time),
+                        if (widget.timeDetail.isNotEmpty)
+                          TextSpan(
+                              text: ' ${widget.timeDetail}',
+                              style: sans(10,
+                                  color: AppColors.fg4.withValues(alpha: 0.7),
+                                  tabular: true)),
+                      ]),
                       maxLines: 1,
                       style: sans(11, color: AppColors.fg4, tabular: true)),
                 ],

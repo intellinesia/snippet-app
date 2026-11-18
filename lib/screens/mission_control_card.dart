@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'agent_card.dart' show AgentRowShell, agentRowTime;
+import 'agent_card.dart' show AgentRowShell, agentRowClock, agentRowTime;
 import '../api.dart';
 import '../mochi.dart';
 import '../models.dart';
@@ -142,6 +142,7 @@ class _MissionControlCardState extends State<MissionControlCard> {
         time: widget.lastMessage == null
             ? ''
             : agentRowTime(widget.lastMessage!.at),
+        timeDetail: agentRowClock(widget.lastMessage?.at),
         preview: waiting ? 'Waiting on you' : line,
         needs: waiting,
       );
