@@ -123,7 +123,7 @@ class GlassTopFrame extends StatelessWidget {
                     colors: [Colors.black, Colors.black, Colors.transparent],
                   ).createShader(r),
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                     child: const SizedBox.expand(),
                   ),
                 ),
@@ -139,10 +139,10 @@ class GlassTopFrame extends StatelessWidget {
                     // crashed the raster thread on a Pixel when a page slid in.
                     stops: const [0, 0.3, 0.55, 0.78, 1],
                     colors: [
-                      bg.withValues(alpha: on ? 0.94 : 0.98),
-                      bg.withValues(alpha: on ? 0.82 : 0.94),
-                      bg.withValues(alpha: on ? 0.5 : 0.8),
-                      bg.withValues(alpha: on ? 0.16 : 0.4),
+                      bg.withValues(alpha: on ? 0.34 : 0.98),
+                      bg.withValues(alpha: on ? 0.26 : 0.94),
+                      bg.withValues(alpha: on ? 0.16 : 0.8),
+                      bg.withValues(alpha: on ? 0.05 : 0.4),
                       bg.withValues(alpha: 0),
                     ],
                   ),
