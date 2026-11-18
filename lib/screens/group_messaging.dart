@@ -30,7 +30,7 @@ import '../chat/chat_style.dart';
 import '../chat/group_notice.dart';
 import '../chat/stage_bar.dart';
 import '../chat/stage_header.dart';
-import 'agent_card.dart' show AgentRowShell, TeamRow, agentRowClock, agentRowTime;
+import 'agent_card.dart' show AgentRowShell, TeamRow, agentRowAgo, agentRowTime;
 import 'agent_questions_card.dart' show questionAnswerSystemLine;
 import 'agent_thread_cards.dart' show agentThreadEventCard;
 import 'tasks/tasks_panel.dart' show openTasksPage, openTaskCountFor;
@@ -303,9 +303,7 @@ class GroupRow extends StatelessWidget {
     return AgentRowShell(
       onTap: onTap,
       onLongPress: onLongPress,
-      time: agentRowTime(DateTime.tryParse(group.lastEventAt ?? '')?.toLocal()),
-      timeDetail:
-          agentRowClock(DateTime.tryParse(group.lastEventAt ?? '')?.toLocal()),
+      time: agentRowAgo(DateTime.tryParse(group.lastEventAt ?? '')),
       avatar: shown.isEmpty
           ? const Center(child: AppIcon('users', size: 14))
           : shown.length == 1

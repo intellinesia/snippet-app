@@ -120,6 +120,19 @@ String agentRowTime(DateTime? at, {DateTime? now}) {
   return '${at.day} ${months[at.month - 1]}';
 }
 
+/// Desktop row time: how long ago, as 'now', '5m', '2h', '3d', '2w', '4mo', '1y'.
+String agentRowAgo(DateTime? at, {DateTime? now}) {
+  if (at == null) return '';
+  final d = (now ?? DateTime.now()).difference(at);
+  if (d.inMinutes < 1) return 'now';
+  if (d.inHours < 1) return '${d.inMinutes}m';
+  if (d.inDays < 1) return '${d.inHours}h';
+  if (d.inDays < 7) return '${d.inDays}d';
+  if (d.inDays < 30) return '${d.inDays ~/ 7}w';
+  if (d.inDays < 365) return '${d.inDays ~/ 30}mo';
+  return '${d.inDays ~/ 365}y';
+}
+
 /// The clock to sit beside [agentRowTime] when that shows only a day or date.
 String agentRowClock(DateTime? at, {DateTime? now}) {
   if (at == null) return '';
@@ -523,7 +536,7 @@ class _AgentCardState extends State<AgentCard> {
         crew != null && crew.state != CrewState.standingBy && lead != null
             ? DateTime.fromMillisecondsSinceEpoch(lead.lastActive * 1000)
             : last?.at;
-    final time = agentRowTime(at);
+    final time = kMobile ? agentRowTime(at) : agentRowAgo(at);
     final detail = agent.presence?.detail.trim() ?? '';
     var line2 = _phoneLine(agent, crew, presence);
     if (kMobile && ring && crew == null && detail.isNotEmpty) line2 = detail;
@@ -548,7 +561,7 @@ class _AgentCardState extends State<AgentCard> {
       name: name,
       pinned: _isPinned,
       time: time,
-      timeDetail: agentRowClock(at),
+      timeDetail: kMobile ? agentRowClock(at) : '',
       preview: line2,
       needs: needs || (last?.unread ?? false),
       trailing: needs && agent.needsYou > 0
