@@ -1656,10 +1656,11 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
                           onOpenMissionControl: widget.onOpenMissionControl,
                           embedded: true),
                     ],
+                    // Desktop selects from a row's right-click menu instead.
                     SidebarSectionHeader(
                       'Sessions',
                       moreTooltip: 'Session options',
-                      moreBuilder: hasClient ? _sessionsMenu : null,
+                      moreBuilder: hasClient && kMobile ? _sessionsMenu : null,
                     ),
                     if (!hasClient)
                       const SidebarEmpty('Add a machine to begin.')
