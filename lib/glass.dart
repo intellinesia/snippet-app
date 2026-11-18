@@ -105,6 +105,19 @@ class GlassTopFrame extends StatelessWidget {
         bottom: 0,
         child: IgnorePointer(
           child: Stack(children: [
+            if (on)
+              // Two plain rectangles, not many clipped bands: the 14-band
+              // version crashed the raster thread when a page slid in.
+              for (final (frac, sigma) in const [(0.85, 3.0), (0.6, 9.0)])
+                Positioned.fill(
+                  child: ClipRect(
+                    clipper: _TopFraction(frac),
+                    child: BackdropFilter.grouped(
+                      filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                ),
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -217,4 +230,18 @@ class ModalGlass extends StatelessWidget {
       MediaQuery.sizeOf(context).width < 700 ||
       const {TargetPlatform.android, TargetPlatform.iOS}
           .contains(Theme.of(context).platform);
+}
+
+/// Clips to the top [fraction] of the box.
+class _TopFraction extends CustomClipper<Rect> {
+  const _TopFraction(this.fraction);
+
+  final double fraction;
+
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTWH(0, 0, size.width, size.height * fraction);
+
+  @override
+  bool shouldReclip(_TopFraction old) => old.fraction != fraction;
 }
