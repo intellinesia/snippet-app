@@ -15,7 +15,6 @@ import '../command_palette.dart';
 import 'session_header.dart' show sessionBarTools, SessionStatusPill;
 import '../presence.dart' show PresenceStore;
 import 'agent_view_mode.dart';
-import '../desktop_notifications.dart';
 import '../device_events.dart';
 import '../mochi.dart' show sessionAgents;
 import '../models.dart';
@@ -480,9 +479,6 @@ class _DesktopShellState extends State<DesktopShell>
         onSessionAction: _dispatchSessionAction,
         onOpenGoalPopover: _openGoalPopover,
       );
-
-  // Session, MC, and agent tabs carry their tools in the chat header.
-  List<Widget> _railTools() => const [NotificationBell()];
 
   Future<void> _openGoalPopover(BuildContext btnCtx) => showGoalPopover(
         context: context,

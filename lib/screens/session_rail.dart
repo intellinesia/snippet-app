@@ -13,6 +13,10 @@ import '../platform.dart';
 import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
+import '../panel.dart' show presentScreen, PanelStyle;
+import '../shell_panel.dart' show ShellPanelPurpose;
+import '../chat/mc_panel_sections.dart' show mcNeeds, McNeedsYou;
+import 'agent_records.dart' show AgentInboxView, AgentBoardView;
 
 part 'session_rail_pages.dart';
 
@@ -217,6 +221,9 @@ class _SessionRailState extends State<SessionRail> {
   bool? _warm;
   bool? _autonomous;
   List<TaskItem> _tasks = const [];
+  // Mission Control only: every open task and session, for "Needs you".
+  List<TaskItem> _allTasks = const [];
+  List<SessionInfo> _sessions = const [];
   int _gen = 0;
   int _liveGen = 0;
 
@@ -346,6 +353,8 @@ class _SessionRailState extends State<SessionRail> {
       _try(c.mcAutonomy()),
       mc ? Future.value(null) : _try(c.bgList(id)),
       mc ? Future.value(null) : _try(c.wakes()),
+      mc ? _try(c.tasks(limit: 300)) : Future.value(null),
+      mc ? _try(c.sessions()) : Future.value(null),
     ]);
     if (!mounted || gen != _gen) return;
     final auto = r[4] as Map<String, dynamic>?;
@@ -355,6 +364,8 @@ class _SessionRailState extends State<SessionRail> {
       _wake = r[1] as WakeSchedule?;
       _warm = (r[2] as KeepWarmEntry?)?.enabled ?? false;
       _tasks = r[3] as List<TaskItem>? ?? const [];
+      _allTasks = r[7] as List<TaskItem>? ?? _allTasks;
+      _sessions = r[8] as List<SessionInfo>? ?? _sessions;
       _autonomous = auto == null ? null : auto['on'] == true;
       _procs = r[5] as List<Map<String, dynamic>>? ?? _procs;
       final wl = r[6] as WakeList?;
@@ -502,9 +513,15 @@ class _SessionRailState extends State<SessionRail> {
     }
 
     if (mc) {
+      final needs = mcNeeds(widget.client, _allTasks, _sessions);
+      if (needs.isNotEmpty) {
+        out.add(McNeedsYou(key: const ValueKey('rail-needs'), needs: needs));
+        first = false;
+      }
       final n = _tasks.length;
       add('In flight', _flightRows(), meta: n == 0 ? null : '$n');
       add('Next', _wakeRows());
+      add('Go to', _goToRows());
       add('Autonomy', _autonomyRows(), open: false);
       final ctx = _contextPct(s);
       add('Model', _modelRows(s),
@@ -1479,6 +1496,40 @@ class _SessionRailState extends State<SessionRail> {
             ),
           ),
       ];
+
+  void _openMcRecords(String title, ShellPanelPurpose purpose, Widget view) =>
+      presentScreen<void>(context,
+          style: PanelStyle.drawer,
+          purpose: purpose,
+          originClient: widget.client,
+          title: title,
+          builder: (_, __) => view);
+
+  List<Widget> _goToRows() {
+    const id = 'mission-control', name = 'Mission Control';
+    return [
+      _RailRow(
+          icon: 'inbox',
+          label: 'Inbox',
+          chevron: true,
+          onTap: () => _openMcRecords(
+              'Inbox',
+              ShellPanelPurpose.inbox,
+              AgentInboxView(
+                  client: widget.client, agentId: id, agentName: name))),
+      _RailRow(
+          icon: 'kanban',
+          label: 'Board',
+          chevron: true,
+          onTap: () => _openMcRecords(
+              'Board',
+              ShellPanelPurpose.generic,
+              AgentBoardView(
+                  client: widget.client, agentId: id, agentName: name))),
+      _RailRow(
+          icon: 'book', label: 'Memory', chevron: true, onTap: widget.onMemory),
+    ];
+  }
 
   List<Widget> _autonomyRows() => [
         _RailRow(

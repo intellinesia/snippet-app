@@ -86,6 +86,7 @@ import 'mobile_voice_page.dart' show startMobileVoice;
 import 'session_panels.dart';
 import 'session_coordination_cards.dart';
 import 'session_handoff.dart';
+import 'shell_rail_tools.dart' show showGoalPopover;
 import 'mission_control/widgets/autonomy_panel.dart';
 import 'mission_control/mission_control_state.dart'
     show

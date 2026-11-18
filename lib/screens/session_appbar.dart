@@ -311,7 +311,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   Widget _centerWide(Widget child, {double extra = 0}) => widget.embedded
       ? Center(
           child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 860 + extra), child: child))
+              constraints: BoxConstraints(maxWidth: 960 + extra), child: child))
       : child;
 
   // Mobile chat header: a back button that returns to the session list, the
@@ -832,6 +832,24 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     _toast('Goal set — the agent will drive toward it');
   }
 
+  /// Desktop: the goal popover drops from the header button; phone: the sheet.
+  void _openGoalPopover(BuildContext anchor) {
+    if (kMobile) {
+      _setGoal();
+      return;
+    }
+    final me = _me;
+    final id = me?.displayAgentId ?? 'snippet';
+    final name = (_meAgentName ?? '').trim().isEmpty
+        ? agentDisplayName(id)
+        : _meAgentName!.trim();
+    showGoalPopover(
+        context: context,
+        anchorContext: anchor,
+        agentName: name,
+        onSetGoal: _submitGoal);
+  }
+
   void _submitGoal(String t) {
     _send({'kind': 'set_goal', 'value': t});
     _toast('Goal set — the agent will drive toward it');
@@ -1329,7 +1347,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       builder: (_, close) => ProcessesScreen(
           client: widget.client, sessionId: widget.sessionId, onClose: close));
 
-  /// The chat pane: 760 of text, centred, the same with or without the session
+  /// The chat pane: 960 of text, centred, the same with or without the session
   /// panel so opening it never reflows the transcript. Alone (phone,
   /// read-only, inbox) it takes the full width.
   Widget _chatPane(bool paired, Widget child) {
@@ -1345,7 +1363,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
             children: [
           Flexible(
               child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 760 + 40),
+                  constraints: const BoxConstraints(maxWidth: 960 + 40),
                   child: child)),
         ]));
   }
@@ -1718,14 +1736,17 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         mainAxisSize: MainAxisSize.min,
         children: [
           Stack(clipBehavior: Clip.none, children: [
-            IconBtn('goal',
-                size: 30,
-                iconSize: 15,
-                tooltip: (s?.goal?.ongoing ?? false)
-                    ? 'Goal: ${s!.goal!.text}'
-                    : 'Set a goal',
-                onTap: () =>
-                    (s?.goal?.ongoing ?? false) ? _showPanel() : _editGoal()),
+            Builder(
+              builder: (btnCtx) => IconBtn('goal',
+                  size: 30,
+                  iconSize: 15,
+                  tooltip: (s?.goal?.ongoing ?? false)
+                      ? 'Goal: ${s!.goal!.text}'
+                      : 'Set a goal',
+                  onTap: () => (s?.goal?.ongoing ?? false)
+                      ? _showPanel()
+                      : _openGoalPopover(btnCtx)),
+            ),
             if (s?.goal?.ongoing ?? false)
               Positioned(
                 right: 6,

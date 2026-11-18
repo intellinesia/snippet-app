@@ -82,7 +82,6 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
       _pending.removeWhere((p) => identical(p, payload));
       _afterChange();
     });
-    if (open && !kMobile) DesktopNotificationFeed.remove(payload);
     if (open) onNotifTap?.call(payload);
   }
 
@@ -124,7 +123,6 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
   }
 
   void _addPending(Map<String, dynamic> payload) {
-    if (!kMobile) DesktopNotificationFeed.add(payload);
     _pending.removeWhere((old) => toastSuperseded(old, payload));
     _pending.add(payload);
   }
@@ -251,10 +249,7 @@ class _NotificationPopoversState extends State<NotificationPopovers> {
                     payload: items.first,
                     extra: items.length - 1,
                     onClose: () => _remove(items.first),
-                    onResolved: () {
-                      DesktopNotificationFeed.remove(items.first);
-                      _remove(items.first);
-                    },
+                    onResolved: () => _remove(items.first),
                     onHold: (hold) => _setHold(card: hold),
                   ),
                 ),

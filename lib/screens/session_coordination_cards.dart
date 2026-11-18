@@ -985,7 +985,8 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
     final newest = told ? null : notes.last;
     final earlier =
         told ? const <LaneNote>[] : notes.sublist(0, notes.length - 1);
-    final indent = S.of(34);
+    // Flush with the transcript text: no tile, so nothing to indent past.
+    const indent = 0.0;
     final faint = AppColors.fg4;
 
     var status =
@@ -998,40 +999,28 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
     final time = formatEventTime(told ? widget.replyAt : newest!.at);
 
     final header = Row(children: [
-      Container(
-        width: 26,
-        height: 26,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.surface3,
-          borderRadius: BorderRadius.circular(R.of(8)),
-        ),
-        child: AppIcon(laneGlyph(widget.laneTitle),
-            size: 14, color: AppColors.accent),
-      ),
-      const SizedBox(width: 8),
       Expanded(
         child: Row(children: [
           if (told) ...[
             Text('Told',
-                style: sans(14, height: 18 / 14, color: AppColors.fg3)),
+                style: sans(13, height: 18 / 13, color: AppColors.fg3)),
             const SizedBox(width: 6),
           ],
           Flexible(
             child: Text(widget.laneTitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(14,
+                style: sans(13,
                     weight: FontWeight.w500,
-                    height: 18 / 14,
-                    color: AppColors.fg1)),
+                    height: 18 / 13,
+                    color: AppColors.fg2)),
           ),
           if (status.isNotEmpty) ...[
             const SizedBox(width: 8),
             Text(status,
                 style: sans(12,
                     height: 18 / 12.5,
-                    color: widget.waiting ? AppColors.run : AppColors.fg3)),
+                    color: widget.waiting ? AppColors.run : AppColors.fg4)),
           ],
         ]),
       ),
@@ -1041,7 +1030,7 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
       ],
     ]);
 
-    final text = sans(14, height: 20 / 14, color: AppColors.fg2);
+    final text = sans(13, height: 20 / 13, color: AppColors.fg3);
     Widget noteBody(LaneNote n, {required bool open}) => open
         ? CardMarkdownBody(body: n.body.trim(), collapsible: false)
         : Text(_plain(n.body),
@@ -1130,20 +1119,12 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
           return Padding(padding: EdgeInsets.only(left: indent), child: body);
         }
         return Container(
-          margin: EdgeInsets.only(left: indent, top: 4),
-          padding: const EdgeInsets.only(top: 8),
+          margin: const EdgeInsets.only(top: 4),
+          padding: const EdgeInsets.only(left: 10),
           decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.border))),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 1),
-              child: me.isEmpty
-                  ? const SizedBox(width: 18, height: 18)
-                  : AgentMochi(me, size: 18),
-            ),
-            const SizedBox(width: 8),
-            Expanded(child: body),
-          ]),
+              border:
+                  Border(left: BorderSide(color: AppColors.line, width: 2))),
+          child: body,
         );
       }));
     }
@@ -1156,30 +1137,20 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
       ));
     }
 
-    final radius = BorderRadius.circular(R.of(14));
-    return Padding(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: AppColors.surface1,
-        shape: RoundedRectangleBorder(
-            borderRadius: radius, side: BorderSide(color: AppColors.border)),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          borderRadius: radius,
-          onTap: () => setState(() => _open = !_open),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var i = 0; i < children.length; i++) ...[
-                  if (i > 0) const SizedBox(height: 4),
-                  children[i],
-                ],
-              ],
-            ),
-          ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(() => _open = !_open),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0) const SizedBox(height: 2),
+              children[i],
+            ],
+          ],
         ),
       ),
     );

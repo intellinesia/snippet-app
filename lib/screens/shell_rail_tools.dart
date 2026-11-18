@@ -11,11 +11,12 @@ Future<void> showGoalPopover({
   required BuildContext context,
   required BuildContext anchorContext,
   required ValueChanged<String> onSetGoal,
+  String? agentName,
 }) async {
   final box = anchorContext.findRenderObject() as RenderBox?;
   if (box == null) return;
   final origin = box.localToGlobal(Offset.zero);
-  const width = 320.0;
+  const width = 360.0;
   final screen = MediaQuery.sizeOf(context).width;
   final left =
       (origin.dx + box.size.width - width).clamp(8.0, screen - width - 8);
@@ -38,8 +39,9 @@ Future<void> showGoalPopover({
           elevation: 4,
           shadowColor: Colors.black.withValues(alpha: 0.4),
           child: Padding(
-            padding: EdgeInsets.all(S.s12),
+            padding: EdgeInsets.all(S.of(14)),
             child: GoalPopover(
+              agentName: agentName,
               onSet: (text) {
                 Navigator.pop(context);
                 onSetGoal(text);
@@ -113,8 +115,7 @@ List<Widget> buildShellRailTools({
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(children: [
-                      Expanded(
-                          child: Text('Context', style: TS.ui())),
+                      Expanded(child: Text('Context', style: TS.ui())),
                       Text('${k(used)} / ${k(win)}', style: TS.meta()),
                     ]),
                     SizedBox(height: S.of(10)),
@@ -150,8 +151,8 @@ List<Widget> buildShellRailTools({
                   borderRadius: BorderRadius.circular(R.sm),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(R.sm),
-                    onTap: () => Navigator.of(ctx).pop<VoidCallback>(
-                        () => onSessionAction('compact')),
+                    onTap: () => Navigator.of(ctx)
+                        .pop<VoidCallback>(() => onSessionAction('compact')),
                     child: Container(
                       height: 30,
                       padding: EdgeInsets.symmetric(horizontal: S.s12),
@@ -170,7 +171,8 @@ List<Widget> buildShellRailTools({
         else ...[
           item('git-fork', 'Fork from here', () => onSessionAction('fork')),
           const PopupMenuDivider(height: 9),
-          item('file-diff', 'File changes', () => onSessionAction('file_changes')),
+          item('file-diff', 'File changes',
+              () => onSessionAction('file_changes')),
           item('clipboard', 'Artifacts', () => onSessionAction('artifacts')),
           item('book-marked', 'Memory', () => onSessionAction('memory')),
           item('pull-request', 'Pull requests',

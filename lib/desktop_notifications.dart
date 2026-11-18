@@ -5,35 +5,11 @@ import 'package:flutter/material.dart';
 import 'markdown_preview.dart';
 import 'mochi.dart';
 import 'notification_card.dart' show CardAction, cardActionFor;
-import 'notification_stack.dart' show needsYou;
 import 'notification_text.dart';
 import 'notifications.dart' show onNotifTap;
 import 'session_quick_send.dart';
 import 'theme.dart';
 import 'widgets.dart';
-
-/// Desktop-only history behind the title-bar bell. Toasts come and go; the bell
-/// keeps every notification until it is answered, opened or cleared.
-class DesktopNotificationFeed {
-  DesktopNotificationFeed._();
-  static final items = ValueNotifier<List<Map<String, dynamic>>>(const []);
-
-  static void add(Map<String, dynamic> p) {
-    final next = [
-      for (final o in items.value)
-        if (!toastSuperseded(o, p)) o,
-      p,
-    ];
-    items.value = next.length > 40 ? next.sublist(next.length - 40) : next;
-  }
-
-  static void remove(Map<String, dynamic> p) => items.value = [
-        for (final o in items.value)
-          if (!identical(o, p)) o
-      ];
-
-  static void clear() => items.value = const [];
-}
 
 String _ago(Object? createdAt) {
   final DateTime? t = switch (createdAt) {
@@ -362,7 +338,7 @@ class _DesktopNotificationCardState extends State<DesktopNotificationCard> {
   }
 }
 
-/// Bottom-right toast clear of the composer; the bell keeps the item afterwards.
+/// Bottom-right toast clear of the composer; later ones wait behind it.
 class DesktopToast extends StatelessWidget {
   const DesktopToast({
     super.key,
@@ -405,207 +381,11 @@ class DesktopToast extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Padding(
                 padding: const EdgeInsets.only(left: 26, top: 8),
-                child: Text('+$extra more in the bell',
+                child: Text('+$extra more',
                     style: sans(11, color: AppColors.fg4)),
               ),
             ),
         ]),
-      ),
-    );
-  }
-}
-
-/// Title-bar bell with the count badge; opens the notifications popover.
-class NotificationBell extends StatefulWidget {
-  const NotificationBell({super.key});
-  @override
-  State<NotificationBell> createState() => _NotificationBellState();
-}
-
-class _NotificationBellState extends State<NotificationBell> {
-  bool _hover = false;
-  bool _open = false;
-  final _key = GlobalKey();
-
-  Future<void> _toggle() async {
-    final box = _key.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final origin = box.localToGlobal(Offset.zero);
-    final size = MediaQuery.of(context).size;
-    // Open from the bell's own edge: left-aligned when it sits in the left
-    // half (the sidebar), right-aligned otherwise, always inside the window.
-    final w = 420.0.clamp(240.0, size.width - 20);
-    final fromLeft = origin.dx + box.size.width / 2 < size.width / 2;
-    final left = (fromLeft ? origin.dx : origin.dx + box.size.width - w)
-        .clamp(10.0, (size.width - w - 10).clamp(10.0, size.width));
-    setState(() => _open = true);
-    await showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'notifications',
-      barrierColor: Colors.transparent,
-      transitionDuration: Motion.press,
-      pageBuilder: (ctx, _, __) => Stack(children: [
-        Positioned(
-          left: left,
-          top: origin.dy + box.size.height + 4,
-          width: w,
-          child: _BellPopover(onClose: () => Navigator.of(ctx).pop()),
-        ),
-      ]),
-    );
-    if (mounted) setState(() => _open = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<List<Map<String, dynamic>>>(
-      valueListenable: DesktopNotificationFeed.items,
-      builder: (_, items, __) {
-        final n = items.length;
-        return Tooltip(
-          message: n > 0 ? '$n notifications' : 'Notifications',
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            onEnter: (_) => setState(() => _hover = true),
-            onExit: (_) => setState(() => _hover = false),
-            child: GestureDetector(
-              key: _key,
-              behavior: HitTestBehavior.opaque,
-              onTap: _toggle,
-              // Inbox, not an alarm: what came back, with its count beside it.
-              child: Container(
-                height: 28,
-                constraints: const BoxConstraints(minWidth: 28),
-                padding: EdgeInsets.symmetric(horizontal: n > 0 ? 7 : 0),
-                decoration: BoxDecoration(
-                  color:
-                      _open || _hover ? AppColors.surface2 : Colors.transparent,
-                  borderRadius: BorderRadius.circular(R.md),
-                ),
-                child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      AppIcon('inbox',
-                          size: 15,
-                          color:
-                              _hover || _open ? AppColors.fg1 : AppColors.fg3),
-                      if (n > 0) ...[
-                        const SizedBox(width: 5),
-                        Container(
-                          height: 16,
-                          padding: const EdgeInsets.symmetric(horizontal: 5),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: AppColors.run.withValues(alpha: 0.13),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(n > 99 ? '99+' : '$n',
-                              style: mono(11,
-                                  weight: FontWeight.w500,
-                                  color: AppColors.run)),
-                        ),
-                      ],
-                    ]),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _BellPopover extends StatelessWidget {
-  const _BellPopover({required this.onClose});
-  final VoidCallback onClose;
-
-  Widget _label(String t, {Color? color, double top = 4}) => Padding(
-        padding: EdgeInsets.fromLTRB(10, top, 10, 4),
-        child: Text(t,
-            style: sans(11, weight: W.title, color: color ?? AppColors.fg4)),
-      );
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(R.lg),
-        side: BorderSide(color: AppColors.lineStrong),
-      ),
-      elevation: 6,
-      shadowColor: Colors.black.withValues(alpha: .4),
-      clipBehavior: Clip.antiAlias,
-      child: ValueListenableBuilder<List<Map<String, dynamic>>>(
-        valueListenable: DesktopNotificationFeed.items,
-        builder: (context, items, _) {
-          final newest = items.reversed.toList();
-          final need = newest.where(needsYou).toList();
-          final rest = newest.where((p) => !needsYou(p)).toList();
-          final maxH = MediaQuery.of(context).size.height - 100;
-          Widget card(Map<String, dynamic> p) => DesktopNotificationCard(
-                key: ObjectKey(p),
-                payload: p,
-                onResolved: () => DesktopNotificationFeed.remove(p),
-              );
-          return ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxH),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Container(
-                height: 46,
-                padding: const EdgeInsets.only(left: 16, right: 10),
-                child: Row(children: [
-                  Text('Notifications',
-                      style: sans(13.5, weight: W.title, color: AppColors.fg1)),
-                  if (items.isNotEmpty) ...[
-                    SizedBox(width: S.s8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      height: 18,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface3,
-                        borderRadius: BorderRadius.circular(R.xs),
-                      ),
-                      child: Text('${items.length}',
-                          style: mono(10.5, color: AppColors.fg3)),
-                    ),
-                  ],
-                  const Spacer(),
-                  if (items.isNotEmpty)
-                    Btn('Clear all',
-                        small: true,
-                        variant: BtnVariant.ghost,
-                        onTap: DesktopNotificationFeed.clear),
-                ]),
-              ),
-              Flexible(
-                child: items.isEmpty
-                    ? Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-                        child: Text('Nothing needs you right now.',
-                            style: sans(12.5, color: AppColors.fg4)),
-                      )
-                    : ListView(
-                        shrinkWrap: true,
-                        padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                        children: [
-                          if (need.isNotEmpty) ...[
-                            _label('Needs you', color: AppColors.run),
-                            for (final p in need) card(p),
-                          ],
-                          if (rest.isNotEmpty) ...[
-                            _label('Updates', top: need.isEmpty ? 4 : 12),
-                            for (final p in rest) card(p),
-                          ],
-                        ],
-                      ),
-              ),
-            ]),
-          );
-        },
       ),
     );
   }

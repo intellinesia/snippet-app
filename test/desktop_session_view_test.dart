@@ -239,8 +239,8 @@ void main() {
     // Without timings the fold names the work instead of counting steps.
     final summary = find.byType(WorkLine);
     expect(summary, findsOneWidget);
-    expect(find.textContaining('Worked ·', findRichText: true), findsNothing);
-    expect(find.textContaining('a.dart', findRichText: true), findsOneWidget);
+    // Without timings the fold just says it worked; no summary, no chevron.
+    expect(find.text('Worked', findRichText: true), findsOneWidget);
     expect(find.text('Show'), findsNothing);
     expect(find.text('Hide'), findsNothing);
     expect(find.byType(DenseToolRow), findsNothing);
@@ -250,7 +250,7 @@ void main() {
         of: find.byType(CollapsedActivity),
         matching: find.byType(AppIcon),
       ),
-      findsOneWidget, // the chevron
+      findsNothing, // text only: no chevron
     );
 
     await tester.tap(summary);
@@ -408,7 +408,7 @@ void main() {
       ]),
     );
 
-    final summary = find.textContaining('Worked 1.4s', findRichText: true);
+    final summary = find.textContaining('Worked for 1.4s', findRichText: true);
     expect(summary, findsOneWidget);
 
     await tester.tap(summary);

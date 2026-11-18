@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
-/// Modal popover for setting the session goal.
+/// Anchored popover for setting the session goal: what to work toward, who
+/// works on it, and how a goal runs.
 class GoalPopover extends StatefulWidget {
   final void Function(String text) onSet;
-  const GoalPopover({super.key, required this.onSet});
+
+  /// The agent that will drive the goal, named in the header and the help line.
+  final String? agentName;
+  const GoalPopover({super.key, required this.onSet, this.agentName});
 
   @override
   State<GoalPopover> createState() => _GoalPopoverState();
@@ -15,6 +20,12 @@ class GoalPopover extends StatefulWidget {
 
 class _GoalPopoverState extends State<GoalPopover> {
   final _ctl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _ctl.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
@@ -30,34 +41,59 @@ class _GoalPopoverState extends State<GoalPopover> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text('Set goal',
-            style: sans(12, weight: W.label, color: AppColors.fg1)),
-        SizedBox(height: S.s8),
-        AppField(
-          controller: _ctl,
-          hint: 'What should the agent work toward?',
-          autofocus: true,
-          minLines: 2,
-          maxLines: 4,
-          onSubmitted: (_) => _submit(),
-        ),
-        SizedBox(height: S.s8),
-        Row(children: [
-          const Spacer(),
-          if (!kMobile) ...[
-            Btn('Cancel',
-                variant: BtnVariant.ghost,
-                small: true,
-                onTap: () => Navigator.pop(context)),
-            SizedBox(width: S.s6),
-          ],
-          Btn('Set goal', small: true, onTap: _submit),
-        ]),
-      ],
+    final name = (widget.agentName ?? '').trim();
+    final who = name.isEmpty ? 'The agent' : name;
+    final ready = _ctl.text.trim().isNotEmpty;
+    return CallbackShortcuts(
+      bindings: {
+        SingleActivator(LogicalKeyboardKey.enter,
+            meta: kMacOS, control: !kMacOS): _submit,
+        const SingleActivator(LogicalKeyboardKey.escape): () =>
+            Navigator.maybePop(context),
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(children: [
+            AppIcon('goal', size: 14, color: AppColors.fg3),
+            SizedBox(width: S.s8),
+            Text('Set a goal',
+                style: sans(13, weight: W.title, color: AppColors.fg1)),
+            const Spacer(),
+            if (name.isNotEmpty)
+              Text('for $name', style: sans(12, color: AppColors.fg4)),
+          ]),
+          SizedBox(height: S.s12),
+          AppField(
+            controller: _ctl,
+            hint: 'What should $who work toward?',
+            autofocus: true,
+            minLines: 2,
+            maxLines: 5,
+          ),
+          SizedBox(height: S.s8),
+          Text(
+              '$who keeps working, turn after turn, until it is met or you '
+              'end it. Interrupting pauses it.',
+              style: sans(12, height: 1.45, color: AppColors.fg4)),
+          SizedBox(height: S.s12),
+          Row(children: [
+            if (!kMobile)
+              Text(kMacOS ? '\u2318\u21b5' : 'Ctrl \u21b5',
+                  style: mono(11, color: AppColors.fg4)),
+            const Spacer(),
+            if (!kMobile) ...[
+              Btn('Cancel',
+                  variant: BtnVariant.ghost,
+                  small: true,
+                  onTap: () => Navigator.pop(context)),
+              SizedBox(width: S.s6),
+            ],
+            Btn('Start goal', small: true, onTap: ready ? _submit : null),
+          ]),
+        ],
+      ),
     );
   }
 }
@@ -143,4 +179,3 @@ class _PulsingDotState extends State<PulsingDot>
     );
   }
 }
-

@@ -10,6 +10,7 @@ import '../screens/tasks/task_common.dart' show openTaskDetail;
 import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
+import 'mc_panel_sections.dart';
 
 /// One row of the panel's Settings section.
 class AgentSettingRow {
@@ -70,6 +71,7 @@ final Map<String, bool> _open = {};
 
 class _AgentPanelBodyState extends State<AgentPanelBody> {
   List<TaskItem> _tasks = const [];
+  List<SessionInfo> _sessions = const [];
   WakeSchedule? _wake;
   KeepWarmEntry? _warm;
   bool _warmLoaded = false;
@@ -96,13 +98,18 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
     final id = widget.agentId;
     _loadedFor = id;
     final c = widget.client;
+    final mc = _mc;
     final r = await Future.wait<Object?>([
-      c.tasks(agentId: id, limit: 60).catchError((_) => <TaskItem>[]),
+      c
+          .tasks(agentId: mc ? null : id, limit: mc ? 300 : 60)
+          .catchError((_) => <TaskItem>[]),
       c.wake(id).catchError((_) => null),
       c.keepWarmFor(id).catchError((_) => null),
+      if (mc) c.sessions().catchError((_) => <SessionInfo>[]),
     ]);
     if (!mounted || _loadedFor != id) return;
     setState(() {
+      if (mc) _sessions = r[3] as List<SessionInfo>;
       _tasks = r[0] as List<TaskItem>;
       _wake = r[1] as WakeSchedule?;
       _warm = r[2] as KeepWarmEntry?;
@@ -423,8 +430,144 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
     ]);
   }
 
+  // ---- Mission Control -------------------------------------------------
+
+  AgentSettingRow? get _wakesSetting {
+    for (final s in widget.settings) {
+      if (s.label == 'Automated wakes') return s;
+    }
+    return null;
+  }
+
+  Widget _mcNow() {
+    final p = widget.agent?.presence;
+    final w = _wake;
+    final active = p != null && p.active;
+    final lastRun = w?.lastRunAt;
+    final head = active
+        ? p.state[0].toUpperCase() + p.state.substring(1)
+        : lastRun != null && lastRun > 0
+            ? 'Quiet · woke ${mcAge(DateTime.fromMillisecondsSinceEpoch(lastRun * 1000))} ago'
+            : 'Quiet';
+    final now = DateTime.now();
+    final flight =
+        _tasks.where((t) => t.status == TaskStatus.inProgress).length;
+    final doneToday = _tasks.where((t) {
+      final at = DateTime.tryParse(t.completedAt ?? '')?.toLocal();
+      return t.status == TaskStatus.done &&
+          at != null &&
+          at.year == now.year &&
+          at.month == now.month &&
+          at.day == now.day;
+    }).length;
+    final action = active && p.detail.isNotEmpty ? p.detail : 'No action';
+    final next = w != null && w.enabled && w.nextRunAt > 0
+        ? DateTime.fromMillisecondsSinceEpoch(w.nextRunAt * 1000)
+        : null;
+    final wakes = _wakesSetting;
+    final on = w?.enabled ?? false;
+    return _Section('Now', children: [
+      _Row(
+        icon: 'check',
+        title: head,
+        sub: '$action · $flight in flight · $doneToday done today',
+        dot: active ? AppColors.accent : null,
+      ),
+      _Row(
+        icon: 'calendar-clock',
+        title: 'Next wake',
+        value: next == null
+            ? 'Off'
+            : '${_nextAt(w!.nextRunAt)} · ${mcUntil(next)}',
+        valueMono: true,
+      ),
+      _Row(
+        icon: 'activity',
+        title: 'Automated wakes',
+        trailing: AppSwitch(
+            on: on,
+            width: 34,
+            height: 20,
+            thumb: 14,
+            onChanged: (_) => wakes?.onTap()),
+        onTap: wakes?.onTap,
+      ),
+      if (_warmLoaded)
+        _Row(
+          icon: 'zap',
+          title: 'Keep warm',
+          trailing: AppSwitch(
+              on: _warm?.enabled ?? false,
+              width: 34,
+              height: 20,
+              thumb: 14,
+              onChanged: _setWarm),
+          onTap: () => _setWarm(!(_warm?.enabled ?? false)),
+        ),
+    ]);
+  }
+
+  Widget _mcGoTo() {
+    final open = _tasks.where((t) => !t.status.isTerminal).length;
+    final rows = <(String, String, String?, VoidCallback?)>[
+      ('inbox', 'Inbox', null, widget.onInbox),
+      ('kanban', 'Board', null, widget.onBoard),
+      ('book', 'Memory', null, widget.onMemory),
+      ('task', 'Tasks', _tasks.isEmpty ? null : '$open open', widget.onTasks),
+    ];
+    return _Section('Go to', children: [
+      for (final r in rows)
+        if (r.$4 != null)
+          _Row(
+              icon: r.$1,
+              title: r.$2,
+              value: r.$3,
+              valueMono: true,
+              chevron: true,
+              onTap: r.$4),
+    ]);
+  }
+
+  Widget _buildMc() {
+    final needs = mcNeeds(widget.client, _tasks, _sessions);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            _identity(),
+            if (_presence() case final p?) p,
+          ]),
+        ),
+        McNeedsYou(needs: needs),
+        _mcNow(),
+        _mcGoTo(),
+        _Section('Settings', initiallyOpen: false, children: [
+          for (final s in widget.settings)
+            _Row(
+                icon: s.icon,
+                title: s.label,
+                sub: s.sub,
+                chevron: true,
+                onTap: s.onTap),
+        ]),
+        if (widget.header != null)
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.line))),
+            child: widget.header!,
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_mc) return _buildMc();
     final presence = _presence();
     final sections = [_onNow(), _next(), _cameBack()].whereType<Widget>();
     return Column(
@@ -571,6 +714,7 @@ class _Row extends StatelessWidget {
     required this.title,
     this.sub,
     this.value,
+    this.valueMono = false,
     this.dot,
     this.trailing,
     this.chevron = false,
@@ -580,6 +724,7 @@ class _Row extends StatelessWidget {
   final String title;
   final String? sub;
   final String? value;
+  final bool valueMono;
   final Color? dot;
   final Widget? trailing;
   final bool chevron;
@@ -630,7 +775,9 @@ class _Row extends StatelessWidget {
               if (value != null) ...[
                 const SizedBox(width: 8),
                 Text(value!,
-                    style: sans(11.5, color: AppColors.fg4, tabular: true)),
+                    style: valueMono
+                        ? mono(11, color: AppColors.fg3)
+                        : sans(11.5, color: AppColors.fg4, tabular: true)),
               ],
               if (trailing != null) ...[
                 const SizedBox(width: 8),

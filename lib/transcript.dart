@@ -136,9 +136,9 @@ String? _failureNote(List<ToolStep> steps) {
   return null;
 }
 
-/// The fold line of a finished run of tool calls: "Worked 2m 38s · 2 files
-/// +30 −13", centred, with the failure note and a chevron. Open, thin rules
-/// run out to both sides. Running, it names the live step instead.
+/// The fold line of a finished run of tool calls: "Worked for 38s", flush
+/// left with the text, then any failure note; tap to open.
+/// Open, a thin rule runs out to the right. Running, it names the live step.
 class WorkLine extends StatelessWidget {
   const WorkLine({
     super.key,
@@ -167,30 +167,10 @@ class WorkLine extends StatelessWidget {
     final spans = <InlineSpan>[];
     if (!isRunning) {
       final took = stepsDuration(steps);
-      final n = steps.length;
-      // Without timings, the summary sentence says more than a step count.
-      final said = took == null ? describeWork(steps).text : '';
       lead = TextSpan(
           text: took != null
-              ? 'Worked ${formatWorkDuration(took)}'
-              : said.isNotEmpty
-                  ? said
-                  : 'Worked · $n ${n == 1 ? 'step' : 'steps'}');
-      final files = fileChanges(steps);
-      if (files.isNotEmpty) {
-        final added = files.fold<int>(0, (n, f) => n + f.added);
-        final removed = files.fold<int>(0, (n, f) => n + f.removed);
-        spans.add(TextSpan(
-            text:
-                ' · ${files.length} ${files.length == 1 ? 'file' : 'files'}'));
-        if (added > 0 || removed > 0) {
-          spans.add(TextSpan(
-              text: ' +$added', style: style.copyWith(color: AppColors.ok)));
-          spans.add(TextSpan(
-              text: ' −$removed',
-              style: style.copyWith(color: AppColors.danger)));
-        }
-      }
+              ? 'Worked for ${formatWorkDuration(took)}'
+              : 'Worked');
       final note = _failureNote(steps);
       if (note != null) {
         spans.add(TextSpan(
@@ -212,11 +192,9 @@ class WorkLine extends StatelessWidget {
         child: LayoutBuilder(
           // The label is sized first so the rules only take what it leaves.
           builder: (context, c) => Row(children: [
-            rule(),
-            const SizedBox(width: 12),
             ConstrainedBox(
               constraints: BoxConstraints(
-                  maxWidth: (c.maxWidth - (open ? 96 : 56)).clamp(0, 560)),
+                  maxWidth: (c.maxWidth - (open ? 72 : 32)).clamp(0, 560)),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Flexible(
                   child: Text.rich(lead,
@@ -229,18 +207,11 @@ class WorkLine extends StatelessWidget {
                       maxLines: 1, softWrap: false, style: style),
               ]),
             ),
-            const SizedBox(width: 6),
-            if (isRunning)
-              RunSpinner(size: 12, color: AppColors.accent)
-            else
-              AnimatedRotation(
-                turns: open ? 0.5 : 0,
-                duration: Motion.fast,
-                curve: Curves.easeOutCubic,
-                child: AppIcon('chevron-down', size: 14, color: AppColors.fg4),
-              ),
-            const SizedBox(width: 12),
-            rule(),
+            if (isRunning) ...[
+              const SizedBox(width: 6),
+              RunSpinner(size: 12, color: AppColors.accent),
+            ],
+            if (open) ...[const SizedBox(width: 12), rule()],
           ]),
         ),
       ),
@@ -1483,7 +1454,6 @@ class HandoffNotice extends StatelessWidget {
       if (pending) {
         return SignalRow(
           icon: 'arrow-right',
-          center: true,
           text: '**$toName** takes over after this turn',
         );
       }

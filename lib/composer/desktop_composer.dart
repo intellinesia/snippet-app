@@ -625,7 +625,20 @@ class DeskPinCard extends StatelessWidget {
                 if (trailing != null) trailing!,
               ]),
             ),
-            ...children,
+            // The body scrolls inside the bar's height cap; the action bar stays put.
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final c in children)
+                      if (c is! DeskPinBar) c,
+                  ],
+                ),
+              ),
+            ),
+            for (final c in children)
+              if (c is DeskPinBar) c,
           ],
         ),
       );

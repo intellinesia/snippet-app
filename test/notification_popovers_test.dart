@@ -169,7 +169,7 @@ void main() {
         home: NotificationPopovers(child: Scaffold(body: Text('Home')))));
     await tester.pumpAndSettle();
     expect(find.byType(DesktopToast), findsOneWidget);
-    expect(find.text('+1 more in the bell'), findsOneWidget);
+    expect(find.text('+1 more'), findsOneWidget);
     final first = find.text('First').evaluate().isNotEmpty ? 'First' : 'Second';
     final next = first == 'First' ? 'Second' : 'First';
     await tester.tap(find.descendant(
