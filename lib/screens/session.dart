@@ -22,7 +22,7 @@ import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../chat/activity_dock.dart';
-import '../chat/send_in.dart';
+import '../chat/send_flight.dart';
 import '../chat/activity_sheet.dart';
 import '../chat/anchored_scroll.dart';
 import '../chat/chat_card.dart';
@@ -480,10 +480,12 @@ class _SessionScreenState extends State<SessionScreen>
 
   // When the user last sent; the echoed bubble rises in from the composer.
   DateTime? _lastSendAt;
+  final GlobalKey _inputFieldKey = GlobalKey();
   final Set<String> _sendInKeys = {};
 
   void _trackPending(String msg, String nonce) {
     _lastSendAt = DateTime.now();
+    SendFlight.arm(_inputFieldKey);
     _pending.add(msg);
     _pendingNonce.add(nonce);
     _pendingEchoBaseline

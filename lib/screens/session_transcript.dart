@@ -417,7 +417,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                 child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: kMobile && _sendInKeys.contains(key)
-                        ? SendIn(child: userBubble)
+                        ? SendFlightTarget(child: userBubble)
                         : userBubble),
               ));
         case 'assistant_text':

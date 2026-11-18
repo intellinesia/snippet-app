@@ -817,6 +817,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
         field: CallbackShortcuts(
           bindings: _composerShortcuts,
           child: TextField(
+            key: _inputFieldKey,
             controller: _input,
             focusNode: _inputFocus,
             contentInsertionConfiguration: _keyboardContent,

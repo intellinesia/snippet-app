@@ -22,7 +22,7 @@ import '../composer/composer_attachments.dart';
 import '../composer/composer_card.dart';
 import '../composer/voice_note.dart';
 import '../message_reactions.dart';
-import '../chat/send_in.dart';
+import '../chat/send_flight.dart';
 import '../mochi.dart';
 import '../motion.dart';
 import '../models.dart';
@@ -614,6 +614,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   final bool _sending = false;
   // Local bubbles that rise in from the composer once; the echo replaces them.
   final Set<String> _sendInIds = {};
+  final GlobalKey _inputFieldKey = GlobalKey();
   String? _error;
   late final Swr<DirectThreadPage> _thread;
 
@@ -794,6 +795,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       'idempotency_key': key,
       'created_at': DateTime.now().toUtc().toIso8601String(),
     });
+    SendFlight.arm(_inputFieldKey);
     _input.clear();
     _attachments.clear();
     unawaited(_voice.discard());
@@ -1571,7 +1573,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               align: Alignment.centerLeft,
             ),
           kMobile && _sendInIds.contains(e.eventId)
-              ? SendIn(child: content)
+              ? SendFlightTarget(child: content)
               : content,
           if (choices.isNotEmpty)
             LayoutBuilder(
@@ -1788,6 +1790,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                   _send,
             },
             child: TextField(
+              key: _inputFieldKey,
               controller: _input,
               focusNode: _inputFocus,
               minLines: 1,
