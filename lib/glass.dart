@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -15,8 +14,8 @@ class GlassStyle {
         : AppColors.surface2.withValues(alpha: alpha);
   }
 
-  static Color get edgeColor => AppColors.fg1.withValues(
-      alpha: ThemeManager.instance.resolved.border.glassEdgeAlpha);
+  static Color get edgeColor => AppColors.fg1
+      .withValues(alpha: ThemeManager.instance.resolved.border.glassEdgeAlpha);
 }
 
 /// Frosted surface for elements floating over content: blur behind a tinted,
@@ -47,8 +46,7 @@ class Glass extends StatelessWidget {
   Widget build(BuildContext context) {
     final on = Glass.effectiveEnabled;
     final fill = tint ?? GlassStyle.fill;
-    final sigma =
-        blur ?? ThemeManager.instance.resolved.translucency.glassBlur;
+    final sigma = blur ?? ThemeManager.instance.resolved.translucency.glassBlur;
     Widget w = DecoratedBox(
       decoration: BoxDecoration(
         color: on ? fill : fill.withValues(alpha: 0.96),
@@ -94,22 +92,10 @@ class GlassTopFrame extends StatelessWidget {
   /// still reach the oldest row from under the header.
   static const double inset = 52;
   static const double fade = 14;
-  // (lower edge as a fraction of the height, blur sigma), top band first. Many
-  // small steps on wavy edges, so neither the start nor a step reads as a line.
-  static final List<(double, double)> _bands = [
-    for (var i = 0; i < 14; i++)
-      (
-        0.34 + 0.66 * (i + 1) / 14,
-        0.5 + 10.5 * math.pow(1 - i / 13, 1.6).toDouble(),
-      ),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final bg = color ?? AppColors.bg;
     final on = Glass.effectiveEnabled;
-    // Test: edge blur off while chasing a raster-thread crash on session open.
-    const edgeBlur = false;
     final up = StatusInset.of(context);
     final frame = Stack(clipBehavior: Clip.none, children: [
       Positioned(
@@ -119,35 +105,21 @@ class GlassTopFrame extends StatelessWidget {
         bottom: 0,
         child: IgnorePointer(
           child: Stack(children: [
-            if (edgeBlur)
-              // Bands share one backdrop read; overlapping stacked blurs cost a
-              // full pass each and were the main source of scroll jank.
-              Positioned.fill(
-                child: Stack(children: [
-                  for (var i = 0; i < _bands.length; i++)
-                    Positioned.fill(
-                      child: ClipPath(
-                        clipper: _BandClip(i, _bands),
-                        child: BackdropFilter.grouped(
-                          filter: ImageFilter.blur(
-                              sigmaX: _bands[i].$2, sigmaY: _bands[i].$2),
-                          child: const SizedBox.expand(),
-                        ),
-                      ),
-                    ),
-                ]),
-              ),
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    stops: const [0, 0.5, 0.8, 1],
+                    // Eased fade: solid at the status bar, gone at the lower edge.
+                    // A plain gradient is free to paint; stacked backdrop blurs
+                    // crashed the raster thread on a Pixel when a page slid in.
+                    stops: const [0, 0.3, 0.55, 0.78, 1],
                     colors: [
-                      bg.withValues(alpha: on ? 0.72 : 0.96),
-                      bg.withValues(alpha: on ? 0.55 : 0.9),
-                      bg.withValues(alpha: on ? 0.2 : 0.5),
+                      bg.withValues(alpha: on ? 0.94 : 0.98),
+                      bg.withValues(alpha: on ? 0.82 : 0.94),
+                      bg.withValues(alpha: on ? 0.5 : 0.8),
+                      bg.withValues(alpha: on ? 0.16 : 0.4),
                       bg.withValues(alpha: 0),
                     ],
                   ),
@@ -165,66 +137,6 @@ class GlassTopFrame extends StatelessWidget {
         ? BackdropGroup(child: frame)
         : frame;
   }
-}
-
-/// One frost band: the region between the wavy lower edge of the band above
-/// and its own. Neighbours share an edge, so bands tile without overlap.
-class _BandClip extends CustomClipper<Path> {
-  _BandClip(this.index, this.bands);
-
-  final int index;
-  final List<(double, double)> bands;
-
-  static const _knot = 32.0;
-
-  // Seeded per edge so the contour is irregular but stable across frames.
-  List<double> _knots(int edge, Size size) {
-    final h = size.height;
-    final frac = bands[edge].$1;
-    final amp = h * 0.03;
-    final rnd = math.Random(31 + edge * 977);
-    final n = (size.width / _knot).ceil() + 1;
-    return [
-      for (var k = 0; k <= n; k++)
-        frac >= 1
-            ? h - rnd.nextDouble() * amp * 1.5
-            : (h * frac + (rnd.nextDouble() - 0.5) * 2 * amp).clamp(0.0, h),
-    ];
-  }
-
-  // A smooth curve through the knots: quadratic segments between midpoints.
-  static void _curve(Path p, List<double> ys, {required bool reverse}) {
-    final pts = [
-      for (var k = 0; k < ys.length; k++) Offset(k * _knot, ys[k]),
-    ];
-    final seq = reverse ? pts.reversed.toList() : pts;
-    p.lineTo(seq.first.dx, seq.first.dy);
-    for (var k = 1; k < seq.length - 1; k++) {
-      final mid = Offset((seq[k].dx + seq[k + 1].dx) / 2,
-          (seq[k].dy + seq[k + 1].dy) / 2);
-      p.quadraticBezierTo(seq[k].dx, seq[k].dy, mid.dx, mid.dy);
-    }
-    p.lineTo(seq.last.dx, seq.last.dy);
-  }
-
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    if (index == 0) {
-      path.moveTo(0, 0);
-      path.lineTo(size.width + _knot, 0);
-    } else {
-      final top = _knots(index - 1, size);
-      path.moveTo(0, top.first);
-      _curve(path, top, reverse: false);
-    }
-    _curve(path, _knots(index, size), reverse: true);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(_BandClip old) => old.index != index;
 }
 
 /// Marks content already sitting on frost, so nested [Glass] skips its blur.
@@ -279,7 +191,8 @@ class ModalGlass extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final anim = ModalRoute.of(context)?.animation;
-    if (anim == null || !Glass.effectiveEnabled || _phone(context)) return child;
+    if (anim == null || !Glass.effectiveEnabled || _phone(context))
+      return child;
     return Stack(fit: StackFit.passthrough, children: [
       Positioned.fill(
         child: IgnorePointer(
