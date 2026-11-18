@@ -1320,7 +1320,18 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           tail: true,
           child: Padding(
             padding: EdgeInsets.symmetric(vertical: S.s4, horizontal: S.s2),
-            child: _TypingDots(key: Key('agentTypingDots')),
+            // Phone: the agent's own mascot hops, as in sessions; desktop keeps dots.
+            child: kMobile
+                ? SizedBox(
+                    key: const Key('agentTypingDots'),
+                    width: 34,
+                    height: 30,
+                    child: Center(
+                      child: AgentMochi(widget.agentId,
+                          size: 28, state: AgentCharacterState.working),
+                    ),
+                  )
+                : const _TypingDots(key: Key('agentTypingDots')),
           ),
         ),
       );
