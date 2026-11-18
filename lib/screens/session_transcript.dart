@@ -55,8 +55,13 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       ));
     }
 
+    // Index of the event being laid out, and where the open run began.
+    var curIdx = 0;
+    int? runFirst;
+
     void addToolRow(Widget child, String key) {
       runStartKey ??= key;
+      runFirst ??= curIdx;
       run.add(child);
     }
 
@@ -110,12 +115,14 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       final running =
           isSessionRunning && run.any((w) => w is DenseToolRow && w.pending);
       final toolKey = 'transcript-tools-$start';
+      final took = transcriptRunDuration(events, runFirst ?? curIdx, curIdx);
       final open = _toolRunOpen[toolKey] ?? false;
       out.add(KeyedSubtree(
         key: ValueKey(toolKey),
         child: spaced(CollapsedActivity(
           List.of(run),
           running: running,
+          took: took,
           open: open,
           onOpenChanged: (nextOpen) {
             if (!mounted) return;
@@ -129,6 +136,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       ));
       run.clear();
       runStartKey = null;
+      runFirst = null;
     }
 
     String? laneTitleFor(String agentId) {
@@ -173,6 +181,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     }
 
     for (var idx = 0; idx < events.length; idx++) {
+      curIdx = idx;
       final e = events[idx];
       final key = eventKey(e);
       final abs = 'event-${_transcriptStart + idx}';
@@ -628,6 +637,19 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                 ));
           }
         case 'system_decision':
+          // Watch lines are part of the work, so they join the open fold.
+          if (const {'watch_added', 'watch_removed', 'file_watch'}
+              .contains(_s(e['step']))) {
+            flushPending(key);
+            addToolRow(
+                SystemRow(
+                    key: ValueKey('watch-$key'),
+                    step: _s(e['step']),
+                    reasoning: _s(e['reasoning']),
+                    time: formatEventTime(e['at'] ?? e['created_at'])),
+                key);
+            break;
+          }
           endTools(key);
           // Don't render "interrupted" decisions — just noise in the chat.
           if (_s(e['step']) == 'interrupted') break;
@@ -776,6 +798,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     // Trailing tool_call/tool_result events stay in `run` until a later
     // user/assistant message would flush them. Without this, live tools
     // remain invisible until the next chat message.
+    curIdx = events.length;
     endTools('transcript-tools-tail');
     // Coordination rows go LAST: they are the most recent thing to happen to
     // this session's agent, and they read as a live footer under the work.
@@ -1197,6 +1220,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
 class CollapsedActivity extends StatefulWidget {
   final List<Widget> rows;
   final bool running;
+  final Duration? took;
   final bool open;
   final ValueChanged<bool>? onOpenChanged;
 
@@ -1204,6 +1228,7 @@ class CollapsedActivity extends StatefulWidget {
     this.rows, {
     super.key,
     this.running = false,
+    this.took,
     this.open = false,
     this.onOpenChanged,
   });
@@ -1230,9 +1255,35 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
     return ActivityFold(
         rows: widget.rows,
         running: widget.running,
+        took: widget.took,
         open: _open,
         onTap: _toggle);
   }
+}
+
+int? _eventMs(Map<String, dynamic> e) {
+  final v = e['at_ms'];
+  return v is num ? v.toInt() : null;
+}
+
+/// Time between the message before a run of steps (events `[from, to)`) and
+/// the reply that ends it, from the daemon's `at_ms` write stamps. Without a
+/// closing reply it ends at the run's last stamp, so an idle gap before the
+/// user's next message is never counted. Null when unstamped or under 1s.
+Duration? transcriptRunDuration(List<Map<String, dynamic>> events, int from, int to) {
+  int? start;
+  for (var i = from - 1; i >= 0 && start == null; i--) {
+    start = _eventMs(events[i]);
+  }
+  int? end;
+  if (to < events.length && events[to]['kind'] == 'assistant_text') {
+    end = _eventMs(events[to]);
+  }
+  for (var i = to - 1; i >= from && end == null; i--) {
+    end = _eventMs(events[i]);
+  }
+  if (start == null || end == null || end - start < 1000) return null;
+  return Duration(milliseconds: end - start);
 }
 
 bool _isRestartNote(String s) => s.trim().startsWith('Snippet restarted while');

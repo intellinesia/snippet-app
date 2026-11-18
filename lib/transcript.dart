@@ -146,9 +146,13 @@ class WorkLine extends StatelessWidget {
     required this.running,
     required this.open,
     required this.onTap,
+    this.took,
   });
 
   final List<ToolStep> steps;
+
+  /// Wall time from the event stamps; falls back to the steps' own timings.
+  final Duration? took;
   final bool running;
   final bool open;
   final VoidCallback onTap;
@@ -166,7 +170,7 @@ class WorkLine extends StatelessWidget {
         style: isRunning ? style.copyWith(color: AppColors.fg1) : null);
     final spans = <InlineSpan>[];
     if (!isRunning) {
-      final took = stepsDuration(steps);
+      final took = this.took ?? stepsDuration(steps);
       lead = TextSpan(
           text: took != null
               ? 'Worked for ${formatWorkDuration(took)}'
@@ -812,10 +816,12 @@ class ActivityFold extends StatelessWidget {
     required this.running,
     required this.open,
     required this.onTap,
+    this.took,
   });
 
   final List<Widget> rows;
   final bool running;
+  final Duration? took;
   final bool open;
   final VoidCallback onTap;
 
@@ -829,7 +835,8 @@ class ActivityFold extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        WorkLine(steps: steps, running: false, open: open, onTap: onTap),
+        WorkLine(
+            steps: steps, running: false, open: open, onTap: onTap, took: took),
         SpringExpand(open: open, child: WorkSteps(rows: rows)),
       ],
     );
