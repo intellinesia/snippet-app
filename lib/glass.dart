@@ -95,11 +95,12 @@ class GlassTopFrame extends StatelessWidget {
   static const double fade = 14;
 
   // (bottom edge as a fraction of the blurred area, blur sigma), weakest first.
-  // Eased so the steps are tiny at the bottom, where the area ends: the first
-  // band is barely blurred, so no line shows against the sharp text below.
+  // Nine bands is the ceiling: 14 crashed the raster thread on a Pixel while a
+  // page opened. Eased so the first band is barely blurred and the lower edge
+  // does not show against the sharp text below.
   static final List<(double, double)> _bands = [
-    for (var i = 0; i < 14; i++)
-      (1.0 - i * 0.05, 20.0 * math.pow((i + 1) / 14, 1.6).toDouble()),
+    for (var i = 0; i < 9; i++)
+      (1.0 - i * 0.075, 20.0 * math.pow((i + 1) / 9, 2).toDouble()),
   ];
 
   /// How far the blurred area runs below the header strip, in logical pixels.
