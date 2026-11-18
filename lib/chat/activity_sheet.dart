@@ -358,15 +358,6 @@ String _argLabel(ToolStep s) {
   return (a['label'] ?? '').toString().trim();
 }
 
-String _command(ToolStep s) {
-  final a = s.args is Map ? s.args as Map : const {};
-  return (a['command'] ?? s.data?['command'] ?? '')
-      .toString()
-      .split('\n')
-      .first
-      .trim();
-}
-
 String stepTitle(ToolStep s) {
   if (s.running) return liveStepText(s);
   if (toolBaseName(s.tool) == 'bash') {

@@ -22,6 +22,7 @@ import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../chat/activity_dock.dart';
+import '../chat/send_in.dart';
 import '../chat/activity_sheet.dart';
 import '../chat/anchored_scroll.dart';
 import '../chat/chat_card.dart';
@@ -476,7 +477,12 @@ class _SessionScreenState extends State<SessionScreen>
 
   // How many user turns (typed or steered) the daemon has echoed into the event
 
+  // When the user last sent; the echoed bubble rises in from the composer.
+  DateTime? _lastSendAt;
+  final Set<String> _sendInKeys = {};
+
   void _trackPending(String msg, String nonce) {
+    _lastSendAt = DateTime.now();
     _pending.add(msg);
     _pendingNonce.add(nonce);
     _pendingEchoBaseline
@@ -1825,8 +1831,10 @@ class _SessionScreenState extends State<SessionScreen>
                                                                   _me?.displayAgentId ??
                                                                       'snippet',
                                                               running: running,
-                                                              dockActive: kMobile &&
-                                                                  _dockRun != null,
+                                                              dockActive:
+                                                                  kMobile &&
+                                                                      _dockRun !=
+                                                                          null,
                                                               compacting:
                                                                   s.compacting,
                                                               startedAt: s

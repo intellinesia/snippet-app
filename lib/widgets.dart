@@ -956,7 +956,10 @@ class _PressableState extends State<Pressable> with TickerProviderStateMixin {
   Timer? _liftTimer;
   bool _down = false;
 
-  bool get _tints => widget.kind != PressKind.button;
+  // Phone rows keep the press scale but no square tint (radius 0 showed a rectangle).
+  bool get _tints =>
+      widget.kind != PressKind.button &&
+      !(kMobile && widget.kind == PressKind.row);
 
   void _press(PointerDownEvent e) {
     if (!widget.enabled || _down) return;

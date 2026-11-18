@@ -401,13 +401,23 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             addEvent(key, AssignmentCard(assignment: assignment));
             break;
           }
+          final sentAt = _lastSendAt;
+          final evMs = _eventMs(e);
+          if (sentAt != null &&
+              DateTime.now().difference(sentAt).inSeconds < 4 &&
+              (evMs == null || evMs >= sentAt.millisecondsSinceEpoch - 2000)) {
+            _sendInKeys.add(key);
+          }
+          final userBubble =
+              Bubble(mine: true, text: text, client: widget.client);
           addEvent(
               key,
               KeyedSubtree(
                 child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
-                    child:
-                        Bubble(mine: true, text: text, client: widget.client)),
+                    child: kMobile && _sendInKeys.contains(key)
+                        ? SendIn(child: userBubble)
+                        : userBubble),
               ));
         case 'assistant_text':
           endTools(key);
