@@ -643,8 +643,8 @@ class _AgentRowShellState extends State<AgentRowShell> {
                 color: fill, borderRadius: BorderRadius.circular(R.of(8))),
             child: Opacity(
               opacity: widget.dim ? 0.55 : 1,
-              // One line: avatar and name. Time and preview are left out;
-              // the avatar dot and the trailing mark carry the state.
+              // One line: avatar, name and last-message time; the avatar dot
+              // and the trailing mark carry the state.
               child: Row(children: [
                 SizedBox.square(
                   dimension: 22,
@@ -697,6 +697,13 @@ class _AgentRowShellState extends State<AgentRowShell> {
                 if (widget.trailing != null) ...[
                   const SizedBox(width: 6),
                   widget.trailing!,
+                ],
+                // Last at the edge so the times form one column.
+                if (widget.time.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Text(widget.time,
+                      maxLines: 1,
+                      style: sans(11, color: AppColors.fg4, tabular: true)),
                 ],
               ]),
             ),
