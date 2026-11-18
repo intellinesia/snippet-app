@@ -92,6 +92,10 @@ class GlassTopFrame extends StatelessWidget {
   /// still reach the oldest row from under the header.
   static const double inset = 52;
   static const double fade = 14;
+  // (how far the arch reaches, blur sigma), widest and gentlest first so the
+  // strongest, smallest arch is painted on top.
+  static const List<(double, double)> _arches = [(1.0, 3.5), (0.72, 9.0)];
+
   @override
   Widget build(BuildContext context) {
     final bg = color ?? AppColors.bg;
@@ -106,12 +110,12 @@ class GlassTopFrame extends StatelessWidget {
         child: IgnorePointer(
           child: Stack(children: [
             if (on)
-              // Two plain rectangles, not many clipped bands: the 14-band
-              // version crashed the raster thread when a page slid in.
-              for (final (frac, sigma) in const [(0.85, 3.0), (0.6, 9.0)])
+              // Two arched clips, not 14 wavy bands (those crashed the raster
+              // thread on a Pixel). The arch dips toward the centre pill.
+              for (final (reach, sigma) in _arches)
                 Positioned.fill(
-                  child: ClipRect(
-                    clipper: _TopFraction(frac),
+                  child: ClipPath(
+                    clipper: _ArchClip(reach),
                     child: BackdropFilter.grouped(
                       filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
                       child: const SizedBox.expand(),
@@ -232,16 +236,25 @@ class ModalGlass extends StatelessWidget {
           .contains(Theme.of(context).platform);
 }
 
-/// Clips to the top [fraction] of the box.
-class _TopFraction extends CustomClipper<Rect> {
-  const _TopFraction(this.fraction);
+/// An uneven arch: shallow at the sides, deepest just off centre, with a soft
+/// shoulder on each side so the edge never reads as a straight line.
+class _ArchClip extends CustomClipper<Path> {
+  const _ArchClip(this.reach);
 
-  final double fraction;
-
-  @override
-  Rect getClip(Size size) =>
-      Rect.fromLTWH(0, 0, size.width, size.height * fraction);
+  final double reach;
 
   @override
-  bool shouldReclip(_TopFraction old) => old.fraction != fraction;
+  Path getClip(Size size) {
+    final w = size.width, h = size.height * reach;
+    return Path()
+      ..moveTo(0, 0)
+      ..lineTo(w, 0)
+      ..lineTo(w, h * 0.5)
+      ..cubicTo(w * 0.92, h * 0.78, w * 0.72, h * 0.98, w * 0.56, h)
+      ..cubicTo(w * 0.42, h * 1.0, w * 0.22, h * 0.84, 0, h * 0.58)
+      ..close();
+  }
+
+  @override
+  bool shouldReclip(_ArchClip old) => old.reach != reach;
 }
