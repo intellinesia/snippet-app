@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -93,18 +92,9 @@ class GlassTopFrame extends StatelessWidget {
   /// still reach the oldest row from under the header.
   static const double inset = 52;
   static const double fade = 14;
-  // (how far the layer reaches, blur sigma, shape seed), widest and faintest
-  // first so the strongest, smallest layer is painted on top. Each edge is a
-  // different big irregular outline, so no single border shows.
-  static const List<(double, double, int)> _arches = [
-    (1.0, 1.0, 3),
-    (0.88, 2.6, 11),
-    (0.74, 5.0, 23),
-    (0.58, 8.5, 37),
-  ];
 
   /// How far the blurred area runs below the header strip, in logical pixels.
-  static const double _extra = 44;
+  static const double _extra = 36;
 
   @override
   Widget build(BuildContext context) {
@@ -120,18 +110,24 @@ class GlassTopFrame extends StatelessWidget {
         child: IgnorePointer(
           child: Stack(children: [
             if (on)
-              // Two arched clips, not 14 wavy bands (those crashed the raster
-              // thread on a Pixel). The arch dips toward the centre pill.
-              for (final (reach, sigma, seed) in _arches)
-                Positioned.fill(
-                  child: ClipPath(
-                    clipper: ArchClip(reach, seed),
-                    child: BackdropFilter.grouped(
-                      filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-                      child: const SizedBox.expand(),
-                    ),
+              // One blurred rectangle whose strength melts away downward: a
+              // gradient mask, no clip paths (stacked clipped layers crashed the
+              // raster thread on a Pixel).
+              Positioned.fill(
+                child: ShaderMask(
+                  blendMode: BlendMode.dstIn,
+                  shaderCallback: (r) => const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [0, 0.5, 1],
+                    colors: [Colors.black, Colors.black, Colors.transparent],
+                  ).createShader(r),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                    child: const SizedBox.expand(),
                   ),
                 ),
+              ),
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -244,58 +240,4 @@ class ModalGlass extends StatelessWidget {
       MediaQuery.sizeOf(context).width < 700 ||
       const {TargetPlatform.android, TargetPlatform.iOS}
           .contains(Theme.of(context).platform);
-}
-
-/// A big irregular blob edge: many uneven lobes along the bottom, deepest near
-/// the centre pill, plus a few loose droplets just below. Each seed draws a
-/// different outline, so stacked layers never trace one visible border.
-class ArchClip extends CustomClipper<Path> {
-  const ArchClip(this.reach, this.seed);
-
-  final double reach;
-  final int seed;
-
-  static const _knots = 13;
-
-  double _rnd(int i, int salt) =>
-      (math.sin((seed * 12.9898 + i * 78.233 + salt * 37.719) * 1.7) *
-              43758.5453)
-          .abs() %
-      1.0;
-
-  @override
-  Path getClip(Size size) {
-    final w = size.width, h = size.height * reach;
-    final xs = <double>[], ys = <double>[];
-    for (var i = 0; i < _knots; i++) {
-      final t = i / (_knots - 1);
-      final arch = 0.62 + 0.38 * math.sin(math.pi * t);
-      xs.add(w * t +
-          (i == 0 || i == _knots - 1 ? 0 : (_rnd(i, 1) - 0.5) * w * 0.05));
-      ys.add(h * arch * (0.5 + 0.5 * _rnd(i, 2)));
-    }
-    final path = Path()
-      ..moveTo(0, 0)
-      ..lineTo(w, 0)
-      ..lineTo(xs.last, ys.last);
-    // Rounded lobes: quadratic through the midpoints, knots as the controls.
-    for (var i = _knots - 1; i > 0; i--) {
-      final mx = (xs[i] + xs[i - 1]) / 2, my = (ys[i] + ys[i - 1]) / 2;
-      path.quadraticBezierTo(xs[i], ys[i], mx, my);
-    }
-    path.lineTo(xs.first, ys.first);
-    path.close();
-    // Loose droplets under the edge.
-    for (var k = 0; k < 7; k++) {
-      final x = w * (0.06 + 0.88 * _rnd(k, 3));
-      final r = 5 + 9 * _rnd(k, 4);
-      final yEdge = ys[(x / w * (_knots - 1)).round().clamp(0, _knots - 1)];
-      path.addOval(Rect.fromCircle(
-          center: Offset(x, yEdge + r * (0.3 + 1.1 * _rnd(k, 5))), radius: r));
-    }
-    return path;
-  }
-
-  @override
-  bool shouldReclip(ArchClip old) => old.reach != reach || old.seed != seed;
 }
