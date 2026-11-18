@@ -1524,7 +1524,8 @@ class _SessionScreenState extends State<SessionScreen>
   double _composerH = 0;
 
   @override
-  Widget build(BuildContext context) => _isMissionControl
+  // Phones keep Mission Control as a chat; desktop reads it like any session.
+  Widget build(BuildContext context) => _isMissionControl && kMobile
       ? ChatBubbleScope(child: _buildScreen(context))
       : _buildScreen(context);
 
