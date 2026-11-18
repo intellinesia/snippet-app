@@ -94,14 +94,17 @@ class GlassTopFrame extends StatelessWidget {
   static const double inset = 52;
   static const double fade = 14;
   // (how far the layer reaches, blur sigma, shape seed), widest and faintest
-  // first so the strongest, smallest layer is painted on top. Each step in
-  // sigma is small and each edge differs, so no single outline shows.
+  // first so the strongest, smallest layer is painted on top. Each edge is a
+  // different big irregular outline, so no single border shows.
   static const List<(double, double, int)> _arches = [
-    (1.0, 1.2, 3),
-    (0.86, 3.0, 11),
-    (0.72, 5.8, 23),
-    (0.56, 9.0, 37),
+    (1.0, 1.0, 3),
+    (0.88, 2.6, 11),
+    (0.74, 5.0, 23),
+    (0.58, 8.5, 37),
   ];
+
+  /// How far the blurred area runs below the header strip, in logical pixels.
+  static const double _extra = 44;
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +116,7 @@ class GlassTopFrame extends StatelessWidget {
         top: -up,
         left: 0,
         right: 0,
-        bottom: 0,
+        bottom: -_extra,
         child: IgnorePointer(
           child: Stack(children: [
             if (on)
@@ -243,42 +246,54 @@ class ModalGlass extends StatelessWidget {
           .contains(Theme.of(context).platform);
 }
 
-/// An uneven arch: its lower edge is a smooth curve through knots that rise and
-/// fall by a seeded amount, deepest near the centre pill. Different seeds give
-/// different outlines, so stacked layers never trace one visible border.
+/// A big irregular blob edge: many uneven lobes along the bottom, deepest near
+/// the centre pill, plus a few loose droplets just below. Each seed draws a
+/// different outline, so stacked layers never trace one visible border.
 class ArchClip extends CustomClipper<Path> {
   const ArchClip(this.reach, this.seed);
 
   final double reach;
   final int seed;
 
-  static const _knots = 7;
+  static const _knots = 13;
+
+  double _rnd(int i, int salt) =>
+      (math.sin((seed * 12.9898 + i * 78.233 + salt * 37.719) * 1.7) *
+              43758.5453)
+          .abs() %
+      1.0;
 
   @override
   Path getClip(Size size) {
     final w = size.width, h = size.height * reach;
-    final ys = <double>[];
+    final xs = <double>[], ys = <double>[];
     for (var i = 0; i < _knots; i++) {
       final t = i / (_knots - 1);
-      final arch = 0.55 + 0.45 * math.sin(math.pi * t);
-      final n = math.sin((seed * 12.9898 + i * 78.233) * 1.7) * 0.5 + 0.5;
-      ys.add(h * (arch * (0.82 + 0.18 * n)).clamp(0.2, 1.0));
+      final arch = 0.62 + 0.38 * math.sin(math.pi * t);
+      xs.add(w * t +
+          (i == 0 || i == _knots - 1 ? 0 : (_rnd(i, 1) - 0.5) * w * 0.05));
+      ys.add(h * arch * (0.5 + 0.5 * _rnd(i, 2)));
     }
     final path = Path()
       ..moveTo(0, 0)
       ..lineTo(w, 0)
-      ..lineTo(w, ys.last);
-    // Catmull-Rom through the knots, right to left.
+      ..lineTo(xs.last, ys.last);
+    // Rounded lobes: quadratic through the midpoints, knots as the controls.
     for (var i = _knots - 1; i > 0; i--) {
-      final x0 = w * i / (_knots - 1), x1 = w * (i - 1) / (_knots - 1);
-      final y0 = ys[i], y1 = ys[i - 1];
-      final yp = i + 1 < _knots ? ys[i + 1] : y0;
-      final yn = i - 2 >= 0 ? ys[i - 2] : y1;
-      final dx = (x0 - x1) / 3;
-      path.cubicTo(
-          x0 - dx, y0 + (y1 - yp) / 6, x1 + dx, y1 - (yn - y0) / 6, x1, y1);
+      final mx = (xs[i] + xs[i - 1]) / 2, my = (ys[i] + ys[i - 1]) / 2;
+      path.quadraticBezierTo(xs[i], ys[i], mx, my);
     }
-    return path..close();
+    path.lineTo(xs.first, ys.first);
+    path.close();
+    // Loose droplets under the edge.
+    for (var k = 0; k < 7; k++) {
+      final x = w * (0.06 + 0.88 * _rnd(k, 3));
+      final r = 5 + 9 * _rnd(k, 4);
+      final yEdge = ys[(x / w * (_knots - 1)).round().clamp(0, _knots - 1)];
+      path.addOval(Rect.fromCircle(
+          center: Offset(x, yEdge + r * (0.3 + 1.1 * _rnd(k, 5))), radius: r));
+    }
+    return path;
   }
 
   @override
