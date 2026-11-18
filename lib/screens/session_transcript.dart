@@ -2,6 +2,7 @@ part of 'session.dart';
 
 extension _SessionScreenTranscriptExt on _SessionScreenState {
   List<Widget> _transcript(List<Map<String, dynamic>> events) {
+    _dockRun = null;
     final out = <Widget>[];
     Map<String, dynamic>? pending;
     final run = <Widget>[]; // consecutive dense tool rows
@@ -91,6 +92,45 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           isSessionRunning && run.any((w) => w is DenseToolRow && w.pending);
       final toolKey = 'transcript-tools-$start';
       final took = transcriptRunDuration(events, runFirst ?? curIdx, curIdx);
+      if (kMobile) {
+        final steps = [
+          for (final w in run.whereType<DenseToolRow>())
+            ToolStep(tool: w.tool, args: w.args, result: w.result),
+        ];
+        if (steps.isNotEmpty) {
+          if (running) {
+            int? startMs;
+            for (var i = (runFirst ?? curIdx) - 1; i >= 0 && startMs == null; i--) {
+              startMs = _eventMs(events[i]);
+            }
+            final startedAt = startMs != null
+                ? DateTime.fromMillisecondsSinceEpoch(startMs)
+                : _dockSeen.putIfAbsent(toolKey, DateTime.now);
+            final batch = ToolBatch(steps, running: true);
+            _dockRun = DockRun(batch, startedAt);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _dockBatch.value = batch;
+            });
+          } else {
+            out.add(KeyedSubtree(
+              key: ValueKey(toolKey),
+              child: spaced(ActivityPill(
+                steps: steps,
+                took: took,
+                onOpen: (i) => showActivitySheet(context,
+                    batch: ValueNotifier<ToolBatch>(ToolBatch(steps)),
+                    initial: i,
+                    took: took,
+                    onOpenFile: _openChangedFile),
+              )),
+            ));
+          }
+          run.clear();
+          runStartKey = null;
+          runFirst = null;
+          return;
+        }
+      }
       final open = _toolRunOpen[toolKey] ?? false;
       out.add(KeyedSubtree(
         key: ValueKey(toolKey),
@@ -662,24 +702,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
               key,
               TurnChangesCard(
                 event: e,
-                onOpenFile: (rel) {
-                  final ws = _state?.workspace ?? '';
-                  final full = rel.startsWith('/') || ws.isEmpty
-                      ? rel
-                      : '${ws.endsWith('/') ? ws : '$ws/'}$rel';
-                  final name = rel.split('/').last;
-                  if (openFileForViewing(context,
-                      client: widget.client, path: full, name: name)) {
-                    return;
-                  }
-                  final open = widget.onOpenFileTab;
-                  if (open != null) {
-                    open(full, name);
-                  } else {
-                    presentFileOnDesktop(context,
-                        client: widget.client, path: full, name: name);
-                  }
-                },
+                onOpenFile: _openChangedFile,
               ));
         case 'file_presented':
           endTools(key);
@@ -1191,6 +1214,17 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     } catch (e) {
       _toast('$e');
     }
+  }
+}
+
+extension _SessionActivityExt on _SessionScreenState {
+  void _openLiveActivity(int? index) {
+    final run = _dockRun;
+    showActivitySheet(context,
+        batch: _dockBatch,
+        initial: index,
+        startedAt: run?.startedAt,
+        onOpenFile: _openChangedFile);
   }
 }
 

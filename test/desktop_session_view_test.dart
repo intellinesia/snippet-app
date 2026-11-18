@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:snippet/chat/activity_dock.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/motion.dart';
 import 'package:snippet/screens/session.dart';
@@ -335,16 +336,33 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.byType(WorkLine), findsOneWidget);
-      expect(find.textContaining('Running flutter analyze', findRichText: true),
-          findsOneWidget);
-      expect(find.byType(DenseToolRow), findsOneWidget);
-      expect(find.text('Show'), findsNothing);
+      if (desktop) {
+        expect(find.byType(WorkLine), findsOneWidget);
+        expect(
+            find.textContaining('Running flutter analyze', findRichText: true),
+            findsOneWidget);
+        expect(find.byType(DenseToolRow), findsOneWidget);
+        expect(find.text('Show'), findsNothing);
 
-      await tester.tap(find.byType(WorkLine));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byType(DenseToolRow), findsNWidgets(6));
+        await tester.tap(find.byType(WorkLine));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.byType(DenseToolRow), findsNWidgets(6));
+      } else {
+        // Phone: the finished run is one pill, the live run is the dock.
+        expect(find.byType(WorkLine), findsNothing);
+        expect(find.byType(DenseToolRow), findsNothing);
+        expect(find.byType(ActivityPill), findsOneWidget);
+        expect(find.byType(ActivityDock), findsOneWidget);
+        expect(find.textContaining('Running flutter analyze', findRichText: true),
+            findsOneWidget);
+
+        await tester.tap(find.byType(ActivityPill));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 600));
+        expect(find.text('Activity'), findsOneWidget);
+        expect(find.text('Edited 3 files'), findsOneWidget);
+      }
 
       await _disposeSession(tester);
     });

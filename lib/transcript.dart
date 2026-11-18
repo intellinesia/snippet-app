@@ -224,7 +224,7 @@ class WorkLine extends StatelessWidget {
 }
 
 /// Steps that only look something up; a run of them folds into one group row.
-bool _isLookup(ToolStep s) => switch (toolBaseName(s.tool)) {
+bool isLookupStep(ToolStep s) => switch (toolBaseName(s.tool)) {
       'read_file' ||
       'view_file' ||
       'search_content' ||
@@ -282,7 +282,7 @@ List<Widget> _groupLookups(List<Widget> rows) {
 
   for (final r in rows) {
     if (r is DenseToolRow &&
-        _isLookup(ToolStep(tool: r.tool, args: r.args, result: r.result))) {
+        isLookupStep(ToolStep(tool: r.tool, args: r.args, result: r.result))) {
       run.add(r);
     } else {
       flush();
@@ -312,7 +312,7 @@ class _ExploreGroupState extends State<_ExploreGroup> {
         ToolStep(tool: r.tool, args: r.args, result: r.result),
     ];
     final live = steps.any((s) => s.running);
-    final searches = steps.where(_isSearch).length;
+    final searches = steps.where(isSearchStep).length;
     final files = steps.length - searches;
     final object = [
       if (files > 0) '$files ${files == 1 ? 'file' : 'files'}',
@@ -352,7 +352,7 @@ class _ExploreGroupState extends State<_ExploreGroup> {
   }
 }
 
-bool _isSearch(ToolStep s) => switch (toolBaseName(s.tool)) {
+bool isSearchStep(ToolStep s) => switch (toolBaseName(s.tool)) {
       'read_file' || 'view_file' || 'list_dir' => false,
       _ => true,
     };
@@ -556,7 +556,7 @@ class _DenseToolRowState extends State<DenseToolRow> {
               ? Padding(
                   padding: const EdgeInsets.fromLTRB(0, 2, 0, 8),
                   child: _isCommand
-                      ? _TerminalBlock(step: step)
+                      ? TerminalBlock(step: step)
                       : _StepDetail(step: step),
                 )
               : const SizedBox(width: double.infinity),
@@ -570,19 +570,37 @@ final _ansiCodes = RegExp(r'\x1B\[[0-9;]*[A-Za-z]');
 
 /// A command opened: "$ command", its output capped at a few lines with a
 /// fade, and the exit code in the corner.
-class _TerminalBlock extends StatefulWidget {
-  const _TerminalBlock({required this.step});
+class TerminalBlock extends StatefulWidget {
+  const TerminalBlock({
+    super.key,
+    required this.step,
+    this.commandLines,
+    this.outputCap = 8,
+    this.tail = false,
+    this.size = 12,
+  });
   final ToolStep step;
 
+  /// Clamp the command to this many lines behind "Show full command".
+  final int? commandLines;
+
+  /// Output lines shown before "Show all".
+  final int outputCap;
+
+  /// Show the last lines of the output, as a running command does.
+  final bool tail;
+  final double size;
+
   @override
-  State<_TerminalBlock> createState() => _TerminalBlockState();
+  State<TerminalBlock> createState() => _TerminalBlockState();
 }
 
-class _TerminalBlockState extends State<_TerminalBlock> {
-  static const _cap = 8;
-  static const _size = 12.0;
+class _TerminalBlockState extends State<TerminalBlock> {
   static const _lineHeight = 1.6;
+  double get _size => widget.size;
+  int get _cap => widget.outputCap;
   bool _full = false;
+  bool _cmdFull = false;
 
   static String _clean(Object? v) => (v ?? '')
       .toString()
@@ -610,18 +628,25 @@ class _TerminalBlockState extends State<_TerminalBlock> {
     final overflow = total > _cap;
     final capped = overflow && !_full;
     final cmdLines = cmd.isEmpty ? const <String>[] : cmd.split('\n');
+    final clampCmd = widget.commandLines != null &&
+        (cmdLines.length > widget.commandLines! || cmd.length > 110);
+    // A running command shows its newest lines, a finished one its first.
+    final skip = capped && widget.tail ? total - _cap : 0;
+    final outShown = out.skip(skip.clamp(0, out.length)).toList();
+    final errShown =
+        errLines.skip((skip - out.length).clamp(0, errLines.length)).toList();
     final output = total == 0
         ? null
         : Text.rich(TextSpan(style: base, children: [
-            for (var i = 0; i < out.length; i++)
+            for (var i = 0; i < outShown.length; i++)
               TextSpan(
-                  text: '${i == 0 ? '' : '\n'}${out[i]}',
-                  style: errorLineMarker.hasMatch(out[i])
+                  text: '${i == 0 ? '' : '\n'}${outShown[i]}',
+                  style: errorLineMarker.hasMatch(outShown[i])
                       ? TextStyle(color: AppColors.danger)
                       : null),
-            for (var i = 0; i < errLines.length; i++)
+            for (var i = 0; i < errShown.length; i++)
               TextSpan(
-                  text: '${out.isEmpty && i == 0 ? '' : '\n'}${errLines[i]}',
+                  text: '${outShown.isEmpty && i == 0 ? '' : '\n'}${errShown[i]}',
                   style: TextStyle(color: AppColors.danger)),
           ]));
     final exit = step.exitCode;
@@ -639,16 +664,30 @@ class _TerminalBlockState extends State<_TerminalBlock> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (cmdLines.isNotEmpty)
-            Text.rich(TextSpan(style: base, children: [
-              for (var i = 0; i < cmdLines.length; i++) ...[
-                if (i > 0) const TextSpan(text: '\n'),
-                TextSpan(
-                    text: i == 0 ? r'$ ' : '  ',
-                    style: TextStyle(color: AppColors.fg4)),
-                TextSpan(
-                    text: cmdLines[i], style: TextStyle(color: AppColors.fg2)),
-              ],
-            ])),
+            Text.rich(
+                TextSpan(style: base, children: [
+                  for (var i = 0; i < cmdLines.length; i++) ...[
+                    if (i > 0) const TextSpan(text: '\n'),
+                    TextSpan(
+                        text: i == 0 ? r'$ ' : '  ',
+                        style: TextStyle(color: AppColors.fg4)),
+                    TextSpan(
+                        text: cmdLines[i],
+                        style: TextStyle(color: AppColors.fg2)),
+                  ],
+                ]),
+                maxLines: clampCmd && !_cmdFull ? widget.commandLines : null,
+                overflow: TextOverflow.ellipsis),
+          if (clampCmd)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => setState(() => _cmdFull = !_cmdFull),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(_cmdFull ? 'Show less' : 'Show full command',
+                    style: sans(13, weight: W.label, color: AppColors.fg3)),
+              ),
+            ),
           if (output != null) ...[
             if (cmdLines.isNotEmpty) const SizedBox(height: 6),
             capped
@@ -664,7 +703,8 @@ class _TerminalBlockState extends State<_TerminalBlock> {
                       Positioned(
                         left: 0,
                         right: 0,
-                        bottom: 0,
+                        top: widget.tail ? 0 : null,
+                        bottom: widget.tail ? null : 0,
                         height: 3 * _size * _lineHeight,
                         child: IgnorePointer(
                           child: DecoratedBox(
@@ -672,10 +712,15 @@ class _TerminalBlockState extends State<_TerminalBlock> {
                               gradient: LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
-                                colors: [
-                                  AppColors.surface2.withValues(alpha: 0),
-                                  AppColors.surface2,
-                                ],
+                                colors: widget.tail
+                                    ? [
+                                        AppColors.surface2,
+                                        AppColors.surface2.withValues(alpha: 0),
+                                      ]
+                                    : [
+                                        AppColors.surface2.withValues(alpha: 0),
+                                        AppColors.surface2,
+                                      ],
                               ),
                             ),
                           ),
@@ -685,7 +730,7 @@ class _TerminalBlockState extends State<_TerminalBlock> {
                   )
                 : output,
           ],
-          if (overflow || badge != null)
+          if (overflow || badge != null || (step.running && widget.tail))
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Row(children: [
@@ -696,6 +741,9 @@ class _TerminalBlockState extends State<_TerminalBlock> {
                     child: Text(_full ? 'Show less' : 'Show all $total lines',
                         style: sans(12, weight: W.label, color: AppColors.fg3)),
                   ),
+                if (step.running && widget.tail)
+                  Text('Following',
+                      style: sans(12, weight: W.label, color: AppColors.fg3)),
                 const Spacer(),
                 if (badge != null)
                   Container(

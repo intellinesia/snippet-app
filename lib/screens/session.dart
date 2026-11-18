@@ -20,6 +20,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../chat/activity_dock.dart';
+import '../chat/activity_sheet.dart';
 import '../chat/anchored_scroll.dart';
 import '../chat/chat_card.dart';
 import '../chat/stage_header.dart';
@@ -686,6 +688,13 @@ class _SessionScreenState extends State<SessionScreen>
   int _attachmentGeneration = 0;
   bool get _anyUploading => _attachments.any((a) => a.uploading);
   final Map<String, bool> _toolRunOpen = {};
+
+  /// Phone: the run now in flight, shown as the dock above the composer.
+  /// Set while the transcript is built; the sheet follows [_dockBatch].
+  DockRun? _dockRun;
+  final ValueNotifier<ToolBatch> _dockBatch =
+      ValueNotifier<ToolBatch>(const ToolBatch([]));
+  final Map<String, DateTime> _dockSeen = {};
   final Set<String> _openToolRows = {};
   bool _transcriptDirty = true;
 
@@ -1457,6 +1466,7 @@ class _SessionScreenState extends State<SessionScreen>
   @override
   void dispose() {
     _closed = true;
+    _dockBatch.dispose();
     _tray.dispose();
     _agentEventsSub?.cancel();
     modelsRevision.removeListener(_loadModel);
