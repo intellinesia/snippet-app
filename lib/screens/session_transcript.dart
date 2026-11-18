@@ -120,6 +120,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                 steps: steps,
                 took: took,
                 onOpen: (i) => showActivitySheet(context,
+        client: widget.client,
                     batch: ValueNotifier<ToolBatch>(ToolBatch(steps)),
                     initial: i,
                     took: took,
@@ -1223,6 +1224,7 @@ extension _SessionActivityExt on _SessionScreenState {
   void _openLiveActivity(int? index) {
     final run = _dockRun;
     showActivitySheet(context,
+        client: widget.client,
         batch: _dockBatch,
         initial: index,
         startedAt: run?.startedAt,

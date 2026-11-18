@@ -8,6 +8,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../api.dart' show DaemonClient;
+import '../media_views.dart' show DaemonScope, ImageThumb;
 import '../morph_sheet.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
@@ -20,6 +22,7 @@ import 'activity_dock.dart';
 
 Future<void> showActivitySheet(
   BuildContext context, {
+  required DaemonClient client,
   required ValueListenable<ToolBatch> batch,
   int? initial,
   DateTime? startedAt,
@@ -27,19 +30,23 @@ Future<void> showActivitySheet(
   void Function(String path)? onOpenFile,
 }) {
   return showSpringSheet<void>(context, builder: (ctx, scroll) {
-    final h = math.min(MediaQuery.of(ctx).size.height * 0.92, 760.0);
+    final h = math.min(MediaQuery.of(ctx).size.height * 0.78, 640.0);
     return Material(
       type: MaterialType.transparency,
       child: AppSheetSurface(
-        child: SizedBox(
-          height: h,
-          child: ActivitySheet(
-            batch: batch,
-            scroll: scroll,
-            initial: initial,
-            startedAt: startedAt,
-            took: took,
-            onOpenFile: onOpenFile,
+        // The sheet sits above the page's scope; images need the client.
+        child: DaemonScope(
+          client: client,
+          child: SizedBox(
+            height: h,
+            child: ActivitySheet(
+              batch: batch,
+              scroll: scroll,
+              initial: initial,
+              startedAt: startedAt,
+              took: took,
+              onOpenFile: onOpenFile,
+            ),
           ),
         ),
       ),
@@ -107,8 +114,8 @@ class _ActivitySheetState extends State<ActivitySheet> {
               return FadeTransition(
                 opacity: a,
                 child: SlideTransition(
-                  position: Tween(begin: Offset(dx, 0), end: Offset.zero)
-                      .animate(a),
+                  position:
+                      Tween(begin: Offset(dx, 0), end: Offset.zero).animate(a),
                   child: child,
                 ),
               );
@@ -121,8 +128,9 @@ class _ActivitySheetState extends State<ActivitySheet> {
                     startedAt: widget.startedAt,
                     took: widget.took,
                     expanded: _expanded,
-                    onToggle: (i) => setState(
-                        () => _expanded.contains(i) ? _expanded.remove(i) : _expanded.add(i)),
+                    onToggle: (i) => setState(() => _expanded.contains(i)
+                        ? _expanded.remove(i)
+                        : _expanded.add(i)),
                     onOpen: _show,
                   )
                 : _DetailPage(
@@ -219,7 +227,8 @@ class _ListPage extends StatelessWidget {
       ));
       if (open) {
         for (final i in e.indexes) {
-          rows.add(_StepRow(step: steps[i], indent: 24, onTap: () => onOpen(i)));
+          rows.add(
+              _StepRow(step: steps[i], indent: 24, onTap: () => onOpen(i)));
         }
       }
     }
@@ -228,11 +237,11 @@ class _ListPage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 6, 20, 8),
+          padding: const EdgeInsets.fromLTRB(20, 2, 20, 4),
           child: Row(children: [
             Expanded(
                 child: Text('Activity',
-                    style: sans(22, weight: W.title, color: AppColors.fg1))),
+                    style: sans(17, weight: W.title, color: AppColors.fg1))),
             if (batch.running && startedAt != null)
               _RunClock(startedAt!)
             else if (t != null)
@@ -303,14 +312,14 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, fg) = _toneColors(tone);
     return Container(
-      height: 28,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      height: 24,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration:
-          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
       child: Center(
         widthFactor: 1,
         child: Text(text,
-            style: sans(14, weight: W.label, color: fg, tabular: true)),
+            style: sans(13, weight: W.label, color: fg, tabular: true)),
       ),
     );
   }
@@ -332,14 +341,14 @@ class _Tile extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, fg) = _toneColors(tone);
     return Container(
-      width: 40,
-      height: 40,
+      width: 34,
+      height: 34,
       alignment: Alignment.center,
       decoration:
-          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
       child: tone == _Tone.run
-          ? RunSpinner(size: 18, color: AppColors.run)
-          : AppIcon(icon, size: 20, color: fg),
+          ? RunSpinner(size: 16, color: AppColors.run)
+          : AppIcon(icon, size: 17, color: fg),
     );
   }
 }
@@ -381,9 +390,8 @@ String? _stepSub(ToolStep s) {
     return c.isEmpty ? null : c;
   }
   if (tool == 'change_files') {
-    final paths = {
-      for (final c in s.changes) (c['path'] ?? '').toString()
-    }..removeWhere((p) => p.isEmpty);
+    final paths = {for (final c in s.changes) (c['path'] ?? '').toString()}
+      ..removeWhere((p) => p.isEmpty);
     return paths.length == 1 ? paths.first : null;
   }
   return null;
@@ -393,7 +401,8 @@ List<String> _errorLines(ToolStep s) {
   final d = s.data;
   var text = (d?['stderr'] ?? '').toString();
   final err = s.result is Map ? (s.result as Map)['error'] : null;
-  if (text.trim().isEmpty && err is Map) text = (err['message'] ?? '').toString();
+  if (text.trim().isEmpty && err is Map)
+    text = (err['message'] ?? '').toString();
   if (text.trim().isEmpty) text = (d?['stdout'] ?? '').toString();
   final lines = text
       .split('\n')
@@ -401,8 +410,9 @@ List<String> _errorLines(ToolStep s) {
       .where((l) => l.isNotEmpty)
       .toList();
   final errors = lines
-      .where((l) => RegExp(r'^\s*(error|fatal|panic|fail)', caseSensitive: false)
-          .hasMatch(l))
+      .where((l) =>
+          RegExp(r'^\s*(error|fatal|panic|fail)', caseSensitive: false)
+              .hasMatch(l))
       .toList();
   if (errors.isNotEmpty) return errors.take(2).toList();
   final hits = lines.where(errorLineMarker.hasMatch).toList();
@@ -416,6 +426,28 @@ class _StepRow extends StatelessWidget {
   final VoidCallback onTap;
   final double indent;
 
+  /// An image step shows its picture in place of the icon.
+  Widget _leading(BuildContext context) {
+    final client = DaemonScope.maybeOf(context);
+    final name = toolBaseName(step.tool);
+    if (client != null &&
+        (name == 'view_image' || name == 'present_file') &&
+        !step.running &&
+        !step.failed) {
+      final a = step.args is Map ? step.args as Map : const {};
+      final path = (step.data?['path'] ?? a['path'] ?? '').toString().trim();
+      final ext = path.split('.').last.toLowerCase();
+      if (path.startsWith('/') &&
+          const {'png', 'jpg', 'jpeg', 'gif', 'webp'}.contains(ext)) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: ImageThumb(client: client, path: path, width: 34, height: 34),
+        );
+      }
+    }
+    return _Tile(toolIcon(step.tool), _stepTone(step));
+  }
+
   @override
   Widget build(BuildContext context) {
     final tone = _stepTone(step);
@@ -424,12 +456,15 @@ class _StepRow extends StatelessWidget {
     final failed = tone == _Tone.bad;
     Widget? meta;
     if (chip != null && (chip.added > 0 || chip.removed > 0)) {
-      meta = Text.rich(TextSpan(children: [
-        TextSpan(text: '+${chip.added}', style: TextStyle(color: AppColors.ok)),
-        TextSpan(
-            text: ' −${chip.removed}',
-            style: TextStyle(color: AppColors.danger)),
-      ]), style: sans(15, tabular: true));
+      meta = Text.rich(
+          TextSpan(children: [
+            TextSpan(
+                text: '+${chip.added}', style: TextStyle(color: AppColors.ok)),
+            TextSpan(
+                text: ' −${chip.removed}',
+                style: TextStyle(color: AppColors.danger)),
+          ]),
+          style: sans(13.5, tabular: true));
     } else if (chip != null) {
       meta = Text(chip.text.split(' · ').last,
           style: sans(15,
@@ -441,22 +476,23 @@ class _StepRow extends StatelessWidget {
               tabular: true));
     } else {
       final d = stepDuration(step);
-      if (d != null) meta = Text(d, style: sans(15, color: AppColors.fg3, tabular: true));
+      if (d != null)
+        meta = Text(d, style: sans(15, color: AppColors.fg3, tabular: true));
     }
     final err = failed ? _errorLines(step) : const <String>[];
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(20 + indent, 8, 20, 8),
+        padding: EdgeInsets.fromLTRB(20 + indent, 5, 20, 5),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
+              constraints: const BoxConstraints(minHeight: 40),
               child: Row(children: [
-                _Tile(toolIcon(step.tool), tone),
-                const SizedBox(width: 14),
+                _leading(context),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -464,14 +500,13 @@ class _StepRow extends StatelessWidget {
                       Text(stepTitle(step),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(17,
-                              weight: W.label,
-                              color: failed ? AppColors.fg1 : AppColors.fg1)),
+                          style: sans(15.5,
+                              weight: W.label, color: AppColors.fg1)),
                       if (sub != null)
                         Text(sub,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: sans(14.5, color: AppColors.fg3)),
+                            style: sans(13, color: AppColors.fg3)),
                     ],
                   ),
                 ),
@@ -480,15 +515,17 @@ class _StepRow extends StatelessWidget {
             ),
             if (err.isNotEmpty)
               Container(
-                margin: const EdgeInsets.only(top: 8, left: 54),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                margin: const EdgeInsets.only(top: 6, left: 46),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                     color: AppColors.dangerBg,
                     borderRadius: BorderRadius.circular(14)),
                 child: Text(err.join('\n'),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: codeMono(12.5, height: 1.6, color: AppColors.danger)),
+                    style:
+                        codeMono(12.5, height: 1.6, color: AppColors.danger)),
               ),
           ],
         ),
@@ -522,15 +559,19 @@ class _GroupRow extends StatelessWidget {
       final files = fileChanges(steps);
       final added = files.fold<int>(0, (n, c) => n + c.added);
       final removed = files.fold<int>(0, (n, c) => n + c.removed);
-      title = live ? 'Editing ${files.length} files' : 'Edited ${files.length} files';
+      title = live
+          ? 'Editing ${files.length} files'
+          : 'Edited ${files.length} files';
       sub = files.map((c) => c.path.split('/').last).join(', ');
       if (added + removed > 0) {
-        meta = Text.rich(TextSpan(children: [
-          TextSpan(text: '+$added', style: TextStyle(color: AppColors.ok)),
-          TextSpan(
-              text: ' −$removed',
-              style: TextStyle(color: AppColors.danger)),
-        ]), style: sans(15, tabular: true));
+        meta = Text.rich(
+            TextSpan(children: [
+              TextSpan(text: '+$added', style: TextStyle(color: AppColors.ok)),
+              TextSpan(
+                  text: ' −$removed',
+                  style: TextStyle(color: AppColors.danger)),
+            ]),
+            style: sans(13.5, tabular: true));
       }
     } else {
       final searches = steps.where(isSearchStep).length;
@@ -545,22 +586,22 @@ class _GroupRow extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+        padding: const EdgeInsets.fromLTRB(20, 5, 20, 5),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
+          constraints: const BoxConstraints(minHeight: 40),
           child: Row(children: [
             _Tile(edit ? 'edit' : 'layers', tone),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
-                      style: sans(17, weight: W.label, color: AppColors.fg1)),
+                      style: sans(15.5, weight: W.label, color: AppColors.fg1)),
                   Text(sub,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(14.5, color: AppColors.fg3)),
+                      style: sans(13, color: AppColors.fg3)),
                 ],
               ),
             ),
@@ -644,15 +685,15 @@ class _DetailPage extends StatelessWidget {
                     child: Text(stepTitle(step),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: sans(19, weight: W.title, color: AppColors.fg1))),
+                        style:
+                            sans(17, weight: W.title, color: AppColors.fg1))),
               ]),
             ),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                 child: toolBaseName(step.tool) == 'bash'
-                    ? TerminalBlock(
-                        step: step, outputCap: 100000, size: 13)
+                    ? TerminalBlock(step: step, outputCap: 100000, size: 13)
                     : safeToolDetailView(context,
                         tool: step.tool, args: step.args, result: step.result),
               ),
@@ -692,11 +733,11 @@ class _DetailPage extends StatelessWidget {
                   Text(stepTitle(step),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(19, weight: W.title, color: AppColors.fg1)),
+                      style: sans(17, weight: W.title, color: AppColors.fg1)),
                   Text(sub,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: sans(14, color: AppColors.fg3)),
+                      style: sans(13, color: AppColors.fg3)),
                 ],
               ),
             ),
@@ -797,11 +838,12 @@ class _NavButton extends StatelessWidget {
         child: Opacity(
           opacity: enabled ? 1 : 0.35,
           child: Container(
-            width: 52,
-            height: 52,
+            width: 44,
+            height: 44,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-                color: AppColors.surface3, borderRadius: BorderRadius.circular(26)),
+                color: AppColors.surface3,
+                borderRadius: BorderRadius.circular(22)),
             child: AppIcon(icon, size: 18, color: AppColors.fg1),
           ),
         ),
@@ -820,10 +862,11 @@ class _WideButton extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
-          height: 52,
+          height: 44,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-              color: AppColors.surface3, borderRadius: BorderRadius.circular(26)),
+              color: AppColors.surface3,
+              borderRadius: BorderRadius.circular(22)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             AppIcon(icon, size: 18, color: AppColors.fg1),
             const SizedBox(width: 8),
@@ -831,7 +874,7 @@ class _WideButton extends StatelessWidget {
               child: Text(label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(16, weight: W.label, color: AppColors.fg1)),
+                  style: sans(15, weight: W.label, color: AppColors.fg1)),
             ),
           ]),
         ),
