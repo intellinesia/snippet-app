@@ -93,6 +93,19 @@ class GlassTopFrame extends StatelessWidget {
   static const double inset = 52;
   static const double fade = 14;
 
+  // (bottom edge as a fraction of the blurred area, blur sigma), weakest first.
+  static const List<(double, double)> _bands = [
+    (1.00, 1.5),
+    (0.92, 4.0),
+    (0.84, 6.5),
+    (0.76, 9.0),
+    (0.68, 11.5),
+    (0.60, 14.0),
+    (0.52, 16.5),
+    (0.44, 18.5),
+    (0.36, 20.0),
+  ];
+
   /// How far the blurred area runs below the header strip, in logical pixels.
   static const double _extra = 36;
 
@@ -110,24 +123,20 @@ class GlassTopFrame extends StatelessWidget {
         child: IgnorePointer(
           child: Stack(children: [
             if (on)
-              // One blurred rectangle whose strength melts away downward: a
-              // gradient mask, no clip paths (stacked clipped layers crashed the
-              // raster thread on a Pixel).
-              Positioned.fill(
-                child: ShaderMask(
-                  blendMode: BlendMode.dstIn,
-                  shaderCallback: (r) => const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    stops: [0, 0.5, 1],
-                    colors: [Colors.black, Colors.black, Colors.transparent],
-                  ).createShader(r),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                    child: const SizedBox.expand(),
+              // A masked backdrop blur draws nothing (the mask layer starts
+              // empty), and clip paths crashed the raster thread. Plain rects
+              // with small sigma steps read as one falloff. Weakest first, so
+              // the strongest, shortest band ends on top.
+              for (final (frac, sigma) in _bands)
+                Positioned.fill(
+                  child: ClipRect(
+                    clipper: _TopFraction(frac),
+                    child: BackdropFilter.grouped(
+                      filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                      child: const SizedBox.expand(),
+                    ),
                   ),
                 ),
-              ),
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -240,4 +249,18 @@ class ModalGlass extends StatelessWidget {
       MediaQuery.sizeOf(context).width < 700 ||
       const {TargetPlatform.android, TargetPlatform.iOS}
           .contains(Theme.of(context).platform);
+}
+
+/// Clips to the top [fraction] of the box.
+class _TopFraction extends CustomClipper<Rect> {
+  const _TopFraction(this.fraction);
+
+  final double fraction;
+
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTWH(0, 0, size.width, size.height * fraction);
+
+  @override
+  bool shouldReclip(_TopFraction old) => old.fraction != fraction;
 }
