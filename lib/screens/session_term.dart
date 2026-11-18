@@ -265,6 +265,9 @@ class _LiveStreamRow extends StatelessWidget {
   final String agentId;
   final int steps;
 
+  /// Phone: the dock above the composer already shows the working mascot.
+  final bool dockActive;
+
   const _LiveStreamRow({
     super.key,
     required this.frame,
@@ -275,6 +278,7 @@ class _LiveStreamRow extends StatelessWidget {
     required this.compactionDetail,
     this.agentId = 'snippet',
     this.steps = 0,
+    this.dockActive = false,
   });
 
   @override
@@ -303,7 +307,7 @@ class _LiveStreamRow extends StatelessWidget {
               agentId: agentId,
             ),
           ]);
-        } else if (running) {
+        } else if (running && !dockActive) {
           children.addAll([
             SizedBox(height: S.of(10)),
             _ChurningStatus(

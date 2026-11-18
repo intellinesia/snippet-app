@@ -1825,6 +1825,8 @@ class _SessionScreenState extends State<SessionScreen>
                                                                   _me?.displayAgentId ??
                                                                       'snippet',
                                                               running: running,
+                                                              dockActive: kMobile &&
+                                                                  _dockRun != null,
                                                               compacting:
                                                                   s.compacting,
                                                               startedAt: s
