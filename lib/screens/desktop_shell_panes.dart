@@ -820,107 +820,117 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   }
 
   Widget _sidebarTop() {
-    return SizedBox(
-      height: 44,
-      child: Row(children: [
-        if (kMacOS) const SizedBox(width: 78) else SizedBox(width: S.of(14)),
-        const Spacer(),
-        _TbBtn(
-            icon: 'sidebar',
-            tooltip: kMacOS ? 'Hide sidebar (⌘B)' : 'Hide sidebar (Ctrl+B)',
-            onTap: _toggleSidebar),
-        SizedBox(width: S.s6),
-        ValueListenableBuilder<bool>(
-          valueListenable: sidebarAgentsFirst,
-          builder: (_, agents, __) => Builder(
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      SizedBox(
+        height: 44,
+        child: Row(children: [
+          if (kMacOS) const SizedBox(width: 78) else SizedBox(width: S.of(14)),
+          const Spacer(),
+          _TbBtn(
+              icon: 'sidebar',
+              tooltip: kMacOS ? 'Hide sidebar (⌘B)' : 'Hide sidebar (Ctrl+B)',
+              onTap: _toggleSidebar),
+          SizedBox(width: S.s6),
+          Builder(
             builder: (ctx) => _TbBtn(
                 icon: 'plus',
-                tooltip: agents ? 'New agent or group' : 'New session',
-                onTap: () => kMobile
-                    ? SidebarState.openNew(ctx, _newSessionFlow)
-                    : _showNewMenu(ctx)),
+                tooltip: 'New session',
+                onTap: () => _showNewMenu(ctx)),
           ),
-        ),
-        SizedBox(width: S.of(10)),
-      ]),
-    );
+          SizedBox(width: S.of(10)),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+        child: const SidebarBrand(),
+      ),
+    ]);
   }
 
   Widget _sidebarFooter() {
     final healthy = _active == null ? null : _health[_active!.url];
+    final label = _active == null
+        ? 'Add machine'
+        : (_active!.label.isNotEmpty ? _active!.label : _active!.name);
+    final initial =
+        _active == null ? '+' : label.trim().characters.first.toUpperCase();
+    final needsYou = [
+      for (final s in _sessions ?? const <SessionInfo>[])
+        if (sessionNeedsYou(s)) s
+    ].isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-      child: Row(children: [
-        Expanded(
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Tooltip(
+          message: label,
           child: HoverSurface(
             key: _topMachineKey,
-            radius: 8,
-            hoverColor: AppColors.surface2,
+            radius: R.of(6),
+            hoverColor: AppColors.fg1.withValues(alpha: 0.12),
+            rest: AppColors.fg1.withValues(alpha: 0.07),
             onTap: _instances.isEmpty ? _addInstanceFlow : _openTopMachines,
-            child: Container(
-              height: 36,
-              padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-              child: Row(children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: Stack(clipBehavior: Clip.none, children: [
-                    AppIcon('monitor', size: 15, color: AppColors.fg3),
-                    Positioned(
-                      right: -2,
-                      bottom: -1,
-                      child: Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: healthy == true ? AppColors.ok : AppColors.fg4,
-                          border: Border.all(color: AppColors.bg, width: 1.5),
-                        ),
-                      ),
+            child: SizedBox.square(
+              dimension: 24,
+              child: Stack(clipBehavior: Clip.none, children: [
+                Center(
+                    child: Text(initial,
+                        style: sans(11,
+                            weight: FontWeight.w600, color: AppColors.fg2))),
+                Positioned(
+                  right: -2,
+                  bottom: -2,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: healthy == true ? AppColors.ok : AppColors.fg4,
+                      border: Border.all(color: AppColors.windowBg, width: 1.5),
                     ),
-                  ]),
-                ),
-                SizedBox(width: S.s8),
-                Expanded(
-                  child: Text(
-                      _active == null
-                          ? 'Add machine'
-                          : (_active!.label.isNotEmpty
-                              ? _active!.label
-                              : _active!.name),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(14, color: AppColors.fg1)),
+                  ),
                 ),
               ]),
             ),
           ),
         ),
-        SizedBox(width: S.s6),
         if (_client != null) ...[
-          ListenableBuilder(
+          _footerFit(_FooterBtn(
+              icon: 'task',
+              tooltip: 'Tasks',
+              badge: needsYou,
+              onTap: _openTasksTab)),
+          _footerFit(_FooterBtn(
+              icon: 'git-branch',
+              tooltip: 'Pull requests',
+              onTap: _openPullRequestsTile)),
+          _footerFit(_FooterBtn(
+              icon: 'file', tooltip: 'Artifacts', onTap: _openArtifactsTile)),
+          _footerFit(_FooterBtn(
+              icon: 'clock', tooltip: 'Wakes', onTap: _openWakesTile)),
+          _footerFit(ListenableBuilder(
             listenable: AmbientController.instance,
-            builder: (_, __) => Builder(
-              builder: (ctx) => _ListeningPill(
-                on: AmbientController.instance.status.running,
-                onTap: () => showAmbientStage(ctx, _client!),
-              ),
-            ),
-          ),
-          SizedBox(width: S.s6),
-        ],
-        if (_client != null) ...[
-          Builder(
-            builder: (ctx) => _TbBtn(
+            builder: (_, __) {
+              final on = AmbientController.instance.status.running;
+              return Builder(
+                builder: (ctx) => _FooterBtn(
+                    icon: 'mic',
+                    tooltip: on
+                        ? 'Ambient voice is listening'
+                        : 'Listen (ambient voice)',
+                    active: on,
+                    onTap: () => showAmbientStage(ctx, _client!)),
+              );
+            },
+          )),
+          _footerFit(Builder(
+            builder: (ctx) => _FooterBtn(
                 icon: 'gauge',
                 tooltip: 'Usage',
                 onTap: () => showUsagePopover(ctx, _client!)),
-          ),
-          SizedBox(width: S.s2),
+          )),
         ],
-        _TbBtn(
-            icon: 'settings', tooltip: 'Settings', onTap: _openShellSettings),
+        _footerFit(_FooterBtn(
+            icon: 'settings', tooltip: 'Settings', onTap: _openShellSettings)),
       ]),
     );
   }
@@ -1025,55 +1035,76 @@ class _TbBtnState extends State<_TbBtn> {
   }
 }
 
-/// The sidebar footer's ambient control: "Listen" when off, the live pill when
-/// on; either opens the ambient panel.
-class _ListeningPill extends StatelessWidget {
-  const _ListeningPill({required this.on, required this.onTap});
-  final bool on;
+/// Quiet 28 px footer icon button; [active] tints the icon accent and
+/// [badge] adds a small accent dot.
+// Lets the icon row shrink below 28px per button at the narrowest sidebar.
+Widget _footerFit(Widget child) => Flexible(child: child);
+
+class _FooterBtn extends StatefulWidget {
+  const _FooterBtn({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.active = false,
+    this.badge = false,
+  });
+  final String icon;
+  final String tooltip;
   final VoidCallback onTap;
+  final bool active;
+  final bool badge;
+
+  @override
+  State<_FooterBtn> createState() => _FooterBtnState();
+}
+
+class _FooterBtnState extends State<_FooterBtn> {
+  bool _hover = false;
 
   @override
   Widget build(BuildContext context) {
-    Widget bar(double h) => Container(
-        width: 2,
-        height: h,
-        decoration: BoxDecoration(
-            color: AppColors.ok, borderRadius: BorderRadius.circular(R.of(1))));
     return Tooltip(
-      message: on ? 'Ambient voice is listening' : 'Ambient listening is off',
-      child: HoverSurface(
-        radius: 13,
-        hoverColor: on
-            ? AppColors.ok.withValues(alpha: 0.16)
-            : AppColors.fg1.withValues(alpha: 0.08),
-        onTap: onTap,
-        child: Container(
-          height: 26,
-          padding: EdgeInsets.symmetric(horizontal: S.of(9)),
-          decoration: BoxDecoration(
-            color: on ? AppColors.ok.withValues(alpha: 0.10) : null,
-            borderRadius: BorderRadius.circular(R.of(13)),
+      message: widget.tooltip,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            curve: const Cubic(0.23, 1, 0.32, 1),
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: _hover
+                  ? AppColors.fg1.withValues(alpha: 0.07)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(R.of(6)),
+            ),
+            child: Stack(alignment: Alignment.center, children: [
+              AppIcon(widget.icon,
+                  size: 16,
+                  color: widget.active
+                      ? AppColors.accent
+                      : _hover
+                          ? AppColors.fg1
+                          : AppColors.fg3),
+              if (widget.badge)
+                Positioned(
+                  right: 5,
+                  top: 5,
+                  child: Container(
+                    key: const ValueKey('footer-badge'),
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                        color: AppColors.accent, shape: BoxShape.circle),
+                  ),
+                ),
+            ]),
           ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (on)
-              SizedBox(
-                height: 12,
-                child: Row(children: [
-                  bar(5),
-                  SizedBox(width: S.s2),
-                  bar(11),
-                  SizedBox(width: S.s2),
-                  bar(7),
-                  SizedBox(width: S.s2),
-                  bar(9),
-                ]),
-              )
-            else
-              AppIcon('mic', size: 13, color: AppColors.fg3),
-            SizedBox(width: S.s6),
-            Text(on ? 'Listening' : 'Listen',
-                style: sans(12, color: on ? AppColors.ok : AppColors.fg3)),
-          ]),
         ),
       ),
     );

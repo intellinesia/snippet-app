@@ -72,7 +72,7 @@ import 'shell_pane_view.dart';
 import 'shell_rail.dart';
 import 'shell_rail_tools.dart';
 import 'shell_shortcuts.dart';
-import 'sidebar.dart' show SidebarState;
+import 'sidebar.dart' show SidebarBrand;
 import 'sidebar_mode.dart';
 import 'shell_sidebar_host.dart';
 import 'shell_split_view.dart';

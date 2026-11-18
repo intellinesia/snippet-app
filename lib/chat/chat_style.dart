@@ -148,11 +148,15 @@ class ChatBubble extends StatelessWidget {
     required this.child,
     this.tail = true,
     this.color,
+    this.flat = false,
   });
 
   final bool mine;
   final bool tail;
   final Widget child;
+
+  /// Desktop: a plain 8 px card with no tail, 7/11 padding.
+  final bool flat;
 
   /// Overrides the fill, for a tinted bubble such as an error.
   final Color? color;
@@ -165,6 +169,25 @@ class ChatBubble extends StatelessWidget {
         color ?? (mine ? ChatColors.sentIn(context) : ChatColors.received);
     final h = kMobile ? 12.0 : 11.0;
     final v = kMobile ? 8.0 : 6.0;
+    if (flat && !kMobile) {
+      return ChatBubbleFill(
+        fill: fill,
+        child: Builder(
+          builder: (bubbleCtx) => Container(
+            padding: const EdgeInsets.fromLTRB(11, 7, 11, 7),
+            decoration: BoxDecoration(
+              color: fill,
+              borderRadius: BorderRadius.circular(R.of(8)),
+            ),
+            child: DefaultTextStyle.merge(
+              style: chatText(mine: mine, context: bubbleCtx),
+              textWidthBasis: TextWidthBasis.longestLine,
+              child: child,
+            ),
+          ),
+        ),
+      );
+    }
     return ChatBubbleFill(
       fill: fill,
       child: Builder(

@@ -5,7 +5,6 @@ import '../models.dart';
 import '../notification_text.dart' show approvalOf;
 import '../platform.dart';
 import '../settled_sessions.dart';
-import '../composer/composer_pill.dart' show C7;
 import '../theme.dart';
 import '../widgets.dart';
 import 'shell_nav.dart';
@@ -620,29 +619,29 @@ class SessionListRow extends StatelessWidget {
       ],
     );
 
-    // One 32px line on desktop; the title takes width first, meta gets the rest.
+    // Desktop: title and time over one quiet meta line; no round avatar.
     final compact = !kMobile;
     final approval = needsYou ? approvalOf(s.attention) : null;
     Widget compactContent(bool hover) {
       final plan = s.plan;
       final planRunning = working && plan != null && plan.total > 0;
-      final String meta;
+      String attnText = '';
       if (attn != null) {
-        meta = approval != null
+        attnText = approval != null
             ? approval.headline('${s.attention?['tool'] ?? ''}')
             : attn.label;
-      } else if (planRunning && plan.done < plan.total) {
-        meta = 'step ${(plan.done + 1).clamp(1, plan.total)} of ${plan.total}';
-      } else if (pr != null) {
-        meta = 'PR #${pr.number}';
-      } else if (showProject) {
-        meta = projectLabel(s);
-      } else if (branch.isNotEmpty) {
-        meta = branch;
-      } else {
-        meta = '';
       }
-      final metaStyle = sans(12, color: AppColors.fg4);
+      final String extra;
+      if (planRunning && plan.done < plan.total) {
+        extra = 'step ${(plan.done + 1).clamp(1, plan.total)} of ${plan.total}';
+      } else if (pr != null) {
+        extra = 'PR #${pr.number}';
+      } else {
+        extra = branch;
+      }
+      final folder =
+          !showProject || s.projectFolder.trim().isEmpty ? '' : projectLabel(s);
+      final metaStyle = sans(11, color: AppColors.fg4);
       Widget action(String icon, String tip, VoidCallback? tap) => Tooltip(
             message: tip,
             child: GestureDetector(
@@ -650,94 +649,52 @@ class SessionListRow extends StatelessWidget {
               onTap: tap,
               child: SizedBox(
                   width: 24,
-                  height: 22,
+                  height: 18,
                   child: Center(
-                      child: AppIcon(icon, size: 16, color: AppColors.fg3))),
+                      child: AppIcon(icon, size: 15, color: AppColors.fg3))),
             ),
           );
-      Widget diffText() => Row(mainAxisSize: MainAxisSize.min, children: [
-            if (diff!.added > 0)
-              Text('+${compactCount(diff.added)}',
-                  maxLines: 1, style: sans(12, color: AppColors.ok)),
-            if (diff.added > 0 && diff.removed > 0) const SizedBox(width: 3),
-            if (diff.removed > 0)
-              Text('-${compactCount(diff.removed)}',
-                  maxLines: 1, style: sans(12, color: AppColors.danger)),
-          ]);
+      final dim = settled || untitled;
       final titleW = renameField ??
           Text(title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: sans(13,
-                  weight: settled || untitled ? W.body : W.label,
-                  color: settled || untitled ? AppColors.fg3 : AppColors.fg1));
+                  weight: const FontWeight(450),
+                  color: dim
+                      ? AppColors.fg3
+                      : (selected || hover)
+                          ? AppColors.fg1
+                          : AppColors.fg2));
+      final showMeta = renameField == null &&
+          (working ||
+              attnText.isNotEmpty ||
+              folder.isNotEmpty ||
+              extra.isNotEmpty ||
+              diff != null);
       final line = Row(children: [
-        if (leading != null) ...[
-          SizedBox(width: 20, height: 20, child: Center(child: leading)),
-          const SizedBox(width: 8),
+        Expanded(child: titleW),
+        if (pinned && renameField == null) ...[
+          const SizedBox(width: 6),
+          AppIcon('pin', size: 11, color: AppColors.fg4),
         ],
-        Expanded(
-          child: LayoutBuilder(builder: (context, c) {
-            final titleStyle = sans(13,
-                weight: settled || untitled ? W.body : W.label,
-                color: AppColors.fg1);
-            final pinW = pinned && renameField == null ? 17.0 : 0.0;
-            Widget? tail;
-            if (renameField == null) {
-              if (meta.isNotEmpty) {
-                tail = Text(meta,
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                    style: attn != null
-                        ? sans(12, color: AppColors.run)
-                        : metaStyle);
-              } else if (diff != null) {
-                tail = diffText();
-              }
-            }
-            // The title gets width first; meta takes what is left, or goes.
-            final measured = TextPainter(
-                text: TextSpan(text: title, style: titleStyle),
-                maxLines: 1,
-                textDirection: TextDirection.ltr)
-              ..layout();
-            final titleW0 =
-                renameField == null ? measured.width + 1 : c.maxWidth;
-            final room = c.maxWidth - pinW - titleW0 - 8;
-            final showTail = tail != null && room >= 40;
-            return Row(children: [
-              Flexible(child: titleW),
-              if (pinned && renameField == null) ...[
-                const SizedBox(width: 6),
-                AppIcon('pin', size: 11, color: AppColors.fg3),
-              ],
-              if (showTail) ...[
-                const SizedBox(width: 8),
-                SizedBox(
-                    width: room,
-                    child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: ClipRect(child: tail))),
-              ],
-            ]);
-          }),
-        ),
-        // Fixed slot so hovering swaps meta for actions without reflowing the row.
+        if (s.keepAwake && renameField == null) ...[
+          const SizedBox(width: 6),
+          AppIcon('lock', size: 11, color: AppColors.fg4),
+        ],
+        // Fixed slot so hovering swaps the time for actions without reflow.
         if (renameField == null)
           SizedBox(
-            width: 56,
-            height: 22,
+            width: 52,
+            height: 18,
             child: Stack(alignment: Alignment.centerRight, children: [
               Visibility.maintain(
                 visible: !(hover && !selecting),
-                child: working
-                    ? const WorkingDots()
-                    : Text(timeText,
-                        maxLines: 1,
-                        overflow: TextOverflow.fade,
-                        softWrap: false,
-                        style: sans(11, color: timeColor, tabular: true)),
+                child: Text(timeText,
+                    maxLines: 1,
+                    overflow: TextOverflow.fade,
+                    softWrap: false,
+                    style: sans(11, color: timeColor, tabular: true)),
               ),
               if (hover && !selecting)
                 Row(mainAxisSize: MainAxisSize.min, children: [
@@ -754,8 +711,57 @@ class SessionListRow extends StatelessWidget {
             ]),
           ),
       ]);
+      final meta = !showMeta
+          ? null
+          : SizedBox(
+              height: 15,
+              child: Row(children: [
+                if (working) ...[
+                  Spinner(size: 10, color: AppColors.run),
+                  const SizedBox(width: 6),
+                ],
+                if (attnText.isNotEmpty) ...[
+                  Flexible(
+                    child: Text(attnText,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(11, color: AppColors.accent)),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                if (folder.isNotEmpty)
+                  Flexible(child: WorkspaceChip(folder: folder)),
+                if (extra.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(extra,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: metaStyle),
+                  ),
+                ] else if (diff != null) ...[
+                  const SizedBox(width: 6),
+                  if (diff.added > 0)
+                    Text('+${compactCount(diff.added)}',
+                        maxLines: 1, style: sans(11, color: AppColors.ok)),
+                  if (diff.added > 0 && diff.removed > 0)
+                    const SizedBox(width: 4),
+                  if (diff.removed > 0)
+                    Text('-${compactCount(diff.removed)}',
+                        maxLines: 1, style: sans(11, color: AppColors.danger)),
+                ],
+              ]),
+            );
+      final body = meta == null
+          ? line
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [line, const SizedBox(height: 1), meta]);
       if (approval == null || onDecide == null || renameField != null) {
-        return line;
+        return body;
       }
       Widget chip(String label, bool ok) => GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -765,19 +771,21 @@ class SessionListRow extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 9),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: ok ? AppColors.fg1 : AppColors.surface2,
-                borderRadius: BorderRadius.circular(7),
+                color: ok
+                    ? AppColors.accentFill
+                    : AppColors.fg1.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(R.of(6)),
               ),
               child: Text(label,
                   style: sans(11.5,
                       weight: W.label,
-                      color: ok ? AppColors.bg : AppColors.fg2)),
+                      color: ok ? AppColors.accentFg : AppColors.fg2)),
             ),
           );
       return Column(mainAxisSize: MainAxisSize.min, children: [
-        line,
+        body,
         Padding(
-          padding: EdgeInsets.only(left: leading != null ? 28 : 0, top: 3),
+          padding: const EdgeInsets.only(top: 4),
           child: Row(children: [
             chip('Deny', false),
             const SizedBox(width: 6),
@@ -848,9 +856,9 @@ class SessionListRow extends StatelessWidget {
         : _HoverBuilder(
             builder: (hover) => HoverSurface(
                   selected: selecting ? checked : selected,
-                  radius: R.of(10),
-                  selectedColor: C7.row,
-                  hoverColor: C7.row.withValues(alpha: 0.5),
+                  radius: R.of(8),
+                  selectedColor: AppColors.surface3,
+                  hoverColor: AppColors.fg1.withValues(alpha: 0.07),
                   onTap: onTap,
                   onLongPress: onLongPress == null ? null : longPress,
                   onSecondaryTapDown: onSecondaryTapDown,
@@ -858,7 +866,7 @@ class SessionListRow extends StatelessWidget {
                     constraints: BoxConstraints(minHeight: compact ? 32 : 44),
                     child: Padding(
                       padding: EdgeInsets.symmetric(
-                          horizontal: 8, vertical: compact ? 5.0 : 4.0),
+                          horizontal: 8, vertical: compact ? 7.0 : 4.0),
                       child: Align(
                           alignment: Alignment.centerLeft,
                           child: compact ? compactContent(hover) : content),
@@ -1003,4 +1011,54 @@ class _HoverBuilderState extends State<_HoverBuilder> {
         onExit: (_) => setState(() => _hover = false),
         child: widget.builder(_hover),
       );
+}
+
+/// Two letters of a workspace folder in a 14 px tile, tinted from a hash of
+/// the folder name so each project keeps its colour.
+class WorkspaceChip extends StatelessWidget {
+  const WorkspaceChip({super.key, required this.folder});
+
+  final String folder;
+
+  static String initials(String folder) {
+    final parts =
+        folder.split(RegExp(r'[-_.\s]+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return '?';
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    final p = parts.first;
+    return (p.length >= 2 ? p.substring(0, 2) : p).toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var h = 7;
+    for (final c in folder.codeUnits) {
+      h = (h * 31 + c) & 0x7FFFFFFF;
+    }
+    final hue = (h % 360).toDouble();
+    final dark = ThemeData.estimateBrightnessForColor(AppColors.windowBg) ==
+        Brightness.dark;
+    final tint = HSLColor.fromAHSL(1, hue, 0.55, dark ? 0.72 : 0.38).toColor();
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(
+        width: 14,
+        height: 14,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: tint.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(R.of(3)),
+        ),
+        child: Text(initials(folder),
+            style: sans(8, weight: FontWeight.w600, color: tint)),
+      ),
+      const SizedBox(width: 4),
+      Flexible(
+        child: Text(folder,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            style: sans(11, color: AppColors.fg4)),
+      ),
+    ]);
+  }
 }

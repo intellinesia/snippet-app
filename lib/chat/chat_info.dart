@@ -913,7 +913,7 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
         child: _DockedNavigator(navKey: _navKey, root: root),
       ),
     );
-    return kMobile ? nav : _DesktopPanelShell(child: nav);
+    return kMobile ? nav : _DesktopPanelShell(flat: widget.docked, child: nav);
   }
 }
 
@@ -1034,8 +1034,9 @@ class _PanelMax extends InheritedWidget {
 /// The desktop card around a docked or dialog panel's navigator. The card is
 /// as tall as the current page, so the navigator gets unbounded height.
 class _DesktopPanelShell extends StatelessWidget {
-  const _DesktopPanelShell({required this.child});
+  const _DesktopPanelShell({required this.child, this.flat = false});
   final Widget child;
+  final bool flat;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -1044,6 +1045,7 @@ class _DesktopPanelShell extends StatelessWidget {
           return _PanelMax(
             height: h - S.s12 * 2,
             child: PanelCard(
+              flat: flat,
               child: UnconstrainedBox(
                 constrainedAxis: Axis.horizontal,
                 // flutter#192861: a tooltip in a shrink-wrapped overlay trips a
@@ -1718,7 +1720,7 @@ class _GroupInfoPanelState extends State<GroupInfoPanel> {
       pop: _popNested,
       child: _DockedNavigator(navKey: _navKey, root: (_) => _frame()),
     );
-    return _DesktopPanelShell(child: nav);
+    return _DesktopPanelShell(flat: widget.docked, child: nav);
   }
 
   Widget _frame() {

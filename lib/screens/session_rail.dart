@@ -404,7 +404,9 @@ class _SessionRailState extends State<SessionRail> {
         // The panel's width eases out to nothing while it fades and slides.
         final open = LayoutBuilder(
           builder: (_, box) => Padding(
-            padding: EdgeInsets.fromLTRB(24, 10, kSessionRailEdgeInset, S.s12),
+            padding: kMobile
+                ? EdgeInsets.fromLTRB(24, 10, kSessionRailEdgeInset, S.s12)
+                : EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s8),
             child: Align(
               alignment: Alignment.topCenter,
               child: _card(box.maxHeight - 10 - S.s12),
@@ -435,19 +437,25 @@ class _SessionRailState extends State<SessionRail> {
   }
 
   Widget _card(double maxHeight) {
+    // Docked on desktop the rail is flat on the inset panel; only the floating
+    // overlay keeps a card.
+    final flat = !kMobile && !widget.floating;
     return Container(
       width: kSessionRailWidth,
-      decoration: BoxDecoration(
-        color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(R.of(16)),
-        border: Border.all(
-            color: widget.floating ? AppColors.lineStrong : AppColors.line),
-        boxShadow: widget.floating ? overlayShadow : null,
-      ),
+      decoration: flat
+          ? null
+          : BoxDecoration(
+              color: AppColors.surface1,
+              borderRadius: BorderRadius.circular(R.of(16)),
+              border: Border.all(
+                  color:
+                      widget.floating ? AppColors.lineStrong : AppColors.line),
+              boxShadow: widget.floating ? overlayShadow : null,
+            ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(R.of(16)),
+          borderRadius: BorderRadius.circular(flat ? 0 : R.of(16)),
           child: SingleChildScrollView(
             padding: const EdgeInsets.only(bottom: 6),
             // Pages slide in from the side they lead to; root comes back from the left.
@@ -604,15 +612,17 @@ class _SessionRailState extends State<SessionRail> {
     if (g == null || !g.ongoing) {
       if (widget.onSubmitGoal == null) return const SizedBox.shrink();
       return Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+        padding: EdgeInsets.fromLTRB(kMobile ? 12 : 0, 10, kMobile ? 12 : 0, 0),
         child: InkWell(
           onTap: _startGoalEdit,
-          borderRadius: BorderRadius.circular(R.of(14)),
+          borderRadius: BorderRadius.circular(R.of(kMobile ? 14 : 8)),
           child: Container(
-            padding: const EdgeInsets.fromLTRB(14, 11, 12, 11),
+            padding: kMobile
+                ? const EdgeInsets.fromLTRB(14, 11, 12, 11)
+                : const EdgeInsets.fromLTRB(8, 8, 8, 8),
             decoration: BoxDecoration(
               color: AppColors.surface2,
-              borderRadius: BorderRadius.circular(R.of(14)),
+              borderRadius: BorderRadius.circular(R.of(kMobile ? 14 : 8)),
             ),
             child: Row(children: [
               AppIcon('goal', size: 15, color: AppColors.fg4),
@@ -641,11 +651,11 @@ class _SessionRailState extends State<SessionRail> {
     final turnsText = turns > 0 ? '$turns turn${turns == 1 ? '' : 's'}' : null;
     final tone = paused ? AppColors.fg3 : AppColors.accent;
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+      margin: EdgeInsets.fromLTRB(kMobile ? 12 : 0, 10, kMobile ? 12 : 0, 0),
       padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
       decoration: BoxDecoration(
         color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.of(14)),
+        borderRadius: BorderRadius.circular(R.of(kMobile ? 14 : 8)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
@@ -690,11 +700,11 @@ class _SessionRailState extends State<SessionRail> {
   /// Ctrl or Cmd+Enter sets it, Escape cancels.
   Widget _goalEditor(bool replacing) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+      margin: EdgeInsets.fromLTRB(kMobile ? 12 : 0, 10, kMobile ? 12 : 0, 0),
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       decoration: BoxDecoration(
         color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(R.of(14)),
+        borderRadius: BorderRadius.circular(R.of(kMobile ? 14 : 8)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
@@ -829,6 +839,8 @@ class _SessionRailState extends State<SessionRail> {
           child: Builder(
             builder: (ctx) => Material(
               color: on ? AppColors.surface3 : AppColors.surface2,
+              borderRadius: kMobile ? null : BorderRadius.circular(R.of(8)),
+              clipBehavior: kMobile ? Clip.none : Clip.antiAlias,
               child: InkWell(
                 onTap: () => tap(ctx),
                 hoverColor: AppColors.surface3,
@@ -854,7 +866,7 @@ class _SessionRailState extends State<SessionRail> {
         );
     final row = <Widget>[];
     for (final c in cells) {
-      if (row.isNotEmpty) row.add(const SizedBox(width: 2));
+      if (row.isNotEmpty) row.add(SizedBox(width: kMobile ? 2 : 6));
       row.add(cell(c.$1, c.$2, (_) => c.$3?.call(), on: _openAction == c.$4));
     }
     // Desktop has room for the extras as a second row; delete lives in the
@@ -869,9 +881,9 @@ class _SessionRailState extends State<SessionRail> {
     if (row.isEmpty && row2.isEmpty) return const SizedBox.shrink();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+        padding: EdgeInsets.fromLTRB(kMobile ? 12 : 0, 8, kMobile ? 12 : 0, 0),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(R.of(12)),
+          borderRadius: BorderRadius.circular(kMobile ? R.of(12) : 0),
           child: Column(children: [
             if (row.isNotEmpty) Row(children: row),
             if (row.isNotEmpty && row2.isNotEmpty) const SizedBox(height: 2),
@@ -943,11 +955,12 @@ class _SessionRailState extends State<SessionRail> {
         autofocus: true,
         child: Container(
           key: ValueKey('rail-action-$k'),
-          margin: const EdgeInsets.fromLTRB(12, 2, 12, 0),
+          margin: EdgeInsets.fromLTRB(
+              kMobile ? 12 : 0, kMobile ? 2 : 6, kMobile ? 12 : 0, 0),
           padding: const EdgeInsets.fromLTRB(12, 10, 8, 12),
           decoration: BoxDecoration(
             color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(R.of(12)),
+            borderRadius: BorderRadius.circular(R.of(kMobile ? 12 : 8)),
           ),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -1127,7 +1140,7 @@ class _SessionRailState extends State<SessionRail> {
             _ => <String>[],
           };
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+      margin: EdgeInsets.fromLTRB(kMobile ? 12 : 0, 10, kMobile ? 12 : 0, 0),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
         color: AppColors.run.withValues(alpha: 0.11),
@@ -1191,13 +1204,20 @@ class _SessionRailState extends State<SessionRail> {
     final t = _tasks.where((t) => t.sessionId == widget.sessionId).firstOrNull;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Container(
-        padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.line))),
+        height: kMobile ? null : 40,
+        padding: kMobile
+            ? const EdgeInsets.fromLTRB(14, 8, 8, 8)
+            : const EdgeInsets.fromLTRB(4, 0, 0, 0),
+        decoration: kMobile
+            ? BoxDecoration(
+                border: Border(bottom: BorderSide(color: AppColors.line)))
+            : null,
         child: Row(children: [
           Expanded(
             child: Text(mc ? 'Mission Control' : 'Session',
-                style: sans(13, weight: W.label, color: AppColors.fg1)),
+                style: sans(13,
+                    weight: kMobile ? W.label : W.strong,
+                    color: AppColors.fg1)),
           ),
           if (mc && widget.headerActions != null) widget.headerActions!,
           if (!mc && widget.onShell != null)
@@ -1832,6 +1852,44 @@ class _MoreRow extends StatelessWidget {
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(label, style: sans(12, color: AppColors.fg4)),
+          ),
+        ),
+      );
+}
+
+/// A flat-pane row card: 8 px on surface2, hover surface3.
+class _RailCard extends StatefulWidget {
+  const _RailCard({required this.child, this.onTap});
+  final Widget child;
+  final VoidCallback? onTap;
+
+  @override
+  State<_RailCard> createState() => _RailCardState();
+}
+
+class _RailCardState extends State<_RailCard> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        cursor:
+            widget.onTap == null ? MouseCursor.defer : SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            curve: const Cubic(.23, 1, .32, 1),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: _hover && widget.onTap != null
+                  ? AppColors.surface3
+                  : AppColors.surface2,
+              borderRadius: BorderRadius.circular(R.of(8)),
+            ),
+            child: widget.child,
           ),
         ),
       );

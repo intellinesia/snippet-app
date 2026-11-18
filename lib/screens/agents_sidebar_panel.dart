@@ -16,6 +16,7 @@ import 'create_agent_form.dart';
 import '../mochi.dart';
 import 'group_messaging.dart';
 import 'mission_control_card.dart';
+import 'sidebar_tiles.dart' show SidebarSectionHeader;
 import '../pull_refresh.dart';
 import '../message_reactions.dart' show isReactionEvent;
 import '../motion.dart';
@@ -59,7 +60,12 @@ class AgentsSidebarPanel extends StatefulWidget {
     this.groupsKey,
     this.heroBuilder,
     this.sessions,
+    this.embedded = false,
   });
+
+  /// Desktop: non-scrolling rows (Mission Control, agents, groups) for a list
+  /// the sidebar scrolls itself; no hero and no Working/Quiet sections.
+  final bool embedded;
 
   /// Phone: live sessions, so rows show who is asking and what they work on.
   final List<SessionInfo>? sessions;
@@ -420,18 +426,6 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
   /// Totals for the Mission Control strip, from the agents' own counts. The
   /// daemon keeps finished work for 7 days, so "came back" is null (cell
   /// dropped) when no agent reports counts at all.
-  McStats _crewStats() {
-    final all = [...agents, if (_mc != null) _mc!];
-    final counted = all.where((a) => a.taskCounts != null);
-    return McStats(
-      inFlight: all.fold(0, (n, a) => n + a.tasksIn({'in_progress'})),
-      needsYou: agents.fold(0, (n, a) => n + a.needsYou),
-      cameBack: counted.isEmpty
-          ? null
-          : counted.fold<int>(0, (n, a) => n + a.tasksIn({'done'})),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final q = effectiveQuery.toLowerCase();
@@ -445,14 +439,13 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             lastMessage: _mcLast,
             onOpen: onOpenMc,
             presenceDetail: _mc?.presence?.detail,
-            stats: _crewStats(),
           )
         : null;
     // The phone's v5 header avatar is the Mission Control entry point, so the
     // pinned card only shows on desktop.
     final showMcCard = mcCard != null && !kMobile;
 
-    if (loading && agents.isEmpty && !showMcCard) {
+    if (!widget.embedded && loading && agents.isEmpty && !showMcCard) {
       return Container(
         color: kMobile ? AppColors.pageBg : Colors.transparent,
         alignment: Alignment.center,
@@ -461,7 +454,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             : Spinner(size: 20, color: AppColors.fg3),
       );
     }
-    if (error != null && agents.isEmpty && !showMcCard) {
+    if (!widget.embedded && error != null && agents.isEmpty && !showMcCard) {
       if (kMobile) {
         return Material(
           color: kMobile ? AppColors.pageBg : Colors.transparent,
@@ -596,6 +589,65 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
                 : kMobile
                     ? null
                     : _EmptyTeam();
+
+    if (widget.embedded && !kMobile) {
+      return ListenableBuilder(
+        listenable: widget.client.presence,
+        builder: (context, _) {
+          final presence = widget.client.presence;
+          final sessions = widget.sessions;
+          final crew = sessions == null
+              ? const <String, CrewEntry>{}
+              : {
+                  for (final e in deriveCrew(
+                      agents,
+                      [
+                        for (final s in sessions)
+                          if (!s.settled) s
+                      ],
+                      presence: presence))
+                    e.agent.id: e,
+                };
+          AgentGroup bucketOf(CoordinationAgent a) {
+            final g = switch (crew[a.id]?.state) {
+              CrewState.needsYou => AgentGroup.needsYou,
+              CrewState.working => AgentGroup.working,
+              _ =>
+                agentGroupFor(a, presence: presence.presenceForAgentId(a.id)),
+            };
+            return g == AgentGroup.recent && a.available && a.needsYou > 0
+                ? AgentGroup.needsYou
+                : g;
+          }
+
+          final agentRows = <Widget>[];
+          final groupRows = <Widget>[];
+          for (final e in entries) {
+            final item = e.item;
+            if (item is CoordinationAgent) {
+              agentRows.add(
+                  agentTile(item, crew: crew[item.id], group: bucketOf(item)));
+            } else {
+              groupRows.add(groupTile(item as GroupSummary));
+            }
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (mcCard != null) mcCard,
+              ...agentRows,
+              if (emptyState != null && agentRows.isEmpty && mcCard == null)
+                emptyState,
+              if (groupRows.isNotEmpty) ...[
+                const SidebarSectionHeader('Groups'),
+                ...groupRows,
+              ],
+            ],
+          );
+        },
+      );
+    }
 
     if (kMobile) {
       return PullToRefresh(

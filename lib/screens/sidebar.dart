@@ -36,6 +36,7 @@ import '../session_quick_send.dart';
 import 'mobile_voice_page.dart' show startMobileVoice;
 import 'pull_requests.dart' show openPullRequest;
 export 'sidebar_mobile.dart';
+export 'sidebar_tiles.dart' show SidebarBrand;
 
 class Sidebar extends StatefulWidget {
   final List<Instance> instances;
@@ -777,8 +778,10 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   Widget _agentList(DaemonClient client,
           {SessionInfo? missionControl,
           VoidCallback? onOpenMissionControl,
-          bool mirror = false}) =>
+          bool mirror = false,
+          bool embedded = false}) =>
       AgentsSidebarPanel(
+        embedded: embedded,
         key: mirror ? _agentsMirrorKey : _agentsPanelKey,
         client: client,
         missionControl: missionControl,
@@ -1452,7 +1455,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       divider: divider && !(below != null && _selected.contains(below.id)),
       showProject: showProject,
       renameField: renaming ? _inlineRenameField(s, compact: !kMobile) : null,
-      leading: _agentBadge(s),
+      leading: kMobile ? _agentBadge(s) : null,
       onTogglePin: kMobile || isDedicatedMcSession(s.id)
           ? null
           : () => Pins.instance.toggle(Pins.session, s.id, host: _pinHost),
@@ -1523,82 +1526,15 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     );
   }
 
-  /// `.sctl`: the Sessions|Agents segment over the palette/search field.
-  bool _desktopAgentsAvailable(BuildContext context) =>
-      !kMobile && MediaQuery.sizeOf(context).width >= kShellCompact;
-
-  Widget _sidebarControls({required bool agentsFirst}) {
-    final agentsAvailable =
-        widget.client != null && _desktopAgentsAvailable(context);
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-        child: _sidebarSearch(agentsFirst: agentsFirst),
-      ),
-      SidebarTiles(
-        client: widget.client,
-        sessions: widget.sessions,
-        onOpenTasks: widget.onOpenTasks,
-        onOpenPullRequests: widget.onOpenPullRequests,
-        onOpenArtifacts: widget.onOpenArtifacts,
-        onOpenWakes: widget.onOpenWakes,
-      ),
-      Container(
-        height: 30,
-        margin: const EdgeInsets.fromLTRB(10, 2, 10, 6),
-        padding: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          color: AppColors.surface1,
-          border: Border.all(color: AppColors.line),
-          borderRadius: BorderRadius.circular(R.of(10)),
-        ),
-        child: Row(children: [
-          _segCell(
-              'Sessions',
-              !agentsFirst,
-              const ValueKey('sidebar-mode-sessions'),
-              () => setSidebarAgentsFirst(false)),
-          _segCell('Agents', agentsFirst, const ValueKey('sidebar-mode-agents'),
-              agentsAvailable ? () => setSidebarAgentsFirst(true) : null),
-        ]),
-      ),
-    ]);
-  }
-
-  Widget _segCell(String label, bool on, Key key, VoidCallback? onTap) =>
-      Expanded(
-        child: Semantics(
-          button: true,
-          selected: on,
-          label: label,
-          child: GestureDetector(
-            key: key,
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: AnimatedContainer(
-              duration: Motion.quick,
-              height: 24,
-              decoration: BoxDecoration(
-                color: on ? AppColors.surface3 : Colors.transparent,
-                borderRadius: BorderRadius.circular(R.of(8)),
-              ),
-              alignment: Alignment.center,
-              child: Text(label,
-                  style: sans(12.5, color: on ? AppColors.fg1 : AppColors.fg3)),
-            ),
-          ),
-        ),
-      );
-
-  /// The `.search` field: a palette opener when one is wired, else the
-  /// inline filter for whichever list is showing.
-  Widget _sidebarSearch({required bool agentsFirst}) {
+  /// The quiet search field: a palette opener when one is wired, else an
+  /// inline filter for both lists.
+  Widget _sidebarSearch() {
     final palette = widget.onOpenPalette;
     if (palette != null) {
       return _searchBox(
         onTap: palette,
         child: Row(children: [
-          AppIcon('search', size: 16, color: AppColors.fg4),
+          AppIcon('search', size: 14, color: AppColors.fg4),
           const SizedBox(width: 8),
           Expanded(
             child: Text('Search', style: sans(13, color: AppColors.fg4)),
@@ -1607,23 +1543,24 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         ]),
       );
     }
-    final ctl = agentsFirst ? _agentSearchCtl : _desktopChatsSearchCtl;
-    final focus = agentsFirst ? _agentSearchFocus : _desktopChatsSearchFocus;
+    final ctl = _desktopChatsSearchCtl;
     return _searchBox(
       child: Row(children: [
-        AppIcon('search', size: 16, color: AppColors.fg4),
+        AppIcon('search', size: 14, color: AppColors.fg4),
         const SizedBox(width: 8),
         Expanded(
           child: TextField(
             controller: ctl,
-            focusNode: focus,
-            onChanged: (v) => setState(
-                () => agentsFirst ? _agentFilterQuery = v : _filterQuery = v),
+            focusNode: _desktopChatsSearchFocus,
+            onChanged: (v) => setState(() {
+              _filterQuery = v;
+              _agentFilterQuery = v;
+            }),
             style: sans(13, color: AppColors.fg1),
             decoration: InputDecoration(
               isCollapsed: true,
               border: InputBorder.none,
-              hintText: agentsFirst ? 'Search agents' : 'Search chats',
+              hintText: 'Search',
               hintStyle: sans(13, color: AppColors.fg4),
             ),
           ),
@@ -1631,8 +1568,10 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         if (ctl.text.isNotEmpty)
           IconBtn('x', size: 20, iconSize: 10, tooltip: 'Clear', onTap: () {
             ctl.clear();
-            setState(
-                () => agentsFirst ? _agentFilterQuery = '' : _filterQuery = '');
+            setState(() {
+              _filterQuery = '';
+              _agentFilterQuery = '';
+            });
           }),
       ]),
     );
@@ -1643,9 +1582,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       height: 30,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: AppColors.surface1,
-        border: Border.all(color: AppColors.line),
-        borderRadius: BorderRadius.circular(R.of(10)),
+        color: AppColors.fg1.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(R.of(6)),
       ),
       child: child,
     );
@@ -1663,8 +1601,9 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     );
   }
 
-  /// Desktop sidebar as a single recency-ordered chat stream. Workspace is
-  /// metadata on each row, never a grouping or sort key.
+  /// Desktop sidebar: one scroll holding the agents (Mission Control first,
+  /// then groups) and the recency-ordered sessions. Workspace is metadata on
+  /// each row, never a grouping or sort key.
   Widget _sectionedSidebar() {
     final hasClient = widget.client != null;
     final all = _sessions ?? const <SessionInfo>[];
@@ -1677,50 +1616,71 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     final mc = all.where((s) => isDedicatedMcSession(s.id)).firstOrNull;
     _chatsShownAt ??= DateTime.now();
     final rows = _groupedRows(list, attentionFirst: true);
-    final agentsFirst = sidebarAgentsFirst.value &&
-        hasClient &&
-        _desktopAgentsAvailable(context);
-    final sessionsBody =
-        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Expanded(
-        child: PullToRefresh(
-          onRefresh: () async => widget.onRefreshSessions(),
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(6, 2, 6, 8),
-            children: [
-              if (!hasClient)
-                const SidebarEmpty('Add a machine to begin.')
-              else if (list.isEmpty && settledRows.isEmpty)
-                _emptySessions(searching: _filterQuery.trim().isNotEmpty)
-              else
-                ...rows,
-            ],
-          ),
-        ),
-      ),
-      if (hasClient && settledRows.isNotEmpty) _settledPinned(settledRows),
-    ]);
+    final searching = _filterQuery.trim().isNotEmpty;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (hasClient) _sidebarControls(agentsFirst: agentsFirst),
+      if (hasClient)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(10, 4, 10, 2),
+          child: _sidebarSearch(),
+        ),
       Expanded(
-        child: SidebarModeSwap(
-          // The narrow drawer has no switch, so it always lists sessions.
-          agentsFirst: agentsFirst,
-          sessions: sessionsBody,
-          agents: (_) => _agentList(widget.client!,
-              missionControl: mc,
-              onOpenMissionControl: widget.onOpenMissionControl),
+        child: SidebarHoverScope(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Expanded(
+              child: PullToRefresh(
+                onRefresh: () async => widget.onRefreshSessions(),
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                  children: [
+                    if (hasClient) ...[
+                      SidebarSectionHeader(
+                        'Agents',
+                        addTooltip: 'New agent or group',
+                        addBuilder: (ctx) => _agentsPanelKey.currentState
+                            ?.openCreateMenu(ctx, above: false),
+                      ),
+                      _agentList(widget.client!,
+                          missionControl: mc,
+                          onOpenMissionControl: widget.onOpenMissionControl,
+                          embedded: true),
+                    ],
+                    SidebarSectionHeader(
+                      'Sessions',
+                      addTooltip: 'New session',
+                      onAdd: widget.onNewSession,
+                      moreTooltip: 'Session options',
+                      moreBuilder: hasClient ? _sessionsMenu : null,
+                    ),
+                    if (!hasClient)
+                      const SidebarEmpty('Add a machine to begin.')
+                    else if (list.isEmpty && settledRows.isEmpty)
+                      _emptySessions(searching: searching)
+                    else
+                      ...rows,
+                  ],
+                ),
+              ),
+            ),
+            if (hasClient && settledRows.isNotEmpty)
+              _settledPinned(settledRows),
+          ]),
         ),
       ),
-      Container(
-        decoration: BoxDecoration(
-            border: Border(top: BorderSide(color: AppColors.line))),
-        child: Column(children: [
-          if (widget.desktopFooter != null) widget.desktopFooter!,
-        ]),
-      ),
+      if (widget.desktopFooter != null) widget.desktopFooter!,
     ]);
+  }
+
+  Future<void> _sessionsMenu(BuildContext anchor) async {
+    final pick = await showAppMenu<String>(
+      context,
+      anchor: anchor,
+      items: [
+        appMenuItem(value: 'select', icon: 'check', label: 'Select sessions'),
+      ],
+    );
+    if (pick == 'select' && mounted) _enterSelect();
   }
 
   // Long-press / right-click a session → pin, rename, settle or delete.

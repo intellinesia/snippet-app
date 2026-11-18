@@ -155,8 +155,9 @@ Widget _audioCard(
     constraints: BoxConstraints(maxWidth: kMobile ? 272 : 340),
     padding: EdgeInsets.fromLTRB(S.s8, S.s8, S.s12, S.of(10)),
     decoration: BoxDecoration(
-      color: ChatColors.received,
-      borderRadius: BorderRadius.circular(ChatColors.radius),
+      color: kMobile ? ChatColors.received : AppColors.surface2,
+      borderRadius:
+          BorderRadius.circular(kMobile ? ChatColors.radius : R.of(8)),
     ),
     child: VoiceNote(
       client: client,
@@ -312,8 +313,9 @@ Widget _chatCardShell({
   return Container(
     padding: EdgeInsets.all(S.of(14)),
     decoration: BoxDecoration(
-      color: ChatColors.card,
-      borderRadius: BorderRadius.circular(ChatColors.radius),
+      color: kMobile ? ChatColors.card : AppColors.surface2,
+      borderRadius:
+          BorderRadius.circular(kMobile ? ChatColors.radius : R.of(8)),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,

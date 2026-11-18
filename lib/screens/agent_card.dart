@@ -514,137 +514,210 @@ class _AgentCardState extends State<AgentCard> {
     final detail = agent.presence?.detail.trim() ?? '';
     var line2 = _phoneLine(agent, crew, presence);
     if (ring && crew == null && detail.isNotEmpty) line2 = detail;
-    final line2Color = needs
-        ? AppColors.run
-        : ring
-            ? AppColors.accent
-            : AppColors.fg3;
-    final dot = !agent.available ? AppColors.fg4 : null;
-    return GestureDetector(
+    return AgentRowShell(
+      selected: widget.selected,
+      dim: !agent.available,
+      onTap: widget.onOpen,
+      onLongPress: () {
+        holdHaptic();
+        _actions(null);
+      },
       onSecondaryTapUp: (d) => _actions(d.globalPosition),
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 2),
-        child: Material(
-          color: widget.selected ? AppColors.surface2 : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          child: InkWell(
-            onTap: widget.onOpen,
-            onLongPress: () {
-              holdHaptic();
-              _actions(null);
-            },
-            borderRadius: BorderRadius.circular(12),
-            hoverColor: AppColors.surface2.withValues(alpha: 0.5),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 52),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-                child: Opacity(
-                  opacity: agent.available ? 1 : 0.55,
-                  child: Row(children: [
-                    SizedBox.square(
-                      dimension: 30,
-                      child: Stack(clipBehavior: Clip.none, children: [
-                        Center(child: AgentMochi(agent.id, size: 30)),
-                        if (ring)
-                          const Positioned(
-                              left: -3,
-                              top: -3,
-                              right: -3,
-                              bottom: -3,
-                              child:
-                                  WorkingRing(key: ValueKey('agent-working'))),
-                        if (dot != null)
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: dot,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: AppColors.windowBg, width: 2),
-                              ),
-                            ),
-                          ),
-                      ]),
+      avatar: AgentMochi(agent.id, size: 28),
+      dot: !agent.available
+          ? null
+          : needs
+              ? AppColors.accent
+              : ring
+                  ? AppColors.run
+                  : null,
+      dotKey: ring && !needs ? const ValueKey('agent-working') : null,
+      name: name,
+      pinned: _isPinned,
+      time: time,
+      preview: line2,
+      needs: needs,
+      trailing: needs && agent.needsYou > 0
+          ? Container(
+              key: const ValueKey('agent-needs-count'),
+              constraints: const BoxConstraints(minWidth: 16),
+              height: 16,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                  color: AppColors.accentBg,
+                  borderRadius: BorderRadius.circular(R.of(3))),
+              child: Text('${agent.needsYou}',
+                  style: sans(10.5,
+                      weight: FontWeight.w600,
+                      color: AppColors.accent,
+                      tabular: true)),
+            )
+          : blocked > 0 || !agent.available
+              ? Text(summaryText,
+                  style: sans(metaSize, color: summaryColor, tabular: true))
+              : null,
+    );
+  }
+}
+
+/// Desktop sidebar row for an agent or Mission Control: 28 px rounded-square
+/// avatar with a status dot, name and time, one preview line.
+class AgentRowShell extends StatefulWidget {
+  const AgentRowShell({
+    super.key,
+    required this.avatar,
+    required this.name,
+    required this.preview,
+    required this.onTap,
+    this.time = '',
+    this.dot,
+    this.dotKey,
+    this.needs = false,
+    this.selected = false,
+    this.dim = false,
+    this.pinned = false,
+    this.trailing,
+    this.onLongPress,
+    this.onSecondaryTapUp,
+  });
+
+  final Widget avatar;
+  final String name;
+  final String preview;
+  final String time;
+  final Color? dot;
+  final Key? dotKey;
+  final bool needs;
+  final bool selected;
+  final bool dim;
+  final bool pinned;
+  final Widget? trailing;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final GestureTapUpCallback? onSecondaryTapUp;
+
+  @override
+  State<AgentRowShell> createState() => _AgentRowShellState();
+}
+
+class _AgentRowShellState extends State<AgentRowShell> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final fill = widget.selected
+        ? AppColors.surface3
+        : _hover
+            ? AppColors.fg1.withValues(alpha: 0.07)
+            : Colors.transparent;
+    final ring = Color.alphaBlend(fill, AppColors.windowBg);
+    final still = reduceMotion(context);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
+        onSecondaryTapUp: widget.onSecondaryTapUp,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 1),
+          child: AnimatedContainer(
+            duration: still ? Duration.zero : const Duration(milliseconds: 150),
+            curve: const Cubic(0.23, 1, 0.32, 1),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+            decoration: BoxDecoration(
+                color: fill, borderRadius: BorderRadius.circular(R.of(8))),
+            child: Opacity(
+              opacity: widget.dim ? 0.55 : 1,
+              child:
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                SizedBox.square(
+                  dimension: 28,
+                  child: Stack(clipBehavior: Clip.none, children: [
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(R.of(7)),
+                        child: ColoredBox(
+                            color: AppColors.surface2,
+                            child: Center(child: widget.avatar)),
+                      ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(children: [
+                    if (widget.dot != null)
+                      Positioned(
+                        right: -2,
+                        bottom: -2,
+                        child: Container(
+                          key: widget.dotKey,
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: widget.dot,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: ring, width: 2),
+                          ),
+                        ),
+                      ),
+                  ]),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
                             Flexible(
-                              flex: 0,
-                              child: Text(name,
+                              child: Text(widget.name,
                                   maxLines: 1,
                                   softWrap: false,
                                   overflow: TextOverflow.ellipsis,
-                                  style: DeskRow.nameStyle(agent.available
-                                      ? AppColors.fg1
-                                      : AppColors.fg3)),
+                                  style: sans(13,
+                                      weight: FontWeight.w500,
+                                      color: AppColors.fg1)),
                             ),
-                            if (_isPinned) ...[
+                            if (widget.pinned) ...[
                               const SizedBox(width: 6),
-                              AppIcon('pin', size: 11, color: AppColors.fg3),
+                              AppIcon('pin', size: 11, color: AppColors.fg4),
                             ],
                             const Spacer(),
-                            if (time.isNotEmpty)
+                            if (widget.time.isNotEmpty)
                               Padding(
-                                padding: const EdgeInsets.only(left: 6),
-                                child: Text(time,
+                                padding: const EdgeInsets.only(left: 8),
+                                child: Text(widget.time,
                                     maxLines: 1,
                                     style: sans(11,
                                         color: AppColors.fg4, tabular: true)),
                               ),
                           ]),
-                          const SizedBox(height: 2),
-                          Row(children: [
-                            Expanded(
-                              child: Text.rich(
-                                  markdownPreviewSpan(
-                                      line2,
-                                      sans(12,
-                                          height: 16 / 12, color: line2Color)),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
-                            ),
-                            if (needs && agent.needsYou > 0) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                key: const ValueKey('agent-needs-count'),
-                                constraints: const BoxConstraints(minWidth: 16),
-                                height: 16,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 4),
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                    color:
-                                        AppColors.run.withValues(alpha: 0.18),
-                                    borderRadius: BorderRadius.circular(8)),
-                                child: Text('${agent.needsYou}',
-                                    style: sans(10.5,
-                                        weight: FontWeight.w600,
-                                        color: AppColors.run,
-                                        tabular: true)),
-                              ),
-                            ] else if (blocked > 0 || !agent.available) ...[
-                              const SizedBox(width: 6),
-                              Text(summaryText,
-                                  style: sans(metaSize,
-                                      color: summaryColor, tabular: true)),
-                            ],
-                          ]),
+                      const SizedBox(height: 1),
+                      Row(children: [
+                        Expanded(
+                          child: Text.rich(
+                              markdownPreviewSpan(
+                                  widget.preview,
+                                  sans(12,
+                                      height: 16 / 12,
+                                      color: widget.needs
+                                          ? AppColors.accent
+                                          : AppColors.fg3)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                        ),
+                        if (widget.trailing != null) ...[
+                          const SizedBox(width: 6),
+                          widget.trailing!,
                         ],
-                      ),
-                    ),
-                  ]),
+                      ]),
+                    ],
+                  ),
                 ),
-              ),
+              ]),
             ),
           ),
         ),

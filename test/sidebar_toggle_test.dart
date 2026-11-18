@@ -54,7 +54,7 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('the header switch puts agents first and keeps the footer tools',
+  testWidgets('desktop lists agents above sessions and keeps the footer tools',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     DaemonClient.wsConnector =
@@ -74,19 +74,14 @@ void main() {
     final before = tester.state(find.byType(ShellSplitView));
     expect(find.byTooltip('Back'), findsOneWidget);
     expect(find.byTooltip('Forward'), findsOneWidget);
-    expect(find.byType(AgentsSidebarPanel), findsNothing);
-
-    await tester.tap(find.byKey(const ValueKey('sidebar-mode-agents')));
-    await _pump(tester);
-    expect(sidebarAgentsFirst.value, isTrue);
+    // Desktop always lists agents above sessions.
     expect(find.byType(AgentsSidebarPanel), findsOneWidget);
+
     expect(
         find.descendant(
             of: find.byType(Sidebar), matching: find.byTooltip('Settings')),
         findsWidgets);
     expect(tester.state(find.byType(ShellSplitView)), same(before));
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getBool('home_agents_first'), isNull);
 
     // A row opens the agent beside the chat, not the phone route.
     tester
@@ -96,10 +91,6 @@ void main() {
             {'id': 'scout', 'display_name': 'Scout', 'handle': 'scout'}));
     await _pump(tester);
     expect(find.text('Scout'), findsWidgets);
-
-    await tester.tap(find.byKey(const ValueKey('sidebar-mode-sessions')));
-    await _pump(tester);
-    expect(find.byType(AgentsSidebarPanel), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(seconds: 1));
