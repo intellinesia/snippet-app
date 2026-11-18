@@ -73,7 +73,11 @@ class MainActivity : FlutterActivity() {
             if (info.reason == android.app.ApplicationExitInfo.REASON_ANR ||
                 info.reason == android.app.ApplicationExitInfo.REASON_CRASH_NATIVE) {
                 try {
-                    info.traceInputStream?.bufferedReader()?.use { o.put("trace", it.readText().take(6000)) }
+                    info.traceInputStream?.use {
+                        val bytes = it.readBytes()
+                        o.put("traceBytes", bytes.size)
+                        o.put("traceB64", android.util.Base64.encodeToString(bytes.copyOf(minOf(bytes.size, 150000)), android.util.Base64.NO_WRAP))
+                    }
                 } catch (_: Throwable) {
                 }
             }
