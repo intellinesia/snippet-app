@@ -36,6 +36,7 @@ import '../chat/decided_card.dart';
 import 'agent_questions_card.dart';
 import 'agent_records.dart';
 import 'agent_thread_cards.dart';
+import 'agent_transcript_head.dart';
 import 'agent_view_switcher.dart';
 import '../chat_scene.dart' show SceneBackdrop;
 
@@ -375,7 +376,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
 
   /// Desktop thread view: the agent header scrolls with the transcript
   /// instead of the floating stage bar.
-  bool get _deskHead => !kMobile && !_noChrome && _view == AgentView.thread;
+  // Desktop tabs too: the head scrolls with the thread, so it is not a stage.
+  bool get _deskHead => !kMobile && _view == AgentView.thread;
   double get _chromeTop => _noChrome || _deskHead ? 0 : StageBar.height;
 
   void _loadLine() {
@@ -644,6 +646,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     super.initState();
     _loadLine();
     _loadUnread();
+    if (!kMobile) _loadProviders();
     _thread = Swr<DirectThreadPage>(
       client: widget.client,
       key: 'agent-thread:${widget.agentId}',
@@ -1621,6 +1624,18 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     );
   }
 
+  Map<String, String> _providers = const {};
+
+  Future<void> _loadProviders() async {
+    try {
+      final cfg = await widget.client.getConfig();
+      if (!mounted) return;
+      setState(() => _providers = {
+            for (final p in cfg.profiles) p.name: p.provider,
+          });
+    } catch (_) {}
+  }
+
   /// Desktop: the agent's identity at the top of its transcript.
   Widget _agentHead() {
     final a = _agent;
@@ -1640,83 +1655,39 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     ].join(' \u00b7 ');
     Widget quiet(String icon, String tip, VoidCallback? onTap) =>
         DeskIconButton(icon, tooltip: tip, onTap: onTap, iconSize: 15);
-    return Container(
+    return AgentTranscriptHead(
       key: const Key('agentHead'),
-      padding: EdgeInsets.fromLTRB(0, S.s12, 0, S.of(18)),
-      margin: EdgeInsets.only(bottom: S.s4),
-      decoration: BoxDecoration(
-          border: Border(
-              bottom:
-                  BorderSide(color: AppColors.fg1.withValues(alpha: 0.07)))),
-      child: Row(children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(R.of(12)),
-          child: AgentMochi(widget.agentId, size: 52),
-        ),
-        SizedBox(width: S.of(14)),
-        Expanded(
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(widget.agentName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(18,
-                        weight: FontWeight.w600, color: AppColors.fg1)),
-                if (purpose.isNotEmpty)
-                  Text(purpose,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(13, color: AppColors.fg3)),
-                if (model.isNotEmpty || meta.isNotEmpty)
-                  Padding(
-                    padding: EdgeInsets.only(top: S.s4),
-                    child: Row(children: [
-                      if (model.isNotEmpty) ...[
-                        AppIcon('cpu', size: 12, color: AppColors.fg4),
-                        SizedBox(width: S.s4),
-                        Flexible(
-                          child: Text(model,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: sans(11.5, color: AppColors.fg4)),
-                        ),
-                      ],
-                      if (model.isNotEmpty && meta.isNotEmpty)
-                        SizedBox(width: S.of(10)),
-                      if (meta.isNotEmpty)
-                        Text(meta, style: sans(11.5, color: AppColors.fg4)),
-                    ]),
-                  ),
-              ]),
-        ),
-        SizedBox(width: S.s12),
+      agentId: widget.agentId,
+      name: widget.agentName,
+      purpose: purpose,
+      model: model,
+      provider: _providers[model],
+      meta: meta,
+      actions: [
         _HeadButton(label: 'View agent', onTap: widget.onDeskInfo ?? _openInfo),
-        SizedBox(width: S.s4),
-        Builder(
-          builder: (c) => Stack(clipBehavior: Clip.none, children: [
-            quiet('layers', 'Switch view', () => _openSwitcherMenu(c)),
-            if (_unread > 0)
-              Positioned(
-                  right: 4,
-                  top: 4,
-                  child: Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                          color: AppColors.accent, shape: BoxShape.circle))),
-          ]),
-        ),
+        // In a tab the window bar already switches Chat and Work.
+        if (!_noChrome)
+          Builder(
+            builder: (c) => Stack(clipBehavior: Clip.none, children: [
+              quiet('layers', 'Switch view', () => _openSwitcherMenu(c)),
+              if (_unread > 0)
+                Positioned(
+                    right: 4,
+                    top: 4,
+                    child: Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                            color: AppColors.accent, shape: BoxShape.circle))),
+            ]),
+          ),
         if (widget.tabHeader && widget.deskTrailing != null) ...[
-          SizedBox(width: S.s4),
           widget.deskTrailing!,
         ],
         if (!widget.embedded && widget.onClose != null) ...[
-          SizedBox(width: S.s4),
           quiet('x', 'Close', widget.onClose),
         ],
-      ]),
+      ],
     );
   }
 
