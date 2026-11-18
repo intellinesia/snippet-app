@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -119,9 +118,7 @@ class ThemePreset {
         : (rawLabel ?? rawName ?? slug);
 
     final rawColor = json['color'];
-    final c = rawColor is Map
-        ? rawColor.cast<String, dynamic>()
-        : json;
+    final c = rawColor is Map ? rawColor.cast<String, dynamic>() : json;
     Color col(String key, Color def) => parseThemeColor(c[key]) ?? def;
 
     return ThemePreset(
@@ -1200,6 +1197,7 @@ class ThemeManager extends ChangeNotifier {
     }
     return _signature;
   }
+
   List<ThemeSummary> _daemonThemes = const [];
   List<String> _liveGroups = const [];
   String? _activeId;
@@ -1293,7 +1291,8 @@ class ThemeManager extends ChangeNotifier {
       allMonoFonts
           .where((f) => f.family == _resolved.type.codeFont)
           .firstOrNull ??
-      allMonoFonts[_indexOr(allMonoFonts.map((f) => f.family), defaultMonoFont)];
+      allMonoFonts[
+          _indexOr(allMonoFonts.map((f) => f.family), defaultMonoFont)];
 
   @visibleForTesting
   void resetForTest() {
@@ -1458,9 +1457,8 @@ class ThemeManager extends ChangeNotifier {
     final accent = _resolved.accentName;
     final uiFont = _resolved.type.uiFont;
     final codeFont = _resolved.type.codeFont;
-    final hasOverrides = accent != null ||
-        uiFont != defaultFont ||
-        codeFont != defaultMonoFont;
+    final hasOverrides =
+        accent != null || uiFont != defaultFont || codeFont != defaultMonoFont;
     if (!_hasLegacyPrefs && baseId == defaultTheme && !hasOverrides) {
       return null;
     }
@@ -1497,9 +1495,7 @@ class ThemeManager extends ChangeNotifier {
   }
 
   Future<void> _applyAndCache(ResolvedTheme theme) async {
-    final safe = theme.id == 'white'
-        ? ResolvedTheme.fromPreset(_black)
-        : theme;
+    final safe = theme.id == 'white' ? ResolvedTheme.fromPreset(_black) : theme;
     _resolved = safe;
     _activeId = safe.id;
     _hasCache = true;
@@ -1681,14 +1677,12 @@ class ThemeManager extends ChangeNotifier {
     String? uiFont,
     String? codeFont,
   }) {
-    final doc = existing != null
-        ? _sanitiseCustomDoc(existing)
-        : <String, dynamic>{};
+    final doc =
+        existing != null ? _sanitiseCustomDoc(existing) : <String, dynamic>{};
     doc['schema'] = 1;
     doc['id'] = 'custom';
-    doc['name'] = (doc['name'] as String?)?.isNotEmpty == true
-        ? doc['name']
-        : 'Custom';
+    doc['name'] =
+        (doc['name'] as String?)?.isNotEmpty == true ? doc['name'] : 'Custom';
     doc['base'] = baseId;
 
     if (updateAccent) {
@@ -1759,6 +1753,7 @@ void rebuildThemeElements(BuildContext context) {
     e.markNeedsBuild();
     e.visitChildren(rebuild);
   }
+
   (context as Element).visitChildren(rebuild);
 }
 
@@ -1773,6 +1768,7 @@ class AppColors {
   static Color get bg => currentTheme.bg;
   static Color get canvas => currentTheme.canvas.withValues(
       alpha: ThemeManager.instance.resolved.translucency.canvasAlpha.current);
+
   /// Full-page background: clear while the scene paints behind the page.
   static Color get pageBg =>
       ChatScene.instance.ready ? const Color(0x00000000) : bg;
@@ -1795,11 +1791,14 @@ class AppColors {
   // Lighter, so a glass sheet still shows the page through its blur.
   static Color get glassScrim => const Color(0xFF000000).withValues(
       alpha: ThemeManager.instance.resolved.translucency.glassScrim);
+
   /// Behind every centred desktop dialog, Settings included.
   static Color get modalScrim => const Color(0xFF000000).withValues(
       alpha: ThemeManager.instance.resolved.translucency.modalScrim);
+
   /// Set while a chat wallpaper shows: side chrome goes opaque to frame it.
   static bool solidChrome = false;
+
   /// The user's chrome opacity; overrides [solidChrome] when set.
   static double? chromeAlpha;
   static Color get windowBg => kMobile
@@ -1809,7 +1808,8 @@ class AppColors {
   static Color get sidebarPanel => kMobile
       ? currentTheme.surface1
       : currentTheme.surface1.withValues(alpha: chromeAlpha ?? 0.92);
-  static Color get paneBg => kMobile ? currentTheme.bg : const Color(0x00000000);
+  static Color get paneBg =>
+      kMobile ? currentTheme.bg : const Color(0x00000000);
   static Color get tint1 => kMobile
       ? currentTheme.surface1
       : currentTheme.fg1.withValues(alpha: 0.05);
@@ -2292,8 +2292,11 @@ ThemeData buildAppTheme() {
     ),
     splashFactory: NoSplash.splashFactory,
     splashColor: Colors.transparent,
-    highlightColor: c.surface3.withValues(alpha: 0.7),
-    hoverColor: c.surface3.withValues(alpha: 0.5),
+    // Phones: no square flash under a finger; the row itself is the feedback.
+    highlightColor:
+        kMobile ? Colors.transparent : c.surface3.withValues(alpha: 0.7),
+    hoverColor:
+        kMobile ? Colors.transparent : c.surface3.withValues(alpha: 0.5),
     popupMenuTheme: PopupMenuThemeData(
       color: c.surface2,
       elevation: 4,
