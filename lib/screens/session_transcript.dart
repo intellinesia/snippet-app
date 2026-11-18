@@ -102,7 +102,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           final live = isSessionRunning && curIdx >= events.length;
           if (live) {
             int? startMs;
-            for (var i = (runFirst ?? curIdx) - 1; i >= 0 && startMs == null; i--) {
+            for (var i = (runFirst ?? curIdx) - 1;
+                i >= 0 && startMs == null;
+                i--) {
               startMs = _eventMs(events[i]);
             }
             final startedAt = startMs != null
@@ -117,10 +119,11 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             out.add(KeyedSubtree(
               key: ValueKey(toolKey),
               child: spaced(ActivityPill(
+                agentId: _me?.displayAgentId ?? 'snippet',
                 steps: steps,
                 took: took,
                 onOpen: (i) => showActivitySheet(context,
-        client: widget.client,
+                    client: widget.client,
                     batch: ValueNotifier<ToolBatch>(ToolBatch(steps)),
                     initial: i,
                     took: took,

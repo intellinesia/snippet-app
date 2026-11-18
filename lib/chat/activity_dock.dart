@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../mochi.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
 import '../tool_sheet.dart' show ToolBatch;
@@ -110,15 +111,17 @@ class FailedPill extends StatelessWidget {
       );
 }
 
-/// The live capsule: ring of finished steps, the current step, its clock.
+/// The live capsule: the agent's mascot hopping, the current step, its clock.
 class ActivityDock extends StatefulWidget {
   const ActivityDock({
     super.key,
     required this.run,
     required this.onOpen,
+    required this.agentId,
   });
 
   final DockRun run;
+  final String agentId;
 
   /// Opens the sheet; [index] lands on that step, null on the list.
   final void Function(int? index) onOpen;
@@ -150,7 +153,6 @@ class _ActivityDockState extends State<ActivityDock> {
     final steps = widget.run.batch.steps;
     if (steps.isEmpty) return const SizedBox.shrink();
     final live = steps.where((s) => s.running).toList();
-    final done = steps.length - live.length;
     final failed = runFailures(steps);
     final elapsed = DateTime.now().difference(widget.run.startedAt);
     final clock = formatWorkDuration(
@@ -170,15 +172,9 @@ class _ActivityDockState extends State<ActivityDock> {
             border: Border.all(color: AppColors.border2),
           ),
           child: Row(children: [
-            RunRing(
-              fraction: done / steps.length,
-              color: AppColors.run,
-              size: 26,
-              stroke: 2.5,
-              child: Text('$done',
-                  style: sans(11,
-                      weight: W.label, color: AppColors.fg1, tabular: true)),
-            ),
+            // The agent's own mascot hops while it works, as in the transcript.
+            AgentMochi(widget.agentId,
+                size: 30, state: AgentCharacterState.working),
             const SizedBox(width: 10),
             Expanded(
               child: Text(title,
@@ -209,9 +205,11 @@ class ActivityPill extends StatelessWidget {
     super.key,
     required this.steps,
     required this.onOpen,
+    required this.agentId,
     this.took,
   });
 
+  final String agentId;
   final List<ToolStep> steps;
   final Duration? took;
   final void Function(int? index) onOpen;
@@ -230,13 +228,7 @@ class ActivityPill extends StatelessWidget {
         decoration: BoxDecoration(
             color: AppColors.surface2, borderRadius: BorderRadius.circular(22)),
         child: Row(children: [
-          RunRing(
-            fraction: 1,
-            color: AppColors.ok,
-            size: 22,
-            stroke: 2,
-            child: AppIcon('check', size: 11, color: AppColors.ok),
-          ),
+          AgentMochi(agentId, size: 26, state: AgentCharacterState.done),
           const SizedBox(width: 10),
           Expanded(
             child: Text(describeWork(steps).text,
