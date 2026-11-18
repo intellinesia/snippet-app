@@ -13,27 +13,10 @@ import 'crew_widgets.dart' show AgentProviderMark;
 import 'mochi.dart';
 import 'models.dart';
 import 'platform.dart';
-import 'settings_form.dart' show Grouped;
 import 'theme.dart';
 import 'tool_activity.dart';
 import 'tool_views.dart';
 import 'widgets.dart';
-
-/// Marks steps drawn as grouped-card segments and carries each one's corners.
-class StepScope extends InheritedWidget {
-  const StepScope({super.key, this.radius, required super.child});
-
-  final BorderRadius? radius;
-
-  static bool active(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<StepScope>() != null;
-
-  static BorderRadius? radiusOf(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<StepScope>()?.radius;
-
-  @override
-  bool updateShouldNotify(StepScope old) => old.radius != radius;
-}
 
 /// The summary sentence with file names a step brighter and the outcome word
 /// in its own colour.
@@ -139,18 +122,6 @@ class _SpinnerPainter extends CustomPainter {
       old.head != head || old.track != track;
 }
 
-BorderRadius _segmentRadius({required bool first, required bool last}) {
-  // The desktop design wants 8px group ends and 3px between rows.
-  final end = Radius.circular(kMobile ? R.of(Grouped.radiusEnd) : R.of(13));
-  final inner = Radius.circular(kMobile ? R.of(Grouped.radiusInner) : R.of(5));
-  return BorderRadius.only(
-    topLeft: first ? end : inner,
-    topRight: first ? end : inner,
-    bottomLeft: last ? end : inner,
-    bottomRight: last ? end : inner,
-  );
-}
-
 /// The phrase for a failing step: "3 tests failed" for a test run, else its chip.
 String? _failureNote(List<ToolStep> steps) {
   for (final s in steps) {
@@ -165,8 +136,9 @@ String? _failureNote(List<ToolStep> steps) {
   return null;
 }
 
-/// The header segment of a run of tool calls: what the work did, how many
-/// steps and how long, and the first failure. Running, it names the live step.
+/// The fold line of a finished run of tool calls: "Worked 2m 38s · 2 files
+/// +30 −13", centred, with the failure note and a chevron. Open, thin rules
+/// run out to both sides. Running, it names the live step instead.
 class WorkLine extends StatelessWidget {
   const WorkLine({
     super.key,
@@ -186,102 +158,89 @@ class WorkLine extends StatelessWidget {
     Theme.of(context);
     final live = steps.where((s) => s.running).toList();
     final isRunning = running && live.isNotEmpty;
-    final work = describeWork(steps);
-    final titleStyle = sans(kMobile ? (Grouped.compact ? 15 : 16) : 14,
-        height: kMobile ? 22 / 16 : 20 / 14, color: AppColors.fg2);
-    final subStyle = sans(kMobile ? (Grouped.compact ? 13 : 14) : 13,
-        height: kMobile ? 20 / 14 : 18 / 13, color: AppColors.fg3);
-    final title = isRunning
-        ? <InlineSpan>[
-            TextSpan(
-                text: liveStepText(live.last),
-                style: titleStyle.copyWith(color: AppColors.fg1))
-          ]
-        : [
-            for (final sp in workSpans(
-                WorkSummary(work.text,
-                    emphasis: work.emphasis,
-                    outcome: work.failed ? null : work.outcome,
-                    failed: work.failed),
-                titleStyle))
-              // The emphasis colour is fg2; names go to fg1 over an fg2 sentence.
-              if (sp is TextSpan && sp.style?.color == AppColors.fg2)
-                TextSpan(
-                    text: sp.text,
-                    style: sp.style!.copyWith(color: AppColors.fg1))
-              else
-                sp
-          ];
-    final took = stepsDuration(steps);
-    final note = isRunning ? null : _failureNote(steps);
-    final sub = <InlineSpan>[
-      if (took != null) TextSpan(text: formatWorkDuration(took)),
-      if (note != null)
-        TextSpan(
-            text: took == null ? note : ' · $note',
-            style: subStyle.copyWith(color: AppColors.danger)),
-    ];
-    if (!kMobile) {
-      return _desktopWorkLine(
-          title: title,
-          titleStyle: titleStyle,
-          isRunning: isRunning,
-          failed: work.failed,
-          took: took,
-          note: note);
+    final style = sans(kMobile ? 14 : 13,
+        height: 1.3, color: AppColors.fg3, tabular: true);
+    // The lead truncates; the counts after it always stay in view.
+    var lead = TextSpan(
+        text: isRunning ? liveStepText(live.last) : '',
+        style: isRunning ? style.copyWith(color: AppColors.fg1) : null);
+    final spans = <InlineSpan>[];
+    if (!isRunning) {
+      final took = stepsDuration(steps);
+      final n = steps.length;
+      // Without timings, the summary sentence says more than a step count.
+      final said = took == null ? describeWork(steps).text : '';
+      lead = TextSpan(
+          text: took != null
+              ? 'Worked ${formatWorkDuration(took)}'
+              : said.isNotEmpty
+                  ? said
+                  : 'Worked · $n ${n == 1 ? 'step' : 'steps'}');
+      final files = fileChanges(steps);
+      if (files.isNotEmpty) {
+        final added = files.fold<int>(0, (n, f) => n + f.added);
+        final removed = files.fold<int>(0, (n, f) => n + f.removed);
+        spans.add(TextSpan(
+            text:
+                ' · ${files.length} ${files.length == 1 ? 'file' : 'files'}'));
+        if (added > 0 || removed > 0) {
+          spans.add(TextSpan(
+              text: ' +$added', style: style.copyWith(color: AppColors.ok)));
+          spans.add(TextSpan(
+              text: ' −$removed',
+              style: style.copyWith(color: AppColors.danger)));
+        }
+      }
+      final note = _failureNote(steps);
+      if (note != null) {
+        spans.add(TextSpan(
+            text: ' · $note', style: style.copyWith(color: AppColors.danger)));
+      }
     }
-    final glyph = Grouped.icon;
-    final Widget lead = isRunning
-        ? SizedBox.square(
-            dimension: glyph,
-            child: RunSpinner(size: glyph, color: AppColors.accent))
-        : AppIcon(work.failed ? 'x-circle' : 'check-circle',
-            size: glyph, color: work.failed ? AppColors.danger : AppColors.fg3);
+    Widget rule() => Expanded(
+          child: open
+              ? ColoredBox(
+                  color: AppColors.border,
+                  child: const SizedBox(height: 1, width: double.infinity))
+              : const SizedBox.shrink(),
+        );
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Container(
-        constraints: BoxConstraints(minHeight: kMobile ? Grouped.rowMin : 56),
-        padding: EdgeInsets.symmetric(
-            horizontal: Grouped.padX, vertical: Grouped.padY),
-        decoration: BoxDecoration(
-          color: Grouped.row,
-          borderRadius: _segmentRadius(first: true, last: !open),
-        ),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          heightFactor: 1,
-          child: Row(children: [
-            lead,
-            SizedBox(width: Grouped.iconGap),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text.rich(TextSpan(children: title),
+      child: SizedBox(
+        height: kMobile ? 40 : 32,
+        child: LayoutBuilder(
+          // The label is sized first so the rules only take what it leaves.
+          builder: (context, c) => Row(children: [
+            rule(),
+            const SizedBox(width: 12),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                  maxWidth: (c.maxWidth - (open ? 96 : 56)).clamp(0, 560)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Flexible(
+                  child: Text.rich(lead,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: titleStyle),
-                  if (sub.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text.rich(TextSpan(children: sub),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: subStyle),
-                    ),
-                ],
+                      style: style),
+                ),
+                if (spans.isNotEmpty)
+                  Text.rich(TextSpan(children: spans),
+                      maxLines: 1, softWrap: false, style: style),
+              ]),
+            ),
+            const SizedBox(width: 6),
+            if (isRunning)
+              RunSpinner(size: 12, color: AppColors.accent)
+            else
+              AnimatedRotation(
+                turns: open ? 0.5 : 0,
+                duration: Motion.fast,
+                curve: Curves.easeOutCubic,
+                child: AppIcon('chevron-down', size: 14, color: AppColors.fg4),
               ),
-            ),
-            SizedBox(width: S.s8),
-            AnimatedRotation(
-              turns: open ? 0.5 : 0,
-              duration: Motion.fast,
-              curve: Curves.easeOutCubic,
-              child: AppIcon('chevron-down',
-                  size: Grouped.chevron, color: AppColors.fg4),
-            ),
+            const SizedBox(width: 12),
+            rule(),
           ]),
         ),
       ),
@@ -289,106 +248,254 @@ class WorkLine extends StatelessWidget {
   }
 }
 
-extension on WorkLine {
-  Widget _desktopWorkLine({
-    required List<InlineSpan> title,
-    required TextStyle titleStyle,
-    required bool isRunning,
-    required bool failed,
-    required Duration? took,
-    required String? note,
-  }) {
-    final style = sans(12.5, color: AppColors.fg2);
-    final Widget lead = SizedBox(
-      width: 16,
-      child: Center(
-        child: isRunning
-            ? RunSpinner(size: 12, color: AppColors.accent)
-            : AppIcon(failed ? 'x-circle' : 'check-circle',
-                size: 16, color: failed ? AppColors.danger : AppColors.fg4),
+/// Steps that only look something up; a run of them folds into one group row.
+bool _isLookup(ToolStep s) => switch (toolBaseName(s.tool)) {
+      'read_file' ||
+      'view_file' ||
+      'search_content' ||
+      'grep_search' ||
+      'find_by_name' ||
+      'list_dir' ||
+      'glob' =>
+        true,
+      _ => false,
+    };
+
+const double _rowGap = 2;
+
+/// The step rows of an open run: flat, [_rowGap] apart. Two or more lookups in
+/// a row fold into an "Explored" group.
+class WorkSteps extends StatelessWidget {
+  const WorkSteps({super.key, required this.rows, this.header = true});
+  final List<Widget> rows;
+
+  /// Whether a fold line sits above, which adds a little air before the rows.
+  final bool header;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = _groupLookups(rows);
+    return Padding(
+      padding: EdgeInsets.only(top: header ? 2 : 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < items.length; i++)
+            Padding(
+              padding: EdgeInsets.only(top: i == 0 ? 0 : _rowGap),
+              child: items[i],
+            ),
+        ],
       ),
     );
+  }
+}
+
+List<Widget> _groupLookups(List<Widget> rows) {
+  final out = <Widget>[];
+  var run = <DenseToolRow>[];
+  void flush() {
+    if (run.length >= 2) {
+      final key = run.first.key;
+      out.add(_ExploreGroup(
+          key: key == null ? null : ValueKey('explore-$key'), rows: run));
+    } else {
+      out.addAll(run);
+    }
+    run = <DenseToolRow>[];
+  }
+
+  for (final r in rows) {
+    if (r is DenseToolRow &&
+        _isLookup(ToolStep(tool: r.tool, args: r.args, result: r.result))) {
+      run.add(r);
+    } else {
+      flush();
+      out.add(r);
+    }
+  }
+  flush();
+  return out;
+}
+
+/// "Explored 3 files": consecutive lookups, open while their run is open.
+class _ExploreGroup extends StatefulWidget {
+  const _ExploreGroup({super.key, required this.rows});
+  final List<DenseToolRow> rows;
+
+  @override
+  State<_ExploreGroup> createState() => _ExploreGroupState();
+}
+
+class _ExploreGroupState extends State<_ExploreGroup> {
+  bool _open = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = [
+      for (final r in widget.rows)
+        ToolStep(tool: r.tool, args: r.args, result: r.result),
+    ];
+    final live = steps.any((s) => s.running);
+    final searches = steps.where(_isSearch).length;
+    final files = steps.length - searches;
+    final object = [
+      if (files > 0) '$files ${files == 1 ? 'file' : 'files'}',
+      if (searches > 0) '$searches ${searches == 1 ? 'search' : 'searches'}',
+    ].join(', ');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _FlatRow(
+          live: live,
+          onTap: () => setState(() => _open = !_open),
+          title: TextSpan(children: [
+            TextSpan(
+                text: live ? 'Exploring' : 'Explored',
+                style: TextStyle(color: AppColors.fg1)),
+            TextSpan(text: ' $object', style: TextStyle(color: AppColors.fg3)),
+          ]),
+        ),
+        SpringExpand(
+          open: _open,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 14, top: _rowGap),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < widget.rows.length; i++)
+                  Padding(
+                    padding: EdgeInsets.only(top: i == 0 ? 0 : _rowGap),
+                    child: widget.rows[i],
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+bool _isSearch(ToolStep s) => switch (toolBaseName(s.tool)) {
+      'read_file' || 'view_file' || 'list_dir' => false,
+      _ => true,
+    };
+
+/// One flat line of the step list: title, trailing meta, live spinner.
+class _FlatRow extends StatelessWidget {
+  const _FlatRow({
+    required this.title,
+    required this.onTap,
+    this.live = false,
+    this.meta = const [],
+  });
+
+  final InlineSpan title;
+  final VoidCallback? onTap;
+  final bool live;
+  final List<Widget> meta;
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 34),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: Grouped.row,
-          borderRadius: _segmentRadius(first: true, last: !open),
-        ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: kMobile ? 36 : 30),
+        // Text only: the verb carries the kind, so rows need no glyphs.
         child: Row(children: [
-          lead,
-          const SizedBox(width: 10),
           Expanded(
-            child: Text.rich(
-              TextSpan(children: [
-                for (final sp in title)
-                  if (sp is TextSpan && sp.text != null)
-                    TextSpan(
-                        text: sp.text,
-                        style: sp.style?.color == AppColors.fg1 ||
-                                sp.style?.color == AppColors.ok ||
-                                sp.style?.color == AppColors.danger
-                            ? style.copyWith(
-                                color: sp.style!.color == AppColors.fg1
-                                    ? AppColors.fg2
-                                    : sp.style!.color)
-                            : style)
-                  else
-                    sp,
-                if (note != null)
-                  TextSpan(
-                      text: ' · $note',
-                      style: style.copyWith(color: AppColors.danger)),
-              ]),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: style,
-            ),
+            child: Text.rich(title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(kMobile ? 15 : 13, height: 1.35)),
           ),
-          const SizedBox(width: 10),
-          Text(took == null ? '' : formatWorkDuration(took),
-              style: sans(11, color: AppColors.fg4, tabular: true)),
-          const SizedBox(width: 6),
-          AnimatedRotation(
-            turns: open ? 0.5 : 0,
-            duration: Motion.fast,
-            curve: Curves.easeOutCubic,
-            child: AppIcon('chevron-down', size: 14, color: AppColors.fg4),
-          ),
+          for (final m in meta) ...[const SizedBox(width: 10), m],
+          if (live) ...[
+            const SizedBox(width: 8),
+            RunSpinner(size: 12, color: AppColors.accent),
+          ],
         ]),
       ),
     );
   }
 }
 
-/// The step segments of a grouped card, 2px apart. Under a header the first
-/// segment is square at the top; without one the group rounds at both ends.
-class WorkSteps extends StatelessWidget {
-  const WorkSteps({super.key, required this.rows, this.header = true});
-  final List<Widget> rows;
-  final bool header;
+enum _Object { text, path, code }
 
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.only(top: header ? Grouped.gap : 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var i = 0; i < rows.length; i++)
-              Padding(
-                padding: EdgeInsets.only(top: i == 0 ? 0 : Grouped.gap),
-                child: StepScope(
-                  radius: _segmentRadius(
-                      first: i == 0 && !header, last: i == rows.length - 1),
-                  child: rows[i],
-                ),
-              ),
-          ],
-        ),
+/// A step as (verb, object, how to draw the object).
+(String, String, _Object) _rowParts(ToolStep step) {
+  final name = toolBaseName(step.tool);
+  final running = step.running;
+  final a = step.args is Map ? step.args as Map : const {};
+  final (verb, object) = toolSentenceParts(step);
+  switch (name) {
+    case 'bash':
+      final label = (a['label'] ?? '').toString().trim();
+      // A label already reads as a sentence; a bare command is "Ran <command>".
+      if (label.isNotEmpty) return (label, '', _Object.text);
+      return (running ? 'Running' : 'Ran', stepTarget(step), _Object.code);
+    case 'read_file':
+    case 'view_file':
+      final listing = step.data?['entries'] is List;
+      return (
+        listing ? (running ? 'Listing' : 'Listed') : verb,
+        stepTarget(step),
+        _Object.path
       );
+    case 'list_dir':
+      return (running ? 'Listing' : 'Listed', object, _Object.path);
+    case 'search_content':
+    case 'grep_search':
+    case 'find_by_name':
+    case 'glob':
+      return (running ? 'Searching' : 'Searched', object, _Object.code);
+    case 'view_image':
+    case 'present_file':
+      return (verb, stepTarget(step), _Object.path);
+    case 'change_files':
+      final many = RegExp(r'^\d+ files?$').hasMatch(object);
+      return (
+        verb,
+        object,
+        many || object.isEmpty ? _Object.text : _Object.path
+      );
+  }
+  return (verb, object, _Object.text);
+}
+
+/// Trailing facts of a step: lines, hits, +/− counts, a result, the time.
+List<Widget> _rowMeta(ToolStep step) {
+  final base = sans(kMobile ? 13 : 12, color: AppColors.fg4, tabular: true);
+  final chip = stepChip(step);
+  final out = <Widget>[];
+  if (chip != null && (chip.added > 0 || chip.removed > 0)) {
+    out.add(Text.rich(TextSpan(style: base, children: [
+      TextSpan(text: '+${chip.added}', style: TextStyle(color: AppColors.ok)),
+      TextSpan(
+          text: ' −${chip.removed}', style: TextStyle(color: AppColors.danger)),
+    ])));
+  } else if (chip != null) {
+    final danger = chip.tone == StepChipTone.danger;
+    out.add(Text(danger ? chip.text.split(', ').last : chip.text,
+        maxLines: 1,
+        style: base.copyWith(
+            color: switch (chip.tone) {
+          StepChipTone.ok => AppColors.ok,
+          StepChipTone.danger => AppColors.danger,
+          StepChipTone.neutral => AppColors.fg4,
+        })));
+  } else if (!step.running && toolBaseName(step.tool) == 'search_content') {
+    final hits = step.data?['matches'] ?? step.data?['results'];
+    if (hits is List) {
+      out.add(Text('${hits.length} ${hits.length == 1 ? 'hit' : 'hits'}',
+          style: base));
+    }
+  }
+  final took = stepDuration(step);
+  if (took != null) out.add(Text(took, maxLines: 1, style: base));
+  return out;
 }
 
 class DenseToolRow extends StatefulWidget {
@@ -418,8 +525,13 @@ class _DenseToolRowState extends State<DenseToolRow> {
   ToolStep get _step =>
       ToolStep(tool: widget.tool, args: widget.args, result: widget.result);
 
-  // A failed step starts open until the reader says otherwise.
-  bool get _autoOpen => stepChip(_step)?.tone == StepChipTone.danger;
+  bool get _isCommand => toolBaseName(widget.tool) == 'bash';
+
+  // A failed step, and a command still running, start open until the reader
+  // says otherwise.
+  bool get _autoOpen =>
+      stepChip(_step)?.tone == StepChipTone.danger ||
+      (_isCommand && widget.pending);
 
   bool get _open => !_touched && _autoOpen ? true : (widget.open ?? _localOpen);
 
@@ -434,180 +546,200 @@ class _DenseToolRowState extends State<DenseToolRow> {
   Widget build(BuildContext context) {
     Theme.of(context);
     final step = _step;
-    final canExpand = toolHasDetail(step);
+    final liveCommand = _isCommand && step.running && step.args is Map;
+    final canExpand = toolHasDetail(step) || liveCommand;
     final open = _open && canExpand;
-    final chip = stepChip(step);
-    final danger = chip?.tone == StepChipTone.danger;
-    final (verb, object) = toolSentenceParts(step);
-    final valueStyle = sans(kMobile ? 14 : 13, color: AppColors.fg3);
-    final Widget? value;
-    if (chip == null) {
-      value = null;
-    } else if (chip.added > 0 || chip.removed > 0) {
-      value = Text.rich(TextSpan(children: [
-        TextSpan(
-            text: '+${chip.added}',
-            style: valueStyle.copyWith(color: AppColors.ok)),
-        TextSpan(
-            text: ' −${chip.removed}',
-            style: valueStyle.copyWith(color: AppColors.danger)),
-      ]));
-    } else {
-      // On a failing row the failure count is the news; passes crowd it.
-      value = Text(danger ? chip.text.split(', ').last : chip.text,
-          maxLines: 1,
-          style: valueStyle.copyWith(
-              color: switch (chip.tone) {
-            StepChipTone.ok => AppColors.ok,
-            StepChipTone.danger => AppColors.danger,
-            StepChipTone.neutral => AppColors.fg3,
-          }));
-    }
-    final radius =
-        StepScope.radiusOf(context) ?? _segmentRadius(first: true, last: true);
-    if (!kMobile) {
-      return _desktop(step, verb, object, value, radius,
-          canExpand: canExpand, open: open, danger: danger);
-    }
-    final icon = kMobile ? (Grouped.compact ? 18.0 : 20.0) : 18.0;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: canExpand ? _toggle : null,
-      child: Container(
-        constraints: BoxConstraints(
-            minHeight: kMobile ? (Grouped.compact ? 46 : 52) : 44),
-        padding: EdgeInsets.symmetric(
-            horizontal: Grouped.padX, vertical: kMobile ? 8 : 6),
-        decoration: BoxDecoration(color: Grouped.row, borderRadius: radius),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          heightFactor: 1,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(children: [
-                AppIcon(toolIcon(step.tool),
-                    size: icon,
-                    color: danger ? AppColors.danger : AppColors.fg2),
-                SizedBox(width: Grouped.iconGap),
-                Expanded(
-                  child: Text.rich(
-                    TextSpan(children: [
-                      TextSpan(
-                          text: verb, style: TextStyle(color: AppColors.fg3)),
-                      if (object.isNotEmpty)
-                        TextSpan(
-                            text: ' $object',
-                            style: TextStyle(color: AppColors.fg1)),
-                    ]),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: sans(kMobile ? (Grouped.compact ? 14 : 15) : 13,
-                        height: 20 / 15),
-                  ),
-                ),
-                if (value != null) ...[SizedBox(width: S.s12), value],
-              ]),
-              SpringExpand(
-                open: open,
-                child: canExpand
-                    ? Padding(
-                        padding: EdgeInsets.fromLTRB(
-                            icon + Grouped.iconGap, S.s6, 0, S.s4),
-                        child: _StepDetail(step: step),
-                      )
-                    : const SizedBox(width: double.infinity),
-              ),
-            ],
-          ),
+    final danger = stepChip(step)?.tone == StepChipTone.danger;
+    final (verb, object, kind) = _rowParts(step);
+    final live = step.running;
+    final objectStyle = switch (kind) {
+      _Object.path => sans(kMobile ? 15 : 13, color: AppColors.accent),
+      _Object.code =>
+        mono(kMobile ? 13 : 12.5, color: live ? AppColors.fg1 : AppColors.fg3),
+      _Object.text =>
+        sans(kMobile ? 15 : 13, color: live ? AppColors.fg1 : AppColors.fg3),
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _FlatRow(
+          live: live,
+          onTap: canExpand ? _toggle : null,
+          title: TextSpan(children: [
+            TextSpan(
+                text: verb,
+                style: TextStyle(
+                    color: danger ? AppColors.danger : AppColors.fg1)),
+            if (object.isNotEmpty)
+              TextSpan(text: ' $object', style: objectStyle),
+          ]),
+          meta: _rowMeta(step),
         ),
-      ),
+        SpringExpand(
+          open: open,
+          child: canExpand
+              ? Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 2, 0, 8),
+                  child: _isCommand
+                      ? _TerminalBlock(step: step)
+                      : _StepDetail(step: step),
+                )
+              : const SizedBox(width: double.infinity),
+        ),
+      ],
     );
   }
 }
 
-extension on _DenseToolRowState {
-  /// One soft line: glyph, verb, mono target, counts and time on the right.
-  Widget _desktop(ToolStep step, String verb, String object, Widget? value,
-      BorderRadius radius,
-      {required bool canExpand, required bool open, required bool danger}) {
-    final took = stepDuration(step);
-    final live = step.running;
-    final Widget lead = live
-        ? SizedBox(
-            width: 16,
-            child: Center(child: RunSpinner(size: 12, color: AppColors.accent)))
-        : SizedBox(
-            width: 16,
-            child: AppIcon(toolIcon(step.tool),
-                size: 16, color: danger ? AppColors.danger : AppColors.fg4));
-    final trailing = <Widget>[
-      if (value != null) ...[
-        DefaultTextStyle.merge(
-            style: mono(11.5, color: AppColors.fg3), child: value),
-        SizedBox(width: 10),
-      ],
-      if (took != null)
-        ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 38),
-          child: Text(took,
-              textAlign: TextAlign.right,
-              maxLines: 1,
-              style: sans(11, color: AppColors.fg4, tabular: true)),
-        ),
-      if (canExpand) ...[
-        SizedBox(width: 6),
-        AppIcon(open ? 'chevron-up' : 'chevron-down',
-            size: 14, color: AppColors.fg4),
-      ],
-    ];
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: canExpand ? _toggle : null,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(color: Grouped.row, borderRadius: radius),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 34),
+final _ansiCodes = RegExp(r'\x1B\[[0-9;]*[A-Za-z]');
+
+/// A command opened: "$ command", its output capped at a few lines with a
+/// fade, and the exit code in the corner.
+class _TerminalBlock extends StatefulWidget {
+  const _TerminalBlock({required this.step});
+  final ToolStep step;
+
+  @override
+  State<_TerminalBlock> createState() => _TerminalBlockState();
+}
+
+class _TerminalBlockState extends State<_TerminalBlock> {
+  static const _cap = 8;
+  static const _size = 12.0;
+  static const _lineHeight = 1.6;
+  bool _full = false;
+
+  static String _clean(Object? v) => (v ?? '')
+      .toString()
+      .replaceAll(_ansiCodes, '')
+      .replaceAll(r'\r\n', '\n')
+      .replaceAll(r'\n', '\n')
+      .trimRight();
+
+  @override
+  Widget build(BuildContext context) {
+    final step = widget.step;
+    final a = step.args is Map ? step.args as Map : const {};
+    final d = step.data;
+    final cmd = _clean(a['command'] ?? d?['command']);
+    final stdout = _clean(d?['stdout'] ?? d?['output_so_far']);
+    var stderr = _clean(d?['stderr']);
+    final err = step.result is Map ? (step.result as Map)['error'] : null;
+    if (err is Map && step.failed && stderr.isEmpty && stdout.isEmpty) {
+      stderr = _clean(err['message']);
+    }
+    final base = codeMono(_size, height: _lineHeight, color: AppColors.fg3);
+    final out = stdout.isEmpty ? const <String>[] : stdout.split('\n');
+    final errLines = stderr.isEmpty ? const <String>[] : stderr.split('\n');
+    final total = out.length + errLines.length;
+    final overflow = total > _cap;
+    final capped = overflow && !_full;
+    final cmdLines = cmd.isEmpty ? const <String>[] : cmd.split('\n');
+    final output = total == 0
+        ? null
+        : Text.rich(TextSpan(style: base, children: [
+            for (var i = 0; i < out.length; i++)
+              TextSpan(
+                  text: '${i == 0 ? '' : '\n'}${out[i]}',
+                  style: errorLineMarker.hasMatch(out[i])
+                      ? TextStyle(color: AppColors.danger)
+                      : null),
+            for (var i = 0; i < errLines.length; i++)
+              TextSpan(
+                  text: '${out.isEmpty && i == 0 ? '' : '\n'}${errLines[i]}',
+                  style: TextStyle(color: AppColors.danger)),
+          ]));
+    final exit = step.exitCode;
+    final (String, bool)? badge = step.running
+        ? null
+        : exit != null
+            ? ('exit $exit', exit != 0)
+            : (step.failed ? ('failed', true) : null);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+          color: AppColors.surface2, borderRadius: BorderRadius.circular(10)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (cmdLines.isNotEmpty)
+            Text.rich(TextSpan(style: base, children: [
+              for (var i = 0; i < cmdLines.length; i++) ...[
+                if (i > 0) const TextSpan(text: '\n'),
+                TextSpan(
+                    text: i == 0 ? r'$ ' : '  ',
+                    style: TextStyle(color: AppColors.fg4)),
+                TextSpan(
+                    text: cmdLines[i], style: TextStyle(color: AppColors.fg2)),
+              ],
+            ])),
+          if (output != null) ...[
+            if (cmdLines.isNotEmpty) const SizedBox(height: 6),
+            capped
+                ? SizedBox(
+                    height: _cap * _size * _lineHeight,
+                    child: Stack(children: [
+                      ClipRect(
+                        child: SingleChildScrollView(
+                          physics: const NeverScrollableScrollPhysics(),
+                          child: output,
+                        ),
+                      ),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: 3 * _size * _lineHeight,
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  AppColors.surface2.withValues(alpha: 0),
+                                  AppColors.surface2,
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ]),
+                  )
+                : output,
+          ],
+          if (overflow || badge != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
               child: Row(children: [
-                lead,
-                const SizedBox(width: 10),
-                Text(verb,
-                    maxLines: 1,
-                    style: sans(12.5,
-                        color: live ? AppColors.fg1 : AppColors.fg2)),
-                if (object.isNotEmpty) ...[
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(object,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: mono(12, color: AppColors.fg3)),
+                if (overflow)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => setState(() => _full = !_full),
+                    child: Text(_full ? 'Show less' : 'Show all $total lines',
+                        style: sans(12, weight: W.label, color: AppColors.fg3)),
                   ),
-                ] else
-                  const Spacer(),
-                if (trailing.isNotEmpty) ...[
-                  const SizedBox(width: 10),
-                  ...trailing
-                ],
+                const Spacer(),
+                if (badge != null)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: badge.$2
+                          ? AppColors.danger.withValues(alpha: 0.13)
+                          : AppColors.surface3,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(badge.$1,
+                        style: sans(11,
+                            color: badge.$2 ? AppColors.danger : AppColors.fg3,
+                            tabular: true)),
+                  ),
               ]),
             ),
-            SpringExpand(
-              open: open,
-              child: canExpand
-                  ? Padding(
-                      padding: const EdgeInsets.fromLTRB(26, 0, 0, 12),
-                      child: _StepDetail(step: step),
-                    )
-                  : const SizedBox(width: double.infinity),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -645,16 +777,15 @@ class _StepDetailState extends State<_StepDetail> {
     });
     final overflow = _height > _cap + 1;
     final tool = toolBaseName(step.tool);
-    final countsLines =
-        tool == 'bash' || tool == 'read_file' || tool == 'change_files';
+    final countsLines = tool == 'read_file' || tool == 'change_files';
     final lines = (_height / _lineHeight).round();
     final more = countsLines ? 'Show all $lines lines' : 'Show all';
     final meta = toolMetaParts(step);
-    final metaStyle = sans(kMobile ? 12 : 12, color: AppColors.fg3);
+    final metaStyle = sans(12, color: AppColors.fg3);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // No inner box: the step's own row is the surface.
+        // No inner box: the transcript itself is the surface.
         Padding(
           padding: EdgeInsets.only(top: S.s2),
           child: Column(
@@ -701,8 +832,40 @@ class _StepDetailState extends State<_StepDetail> {
   }
 }
 
-/// A run of tool steps. Up to [_directLimit] steps show directly; a longer run
-/// shows one work line that opens into the step list.
+/// A finished run folds into one line that opens into its steps; a run still
+/// working shows its rows directly. Shared by the transcript and [ToolRun].
+class ActivityFold extends StatelessWidget {
+  const ActivityFold({
+    super.key,
+    required this.rows,
+    required this.running,
+    required this.open,
+    required this.onTap,
+  });
+
+  final List<Widget> rows;
+  final bool running;
+  final bool open;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = [
+      for (final r in rows.whereType<DenseToolRow>())
+        ToolStep(tool: r.tool, args: r.args, result: r.result),
+    ];
+    if (running) return WorkSteps(rows: rows, header: false);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        WorkLine(steps: steps, running: false, open: open, onTap: onTap),
+        SpringExpand(open: open, child: WorkSteps(rows: rows)),
+      ],
+    );
+  }
+}
+
+/// A run of tool steps: one fold line while finished, rows while running.
 class ToolRun extends StatefulWidget {
   final List<Widget> rows;
   final bool running;
@@ -715,7 +878,6 @@ class ToolRun extends StatefulWidget {
 }
 
 class _ToolRunState extends State<ToolRun> {
-  static const _directLimit = 3;
   bool _localOpen = false;
 
   bool get _open => widget.onOpenChanged != null ? widget.open : _localOpen;
@@ -731,27 +893,13 @@ class _ToolRunState extends State<ToolRun> {
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
-    final rows = widget.rows;
-    final steps = [
-      for (final r in rows.whereType<DenseToolRow>())
-        ToolStep(tool: r.tool, args: r.args, result: r.result),
-    ];
-    final long = rows.length > _directLimit;
-    final open = _open;
     return Padding(
       padding: EdgeInsets.symmetric(vertical: S.s4),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (long)
-          WorkLine(
-              steps: steps,
-              running: widget.running,
-              open: open,
-              onTap: _toggle),
-        if (!long)
-          WorkSteps(rows: rows, header: false)
-        else
-          SpringExpand(open: open, child: WorkSteps(rows: rows)),
-      ]),
+      child: ActivityFold(
+          rows: widget.rows,
+          running: widget.running,
+          open: _open,
+          onTap: _toggle),
     );
   }
 }

@@ -1227,32 +1227,11 @@ class _CollapsedActivityState extends State<CollapsedActivity> {
 
   @override
   Widget build(BuildContext context) {
-    // One tool is its own row; a summary header would only hide it.
-    if (widget.rows.length == 1) return widget.rows.single;
-    final steps = [
-      for (final r in widget.rows.whereType<DenseToolRow>())
-        ToolStep(tool: r.tool, args: r.args, result: r.result),
-    ];
-    // Desktop shows a live run as plain rows; a long one keeps its header.
-    if (!kMobile && widget.running && widget.rows.length <= 8) {
-      return WorkSteps(rows: widget.rows, header: false);
-    }
-    final open = _open;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        WorkLine(
-            steps: steps, running: widget.running, open: open, onTap: _toggle),
-        AnimatedSize(
-          duration: Motion.fast,
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: open
-              ? WorkSteps(rows: widget.rows)
-              : const SizedBox(width: double.infinity),
-        ),
-      ],
-    );
+    return ActivityFold(
+        rows: widget.rows,
+        running: widget.running,
+        open: _open,
+        onTap: _toggle);
   }
 }
 

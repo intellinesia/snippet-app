@@ -89,7 +89,8 @@ void main() {
         bash('cd ~/code/app && python3 - <<\'EOF\'\n'
             'p="lib/a.dart"\nassert open(p).read()\n'
             'open(p,"w").write("x")\nEOF'),
-        bash('export PATH=\$HOME/bin:\$PATH; CPU_SLOT_WAIT=1 cpu-slot flutter test test/a_test.dart'),
+        bash(
+            'export PATH=\$HOME/bin:\$PATH; CPU_SLOT_WAIT=1 cpu-slot flutter test test/a_test.dart'),
         bash('cat > notes.txt <<EOF\nhello\nEOF'),
         bash('python3 -c "assert 1; print(open(\'f\').read())"'),
       ];
@@ -100,7 +101,14 @@ void main() {
         final w = describeWork(subset);
         final line = activitySummary(subset);
         expect(line, isNot(matches(r'[<>|=(){}\\$]')), reason: line);
-        for (final bad in ['assert', 'open(', 'EOF', 'cd ', 'export', 'cat >']) {
+        for (final bad in [
+          'assert',
+          'open(',
+          'EOF',
+          'cd ',
+          'export',
+          'cat >'
+        ]) {
           expect(line, isNot(contains(bad)), reason: line);
         }
         expect(w.text, isNotEmpty);
@@ -154,14 +162,13 @@ void main() {
       expect(stepChip(edit('a.dart'))?.text, '+1 −1');
       expect(stepChip(bash('flutter test', stdout: '00:01 +2: 2 passed'))?.text,
           '2 passed');
-      expect(stepChip(bash('flutter test', code: 1))?.tone,
-          StepChipTone.danger);
+      expect(
+          stepChip(bash('flutter test', code: 1))?.tone, StepChipTone.danger);
       expect(
           stepChip(const ToolStep(
-                  tool: 'view_image',
-                  args: {'path': 'a.png'},
-                  result: {'status': 'ok'}))
-              ?.text,
+              tool: 'view_image',
+              args: {'path': 'a.png'},
+              result: {'status': 'ok'}))?.text,
           'image');
     });
   });
@@ -183,7 +190,8 @@ void main() {
     });
 
     test('become one sentence naming the sender', () {
-      final sig = envelopeSignal(parseCoordinationEnvelope(body)!, 'Mission Control');
+      final sig =
+          envelopeSignal(parseCoordinationEnvelope(body)!, 'Mission Control');
       expect(signalPlain(sig.text),
           'Mission Control cancelled Daily LinkedIn sync');
       expect(sig.sub, 'Moot: run 3 completed.');
@@ -208,8 +216,10 @@ void main() {
             reasoning: 'watching "build 7" (/tmp/build.log)'),
         SystemRow(
             step: 'file_watch',
-            reasoning: '"build 7" — /tmp/build.log grew: APK ok\n__DONE__ exit=0'),
-        SystemRow(step: 'watch_removed', reasoning: 'stopped watching "build 7"'),
+            reasoning:
+                '"build 7" — /tmp/build.log grew: APK ok\n__DONE__ exit=0'),
+        SystemRow(
+            step: 'watch_removed', reasoning: 'stopped watching "build 7"'),
       ])));
       expect(find.text('Watching build 7', findRichText: true), findsOneWidget);
       expect(find.text('build 7 finished', findRichText: true), findsOneWidget);
@@ -230,7 +240,8 @@ void main() {
             meName: 'Rook'),
         AgentMessageCard(
             agentId: 'mission-control',
-            body: '[task_cancelled]\ntitle: Sync\nreason: Moot.\n[/task_cancelled]',
+            body:
+                '[task_cancelled]\ntitle: Sync\nreason: Moot.\n[/task_cancelled]',
             outbound: false),
       ])));
       expect(find.text('Moss'), findsOneWidget);
@@ -261,31 +272,34 @@ void main() {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       await t.pumpWidget(wrap(CollapsedActivity(
         [
-          DenseToolRow(
-              tool: 'change_files',
-              args: const {
-                'path': 'lib/a.dart',
-                'action': 'replace',
-                'find': 'a',
-                'with': 'b'
-              },
-              result: const {'status': 'ok'}),
-          DenseToolRow(
-              tool: 'bash',
-              args: const {'command': 'flutter test test/a_test.dart'},
-              result: const {
-                'status': 'ok',
-                'data': {'exit_code': 0, 'stdout': '3 passed'}
-              }),
+          DenseToolRow(tool: 'change_files', args: const {
+            'path': 'lib/a.dart',
+            'action': 'replace',
+            'find': 'a',
+            'with': 'b'
+          }, result: const {
+            'status': 'ok'
+          }),
+          DenseToolRow(tool: 'bash', args: const {
+            'command': 'flutter test test/a_test.dart'
+          }, result: const {
+            'status': 'ok',
+            'data': {'exit_code': 0, 'stdout': '3 passed'}
+          }),
         ],
         open: true,
         onOpenChanged: (_) {},
       )));
       await t.pump(const Duration(milliseconds: 300));
-      // The header title and the step row both name the edit.
-      expect(find.textContaining('Edited a.dart', findRichText: true),
-          findsNWidgets(2));
-      expect(find.textContaining('flutter test test/a_test.dart',
+      expect(find.byType(WorkLine), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byType(DenseToolRow),
+              matching:
+                  find.textContaining('Edited a.dart', findRichText: true)),
+          findsOneWidget);
+      expect(
+          find.textContaining('flutter test test/a_test.dart',
               findRichText: true),
           findsOneWidget);
       expect(find.text('3 passed'), findsOneWidget);
@@ -379,7 +393,12 @@ void main() {
       workSummary(const [
         ToolStep(
           tool: 'change_files',
-          args: {'path': 'lib/a.dart', 'action': 'replace', 'find': 'x', 'with': 'y'},
+          args: {
+            'path': 'lib/a.dart',
+            'action': 'replace',
+            'find': 'x',
+            'with': 'y'
+          },
           result: {'status': 'error'},
         ),
       ]),
@@ -391,7 +410,8 @@ void main() {
     expect(
       workSummary([
         _bash('cd /home/snippet/code/app && flutter analyze lib/a.dart'),
-        _bash('CPU_SLOT_WAIT=3600 cpu-slot cargo test --lib work_notes | tail -n 20'),
+        _bash(
+            'CPU_SLOT_WAIT=3600 cpu-slot cargo test --lib work_notes | tail -n 20'),
         _bash('cargo test --lib other_filter'),
         _bash('rg -n CollapsedActivity lib/'),
         _bash('ls -la lib/'),
@@ -419,14 +439,19 @@ void main() {
     );
     expect(
       workSummary(const [
-        ToolStep(tool: 'search_content', args: {'query': 'a'}, result: {'status': 'ok'}),
-        ToolStep(tool: 'web_search', args: {'query': 'b'}, result: {'status': 'ok'}),
+        ToolStep(
+            tool: 'search_content',
+            args: {'query': 'a'},
+            result: {'status': 'ok'}),
+        ToolStep(
+            tool: 'web_search', args: {'query': 'b'}, result: {'status': 'ok'}),
       ]),
       'Searched 2 times',
     );
   });
 
-  test('workSummary extracts test and build excerpts only from last command', () {
+  test('workSummary extracts test and build excerpts only from last command',
+      () {
     expect(
       workSummary([
         _read('lib/a.dart'),
@@ -437,7 +462,8 @@ void main() {
         _bash('flutter analyze', stdout: 'No issues found! (ran in 1.1s)'),
         _bash(
           'cargo test --lib',
-          stdout: 'test result: ok. 212 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out\n'
+          stdout:
+              'test result: ok. 212 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out\n'
               'Doc-tests app\n'
               'test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out\n',
         ),
@@ -461,7 +487,8 @@ void main() {
         _bash(
           'cargo build',
           exitCode: 101,
-          stderr: '\x1B[1;31merror[E0425]\x1B[0m: cannot find value `x` in this scope',
+          stderr:
+              '\x1B[1;31merror[E0425]\x1B[0m: cannot find value `x` in this scope',
         ),
       ]),
       'Ran cargo build · error[E0425]',
@@ -476,7 +503,8 @@ void main() {
 
     expect(
       workSummary([
-        _bash('flutter analyze', stdout: 'Analyzing snippet...\n\n3 issues found. (ran in 2.1s)'),
+        _bash('flutter analyze',
+            stdout: 'Analyzing snippet...\n\n3 issues found. (ran in 2.1s)'),
       ]),
       'Ran flutter analyze · 3 issues found',
     );

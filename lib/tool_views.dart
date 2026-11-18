@@ -438,7 +438,7 @@ List<Widget> _changeFilesView(Map? a, Map? d, {bool failed = false}) {
   );
 }
 
-final _errorLine = RegExp(
+final errorLineMarker = RegExp(
     r'^\s*([Ee]rror|[Ff]atal|FATAL|[Pp]anic|[Ee]xception|Traceback)\b|error\[E|\bError:|\bFAILED\b');
 
 List<Widget> _bashView(Map? a, Map? d, {required bool running, String? error}) {
@@ -476,7 +476,7 @@ List<Widget> _bashView(Map? a, Map? d, {required bool running, String? error}) {
     for (final l in stdout.split('\n')) {
       line(
           l,
-          _errorLine.hasMatch(l)
+          errorLineMarker.hasMatch(l)
               ? AppColors.danger
               : (kMobile ? AppColors.fg2 : AppColors.fg3));
     }

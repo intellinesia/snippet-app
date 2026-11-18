@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-
 import 'package:snippet/models.dart';
 import 'package:snippet/tool_activity.dart';
 import 'package:snippet/screens/mission_control/mission_control_state.dart';
@@ -399,8 +398,13 @@ void main() {
     await tester.pump();
     expect(find.text('tool detail'), findsOneWidget);
 
+    // A finished run folds to one line until the reader opens it.
     running.value = false;
     await tester.pump();
+    expect(find.text('tool detail'), findsNothing);
+
+    open.value = true;
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('tool detail'), findsOneWidget);
   });
 

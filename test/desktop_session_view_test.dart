@@ -149,7 +149,9 @@ List<Widget> _activityRows() => [
         DenseToolRow(
           tool: 'bash',
           args: {'command': 'echo $i'},
-          result: const {'data': {'exit_code': 0}},
+          result: const {
+            'data': {'exit_code': 0}
+          },
         ),
     ];
 
@@ -187,18 +189,23 @@ void main() {
       const ToolStep(
         tool: 'bash',
         args: {'command': 'ls'},
-        result: {'data': {'exit_code': 0}},
+        result: {
+          'data': {'exit_code': 0}
+        },
       ),
       const ToolStep(
         tool: 'bash',
         args: {'command': 'pwd'},
-        result: {'data': {'exit_code': 0}},
+        result: {
+          'data': {'exit_code': 0}
+        },
       ),
     ]);
     expect(summary, 'Edited 3 files, searched 1 time, ran pwd');
   });
 
-  testWidgets('CollapsedActivity collapses consecutive tools and expands in place',
+  testWidgets(
+      'CollapsedActivity collapses consecutive tools and expands in place',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
@@ -220,16 +227,20 @@ void main() {
           DenseToolRow(
             tool: 'bash',
             args: const {'command': 'echo hi'},
-            result: const {'data': {'exit_code': 0}},
+            result: const {
+              'data': {'exit_code': 0}
+            },
           ),
         ]),
       ),
     ));
     await tester.pump();
 
-    final summary = find.text('Edited a.dart, ran echo',
-        findRichText: true);
+    // Without timings the fold names the work instead of counting steps.
+    final summary = find.byType(WorkLine);
     expect(summary, findsOneWidget);
+    expect(find.textContaining('Worked ·', findRichText: true), findsNothing);
+    expect(find.textContaining('a.dart', findRichText: true), findsOneWidget);
     expect(find.text('Show'), findsNothing);
     expect(find.text('Hide'), findsNothing);
     expect(find.byType(DenseToolRow), findsNothing);
@@ -239,7 +250,7 @@ void main() {
         of: find.byType(CollapsedActivity),
         matching: find.byType(AppIcon),
       ),
-      findsNWidgets(2), // status glyph and chevron
+      findsOneWidget, // the chevron
     );
 
     await tester.tap(summary);
@@ -248,8 +259,7 @@ void main() {
     expect(find.byType(DenseToolRow), findsNWidgets(2));
 
     await tester.tap(summary);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
     expect(find.byType(DenseToolRow), findsNothing);
     debugDefaultTargetPlatformOverride = null;
   });
@@ -275,9 +285,11 @@ void main() {
     ));
     await tester.pump();
 
-    // Desktop splits the verb from the mono target.
-    expect(find.text('Running'), findsOneWidget);
-    expect(find.text('flutter test'), findsOneWidget);
+    // A running run shows its live row, with the command's terminal open.
+    expect(find.textContaining('Running flutter test', findRichText: true),
+        findsOneWidget);
+    expect(find.textContaining(r'$ flutter test', findRichText: true),
+        findsOneWidget);
     expect(find.text('Show'), findsNothing);
     expect(find.byType(WorkingDots), findsNothing);
     expect(
@@ -285,7 +297,7 @@ void main() {
         of: find.byType(CollapsedActivity),
         matching: find.byType(AppIcon),
       ),
-      findsNothing, // a live step shows the spinner; a lone step has no header
+      findsNothing, // rows are text only; no fold line while running
     );
     expect(find.byType(RunSpinner), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
@@ -323,21 +335,13 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(
-          find.text('Edited 3 files, ran echo',
-              findRichText: true),
-          findsOneWidget);
-      expect(
-          desktop
-              ? find.text('flutter analyze')
-              : find.text('Running flutter analyze', findRichText: true),
+      expect(find.byType(WorkLine), findsOneWidget);
+      expect(find.textContaining('Running flutter analyze', findRichText: true),
           findsOneWidget);
       expect(find.byType(DenseToolRow), findsOneWidget);
       expect(find.text('Show'), findsNothing);
 
-      await tester.tap(find.text(
-          'Edited 3 files, ran echo',
-          findRichText: true));
+      await tester.tap(find.byType(WorkLine));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byType(DenseToolRow), findsNWidgets(6));
@@ -346,13 +350,13 @@ void main() {
     });
   }
 
-  testWidgets('tapping the summary reveals the rows and tapping again hides '
+  testWidgets(
+      'tapping the summary reveals the rows and tapping again hides '
       'them', (tester) async {
     _usePhoneView();
     await _pumpRows(tester, CollapsedActivity(_activityRows()));
 
-    await tester.tap(
-        find.text('Edited f0.dart and f1.dart, ran echo', findRichText: true));
+    await tester.tap(find.byType(WorkLine));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -360,16 +364,15 @@ void main() {
     expect(find.text('Show'), findsNothing);
     expect(find.text('Hide'), findsNothing);
 
-    await tester.tap(
-        find.text('Edited f0.dart and f1.dart, ran echo', findRichText: true));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byType(WorkLine));
+    await tester.pumpAndSettle();
 
     expect(find.byType(DenseToolRow), findsNothing);
     debugDefaultTargetPlatformOverride = null;
   });
 
-  testWidgets('work summary shows outcome when collapsed and command '
+  testWidgets(
+      'work summary shows outcome when collapsed and command '
       'duration when expanded', (tester) async {
     _usePhoneView();
     await _pumpRows(
@@ -405,10 +408,7 @@ void main() {
       ]),
     );
 
-    final summary = find.text(
-      'Read a.dart, edited a.dart, ran flutter test passed',
-      findRichText: true,
-    );
+    final summary = find.textContaining('Worked 1.4s', findRichText: true);
     expect(summary, findsOneWidget);
 
     await tester.tap(summary);
@@ -416,7 +416,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(DenseToolRow), findsNWidgets(3));
-    await tester.tap(find.textContaining('flutter test test/work_notes_test.dart',
+    await tester.tap(find.textContaining(
+        'flutter test test/work_notes_test.dart',
         findRichText: true));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
