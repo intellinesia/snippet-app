@@ -715,7 +715,6 @@ class _DetailPage extends StatelessWidget {
     final added = files.fold<int>(0, (n, c) => n + c.added);
     final removed = files.fold<int>(0, (n, c) => n + c.removed);
     final dur = stepDuration(step);
-    final sub = _stepSub(step) ?? toolTitle(step.tool);
     final single = files.length == 1 ? files.first.path : null;
     final canOpenFile = single != null && onOpenFile != null;
     return Column(
@@ -734,10 +733,6 @@ class _DetailPage extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: sans(17, weight: W.title, color: AppColors.fg1)),
-                  Text(sub,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(13, color: AppColors.fg3)),
                 ],
               ),
             ),

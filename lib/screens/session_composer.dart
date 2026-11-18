@@ -1225,7 +1225,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (heading.isNotEmpty)
+        if (!kMobile && heading.isNotEmpty)
           ComposerTrayItem(index: 0, child: ComposerTrayHeading(heading)),
         for (var i = 0; i < groups.length; i++) ...[
           if (i > 0) SizedBox(height: S.s12),
