@@ -401,11 +401,12 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             addEvent(key, AssignmentCard(assignment: assignment));
             break;
           }
+          // The phone and the daemon keep different clocks, so match on order:
+          // the newest user turn, shortly after the user pressed send.
           final sentAt = _lastSendAt;
-          final evMs = _eventMs(e);
           if (sentAt != null &&
-              DateTime.now().difference(sentAt).inSeconds < 4 &&
-              (evMs == null || evMs >= sentAt.millisecondsSinceEpoch - 2000)) {
+              DateTime.now().difference(sentAt).inSeconds < 8 &&
+              !events.skip(idx + 1).any((x) => x['kind'] == e['kind'])) {
             _sendInKeys.add(key);
           }
           final userBubble =

@@ -22,6 +22,7 @@ import '../composer/composer_attachments.dart';
 import '../composer/composer_card.dart';
 import '../composer/voice_note.dart';
 import '../message_reactions.dart';
+import '../chat/send_in.dart';
 import '../mochi.dart';
 import '../motion.dart';
 import '../models.dart';
@@ -611,6 +612,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   Map<String, MessageDelivery> _deliveries = const {};
   bool _loading = true;
   final bool _sending = false;
+  // Local bubbles that rise in from the composer once; the echo replaces them.
+  final Set<String> _sendInIds = {};
   String? _error;
   late final Swr<DirectThreadPage> _thread;
 
@@ -795,6 +798,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     _attachments.clear();
     unawaited(_voice.discard());
     _unechoed.add(pending);
+    _sendInIds.add(key);
     setState(() {
       _replyTo = null;
       _events = [..._events, pending];
@@ -1347,18 +1351,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           tail: true,
           child: Padding(
             padding: EdgeInsets.symmetric(vertical: S.s4, horizontal: S.s2),
-            // Phone: the agent's own mascot hops, as in sessions; desktop keeps dots.
-            child: kMobile
-                ? SizedBox(
-                    key: const Key('agentTypingDots'),
-                    width: 34,
-                    height: 30,
-                    child: Center(
-                      child: AgentMochi(widget.agentId,
-                          size: 28, state: AgentCharacterState.working),
-                    ),
-                  )
-                : const _TypingDots(key: Key('agentTypingDots')),
+            child: _TypingDots(key: Key('agentTypingDots')),
           ),
         ),
       );
@@ -1577,7 +1570,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                   : 'from a work session',
               align: Alignment.centerLeft,
             ),
-          content,
+          kMobile && _sendInIds.contains(e.eventId)
+              ? SendIn(child: content)
+              : content,
           if (choices.isNotEmpty)
             LayoutBuilder(
               builder: (_, box) {
