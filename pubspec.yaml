@@ -11,6 +11,8 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  # Variable-radius backdrop blur (Impeller ImageFilter.shader) for the glass header.
+  progressive_background_blur: ^1.0.1
   clock: ^1.1.1
   desktop_drop: ^0.7.1
   http: ^1.2.0

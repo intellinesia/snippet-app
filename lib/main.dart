@@ -1,4 +1,6 @@
 import 'diagnostics.dart';
+import 'package:progressive_background_blur/progressive_background_blur.dart'
+    show ProgressiveBlur;
 import 'package:flutter/material.dart';
 
 import 'drafts.dart';
@@ -73,6 +75,8 @@ void main() async {
     } catch (_) {}
   }
   trackPointer();
+  // Compile the header blur shader before the first frame uses it.
+  await ProgressiveBlur.precache().catchError((_) {});
   runApp(const SnippetApp());
 }
 

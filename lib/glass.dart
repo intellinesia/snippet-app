@@ -1,7 +1,7 @@
-import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:progressive_background_blur/progressive_background_blur.dart';
 
 import 'theme.dart';
 
@@ -94,15 +94,6 @@ class GlassTopFrame extends StatelessWidget {
   static const double inset = 52;
   static const double fade = 14;
 
-  // (bottom edge as a fraction of the blurred area, blur sigma), weakest first.
-  // Nine bands is the ceiling: 14 crashed the raster thread on a Pixel while a
-  // page opened. Eased so the first band is barely blurred and the lower edge
-  // does not show against the sharp text below.
-  static final List<(double, double)> _bands = [
-    for (var i = 0; i < 9; i++)
-      (1.0 - i * 0.075, 20.0 * math.pow((i + 1) / 9, 2).toDouble()),
-  ];
-
   /// How far the blurred area runs below the header strip, in logical pixels.
   static const double _extra = 36;
 
@@ -120,20 +111,16 @@ class GlassTopFrame extends StatelessWidget {
         child: IgnorePointer(
           child: Stack(children: [
             if (on)
-              // A masked backdrop blur draws nothing (the mask layer starts
-              // empty), and clip paths crashed the raster thread. Plain rects
-              // with small sigma steps read as one falloff. Weakest first, so
-              // the strongest, shortest band ends on top.
-              for (final (frac, sigma) in _bands)
-                Positioned.fill(
-                  child: ClipRect(
-                    clipper: _TopFraction(frac),
-                    child: BackdropFilter.grouped(
-                      filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-                      child: const SizedBox.expand(),
-                    ),
-                  ),
+              // One variable-radius blur (two shader passes) whose strength
+              // falls smoothly to zero at the bottom: no bands, no edge. Stacked
+              // BackdropFilters crashed the raster thread; a mask over one draws
+              // nothing. Sigma is in physical pixels and saturates near 42.
+              Positioned.fill(
+                child: ProgressiveBlur(
+                  sigmaStart: 16 * MediaQuery.devicePixelRatioOf(context),
+                  sigmaEnd: 0,
                 ),
+              ),
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -246,18 +233,4 @@ class ModalGlass extends StatelessWidget {
       MediaQuery.sizeOf(context).width < 700 ||
       const {TargetPlatform.android, TargetPlatform.iOS}
           .contains(Theme.of(context).platform);
-}
-
-/// Clips to the top [fraction] of the box.
-class _TopFraction extends CustomClipper<Rect> {
-  const _TopFraction(this.fraction);
-
-  final double fraction;
-
-  @override
-  Rect getClip(Size size) =>
-      Rect.fromLTWH(0, 0, size.width, size.height * fraction);
-
-  @override
-  bool shouldReclip(_TopFraction old) => old.fraction != fraction;
 }
