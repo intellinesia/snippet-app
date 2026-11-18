@@ -1827,6 +1827,21 @@ class _SessionScreenState extends State<SessionScreen>
                                                               timeline[i].key ??
                                                               ValueKey(
                                                                   'timeline-$i');
+                                                          // A new row lands at index 0 of the reversed list and shifts
+                                                          // the rest; matching by key keeps them mounted.
+                                                          final rowIndex =
+                                                              <Key, int>{
+                                                            for (var i = 0;
+                                                                i <
+                                                                    timeline
+                                                                        .length;
+                                                                i++)
+                                                              rowKey(
+                                                                  i): timeline
+                                                                      .length -
+                                                                  1 -
+                                                                  i,
+                                                          };
                                                           if (!_rowsSeeded &&
                                                               timeline.length >
                                                                   1) {
@@ -1880,6 +1895,10 @@ class _SessionScreenState extends State<SessionScreen>
                                                               itemCount:
                                                                   timeline
                                                                       .length,
+                                                              findChildIndexCallback:
+                                                                  (key) =>
+                                                                      rowIndex[
+                                                                          key],
                                                               itemBuilder:
                                                                   (context,
                                                                       index) {

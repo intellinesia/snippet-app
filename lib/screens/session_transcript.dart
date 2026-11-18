@@ -7,31 +7,6 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     final run = <Widget>[]; // consecutive dense tool rows
     String? runStartKey;
     String? pendingKey;
-    final eventOccurrences = <String, int>{};
-    String eventKey(Map<String, dynamic> event) {
-      // Use the stable fields that identify a transcript event instead of
-      // JSON-serializing the entire historical event on every delta. The old
-      // fingerprint became O(history) work for each new tool event and made
-      // a burst of tool calls wait behind repeated full-list rebuilds.
-      final fingerprint = Object.hash(
-        event['kind'],
-        event['tool_name'],
-        event['text'],
-        event['id'],
-        event['path'],
-        event['step'],
-        event['request_id'],
-        event['at'],
-        event['created_at'],
-      ).toString();
-      final occurrence = eventOccurrences.update(
-        fingerprint,
-        (count) => count + 1,
-        ifAbsent: () => 0,
-      );
-      return 'transcript-event-${fingerprint.hashCode}-$occurrence';
-    }
-
     List<({String path, String caption})>? openFiles;
     var openFilesAt = -1;
     final newestArtifact = <String, int>{};
@@ -183,7 +158,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     for (var idx = 0; idx < events.length; idx++) {
       curIdx = idx;
       final e = events[idx];
-      final key = eventKey(e);
+      // Keyed by absolute index, which a reconnect snapshot or an older page
+      // never shifts, so rows keep their state instead of remounting.
+      final key = 'transcript-event-${_transcriptStart + idx}';
       final abs = 'event-${_transcriptStart + idx}';
       final k = e['kind'] as String? ?? '';
       final quietRun = quietWakes[idx];
@@ -1270,7 +1247,8 @@ int? _eventMs(Map<String, dynamic> e) {
 /// the reply that ends it, from the daemon's `at_ms` write stamps. Without a
 /// closing reply it ends at the run's last stamp, so an idle gap before the
 /// user's next message is never counted. Null when unstamped or under 1s.
-Duration? transcriptRunDuration(List<Map<String, dynamic>> events, int from, int to) {
+Duration? transcriptRunDuration(
+    List<Map<String, dynamic>> events, int from, int to) {
   int? start;
   for (var i = from - 1; i >= 0 && start == null; i--) {
     start = _eventMs(events[i]);
