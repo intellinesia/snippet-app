@@ -383,20 +383,6 @@ String stepTitle(ToolStep s) {
   return toolSentence(s);
 }
 
-String? _stepSub(ToolStep s) {
-  final tool = toolBaseName(s.tool);
-  if (tool == 'bash') {
-    final c = _command(s);
-    return c.isEmpty ? null : c;
-  }
-  if (tool == 'change_files') {
-    final paths = {for (final c in s.changes) (c['path'] ?? '').toString()}
-      ..removeWhere((p) => p.isEmpty);
-    return paths.length == 1 ? paths.first : null;
-  }
-  return null;
-}
-
 List<String> _errorLines(ToolStep s) {
   final d = s.data;
   var text = (d?['stderr'] ?? '').toString();
