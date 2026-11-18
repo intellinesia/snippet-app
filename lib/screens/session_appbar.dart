@@ -1364,19 +1364,30 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       valueListenable: sessionRailFloating,
       builder: (_, open, __) {
         if (!open) return const SizedBox.shrink();
-        return Stack(children: [
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => sessionRailFloating.value = false,
+        // Drops in from under the header rather than popping into place.
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          builder: (_, t, child) => Opacity(
+            opacity: t,
+            child: Transform.translate(
+                offset: Offset(0, (1 - t) * -8), child: child),
+          ),
+          child: Stack(children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => sessionRailFloating.value = false,
+              ),
             ),
-          ),
-          Positioned(
-            right: kSessionRailEdgeInset,
-            top: 8,
-            child: _sessionRail(s, floating: true),
-          ),
-        ]);
+            Positioned(
+              right: kSessionRailEdgeInset,
+              top: 8,
+              child: _sessionRail(s, floating: true),
+            ),
+          ]),
+        );
       },
     );
   }

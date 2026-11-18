@@ -390,13 +390,32 @@ class _SessionRailState extends State<SessionRail> {
       valueListenable: sessionRailCollapsed,
       builder: (_, collapsed, __) {
         // Hidden: the chat header carries the actions and the show toggle.
-        if (collapsed) return const SizedBox.shrink();
-        return LayoutBuilder(
+        // The panel's width eases out to nothing while it fades and slides.
+        final open = LayoutBuilder(
           builder: (_, box) => Padding(
             padding: EdgeInsets.fromLTRB(24, 10, kSessionRailEdgeInset, S.s12),
             child: Align(
               alignment: Alignment.topCenter,
               child: _card(box.maxHeight - 10 - S.s12),
+            ),
+          ),
+        );
+        return ClipRect(
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.centerLeft,
+            child: AnimatedSlide(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOutCubic,
+              offset: collapsed ? const Offset(0.08, 0) : Offset.zero,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 180),
+                opacity: collapsed ? 0 : 1,
+                child: collapsed
+                    ? const SizedBox(width: 0, height: double.infinity)
+                    : open,
+              ),
             ),
           ),
         );
@@ -522,6 +541,46 @@ class _SessionRailState extends State<SessionRail> {
   /// can do to it. The daemon has no pause; interrupting the run pauses it.
   Widget _goalCard() {
     final g = widget.state?.goal;
+    final key = _editingGoal && widget.onSubmitGoal != null
+        ? 'edit'
+        : g == null || !g.ongoing
+            ? 'empty'
+            : g.paused
+                ? 'paused'
+                : 'active';
+    // The card resizes while the old contents fade out, then the new fade in;
+    // overlapping them read as a smear.
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeInOutCubic,
+      alignment: Alignment.topCenter,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 260),
+        switchInCurve: const Interval(0.45, 1, curve: Curves.easeOutCubic),
+        switchOutCurve: const Interval(0.45, 1, curve: Curves.easeInCubic),
+        layoutBuilder: (cur, prev) => Stack(
+            alignment: Alignment.topCenter,
+            // AnimatedSize clips, so the outgoing body shows whole while it fades.
+            clipBehavior: Clip.none,
+            children: [
+              for (final p in prev)
+                Positioned(top: 0, left: 0, right: 0, child: p),
+              if (cur != null) cur
+            ]),
+        transitionBuilder: (child, a) => FadeTransition(
+          opacity: a,
+          child: ScaleTransition(
+              scale: Tween(begin: 0.98, end: 1.0).animate(a),
+              alignment: Alignment.topCenter,
+              child: child),
+        ),
+        child: KeyedSubtree(key: ValueKey(key), child: _goalCardBody()),
+      ),
+    );
+  }
+
+  Widget _goalCardBody() {
+    final g = widget.state?.goal;
     if (_editingGoal && widget.onSubmitGoal != null) {
       return _goalEditor(g != null && g.ongoing);
     }
@@ -636,12 +695,23 @@ class _SessionRailState extends State<SessionRail> {
             const SingleActivator(LogicalKeyboardKey.enter, meta: true):
                 _submitGoal,
           },
-          child: AppField(
-            controller: _goalText,
-            hint: 'What should the agent work toward?',
-            autofocus: true,
-            minLines: 3,
-            maxLines: 6,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            decoration: BoxDecoration(
+              color: AppColors.surface3,
+              borderRadius: BorderRadius.circular(R.of(10)),
+            ),
+            child: TextField(
+              controller: _goalText,
+              autofocus: true,
+              minLines: 3,
+              maxLines: 6,
+              cursorColor: AppColors.accent,
+              style: sans(13.5, height: 1.45, color: AppColors.fg1),
+              decoration: InputDecoration.collapsed(
+                  hintText: 'What should the agent work toward?',
+                  hintStyle: sans(13.5, height: 1.45, color: AppColors.fg4)),
+            ),
           ),
         ),
         const SizedBox(height: 6),
