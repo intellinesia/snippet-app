@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -92,9 +93,15 @@ class GlassTopFrame extends StatelessWidget {
   /// still reach the oldest row from under the header.
   static const double inset = 52;
   static const double fade = 14;
-  // (how far the arch reaches, blur sigma), widest and gentlest first so the
-  // strongest, smallest arch is painted on top.
-  static const List<(double, double)> _arches = [(1.0, 3.5), (0.72, 9.0)];
+  // (how far the layer reaches, blur sigma, shape seed), widest and faintest
+  // first so the strongest, smallest layer is painted on top. Each step in
+  // sigma is small and each edge differs, so no single outline shows.
+  static const List<(double, double, int)> _arches = [
+    (1.0, 1.2, 3),
+    (0.86, 3.0, 11),
+    (0.72, 5.8, 23),
+    (0.56, 9.0, 37),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -112,10 +119,10 @@ class GlassTopFrame extends StatelessWidget {
             if (on)
               // Two arched clips, not 14 wavy bands (those crashed the raster
               // thread on a Pixel). The arch dips toward the centre pill.
-              for (final (reach, sigma) in _arches)
+              for (final (reach, sigma, seed) in _arches)
                 Positioned.fill(
                   child: ClipPath(
-                    clipper: _ArchClip(reach),
+                    clipper: ArchClip(reach, seed),
                     child: BackdropFilter.grouped(
                       filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
                       child: const SizedBox.expand(),
@@ -236,25 +243,44 @@ class ModalGlass extends StatelessWidget {
           .contains(Theme.of(context).platform);
 }
 
-/// An uneven arch: shallow at the sides, deepest just off centre, with a soft
-/// shoulder on each side so the edge never reads as a straight line.
-class _ArchClip extends CustomClipper<Path> {
-  const _ArchClip(this.reach);
+/// An uneven arch: its lower edge is a smooth curve through knots that rise and
+/// fall by a seeded amount, deepest near the centre pill. Different seeds give
+/// different outlines, so stacked layers never trace one visible border.
+class ArchClip extends CustomClipper<Path> {
+  const ArchClip(this.reach, this.seed);
 
   final double reach;
+  final int seed;
+
+  static const _knots = 7;
 
   @override
   Path getClip(Size size) {
     final w = size.width, h = size.height * reach;
-    return Path()
+    final ys = <double>[];
+    for (var i = 0; i < _knots; i++) {
+      final t = i / (_knots - 1);
+      final arch = 0.55 + 0.45 * math.sin(math.pi * t);
+      final n = math.sin((seed * 12.9898 + i * 78.233) * 1.7) * 0.5 + 0.5;
+      ys.add(h * (arch * (0.82 + 0.18 * n)).clamp(0.2, 1.0));
+    }
+    final path = Path()
       ..moveTo(0, 0)
       ..lineTo(w, 0)
-      ..lineTo(w, h * 0.5)
-      ..cubicTo(w * 0.92, h * 0.78, w * 0.72, h * 0.98, w * 0.56, h)
-      ..cubicTo(w * 0.42, h * 1.0, w * 0.22, h * 0.84, 0, h * 0.58)
-      ..close();
+      ..lineTo(w, ys.last);
+    // Catmull-Rom through the knots, right to left.
+    for (var i = _knots - 1; i > 0; i--) {
+      final x0 = w * i / (_knots - 1), x1 = w * (i - 1) / (_knots - 1);
+      final y0 = ys[i], y1 = ys[i - 1];
+      final yp = i + 1 < _knots ? ys[i + 1] : y0;
+      final yn = i - 2 >= 0 ? ys[i - 2] : y1;
+      final dx = (x0 - x1) / 3;
+      path.cubicTo(
+          x0 - dx, y0 + (y1 - yp) / 6, x1 + dx, y1 - (yn - y0) / 6, x1, y1);
+    }
+    return path..close();
   }
 
   @override
-  bool shouldReclip(_ArchClip old) => old.reach != reach;
+  bool shouldReclip(ArchClip old) => old.reach != reach || old.seed != seed;
 }
