@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -94,16 +95,11 @@ class GlassTopFrame extends StatelessWidget {
   static const double fade = 14;
 
   // (bottom edge as a fraction of the blurred area, blur sigma), weakest first.
-  static const List<(double, double)> _bands = [
-    (1.00, 1.5),
-    (0.92, 4.0),
-    (0.84, 6.5),
-    (0.76, 9.0),
-    (0.68, 11.5),
-    (0.60, 14.0),
-    (0.52, 16.5),
-    (0.44, 18.5),
-    (0.36, 20.0),
+  // Eased so the steps are tiny at the bottom, where the area ends: the first
+  // band is barely blurred, so no line shows against the sharp text below.
+  static final List<(double, double)> _bands = [
+    for (var i = 0; i < 14; i++)
+      (1.0 - i * 0.05, 20.0 * math.pow((i + 1) / 14, 1.6).toDouble()),
   ];
 
   /// How far the blurred area runs below the header strip, in logical pixels.
