@@ -263,7 +263,7 @@ class DeskComposerCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 11, 6, 6),
           // Typing flips Flutter into keyboard mode, so a focus ring here
           // would show whenever you write; focus stays a faint hairline.
-          decoration: _cardDecoration(focus: focused || highlight),
+          decoration: _cardDecoration(hairline: false),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -294,21 +294,14 @@ class DeskComposerCard extends StatelessWidget {
             ],
           ),
         );
-    // The ground sits between the panel and the card.
-    Widget body(bool focused) => Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: Color.lerp(AppColors.panelBg, AppColors.fg1, 0.04),
-            borderRadius: BorderRadius.circular(R.of(12)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              DeskAttentionBar(exclude: attentionExclude),
-              card(focused),
-            ],
-          ),
+    // One flat card, no tray or outline around it.
+    Widget body(bool focused) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DeskAttentionBar(exclude: attentionExclude),
+            card(focused),
+          ],
         );
     if (focus == null) return body(false);
     return ListenableBuilder(

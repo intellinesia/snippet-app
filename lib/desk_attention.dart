@@ -235,9 +235,15 @@ class _DeskAttentionBarState extends State<DeskAttentionBar> {
           )
         : null;
 
-    return Padding(
+    // Its own tinted surface, 4 px above the composer card.
+    return Container(
       key: const Key('deskAttention'),
-      padding: const EdgeInsets.fromLTRB(8, 4, 6, 6),
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        color: Color.lerp(AppColors.panelBg, AppColors.fg1, 0.04),
+        borderRadius: BorderRadius.circular(R.of(8)),
+      ),
+      padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
