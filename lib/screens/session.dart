@@ -1,3 +1,4 @@
+import '../diagnostics.dart';
 import 'session_header.dart';
 import 'package:snippet/ambient/controller.dart';
 import 'package:snippet/ambient/hold.dart';

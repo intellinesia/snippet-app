@@ -48,6 +48,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     if (_sendingAudio) return;
     if (_isRecording || _recordingPath != null) {
       _sendingAudio = true;
+      Diag.crumb('send audio tapped');
       if (mounted) _setState(() {});
       try {
         if (_isRecording) await _stopRecording();

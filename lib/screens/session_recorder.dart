@@ -139,13 +139,15 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
     _recordingTimer?.cancel();
     _recordingTimer = null;
     try {
-      final stoppedPath = await _recorder.stop();
+      final stoppedPath =
+          await Diag.span('recorder.stop', () => _recorder.stop());
       final path = stoppedPath ?? _recordingPath;
       if (path == null) {
         _toast('No recording was captured.');
         return;
       }
-      final bytes = await _waitForRecordingFile(path);
+      final bytes = await Diag.span(
+          'recorder.waitForFile', () => _waitForRecordingFile(path));
       // Discarded while the encoder finished: do not bring the take back.
       if (take != _recordingTake) return;
       if (bytes == null || bytes.isEmpty) {
@@ -223,15 +225,16 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
         _toast('The recording was empty.');
         return false;
       }
-      await _ingest([
+      await Diag.span('recorder.ingest', () => _ingest([
         (
+
           name:
               'voice-${DateTime.now().microsecondsSinceEpoch}.$voiceNoteExtension',
           localPath: null,
           readBytes: () async => bytes!,
         )
-      ]);
-      await _audioPlayer.stop();
+      ]));
+      await Diag.span('player.stop', () => _audioPlayer.stop());
       if (path != null) {
         try {
           final file = File(path);
@@ -510,7 +513,8 @@ extension _SessionScreenRecorderExt on _SessionScreenState {
       final a = entries[i];
       try {
         final bytes = await p.readBytes();
-        final path = await widget.client.uploadFile(bytes, name: p.name);
+        final path = await Diag.span('upload ${bytes.length}B',
+            () => widget.client.uploadFile(bytes, name: p.name));
         if (!mounted || generation != _attachmentGeneration) {
           // The composer moved on mid-upload: the file still belongs to the
           // session it was attached in, as part of that session's draft.

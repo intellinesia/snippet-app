@@ -1,3 +1,4 @@
+import 'diagnostics.dart';
 import 'package:flutter/material.dart';
 
 import 'drafts.dart';
@@ -41,6 +42,7 @@ Widget _buildErrorWidget(FlutterErrorDetails details) {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Diag.init();
   // Keep a build failure inside a tool panel visible and dismissible instead of
   // leaving only the modal barrier over the previous screen.
   ErrorWidget.builder = _buildErrorWidget;
@@ -111,6 +113,7 @@ class _SnippetAppState extends State<SnippetApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final fg = state == AppLifecycleState.resumed;
+    Diag.lifecycle(state);
     reportForeground(fg);
   }
 

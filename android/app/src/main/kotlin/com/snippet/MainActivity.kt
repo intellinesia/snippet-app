@@ -24,12 +24,83 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun installCrashLog() {
+        if (crashLogInstalled) return
+        crashLogInstalled = true
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, error ->
+            try {
+                val dir = File(filesDir, "diag").apply { mkdirs() }
+                File(dir, "native-crash.log").appendText(
+                    "thread=${thread.name}\n" + android.util.Log.getStackTraceString(error) + "\n"
+                )
+            } catch (_: Throwable) {
+            }
+            previous?.uncaughtException(thread, error)
+        }
+    }
+
+    private fun previousExits(): String {
+        if (Build.VERSION.SDK_INT < 30) return "[]"
+        val am = getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        val out = org.json.JSONArray()
+        for (info in am.getHistoricalProcessExitReasons(packageName, 0, 8)) {
+            val reason = when (info.reason) {
+                android.app.ApplicationExitInfo.REASON_ANR -> "ANR"
+                android.app.ApplicationExitInfo.REASON_CRASH -> "CRASH"
+                android.app.ApplicationExitInfo.REASON_CRASH_NATIVE -> "CRASH_NATIVE"
+                android.app.ApplicationExitInfo.REASON_LOW_MEMORY -> "LOW_MEMORY"
+                android.app.ApplicationExitInfo.REASON_SIGNALED -> "SIGNALED"
+                android.app.ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "EXCESSIVE_RESOURCE_USAGE"
+                android.app.ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> "INITIALIZATION_FAILURE"
+                android.app.ApplicationExitInfo.REASON_PERMISSION_CHANGE -> "PERMISSION_CHANGE"
+                android.app.ApplicationExitInfo.REASON_USER_REQUESTED -> "USER_REQUESTED"
+                android.app.ApplicationExitInfo.REASON_USER_STOPPED -> "USER_STOPPED"
+                android.app.ApplicationExitInfo.REASON_DEPENDENCY_DIED -> "DEPENDENCY_DIED"
+                android.app.ApplicationExitInfo.REASON_EXIT_SELF -> "EXIT_SELF"
+                android.app.ApplicationExitInfo.REASON_OTHER -> "OTHER"
+                else -> "UNKNOWN_${info.reason}"
+            }
+            // Ordinary exits (user swipe, self exit) are noise.
+            if (reason == "USER_REQUESTED" || reason == "USER_STOPPED" || reason == "EXIT_SELF") continue
+            val o = org.json.JSONObject()
+            o.put("timestamp", info.timestamp)
+            o.put("reason", reason)
+            o.put("status", info.status)
+            o.put("description", info.description ?: "")
+            o.put("pssKb", info.pss)
+            o.put("rssKb", info.rss)
+            if (info.reason == android.app.ApplicationExitInfo.REASON_ANR ||
+                info.reason == android.app.ApplicationExitInfo.REASON_CRASH_NATIVE) {
+                try {
+                    info.traceInputStream?.bufferedReader()?.use { o.put("trace", it.readText().take(6000)) }
+                } catch (_: Throwable) {
+                }
+            }
+            out.put(o)
+        }
+        return out.toString()
+    }
+
+    private var crashLogInstalled = false
     private val channelName = "snippet/share"
     private var channel: MethodChannel? = null
     private var pending: HashMap<String, Any>? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        installCrashLog()
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "snippet/diag").setMethodCallHandler { call, result ->
+            if (call.method == "previousExits") {
+                try {
+                    result.success(previousExits())
+                } catch (e: Throwable) {
+                    result.success("[]")
+                }
+            } else {
+                result.notImplemented()
+            }
+        }
         channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName).also { ch ->
             ch.setMethodCallHandler { call, result ->
                 if (call.method == "takePending") {
