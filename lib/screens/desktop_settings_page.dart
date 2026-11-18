@@ -24,6 +24,8 @@ class DesktopSettingsPage extends StatefulWidget {
     this.onAdd,
     required this.onBack,
     this.initialSection,
+    this.fullPage = false,
+    this.navWidth = _navWidth,
   });
 
   final DaemonClient client;
@@ -35,6 +37,10 @@ class DesktopSettingsPage extends StatefulWidget {
   final void Function(Instance)? onAdd;
   final VoidCallback onBack;
   final SettingsPage? initialSection;
+
+  /// Takes the whole window: a back row heads the nav, content is centred.
+  final bool fullPage;
+  final double navWidth;
 
   @override
   State<DesktopSettingsPage> createState() => _DesktopSettingsPageState();
@@ -194,12 +200,13 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
       child: Focus(
         autofocus: true,
         child: Material(
-          color: AppColors.paneBg,
+          // The dialog sat on glass; the full page must hide the app behind it.
+          color: widget.fullPage ? AppColors.bg : AppColors.paneBg,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                width: _navWidth,
+                width: widget.navWidth,
                 decoration: BoxDecoration(
                   color: AppColors.tint1,
                   border: Border(right: borderSide),
@@ -207,6 +214,13 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (widget.fullPage)
+                      Padding(
+                        // Clears the macOS traffic lights.
+                        padding:
+                            EdgeInsets.fromLTRB(12, kMacOS ? 40 : 12, 12, 0),
+                        child: _BackRow(onTap: widget.onBack),
+                      ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                       child: Text('Settings',
@@ -242,7 +256,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                     child: ColoredBox(
                       color:
                           kMobile ? AppColors.pageCanvas : Colors.transparent,
-                      child: SettingsSectionView(
+                      child: _centred(SettingsSectionView(
                         client: widget.client,
                         instances: widget.instances,
                         active: widget.active,
@@ -254,7 +268,7 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                         onSelectPage: _selectSection,
                         onClose: widget.onBack,
                         v5Desktop: true,
-                      ),
+                      )),
                     ),
                   ),
                 ]),
@@ -265,6 +279,39 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
       ),
     );
   }
+}
+
+extension on _DesktopSettingsPageState {
+  Widget _centred(Widget child) => !widget.fullPage
+      ? child
+      : Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 820), child: child),
+        );
+}
+
+class _BackRow extends StatelessWidget {
+  const _BackRow({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => HoverSurface(
+        onTap: onTap,
+        radius: R.of(12),
+        hoverColor: AppColors.fg1.withValues(alpha: 0.035),
+        child: SizedBox(
+          height: _navRowHeight,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(children: [
+              AppIcon('chevron-left', size: 16, color: AppColors.fg3),
+              const SizedBox(width: 10),
+              Text('Back to app', style: sans(13, color: AppColors.fg2)),
+            ]),
+          ),
+        ),
+      );
 }
 
 class _NavRow extends StatelessWidget {

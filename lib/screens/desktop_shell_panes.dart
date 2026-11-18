@@ -676,59 +676,39 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     if (c == null) return;
     final inst = _active;
     _settingsOpen = true;
-    showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Close settings',
-      barrierColor: AppColors.modalScrim,
-      transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (ctx, a1, a2) {
-        final size = MediaQuery.sizeOf(ctx);
-        return Center(
-          child: SizedBox(
-            width: (size.width - 80).clamp(320.0, 1000.0),
-            height: (size.height - 80).clamp(360.0, 700.0),
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: AppColors.bg,
-                borderRadius: BorderRadius.circular(R.lg),
-              ),
-              foregroundDecoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(R.lg),
-                border: Border.all(color: AppColors.border2),
-              ),
-              child: DesktopSettingsPage(
-                client: c,
-                instances: _instances,
-                active: inst,
-                onRemove: _removeInstance,
-                onRename: _renameInstance,
-                onSelect: _selectInstance,
-                onAdd: _onInstanceAdded,
-                onBack: () => Navigator.of(ctx).maybePop(),
-                initialSection: page,
-              ),
-            ),
+    Navigator.of(context)
+        .push(PageRouteBuilder<void>(
+          transitionDuration: const Duration(milliseconds: 220),
+          reverseTransitionDuration: const Duration(milliseconds: 160),
+          pageBuilder: (ctx, a1, a2) => DesktopSettingsPage(
+            client: c,
+            instances: _instances,
+            active: inst,
+            onRemove: _removeInstance,
+            onRename: _renameInstance,
+            onSelect: _selectInstance,
+            onAdd: _onInstanceAdded,
+            onBack: () => Navigator.of(ctx).maybePop(),
+            initialSection: page,
+            fullPage: true,
+            navWidth: _sidebarWidth,
           ),
-        );
-      },
-      transitionBuilder: (ctx, anim, a2, child) {
-        final t = CurvedAnimation(
-            parent: anim,
-            curve: Curves.easeOutCubic,
-            reverseCurve: Curves.easeInCubic);
-        return ModalGlass(
-          child: FadeTransition(
-            opacity: t,
-            child: ScaleTransition(
-              scale: Tween(begin: 0.97, end: 1.0).animate(t),
-              child: child,
-            ),
-          ),
-        );
-      },
-    ).whenComplete(() => _settingsOpen = false);
+          transitionsBuilder: (ctx, anim, a2, child) {
+            final t = CurvedAnimation(
+                parent: anim,
+                curve: Curves.easeOutCubic,
+                reverseCurve: Curves.easeInCubic);
+            return FadeTransition(
+              opacity: t,
+              child: SlideTransition(
+                position: Tween(begin: const Offset(0.015, 0), end: Offset.zero)
+                    .animate(t),
+                child: child,
+              ),
+            );
+          },
+        ))
+        .whenComplete(() => _settingsOpen = false);
   }
 
   Widget _tabStrip(VoidCallback? onMenu) => CardTabStrip(
