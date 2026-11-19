@@ -832,24 +832,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     _toast('Goal set — the agent will drive toward it');
   }
 
-  /// Desktop: the goal popover drops from the header button; phone: the sheet.
-  void _openGoalPopover(BuildContext anchor) {
-    if (kMobile) {
-      _setGoal();
-      return;
-    }
-    final me = _me;
-    final id = me?.displayAgentId ?? 'snippet';
-    final name = (_meAgentName ?? '').trim().isEmpty
-        ? agentDisplayName(id)
-        : _meAgentName!.trim();
-    showGoalPopover(
-        context: context,
-        anchorContext: anchor,
-        agentName: name,
-        onSetGoal: _submitGoal);
-  }
-
   void _submitGoal(String t) {
     _send({'kind': 'set_goal', 'value': t});
     _toast('Goal set — the agent will drive toward it');
@@ -1433,6 +1415,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       state: s,
       isMissionControl: mc,
       floating: floating,
+      agentId: _me?.displayAgentId,
       profileLabel: profile.isEmpty ? 'Default model' : profile,
       resumeMode: _resumeMode,
       github: _github != null,
@@ -1697,15 +1680,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
             margin: const EdgeInsets.symmetric(horizontal: 8),
             color: AppColors.lineStrong),
       ],
-      if (actions) ...[
-        if (mc)
-          _mcHeaderActions(s)
-        else ...[
-          _workspaceChips(s),
-          const SizedBox(width: 4),
-          _sessionIconActions(s),
-        ],
-      ],
+      // Sessions keep their tools in the pane row and the "/" menu.
+      if (actions && mc) _mcHeaderActions(s),
       if (toggle != null) toggle,
     ]);
   }
@@ -1741,49 +1717,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     if (sessionRailCollapsed.value) setSessionRailCollapsed(false);
     sessionRailFloating.value = true;
   }
-
-  // Panel closed: the goal icon carries a dot while a goal runs and opens the
-  // panel, where the goal and every session action live.
-  Widget _sessionIconActions(HarnessState? s) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(clipBehavior: Clip.none, children: [
-            Builder(
-              builder: (btnCtx) => IconBtn('goal',
-                  size: 30,
-                  iconSize: 15,
-                  tooltip: (s?.goal?.ongoing ?? false)
-                      ? 'Goal: ${s!.goal!.text}'
-                      : 'Set a goal',
-                  onTap: () => (s?.goal?.ongoing ?? false)
-                      ? _showPanel()
-                      : _openGoalPopover(btnCtx)),
-            ),
-            if (s?.goal?.ongoing ?? false)
-              Positioned(
-                right: 6,
-                top: 6,
-                child: IgnorePointer(
-                  child: Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                          color: s!.goal!.paused
-                              ? AppColors.fg3
-                              : AppColors.accent,
-                          shape: BoxShape.circle)),
-                ),
-              ),
-          ]),
-          if (!_isMissionControl)
-            IconBtn('terminal',
-                size: 30,
-                iconSize: 15,
-                tooltip: 'Terminal',
-                active: _termOpen && _terms.isNotEmpty,
-                onTap: _openTerm),
-        ],
-      );
 
   Widget _mcHeaderActions(HarnessState? s) => Row(
         mainAxisSize: MainAxisSize.min,

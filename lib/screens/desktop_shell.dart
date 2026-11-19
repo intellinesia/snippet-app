@@ -70,6 +70,7 @@ import 'pane_add_menu.dart';
 import 'session_rail.dart'
     show
         kSessionRailMinColumn,
+        kSessionRailWidth,
         sessionRailCollapsed,
         sessionRailFloating,
         setSessionRailCollapsed;

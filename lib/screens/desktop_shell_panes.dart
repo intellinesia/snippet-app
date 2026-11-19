@@ -580,44 +580,61 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   Widget? _sessionStripAdd() {
     if (_chatTab == null) return null;
     return Builder(
-      builder: (ctx) => IconBtn('plus',
-          size: 26,
-          iconSize: 14,
+      builder: (ctx) => StripSquareButton(
+          icon: 'plus',
           tooltip: 'Add to this pane',
           onTap: () => _showPaneAddMenu(ctx)),
     );
   }
 
-  /// ··· (session actions) and the panel toggle, at the end of the pane row.
+  /// The panel toggle at the end of the pane row. With the panel docked the
+  /// row's right end becomes the panel's own strip, the panel's width wide.
   Widget Function(double)? _sessionStripTools() {
-    final t = _chatTab;
-    if (t == null) return null;
-    final menu = _headerTools(t);
-    return (width) => Row(mainAxisSize: MainAxisSize.min, children: [
-          ...menu,
-          ListenableBuilder(
-            listenable:
-                Listenable.merge([sessionRailCollapsed, sessionRailFloating]),
-            builder: (_, __) {
-              final docked = width >= kSessionRailMinColumn;
-              final on = docked
-                  ? !sessionRailCollapsed.value
-                  : sessionRailFloating.value;
-              return IconBtn('sidebar',
-                  size: 28,
-                  iconSize: 15,
-                  active: on,
-                  tooltip: on ? 'Hide panel' : 'Show panel',
-                  onTap: () {
-                    if (docked) {
-                      setSessionRailCollapsed(on);
-                    } else {
-                      sessionRailFloating.value = !on;
-                    }
-                  });
-            },
-          ),
-        ]);
+    if (_chatTab == null) return null;
+    return (width) => ListenableBuilder(
+          listenable:
+              Listenable.merge([sessionRailCollapsed, sessionRailFloating]),
+          builder: (_, __) {
+            final docked = width >= kSessionRailMinColumn;
+            final on = docked
+                ? !sessionRailCollapsed.value
+                : sessionRailFloating.value;
+            final toggle = IconBtn('sidebar',
+                size: 28,
+                iconSize: 15,
+                active: on,
+                tooltip: on ? 'Hide panel' : 'Show panel', onTap: () {
+              if (docked) {
+                setSessionRailCollapsed(on);
+              } else {
+                sessionRailFloating.value = !on;
+              }
+            });
+            if (!(docked && on)) {
+              return Row(mainAxisSize: MainAxisSize.min, children: [
+                toggle,
+                SizedBox(width: S.s6),
+              ]);
+            }
+            return Container(
+              width: kSessionRailWidth + 2 * S.s12,
+              decoration: BoxDecoration(
+                  border: Border(left: BorderSide(color: AppColors.line))),
+              padding: EdgeInsets.only(left: S.s6, right: S.s6),
+              child: Row(children: [
+                const StripChip(icon: 'list', label: 'Overview'),
+                Builder(
+                  builder: (ctx) => StripSquareButton(
+                      icon: 'plus',
+                      tooltip: 'Add to this pane',
+                      onTap: () => _showPaneAddMenu(ctx)),
+                ),
+                const Spacer(),
+                toggle,
+              ]),
+            );
+          },
+        );
   }
 
   /// Shows the Overview panel, docked or floating, whichever fits.
@@ -641,7 +658,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       title: t.title,
       views: [
         PaneAddEntry(
-            icon: 'layers',
+            icon: 'list',
             label: 'Overview',
             checked: !sessionRailCollapsed.value,
             onTap: _showOverview),
@@ -650,8 +667,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             label: 'Diffs',
             meta: count(changed),
             onTap: () => act('file_changes')),
-        PaneAddEntry(
-            icon: 'folder', label: 'Files', onTap: () => act('files')),
+        PaneAddEntry(icon: 'folder', label: 'Files', onTap: () => act('files')),
         PaneAddEntry(
             icon: 'activity', label: 'Activity', onTap: () => act('processes')),
         PaneAddEntry(
@@ -663,6 +679,12 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             icon: 'image',
             label: 'Shared files',
             onTap: () => act('artifacts')),
+        PaneAddEntry(
+            icon: 'book-marked', label: 'Memory', onTap: () => act('memory')),
+        PaneAddEntry(
+            icon: 'pull-request',
+            label: 'Pull requests',
+            onTap: () => act('pull_requests')),
         PaneAddEntry(
             icon: 'git-branch',
             label: 'Side threads',

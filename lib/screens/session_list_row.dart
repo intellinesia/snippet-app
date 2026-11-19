@@ -766,15 +766,15 @@ class SessionListRow extends StatelessWidget {
                   ],
                   if (folder.isNotEmpty)
                     SizedBox(
-                        width: folderW,
-                        child: metaField('folder', folder)),
+                        width: folderW, child: metaField('folder', folder)),
                   if (gap > 0) SizedBox(width: gap),
                   if (branch.isNotEmpty)
                     SizedBox(
-                        width: branchW,
-                        child: metaField('git-branch', branch)),
+                        width: branchW, child: metaField('git-branch', branch)),
                   if (machineName.isNotEmpty) ...[
                     const SizedBox(width: 8),
+                    // Desktop pins the machine to the row's right edge.
+                    if (!kMobile) const Spacer(),
                     metaField('laptop', machineName),
                   ],
                 ]);

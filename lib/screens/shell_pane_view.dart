@@ -475,16 +475,16 @@ class PaneStrip extends StatelessWidget {
     final count = tabs.length + readouts.length;
     final compact = !kMobile;
     return Container(
-      height: compact ? 38 : 46,
+      height: compact ? 44 : 46,
       color: kMobile ? AppColors.pageCanvas : Colors.transparent,
       child: LayoutBuilder(builder: (context, outer) {
         final list = _chips(count, compact);
         final tail = trailing;
         if (tail == null) return list;
+        // The trailing builder owns its end padding; the docked panel's strip runs to the edge.
         return Row(children: [
           Expanded(child: list),
           tail(outer.maxWidth),
-          SizedBox(width: S.s6),
         ]);
       }),
     );

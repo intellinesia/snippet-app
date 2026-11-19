@@ -698,6 +698,8 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             _performMacAction('compact');
           case SlashCmd.fork:
             _performMacAction('fork');
+          case SlashCmd.handoff:
+            _performMacAction('handoff');
           case SlashCmd.wakes:
             _performMacAction('autonomy');
           default:

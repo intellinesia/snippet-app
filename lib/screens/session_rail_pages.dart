@@ -152,36 +152,27 @@ extension _RailPages on _SessionRailState {
   List<Widget> _overviewRoot() {
     final s = widget.state;
     final w = widget;
-    final lanes = [...?s?.lanes];
-    final running = lanes.where((l) => l.running).length;
-    final files = fileChanges(sessionChangeSteps(s?.events ?? const []));
-    final jobs = _procs.where((p) => p['running'] == true).length;
-    final ctx = _contextPct(s);
     final plan = _SessionRailState._plan(s);
     final t = _tasks.where((t) => t.sessionId == widget.sessionId).firstOrNull;
-    final ws = (s?.workspace ?? '').trim();
     final goalOn = (s?.goal?.ongoing ?? false) || _editingGoal;
-    final model = [
-      w.profileLabel,
-      if (ctx != null) '${ctx.round()}% context',
-    ].join(' · ');
-    Widget gap() => const SizedBox(height: 6);
+    final quiet = !w.floating && !goalOn && plan == null && t == null;
     return [
-      Container(
-        height: 40,
-        padding: const EdgeInsets.only(left: 4),
-        child: Row(children: [
-          Expanded(
-              child: Text('Overview',
-                  style: sans(13, weight: W.strong, color: AppColors.fg1))),
-          if (w.floating)
-            IconBtn('x',
-                size: 30,
-                iconSize: 15,
-                tooltip: 'Close',
-                onTap: () => sessionRailFloating.value = false),
-        ]),
-      ),
+      if (w.floating)
+        Container(
+          height: 40,
+          padding: const EdgeInsets.only(left: 4),
+          child: Row(children: [
+            Expanded(
+                child: Text('Overview',
+                    style: sans(13, weight: W.strong, color: AppColors.fg1))),
+            if (w.floating)
+              IconBtn('x',
+                  size: 30,
+                  iconSize: 15,
+                  tooltip: 'Close',
+                  onTap: () => sessionRailFloating.value = false),
+          ]),
+        ),
       if (goalOn) _goalCard(),
       if (t != null && w.onOpenTask != null)
         Padding(
@@ -200,7 +191,78 @@ extension _RailPages on _SessionRailState {
         _card2('Plan', [Column(children: _planRows(plan))],
             meta:
                 '${plan.where((p) => _SessionRailState._stepState(p) == 2).length} of ${plan.length} done'),
-      const SizedBox(height: 10),
+      if (quiet)
+        SizedBox(
+          height: (_bodyH - 6).clamp(320.0, double.infinity),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Expanded(
+              child: Center(
+                child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (w.agentId != null) ...[
+                        Center(child: _quietMascot(w.agentId!)),
+                        const SizedBox(height: 20),
+                      ],
+                      ..._places(),
+                    ]),
+              ),
+            ),
+            ..._footer(),
+          ]),
+        )
+      else ...[
+        const SizedBox(height: 10),
+        ..._places(),
+        const SizedBox(height: 18),
+        ..._footer(),
+      ],
+      const SizedBox(height: 6),
+    ];
+  }
+
+  /// The session's own mascot, greyed and still, above a quiet Overview.
+  Widget _quietMascot(String agentId) => Opacity(
+        opacity: 0.55,
+        child: ColorFiltered(
+          colorFilter: const ColorFilter.matrix(<double>[
+            0.2126,
+            0.7152,
+            0.0722,
+            0,
+            0,
+            0.2126,
+            0.7152,
+            0.0722,
+            0,
+            0,
+            0.2126,
+            0.7152,
+            0.0722,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+          ]),
+          child: AgentMochi(agentId, size: 84),
+        ),
+      );
+
+  List<Widget> _places() {
+    final s = widget.state;
+    final w = widget;
+    final lanes = [...?s?.lanes];
+    final running = lanes.where((l) => l.running).length;
+    final files = fileChanges(sessionChangeSteps(s?.events ?? const []));
+    final jobs = _procs.where((p) => p['running'] == true).length;
+    final ws = (s?.workspace ?? '').trim();
+    Widget gap() => const SizedBox(height: 6);
+    return [
       if (w.onChanges != null) ...[
         _overviewRow(
             'file-diff',
@@ -246,7 +308,17 @@ extension _RailPages on _SessionRailState {
                     ? '$running running · ${lanes.length}'
                     : '${lanes.length} finished',
             onTap: w.onLanes),
-      const SizedBox(height: 18),
+    ];
+  }
+
+  List<Widget> _footer() {
+    final s = widget.state;
+    final ctx = _contextPct(s);
+    final model = [
+      widget.profileLabel,
+      if (ctx != null) '${ctx.round()}% context',
+    ].join(' · ');
+    return [
       if (s != null)
         InkWell(
           onTap: () => _go('usage'),
@@ -277,7 +349,6 @@ extension _RailPages on _SessionRailState {
             ]),
           ),
         ),
-      const SizedBox(height: 6),
     ];
   }
 

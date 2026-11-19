@@ -8,7 +8,7 @@ import '../widgets.dart';
 /// Desktop "/" command popover: pure parse/filter logic, a controller driven
 /// by the composer input, and the popover widget. Phone never mounts it.
 
-enum SlashCmd { goal, compact, fork, wakes, resume, settle }
+enum SlashCmd { goal, compact, fork, handoff, wakes, resume, settle }
 
 /// A "/query" token found before the caret. [rest] only carries text for
 /// "/goal some text" so the goal can be set without the editor.
@@ -56,6 +56,8 @@ List<SlashItem> slashItems({
           '/goal', 'goal'),
       const SlashItem(SlashCmd.compact, 'Compact history', '/compact', 'wrap'),
       const SlashItem(SlashCmd.fork, 'Fork from here', '/fork', 'git-fork'),
+      if (!isMc)
+        const SlashItem(SlashCmd.handoff, 'Hand off', '/handoff', 'send'),
       if (isMc)
         const SlashItem(
             SlashCmd.wakes, 'Automated wakes', '/wakes', 'activity'),

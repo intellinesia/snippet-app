@@ -85,3 +85,69 @@ Future<void> showPaneAddMenu(
   );
   fn?.call();
 }
+
+/// A 26 px filled square on the pane row, the "+" beside the chips.
+class StripSquareButton extends StatefulWidget {
+  const StripSquareButton(
+      {super.key, required this.icon, required this.tooltip, this.onTap});
+
+  final String icon;
+  final String tooltip;
+  final VoidCallback? onTap;
+
+  @override
+  State<StripSquareButton> createState() => _StripSquareButtonState();
+}
+
+class _StripSquareButtonState extends State<StripSquareButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: widget.tooltip,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hover = true),
+          onExit: (_) => setState(() => _hover = false),
+          child: GestureDetector(
+            onTap: widget.onTap,
+            child: Container(
+              width: 26,
+              height: 26,
+              margin: EdgeInsets.symmetric(horizontal: S.s2),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: _hover ? AppColors.surface3 : AppColors.surface2,
+                borderRadius: BorderRadius.circular(R.of(7)),
+              ),
+              child: AppIcon(widget.icon,
+                  size: 14, color: _hover ? AppColors.fg1 : AppColors.fg2),
+            ),
+          ),
+        ),
+      );
+}
+
+/// A pinned, always-active chip on the pane row (the panel's "Overview").
+class StripChip extends StatelessWidget {
+  const StripChip({super.key, required this.icon, required this.label});
+
+  final String icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 26,
+        margin: EdgeInsets.symmetric(horizontal: S.s2),
+        padding: EdgeInsets.fromLTRB(S.of(9), 0, S.of(10), 0),
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: BorderRadius.circular(R.of(7)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          AppIcon(icon, size: 12, color: AppColors.fg1),
+          SizedBox(width: S.s6),
+          Text(label, style: sans(12, color: AppColors.fg1)),
+        ]),
+      );
+}

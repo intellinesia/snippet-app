@@ -74,6 +74,7 @@ class SessionRail extends StatefulWidget {
     required this.onGoal,
     required this.onCycleResume,
     this.floating = false,
+    this.agentId,
     this.github,
     this.onChanges,
     this.onFiles,
@@ -117,6 +118,9 @@ class SessionRail extends StatefulWidget {
 
   /// Shown as a floating card (narrow window) instead of docked beside the chat.
   final bool floating;
+
+  /// Whose mascot heads the quiet Overview.
+  final String? agentId;
   final bool? github;
   final VoidCallback onModel;
   final VoidCallback onWakes;
@@ -230,6 +234,9 @@ class _SessionRailState extends State<SessionRail> {
   int _liveGen = 0;
 
   bool _editingGoal = false;
+
+  /// Height the docked panel was handed, so a quiet Overview can centre in it.
+  double _bodyH = 0;
 
   /// Desktop drill-in page (lanes, jobs, checkpoints, wakes, usage); null is the root.
   String? _page;
@@ -405,10 +412,15 @@ class _SessionRailState extends State<SessionRail> {
         // Hidden: the chat header carries the actions and the show toggle.
         // The panel's width eases out to nothing while it fades and slides.
         final open = LayoutBuilder(
-          builder: (_, box) => Padding(
+          builder: (_, box) => Container(
+            // Meets the divider in the pane row's panel strip above.
+            decoration: kMobile
+                ? null
+                : BoxDecoration(
+                    border: Border(left: BorderSide(color: AppColors.line))),
             padding: kMobile
                 ? EdgeInsets.fromLTRB(24, 10, kSessionRailEdgeInset, S.s12)
-                : EdgeInsets.fromLTRB(S.s12, 0, S.s12, S.s8),
+                : EdgeInsets.fromLTRB(S.s12, S.s4, S.s12, S.s8),
             child: Align(
               alignment: Alignment.topCenter,
               child: _card(box.maxHeight - 10 - S.s12),
@@ -442,6 +454,7 @@ class _SessionRailState extends State<SessionRail> {
     // Docked on desktop the rail is flat on the inset panel; only the floating
     // overlay keeps a card.
     final flat = !kMobile && !widget.floating;
+    _bodyH = maxHeight;
     return Container(
       width: kSessionRailWidth,
       decoration: flat

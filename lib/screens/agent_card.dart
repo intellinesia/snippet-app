@@ -670,7 +670,8 @@ class _AgentRowShellState extends State<AgentRowShell> {
           child: AnimatedContainer(
             duration: still ? Duration.zero : const Duration(milliseconds: 150),
             curve: const Cubic(0.23, 1, 0.32, 1),
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: kMobile ? 6 : 2),
+            padding:
+                EdgeInsets.symmetric(horizontal: 8, vertical: kMobile ? 6 : 4),
             decoration: BoxDecoration(
                 color: fill, borderRadius: BorderRadius.circular(R.of(8))),
             child: Opacity(
