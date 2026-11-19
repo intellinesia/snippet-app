@@ -44,8 +44,7 @@ class SendFlightTarget extends StatefulWidget {
 class _SendFlightTargetState extends State<SendFlightTarget>
     with SingleTickerProviderStateMixin {
   final _box = GlobalKey();
-  late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 460));
+  late final AnimationController _c;
   Rect? _from;
   OverlayEntry? _entry;
   bool _flying = false;
@@ -53,6 +52,9 @@ class _SendFlightTargetState extends State<SendFlightTarget>
   @override
   void initState() {
     super.initState();
+    // Created up front: dispose runs for the rise fallback too.
+    _c = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 460));
     _from = SendFlight.take();
     Diag.crumb('send flight target ${_from == null ? 'rise' : 'fly'}');
     if (_from != null) {
