@@ -156,16 +156,18 @@ class _SendFlightTargetState extends State<SendFlightTarget>
   @override
   Widget build(BuildContext context) {
     if (_from == null) return SendIn(child: widget.child);
-    if (!_flying) return KeyedSubtree(key: _box, child: widget.child);
+    // Same wrapper shape whether flying or not, so the bubble is never remounted.
     return KeyedSubtree(
       key: _box,
       child: AnimatedBuilder(
         animation: _c,
         child: widget.child,
-        builder: (_, child) => Opacity(
-          opacity: ((_c.value - 0.55) / 0.45).clamp(0.0, 1.0),
-          child: child,
-        ),
+        builder: (_, child) => _flying
+            ? Opacity(
+                opacity: ((_c.value - 0.55) / 0.45).clamp(0.0, 1.0),
+                child: child,
+              )
+            : Opacity(opacity: 1, child: child),
       ),
     );
   }

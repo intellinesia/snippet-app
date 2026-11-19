@@ -614,6 +614,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   final bool _sending = false;
   // Local bubbles that rise in from the composer once; the echo replaces them.
   final Set<String> _sendInIds = {};
+  // Server event id -> the local id its bubble was first drawn under.
+  final Map<String, String> _flightAlias = {};
   final GlobalKey _inputFieldKey = GlobalKey();
   String? _error;
   late final Swr<DirectThreadPage> _thread;
@@ -807,12 +809,13 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     });
     _jumpToBottom();
     try {
-      await widget.client.sendAgentMessage(
+      final sent = await widget.client.sendAgentMessage(
         toAgentId: widget.agentId,
         body: body,
         idempotencyKey: key,
         replyTo: replyToId,
       );
+      if (sent.eventId.isNotEmpty) _flightAlias[sent.eventId] = key;
       if (!mounted) return;
       await _load(silent: true);
     } catch (e) {
@@ -1435,8 +1438,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     final delivery = showDelivery ? _deliveryLine(e) : null;
     // The server's copy of a message sent here takes over the local bubble's
     // row (same idempotency key), so the send animation is not restarted.
-    final flightId =
-        _sendInIds.contains(e.idempotencyKey) ? e.idempotencyKey : e.eventId;
+    final flightId = _flightAlias[e.eventId] ??
+        (_sendInIds.contains(e.idempotencyKey) ? e.idempotencyKey : e.eventId);
     if (flightId != e.eventId && e.eventId.isNotEmpty) {
       _messageKeys[e.eventId] = _keyForEvent(flightId);
     }
