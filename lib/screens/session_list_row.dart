@@ -633,7 +633,7 @@ class SessionListRow extends StatelessWidget {
       // down the list; the bouncing agent already reads as working.
       final folder =
           s.projectFolder.trim().isEmpty ? '' : projectLabel(s);
-      final metaStyle = sans(11, color: AppColors.fg4);
+      final metaStyle = sans(11.5, color: AppColors.fg4);
       Widget metaField(String icon, String text) => text.isEmpty
           ? const SizedBox.shrink()
           : Row(mainAxisSize: MainAxisSize.min, children: [
@@ -647,6 +647,17 @@ class SessionListRow extends StatelessWidget {
                     style: metaStyle),
               ),
             ]);
+      // Natural width of an icon + text field, to share space by priority.
+      double fieldWidth(String text) => text.isEmpty
+          ? 0
+          : 16 +
+              (TextPainter(
+                      text: TextSpan(text: text, style: metaStyle),
+                      maxLines: 1,
+                      textDirection: TextDirection.ltr)
+                    ..layout())
+                  .width
+                  .ceilToDouble();
       Widget action(String icon, String tip, VoidCallback? tap) => Tooltip(
             message: tip,
             child: GestureDetector(
@@ -665,7 +676,7 @@ class SessionListRow extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: sans(13,
-                  weight: const FontWeight(450),
+                  weight: FontWeight.w500,
                   color: dim
                       ? AppColors.fg3
                       : (selected || hover)
@@ -688,6 +699,14 @@ class SessionListRow extends StatelessWidget {
           AppIcon('lock', size: 11, color: AppColors.fg4),
         ],
         // Fixed slot so hovering swaps the time for actions without reflow.
+        if (renameField == null && needsYou && !hover) ...[
+          const SizedBox(width: 6),
+          Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                  color: AppColors.run, shape: BoxShape.circle)),
+        ],
         if (renameField == null)
           SizedBox(
             width: 52,
@@ -699,7 +718,7 @@ class SessionListRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.fade,
                     softWrap: false,
-                    style: sans(11, color: timeColor, tabular: true)),
+                    style: sans(11.5, color: timeColor, tabular: true)),
               ),
               if (hover && !selecting)
                 Row(mainAxisSize: MainAxisSize.min, children: [
@@ -719,30 +738,47 @@ class SessionListRow extends StatelessWidget {
       final meta = !showMeta
           ? null
           : SizedBox(
-              height: 15,
-              child: Row(children: [
-                SizedBox(
-                  width: 12,
-                  child: provider == null
-                      ? null
-                      : ProviderLogo(provider,
+              height: 16,
+              child: LayoutBuilder(builder: (_, box) {
+                // Machine never truncates; folder gives way before branch.
+                final machineW =
+                    machineName.isEmpty ? 0.0 : 8 + fieldWidth(machineName);
+                final lead = provider == null ? 0.0 : 18.0;
+                final gap = folder.isNotEmpty && branch.isNotEmpty ? 8.0 : 0.0;
+                final avail = box.maxWidth - machineW - lead - gap;
+                final branchNat = fieldWidth(branch);
+                final folderNat = fieldWidth(folder);
+                final branchW = branchNat <= avail - 40 || folder.isEmpty
+                    ? branchNat.clamp(0.0, avail)
+                    : (avail - folderNat).clamp(40.0, branchNat);
+                final folderW = (avail - branchW).clamp(0.0, folderNat);
+                return Row(children: [
+                  if (provider != null) ...[
+                    SizedBox(
+                      width: 12,
+                      child: ProviderLogo(provider,
                           size: 11,
                           color: providerLogoIsColour(provider)
                               ? null
                               : AppColors.fg3),
-                ),
-                const SizedBox(width: 6),
-                Expanded(child: metaField('folder', folder)),
-                const SizedBox(width: 8),
-                Expanded(child: metaField('git-branch', branch)),
-                if (machineName.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 80),
-                    child: metaField('monitor', machineName),
-                  ),
-                ],
-              ]),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  if (folder.isNotEmpty)
+                    SizedBox(
+                        width: folderW,
+                        child: metaField('folder', folder)),
+                  if (gap > 0) SizedBox(width: gap),
+                  if (branch.isNotEmpty)
+                    SizedBox(
+                        width: branchW,
+                        child: metaField('git-branch', branch)),
+                  if (machineName.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    metaField('laptop', machineName),
+                  ],
+                ]);
+              }),
             );
       final body = meta == null
           ? line
@@ -853,31 +889,14 @@ class SessionListRow extends StatelessWidget {
                   onLongPress: onLongPress == null ? null : longPress,
                   onSecondaryTapDown: onSecondaryTapDown,
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: compact ? 32 : 44),
+                    constraints: const BoxConstraints(minHeight: 44),
                     child: Padding(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 8, vertical: compact ? 7.0 : 4.0),
+                      // 8 here + 8 list inset = the 16px sidebar edge.
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       child: Align(
                           alignment: Alignment.centerLeft,
-                          child: !compact
-                              ? content
-                              : leading == null
-                                  ? compactContent(hover)
-                                  : Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                          Padding(
-                                            padding:
-                                                const EdgeInsets.only(top: 1),
-                                            child: SizedBox.square(
-                                                dimension: 28,
-                                                child: Center(child: leading)),
-                                          ),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                              child: compactContent(hover)),
-                                        ])),
+                          child: !compact ? content : compactContent(hover)),
                     ),
                   ),
                 ));

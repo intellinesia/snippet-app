@@ -344,19 +344,19 @@ void main() {
         ));
         await tester.pumpAndSettle();
 
-        // Grouped by project, groups by newest activity: gamma (4000), then
-        // alpha (3000, 1000), then beta (2000).
+        // One flat list, newest first: gamma (4000), alpha (3000), beta
+        // (2000), alpha (1000).
         final posD = tester.getTopLeft(find.text('Gamma Session Newest')).dy;
         final posC = tester.getTopLeft(find.text('Alpha Session New')).dy;
         final posB = tester.getTopLeft(find.text('Beta Session Middle')).dy;
         final posA = tester.getTopLeft(find.text('Alpha Session Old')).dy;
         expect(posD, lessThan(posC));
-        expect(posC, lessThan(posA));
-        expect(posA, lessThan(posB));
-        // The group header plus each row's folder field.
-        expect(find.text('repo-alpha'), findsNWidgets(3));
-        expect(find.text('repo-beta'), findsNWidgets(2));
-        expect(find.text('repo-gamma'), findsNWidgets(2));
+        expect(posC, lessThan(posB));
+        expect(posB, lessThan(posA));
+        // Each row's folder field; no project group headers.
+        expect(find.text('repo-alpha'), findsNWidgets(2));
+        expect(find.text('repo-beta'), findsOneWidget);
+        expect(find.text('repo-gamma'), findsOneWidget);
         expect(find.text('/workspace/repo-alpha'), findsNothing);
       } finally {
         debugDefaultTargetPlatformOverride = null;
@@ -420,7 +420,7 @@ void main() {
       // Rename edits the row in place.
       await tester.tap(find.text('Rename'));
       await tester.pumpAndSettle();
-      expect(find.byType(EditableText), findsNWidgets(2));
+      expect(find.byType(EditableText), findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
 

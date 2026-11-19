@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../mochi.dart';
+import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -80,7 +81,9 @@ class SidebarSectionHeader extends StatelessWidget {
             child: Text(title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(12, weight: FontWeight.w500, color: AppColors.fg3)),
+                style: sans(12,
+                    weight: kMobile ? FontWeight.w500 : FontWeight.w600,
+                    color: AppColors.fg3)),
           ),
           AnimatedOpacity(
             opacity: show ? 1 : 0,
@@ -139,15 +142,16 @@ class _SectionBtnState extends State<_SectionBtn> {
       );
 }
 
-/// The app mark and name under the traffic lights.
+/// The app mark under the traffic lights, with optional trailing actions.
 class SidebarBrand extends StatelessWidget {
-  const SidebarBrand({super.key});
+  const SidebarBrand({super.key, this.trailing = const []});
+
+  final List<Widget> trailing;
 
   @override
   Widget build(BuildContext context) => Row(children: [
         const AgentMochi('snippet', size: 22),
-        const SizedBox(width: 8),
-        Text('Snippet',
-            style: sans(14, weight: FontWeight.w500, color: AppColors.fg1)),
+        const Spacer(),
+        ...trailing,
       ]);
 }

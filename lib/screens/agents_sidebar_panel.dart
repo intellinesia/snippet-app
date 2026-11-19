@@ -435,7 +435,8 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
     final q = effectiveQuery.toLowerCase();
     final mc = widget.missionControl;
     final onOpenMc = widget.onOpenMissionControl;
-    final mcCard = mc != null && onOpenMc != null && q.isEmpty
+    // Desktop pins Mission Control as a window tab, so the list omits it.
+    final mcCard = kMobile && mc != null && onOpenMc != null && q.isEmpty
         ? MissionControlCard(
             key: const ValueKey('agents-mc-card'),
             client: widget.client,
@@ -445,11 +446,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             presenceDetail: _mc?.presence?.detail,
           )
         : null;
-    // The phone's v5 header avatar is the Mission Control entry point, so the
-    // pinned card only shows on desktop.
-    final showMcCard = mcCard != null && !kMobile;
-
-    if (!widget.embedded && loading && agents.isEmpty && !showMcCard) {
+    if (!widget.embedded && loading && agents.isEmpty) {
       return Container(
         color: kMobile ? AppColors.pageBg : Colors.transparent,
         alignment: Alignment.center,
@@ -458,7 +455,7 @@ class AgentsSidebarPanelState extends State<AgentsSidebarPanel> {
             : Spinner(size: 20, color: AppColors.fg3),
       );
     }
-    if (!widget.embedded && error != null && agents.isEmpty && !showMcCard) {
+    if (!widget.embedded && error != null && agents.isEmpty) {
       if (kMobile) {
         return Material(
           color: kMobile ? AppColors.pageBg : Colors.transparent,

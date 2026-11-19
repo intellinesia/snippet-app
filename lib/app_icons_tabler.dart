@@ -107,6 +107,7 @@ const tablerIcons = <String, IconData>{
   'minimize': TablerIcons.minimize,
   'minus': TablerIcons.minus,
   'monitor': TablerIcons.deviceDesktop,
+  'laptop': TablerIcons.deviceLaptop,
   'more-horizontal': TablerIcons.dots,
   'more-vertical': TablerIcons.dotsVertical,
   'music': TablerIcons.music,

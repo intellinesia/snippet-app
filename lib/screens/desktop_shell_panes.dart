@@ -830,20 +830,25 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               icon: 'sidebar',
               tooltip: kMacOS ? 'Hide sidebar (⌘B)' : 'Hide sidebar (Ctrl+B)',
               onTap: _toggleSidebar),
-          SizedBox(width: S.s6),
-          Builder(
-            builder: (ctx) => _TbBtn(
-                icon: 'plus',
-                tooltip: 'New session',
-                onTap: () => _showNewMenu(ctx)),
-          ),
-          // 9 + half the 28 px button's spare 14 = 16, the row content edge.
+          // 9 + half the 28 px button's spare 12 = 15, the row content edge.
           const SizedBox(width: 9),
         ]),
       ),
       Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-        child: const SidebarBrand(),
+        // Right 9 puts the 16 px icons on the 16 px content edge.
+        padding: const EdgeInsets.fromLTRB(16, 0, 9, 6),
+        child: SidebarBrand(trailing: [
+          _TbBtn(
+              icon: 'search',
+              tooltip: kMacOS ? 'Search (⌘K)' : 'Search (Ctrl+K)',
+              onTap: _openCommandPalette),
+          Builder(
+            builder: (ctx) => _TbBtn(
+                icon: 'edit',
+                tooltip: 'New session',
+                onTap: () => _showNewMenu(ctx)),
+          ),
+        ]),
       ),
     ]);
   }
@@ -854,19 +859,18 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         if (sessionNeedsYou(s)) s
     ].isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(9, 6, 9, 10),
-      // Settings on the left; the other tools packed at the right.
+      padding: const EdgeInsets.fromLTRB(16, 6, 9, 10),
+      // User chip on the left; tools packed at the right, settings last.
       // Flexible children would each claim spare width, so the right group
       // is one Expanded row packed to the end.
       child: Row(children: [
-        _FooterBtn(
-            icon: 'settings', tooltip: 'Settings', onTap: _openShellSettings),
-        if (_client != null)
-          Expanded(
+        _UserChip(label: _active?.label, onTap: _openShellSettings),
+        Expanded(
             child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 spacing: 2,
                 children: [
+                  if (_client != null) ...[
                   _footerFit(_FooterBtn(
                       icon: 'task',
                       tooltip: 'Tasks',
@@ -897,6 +901,11 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                         tooltip: 'Usage',
                         onTap: () => showUsagePopover(ctx, _client!)),
                   )),
+                  ],
+                  _footerFit(_FooterBtn(
+                      icon: 'settings',
+                      tooltip: 'Settings',
+                      onTap: _openShellSettings)),
                 ]),
           ),
       ]),
@@ -973,6 +982,39 @@ class _TbBtnState extends State<_TbBtn> {
 /// [badge] adds a small accent dot.
 // Lets the icon row shrink below 28px per button at the narrowest sidebar.
 Widget _footerFit(Widget child) => Flexible(child: child);
+
+/// 22 px rounded-square initial of the connection label; opens Settings.
+class _UserChip extends StatelessWidget {
+  const _UserChip({required this.label, required this.onTap});
+  final String? label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = (label ?? '').trim();
+    return Tooltip(
+      message: 'Settings',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Container(
+            width: 22,
+            height: 22,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.surface3,
+              borderRadius: BorderRadius.circular(R.of(6)),
+            ),
+            child: Text(l.isEmpty ? 'S' : l.substring(0, 1).toUpperCase(),
+                style: sans(11, weight: FontWeight.w600, color: AppColors.fg1)),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _FooterBtn extends StatefulWidget {
   const _FooterBtn({

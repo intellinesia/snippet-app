@@ -1292,6 +1292,21 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         if (!pinnedIds.contains(s.id)) s,
     ];
 
+    if (!kMobile) {
+      // Desktop: one flat newest-first list; no state or project groups.
+      for (var i = 0; i < unpinned.length; i++) {
+        out.add(Appear(
+          key: ValueKey('chat-${unpinned[i].id}'),
+          index: n++,
+          since: _chatsShownAt,
+          child: _listRow(unpinned[i],
+              above: i > 0 ? unpinned[i - 1] : null,
+              below: i + 1 < unpinned.length ? unpinned[i + 1] : null),
+        ));
+      }
+      return out;
+    }
+
     final List<SessionInfo> groupedSource;
     if (pin) {
       final needsYouRows = [
@@ -1634,7 +1649,8 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
     final rows = _groupedRows(list, attentionFirst: true);
     final searching = _filterQuery.trim().isNotEmpty;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      if (hasClient)
+      // Desktop search lives in the brand row.
+      if (hasClient && kMobile)
         Padding(
           padding: const EdgeInsets.fromLTRB(10, 4, 10, 2),
           child: _sidebarSearch(),

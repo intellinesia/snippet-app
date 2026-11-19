@@ -2640,6 +2640,7 @@ const _lucide = <String, IconData>{
   'processes': LucideIcons.cog300,
   'server': LucideIcons.server300,
   'monitor': LucideIcons.monitor300,
+  'laptop': LucideIcons.laptop300,
   'ai-chip': LucideIcons.cpu300,
   'analytics': LucideIcons.chartColumn300,
   'lock-key': LucideIcons.keyRound300,

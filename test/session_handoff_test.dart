@@ -263,7 +263,7 @@ void main() {
 
     testWidgets('came-back rows group under Completed with their summary',
         (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       await tester.pumpWidget(sidebar([
         s('done',
             cameBack: true,
@@ -281,7 +281,7 @@ void main() {
     });
 
     testWidgets('markSeen drops the row from Completed', (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
       final sessions = [
         s('done', cameBack: true, finishedAt: 100, summary: 'Shipped', at: 100),
       ];
