@@ -16,6 +16,7 @@ import '../markdown_preview.dart';
 import '../chat/message_body.dart';
 import '../message_reactions.dart';
 import '../models.dart';
+import '../chat/send_flight.dart';
 import '../mochi.dart';
 import '../motion.dart';
 import '../panel.dart';
@@ -921,6 +922,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
 
   /// Sent but not yet in a fetched list; merged back so a refetch can't hide.
   final List<CoordinationEvent> _pending = [];
+  // Sent here this session: their bubble gets the text-flight animation.
+  final Set<String> _sendInIds = {};
+  final GlobalKey _inputFieldKey = GlobalKey();
 
   Map<String, CoordinationAgent> _agents = const {};
 
@@ -1136,6 +1140,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       );
       if (!mounted) return;
       _pending.add(ev);
+      _sendInIds.add(ev.eventId);
+      SendFlight.arm(_inputFieldKey);
       _input.clear();
       _attachments.clear();
       await _voice.discard();
@@ -1849,37 +1855,39 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             ]),
           _indented(
               mine: mine,
-              child: MessageBubbleInteractive(
-                text: e.body,
-                mine: mine,
-                onReact: (name) => unawaited(_sendReaction(e, name)),
-                focusBuilder: (_) => buildContent(),
-                builder: (_, __, bubbleKey) => _rowFor(
-                  card: card,
-                  mine: mine,
-                  avatar: kMobile && !mine && run.last
-                      ? _senderAvatar(e.actorId)
-                      : null,
-                  avatarSlot: kMobile && !mine && !run.last,
-                  child: !kMobile
-                      ? KeyedSubtree(key: bubbleKey, child: buildContent())
-                      : _withTapback(
-                          KeyedSubtree(
-                            key: bubbleKey,
-                            child: buildContent(),
-                          ),
-                          reactions.isEmpty
-                              ? null
-                              : MessageReactionChips(
-                                  reactions: reactions,
-                                  mine: mine,
-                                  onReact: (name) =>
-                                      unawaited(_sendReaction(e, name)),
-                                ),
-                          mine: mine,
-                        ),
-                ),
-              )),
+              child: _sendFlight(
+                  e.eventId,
+                  MessageBubbleInteractive(
+                    text: e.body,
+                    mine: mine,
+                    onReact: (name) => unawaited(_sendReaction(e, name)),
+                    focusBuilder: (_) => buildContent(),
+                    builder: (_, __, bubbleKey) => _rowFor(
+                      card: card,
+                      mine: mine,
+                      avatar: kMobile && !mine && run.last
+                          ? _senderAvatar(e.actorId)
+                          : null,
+                      avatarSlot: kMobile && !mine && !run.last,
+                      child: !kMobile
+                          ? KeyedSubtree(key: bubbleKey, child: buildContent())
+                          : _withTapback(
+                              KeyedSubtree(
+                                key: bubbleKey,
+                                child: buildContent(),
+                              ),
+                              reactions.isEmpty
+                                  ? null
+                                  : MessageReactionChips(
+                                      reactions: reactions,
+                                      mine: mine,
+                                      onReact: (name) =>
+                                          unawaited(_sendReaction(e, name)),
+                                    ),
+                              mine: mine,
+                            ),
+                    ),
+                  ))),
           if (!kMobile) _deskReactions(e, reactions, mine: mine),
           if (choices.isNotEmpty)
             LayoutBuilder(
@@ -1998,6 +2006,11 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
         },
       );
 
+  Widget _sendFlight(String id, Widget child) =>
+      kMobile && _sendInIds.contains(id)
+          ? SendFlightTarget(child: child)
+          : child;
+
   Widget _composerCard() => !kMobile
       ? _deskComposerCard()
       : ComposerCard(
@@ -2013,6 +2026,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                   _send,
             },
             child: TextField(
+              key: _inputFieldKey,
               controller: _input,
               focusNode: _inputFocus,
               minLines: 1,
