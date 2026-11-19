@@ -80,7 +80,8 @@ String _phraseText(LedgerKind kind, String tool, List<ToolStep> steps) {
     case LedgerKind.read:
       final paths = {for (final s in steps) _pathArg(s) ?? ''}..remove('');
       if (paths.length == 1) return 'read ${_base(paths.single)}';
-      return 'read ${paths.length > 1 ? paths.length : n} files';
+      final count = paths.isEmpty ? n : paths.length;
+      return count == 1 ? 'read a file' : 'read $count files';
     case LedgerKind.web:
       return 'searched the web';
     case LedgerKind.edit:
@@ -118,26 +119,24 @@ String _phraseText(LedgerKind kind, String tool, List<ToolStep> steps) {
   }
 }
 
-/// Consecutive steps of one kind fold into one phrase.
+/// Steps of one kind fold into one phrase, in order of first appearance, so
+/// a read-run-read-run loop reads as two phrases rather than four.
 List<LedgerPhrase> ledgerPhrases(List<ToolStep> steps) {
+  final groups = <(LedgerKind, String), List<int>>{};
+  for (var i = 0; i < steps.length; i++) {
+    groups.putIfAbsent(_kindOf(steps[i]), () => []).add(i);
+  }
   final out = <LedgerPhrase>[];
-  var i = 0;
-  while (i < steps.length) {
-    final key = _kindOf(steps[i]);
-    var j = i + 1;
-    while (j < steps.length && _kindOf(steps[j]) == key) {
-      j++;
-    }
-    final group = steps.sublist(i, j);
-    var text = _phraseText(key.$1, key.$2, group);
+  for (final e in groups.entries) {
+    final group = [for (final k in e.value) steps[k]];
+    var text = _phraseText(e.key.$1, e.key.$2, group);
     if (out.isEmpty) text = '${text[0].toUpperCase()}${text.substring(1)}';
     out.add(LedgerPhrase(
-      kind: key.$1,
-      indices: [for (var k = i; k < j; k++) k],
+      kind: e.key.$1,
+      indices: e.value,
       text: text,
       failures: group.where(_stepFailed).length,
     ));
-    i = j;
   }
   return out;
 }
