@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'ambient_loop.dart';
+import 'chat/ledger_line.dart';
 import 'chat/signal_row.dart';
 import 'api.dart' show DaemonClient;
 import 'crew_widgets.dart' show AgentProviderMark;
@@ -908,6 +909,19 @@ class ActivityFold extends StatelessWidget {
       for (final r in rows.whereType<DenseToolRow>())
         ToolStep(tool: r.tool, args: r.args, result: r.result),
     ];
+    if (!kMobile) {
+      final dense = rows.whereType<DenseToolRow>().toList();
+      if (dense.length == rows.length) {
+        return running
+            ? LedgerStrip(rows: rows, steps: steps)
+            : LedgerLine(
+                rows: dense,
+                steps: steps,
+                open: open,
+                onTap: onTap,
+                took: took);
+      }
+    }
     if (running) return WorkSteps(rows: rows, header: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

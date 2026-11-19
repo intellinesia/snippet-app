@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:snippet/chat/activity_dock.dart';
+import 'package:snippet/chat/ledger_line.dart';
 import 'package:snippet/api.dart';
 import 'package:snippet/motion.dart';
 import 'package:snippet/screens/session.dart';
@@ -238,22 +239,16 @@ void main() {
     await tester.pump();
 
     // Without timings the fold names the work instead of counting steps.
-    final summary = find.byType(WorkLine);
-    expect(summary, findsOneWidget);
-    // Without timings the fold just says it worked; no summary, no chevron.
-    expect(find.text('Worked', findRichText: true), findsOneWidget);
+    // Desktop folds a finished run into one ledger sentence.
+    expect(find.byType(LedgerLine), findsOneWidget);
     expect(find.text('Show'), findsNothing);
     expect(find.text('Hide'), findsNothing);
     expect(find.byType(DenseToolRow), findsNothing);
     expect(find.byType(WorkingDots), findsNothing);
-    expect(
-      find.descendant(
-        of: find.byType(CollapsedActivity),
-        matching: find.byType(AppIcon),
-      ),
-      findsNothing, // text only: no chevron
-    );
-
+    // The leading status icon toggles every step.
+    final summary = find
+        .descendant(of: find.byType(LedgerLine), matching: find.byType(AppIcon))
+        .first;
     await tester.tap(summary);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
@@ -287,10 +282,9 @@ void main() {
     await tester.pump();
 
     // A running run shows its live row, with the command's terminal open.
-    expect(find.textContaining('Running flutter test', findRichText: true),
-        findsOneWidget);
-    expect(find.textContaining(r'$ flutter test', findRichText: true),
-        findsOneWidget);
+    expect(find.byType(LedgerStrip), findsOneWidget);
+    expect(find.text('Running tests'), findsOneWidget);
+    expect(find.text('flutter test'), findsOneWidget);
     expect(find.text('Show'), findsNothing);
     expect(find.byType(WorkingDots), findsNothing);
     expect(
@@ -359,24 +353,23 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       if (desktop) {
-        expect(find.byType(WorkLine), findsOneWidget);
-        expect(
-            find.textContaining('Running flutter analyze', findRichText: true),
-            findsOneWidget);
-        expect(find.byType(DenseToolRow), findsOneWidget);
-        expect(find.text('Show'), findsNothing);
+        expect(find.byType(LedgerLine), findsOneWidget);
+        expect(find.byType(LedgerStrip), findsOneWidget);
+        expect(find.text('flutter analyze'), findsOneWidget);
+        expect(find.byType(DenseToolRow), findsNothing);
 
-        await tester.tap(find.byType(WorkLine));
+        await tester.tap(find.text('Peek'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
-        expect(find.byType(DenseToolRow), findsNWidgets(6));
+        expect(find.byType(DenseToolRow), findsOneWidget);
       } else {
         // Phone: the finished run is one pill, the live run is the dock.
         expect(find.byType(WorkLine), findsNothing);
         expect(find.byType(DenseToolRow), findsNothing);
         expect(find.byType(ActivityPill), findsOneWidget);
         expect(find.byType(ActivityDock), findsOneWidget);
-        expect(find.textContaining('Running flutter analyze', findRichText: true),
+        expect(
+            find.textContaining('Running flutter analyze', findRichText: true),
             findsOneWidget);
 
         await tester.tap(find.byType(ActivityPill));
