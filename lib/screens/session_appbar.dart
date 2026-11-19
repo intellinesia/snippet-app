@@ -1036,10 +1036,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
             purpose: ShellPanelPurpose.processes,
             originClient: widget.client,
             originSessionId: widget.sessionId,
-            builder: (_, close) => ProcessesScreen(
-                client: widget.client,
-                sessionId: widget.sessionId,
-                onClose: close));
+            builder: (_, close) => _activityPanel(close));
         return;
       case 'actions':
         _openActions(_state);
@@ -1309,10 +1306,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
           purpose: ShellPanelPurpose.processes,
           originClient: widget.client,
           originSessionId: widget.sessionId,
-          builder: (_, close) => ProcessesScreen(
-              client: widget.client,
-              sessionId: widget.sessionId,
-              onClose: close))),
+          builder: (_, close) => _activityPanel(close))),
       onRecurring: () => run(_openRecurring),
       onTasks: kMobile && _isMissionControl
           ? () => run(() => openMobileTasksPage(context, widget.client))
@@ -1347,8 +1341,19 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       purpose: ShellPanelPurpose.processes,
       originClient: widget.client,
       originSessionId: widget.sessionId,
-      builder: (_, close) => ProcessesScreen(
-          client: widget.client, sessionId: widget.sessionId, onClose: close));
+      builder: (_, close) => _activityPanel(close));
+
+  /// Desktop shows tool steps plus background jobs; the phone keeps jobs only.
+  Widget _activityPanel(VoidCallback close) => kMobile
+      ? ProcessesScreen(
+          client: widget.client, sessionId: widget.sessionId, onClose: close)
+      : SessionActivityPanel(
+          client: widget.client,
+          sessionId: widget.sessionId,
+          runs: _activityRuns,
+          live: _activityLive,
+          onClose: close,
+          onOpenFile: _openChangedFile);
 
   /// The chat pane: 960 of text, centred, the same with or without the session
   /// panel so opening it never reflows the transcript. Alone (phone,

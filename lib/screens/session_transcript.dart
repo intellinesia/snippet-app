@@ -5,6 +5,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     _dockRun = null;
     _lastUserRowKey = null;
     final out = <Widget>[];
+    final activityRuns = <ActivityRun>[];
+    ToolBatch? activityLive;
     Map<String, dynamic>? pending;
     final run = <Widget>[]; // consecutive dense tool rows
     String? runStartKey;
@@ -136,6 +138,19 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           runStartKey = null;
           runFirst = null;
           return;
+        }
+      }
+      if (!kMobile) {
+        final steps = [
+          for (final w in run.whereType<DenseToolRow>())
+            ToolStep(tool: w.tool, args: w.args, result: w.result),
+        ];
+        if (steps.isNotEmpty) {
+          if (running) {
+            activityLive = ToolBatch(steps, running: true);
+          } else {
+            activityRuns.add(ActivityRun(toolKey, steps, took));
+          }
         }
       }
       final open = _toolRunOpen[toolKey] ?? false;
@@ -814,6 +829,23 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     // this session's agent, and they read as a live footer under the work.
     for (var i = 0; i < _agentEvents.length; i++) {
       out.add(_agentEventRow(_agentEvents[i], i));
+    }
+    if (!kMobile) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        // Only notify on change: the panel listens, and this runs every build.
+        final cur = _activityRuns.value;
+        if (cur.length != activityRuns.length ||
+            (cur.isNotEmpty && cur.last.key != activityRuns.last.key)) {
+          _activityRuns.value = activityRuns;
+        }
+        final was = _activityLive.value;
+        if ((was == null) != (activityLive == null) ||
+            (activityLive != null &&
+                was!.steps.length != activityLive!.steps.length)) {
+          _activityLive.value = activityLive;
+        }
+      });
     }
     return out;
   }

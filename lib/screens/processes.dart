@@ -16,8 +16,15 @@ class ProcessesScreen extends StatefulWidget {
   final DaemonClient client;
   final String sessionId;
   final VoidCallback? onClose;
+
+  /// Renders only the list (no scaffold or header) for the Activity panel.
+  final bool embedded;
   const ProcessesScreen(
-      {super.key, required this.client, required this.sessionId, this.onClose});
+      {super.key,
+      required this.client,
+      required this.sessionId,
+      this.onClose,
+      this.embedded = false});
   @override
   State<ProcessesScreen> createState() => _ProcessesScreenState();
 }
@@ -116,6 +123,17 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
   Widget build(BuildContext context) {
     Theme.of(context); // Rebuild on theme change
     final procs = _procs ?? const [];
+    if (widget.embedded) {
+      Widget note(String t, {bool danger = false}) => Padding(
+          padding: EdgeInsets.symmetric(vertical: S.s8),
+          child: Text(t,
+              style:
+                  sans(13, color: danger ? AppColors.danger : AppColors.fg4)));
+      if (_loading) return const Center(child: DelayedSpinner(size: 16));
+      if (_error != null) return note(_error!, danger: true);
+      if (procs.isEmpty) return note('No background processes');
+      return _card(procs);
+    }
     return Scaffold(
       body: SafeArea(
         bottom: false,
@@ -169,31 +187,27 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: EdgeInsets.all(S.s16),
                         children: [
-                          Container(
-                            clipBehavior: Clip.antiAlias,
-                            decoration: BoxDecoration(
-                              color: AppColors.surface1,
-                              borderRadius: BorderRadius.circular(R.lg),
-                              border: kMobile
-                                  ? Border.all(color: AppColors.line)
-                                  : null,
-                            ),
-                            child: Column(children: [
-                              for (var i = 0; i < procs.length; i++) ...[
-                                if (i > 0)
-                                  Divider(
-                                      height: 1,
-                                      thickness: 1,
-                                      color: AppColors.line),
-                                _row(procs[i]),
-                              ],
-                            ]),
-                          ),
+                          _card(procs),
                         ]))),
         ]),
       ),
     );
   }
+
+  Widget _card(List<Map<String, dynamic>> procs) => Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: AppColors.surface1,
+          borderRadius: BorderRadius.circular(R.lg),
+          border: kMobile ? Border.all(color: AppColors.line) : null,
+        ),
+        child: Column(children: [
+          for (var i = 0; i < procs.length; i++) ...[
+            if (i > 0) Divider(height: 1, thickness: 1, color: AppColors.line),
+            _row(procs[i]),
+          ],
+        ]),
+      );
 
   Widget _row(Map<String, dynamic> p) {
     final id = '${p['id'] ?? ''}';

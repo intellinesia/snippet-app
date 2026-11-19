@@ -80,6 +80,7 @@ class ShellPanelRequest {
         ShellPanelPurpose.file => id.split('/').last,
         ShellPanelPurpose.changes => 'Changes',
         ShellPanelPurpose.git => 'Git',
+        ShellPanelPurpose.processes => 'Activity',
         _ => '${purpose.name[0].toUpperCase()}${purpose.name.substring(1)}',
       };
   void complete() {

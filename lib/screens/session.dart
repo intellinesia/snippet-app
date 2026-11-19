@@ -79,6 +79,7 @@ import 'agent_messaging.dart';
 import 'package:xterm/xterm.dart';
 import 'files.dart';
 import 'processes.dart';
+import 'session_activity.dart';
 import 'git.dart';
 import 'agent_wake_panel.dart';
 import 'lanes.dart';
@@ -714,6 +715,11 @@ class _SessionScreenState extends State<SessionScreen>
   DockRun? _dockRun;
   final ValueNotifier<ToolBatch> _dockBatch =
       ValueNotifier<ToolBatch>(const ToolBatch([]));
+  /// Desktop Activity panel feed: finished tool runs and the run in flight.
+  final ValueNotifier<List<ActivityRun>> _activityRuns =
+      ValueNotifier<List<ActivityRun>>(const []);
+  final ValueNotifier<ToolBatch?> _activityLive =
+      ValueNotifier<ToolBatch?>(null);
   final Map<String, DateTime> _dockSeen = {};
   final Set<String> _openToolRows = {};
   bool _transcriptDirty = true;
@@ -1545,6 +1551,8 @@ class _SessionScreenState extends State<SessionScreen>
     _closed = true;
     Diag.crumb('session close ${widget.sessionId}');
     _dockBatch.dispose();
+    _activityRuns.dispose();
+    _activityLive.dispose();
     _tray.dispose();
     _agentEventsSub?.cancel();
     modelsRevision.removeListener(_loadModel);
