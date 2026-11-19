@@ -2,6 +2,8 @@ part of 'session.dart';
 
 const double kDesktopComposerWidth = 960;
 
+final _slashControllers = Expando<SlashController>('slash');
+
 extension _SessionScreenComposerExt on _SessionScreenState {
   void _send(Map<String, dynamic> m, {bool tracked = false}) {
     final kind = m['kind'];
@@ -679,6 +681,42 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     }
   }
 
+  /// Desktop "/" menu state lives outside the screen state, keyed by it.
+  SlashController get _slash {
+    final c = _slashControllers[this] ??= SlashController(_input);
+    c.env = SlashEnv(
+      goalOngoing: _state?.goal?.ongoing == true,
+      isMc: _isMissionControl,
+      resumeMode: _resumeMode,
+      settleOn: !_keepAwake,
+      resumeTokens: (_cold?['resume_tokens'] as num?)?.toInt(),
+      onCommand: (cmd, rest) {
+        switch (cmd) {
+          case SlashCmd.goal:
+            _performMacAction('goal', rest.isEmpty ? null : rest);
+          case SlashCmd.compact:
+            _performMacAction('compact');
+          case SlashCmd.fork:
+            _performMacAction('fork');
+          case SlashCmd.wakes:
+            _performMacAction('autonomy');
+          default:
+        }
+        _inputFocus.requestFocus();
+      },
+      onResume: (m) {
+        _setResumeMode(m);
+        _inputFocus.requestFocus();
+      },
+      onSettle: (on) {
+        _setAutoSettle(on);
+        _setState(() {});
+        _inputFocus.requestFocus();
+      },
+    );
+    return c;
+  }
+
   Future<void> _loadMentionAgents() async {
     _mentionLoading = true;
     try {
@@ -872,17 +910,19 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                 : null,
             field: CallbackShortcuts(
               bindings: _composerShortcuts,
-              child: TextField(
-                controller: _input,
-                focusNode: _inputFocus,
-                contentInsertionConfiguration: _keyboardContent,
-                minLines: 1,
-                maxLines: 10,
-                cursorColor: AppColors.fg1,
-                onSubmitted: (_) => _sendMessage(),
-                style: DeskComposerCard.fieldStyle,
-                decoration: DeskComposerCard.decoration(hint),
-              ),
+              child: SlashKeys(
+                  controller: _slash,
+                  child: TextField(
+                    controller: _input,
+                    focusNode: _inputFocus,
+                    contentInsertionConfiguration: _keyboardContent,
+                    minLines: 1,
+                    maxLines: 10,
+                    cursorColor: AppColors.fg1,
+                    onSubmitted: (_) => _sendMessage(),
+                    style: DeskComposerCard.fieldStyle,
+                    decoration: DeskComposerCard.decoration(hint),
+                  )),
             ),
             attach: DeskIconButton('plus',
                 tooltip: 'Attach',
@@ -1064,6 +1104,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                   if (_attachments.isNotEmpty) _attachmentBar(),
                   if (_mentionQuery != null && !_isMissionControl)
                     _mentionList(),
+                  if (!kMobile) SlashMenuPopover(controller: _slash),
                   if (top != null) top,
                   Swap(
                     stateKey: (_isRecording || _recordingPath != null)

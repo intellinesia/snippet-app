@@ -72,6 +72,7 @@ import '../composer/attachment_preview.dart';
 import '../composer/attachment_tile.dart';
 import '../composer/composer_card.dart';
 import '../composer/composer_tray.dart';
+import '../composer/slash_menu.dart';
 import '../media_views.dart';
 import 'agent_transcript_head.dart';
 import 'agent_messaging.dart';
