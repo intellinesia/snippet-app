@@ -1433,7 +1433,14 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           );
     final aboutTask = e.payload['about_task'];
     final delivery = showDelivery ? _deliveryLine(e) : null;
-    final rowKey = e.eventId.isEmpty ? null : _keyForEvent(e.eventId);
+    // The server's copy of a message sent here takes over the local bubble's
+    // row (same idempotency key), so the send animation is not restarted.
+    final flightId =
+        _sendInIds.contains(e.idempotencyKey) ? e.idempotencyKey : e.eventId;
+    if (flightId != e.eventId && e.eventId.isNotEmpty) {
+      _messageKeys[e.eventId] = _keyForEvent(flightId);
+    }
+    final rowKey = flightId.isEmpty ? null : _keyForEvent(flightId);
     final choices = eventChoices(e);
     final chosen = choices.isEmpty ? null : chosenReplyFor(e, _events);
 
@@ -1572,7 +1579,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                   : 'from a work session',
               align: Alignment.centerLeft,
             ),
-          kMobile && _sendInIds.contains(e.eventId)
+          kMobile && _sendInIds.contains(flightId)
               ? SendFlightTarget(child: content)
               : content,
           if (choices.isNotEmpty)

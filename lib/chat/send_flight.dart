@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import '../diagnostics.dart';
 import 'send_in.dart';
 
 /// Remembers where the composer's text field was when the user pressed send,
@@ -15,6 +16,7 @@ class SendFlight {
     if (box is! RenderBox || !box.attached || !box.hasSize) return;
     _from = box.localToGlobal(Offset.zero) & box.size;
     _at = DateTime.now();
+    Diag.crumb('send flight armed');
   }
 
   static Rect? take() {
@@ -52,6 +54,7 @@ class _SendFlightTargetState extends State<SendFlightTarget>
   void initState() {
     super.initState();
     _from = SendFlight.take();
+    Diag.crumb('send flight target ${_from == null ? 'rise' : 'fly'}');
     if (_from != null) {
       _flying = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _launch());
@@ -132,6 +135,7 @@ class _SendFlightTargetState extends State<SendFlightTarget>
       ),
     );
     overlay.insert(_entry!);
+    Diag.crumb('send flight launched');
     _c.forward().whenComplete(() {
       _entry?.remove();
       _entry = null;
@@ -141,6 +145,7 @@ class _SendFlightTargetState extends State<SendFlightTarget>
 
   @override
   void dispose() {
+    if (_entry != null) Diag.crumb('send flight cut short');
     _entry?.remove();
     _c.dispose();
     super.dispose();
