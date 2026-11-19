@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'desktop_composer.dart' show DeskButton;
 
 String _tokens(int n) => n >= 1000 ? '${(n / 1000).round()}k' : '$n';
 
@@ -98,4 +99,61 @@ class _Choice extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// Desktop: the cold-cache state as a chip beside the model chip. It opens the
+/// Ask / Lean / Full menu; in 'ask' mode picking Lean or Full is the one-off
+/// choice, as on the phone's tab.
+class ColdChip extends StatelessWidget {
+  final String mode;
+  final int? resumeTokens;
+  final ValueChanged<String> onPick;
+  const ColdChip(
+      {super.key, required this.mode, this.resumeTokens, required this.onPick});
+
+  Future<void> _menu(BuildContext context, String? tokens) async {
+    final picked = await showAppMenu<String>(
+      context,
+      anchor: context,
+      minWidth: 180,
+      maxWidth: 220,
+      items: [
+        appMenuItem<String>(
+            value: 'ask', label: 'Ask each time', selected: mode == 'ask'),
+        appMenuItem<String>(
+            value: 'lean', label: 'Lean', selected: mode == 'lean'),
+        appMenuItem<String>(
+            value: 'full',
+            label: tokens == null ? 'Full' : 'Full $tokens',
+            selected: mode == 'full'),
+      ],
+    );
+    if (picked != null) onPick(picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = resumeTokens == null ? null : '~${_tokens(resumeTokens!)}';
+    final label = switch (mode) {
+      'lean' => 'Cold · lean',
+      'full' => tokens == null ? 'Cold · full' : 'Cold · full $tokens',
+      _ => 'Cold · resume',
+    };
+    return Builder(
+      builder: (ctx) => DeskButton(
+        tooltip: 'Prompt cache is cold: choose how the next turn resumes',
+        onTap: () => _menu(ctx, tokens),
+        fill: AppColors.fg1.withValues(alpha: 0.05),
+        hoverFill: AppColors.fg1.withValues(alpha: 0.09),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          AppIcon('clock', size: 13, color: AppColors.fg3),
+          const SizedBox(width: 6),
+          Text(label, style: sans(12.5, color: AppColors.fg2)),
+          const SizedBox(width: 4),
+          AppIcon('chevron-down', size: 12, color: AppColors.fg4),
+        ]),
+      ),
+    );
+  }
 }

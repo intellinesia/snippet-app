@@ -844,6 +844,8 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     );
   }
 
+  bool _showsCold(bool running) => !running && !_settled && _cold != null;
+
   Widget _deskComposerCard(bool running, String hint) {
     final goal = _state?.goal?.ongoing == true;
     final rcpt = _recipientChip();
@@ -896,6 +898,12 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                       onTap: () => _switchModel(chipCtx),
                     ),
                   )
+                : null,
+            cold: _showsCold(running)
+                ? ColdChip(
+                    mode: _resumeMode,
+                    resumeTokens: (_cold!['resume_tokens'] as num?)?.toInt(),
+                    onPick: _onColdPick)
                 : null,
             // No send-mode legend; only the new-line key, while idle.
             hint: !typing || running

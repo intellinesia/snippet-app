@@ -575,13 +575,12 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     final a = t.readout!.agent!;
     final presence = t.client.presence;
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      // Live state beside the switch, the way a session tab shows its run.
+      // Only a wait on the user shows here; the sidebar dot shows working.
       ListenableBuilder(
         listenable: presence,
         builder: (_, __) {
           final p = presence.presenceForAgentId(a.id);
           final status = switch (p?.state) {
-            'running' || 'tool' || 'thinking' || 'typing' => 'running',
             'waiting' when PresenceStore.chatWord(p!) == 'waiting on you' =>
               'needs_you',
             _ => null,

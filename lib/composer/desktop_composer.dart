@@ -223,6 +223,7 @@ class DeskComposerCard extends StatelessWidget {
     this.attachments,
     this.attach,
     this.model,
+    this.cold,
     this.hint,
     this.mic,
     this.focus,
@@ -236,6 +237,9 @@ class DeskComposerCard extends StatelessWidget {
   final Widget? attachments;
   final Widget? attach;
   final Widget? model;
+
+  /// Cold-cache chip, after the model chip.
+  final Widget? cold;
   final Widget? hint;
   final Widget? mic;
   final FocusNode? focus;
@@ -284,6 +288,7 @@ class DeskComposerCard extends StatelessWidget {
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     if (attach != null) attach!,
                     if (model != null) ...[const SizedBox(width: 2), model!],
+                    if (cold != null) ...[const SizedBox(width: 4), cold!],
                   ]),
                 ),
                 const Spacer(),

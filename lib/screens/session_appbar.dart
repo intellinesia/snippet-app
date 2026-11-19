@@ -1670,10 +1670,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         : running
             ? 'running'
             : (s?.status ?? 'idle');
-    // Only live states earn a pill; finished or idle shows nothing.
-    final live = status == 'running' ||
-        status == 'needs_you' ||
-        status == 'waiting_for_input';
+    // Only a wait on the user earns a pill; the sidebar dot shows working.
+    final live = status == 'needs_you' || status == 'waiting_for_input';
     return Row(mainAxisSize: MainAxisSize.min, children: [
       if (live) ...[
         SessionStatusPill(

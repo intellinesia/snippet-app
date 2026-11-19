@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../chat/chat_card.dart';
+import '../composer/desktop_composer.dart' show DeskIconButton;
 import '../media_views.dart';
 import '../platform.dart';
 import '../theme.dart';
@@ -148,6 +149,64 @@ class PresentedFileCard extends StatelessWidget {
                     onTap: () => _open(context),
                   ),
                 ]),
+    );
+  }
+
+  /// Desktop, several files: a 52px row with a 40px thumbnail (or the file
+  /// kind's icon), name over caption, and a bare download icon.
+  Widget deskThumbRow(BuildContext context) {
+    final isImage = mediaKindOf(path) == MediaKind.image;
+    final sub = caption.isNotEmpty ? caption : _kindLabel;
+    return Material(
+      color: AppColors.surface2,
+      borderRadius: BorderRadius.circular(R.of(10)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _open(context),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(6, 6, 8, 6),
+          child: Row(children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(R.of(7)),
+              child: SizedBox.square(
+                dimension: 40,
+                child: isImage
+                    // The row opens it; the thumb only shows it.
+                    ? IgnorePointer(
+                        child: ImageThumb(
+                            client: client, path: path, width: 40, height: 40))
+                    : ColoredBox(
+                        color: AppColors.surface3,
+                        child: Center(
+                            child: AppIcon(_icon,
+                                size: 16, color: AppColors.fg2))),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(13, color: AppColors.fg1)),
+                  Text(sub,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, color: AppColors.fg4)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            DeskIconButton('download',
+                tooltip: 'Download',
+                iconSize: 14,
+                onTap: () => _download(context)),
+          ]),
+        ),
+      ),
     );
   }
 
@@ -317,6 +376,62 @@ class _PresentedFilesState extends State<PresentedFiles> {
   static const _shown = 3;
   bool _all = false;
 
+  /// Desktop: a quiet count line, then one row per file, no shared box.
+  Widget _desk(List<({String path, String caption})> visible, int hidden) {
+    final files = widget.files;
+    Widget link(String label, VoidCallback onTap) => MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text(label, style: sans(12, color: AppColors.fg3)),
+            ),
+          ),
+        );
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: S.s6),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 2, bottom: 6),
+                child: Row(children: [
+                  Text('${files.length} files',
+                      style: sans(12, color: AppColors.fg4)),
+                  const SizedBox(width: 10),
+                  link('Download all', _downloadAll),
+                ]),
+              ),
+              for (var i = 0; i < visible.length; i++) ...[
+                if (i > 0) const SizedBox(height: 4),
+                PresentedFileCard(
+                  client: widget.client,
+                  path: visible[i].path,
+                  caption: visible[i].caption,
+                  onOpenFileTab: widget.onOpenFileTab,
+                ).deskThumbRow(context),
+              ],
+              if (hidden > 0 || (_all && files.length > _shown))
+                Padding(
+                  padding: const EdgeInsets.only(left: 2, top: 6),
+                  child: Row(children: [
+                    link(_all ? 'Show fewer' : 'Show $hidden more',
+                        () => setState(() => _all = !_all)),
+                  ]),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _downloadAll() async {
     try {
       toast(context, 'Preparing ${widget.files.length} files…');
@@ -346,6 +461,7 @@ class _PresentedFilesState extends State<PresentedFiles> {
     if (files.length == 1) return _row(files.first);
     final visible = _all ? files : files.take(_shown).toList();
     final hidden = files.length - visible.length;
+    if (!kMobile) return _desk(visible, hidden);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
