@@ -361,6 +361,9 @@ Future<T?> showAppMenu<T>(
   /// it belongs to.
   bool alignEnd = false,
   double? sheetHeightFactor,
+
+  /// Overrides the outlined default, for menus drawn as a bare stepped surface.
+  ShapeBorder? shape,
 }) {
   final bg = color ?? AppColors.surface1;
 
@@ -444,7 +447,7 @@ Future<T?> showAppMenu<T>(
     color: bg,
     elevation: 0,
     surfaceTintColor: Colors.transparent,
-    shape: appMenuShape,
+    shape: shape ?? appMenuShape,
     menuPadding: EdgeInsets.symmetric(vertical: S.s4),
     constraints: BoxConstraints(minWidth: effMin, maxWidth: effMax),
     popUpAnimationStyle: AnimationStyle(

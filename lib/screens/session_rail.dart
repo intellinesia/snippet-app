@@ -76,6 +76,7 @@ class SessionRail extends StatefulWidget {
     this.floating = false,
     this.github,
     this.onChanges,
+    this.onFiles,
     this.onGit,
     this.onPullRequests,
     this.onLanes,
@@ -122,6 +123,7 @@ class SessionRail extends StatefulWidget {
   final VoidCallback onGoal;
   final VoidCallback onCycleResume;
   final VoidCallback? onChanges;
+  final VoidCallback? onFiles;
   final VoidCallback? onGit;
   final VoidCallback? onPullRequests;
   final VoidCallback? onLanes;
@@ -497,7 +499,7 @@ class _SessionRailState extends State<SessionRail> {
   List<Widget> _railBody() {
     if (kMobile || widget.isMissionControl) return _groups();
     if (_page != null) return _subPage();
-    return _desktopRoot([_header()]);
+    return _overviewRoot();
   }
 
   List<Widget> _groups() {
@@ -1859,9 +1861,15 @@ class _MoreRow extends StatelessWidget {
 
 /// A flat-pane row card: 8 px on surface2, hover surface3.
 class _RailCard extends StatefulWidget {
-  const _RailCard({required this.child, this.onTap});
+  const _RailCard(
+      {required this.child,
+      this.onTap,
+      this.pad = const EdgeInsets.all(8),
+      this.radius});
   final Widget child;
   final VoidCallback? onTap;
+  final EdgeInsets pad;
+  final double? radius;
 
   @override
   State<_RailCard> createState() => _RailCardState();
@@ -1882,12 +1890,12 @@ class _RailCardState extends State<_RailCard> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             curve: const Cubic(.23, 1, .32, 1),
-            padding: const EdgeInsets.all(8),
+            padding: widget.pad,
             decoration: BoxDecoration(
               color: _hover && widget.onTap != null
                   ? AppColors.surface3
                   : AppColors.surface2,
-              borderRadius: BorderRadius.circular(R.of(8)),
+              borderRadius: BorderRadius.circular(widget.radius ?? R.of(8)),
             ),
             child: widget.child,
           ),

@@ -323,6 +323,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         ),
         sidebarTop: _sidebarTop(),
         mainHeader: _macWindowBar(),
+        leftStripAfter: _sessionStripAdd(),
+        leftStripTrailing: _sessionStripTools(),
         sidebarHeader: _effectiveSection == ShellSection.sessions ||
                 _effectiveSection == ShellSection.tasks
             ? null
@@ -569,6 +571,115 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   }
 
   Widget _emptyPaneHint() => const EmptyPaneHint();
+
+  _ShellTab? get _chatTab {
+    final t = _activeTab;
+    return !kMobile && t != null && t.isSessionChat ? t : null;
+  }
+
+  Widget? _sessionStripAdd() {
+    if (_chatTab == null) return null;
+    return Builder(
+      builder: (ctx) => IconBtn('plus',
+          size: 26,
+          iconSize: 14,
+          tooltip: 'Add to this pane',
+          onTap: () => _showPaneAddMenu(ctx)),
+    );
+  }
+
+  /// ··· (session actions) and the panel toggle, at the end of the pane row.
+  Widget Function(double)? _sessionStripTools() {
+    final t = _chatTab;
+    if (t == null) return null;
+    final menu = _headerTools(t);
+    return (width) => Row(mainAxisSize: MainAxisSize.min, children: [
+          ...menu,
+          ListenableBuilder(
+            listenable:
+                Listenable.merge([sessionRailCollapsed, sessionRailFloating]),
+            builder: (_, __) {
+              final docked = width >= kSessionRailMinColumn;
+              final on = docked
+                  ? !sessionRailCollapsed.value
+                  : sessionRailFloating.value;
+              return IconBtn('sidebar',
+                  size: 28,
+                  iconSize: 15,
+                  active: on,
+                  tooltip: on ? 'Hide panel' : 'Show panel',
+                  onTap: () {
+                    if (docked) {
+                      setSessionRailCollapsed(on);
+                    } else {
+                      sessionRailFloating.value = !on;
+                    }
+                  });
+            },
+          ),
+        ]);
+  }
+
+  /// Shows the Overview panel, docked or floating, whichever fits.
+  void _showOverview() {
+    if (sessionRailCollapsed.value) setSessionRailCollapsed(false);
+    sessionRailFloating.value = true;
+  }
+
+  void _showPaneAddMenu(BuildContext ctx) {
+    final t = _chatTab;
+    if (t == null) return;
+    final s = _macSessionStatuses[t.key]?.state;
+    final changed =
+        fileChanges(sessionChangeSteps(s?.events ?? const [])).length;
+    final cps = s?.checkpoints.length ?? 0;
+    final lanes = s?.lanes.where((l) => l.running).length ?? 0;
+    String? count(int n) => n > 0 ? '$n' : null;
+    void act(String a) => _dispatchSessionAction(a);
+    showPaneAddMenu(
+      ctx,
+      title: t.title,
+      views: [
+        PaneAddEntry(
+            icon: 'layers',
+            label: 'Overview',
+            checked: !sessionRailCollapsed.value,
+            onTap: _showOverview),
+        PaneAddEntry(
+            icon: 'file-diff',
+            label: 'Diffs',
+            meta: count(changed),
+            onTap: () => act('file_changes')),
+        PaneAddEntry(
+            icon: 'folder', label: 'Files', onTap: () => act('files')),
+        PaneAddEntry(
+            icon: 'activity', label: 'Activity', onTap: () => act('processes')),
+        PaneAddEntry(
+            icon: 'history',
+            label: 'Checkpoints',
+            meta: count(cps),
+            onTap: () => act('checkpoints')),
+        PaneAddEntry(
+            icon: 'image',
+            label: 'Shared files',
+            onTap: () => act('artifacts')),
+        PaneAddEntry(
+            icon: 'git-branch',
+            label: 'Side threads',
+            meta: lanes > 0 ? '$lanes running' : null,
+            chevron: true,
+            onTap: () => act('lanes')),
+      ],
+      terminals: [
+        PaneAddEntry(
+            icon: 'terminal', label: 'Shell', onTap: () => act('shell')),
+        PaneAddEntry(
+            icon: 'plus',
+            label: 'New terminal',
+            onTap: () => act('shell_new')),
+      ],
+    );
+  }
 
   /// Agent tabs: the Chat | Work switch and the panel toggle, in the window bar.
   Widget _agentBarTools(_ShellTab t) {

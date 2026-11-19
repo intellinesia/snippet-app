@@ -104,97 +104,179 @@ extension _RailPages on _SessionRailState {
         _armedRewind = null;
       });
 
-  /// The root page: the goal, the actions, then every area one tap away.
-  List<Widget> _desktopRoot(List<Widget> head) {
+  /// One 48 px stepped-surface row: icon tile, label, quiet sub line, chevron.
+  Widget _overviewRow(String icon, String label, String sub,
+      {VoidCallback? onTap}) {
+    return _RailCard(
+      onTap: onTap,
+      pad: const EdgeInsets.symmetric(horizontal: 10),
+      radius: R.of(10),
+      child: SizedBox(
+        height: 48,
+        child: Row(children: [
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.surface3,
+              borderRadius: BorderRadius.circular(R.of(8)),
+            ),
+            child: AppIcon(icon, size: 15, color: AppColors.fg2),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(13, color: AppColors.fg1)),
+                  Text(sub,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(11.5, color: AppColors.fg4)),
+                ]),
+          ),
+          const SizedBox(width: 6),
+          AppIcon('chevron-right', size: 14, color: AppColors.fg4),
+        ]),
+      ),
+    );
+  }
+
+  /// Desktop session panel, quiet by default: the goal and plan when there are
+  /// any, the places to go, then usage and keep warm.
+  List<Widget> _overviewRoot() {
     final s = widget.state;
     final w = widget;
     final lanes = [...?s?.lanes];
     final running = lanes.where((l) => l.running).length;
     final files = fileChanges(sessionChangeSteps(s?.events ?? const []));
-    final cps = s?.checkpoints.length ?? 0;
     final jobs = _procs.where((p) => p['running'] == true).length;
     final ctx = _contextPct(s);
-    final wake = _wake;
     final plan = _SessionRailState._plan(s);
-    final provider = widget.providers[widget.ownProfile] ??
-        widget.providers[widget.profileLabel];
+    final t = _tasks.where((t) => t.sessionId == widget.sessionId).firstOrNull;
+    final ws = (s?.workspace ?? '').trim();
+    final goalOn = (s?.goal?.ongoing ?? false) || _editingGoal;
+    final model = [
+      w.profileLabel,
+      if (ctx != null) '${ctx.round()}% context',
+    ].join(' · ');
+    Widget gap() => const SizedBox(height: 6);
     return [
-      ...head,
+      Container(
+        height: 40,
+        padding: const EdgeInsets.only(left: 4),
+        child: Row(children: [
+          Expanded(
+              child: Text('Overview',
+                  style: sans(13, weight: W.strong, color: AppColors.fg1))),
+          if (w.floating)
+            IconBtn('x',
+                size: 30,
+                iconSize: 15,
+                tooltip: 'Close',
+                onTap: () => sessionRailFloating.value = false),
+        ]),
+      ),
+      if (goalOn) _goalCard(),
+      if (t != null && w.onOpenTask != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: _RailRow(
+            icon: 'task',
+            label: t.title,
+            value: t.workPlan.isEmpty
+                ? t.status.label
+                : '${t.workPlan.where((p) => p.done).length} of ${t.workPlan.length}',
+            chevron: true,
+            onTap: () => w.onOpenTask!(t.id),
+          ),
+        ),
       if (plan != null)
         _card2('Plan', [Column(children: _planRows(plan))],
             meta:
                 '${plan.where((p) => _SessionRailState._stepState(p) == 2).length} of ${plan.length} done'),
-      _navGroup('Work', [
-        if (lanes.isNotEmpty || w.onLanes != null)
-          (f, l) => _navRow('git-branch', 'Lanes',
-              value: lanes.isEmpty
-                  ? null
-                  : running > 0
-                      ? '$running running · ${lanes.length}'
-                      : '${lanes.length}',
-              hot: running > 0,
-              first: f,
-              last: l,
-              onTap: () => _go('lanes')),
-        if (w.onProcesses != null)
-          (f, l) => _navRow('activity', 'Jobs',
-              value: jobs > 0 ? '$jobs running' : null,
-              hot: jobs > 0,
-              first: f,
-              last: l,
-              onTap: () => _go('jobs')),
-        if (w.onChanges != null)
-          (f, l) => _navRow('file-diff', 'Changes',
-              value: files.isEmpty
-                  ? null
-                  : '${files.length} file${files.length == 1 ? '' : 's'}',
-              first: f,
-              last: l,
-              onTap: w.onChanges),
-        if (w.onCheckpoints != null)
-          (f, l) => _navRow('history', 'Checkpoints',
-              value: cps == 0 ? null : '$cps',
-              first: f,
-              last: l,
-              onTap: () => _go('checkpoints')),
-      ]),
-      _navGroup('Without you', [
-        (f, l) => _navRow('scheduled', 'Wakes',
-            value: !_wakeKnown
-                ? null
-                : wake == null
-                    ? 'None'
-                    : _nextWakeText(wake),
-            first: f,
-            last: l,
-            onTap: () => _go('wakes')),
-        if (_warm != null)
-          (f, l) => _navRow('timer', 'Keep warm',
-              first: f,
-              last: l,
-              trailing: SettingsSwitch(value: _warm!, onChanged: _setWarm),
-              onTap: () => _setWarm(!_warm!)),
-      ]),
-      _navGroup('Context', [
-        if (s != null)
-          (f, l) => _navRow('gauge', 'Usage',
-              leading: provider == null
-                  ? null
-                  : SizedBox.square(
-                      dimension: 16, child: ProviderLogo(provider, size: 16)),
-              value: ctx == null
-                  ? w.profileLabel
-                  : '${w.profileLabel} · ${ctx.round()}%',
-              first: f,
-              last: l,
-              onTap: () => _go('usage')),
-        if (w.onMemory != null)
-          (f, l) =>
-              _navRow('brain', 'Memory', first: f, last: l, onTap: w.onMemory),
-        if (w.onDeliverables != null)
-          (f, l) => _navRow('folder', 'Shared files',
-              first: f, last: l, onTap: w.onDeliverables),
-      ]),
+      const SizedBox(height: 10),
+      if (w.onChanges != null) ...[
+        _overviewRow(
+            'file-diff',
+            'Diffs',
+            files.isEmpty
+                ? 'No changes yet'
+                : '${files.length} file${files.length == 1 ? '' : 's'} changed',
+            onTap: w.onChanges),
+        gap(),
+      ],
+      if (w.onFiles != null) ...[
+        _overviewRow(
+            'folder',
+            'Files',
+            ws.isEmpty
+                ? 'Browse the workspace'
+                : lastPathSegment(ws, ifEmpty: ws),
+            onTap: w.onFiles),
+        gap(),
+      ],
+      if (w.onShell != null) ...[
+        _overviewRow('terminal', 'Shell', 'Terminal in the workspace',
+            onTap: w.onShell),
+        gap(),
+      ],
+      if (w.onProcesses != null) ...[
+        _overviewRow(
+            'activity',
+            'Activity',
+            jobs > 0
+                ? '$jobs job${jobs == 1 ? '' : 's'} running'
+                : 'No background jobs',
+            onTap: w.onProcesses),
+        gap(),
+      ],
+      if (w.onLanes != null)
+        _overviewRow(
+            'git-branch',
+            'Side threads',
+            lanes.isEmpty
+                ? 'None yet'
+                : running > 0
+                    ? '$running running · ${lanes.length}'
+                    : '${lanes.length} finished',
+            onTap: w.onLanes),
+      const SizedBox(height: 18),
+      if (s != null)
+        InkWell(
+          onTap: () => _go('usage'),
+          borderRadius: BorderRadius.circular(R.of(8)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            child: Row(children: [
+              Expanded(
+                  child: Text(model,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(12, color: AppColors.fg4))),
+              AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+            ]),
+          ),
+        ),
+      if (_warm != null)
+        InkWell(
+          onTap: () => _setWarm(!_warm!),
+          borderRadius: BorderRadius.circular(R.of(8)),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(4, 4, 0, 4),
+            child: Row(children: [
+              Expanded(
+                  child:
+                      Text('Keep warm', style: sans(13, color: AppColors.fg3))),
+              SettingsSwitch(value: _warm!, onChanged: _setWarm),
+            ]),
+          ),
+        ),
       const SizedBox(height: 6),
     ];
   }

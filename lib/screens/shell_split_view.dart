@@ -21,6 +21,8 @@ class ShellSplitView extends StatefulWidget {
     this.sidebarTop,
     this.mainHeader,
     this.leftTakeover,
+    this.leftStripAfter,
+    this.leftStripTrailing,
     required this.paneWidth,
     required this.leftCollapsed,
     required this.rightCollapsed,
@@ -60,6 +62,11 @@ class ShellSplitView extends StatefulWidget {
 
   /// Shown over the left pane's body (its tabs stay alive underneath).
   final Widget? leftTakeover;
+
+  /// A session's pane row: the "+" after the chips and the tools at the right.
+  /// Setting the trailing tools keeps the strip up even for the chat alone.
+  final Widget? leftStripAfter;
+  final Widget Function(double width)? leftStripTrailing;
   final double paneWidth;
   final bool leftCollapsed;
   final bool rightCollapsed;
@@ -192,8 +199,11 @@ class _ShellSplitViewState extends State<ShellSplitView> {
             if (p == ShellPane.right
                 ? list.isNotEmpty ||
                     readouts.any((r) => r != _filesTab)
-                : list.length + readouts.length > 1)
+                : list.length + readouts.length > 1 ||
+                    (p == ShellPane.left && widget.leftStripTrailing != null))
               PaneStrip(
+                afterTabs: p == ShellPane.left ? widget.leftStripAfter : null,
+                trailing: p == ShellPane.left ? widget.leftStripTrailing : null,
                 pane: p,
                 tabs: list,
                 readouts: readouts,

@@ -987,6 +987,9 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       case 'lanes':
         _showLanes();
         return;
+      case 'handoff':
+        if (!_isMissionControl && !widget.readOnly) _showHandOff();
+        return;
       case 'files':
         final ws = s?.workspace ?? '';
         final name = lastPathSegment(ws, ifEmpty: 'Files');
@@ -1448,6 +1451,11 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               : widget.onOpenWorkspace != null
                   ? widget.onOpenWorkspace!()
                   : _performMacAction('file_changes'),
+      onFiles: mc
+          ? null
+          : () => widget.onOpenWorkspace != null
+              ? widget.onOpenWorkspace!()
+              : _performMacAction('files'),
       onGit: mc ? null : () => _performMacAction('git'),
       onPullRequests: _github == null ? null : _openPullRequests,
       onLanes: () => open != null ? open('lanes') : _showLanes(),
@@ -1640,7 +1648,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
         final hasPanel =
             !widget.readOnly && _inboxAgentId(widget.sessionId) == null;
         final docked = rail && !collapsed;
-        final Widget? toggle = !hasPanel
+        // Session tabs toggle the panel from the pane row; Mission Control keeps this.
+        final Widget? toggle = !hasPanel || !_isMissionControl
             ? null
             : IconBtn('sidebar',
                 size: 30,

@@ -265,6 +265,11 @@ class ShellTab {
   bool get isDiff => diffPath != null;
   bool get isTerminal => termId != null;
   bool get isWorkspace => workspaceSession != null;
+
+  /// The session's own conversation tab, as opposed to its files, terminals
+  /// and readouts.
+  bool get isSessionChat =>
+      sessionId != null && !isDiff && !isDraft && !isMissionControl;
   bool get isMissionControl =>
       !isDraft &&
       !isReadout &&

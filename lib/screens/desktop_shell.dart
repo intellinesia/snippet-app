@@ -64,6 +64,15 @@ import 'artifact_viewer.dart' show SessionDeliverables;
 import 'wakes_screen.dart';
 import 'workspace_tab.dart';
 import 'desktop_settings_page.dart';
+import 'file_changes.dart' show sessionChangeSteps;
+import '../tool_activity.dart' show fileChanges;
+import 'pane_add_menu.dart';
+import 'session_rail.dart'
+    show
+        kSessionRailMinColumn,
+        sessionRailCollapsed,
+        sessionRailFloating,
+        setSessionRailCollapsed;
 import 'shell_card_tab_strip.dart';
 import 'shell_main_pane.dart';
 import 'shell_models.dart';

@@ -170,6 +170,8 @@ List<Widget> buildShellRailTools({
           item('activity', 'Automated wakes', () => onSessionAction('autonomy'))
         else ...[
           item('git-fork', 'Fork from here', () => onSessionAction('fork')),
+          item('send', 'Hand off', () => onSessionAction('handoff')),
+          item('history', 'Rewind', () => onSessionAction('checkpoints')),
           const PopupMenuDivider(height: 9),
           item('file-diff', 'File changes',
               () => onSessionAction('file_changes')),

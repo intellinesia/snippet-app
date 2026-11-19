@@ -347,6 +347,9 @@ class PaneTabChip extends StatelessWidget {
 
   final bool compact;
 
+  /// The window tab already names the session, so its own chip reads "Chat".
+  bool get chat => !kMobile && tab.isSessionChat;
+
   @override
   Widget build(BuildContext context) {
     final chip = GestureDetector(
@@ -370,14 +373,18 @@ class PaneTabChip extends StatelessWidget {
               children: [
                 SessionStateIcon(
                   status: status,
-                  icon: tabIconKind(tab),
+                  icon: chat ? 'chat' : tabIconKind(tab),
                   size: compact ? 12 : 14,
                 ),
                 SizedBox(width: compact ? S.s6 : S.s8),
                 Flexible(
                   fit: compact ? FlexFit.loose : FlexFit.tight,
                   child: Text(
-                    tab.title.isEmpty ? '(untitled)' : tab.title,
+                    chat
+                        ? 'Chat'
+                        : tab.title.isEmpty
+                            ? '(untitled)'
+                            : tab.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: sans(compact ? 12 : 13,
@@ -438,6 +445,13 @@ class PaneStrip extends StatelessWidget {
   final VoidCallback onDragStarted;
   final void Function(DraggableDetails) onDragEnd;
 
+  /// Sits right after the last chip (the "+" button).
+  final Widget? afterTabs;
+
+  /// Pinned at the strip's right end (session actions, panel toggle); gets the
+  /// strip's width so it can pick docked or floating.
+  final Widget Function(double width)? trailing;
+
   const PaneStrip({
     super.key,
     required this.pane,
@@ -452,6 +466,8 @@ class PaneStrip extends StatelessWidget {
     required this.onCloseReadout,
     required this.onDragStarted,
     required this.onDragEnd,
+    this.afterTabs,
+    this.trailing,
   });
 
   @override
@@ -461,49 +477,64 @@ class PaneStrip extends StatelessWidget {
     return Container(
       height: compact ? 38 : 46,
       color: kMobile ? AppColors.pageCanvas : Colors.transparent,
-      child: Stack(fit: StackFit.expand, children: [
-        LayoutBuilder(builder: (context, c) {
-          final fit = kPaneTabWidth(c.maxWidth - 12, count);
-          final w = compact && fit > 136 ? 136.0 : fit;
-          return ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(horizontal: S.s6),
-            itemCount: count,
-            separatorBuilder: (_, __) => const SizedBox.shrink(),
-            itemBuilder: (_, i) {
-              if (i < tabs.length) {
-                final t = tabs[i];
-                return PaneTabChip(
-                  pane: pane,
-                  tab: t,
-                  active: t.key == activeKey,
-                  width: w,
-                  status: statusForTab(t),
-                  canDismiss: canDismissTab(t),
-                  onTap: () => onActivateTab(t),
-                  onDismiss: () => onDismissTab(t),
-                  onDragStarted: onDragStarted,
-                  onDragEnd: onDragEnd,
-                  compact: compact,
-                );
-              }
-              final r = readouts[i - tabs.length];
-              return ReadoutChip(
+      child: LayoutBuilder(builder: (context, outer) {
+        final list = _chips(count, compact);
+        final tail = trailing;
+        if (tail == null) return list;
+        return Row(children: [
+          Expanded(child: list),
+          tail(outer.maxWidth),
+          SizedBox(width: S.s6),
+        ]);
+      }),
+    );
+  }
+
+  Widget _chips(int count, bool compact) {
+    final extra = afterTabs == null ? 0 : 1;
+    return Stack(fit: StackFit.expand, children: [
+      LayoutBuilder(builder: (context, c) {
+        final fit = kPaneTabWidth(c.maxWidth - 12, count);
+        final w = compact && fit > 136 ? 136.0 : fit;
+        return ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.symmetric(horizontal: S.s6),
+          itemCount: count + extra,
+          separatorBuilder: (_, __) => const SizedBox.shrink(),
+          itemBuilder: (_, i) {
+            if (i >= count) return Center(child: afterTabs);
+            if (i < tabs.length) {
+              final t = tabs[i];
+              return PaneTabChip(
                 pane: pane,
-                tab: r,
-                active: r.key == activeKey,
+                tab: t,
+                active: t.key == activeKey,
                 width: w,
-                onTap: () => onActivateReadout(r),
-                onClose: () => onCloseReadout(r),
+                status: statusForTab(t),
+                canDismiss: canDismissTab(t),
+                onTap: () => onActivateTab(t),
+                onDismiss: () => onDismissTab(t),
                 onDragStarted: onDragStarted,
                 onDragEnd: onDragEnd,
                 compact: compact,
               );
-            },
-          );
-        }),
-      ]),
-    );
+            }
+            final r = readouts[i - tabs.length];
+            return ReadoutChip(
+              pane: pane,
+              tab: r,
+              active: r.key == activeKey,
+              width: w,
+              onTap: () => onActivateReadout(r),
+              onClose: () => onCloseReadout(r),
+              onDragStarted: onDragStarted,
+              onDragEnd: onDragEnd,
+              compact: compact,
+            );
+          },
+        );
+      }),
+    ]);
   }
 }
 
