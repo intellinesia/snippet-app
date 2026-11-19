@@ -1229,8 +1229,36 @@ class _HeaderButton extends StatelessWidget {
       );
 }
 
+/// Breadcrumb segments for a file path: home as ~, and anything between the
+/// root crumb and the last two folders folded into '…' unless [expanded].
+List<String> fileCrumbs(String path, {bool expanded = false}) {
+  var parts = path.split('/').where((s) => s.isNotEmpty).toList();
+  // Paths come from the daemon's machine, so match its home by shape.
+  if (parts.length >= 2 && (parts[0] == 'home' || parts[0] == 'Users')) {
+    parts = ['~', ...parts.sublist(2)];
+  } else if (parts.isNotEmpty && parts[0] == 'root') {
+    parts = ['~', ...parts.sublist(1)];
+  }
+  if (expanded || parts.length <= 1) return parts;
+  // Keep the name and up to two folders above it, stopping at an id-like one.
+  final tail = <String>[parts.last];
+  for (var i = parts.length - 2; i > 0 && tail.length < 3; i--) {
+    if (_idLike(parts[i])) break;
+    tail.insert(0, parts[i]);
+  }
+  final head = parts.length - tail.length;
+  if (head <= 0) return parts;
+  if (head == 1) return [parts.first, ...tail];
+  return [parts.first, '…', ...tail];
+}
+
+bool _idLike(String s) =>
+    s.length > 24 ||
+    s.startsWith('-') ||
+    RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-').hasMatch(s);
+
 /// Breadcrumb, Modified chip and actions above an embedded file.
-class _FileHeaderBar extends StatelessWidget {
+class _FileHeaderBar extends StatefulWidget {
   const _FileHeaderBar(
       {required this.path,
       required this.modified,
@@ -1242,13 +1270,35 @@ class _FileHeaderBar extends StatelessWidget {
   final List<Widget> actions;
 
   @override
+  State<_FileHeaderBar> createState() => _FileHeaderBarState();
+}
+
+class _FileHeaderBarState extends State<_FileHeaderBar> {
+  bool _expanded = false;
+
+  String get path => widget.path;
+  bool get modified => widget.modified;
+  List<Widget> get leading => widget.leading;
+  List<Widget> get actions => widget.actions;
+
+  Widget _crumb(String label, {required bool last}) {
+    final text = Text(label,
+        maxLines: 1,
+        style: sans(12.5, color: last ? AppColors.fg1 : AppColors.fg4));
+    if (label != '…') return text;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() => _expanded = true),
+        child: text,
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final parts = path.split('/').where((s) => s.isNotEmpty).toList();
-    final shown = parts.length > 4 ? parts.sublist(parts.length - 4) : parts;
-    final dir = [
-      if (parts.length > shown.length) '…',
-      ...shown.take(shown.length - 1)
-    ].map((s) => '$s / ').join();
+    final crumbs = fileCrumbs(path, expanded: _expanded);
     return Container(
       height: 44,
       padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
@@ -1258,16 +1308,24 @@ class _FileHeaderBar extends StatelessWidget {
         Expanded(
           child: Row(children: [
             Flexible(
-              child: Text.rich(
-                TextSpan(children: [
-                  TextSpan(
-                      text: dir, style: codeMono(12, color: AppColors.fg4)),
-                  TextSpan(
-                      text: shown.isEmpty ? path : shown.last,
-                      style: codeMono(12, color: AppColors.fg1)),
-                ]),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              child: Tooltip(
+                message: path,
+                waitDuration: const Duration(milliseconds: 500),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  reverse: true,
+                  child: Row(children: [
+                    for (var i = 0; i < crumbs.length; i++) ...[
+                      if (i > 0)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: AppIcon('chevron-right',
+                              size: 12, color: AppColors.fg4),
+                        ),
+                      _crumb(crumbs[i], last: i == crumbs.length - 1),
+                    ],
+                  ]),
+                ),
               ),
             ),
             if (modified) ...[
