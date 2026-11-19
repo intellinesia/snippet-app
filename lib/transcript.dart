@@ -911,11 +911,13 @@ class ActivityFold extends StatelessWidget {
     ];
     if (!kMobile) {
       final dense = rows.whereType<DenseToolRow>().toList();
-      if (dense.length == rows.length) {
+      // Plan and image rows ride along; the sentence is built from tool rows.
+      if (dense.isNotEmpty) {
         return running
             ? LedgerStrip(rows: rows, steps: steps)
             : LedgerLine(
                 rows: dense,
+                allRows: rows,
                 steps: steps,
                 open: open,
                 onTap: onTap,

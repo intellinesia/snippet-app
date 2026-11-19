@@ -184,10 +184,14 @@ class LedgerLine extends StatefulWidget {
     required this.open,
     required this.onTap,
     this.took,
+    this.allRows,
   });
 
   /// Step rows, one per entry in [steps].
   final List<DenseToolRow> rows;
+
+  /// Every row of the run, including non-tool rows, for the open-all view.
+  final List<Widget>? allRows;
   final List<ToolStep> steps;
   final bool open;
   final VoidCallback onTap;
@@ -272,7 +276,7 @@ class _LedgerLineState extends State<LedgerLine> {
         ),
         SpringExpand(
           open: widget.open,
-          child: WorkSteps(rows: widget.rows),
+          child: WorkSteps(rows: widget.allRows ?? widget.rows),
         ),
         SpringExpand(
           open: _phrase != null && !widget.open,
