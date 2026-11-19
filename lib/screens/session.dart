@@ -25,6 +25,7 @@ import '../chat/activity_dock.dart';
 import '../chat/send_flight.dart';
 import '../chat/activity_sheet.dart';
 import '../chat/anchored_scroll.dart';
+import '../chat/send_turn_space.dart';
 import '../chat/chat_card.dart';
 import '../chat/stage_header.dart';
 import '../chat/signal_row.dart';
@@ -1421,6 +1422,62 @@ class _SessionScreenState extends State<SessionScreen>
   // streaming reply keeps reaching the true bottom instead of falling behind.
   bool _stickToBottom = true;
 
+  // Desktop turn space: a send lets the sent message sit at the top of the
+  // transcript with the reply streaming into the room below.
+  bool _turnSpace = false;
+  final GlobalKey _turnAnchor = GlobalKey();
+  String? _lastUserRowKey;
+
+  // Index in the reversed list of the newest user message (or its unechoed bubble).
+  int _turnAnchorIndex(List<Widget> timeline) {
+    String keyOf(Widget w) => '${(w.key as ValueKey?)?.value}';
+    var at = timeline.lastIndexWhere(
+        (w) => w.key is ValueKey && keyOf(w).startsWith('pending-'));
+    if (at < 0 && _lastUserRowKey != null) {
+      at = timeline.lastIndexWhere((w) => keyOf(w) == _lastUserRowKey);
+    }
+    return at < 0 ? -1 : timeline.length - 1 - at;
+  }
+
+  Widget _transcriptList({
+    required bool anchorActive,
+    required EdgeInsets padding,
+    required int itemCount,
+    required int? Function(Key) findChildIndexCallback,
+    required IndexedWidgetBuilder itemBuilder,
+  }) {
+    if (!anchorActive) {
+      return ListView.builder(
+        controller: _scroll,
+        reverse: true,
+        scrollCacheExtent: ScrollCacheExtent.pixels(400),
+        padding: padding,
+        itemCount: itemCount,
+        findChildIndexCallback: findChildIndexCallback,
+        itemBuilder: itemBuilder,
+      );
+    }
+    return CustomScrollView(
+      controller: _scroll,
+      reverse: true,
+      scrollCacheExtent: ScrollCacheExtent.pixels(400),
+      slivers: [
+        SliverTurnSpace(
+          padding: padding,
+          anchorKey: _turnAnchor,
+          active: true,
+          child: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              itemBuilder,
+              childCount: itemCount,
+              findChildIndexCallback: findChildIndexCallback,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   // In a reversed list, offset 0 is the latest message.
   bool _atBottom() {
     if (!_scroll.hasClients) return true;
@@ -1899,6 +1956,7 @@ class _SessionScreenState extends State<SessionScreen>
                                                                   rowKey(i));
                                                             }
                                                           }
+                                                          final anchorIndex = !kMobile && _turnSpace ? _turnAnchorIndex(timeline) : -1;
                                                           final list =
                                                               ScrollConfiguration(
                                                             behavior: ScrollConfiguration
@@ -1906,16 +1964,9 @@ class _SessionScreenState extends State<SessionScreen>
                                                                 .copyWith(
                                                                     scrollbars:
                                                                         false),
-                                                            child: ListView
-                                                                .builder(
-                                                              controller:
-                                                                  _scroll,
-                                                              reverse: true,
-                                                              scrollCacheExtent:
-                                                                  ScrollCacheExtent
-                                                                      .pixels(
-                                                                          400),
-                                                              padding: EdgeInsets.fromLTRB(
+                                                            child: _transcriptList(
+ anchorActive: !kMobile && _turnSpace,
+ padding: EdgeInsets.fromLTRB(
                                                                   kMobile
                                                                       ? M.gutter
                                                                       : S.s20,
@@ -1950,9 +2001,9 @@ class _SessionScreenState extends State<SessionScreen>
                                                                         .length -
                                                                     1 -
                                                                     index;
-                                                                final child =
-                                                                    timeline[
-                                                                        at];
+                                                                final child = index == anchorIndex
+ ? KeyedSubtree(key: _turnAnchor, child: timeline[at])
+ : timeline[at];
                                                                 final key =
                                                                     rowKey(at);
                                                                 final fresh =

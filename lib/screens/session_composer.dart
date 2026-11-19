@@ -110,6 +110,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     _armAckWatchdog(); // recover if this send silently dies on a dead socket
     // Sending is an explicit action — re-pin and jump to the bottom.
     _stickToBottom = true;
+    if (!kMobile && !(running && !steer)) _turnSpace = true;
     _scheduleBottom();
   }
 

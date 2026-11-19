@@ -3,6 +3,7 @@ part of 'session.dart';
 extension _SessionScreenTranscriptExt on _SessionScreenState {
   List<Widget> _transcript(List<Map<String, dynamic>> events) {
     _dockRun = null;
+    _lastUserRowKey = null;
     final out = <Widget>[];
     Map<String, dynamic>? pending;
     final run = <Widget>[]; // consecutive dense tool rows
@@ -321,6 +322,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                 !direct.urgent &&
                 parseTaskOffer(direct.body) == null &&
                 direct.body.trim().isNotEmpty) {
+              _lastUserRowKey = key;
               addEvent(
                   key,
                   Padding(
@@ -403,6 +405,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           }
           final userBubble =
               Bubble(mine: true, text: text, client: widget.client);
+          _lastUserRowKey = key;
           addEvent(
               key,
               KeyedSubtree(

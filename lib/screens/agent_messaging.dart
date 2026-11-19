@@ -23,6 +23,7 @@ import '../composer/composer_card.dart';
 import '../composer/voice_note.dart';
 import '../message_reactions.dart';
 import '../chat/send_flight.dart';
+import '../chat/send_turn_space.dart';
 import '../mochi.dart';
 import '../motion.dart';
 import '../models.dart';
@@ -606,6 +607,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   final _input = TextEditingController();
   final _inputFocus = FocusNode();
   final _scroll = ScrollController();
+  // Desktop turn space: set by a send, see send_turn_space.dart.
+  bool _turnSpace = false;
+  final GlobalKey _turnAnchor = GlobalKey();
   final Map<String, GlobalKey> _messageKeys = {};
   CoordinationEvent? _replyTo;
   List<CoordinationEvent> _events = const [];
@@ -803,6 +807,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     unawaited(_voice.discard());
     _unechoed.add(pending);
     _sendInIds.add(key);
+    if (!kMobile) _turnSpace = true;
     setState(() {
       _replyTo = null;
       _events = [..._events, pending];
@@ -1239,11 +1244,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       onRefresh: () => _load(silent: true),
       reverse: true,
       indicatorTop: topPad + 6,
-      child: ListView.builder(
-        controller: _scroll,
-        reverse: true,
-        scrollCacheExtent: ScrollCacheExtent.pixels(400),
-        physics: const AlwaysScrollableScrollPhysics(),
+      child: _messageList(
         padding: EdgeInsets.fromLTRB(S.s16, topPad, S.s16, S.s16),
         itemCount: n + (_deskHead ? 2 : 1),
         itemBuilder: (_, i) {
@@ -1271,9 +1272,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           final last = at == n - 1 || splitBefore[at + 1];
           final topGap =
               at == 0 ? 0.0 : (first ? ChatColors.groupGap : ChatColors.runGap);
-          return Padding(
-            padding: EdgeInsets.only(top: topGap),
-            child: _wideCap(
+          final row = _wideCap(
               _messageRow(
                 ev,
                 card: cards[ev],
@@ -1284,10 +1283,52 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                 showOrigin: origins[at],
                 showDelivery: at == lastHumanIdx,
               ),
-            ),
+            );
+          return Padding(
+            padding: EdgeInsets.only(top: topGap),
+            child: !kMobile && _turnSpace && at == lastHumanIdx
+                ? KeyedSubtree(key: _turnAnchor, child: row)
+                : row,
           );
         },
       ),
+    );
+  }
+
+  Widget _messageList({
+    required EdgeInsets padding,
+    required int itemCount,
+    required IndexedWidgetBuilder itemBuilder,
+  }) {
+    if (kMobile || !_turnSpace) {
+      return ListView.builder(
+        controller: _scroll,
+        reverse: true,
+        scrollCacheExtent: ScrollCacheExtent.pixels(400),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: padding,
+        itemCount: itemCount,
+        itemBuilder: itemBuilder,
+      );
+    }
+    return CustomScrollView(
+      controller: _scroll,
+      reverse: true,
+      scrollCacheExtent: ScrollCacheExtent.pixels(400),
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverTurnSpace(
+          padding: padding,
+          anchorKey: _turnAnchor,
+          active: true,
+          child: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              itemBuilder,
+              childCount: itemCount,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
