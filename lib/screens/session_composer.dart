@@ -678,11 +678,11 @@ extension _SessionScreenComposerExt on _SessionScreenState {
         child: Padding(
           padding: const EdgeInsets.all(6),
           child: SizedBox(
-            width: 14,
-            height: 14,
+            width: 11,
+            height: 11,
             child: CircularProgressIndicator(
               value: f,
-              strokeWidth: 2,
+              strokeWidth: 1.5,
               color: color,
               backgroundColor: AppColors.fg1.withValues(alpha: 0.12),
             ),
