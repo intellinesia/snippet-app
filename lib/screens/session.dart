@@ -478,13 +478,17 @@ class _SessionScreenState extends State<SessionScreen>
 
   // How many user turns (typed or steered) the daemon has echoed into the event
 
-  // When the user last sent; the echoed bubble rises in from the composer.
-  DateTime? _lastSendAt;
   final GlobalKey _inputFieldKey = GlobalKey();
-  final Set<String> _sendInKeys = {};
+
+  /// The faint bubble for a message not yet echoed. Its text flies in from the
+  /// input at the moment of sending; the echoed bubble then replaces it.
+  Widget _pendingBubble(String text) {
+    final bubble = Bubble(
+        mine: true, text: text, selectable: false, client: widget.client);
+    return kMobile ? SendFlightTarget(child: bubble) : bubble;
+  }
 
   void _trackPending(String msg, String nonce) {
-    _lastSendAt = DateTime.now();
     SendFlight.arm(_inputFieldKey);
     _pending.add(msg);
     _pendingNonce.add(nonce);
@@ -1834,15 +1838,9 @@ class _SessionScreenState extends State<SessionScreen>
                                                                       padding: EdgeInsets.only(
                                                                           bottom: S
                                                                               .s12),
-                                                                      child: Bubble(
-                                                                          mine:
-                                                                              true,
-                                                                          text: _pending[
-                                                                              pi],
-                                                                          selectable:
-                                                                              false,
-                                                                          client:
-                                                                              widget.client))),
+                                                                      child: _pendingBubble(
+                                                                          _pending[
+                                                                              pi]))),
                                                             _LiveStreamRow(
                                                               key: const ValueKey(
                                                                   'live-stream-row'),

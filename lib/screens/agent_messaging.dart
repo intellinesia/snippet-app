@@ -1580,7 +1580,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               align: Alignment.centerLeft,
             ),
           kMobile && _sendInIds.contains(flightId)
-              ? SendFlightTarget(child: content)
+              // Faint while pending; solid once the server has it.
+              ? Opacity(
+                  opacity:
+                      _unechoed.any((p) => p.eventId == e.eventId) ? 0.55 : 1,
+                  child: SendFlightTarget(child: content))
               : content,
           if (choices.isNotEmpty)
             LayoutBuilder(
