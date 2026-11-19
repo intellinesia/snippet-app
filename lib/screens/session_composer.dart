@@ -1029,15 +1029,18 @@ extension _SessionScreenComposerExt on _SessionScreenState {
                 iconSize: 16,
                 color: AppColors.fg2),
             model: _inboxAgentId(widget.sessionId) == null
-                ? Builder(
-                    builder: (chipCtx) => DeskModelChip(
-                      icon: _modelProvider == null
-                          ? 'cpu'
-                          : 'provider:$_modelProvider',
-                      label: _modelLabel ?? 'Auto',
-                      onTap: () => _switchModel(chipCtx),
+                ? Row(mainAxisSize: MainAxisSize.min, children: [
+                    Builder(
+                      builder: (chipCtx) => DeskModelChip(
+                        icon: _modelProvider == null
+                            ? 'cpu'
+                            : 'provider:$_modelProvider',
+                        label: _modelLabel ?? 'Auto',
+                        onTap: () => _switchModel(chipCtx),
+                      ),
                     ),
-                  )
+                    _contextRing(),
+                  ])
                 : null,
             cold: _showsCold(running)
                 ? ColdChip(
