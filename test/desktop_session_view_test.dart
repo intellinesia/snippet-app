@@ -287,13 +287,10 @@ void main() {
     expect(find.text('flutter test'), findsOneWidget);
     expect(find.text('Show'), findsNothing);
     expect(find.byType(WorkingDots), findsNothing);
-    expect(
-      find.descendant(
-        of: find.byType(CollapsedActivity),
-        matching: find.byType(AppIcon),
-      ),
-      findsNothing, // rows are text only; no fold line while running
-    );
+    // Peek with its Space key; Stop only appears when the session can stop.
+    expect(find.text('Peek'), findsOneWidget);
+    expect(find.text('Space'), findsOneWidget);
+    expect(find.text('Stop'), findsNothing);
     expect(find.byType(RunSpinner), findsOneWidget);
     debugDefaultTargetPlatformOverride = null;
   });

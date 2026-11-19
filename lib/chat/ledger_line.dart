@@ -1,7 +1,13 @@
 // "Ledger line": desktop tool activity as one sentence of hoverable phrases
 // while finished, and a single 40px strip while a step is running.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../agent_character.dart' show AgentCharacterState;
+import '../mochi.dart' show AgentMochi;
 
 import '../theme.dart';
 import '../tool_activity.dart';
@@ -444,6 +450,78 @@ class _PopRow extends StatelessWidget {
 }
 
 /// Running run: one strip, with Peek to show the step rows beneath it.
+/// Session facts the live strip needs but its rows do not carry.
+class LedgerLiveScope extends InheritedWidget {
+  const LedgerLiveScope({
+    super.key,
+    required super.child,
+    this.agentId,
+    this.startedAt,
+    this.onStop,
+  });
+
+  final String? agentId;
+
+  /// The turn's start, the elapsed fallback when steps carry no stamps.
+  final String? startedAt;
+
+  /// Interrupts the run; null when nothing is running or Stop is not ours.
+  final VoidCallback? onStop;
+
+  static LedgerLiveScope? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<LedgerLiveScope>();
+
+  @override
+  bool updateShouldNotify(LedgerLiveScope old) =>
+      agentId != old.agentId ||
+      startedAt != old.startedAt ||
+      (onStop == null) != (old.onStop == null);
+}
+
+String _clock(Duration d) {
+  final s = d.inSeconds;
+  if (s < 60) return '${s}s';
+  final m = d.inMinutes;
+  if (m < 60) return '${m}m ${s % 60}s';
+  return '${d.inHours}h ${m % 60}m';
+}
+
+/// Last few non-empty lines of a finished step's output.
+List<String> _tail(ToolStep s, {int n = 3}) {
+  final d = s.data;
+  final r = s.result;
+  final raw = [
+    (d?['stdout'] ?? d?['output'] ?? '').toString(),
+    (d?['stderr'] ?? '').toString(),
+    if (r is Map && r['error'] is Map)
+      ((r['error'] as Map)['message'] ?? '').toString(),
+  ].join('\n');
+  final lines = raw
+      .split('\n')
+      .map((l) => l.trimRight())
+      .where((l) => l.trim().isNotEmpty)
+      .toList();
+  return lines.length <= n ? lines : lines.sublist(lines.length - n);
+}
+
+String _failLabel(ToolStep s) {
+  final cmd = stepCommand(s);
+  if (cmd?.kind == CommandKind.test) return 'Tests failed';
+  if (cmd?.kind == CommandKind.build) return 'Build failed';
+  if (cmd?.kind == CommandKind.check) return 'Check failed';
+  return toolBaseName(s.tool) == 'bash' ? 'Command failed' : 'Step failed';
+}
+
+bool _typing() {
+  final ctx = FocusManager.instance.primaryFocus?.context;
+  if (ctx == null) return false;
+  return ctx.widget is EditableText ||
+      ctx.findAncestorWidgetOfExactType<EditableText>() != null;
+}
+
+/// Running run: one 40px strip with the mascot, what is happening in words,
+/// the command, a step bar sized by time, elapsed time, Peek and Stop. The
+/// latest failure sits above it in red with its last output lines.
 class LedgerStrip extends StatefulWidget {
   const LedgerStrip({super.key, required this.rows, required this.steps});
 
@@ -455,11 +533,213 @@ class LedgerStrip extends StatefulWidget {
 }
 
 class _LedgerStripState extends State<LedgerStrip> {
-  bool _peek = false;
+  final _link = LayerLink();
+  final _portal = OverlayPortalController();
+  Timer? _tick;
+  bool _pinned = false;
+  int? _dismissedFail;
+  bool _keys = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final want = LedgerLiveScope.of(context)?.onStop != null;
+    if (want != _keys) {
+      _keys = want;
+      want
+          ? HardwareKeyboard.instance.addHandler(_onKey)
+          : HardwareKeyboard.instance.removeHandler(_onKey);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    if (_keys) HardwareKeyboard.instance.removeHandler(_onKey);
+    super.dispose();
+  }
+
+  // Space peeks and Esc stops, only while no text field has focus.
+  bool _onKey(KeyEvent e) {
+    if (e is! KeyDownEvent || _typing() || !mounted) return false;
+    if (e.logicalKey == LogicalKeyboardKey.space) {
+      _togglePeek();
+      return true;
+    }
+    if (e.logicalKey == LogicalKeyboardKey.escape) {
+      if (_portal.isShowing) {
+        _portal.hide();
+        setState(() {});
+        return true;
+      }
+      final stop = LedgerLiveScope.of(context)?.onStop;
+      if (stop != null) {
+        stop();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void _togglePeek() {
+    if (_pinned) {
+      setState(() => _pinned = false);
+      return;
+    }
+    _portal.isShowing ? _portal.hide() : _portal.show();
+    setState(() {});
+  }
+
+  int get _now => DateTime.now().millisecondsSinceEpoch;
+
+  /// Seconds each step took, the running one up to now; equal when unstamped.
+  List<double> _weights() => [
+        for (final s in widget.steps)
+          s.startMs == null
+              ? 1.0
+              : (((s.endMs ?? _now) - s.startMs!) / 1000).clamp(0.4, 1e6),
+      ];
+
+  Duration? _elapsed() {
+    int? first;
+    for (final s in widget.steps) {
+      if (s.startMs != null) {
+        first = s.startMs;
+        break;
+      }
+    }
+    if (first == null) {
+      final t = DateTime.tryParse(LedgerLiveScope.of(context)?.startedAt ?? '');
+      if (t == null) return null;
+      first = t.millisecondsSinceEpoch;
+    }
+    final ms = _now - first;
+    return ms < 0 ? Duration.zero : Duration(milliseconds: ms);
+  }
+
+  Widget _bar({int? failAt}) {
+    final w = _weights();
+    final steps = widget.steps;
+    return SizedBox(
+      width: 132,
+      height: 6,
+      child: Row(children: [
+        for (var i = 0; i < steps.length; i++) ...[
+          if (i > 0) const SizedBox(width: 2),
+          Expanded(
+            flex: (w[i] * 10).round().clamp(1, 1 << 20),
+            child: Container(
+              decoration: BoxDecoration(
+                color: _stepFailed(steps[i]) || i == failAt
+                    ? AppColors.danger
+                    : steps[i].running
+                        ? AppColors.accent
+                        : AppColors.fg4.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        ],
+      ]),
+    );
+  }
+
+  Widget _key(String k) => Container(
+        margin: const EdgeInsets.only(left: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+        decoration: BoxDecoration(
+          color: AppColors.fg1.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(k, style: mono(10.5, color: AppColors.fg4)),
+      );
+
+  Widget _btn(String icon, String label, String key, VoidCallback? onTap,
+          {bool filled = false}) =>
+      HoverSurface(
+        radius: 8,
+        onTap: onTap,
+        child: Container(
+          height: 28,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: filled
+              ? BoxDecoration(
+                  color: AppColors.surface3,
+                  borderRadius: BorderRadius.circular(8))
+              : null,
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            AppIcon(icon, size: 13, color: AppColors.fg2),
+            const SizedBox(width: 6),
+            Text(label, style: sans(12, weight: W.label, color: AppColors.fg2)),
+            _key(key),
+          ]),
+        ),
+      );
+
+  Widget _peekPanel() => TapRegion(
+        groupId: _link,
+        onTapOutside: (_) {
+          _portal.hide();
+          setState(() {});
+        },
+        child: Container(
+          width: 470,
+          constraints: const BoxConstraints(maxHeight: 340),
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 6, 4),
+              child: Row(children: [
+                AppIcon('eye', size: 12, color: AppColors.fg4),
+                const SizedBox(width: 6),
+                Expanded(
+                    child: Text('Steps so far',
+                        style: sans(11.5, color: AppColors.fg4))),
+                HoverSurface(
+                  radius: 6,
+                  onTap: () {
+                    _portal.hide();
+                    setState(() => _pinned = true);
+                  },
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    child: Row(children: [
+                      AppIcon('pin', size: 12, color: AppColors.fg3),
+                      const SizedBox(width: 4),
+                      Text('Pin', style: sans(11.5, color: AppColors.fg3)),
+                    ]),
+                  ),
+                ),
+              ]),
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                reverse: true,
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
+                child: WorkSteps(rows: widget.rows, header: false),
+              ),
+            ),
+          ]),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
+    final scope = LedgerLiveScope.of(context);
     final steps = widget.steps;
     ToolStep? live;
     for (final s in steps.reversed) {
@@ -469,49 +749,150 @@ class _LedgerStripState extends State<LedgerStrip> {
       }
     }
     live ??= steps.isEmpty ? null : steps.last;
+    var failAt = -1;
+    for (var i = steps.length - 1; i >= 0; i--) {
+      if (!steps[i].running && _stepFailed(steps[i])) {
+        failAt = i;
+        break;
+      }
+    }
+    final fail = failAt >= 0 && failAt != _dismissedFail ? steps[failAt] : null;
     final label = live == null ? 'Working' : ledgerLiveLabel(live);
     final target = live == null ? '' : stepTarget(live);
+    final el = _elapsed();
+    final agent = scope?.agentId;
+    final peekOpen = _portal.isShowing || _pinned;
+
+    final strip = Container(
+      height: 40,
+      padding: const EdgeInsets.only(left: 10, right: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(children: [
+        SizedBox(
+          width: 18,
+          height: 18,
+          child: agent == null
+              ? Center(child: RunSpinner(size: 12, color: AppColors.accent))
+              : AgentMochi(agent,
+                  size: 18, state: AgentCharacterState.working),
+        ),
+        const SizedBox(width: 10),
+        Text(label,
+            maxLines: 1,
+            softWrap: false,
+            style: sans(13, weight: W.label, color: AppColors.fg1)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(target,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              style: mono(12, color: AppColors.fg3)),
+        ),
+        const SizedBox(width: 10),
+        if (steps.isNotEmpty) ...[_bar(), const SizedBox(width: 10)],
+        if (el != null) ...[
+          Text(_clock(el), style: mono(12, color: AppColors.fg3)),
+          const SizedBox(width: 8),
+        ],
+        CompositedTransformTarget(
+          link: _link,
+          child: OverlayPortal(
+            controller: _portal,
+            overlayChildBuilder: (_) => CompositedTransformFollower(
+              link: _link,
+              targetAnchor: Alignment.topRight,
+              followerAnchor: Alignment.bottomRight,
+              offset: const Offset(0, -8),
+              child: Align(
+                  alignment: Alignment.bottomRight,
+                  child: Material(
+                      type: MaterialType.transparency, child: _peekPanel())),
+            ),
+            child: TapRegion(
+              groupId: _link,
+              child: _btn('eye', 'Peek', 'Space', _togglePeek,
+                  filled: peekOpen),
+            ),
+          ),
+        ),
+        if (scope?.onStop != null) ...[
+          const SizedBox(width: 2),
+          _btn('stop', 'Stop', 'Esc', scope!.onStop),
+        ],
+      ]),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          height: 40,
-          padding: const EdgeInsets.only(left: 12, right: 6),
-          decoration: BoxDecoration(
-            color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(10),
+        if (fail != null) ...[
+          Container(
+            height: 40,
+            padding: const EdgeInsets.only(left: 10, right: 4),
+            decoration: BoxDecoration(
+              color: AppColors.danger.withValues(alpha: 0.13),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(children: [
+              AppIcon('alert-circle', size: 16, color: AppColors.danger),
+              const SizedBox(width: 10),
+              Text(_failLabel(fail),
+                  style: sans(13, weight: W.label, color: AppColors.danger)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                    [
+                      if (fail.exitCode != null) 'exit ${fail.exitCode}',
+                      stepTarget(fail),
+                    ].join(' · '),
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                    style: mono(12, color: AppColors.fg3)),
+              ),
+              const SizedBox(width: 10),
+              _bar(failAt: failAt),
+              if (fail.startMs != null && fail.endMs != null) ...[
+                const SizedBox(width: 10),
+                Text(
+                    _clock(Duration(
+                        milliseconds: fail.endMs! - fail.startMs!)),
+                    style: mono(12, color: AppColors.fg3)),
+              ],
+              const SizedBox(width: 6),
+              IconBtn('copy',
+                  size: 28,
+                  iconSize: 13,
+                  tooltip: 'Copy output',
+                  onTap: () => Clipboard.setData(
+                      ClipboardData(text: _tail(fail, n: 400).join('\n')))),
+              IconBtn('x',
+                  size: 28,
+                  iconSize: 13,
+                  tooltip: 'Dismiss',
+                  onTap: () => setState(() => _dismissedFail = failAt)),
+            ]),
           ),
-          child: Row(children: [
-            RunSpinner(size: 12, color: AppColors.accent),
-            const SizedBox(width: 10),
-            Text(label,
-                maxLines: 1,
-                softWrap: false,
-                style: sans(13, weight: W.label, color: AppColors.fg1)),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(target,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.ellipsis,
+          if (_tail(fail).isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.surface2,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(_tail(fail).join('\n'),
                   style: mono(12, color: AppColors.fg3)),
             ),
-            HoverSurface(
-              radius: 8,
-              onTap: () => setState(() => _peek = !_peek),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                child: Text('Peek',
-                    style: sans(12,
-                        weight: W.label,
-                        color: _peek ? AppColors.accent : AppColors.fg3)),
-              ),
-            ),
-          ]),
-        ),
+          const SizedBox(height: 6),
+        ],
+        strip,
         SpringExpand(
-          open: _peek,
+          open: _pinned,
           child: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: WorkSteps(rows: widget.rows, header: false),

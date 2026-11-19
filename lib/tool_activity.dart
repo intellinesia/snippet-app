@@ -63,11 +63,16 @@ List<Map<String, dynamic>> normalizeChanges(dynamic args) {
 }
 
 class ToolStep {
-  const ToolStep({required this.tool, this.args, this.result});
+  const ToolStep(
+      {required this.tool, this.args, this.result, this.startMs, this.endMs});
 
   final String tool;
   final dynamic args;
   final dynamic result;
+
+  /// Daemon write stamps of the call and its result, when known.
+  final int? startMs;
+  final int? endMs;
 
   bool get running => result == null;
 

@@ -42,6 +42,9 @@ final ValueNotifier<bool> sessionRailFloating = ValueNotifier<bool>(false);
 /// Set from outside the panel (the bar's goal icon) to open the goal editor
 /// in place once the panel is showing; the panel clears it.
 final ValueNotifier<bool> sessionGoalEditRequest = ValueNotifier<bool>(false);
+
+/// Asks the open panel to show a page ('usage'); cleared once taken.
+final ValueNotifier<String?> sessionRailPageRequest = ValueNotifier<String?>(null);
 bool _railPrefLoaded = false;
 
 Future<void> loadSessionRailPref() async {
@@ -275,6 +278,8 @@ class _SessionRailState extends State<SessionRail> {
     loadSessionRailPref();
     _load();
     sessionGoalEditRequest.addListener(_onGoalEditRequest);
+    sessionRailPageRequest.addListener(_onPageRequest);
+    _onPageRequest();
     WidgetsBinding.instance
         .addPostFrameCallback((_) => mounted ? _onGoalEditRequest() : null);
   }
@@ -282,10 +287,18 @@ class _SessionRailState extends State<SessionRail> {
   @override
   void dispose() {
     sessionGoalEditRequest.removeListener(_onGoalEditRequest);
+    sessionRailPageRequest.removeListener(_onPageRequest);
     _goalText.dispose();
     _wakeBrief.dispose();
     _wakeSched.dispose();
     super.dispose();
+  }
+
+  void _onPageRequest() {
+    final p = sessionRailPageRequest.value;
+    if (p == null || kMobile || widget.isMissionControl) return;
+    sessionRailPageRequest.value = null;
+    _go(p);
   }
 
   void _onGoalEditRequest() {

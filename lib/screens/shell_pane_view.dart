@@ -255,7 +255,9 @@ class ReadoutChip extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(
               compact ? S.of(9) : S.s12, 0, compact ? S.s6 : S.s8, 0),
           decoration: BoxDecoration(
-            color: active ? AppColors.surface2 : Colors.transparent,
+            color: active
+                ? (compact ? AppColors.surface3 : AppColors.surface2)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(compact ? R.of(7) : R.card),
           ),
           child: Row(
@@ -365,7 +367,9 @@ class PaneTabChip extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(
               compact ? S.of(9) : S.s12, 0, compact ? S.s6 : S.s8, 0),
           decoration: BoxDecoration(
-            color: active ? AppColors.surface2 : Colors.transparent,
+            color: active
+                ? (compact ? AppColors.surface3 : AppColors.surface2)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(compact ? R.of(7) : R.card),
           ),
           child: Row(

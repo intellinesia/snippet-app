@@ -1,3 +1,4 @@
+import '../chat/ledger_line.dart' show LedgerLiveScope;
 import '../diagnostics.dart';
 import 'session_header.dart';
 import 'package:snippet/ambient/controller.dart';
@@ -719,6 +720,15 @@ class _SessionScreenState extends State<SessionScreen>
       ValueNotifier<List<ActivityRun>>(const []);
   final ValueNotifier<ToolBatch?> _activityLive =
       ValueNotifier<ToolBatch?>(null);
+
+  /// Desktop: a live ledger strip carries the mascot and elapsed time.
+  bool _stripLive = false;
+
+  /// "/" menu: keep warm and hand-off targets, fetched on first use.
+  bool? _warmOn;
+  bool _warmAsked = false;
+  List<(String, String)>? _handoffAgents;
+  bool _agentsAsked = false;
   final Map<String, DateTime> _dockSeen = {};
   final Set<String> _openToolRows = {};
   bool _transcriptDirty = true;
@@ -1657,7 +1667,11 @@ class _SessionScreenState extends State<SessionScreen>
           ? Colors.transparent
           : AppColors.pageCanvas,
       resizeToAvoidBottomInset: false,
-      body: _chatBackdrop(SafeArea(
+      body: LedgerLiveScope(
+          agentId: _me?.displayAgentId,
+          startedAt: s?.turnStartedAt,
+          onStop: running ? () => _send({'kind': 'interrupt'}) : null,
+          child: _chatBackdrop(SafeArea(
         bottom: false,
         child: Stack(children: [
           Positioned.fill(
@@ -1913,10 +1927,10 @@ class _SessionScreenState extends State<SessionScreen>
                                                                   _me?.displayAgentId ??
                                                                       'snippet',
                                                               running: running,
-                                                              dockActive:
-                                                                  kMobile &&
-                                                                      _dockRun !=
-                                                                          null,
+                                                              dockActive: kMobile
+                                                                  ? _dockRun !=
+                                                                      null
+                                                                  : _stripLive,
                                                               compacting:
                                                                   s.compacting,
                                                               startedAt: s
@@ -2205,7 +2219,7 @@ class _SessionScreenState extends State<SessionScreen>
             ),
           ),
         ]),
-      )),
+      ))),
     );
     final guardedScaffold = DaemonScope(
       client: widget.client,

@@ -8,7 +8,7 @@ import '../widgets.dart';
 /// Desktop "/" command popover: pure parse/filter logic, a controller driven
 /// by the composer input, and the popover widget. Phone never mounts it.
 
-enum SlashCmd { goal, compact, fork, handoff, wakes, resume, settle }
+enum SlashCmd { goal, compact, fork, handoff, wakes, resume, settle, warm }
 
 /// A "/query" token found before the caret. [rest] only carries text for
 /// "/goal some text" so the goal can be set without the editor.
@@ -50,6 +50,7 @@ List<SlashItem> slashItems({
   required bool isMc,
   required String resumeMode,
   required bool settleOn,
+  bool? warmOn,
 }) =>
     [
       SlashItem(SlashCmd.goal, goalOngoing ? 'Cancel goal' : 'Set goal',
@@ -57,7 +58,8 @@ List<SlashItem> slashItems({
       const SlashItem(SlashCmd.compact, 'Compact history', '/compact', 'wrap'),
       const SlashItem(SlashCmd.fork, 'Fork from here', '/fork', 'git-fork'),
       if (!isMc)
-        const SlashItem(SlashCmd.handoff, 'Hand off', '/handoff', 'send'),
+        const SlashItem(SlashCmd.handoff, 'Hand off', '/handoff', 'send',
+            drill: true),
       if (isMc)
         const SlashItem(
             SlashCmd.wakes, 'Automated wakes', '/wakes', 'activity'),
@@ -70,6 +72,9 @@ List<SlashItem> slashItems({
           drill: true),
       SlashItem(SlashCmd.settle, 'Auto-settle', '/settle', 'clock',
           value: settleOn ? 'On' : 'Off', drill: true),
+      if (warmOn != null)
+        SlashItem(SlashCmd.warm, 'Keep warm', '/warm', 'zap',
+            value: warmOn ? 'On' : 'Off', drill: true),
     ];
 
 List<SlashItem> filterSlash(List<SlashItem> items, String query) {
@@ -95,6 +100,10 @@ class SlashEnv {
     required this.onCommand,
     required this.onResume,
     required this.onSettle,
+    this.warmOn,
+    this.onWarm,
+    this.handoffAgents,
+    this.onHandOff,
   });
   final bool goalOngoing;
   final bool isMc;
@@ -104,6 +113,14 @@ class SlashEnv {
   final void Function(SlashCmd cmd, String rest) onCommand;
   final void Function(String mode) onResume;
   final void Function(bool on) onSettle;
+
+  /// Keep warm, once known; null hides the command.
+  final bool? warmOn;
+  final void Function(bool on)? onWarm;
+
+  /// (id, name) of agents this session can pass to; null while loading.
+  final List<(String, String)>? handoffAgents;
+  final void Function(String id, String name)? onHandOff;
 }
 
 class SlashController extends ChangeNotifier {
@@ -132,12 +149,17 @@ class SlashController extends ChangeNotifier {
             goalOngoing: e.goalOngoing,
             isMc: e.isMc,
             resumeMode: e.resumeMode,
-            settleOn: e.settleOn),
+            settleOn: e.settleOn,
+            warmOn: e.warmOn),
         _q!.query);
   }
 
   /// Sub-list option count, including the leading "Back to commands" row.
-  int get _subCount => _sub == SlashCmd.resume ? 4 : 3;
+  int get _subCount => switch (_sub) {
+        SlashCmd.resume => 4,
+        SlashCmd.handoff => 1 + (env?.handoffAgents?.length ?? 0),
+        _ => 3,
+      };
 
   bool get isOpen =>
       !kMobile &&
@@ -227,10 +249,18 @@ class SlashController extends ChangeNotifier {
       _dismissed = true;
       _q = null;
       notifyListeners();
-      if (cmd == SlashCmd.resume) {
-        e.onResume(const ['ask', 'lean', 'full'][i - 1]);
-      } else {
-        e.onSettle(i == 1);
+      switch (cmd) {
+        case SlashCmd.resume:
+          e.onResume(const ['ask', 'lean', 'full'][i - 1]);
+        case SlashCmd.warm:
+          e.onWarm?.call(i == 1);
+        case SlashCmd.handoff:
+          final a = e.handoffAgents;
+          if (a != null && i - 1 < a.length) {
+            e.onHandOff?.call(a[i - 1].$1, a[i - 1].$2);
+          }
+        default:
+          e.onSettle(i == 1);
       }
       return;
     }
@@ -357,7 +387,13 @@ class SlashMenuView extends StatelessWidget {
       final isResume = sub == SlashCmd.resume;
       rows.add(Padding(
         padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
-        child: Text(isResume ? '/resume' : '/settle',
+        child: Text(
+            switch (sub) {
+              SlashCmd.resume => '/resume',
+              SlashCmd.warm => '/warm',
+              SlashCmd.handoff => '/handoff',
+              _ => '/settle',
+            },
             style: mono(11, color: AppColors.fg4)),
       ));
       rows.add(_Row(
@@ -368,8 +404,12 @@ class SlashMenuView extends StatelessWidget {
         onHover: () => c.hover(0),
         right: Text('Backspace', style: sans(11, color: AppColors.fg4)),
       ));
-      rows.add(_group(
-          isResume ? 'When this session is cold' : 'After 12 hours idle'));
+      rows.add(_group(switch (sub) {
+        SlashCmd.resume => 'When this session is cold',
+        SlashCmd.warm => 'Keep the cache warm while idle',
+        SlashCmd.handoff => 'Pass to · what you typed goes as the note',
+        _ => 'After 12 hours idle',
+      }));
       Widget check() => AppIcon('check', size: 14, color: AppColors.fg2);
       Widget opt(int i, String label, bool current,
               {String? meta, bool mono_ = false}) =>
@@ -391,7 +431,23 @@ class SlashMenuView extends StatelessWidget {
               ],
             ]),
           );
-      if (isResume) {
+      if (sub == SlashCmd.handoff) {
+        final a = e.handoffAgents;
+        if (a == null) {
+          rows.add(_group('Loading agents…'));
+        } else if (a.isEmpty) {
+          rows.add(_group('No other agent is available'));
+        } else {
+          for (var i = 0; i < a.length; i++) {
+            rows.add(opt(i + 1, a[i].$2, false));
+          }
+        }
+      } else if (sub == SlashCmd.warm) {
+        rows.addAll([
+          opt(1, 'On', e.warmOn == true),
+          opt(2, 'Off', e.warmOn != true),
+        ]);
+      } else if (isResume) {
         final t = e.resumeTokens;
         rows.addAll([
           opt(1, 'Ask each time', e.resumeMode == 'ask'),

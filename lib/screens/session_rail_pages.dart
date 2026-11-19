@@ -210,14 +210,11 @@ extension _RailPages on _SessionRailState {
                     ]),
               ),
             ),
-            ..._footer(),
           ]),
         )
       else ...[
         const SizedBox(height: 10),
         ..._places(),
-        const SizedBox(height: 18),
-        ..._footer(),
       ],
       const SizedBox(height: 6),
     ];
@@ -301,54 +298,13 @@ extension _RailPages on _SessionRailState {
       if (w.onLanes != null)
         _overviewRow(
             'git-branch',
-            'Side threads',
+            'Lanes',
             lanes.isEmpty
                 ? 'None yet'
                 : running > 0
                     ? '$running running · ${lanes.length}'
                     : '${lanes.length} finished',
             onTap: w.onLanes),
-    ];
-  }
-
-  List<Widget> _footer() {
-    final s = widget.state;
-    final ctx = _contextPct(s);
-    final model = [
-      widget.profileLabel,
-      if (ctx != null) '${ctx.round()}% context',
-    ].join(' · ');
-    return [
-      if (s != null)
-        InkWell(
-          onTap: () => _go('usage'),
-          borderRadius: BorderRadius.circular(R.of(8)),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-            child: Row(children: [
-              Expanded(
-                  child: Text(model,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: sans(12, color: AppColors.fg4))),
-              AppIcon('chevron-right', size: 12, color: AppColors.fg4),
-            ]),
-          ),
-        ),
-      if (_warm != null)
-        InkWell(
-          onTap: () => _setWarm(!_warm!),
-          borderRadius: BorderRadius.circular(R.of(8)),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 4, 0, 4),
-            child: Row(children: [
-              Expanded(
-                  child:
-                      Text('Keep warm', style: sans(13, color: AppColors.fg3))),
-              SettingsSwitch(value: _warm!, onChanged: _setWarm),
-            ]),
-          ),
-        ),
     ];
   }
 

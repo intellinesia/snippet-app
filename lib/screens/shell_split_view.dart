@@ -275,10 +275,14 @@ class _ShellSplitViewState extends State<ShellSplitView> {
             ]),
           ),
         Expanded(
-          child: _panel(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            if (widget.mainHeader != null) widget.mainHeader!,
+          // Window tabs sit on the window; the card below holds the panes.
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            if (widget.mainHeader != null)
+              Padding(
+                  padding: EdgeInsets.only(top: kMobile ? 0 : 8),
+                  child: widget.mainHeader!),
             Expanded(
-              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              child: _panel(top: widget.mainHeader == null ? 8 : 0, Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 if (showLeft)
                   Expanded(
                     child: _dropOn(
@@ -307,18 +311,18 @@ class _ShellSplitViewState extends State<ShellSplitView> {
                     ),
                   ),
                 ],
-              ]),
+              ])),
             ),
-          ])),
+          ]),
         ),
       ]),
     );
   }
 
-  Widget _panel(Widget child) {
+  Widget _panel(Widget child, {double top = 8}) {
     if (kMobile) return child;
     return Padding(
-      padding: EdgeInsets.fromLTRB(widget.sidebarHidden ? 8 : 0, 8, 8, 8),
+      padding: EdgeInsets.fromLTRB(widget.sidebarHidden ? 8 : 0, top, 8, 8),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: AppColors.panelBg,

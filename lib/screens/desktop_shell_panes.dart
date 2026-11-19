@@ -687,7 +687,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             onTap: () => act('pull_requests')),
         PaneAddEntry(
             icon: 'git-branch',
-            label: 'Side threads',
+            label: 'Lanes',
             meta: lanes > 0 ? '$lanes running' : null,
             chevron: true,
             onTap: () => act('lanes')),

@@ -497,13 +497,17 @@ class DenseToolRow extends StatefulWidget {
   final dynamic result; // null while running
   final bool? open;
   final ValueChanged<bool>? onOpenChanged;
+  final int? startMs;
+  final int? endMs;
   const DenseToolRow(
       {super.key,
       required this.tool,
       this.args,
       this.result,
       this.open,
-      this.onOpenChanged});
+      this.onOpenChanged,
+      this.startMs,
+      this.endMs});
 
   bool get pending => result == null;
 
@@ -907,7 +911,12 @@ class ActivityFold extends StatelessWidget {
   Widget build(BuildContext context) {
     final steps = [
       for (final r in rows.whereType<DenseToolRow>())
-        ToolStep(tool: r.tool, args: r.args, result: r.result),
+        ToolStep(
+            tool: r.tool,
+            args: r.args,
+            result: r.result,
+            startMs: r.startMs,
+            endMs: r.endMs),
     ];
     if (!kMobile) {
       final dense = rows.whereType<DenseToolRow>().toList();

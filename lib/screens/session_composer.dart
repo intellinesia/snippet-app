@@ -653,6 +653,45 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     );
   }
 
+  /// Desktop: how full the context is, beside the model; opens usage.
+  Widget _contextRing() {
+    final s = _state;
+    final win = s?.contextWindow ?? 0;
+    final used = s?.lastPromptTokens ?? 0;
+    if (win <= 0 || used <= 0) return const SizedBox.shrink();
+    final f = (used / win).clamp(0.0, 1.0);
+    String k(int v) => v >= 1000 ? '${(v / 1000).round()}k' : '$v';
+    final color = f > 0.9
+        ? AppColors.danger
+        : f > 0.8
+            ? AppColors.run
+            : AppColors.fg3;
+    return Tooltip(
+      message: '${(f * 100).round()}% of ${k(win)} context',
+      child: HoverSurface(
+        radius: 6,
+        onTap: () {
+          sessionRailPageRequest.value = 'usage';
+          if (sessionRailCollapsed.value) setSessionRailCollapsed(false);
+          sessionRailFloating.value = true;
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(
+              value: f,
+              strokeWidth: 2,
+              color: color,
+              backgroundColor: AppColors.fg1.withValues(alpha: 0.12),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _modelChip(bool compact) => Builder(
       builder: (chipCtx) => _composerChip(
             icon: _modelProvider == null ? 'cpu' : 'provider:$_modelProvider',
@@ -681,6 +720,35 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     }
   }
 
+  bool? _slashWarm() {
+    if (!_warmAsked) {
+      _warmAsked = true;
+      widget.client.keepWarmFor(widget.sessionId).then((e) {
+        if (mounted) _setState(() => _warmOn = e?.enabled ?? false);
+      }).catchError((_) {});
+    }
+    return _warmOn;
+  }
+
+  List<(String, String)>? _slashAgents() {
+    if (!_agentsAsked) {
+      _agentsAsked = true;
+      widget.client.coordinationAgents().then((all) {
+        final owner = _me?.ownerAgentId ?? _me?.displayAgentId ?? '';
+        if (mounted) {
+          _setState(() => _handoffAgents = [
+                for (final a in all)
+                  if (a.available && !a.isMissionControl && a.id != owner)
+                    (a.id, a.displayName),
+              ]);
+        }
+      }).catchError((_) {
+        if (mounted) _setState(() => _handoffAgents = const []);
+      });
+    }
+    return _handoffAgents;
+  }
+
   /// Desktop "/" menu state lives outside the screen state, keyed by it.
   SlashController get _slash {
     final c = _slashControllers[this] ??= SlashController(_input);
@@ -690,6 +758,32 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       resumeMode: _resumeMode,
       settleOn: !_keepAwake,
       resumeTokens: (_cold?['resume_tokens'] as num?)?.toInt(),
+      warmOn: _slashWarm(),
+      onWarm: (on) async {
+        final before = _warmOn;
+        _setState(() => _warmOn = on);
+        _inputFocus.requestFocus();
+        try {
+          await widget.client.setKeepWarm(widget.sessionId, enabled: on);
+        } catch (_) {
+          if (mounted) _setState(() => _warmOn = before);
+        }
+      },
+      handoffAgents: _isMissionControl ? null : _slashAgents(),
+      onHandOff: (id, name) async {
+        final note = _input.text.trim();
+        try {
+          final res = await widget.client
+              .handOffSession(widget.sessionId, id, note: note);
+          if (!mounted) return;
+          _input.clear();
+          _toast(res['pending'] == true
+              ? 'Hands to $name after this turn'
+              : 'Handed to $name');
+        } catch (e) {
+          if (mounted) _toast('Hand off failed: $e');
+        }
+      },
       onCommand: (cmd, rest) {
         switch (cmd) {
           case SlashCmd.goal:
@@ -698,8 +792,6 @@ extension _SessionScreenComposerExt on _SessionScreenState {
             _performMacAction('compact');
           case SlashCmd.fork:
             _performMacAction('fork');
-          case SlashCmd.handoff:
-            _performMacAction('handoff');
           case SlashCmd.wakes:
             _performMacAction('autonomy');
           default:
@@ -875,7 +967,12 @@ extension _SessionScreenComposerExt on _SessionScreenState {
         // The phone tray carries the model; the desktop pill keeps it inline.
         trailing: !(kMobile && _showsQuickActions) &&
                 _inboxAgentId(widget.sessionId) == null
-            ? _modelChip
+            ? (kMobile
+                ? _modelChip
+                : (compact) => Row(mainAxisSize: MainAxisSize.min, children: [
+                      _modelChip(compact),
+                      _contextRing(),
+                    ]))
             : null,
         send: ValueListenableBuilder<TextEditingValue>(
           valueListenable: _input,

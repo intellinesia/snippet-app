@@ -117,7 +117,10 @@ class _StripSquareButtonState extends State<StripSquareButton> {
               margin: EdgeInsets.symmetric(horizontal: S.s2),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: _hover ? AppColors.surface3 : AppColors.surface2,
+                color: _hover
+                    ? Color.alphaBlend(
+                        AppColors.fg1.withValues(alpha: 0.06), AppColors.surface3)
+                    : AppColors.surface3,
                 borderRadius: BorderRadius.circular(R.of(7)),
               ),
               child: AppIcon(widget.icon,
@@ -141,7 +144,7 @@ class StripChip extends StatelessWidget {
         margin: EdgeInsets.symmetric(horizontal: S.s2),
         padding: EdgeInsets.fromLTRB(S.of(9), 0, S.of(10), 0),
         decoration: BoxDecoration(
-          color: AppColors.surface2,
+          color: AppColors.surface3,
           borderRadius: BorderRadius.circular(R.of(7)),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [

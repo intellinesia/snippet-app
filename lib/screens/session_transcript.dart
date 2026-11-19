@@ -49,7 +49,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
         dynamic args,
         dynamic result,
         int? resultAt,
-        bool clipped = false}) {
+        bool clipped = false,
+        int? startMs,
+        int? endMs}) {
       final open = _openToolRows.contains(key);
       if (open && clipped && resultAt != null) _requestFullEvent(resultAt);
       return DenseToolRow(
@@ -57,6 +59,8 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
         tool: tool,
         args: args,
         result: result,
+        startMs: startMs,
+        endMs: endMs,
         open: open,
         onOpenChanged: (next) {
           if (!mounted) return;
@@ -80,7 +84,10 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       if (p != null) {
         final name = _s(p['tool_name']);
         final k = pendingKey ?? fallbackKey;
-        addToolRow(toolRow(k, tool: name, args: p['arguments']), k);
+        addToolRow(
+            toolRow(k,
+                tool: name, args: p['arguments'], startMs: _eventMs(p)),
+            k);
         pending = null;
         pendingKey = null;
       }
@@ -143,7 +150,12 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       if (!kMobile) {
         final steps = [
           for (final w in run.whereType<DenseToolRow>())
-            ToolStep(tool: w.tool, args: w.args, result: w.result),
+            ToolStep(
+                tool: w.tool,
+                args: w.args,
+                result: w.result,
+                startMs: w.startMs,
+                endMs: w.endMs),
         ];
         if (steps.isNotEmpty) {
           if (running) {
@@ -261,7 +273,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                     args: e['arguments'],
                     result: r['result'],
                     resultAt: _transcriptStart + paired,
-                    clipped: r['result_clipped'] == true),
+                    clipped: r['result_clipped'] == true,
+                    startMs: _eventMs(e),
+                    endMs: _eventMs(r)),
                 abs);
             break;
           }
@@ -279,7 +293,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                       args: p['arguments'],
                       result: e['result'],
                       resultAt: _transcriptStart + idx,
-                      clipped: e['result_clipped'] == true),
+                      clipped: e['result_clipped'] == true,
+                      startMs: _eventMs(p),
+                      endMs: _eventMs(e)),
                   k);
               pending = null;
               pendingKey = null;
@@ -825,6 +841,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
     // remain invisible until the next chat message.
     curIdx = events.length;
     endTools('transcript-tools-tail');
+    _stripLive = activityLive != null;
     // Coordination rows go LAST: they are the most recent thing to happen to
     // this session's agent, and they read as a live footer under the work.
     for (var i = 0; i < _agentEvents.length; i++) {
