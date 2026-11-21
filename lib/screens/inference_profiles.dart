@@ -442,38 +442,34 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
                 profiles.where((p) => p.active).firstOrNull ??
                 profiles.firstOrNull);
         return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Container(
-            width: 320,
-            decoration: BoxDecoration(
-              border: Border(right: BorderSide(color: AppColors.line)),
-            ),
+          SizedBox(
+            width: 300,
             child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(S.s12, S.s24, S.s12, S.s24),
+              padding: EdgeInsets.fromLTRB(0, S.s24, 0, S.s24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
-                    padding: EdgeInsets.fromLTRB(S.s12, 0, S.s4, S.s12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    padding: EdgeInsets.fromLTRB(S.s12, 0, 0, S.s12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Profiles',
-                                  style: sans(18,
-                                      weight: W.title, color: AppColors.fg1)),
-                              SizedBox(height: S.s2),
-                              Text(
-                                  'Models and credentials for chats and background work.',
-                                  style: sans(13, color: AppColors.fg3)),
-                            ],
+                        Row(children: [
+                          Expanded(
+                            child: Text('Profiles',
+                                style: sans(16,
+                                    weight: W.title, color: AppColors.fg1)),
                           ),
-                        ),
-                        SizedBox(width: S.s8),
-                        Btn('Add profile',
-                            icon: 'plus', small: true, onTap: () => _edit(null)),
+                          IconBtn('plus',
+                              size: 28,
+                              iconSize: 15,
+                              tooltip: 'Add profile',
+                              onTap: () => _edit(null)),
+                        ]),
+                        SizedBox(height: S.s2),
+                        Text(
+                            'Models and credentials for chats and background work.',
+                            style: sans(12, color: AppColors.fg3)),
                       ],
                     ),
                   ),
@@ -501,6 +497,7 @@ class InferenceProfilesScreenState extends State<InferenceProfilesScreen>
               ),
             ),
           ),
+          SizedBox(width: S.s24),
           Expanded(
             child: selected == null && !_deskAdding
                 ? Center(
@@ -603,7 +600,7 @@ class _DeskProfileRow extends StatelessWidget {
                     Text('${p.provider} · ${p.model}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: codeMono(11, color: AppColors.fg3)),
+                        style: sans(12, color: AppColors.fg3)),
                   ],
                 ),
               ),

@@ -741,7 +741,10 @@ class SettingsSwitch extends StatelessWidget {
               height: knob,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: value ? Grouped.row : AppColors.fg1,
+                // Desktop rows are translucent; the knob must be opaque.
+                color: value
+                    ? (kMobile ? Grouped.row : AppColors.bg)
+                    : AppColors.fg1,
               ),
             ),
           ),
