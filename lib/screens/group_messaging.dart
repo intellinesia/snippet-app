@@ -32,6 +32,7 @@ import '../chat/group_notice.dart';
 import '../chat/stage_bar.dart';
 import '../chat/stage_header.dart';
 import '../chat/run_head.dart';
+import '../chat/chat_empty_intro.dart';
 import 'agent_card.dart'
     show AgentRowShell, LitTile, TeamRow, agentRowAgo, agentRowTime;
 import 'agent_questions_card.dart' show questionAnswerSystemLine;
@@ -1566,6 +1567,31 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           e
     ];
     final reactionsByTarget = groupMessageReactions(_events);
+    if (visible.isEmpty && !kMobile) {
+      final ids = _group.agentIds;
+      final names = [for (final id in ids) _agentName(id)];
+      final who = names.length <= 1
+          ? names.join()
+          : '${names.take(names.length - 1).join(', ')} and ${names.last}';
+      final lead = _group.lead;
+      return LayoutBuilder(
+        builder: (_, c) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: c.maxHeight,
+            child: ChatEmptyIntro(
+              ids: ids,
+              name: _title,
+              purpose: [
+                if (who.isNotEmpty) '$who.',
+                if (lead != null && lead.isNotEmpty) '${_agentName(lead)} leads.',
+              ].join(' '),
+              note: 'Everyone in the group sees what you send',
+            ),
+          ),
+        ),
+      );
+    }
     if (visible.isEmpty) {
       return PullToRefresh(
         onRefresh: () => _load(silent: true),

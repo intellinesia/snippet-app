@@ -39,6 +39,7 @@ import 'agent_questions_card.dart';
 import 'agent_records.dart';
 import 'agent_thread_cards.dart';
 import '../chat/run_head.dart';
+import '../chat/chat_empty_intro.dart';
 import 'agent_transcript_head.dart';
 import 'agent_view_switcher.dart';
 import '../chat_scene.dart' show SceneBackdrop;
@@ -1286,6 +1287,25 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       for (final e in _events)
         if (!isReactionEvent(e) && !_isAck(e)) e
     ];
+    if (visible.isEmpty && !kMobile && !_showHead) {
+      final caps = _agent?.capabilities ?? const <String>[];
+      return LayoutBuilder(
+        builder: (_, c) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: c.maxHeight,
+            child: ChatEmptyIntro(
+              ids: [widget.agentId],
+              name: widget.agentName,
+              purpose: caps.isNotEmpty
+                  ? caps.map((x) => x.replaceAll('-', ' ')).join(', ')
+                  : (widget.subtitle ?? '').trim(),
+              note: 'No messages yet',
+            ),
+          ),
+        ),
+      );
+    }
     if (visible.isEmpty) {
       return PullToRefresh(
         onRefresh: () => _load(silent: true),
