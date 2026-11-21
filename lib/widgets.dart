@@ -388,7 +388,11 @@ MarkdownStyleSheet agentMarkdownStyle(BuildContext context) {
     return _cachedAgentMarkdownStyle!;
   }
   _cachedAgentMarkdownThemeIndex = themeIndex;
-  final prose = TS.reading();
+  final reading = TS.reading();
+  // Desktop transcript: 13 on a 1.5 line, per the reference session.
+  final prose = kMobile
+      ? reading
+      : reading.copyWith(fontSize: reading.fontSize! * 13 / 14, height: 1.5);
   _cachedAgentMarkdownStyle = base.copyWith(
     p: prose,
     strong: prose.copyWith(fontWeight: weightFor(W.strong)),
