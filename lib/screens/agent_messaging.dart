@@ -38,6 +38,7 @@ import '../chat/decided_card.dart';
 import 'agent_questions_card.dart';
 import 'agent_records.dart';
 import 'agent_thread_cards.dart';
+import '../chat/run_head.dart';
 import 'agent_transcript_head.dart';
 import 'agent_view_switcher.dart';
 import '../chat_scene.dart' show SceneBackdrop;
@@ -1327,6 +1328,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
               showStamp: stamps[at],
               showOrigin: origins[at],
               showDelivery: at == lastHumanIdx,
+              head: !kMobile && first,
             ),
           );
           return Padding(
@@ -1434,7 +1436,14 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     );
   }
 
-  Widget _typingRow() => ChatBubbleRow(
+  Widget _typingRow() => !kMobile
+      ? Align(
+          key: const Key('agentTypingRow'),
+          alignment: Alignment.centerLeft,
+          child: ChatRunHead(
+              agentId: widget.agentId, name: widget.agentName, working: true),
+        )
+      : ChatBubbleRow(
         key: const Key('agentTypingRow'),
         mine: false,
         child: ChatBubble(
@@ -1477,6 +1486,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     required bool showStamp,
     required bool showOrigin,
     required bool showDelivery,
+    bool head = false,
   }) {
     // The local human is the only `human` actor, so everything else is the peer.
     final mine = e.actorKind == 'human';
@@ -1668,6 +1678,15 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                   : 'from a work session',
               align: Alignment.centerLeft,
             ),
+          if (head && !mine)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ChatRunHead(
+                agentId: widget.agentId,
+                name: widget.agentName,
+                time: at == null ? null : _clockLabel(at),
+              ),
+            ),
           kMobile && _sendInIds.contains(flightId)
               // Faint while pending; solid once the server has it.
               ? Opacity(
@@ -1784,7 +1803,10 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       provider: _providers[model],
       meta: meta,
       actions: [
-        _HeadButton(label: 'View agent', onTap: widget.onDeskInfo ?? _openInfo),
+        // A tab has the window bar's panel toggle instead.
+        if (!widget.embedded)
+          _HeadButton(
+              label: 'View agent', onTap: widget.onDeskInfo ?? _openInfo),
         // In a tab the window bar already switches Chat and Work.
         if (!_noChrome)
           Builder(

@@ -789,7 +789,11 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               'needs_you',
             _ => null,
           };
-          if (status == null) return const SizedBox.shrink();
+          if (status == null) {
+            return p != null && p.state != 'waiting'
+                ? _barWorking('working')
+                : const SizedBox.shrink();
+          }
           return Padding(
             padding: EdgeInsets.only(right: S.s8),
             child: SessionStatusPill(
@@ -814,17 +818,42 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     ]);
   }
 
-  /// Group tabs: the member count and the panel toggle, in the window bar.
+  /// Live work in the window bar: the bars and one short line.
+  Widget _barWorking(String text) => Padding(
+        padding: EdgeInsets.only(right: S.s8),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          const WorkingBars(),
+          SizedBox(width: S.s6),
+          Text(text, style: sans(12, color: AppColors.fg3)),
+        ]),
+      );
+
+  /// Group tabs: who is working and the panel toggle, in the window bar.
   Widget? _groupBarTools(_ShellTab? t) {
     final r = t?.readout?.request;
     if (r == null || !r.id.startsWith('group:') || r.sidePanel == null) {
       return null;
     }
-    final n = (r.iconAgentIds?.length ?? 0) + 1;
+    final ids = r.iconAgentIds ?? const <String>[];
+    final client = t!.client;
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      Padding(
-        padding: EdgeInsets.only(right: S.s8),
-        child: Text('$n members', style: sans(12, color: AppColors.fg3)),
+      ListenableBuilder(
+        listenable: client.presence,
+        builder: (_, __) {
+          final busy = ids.where((id) {
+            final p = client.presence.presenceForAgentId(id);
+            return p != null && p.state != 'waiting';
+          }).firstOrNull;
+          if (busy == null) return const SizedBox.shrink();
+          final a = client
+              .cachedCoordinationAgents()
+              ?.where((x) => x.id == busy)
+              .firstOrNull;
+          final name = (a?.displayName.trim().isNotEmpty ?? false)
+              ? a!.displayName.trim()
+              : busy;
+          return _barWorking('$name is working');
+        },
       ),
       IconBtn('sidebar',
           size: 30,

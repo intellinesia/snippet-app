@@ -31,6 +31,8 @@ import '../chat/chat_style.dart';
 import '../chat/group_notice.dart';
 import '../chat/stage_bar.dart';
 import '../chat/stage_header.dart';
+import '../chat/run_head.dart';
+import 'agent_transcript_head.dart';
 import 'agent_card.dart'
     show AgentRowShell, LitTile, TeamRow, agentRowAgo, agentRowTime;
 import 'agent_questions_card.dart' show questionAnswerSystemLine;
@@ -1214,6 +1216,38 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   String _agentName(String id) => groupMemberName(
       GroupMember.fromJson({'kind': 'agent', 'id': id}), _agents);
 
+  /// The member a working line shows: typing first, then the first replying.
+  String? _typingAgentId() {
+    final store = widget.client.presence;
+    for (final id in _group.agentIds) {
+      final p = store.presenceForAgentId(id);
+      if (p != null && (p.state == 'typing' || p.state == 'thinking')) return id;
+    }
+    return _group.replying.firstOrNull;
+  }
+
+  /// Desktop: the group's identity at the start of its history.
+  Widget _intro() {
+    final ids = _group.agentIds;
+    final names = [for (final id in ids) _agentName(id)];
+    final who = names.length <= 2
+        ? names.join(' and ')
+        : '${names.take(2).join(', ')} and ${names.length - 2} more';
+    final lead = _group.lead;
+    return Padding(
+      padding: EdgeInsets.only(bottom: S.s12),
+      child: AgentTranscriptHead(
+        agentId: ids.isEmpty ? '' : ids.first,
+        agentIds: ids,
+        name: _title,
+        purpose: [
+          if (who.isNotEmpty) who,
+          if (lead != null && lead.isNotEmpty) '${_agentName(lead)} leads',
+        ].join(' \u00b7 '),
+      ),
+    );
+  }
+
   String? _typingStatus() {
     final store = widget.client.presence;
     for (final id in _group.agentIds) {
@@ -1598,8 +1632,27 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       reverse: true,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(S.s16, topPad, S.s16, S.s16),
-      itemCount: visible.length + (typing ? 1 : 0),
+      itemCount: visible.length + (typing ? 1 : 0) + (kMobile ? 0 : 1),
       itemBuilder: (_, raw) {
+        if (typing && raw == 0 && !kMobile) {
+          final id = _typingAgentId();
+          return _wideCap(Padding(
+            padding: EdgeInsets.only(top: ChatColors.groupGap),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: id == null
+                  ? const WorkingBars()
+                  : ChatRunHead(
+                      agentId: id,
+                      name: _agentName(id),
+                      lead: id == _group.lead,
+                      working: true),
+            ),
+          ));
+        }
+        if (!kMobile && raw == visible.length + (typing ? 1 : 0)) {
+          return _wideCap(_intro());
+        }
         if (typing && raw == 0) {
           return _wideCap(Padding(
             padding: EdgeInsets.only(
@@ -1741,36 +1794,18 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     }
   }
 
-  static const double _deskIndent = 28;
 
-  Widget _indented({required bool mine, required Widget child}) =>
-      kMobile || mine
-          ? child
-          : Padding(padding: EdgeInsets.only(left: _deskIndent), child: child);
+  // Desktop runs sit flush under their head, as in the agent chat.
+  Widget _indented({required bool mine, required Widget child}) => child;
 
   /// Desktop: who spoke, at the top of their run.
   Widget _runHeader(CoordinationEvent e) {
     final at = _eventTime(e);
-    return Padding(
-      padding: EdgeInsets.only(bottom: S.s6),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        AgentDisc(id: e.actorId, size: 20),
-        SizedBox(width: S.s8),
-        Flexible(
-          child: Text(_agentName(e.actorId),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: sans(13, weight: FontWeight.w600, color: AppColors.fg1)),
-        ),
-        if (e.actorId == _group.lead) ...[
-          SizedBox(width: S.s6),
-          Text('lead', style: sans(11, color: AppColors.fg4)),
-        ],
-        if (at != null) ...[
-          SizedBox(width: S.s8),
-          Text(_dayTimeStamp(at).$2, style: mono(11, color: AppColors.fg4)),
-        ],
-      ]),
+    return ChatRunHead(
+      agentId: e.actorId,
+      name: _agentName(e.actorId),
+      time: at == null ? null : _dayTimeStamp(at).$2,
+      lead: e.actorId == _group.lead,
     );
   }
 
@@ -1779,7 +1814,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       {required bool mine}) {
     if (reactions.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: EdgeInsets.only(top: S.s6, left: mine ? 0 : _deskIndent),
+      padding: EdgeInsets.only(top: S.s6),
       child: Align(
         alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
         child: Wrap(spacing: S.s4, runSpacing: S.s4, children: [
@@ -1858,18 +1893,30 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     final mine = e.actorKind == 'human';
     final choices = eventChoices(e);
     final chosen = choices.isEmpty ? null : chosenReplyFor(e, _events);
+    final body = ChatMessageBody(
+      client: widget.client,
+      body: e.body,
+      mine: mine,
+      markdown: (text) => groupMarkdownWithMentions(text, _mentionIds),
+    );
+    // Desktop matches the agent chat: plain agent text, your words in a flat card.
     Widget buildContent() =>
         card ??
-        ChatBubble(
-          mine: mine,
-          tail: run.last,
-          child: ChatMessageBody(
-            client: widget.client,
-            body: e.body,
-            mine: mine,
-            markdown: (text) => groupMarkdownWithMentions(text, _mentionIds),
-          ),
-        );
+        (kMobile
+            ? ChatBubble(mine: mine, tail: run.last, child: body)
+            : mine
+                ? ConstrainedBox(
+                    constraints: BoxConstraints(
+                        maxWidth: MediaQuery.sizeOf(context).width * 0.5),
+                    child: ChatBubble(
+                        mine: true,
+                        flat: true,
+                        color: AppColors.surface2,
+                        child: body),
+                  )
+                : Padding(
+                    padding: EdgeInsets.symmetric(vertical: S.s2), child: body));
+    final mineAt = !kMobile && mine && run.last ? _eventTime(e) : null;
     return Padding(
       padding: EdgeInsets.only(top: topGap),
       child: Column(
@@ -1924,6 +1971,12 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                             ),
                     ),
                   ))),
+          if (mineAt != null)
+            Padding(
+              padding: EdgeInsets.only(top: S.s4),
+              child: Text(_dayTimeStamp(mineAt).$2,
+                  style: sans(11, color: AppColors.fg4)),
+            ),
           if (!kMobile) _deskReactions(e, reactions, mine: mine),
           if (choices.isNotEmpty)
             LayoutBuilder(
@@ -1938,7 +1991,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                         ? 0
                         : kMobile
                             ? ChatBubbleRow.avatarSize + S.s6 + S.of(5)
-                            : _deskIndent,
+                            : 0,
                     right: mine ? S.of(5) : 0,
                   ),
                   child: ConstrainedBox(
