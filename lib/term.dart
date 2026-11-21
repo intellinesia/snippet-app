@@ -514,7 +514,6 @@ class _SessionTermViewState extends State<SessionTermView> {
             ],
           ]),
         ),
-        if (_lastC > 0 && _lastR > 0) Text('$_lastC × $_lastR', style: style),
       ]),
     );
   }

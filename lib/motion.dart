@@ -129,9 +129,12 @@ class SwapText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AnimatedSwitcher(
-        duration: Motion.fast,
-        switchInCurve: Motion.enter,
-        switchOutCurve: Motion.exit,
+        duration: Motion.base,
+        // Out first, then in: a cross-fade stacks two half-visible words.
+        transitionBuilder: (child, a) => FadeTransition(
+            opacity: CurvedAnimation(
+                parent: a, curve: const Interval(0.5, 1, curve: Curves.easeOut)),
+            child: child),
         layoutBuilder: (current, previous) => Stack(
           alignment: AlignmentDirectional.centerStart,
           children: [...previous, if (current != null) current],
