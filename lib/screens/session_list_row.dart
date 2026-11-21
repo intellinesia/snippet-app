@@ -633,11 +633,11 @@ class SessionListRow extends StatelessWidget {
       // down the list; the bouncing agent already reads as working.
       final folder =
           s.projectFolder.trim().isEmpty ? '' : projectLabel(s);
-      final metaStyle = sans(11.5, color: AppColors.fg4);
+      final metaStyle = sans(12, color: AppColors.fg4);
       Widget metaField(String icon, String text) => text.isEmpty
           ? const SizedBox.shrink()
           : Row(mainAxisSize: MainAxisSize.min, children: [
-              AppIcon(icon, size: 11, color: AppColors.fg4),
+              AppIcon(icon, size: 12, color: AppColors.fg4),
               const SizedBox(width: 4),
               Flexible(
                 child: Text(text,
@@ -650,7 +650,7 @@ class SessionListRow extends StatelessWidget {
       // Natural width of an icon + text field, to share space by priority.
       double fieldWidth(String text) => text.isEmpty
           ? 0
-          : 16 +
+          : 17 +
               (TextPainter(
                       text: TextSpan(text: text, style: metaStyle),
                       maxLines: 1,
@@ -675,13 +675,13 @@ class SessionListRow extends StatelessWidget {
           Text(title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: sans(13,
-                  weight: FontWeight.w500,
+              // The reference's 14px regular title, grey until selected.
+              style: sans(14,
                   color: dim
-                      ? AppColors.fg3
+                      ? AppColors.fg4
                       : (selected || hover)
                           ? AppColors.fg1
-                          : AppColors.fg2));
+                          : AppColors.fg3));
       final machineName = (machine ?? '').trim();
       final showMeta = renameField == null &&
           (provider != null ||
@@ -718,7 +718,7 @@ class SessionListRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.fade,
                     softWrap: false,
-                    style: sans(11.5, color: timeColor, tabular: true)),
+                    style: sans(12, color: timeColor, tabular: true)),
               ),
               if (hover && !selecting)
                 Row(mainAxisSize: MainAxisSize.min, children: [

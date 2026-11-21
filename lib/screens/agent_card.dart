@@ -665,6 +665,9 @@ class _AgentRowShellState extends State<AgentRowShell> {
             : Colors.transparent;
     final ring = Color.alphaBlend(fill, AppColors.windowBg);
     final still = reduceMotion(context);
+    final tiled = !kMobile &&
+        (widget.avatarFor != null ||
+            (widget.tint != null && !widget.wideAvatar));
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
@@ -679,8 +682,8 @@ class _AgentRowShellState extends State<AgentRowShell> {
           child: AnimatedContainer(
             duration: still ? Duration.zero : const Duration(milliseconds: 150),
             curve: const Cubic(0.23, 1, 0.32, 1),
-            padding:
-                EdgeInsets.symmetric(horizontal: 8, vertical: kMobile ? 6 : 4),
+            padding: EdgeInsets.symmetric(
+                horizontal: 8, vertical: kMobile ? 6 : 5.5),
             decoration: BoxDecoration(
                 color: fill, borderRadius: BorderRadius.circular(R.of(8))),
             child: Opacity(
@@ -688,20 +691,16 @@ class _AgentRowShellState extends State<AgentRowShell> {
               // One line: avatar, name and last-message time; the avatar dot
               // and the trailing mark carry the state.
               child: Row(children: [
-                // 28 px slot, the session avatar's width, so agent names and
-                // session titles start at one x.
+                // Lit tiles: a 20px slot flush with the header, 10px to the
+                // name, as in the reference; plates keep the 28px slot.
                 SizedBox(
-                  width: 28,
-                  height: 22,
+                  width: tiled ? 20 : 28,
+                  height: tiled ? 20 : 22,
                   child: Stack(clipBehavior: Clip.none, children: [
                     if (widget.avatarFor != null)
                       Positioned.fill(child: widget.avatarFor!(ring))
                     else if (widget.tint != null && !widget.wideAvatar)
-                      Positioned(
-                          left: 3,
-                          top: 0,
-                          width: 22,
-                          height: 22,
+                      Positioned.fill(
                           child: LitTile(widget.tint!, widget.avatar))
                     else if (widget.wideAvatar)
                       Positioned(
@@ -749,11 +748,19 @@ class _AgentRowShellState extends State<AgentRowShell> {
                           maxLines: 1,
                           softWrap: false,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(13,
-                              weight: FontWeight.w500,
-                              color: widget.needs
-                                  ? AppColors.fg1
-                                  : AppColors.fg2)),
+                          style: kMobile
+                              ? sans(13,
+                                  weight: FontWeight.w500,
+                                  color: widget.needs
+                                      ? AppColors.fg1
+                                      : AppColors.fg2)
+                              : sans(14,
+                                  color: widget.needs ||
+                                          widget.selected ||
+                                          _hover
+                                      ? AppColors.fg1
+                                      : Color.lerp(
+                                          AppColors.fg2, AppColors.fg3, 0.5)!)),
                     ),
                     if (widget.pinned) ...[
                       const SizedBox(width: 6),
@@ -779,7 +786,9 @@ class _AgentRowShellState extends State<AgentRowShell> {
                                   tabular: true)),
                       ]),
                       maxLines: 1,
-                      style: sans(11, color: AppColors.fg4, tabular: true)),
+                      style: kMobile
+                          ? sans(11, color: AppColors.fg4, tabular: true)
+                          : sans(12.5, color: AppColors.fg3, tabular: true)),
                 ],
               ]),
             ),

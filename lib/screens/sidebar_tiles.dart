@@ -81,9 +81,10 @@ class SidebarSectionHeader extends StatelessWidget {
             child: Text(title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: sans(12,
-                    weight: kMobile ? FontWeight.w500 : FontWeight.w600,
-                    color: AppColors.fg3)),
+                // Desktop: the reference's 13px medium, near-white header.
+                style: kMobile
+                    ? sans(12, weight: FontWeight.w500, color: AppColors.fg3)
+                    : sans(13, weight: FontWeight.w500, color: AppColors.fg1)),
           ),
           AnimatedOpacity(
             opacity: show ? 1 : 0,
