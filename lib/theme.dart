@@ -1468,6 +1468,16 @@ class AppColors {
               ? const Color(0xFF09090A)
               : Color.lerp(currentTheme.bg, currentTheme.surface1, 0.45)!)
           .withValues(alpha: chromeAlpha ?? (solidChrome ? 1 : 0.92));
+  /// Desktop window chrome; see-through while a scene plays behind the window.
+  static Color get windowChrome => !kMobile && ChatScene.instance.active
+      ? windowBg.withValues(alpha: 0.55)
+      : windowBg;
+
+  /// The inset desktop panel fill; see-through while a scene plays.
+  static Color get panelFill => !kMobile && ChatScene.instance.active
+      ? panelBg.withValues(alpha: 0.45)
+      : panelBg;
+
   /// The inset desktop panel; phones keep the page background.
   static Color get panelBg => kMobile
       ? currentTheme.bg

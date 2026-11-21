@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../chat_scene.dart' show ChatScene;
 import '../platform.dart';
 import '../theme.dart';
 import 'shell_models.dart';
@@ -120,7 +121,18 @@ class _ShellSplitViewState extends State<ShellSplitView>
   Widget? _lastRight;
 
   @override
+  void initState() {
+    super.initState();
+    ChatScene.instance.addListener(_onScene);
+  }
+
+  void _onScene() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    ChatScene.instance.removeListener(_onScene);
     _revealCurve.dispose();
     _reveal.dispose();
     super.dispose();
@@ -345,7 +357,7 @@ class _ShellSplitViewState extends State<ShellSplitView>
             width: widget.sidebarWidth,
             child: Stack(children: [
               ColoredBox(
-                color: AppColors.windowBg,
+                color: AppColors.windowChrome,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -372,7 +384,7 @@ class _ShellSplitViewState extends State<ShellSplitView>
         Expanded(
           // Window tabs sit on the window colour, matching the sidebar.
           child: ColoredBox(
-              color: kMobile ? Colors.transparent : AppColors.windowBg,
+              color: kMobile ? Colors.transparent : AppColors.windowChrome,
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -438,7 +450,7 @@ class _ShellSplitViewState extends State<ShellSplitView>
       padding: EdgeInsets.fromLTRB(widget.sidebarHidden ? 8 : 0, top, 8, 8),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppColors.panelBg,
+          color: AppColors.panelFill,
           borderRadius: BorderRadius.circular(R.of(12)),
           // Hairline outline lifts the card off the window, as in the reference.
           border: Border.all(color: AppColors.panelOutline, width: 0.5),

@@ -94,6 +94,11 @@ class GlassTopFrame extends StatelessWidget {
   static const double inset = 52;
   static const double fade = 14;
 
+  static final ValueNotifier<int> _settled = ValueNotifier(0);
+
+  /// Call when a page that may hold a header stops moving.
+  static void reflow() => _settled.value++;
+
   /// How far the blurred area runs below the header strip, in logical pixels.
   static const double _extra = 36;
 
@@ -116,10 +121,8 @@ class GlassTopFrame extends StatelessWidget {
               // BackdropFilters crashed the raster thread; a mask over one draws
               // nothing. Sigma is in physical pixels and saturates near 42.
               Positioned.fill(
-                child: ProgressiveBlur(
-                  sigmaStart: 16 * MediaQuery.devicePixelRatioOf(context),
-                  sigmaEnd: 0,
-                ),
+                child: _SettledBlur(
+                    sigma: 16 * MediaQuery.devicePixelRatioOf(context)),
               ),
             Positioned.fill(
               child: DecoratedBox(
@@ -153,6 +156,55 @@ class GlassTopFrame extends StatelessWidget {
         ? BackdropGroup(child: frame)
         : frame;
   }
+}
+
+/// The blur reads its screen position only when it paints, and a sliding
+/// page does not repaint it, so rebuild it fresh whenever a page settles.
+class _SettledBlur extends StatefulWidget {
+  const _SettledBlur({required this.sigma});
+  final double sigma;
+
+  @override
+  State<_SettledBlur> createState() => _SettledBlurState();
+}
+
+class _SettledBlurState extends State<_SettledBlur> {
+  int _gen = 0;
+  Animation<double>? _route;
+
+  @override
+  void initState() {
+    super.initState();
+    GlassTopFrame._settled.addListener(_bump);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final a = ModalRoute.of(context)?.animation;
+    if (a == _route) return;
+    _route?.removeStatusListener(_onStatus);
+    _route = a?..addStatusListener(_onStatus);
+  }
+
+  void _onStatus(AnimationStatus s) {
+    if (s == AnimationStatus.completed) _bump();
+  }
+
+  void _bump() {
+    if (mounted) setState(() => _gen++);
+  }
+
+  @override
+  void dispose() {
+    _route?.removeStatusListener(_onStatus);
+    GlassTopFrame._settled.removeListener(_bump);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ProgressiveBlur(
+      key: ValueKey(_gen), sigmaStart: widget.sigma, sigmaEnd: 0);
 }
 
 /// Marks content already sitting on frost, so nested [Glass] skips its blur.

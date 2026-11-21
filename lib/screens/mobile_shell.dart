@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import '../gesture_physics.dart';
 import '../motion_routes.dart' show AppPageRoute, backSwipeStays;
 import '../page_stack.dart';
-import '../glass.dart' show StatusInset;
+import '../glass.dart' show GlassTopFrame, StatusInset;
 import '../theme.dart';
 import 'shell_models.dart';
 import '../chat_scene.dart' show SceneBackdrop;
@@ -65,6 +65,7 @@ class _MobileShellState extends State<MobileShell>
   void _onV() {
     final e = _endsOf(_v.value);
     if (e == _vEnds) return;
+    if (e.$1 || e.$2) GlassTopFrame.reflow();
     setState(() => _vEnds = e);
   }
 

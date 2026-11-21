@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'chat_scene.dart' show ScenePageFill;
 import 'gesture_physics.dart';
+import 'glass.dart' show GlassTopFrame;
 import 'motion_routes.dart';
 import 'theme.dart';
 
@@ -69,6 +71,7 @@ class _PhonePageStackState extends State<PhonePageStack>
       f = springTo(_v, to, velocity,
           spring: AppPageRoute.pageSpring, epsilon: 0.001);
     }
+    f.whenCompleteOrCancel(GlassTopFrame.reflow);
     if (to == 0) {
       f.whenCompleteOrCancel(() {
         if (mounted && widget.page == null && _v.value <= 0.001) {
@@ -153,8 +156,8 @@ class _PhonePageStackState extends State<PhonePageStack>
                       onUpdate: _dragUpdate,
                       onEnd: _dragEnd,
                       child: RepaintBoundary(
-                        child: ColoredBox(
-                          color: widget.pageColor ?? AppColors.bg,
+                        child: ScenePageFill(
+                          color: widget.pageColor,
                           child: shown,
                         ),
                       ),

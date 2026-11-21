@@ -172,7 +172,7 @@ Future<T?> showModal<T>(
 /// A presented phone page keeps clear of the status bar even when the screen
 /// has no SafeArea or app bar of its own; inner SafeAreas then see no inset.
 Widget _phonePage(Widget child) => ColoredBox(
-      color: AppColors.bg,
+      color: AppColors.pageBg,
       child: SafeArea(bottom: false, child: child),
     );
 

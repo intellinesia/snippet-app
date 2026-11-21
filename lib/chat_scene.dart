@@ -292,6 +292,37 @@ class SceneBackdrop extends StatelessWidget {
   }
 }
 
+/// An opaque page surface: the scene when one is showing, else [color].
+/// For pages that slide over another and must hide it while they do.
+class ScenePageFill extends StatelessWidget {
+  const ScenePageFill({super.key, this.color, required this.child});
+  final Color? color;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scene = ChatScene.instance;
+    return ListenableBuilder(
+      listenable: scene,
+      builder: (context, _) {
+        final bg = color ?? AppColors.bg;
+        if (!kMobile || !scene.active) {
+          return ColoredBox(color: bg, child: child);
+        }
+        return ColoredBox(
+          color: bg,
+          child: _SceneScope(
+            child: Stack(fit: StackFit.expand, children: [
+              const Positioned.fill(child: ChatSceneLayer()),
+              child,
+            ]),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _SceneScope extends InheritedWidget {
   const _SceneScope({required super.child});
 
