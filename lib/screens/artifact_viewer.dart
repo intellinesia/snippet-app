@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -1553,6 +1554,19 @@ class _WebPreviewState extends State<_WebPreview> {
     return NavigationDecision.prevent;
   }
 
+  // Scrolls that reach Flutter instead of the native view are passed to the page.
+  void _scrollPage(Offset at, Offset d) {
+    if (d == Offset.zero) return;
+    _controller.runJavaScript('''(function(x,y,dx,dy){
+  var el=document.elementFromPoint(x,y);
+  for(;el&&el.nodeType===1&&el!==document.body&&el!==document.documentElement;el=el.parentElement){
+    var s=getComputedStyle(el);
+    if((s.overflowY==='auto'||s.overflowY==='scroll')&&el.scrollHeight>el.clientHeight+1){el.scrollBy(dx,dy);return;}
+  }
+  (document.scrollingElement||document.documentElement).scrollBy(dx,dy);
+})(${at.dx},${at.dy},${d.dx},${d.dy})''');
+  }
+
   void _retry() {
     setState(() {
       _failed = null;
@@ -1588,7 +1602,14 @@ class _WebPreviewState extends State<_WebPreview> {
       );
     }
     return Stack(children: [
-      Positioned.fill(child: WebViewWidget(controller: _controller)),
+      Positioned.fill(
+          child: Listener(
+              onPointerSignal: (e) {
+                if (e is PointerScrollEvent) _scrollPage(e.localPosition, e.scrollDelta);
+              },
+              onPointerPanZoomUpdate: (e) =>
+                  _scrollPage(e.localPosition, -e.panDelta),
+              child: WebViewWidget(controller: _controller))),
       if (_progress < 100)
         Positioned(
           left: 0,
