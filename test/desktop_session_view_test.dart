@@ -252,11 +252,13 @@ void main() {
     await tester.tap(summary);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.byType(DenseToolRow), findsNWidgets(2));
+    // Opens the same step timeline as the live Peek.
+    expect(find.byType(LedgerGantt), findsOneWidget);
+    expect(find.text('1 edit'), findsOneWidget);
 
     await tester.tap(summary);
     await tester.pumpAndSettle();
-    expect(find.byType(DenseToolRow), findsNothing);
+    expect(find.byType(LedgerGantt), findsNothing);
     debugDefaultTargetPlatformOverride = null;
   });
 
