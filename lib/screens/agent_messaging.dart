@@ -382,6 +382,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   /// instead of the floating stage bar.
   // Desktop tabs too: the head scrolls with the thread, so it is not a stage.
   bool get _deskHead => !kMobile && _view == AgentView.thread;
+  // Desktop tabs drop the intro card; the side panel carries the agent.
+  bool get _showHead => kMobile || !widget.embedded;
   double get _chromeTop => _noChrome || _deskHead ? 0 : StageBar.height;
 
   void _loadLine() {
@@ -1246,7 +1248,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     final topPad = _noChrome ? 12.0 : (_deskHead ? 8.0 : StageBar.height);
     if (_loading) {
       return Column(children: [
-        if (_deskHead)
+        if (_deskHead && _showHead)
           _wideCap(Padding(
               padding: EdgeInsets.fromLTRB(S.s16, 8, S.s16, 0),
               child: _agentHead())),
@@ -1291,7 +1293,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(top: _chromeTop),
           children: [
-            if (_deskHead)
+            if (_deskHead && _showHead)
               _wideCap(Padding(
                   padding: EdgeInsets.fromLTRB(S.s16, 8, S.s16, 0),
                   child: _agentHead())),
@@ -1344,9 +1346,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                 children: [slot, _wideCap(_waitingLine())]);
           }
           if (i == n + 1) {
-            return _hasOlder
-                ? _wideCap(_earlierAction())
-                : _wideCap(_agentHead());
+            if (_hasOlder) return _wideCap(_earlierAction());
+            return _showHead ? _wideCap(_agentHead()) : const SizedBox.shrink();
           }
           debugAgentMessageRowBuilds++;
           final at = n - i;

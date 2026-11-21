@@ -32,7 +32,6 @@ import '../chat/group_notice.dart';
 import '../chat/stage_bar.dart';
 import '../chat/stage_header.dart';
 import '../chat/run_head.dart';
-import 'agent_transcript_head.dart';
 import 'agent_card.dart'
     show AgentRowShell, LitTile, TeamRow, agentRowAgo, agentRowTime;
 import 'agent_questions_card.dart' show questionAnswerSystemLine;
@@ -1227,28 +1226,6 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
     return _group.replying.firstOrNull;
   }
 
-  /// Desktop: the group's identity at the start of its history.
-  Widget _intro() {
-    final ids = _group.agentIds;
-    final names = [for (final id in ids) _agentName(id)];
-    final who = names.length <= 2
-        ? names.join(' and ')
-        : '${names.take(2).join(', ')} and ${names.length - 2} more';
-    final lead = _group.lead;
-    return Padding(
-      padding: EdgeInsets.only(bottom: S.s12),
-      child: AgentTranscriptHead(
-        agentId: ids.isEmpty ? '' : ids.first,
-        agentIds: ids,
-        name: _title,
-        purpose: [
-          if (who.isNotEmpty) who,
-          if (lead != null && lead.isNotEmpty) '${_agentName(lead)} leads',
-        ].join(' \u00b7 '),
-      ),
-    );
-  }
-
   String? _typingStatus() {
     final store = widget.client.presence;
     for (final id in _group.agentIds) {
@@ -1633,7 +1610,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       reverse: true,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(S.s16, topPad, S.s16, S.s16),
-      itemCount: visible.length + (typing ? 1 : 0) + (kMobile ? 0 : 1),
+      itemCount: visible.length + (typing ? 1 : 0),
       itemBuilder: (_, raw) {
         if (typing && raw == 0 && !kMobile) {
           final id = _typingAgentId();
@@ -1651,9 +1628,6 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                               child: const WorkingBars()))),
             ),
           ));
-        }
-        if (!kMobile && raw == visible.length + (typing ? 1 : 0)) {
-          return _wideCap(_intro());
         }
         if (typing && raw == 0) {
           return _wideCap(Padding(
