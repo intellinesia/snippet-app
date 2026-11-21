@@ -617,13 +617,6 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
                 chevron: true,
                 onTap: s.onTap),
         ]),
-        if (widget.header != null)
-          _Section('Context', children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-              child: widget.header!,
-            ),
-          ]),
         const SizedBox(height: 20),
       ],
     );
