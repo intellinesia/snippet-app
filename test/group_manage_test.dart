@@ -9,24 +9,17 @@ import 'package:snippet/screens/group_messaging.dart';
 import 'package:snippet/screens/mission_control/mission_control_state.dart';
 import 'package:snippet/screens/session_coordination_cards.dart';
 
-const _post = '''[group_message]
-thread_id: group:1
-title: jh
-from: human:human
-mentions: x-scout
-reply_expected: true
-note: this post is waiting on the group.
-body: @x-scout what's trending?
+const _post = '''<group_message thread_id="group:1" title="jh" from="human:human" mentions="x-scout" reply_expected="true">
+<note>this post is waiting on the group.</note>
+<body>
+@x-scout what's trending?
 second line
-[/group_message]''';
+</body>
+</group_message>''';
 
-const _added = '''[group_added]
-thread_id: group:1
-title: jh
-members: x-scout, snippet
-lead: snippet
-note: you were added to this group chat.
-[/group_added]''';
+const _added = '''<group_added thread_id="group:1" title="jh" members="x-scout, snippet" lead="snippet">
+<note>you were added to this group chat.</note>
+</group_added>''';
 
 GroupSummary _group() => GroupSummary.fromJson({
       'id': 'group:1',
@@ -82,7 +75,7 @@ void main() {
     expect(m.added, isTrue);
     expect(m.members, ['x-scout', 'snippet']);
     expect(m.lead, 'snippet');
-    expect(parseGroupMessage('[direct_message]\nbody: x\n[/direct_message]'),
+    expect(parseGroupMessage('<direct_message from="a">\n<body>x</body>\n</direct_message>'),
         isNull);
   });
 
@@ -96,7 +89,7 @@ void main() {
     expect(find.textContaining('You in jh'), findsOneWidget);
     expect(find.textContaining('Reply expected'), findsOneWidget);
     expect(find.textContaining('Added to jh'), findsOneWidget);
-    expect(find.textContaining('[group_message]'), findsNothing);
+    expect(find.textContaining('<group_message'), findsNothing);
   });
 
   testWidgets('members sheet removes an agent and deletes the group',
