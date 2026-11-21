@@ -881,28 +881,33 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
     }
   }
 
+  /// Left edge of the close button: the Flutter sidebar keeps its content on
+  /// a 16pt edge, nudged in to clear the larger window corner.
+  private let trafficLightInset: CGFloat = 18
+
   private func centreTrafficLights() {
-    guard let closeButton = standardWindowButton(.closeButton),
-          let container = closeButton.superview else { return }
+    guard !styleMask.contains(.fullScreen),
+          let close = standardWindowButton(.closeButton),
+          let mini = standardWindowButton(.miniaturizeButton),
+          let zoom = standardWindowButton(.zoomButton),
+          let container = close.superview?.superview else { return }
 
-    let containerHeight = container.bounds.height
-    guard containerHeight > 0 else { return }
+    // AppKit's title bar is ~28pt; stretch it to the painted bar so the
+    // lights can centre in 52pt without being clipped or reset.
+    let height = paintedTitleBarHeight
+    var bar = container.frame
+    if abs(bar.height - height) > 0.5 || abs(bar.minY - (frame.height - height)) > 0.5 {
+      bar.size.height = height
+      bar.origin.y = frame.height - height
+      container.frame = bar
+    }
 
-    let centreFromTop = paintedTitleBarHeight / 2
-    let targetCentreY = container.isFlipped
-      ? centreFromTop
-      : containerHeight - centreFromTop
-
-    let types: [NSWindow.ButtonType] = [
-      .closeButton, .miniaturizeButton, .zoomButton,
-    ]
-    for type in types {
-      guard let button = standardWindowButton(type) else { continue }
-      var frame = button.frame
-      let delta = targetCentreY - frame.midY
-      if abs(delta) < 0.5 { continue }
-      frame.origin.y += delta
-      button.frame = frame
+    let spacing = max(mini.frame.minX - close.frame.minX, 20)
+    for (index, button) in [close, mini, zoom].enumerated() {
+      let parentHeight = button.superview?.bounds.height ?? height
+      let y = (parentHeight - button.frame.height) / 2
+      let origin = NSPoint(x: trafficLightInset + CGFloat(index) * spacing, y: y.rounded())
+      if button.frame.origin != origin { button.setFrameOrigin(origin) }
     }
   }
 }

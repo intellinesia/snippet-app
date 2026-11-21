@@ -764,7 +764,7 @@ class MacWindowBar extends StatelessWidget {
           Center(
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               if (sidebarHidden) ...[
-                if (reserveWindowControls) const SizedBox(width: 72),
+                if (reserveWindowControls) const SizedBox(width: 80),
                 if (onToggleSidebar != null)
                   IconBtn('sidebar',
                       size: 28,

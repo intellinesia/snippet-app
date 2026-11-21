@@ -1046,7 +1046,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         // Centred at 26, level with the traffic lights and the pane bar.
         height: kMobile ? 44 : 52,
         child: Row(children: [
-          if (kMacOS) const SizedBox(width: 78) else SizedBox(width: S.of(14)),
+          if (kMacOS) const SizedBox(width: 80) else SizedBox(width: S.of(14)),
           const Spacer(),
           _TbBtn(
               icon: 'sidebar',
