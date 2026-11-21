@@ -8,6 +8,7 @@ import '../../../theme.dart';
 import '../../../widgets.dart';
 import '../../shell_nav.dart';
 import '../../../swr.dart';
+import '../../../tap_detector.dart';
 
 String _relative(int? epoch, {bool future = false}) {
   if (epoch == null) return '';
@@ -99,7 +100,7 @@ class _AutonomyChipState extends State<AutonomyChip> {
     if (autonomy == null) return const SizedBox.shrink();
     final on = autonomy['on'] == true;
     return Pressable(
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => widget.open(AutonomyPanel(
             client: widget.client,

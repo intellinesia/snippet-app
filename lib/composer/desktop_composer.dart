@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../desk_attention.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 /// Desktop composer surfaces: one calm card, pinned cards above it. The phone
 /// keeps the pill in composer_card.dart.
@@ -69,7 +70,7 @@ class _DeskButtonState extends State<DeskButton> {
       cursor: on ? SystemMouseCursors.click : MouseCursor.defer,
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
         child: Container(
@@ -373,7 +374,7 @@ class DeskRecipientChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(R.of(6)),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          GestureDetector(
+          TapDetector(
             onTap: onTap,
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
@@ -385,7 +386,7 @@ class DeskRecipientChip extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          GestureDetector(
+          TapDetector(
             onTap: onClear,
             child: MouseRegion(
               cursor: SystemMouseCursors.click,

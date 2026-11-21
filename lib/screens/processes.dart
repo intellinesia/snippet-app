@@ -8,6 +8,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../pull_refresh.dart';
 import '../platform.dart';
+import '../tap_detector.dart';
 
 /// Background processes the agent started (dev servers, tunnels, a browser) via
 /// `bash {background:true}`. Lists them from /bg with a live status, a log tail,
@@ -300,7 +301,7 @@ class _ChipBtn extends StatelessWidget {
   const _ChipBtn(this.label, this.onTap, {this.danger = false});
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => TapDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: SizedBox(

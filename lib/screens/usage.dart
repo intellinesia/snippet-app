@@ -10,6 +10,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'shell_nav.dart';
 import 'usage_desktop.dart';
+import '../tap_detector.dart';
 
 String usageProviderTitle(String id) => switch (id.toLowerCase()) {
       'anthropic' => 'Anthropic',
@@ -396,7 +397,7 @@ class _PeriodTabs extends StatelessWidget {
         child: Row(children: [
           for (final p in _Period.values)
             Expanded(
-              child: GestureDetector(
+              child: TapDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => onChanged(p),
                 child: AnimatedContainer(
@@ -433,7 +434,7 @@ class _PeriodTabs extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           for (final p in _Period.values)
-            GestureDetector(
+            TapDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => onChanged(p),
               child: AnimatedContainer(

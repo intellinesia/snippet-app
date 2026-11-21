@@ -10,6 +10,7 @@ import '../theme.dart';
 import '../settings_form.dart';
 
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 // (value sent to the daemon, label shown in the pill)
 const _providers = [
@@ -653,7 +654,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
             obscure: !_showKey,
             hint: _isEdit && widget.existing!.hasKey ? 'Saved' : 'sk-…',
             onChanged: (_) => setState(() {}),
-            suffix: GestureDetector(
+            suffix: TapDetector(
               onTap: () => setState(() => _showKey = !_showKey),
               child: Text(_showKey ? 'Hide' : 'Show',
                   style: sans(12, color: AppColors.fg3)),
@@ -736,7 +737,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                       width: 16,
                       height: 16,
                       child: Center(child: Spinner(size: 12)))
-                  : GestureDetector(
+                  : TapDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: _busy ? null : _browseModels,
                       child: Padding(
@@ -954,7 +955,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
             mono: true,
             obscure: !_showKey,
             hint: _isEdit && widget.existing!.hasKey ? 'Saved' : 'sk-…',
-            suffix: GestureDetector(
+            suffix: TapDetector(
               onTap: () => setState(() => _showKey = !_showKey),
               child: Text(_showKey ? 'Hide' : 'Show',
                   style: sans(12, color: AppColors.fg3)),
@@ -1027,7 +1028,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
                       width: 16,
                       height: 16,
                       child: Center(child: Spinner(size: 12)))
-                  : GestureDetector(
+                  : TapDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: _busy ? null : _browseModels,
                       child: Padding(
@@ -1386,7 +1387,7 @@ class _CliAgentStatusState extends State<_CliAgentStatus> {
     final blurb = Text(
         'Runs the $_label CLI installed on the machine running snippet, signed in the way it already is — no API key. Snippet supplies the prompt, its tools and approvals.',
         style: sans(12, height: 1.4, color: AppColors.fg3));
-    final recheck = GestureDetector(
+    final recheck = TapDetector(
         onTap: _loading ? null : _refresh,
         child: Text(_loading ? 'Checking…' : 'Recheck', style: TS.meta()));
     final s = _status;
@@ -1561,7 +1562,7 @@ class _SubSignInState extends State<_SubSignIn> {
         SizedBox(width: S.s8),
         Text(widget.signedInLabel, style: sans(13, color: AppColors.fg2)),
         const Spacer(),
-        GestureDetector(
+        TapDetector(
             onTap: _signOut, child: Text('Sign out', style: TS.meta())),
       ]);
     }
@@ -1575,7 +1576,7 @@ class _SubSignInState extends State<_SubSignIn> {
         Row(children: [
           Text(_code!, style: mono(18, weight: W.label, color: AppColors.fg1)),
           SizedBox(width: S.of(10)),
-          GestureDetector(
+          TapDetector(
             onTap: () => Clipboard.setData(ClipboardData(text: _code!)),
             child: Text('copy', style: TS.meta()),
           ),

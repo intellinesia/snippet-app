@@ -7,6 +7,7 @@ import 'platform.dart';
 import 'glass.dart';
 import 'theme.dart';
 import 'widgets.dart';
+import 'tap_detector.dart';
 
 OverlayEntry? _activeToast;
 
@@ -706,7 +707,7 @@ class _ToastCardState extends State<_ToastCard>
                   ),
                 ),
                 if (hasAction)
-                  GestureDetector(
+                  TapDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () {
                       widget.onAction?.call();

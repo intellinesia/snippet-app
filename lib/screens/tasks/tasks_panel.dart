@@ -14,6 +14,7 @@ import 'create_task_form.dart';
 import 'task_common.dart';
 import 'task_detail_screen.dart';
 import 'task_list.dart';
+import '../../tap_detector.dart';
 
 /// A pushed Tasks page, optionally limited to the tasks [agentIds] are on.
 Future<void> openTasksPage(BuildContext context, DaemonClient client,
@@ -49,7 +50,7 @@ Future<void> openTasksPage(BuildContext context, DaemonClient client,
 }
 
 /// The "New task" pill on a pushed Tasks page's back bar.
-Widget newTaskPill(VoidCallback onTap) => GestureDetector(
+Widget newTaskPill(VoidCallback onTap) => TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: SizedBox(
@@ -343,7 +344,7 @@ class TasksPanelState extends State<TasksPanel> {
                 ),
               ),
               if (_query.isNotEmpty)
-                GestureDetector(
+                TapDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () {
                     _search.clear();
@@ -639,7 +640,7 @@ class TasksPanelState extends State<TasksPanel> {
   Widget _phoneTabs() {
     Widget tab(String label, TaskTab t) {
       final on = _tab == t;
-      return GestureDetector(
+      return TapDetector(
         key: ValueKey('tab-${t.name}'),
         behavior: HitTestBehavior.opaque,
         onTap: () => setState(() {
@@ -765,7 +766,7 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final h = kMobile ? 32.0 : 26.0;
-    return GestureDetector(
+    return TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: SizedBox(

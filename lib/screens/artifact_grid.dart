@@ -10,6 +10,7 @@ import 'agent_card.dart' show agentRowTime;
 import 'artifact_viewer.dart';
 import 'file_viewer.dart';
 import '../file_icons.dart';
+import '../tap_detector.dart';
 
 class ArtifactGrid extends StatefulWidget {
   const ArtifactGrid({
@@ -140,7 +141,7 @@ class _ArtifactGridState extends State<ArtifactGrid> {
               ),
             ),
             if (_q.isNotEmpty)
-              GestureDetector(
+              TapDetector(
                 onTap: _search.clear,
                 child: AppIcon('x', size: 13, color: AppColors.fg3),
               ),
@@ -439,7 +440,7 @@ class _ArtifactCollectionState extends State<ArtifactCollection> {
       child: Semantics(
         button: true,
         selected: on,
-        child: GestureDetector(
+        child: TapDetector(
           key: ValueKey('artifact-chip-$label'),
           behavior: HitTestBehavior.opaque,
           onTap: () => setState(() => _filter = label),
@@ -502,7 +503,7 @@ class _ArtifactCollectionState extends State<ArtifactCollection> {
           ),
         ),
         if (_q.isNotEmpty)
-          GestureDetector(
+          TapDetector(
             onTap: _search.clear,
             child: AppIcon('x', size: 16, color: AppColors.fg3),
           ),
@@ -601,7 +602,7 @@ class _ArtifactCollectionState extends State<ArtifactCollection> {
               onTap: () => _openFile(f.path),
               action: Tooltip(
                 message: 'Download',
-                child: GestureDetector(
+                child: TapDetector(
                   key: ValueKey('file-download-${f.path}'),
                   behavior: HitTestBehavior.opaque,
                   onTap: () => _downloadFile(f.path),
@@ -654,7 +655,7 @@ class _ArtifactCard extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
         button: onTap != null,
         label: '$title, ${_kindName(kind)}',
-        child: GestureDetector(
+        child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: Container(

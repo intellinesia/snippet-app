@@ -16,6 +16,7 @@ import '../widgets.dart';
 import 'agent_wake_panel.dart';
 import 'session.dart';
 import 'shell_nav.dart';
+import '../tap_detector.dart';
 
 /// Every agent and session wake schedule, or with [keepWarm] the sessions
 /// kept warm.
@@ -308,7 +309,7 @@ class _WakesScreenState extends State<WakesScreen> {
         sub: sub,
         leading: session ? null : const V5IconTile('gauge'),
         trailing: session
-            ? GestureDetector(
+            ? TapDetector(
                 key: ValueKey('warm-open-${e.owner}'),
                 behavior: HitTestBehavior.opaque,
                 onTap: () => _openConversation(e, name),

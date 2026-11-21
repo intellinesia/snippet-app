@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme.dart';
 import '../../widgets.dart';
+import '../../tap_detector.dart';
 
 enum TaskView { board, list }
 
@@ -17,7 +18,7 @@ class TaskViewToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget seg(TaskView v, String label, String icon) {
       final on = v == value;
-      return GestureDetector(
+      return TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => onChanged(v),
         child: Container(

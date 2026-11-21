@@ -42,6 +42,7 @@ import '../chat/run_head.dart';
 import 'agent_transcript_head.dart';
 import 'agent_view_switcher.dart';
 import '../chat_scene.dart' show SceneBackdrop;
+import '../tap_detector.dart';
 
 /// Pick one agent from the directory, as an anchored DROPDOWN.
 ///
@@ -2288,7 +2289,7 @@ class _HeadButtonState extends State<_HeadButton> {
         cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
-        child: GestureDetector(
+        child: TapDetector(
           onTap: widget.onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),

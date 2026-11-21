@@ -13,6 +13,7 @@ import '../../theme.dart';
 import '../../widgets.dart';
 import '../session.dart' show SessionScreen;
 import 'task_detail_screen.dart';
+import '../../tap_detector.dart';
 
 /// The phone's task detail: a tall sheet with the summary, what the agent did,
 /// the decisions logged on the task and what it touched. Anything deeper stays
@@ -225,7 +226,7 @@ class _TaskSheetState extends State<TaskSheet> {
       Semantics(
         button: true,
         label: tip,
-        child: GestureDetector(
+        child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: SizedBox(
@@ -433,7 +434,7 @@ class _TaskSheetState extends State<TaskSheet> {
 
   Widget _resource(IconData icon, String title, String sub,
       {VoidCallback? onTap}) {
-    return GestureDetector(
+    return TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Padding(

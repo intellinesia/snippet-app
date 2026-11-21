@@ -16,6 +16,7 @@ import 'session.dart' show SessionScreen;
 import 'shell_models.dart';
 import 'shell_nav.dart';
 import 'shell_window_bar.dart';
+import '../tap_detector.dart';
 
 /// The container surface for a desktop split pane with corner rounding and drop highlight.
 class PaneSurface extends StatelessWidget {
@@ -242,7 +243,7 @@ class ReadoutChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final chip = GestureDetector(
+    final chip = TapDetector(
       onTap: onTap,
       child: SizedBox(
         width: compact ? null : width,
@@ -285,7 +286,7 @@ class ReadoutChip extends StatelessWidget {
                   SizedBox(width: S.s6)
                 else ...[
                   SizedBox(width: S.s6),
-                  GestureDetector(
+                  TapDetector(
                     onTap: onClose,
                     behavior: HitTestBehavior.opaque,
                     child: Padding(
@@ -360,7 +361,7 @@ class PaneTabChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final chip = GestureDetector(
+    final chip = TapDetector(
       onTap: onTap,
       child: SizedBox(
         width: compact ? null : width,
@@ -407,7 +408,7 @@ class PaneTabChip extends StatelessWidget {
                 ),
                 if (canDismiss) ...[
                   SizedBox(width: S.s6),
-                  GestureDetector(
+                  TapDetector(
                     onTap: onDismiss,
                     behavior: HitTestBehavior.opaque,
                     child: Padding(

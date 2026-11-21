@@ -575,7 +575,7 @@ extension _SessionScreenComposerExt on _SessionScreenState {
               style: mono(10, color: AppColors.accent)),
           SizedBox(width: S.of(5)),
           kMobile
-              ? GestureDetector(
+              ? TapDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: _cancelGoal,
                   child: SizedBox(

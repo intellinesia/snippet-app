@@ -6,6 +6,7 @@ import 'platform.dart';
 import 'theme.dart';
 import 'desktop_look.dart';
 import 'widgets.dart';
+import 'tap_detector.dart';
 
 // ---------------------------------------------------------------------------
 // Grouped rows, design language v7 (option A).
@@ -695,7 +696,7 @@ class GroupedCircleButton extends StatelessWidget {
     final button = Semantics(
       button: true,
       label: tooltip,
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
@@ -721,7 +722,7 @@ class GroupedPillButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        child: GestureDetector(
+        child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: Container(
@@ -812,7 +813,7 @@ class SettingsSwitch extends StatelessWidget {
     final knob = kMobile ? 24.0 : 14.0;
     return Semantics(
       toggled: value,
-      child: GestureDetector(
+      child: TapDetector(
         onTap: onChanged == null ? null : () => onChanged!(!value),
         child: MouseRegion(
           cursor: onChanged == null

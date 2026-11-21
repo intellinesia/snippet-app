@@ -17,6 +17,7 @@ import '../settings_form.dart';
 import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 /// Wake schedule and keep-warm for one agent, in a popover on
 /// desktop and a sheet on phones.
@@ -762,7 +763,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
       );
 
   Widget _actionLink(String label, VoidCallback onTap, {String? icon}) =>
-      GestureDetector(
+      TapDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Padding(

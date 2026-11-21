@@ -16,6 +16,7 @@ import '../session.dart' show SessionScreen;
 import 'task_common.dart';
 import 'task_kanban.dart';
 import 'task_view_toggle.dart';
+import '../../tap_detector.dart';
 
 /// The desktop Tasks tab: a status board by default, with a list option.
 class TaskBoard extends StatefulWidget {
@@ -276,7 +277,7 @@ class _TaskListViewState extends State<TaskListView> {
           color: AppColors.surface2, borderRadius: BorderRadius.circular(8)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         for (final t in _Tab.values)
-          GestureDetector(
+          TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => setState(() => _tab = t),
             child: Container(
@@ -368,7 +369,7 @@ class _TaskListViewState extends State<TaskListView> {
           SizedBox(width: S.s8),
           _Pill(t),
           const Spacer(),
-          GestureDetector(
+          TapDetector(
             onTap: () => setState(() => _selected = null),
             child: Icon(LucideIcons.x, size: 16, color: AppColors.fg3),
           ),
@@ -539,7 +540,7 @@ class _SmallBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fg = primary ? AppColors.accentFg : AppColors.fg1;
-    return GestureDetector(
+    return TapDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
@@ -638,7 +639,7 @@ class _TaskRowState extends State<_TaskRow> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
         child: Container(

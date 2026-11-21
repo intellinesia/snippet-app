@@ -18,6 +18,7 @@ import 'theme.dart';
 import 'tool_activity.dart';
 import 'tool_views.dart';
 import 'widgets.dart';
+import 'tap_detector.dart';
 
 /// The summary sentence with file names a step brighter and the outcome word
 /// in its own colour.
@@ -189,7 +190,7 @@ class WorkLine extends StatelessWidget {
                   child: const SizedBox(height: 1, width: double.infinity))
               : const SizedBox.shrink(),
         );
-    return GestureDetector(
+    return TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: SizedBox(
@@ -389,7 +390,7 @@ class _FlatRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: ConstrainedBox(
@@ -713,7 +714,7 @@ class _TerminalBlockState extends State<TerminalBlock> {
                 maxLines: clampCmd && !_cmdFull ? widget.commandLines : null,
                 overflow: TextOverflow.ellipsis),
           if (clampCmd)
-            GestureDetector(
+            TapDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => setState(() => _cmdFull = !_cmdFull),
               child: Padding(
@@ -769,7 +770,7 @@ class _TerminalBlockState extends State<TerminalBlock> {
               padding: const EdgeInsets.only(top: 8),
               child: Row(children: [
                 if (overflow)
-                  GestureDetector(
+                  TapDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => setState(() => _full = !_full),
                     child: Text(_full ? 'Show less' : 'Show all $total lines',
@@ -865,7 +866,7 @@ class _StepDetailState extends State<_StepDetail> {
                 ),
               ),
               if (overflow)
-                GestureDetector(
+                TapDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => setState(() => _full = !_full),
                   child: Padding(

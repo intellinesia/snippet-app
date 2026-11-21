@@ -13,6 +13,7 @@ import '../../widgets.dart';
 import '../list_search_field.dart';
 import 'task_common.dart';
 import 'task_list.dart' show TaskLoadMore;
+import '../../tap_detector.dart';
 
 /// Desktop task board: four status columns with filter chips and drag/drop.
 ///
@@ -583,7 +584,7 @@ class _TaskCardState extends State<_TaskCard> {
       cursor: SystemMouseCursors.grab,
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
+      child: TapDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: Motion.fast,
@@ -723,7 +724,7 @@ class _TaskCardState extends State<_TaskCard> {
       cursor: SystemMouseCursors.grab,
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
+      child: TapDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: Motion.fast,

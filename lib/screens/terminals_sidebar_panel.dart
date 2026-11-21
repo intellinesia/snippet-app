@@ -5,6 +5,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'shell_nav.dart';
 import 'session.dart' show TerminalInfo;
+import '../tap_detector.dart';
 
 /// Sidebar panel for a session's terminals.
 ///
@@ -148,7 +149,7 @@ class TerminalsSidebarPanel extends StatelessWidget {
           SizedBox(width: S.s6),
         ],
         // Destroying lives here, not in the pane: the pane can only minimize.
-        GestureDetector(
+        TapDetector(
           onTap: () => onCloseTerminal(t.id),
           behavior: HitTestBehavior.opaque,
           child: Padding(

@@ -9,6 +9,7 @@ import '../settled_sessions.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'shell_nav.dart';
+import '../tap_detector.dart';
 
 /// "12.9k" style count: whole numbers to 9,999, then one decimal, then none.
 String compactCount(int n) {
@@ -335,7 +336,7 @@ class _SessionGroupHeaderState extends State<SessionGroupHeader> {
           child: widget.onToggle == null
               ? row
               : kMobile
-                  ? GestureDetector(
+                  ? TapDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: () {
                         pickHaptic();
@@ -661,7 +662,7 @@ class SessionListRow extends StatelessWidget {
                   .ceilToDouble();
       Widget action(String icon, String tip, VoidCallback? tap) => Tooltip(
             message: tip,
-            child: GestureDetector(
+            child: TapDetector(
               behavior: HitTestBehavior.opaque,
               onTap: tap,
               child: SizedBox(
@@ -792,7 +793,7 @@ class SessionListRow extends StatelessWidget {
       if (approval == null || onDecide == null || renameField != null) {
         return body;
       }
-      Widget chip(String label, bool ok) => GestureDetector(
+      Widget chip(String label, bool ok) => TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => onDecide!(ok),
             child: Container(

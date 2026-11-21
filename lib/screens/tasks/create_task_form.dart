@@ -6,6 +6,7 @@ import '../../models.dart';
 import '../../platform.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
+import '../../tap_detector.dart';
 
 /// A new task goes to Mission Control as a request: it files the task, picks
 /// or starts the session, and offers it to the chosen agent.
@@ -112,7 +113,7 @@ class _CreateTaskFormState extends State<CreateTaskForm> {
         button: true,
         selected: selected,
         label: label,
-        child: GestureDetector(
+        child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: _busy ? null : onTap,
           child: SizedBox(

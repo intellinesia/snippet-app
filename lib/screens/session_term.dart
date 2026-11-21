@@ -196,7 +196,7 @@ class _ChurningStatusState extends State<_ChurningStatus> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
+          TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap:
                 thought.isEmpty ? null : () => setState(() => _open = !_open),

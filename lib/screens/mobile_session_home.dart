@@ -12,6 +12,7 @@ import 'mobile_chrome.dart';
 import 'mobile_shell.dart' show HomePagerScope;
 import 'phone_hero.dart' show heroAgentColor;
 import 'session_list_row.dart';
+import '../tap_detector.dart';
 
 /// Phone home top bar: the Sessions / Agents switch with search and settings.
 /// Search swaps the row for a field until it is cleared and closed.
@@ -143,7 +144,7 @@ class _MobileHomeTopBarState extends State<MobileHomeTopBar> {
           button: true,
           selected: on,
           label: label,
-          child: GestureDetector(
+          child: TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: on
                 ? null
@@ -212,7 +213,7 @@ class MissionControlDock extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
         button: true,
         label: 'Ask Mission Control',
-        child: GestureDetector(
+        child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
             tapHaptic();

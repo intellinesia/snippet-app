@@ -18,6 +18,7 @@ import '../mobile_chrome.dart';
 import '../agent_records.dart' show BoardLog;
 import '../session.dart' show SessionScreen;
 import 'task_common.dart' show statusColor, TaskNoteLines, taskAge;
+import '../../tap_detector.dart';
 
 /// One task: its state, its roster, its links, and its own message room.
 ///
@@ -1009,7 +1010,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             const SizedBox(width: 8),
             Text('${roster.length}', style: mono(11, color: AppColors.fg4)),
             const Spacer(),
-            GestureDetector(
+            TapDetector(
               onTap: _addAgent,
               behavior: HitTestBehavior.opaque,
               child: Padding(
@@ -1083,7 +1084,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 style:
                     sans(12.5, weight: FontWeight.w600, color: AppColors.fg1)),
             const Spacer(),
-            GestureDetector(
+            TapDetector(
               onTap: _linkTask,
               behavior: HitTestBehavior.opaque,
               child: Padding(
@@ -1377,7 +1378,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       );
 
   Widget _v5Action(String label, {bool primary = false, VoidCallback? onTap}) =>
-      GestureDetector(
+      TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: SizedBox(
@@ -2321,7 +2322,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       weight: W.label, spacing: 0.7, color: AppColors.fg4)
                   : caps(11, color: AppColors.fg3)),
           const Spacer(),
-          GestureDetector(
+          TapDetector(
             onTap: onAdd,
             behavior: HitTestBehavior.opaque,
             child: Padding(
@@ -2525,7 +2526,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     ),
                   ),
                 ),
-                GestureDetector(
+                TapDetector(
                   onTap: (room?.sending ?? false) ? null : _send,
                   child: Container(
                     width: 36,
@@ -2570,7 +2571,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   ),
                 ),
                 SizedBox(width: S.s6),
-                GestureDetector(
+                TapDetector(
                   onTap: (room?.sending ?? false) ? null : _send,
                   child: Container(
                     width: 26,

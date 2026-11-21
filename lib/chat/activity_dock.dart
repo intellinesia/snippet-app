@@ -10,6 +10,7 @@ import '../theme.dart';
 import '../tool_activity.dart';
 import '../tool_sheet.dart' show ToolBatch;
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 /// A run in flight: its steps so far and when it began.
 class DockRun {
@@ -92,7 +93,7 @@ class FailedPill extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
@@ -160,7 +161,7 @@ class _ActivityDockState extends State<ActivityDock> {
     final title = live.isNotEmpty ? liveStepText(live.last) : 'Working';
     return Padding(
       padding: EdgeInsets.only(bottom: S.s8),
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => widget.onOpen(null),
         child: Container(
@@ -219,7 +220,7 @@ class ActivityPill extends StatelessWidget {
     Theme.of(context);
     final t = took ?? stepsDuration(steps);
     final failed = runFailures(steps);
-    return GestureDetector(
+    return TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => onOpen(null),
       child: Container(

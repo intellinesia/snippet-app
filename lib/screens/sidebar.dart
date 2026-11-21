@@ -36,6 +36,7 @@ import 'phone_hero.dart';
 import '../session_quick_send.dart';
 import 'mobile_voice_page.dart' show startMobileVoice;
 import 'pull_requests.dart' show openPullRequest;
+import '../tap_detector.dart';
 export 'sidebar_mobile.dart';
 export 'sidebar_tiles.dart' show SidebarBrand;
 
@@ -931,7 +932,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
 
   Widget _settledTap({required VoidCallback onTap, required Widget child}) =>
       kMobile
-          ? GestureDetector(
+          ? TapDetector(
               behavior: HitTestBehavior.opaque, onTap: onTap, child: child)
           : HoverSurface(radius: 8, onTap: onTap, child: child);
 
@@ -2046,7 +2047,7 @@ class _DockPlus extends StatelessWidget {
         child: Semantics(
           button: true,
           label: tooltip,
-          child: GestureDetector(
+          child: TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onTap == null
                 ? null

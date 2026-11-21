@@ -7,6 +7,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'shell_models.dart';
+import '../tap_detector.dart';
 
 /// Context menu shown when right clicking or long-pressing a tab.
 void showTabContextMenu({
@@ -105,7 +106,7 @@ class CardTabChip extends StatelessWidget {
     final desktop = !kMobile;
 
     if (!desktop) {
-      return GestureDetector(
+      return TapDetector(
         onTap: onTap,
         onLongPress: onLongPress,
         child: AnimatedContainer(
@@ -138,7 +139,7 @@ class CardTabChip extends StatelessWidget {
             ),
             if (canClose) ...[
               SizedBox(width: S.s4),
-              GestureDetector(
+              TapDetector(
                 onTap: onClose,
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
@@ -153,7 +154,7 @@ class CardTabChip extends StatelessWidget {
     }
 
     // Desktop card tab: bounded width, distinct card surface, 2-line label
-    return GestureDetector(
+    return TapDetector(
       onTap: onTap,
       onLongPress: onLongPress,
       onSecondaryTap: onLongPress,
@@ -208,7 +209,7 @@ class CardTabChip extends StatelessWidget {
             ),
             if (canClose) ...[
               SizedBox(width: S.s4),
-              GestureDetector(
+              TapDetector(
                 onTap: onClose,
                 behavior: HitTestBehavior.opaque,
                 child: Container(

@@ -7,6 +7,7 @@ import 'notification_card.dart' show notificationTone;
 import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart' show AppIcon, HoverSurface, Reveal;
+import 'tap_detector.dart';
 
 bool needsYou(Map<String, dynamic> p) =>
     '${p['kind'] ?? ''}'.split('.').last == 'waiting';
@@ -138,7 +139,7 @@ class NotificationStack extends StatelessWidget {
                   opacity: i <= ghosts ? 1 : 0,
                   child: IgnorePointer(
                     ignoring: i > ghosts,
-                    child: GestureDetector(
+                    child: TapDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: onToggle,
                       onLongPress: _expandByHold,

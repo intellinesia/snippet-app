@@ -25,6 +25,7 @@ import 'agent_questions_card.dart';
 import 'artifact_viewer.dart';
 import 'presented_file_card.dart';
 import 'session.dart' show SessionScreen;
+import '../tap_detector.dart';
 
 String daemonRelativeUrl(DaemonClient client, String url) {
   final raw = url.trim();
@@ -404,7 +405,7 @@ Widget _chatPill({
     ),
   );
   if (onTap == null || disabled) return pill;
-  return GestureDetector(
+  return TapDetector(
     behavior: HitTestBehavior.opaque,
     onTap: onTap,
     child: pill,
@@ -1236,7 +1237,7 @@ class _DeskDecideButtons extends StatelessWidget {
 
   Widget _link() => Semantics(
         button: true,
-        child: GestureDetector(
+        child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: busy ? null : onLink,
           child: Padding(
@@ -1267,7 +1268,7 @@ class _DeskDecideButtons extends StatelessWidget {
     final h = kMobile ? 44.0 : 30.0;
     final btn = Pressable(
       kind: PressKind.button,
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: busy ? null : onTap,
         child: Container(

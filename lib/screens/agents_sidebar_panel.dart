@@ -20,6 +20,7 @@ import '../pull_refresh.dart';
 import '../message_reactions.dart' show isReactionEvent;
 import '../motion.dart';
 import '../swr.dart';
+import '../tap_detector.dart';
 
 /// The agent team, as a sidebar panel — the reference app's "People with
 /// access" slot, holding our agents instead of collaborators.
@@ -1101,7 +1102,7 @@ class _TeamHero extends StatelessWidget {
     return Semantics(
       button: onOpen != null,
       label: '$name, your agent, $word',
-      child: GestureDetector(
+      child: TapDetector(
         key: const ValueKey('agents-team-hero'),
         behavior: HitTestBehavior.opaque,
         onTap: onOpen,

@@ -9,6 +9,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'mobile_chrome.dart';
+import '../tap_detector.dart';
 
 part 'pull_request_desktop.dart';
 
@@ -2510,7 +2511,7 @@ class _PrFileDiffState extends State<PrFileDiff> {
               Tooltip(
                 message: 'Viewed',
                 child: kMobile
-                    ? GestureDetector(
+                    ? TapDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: () => widget.onViewed!(!widget.viewed),
                         child: Padding(
@@ -3010,7 +3011,7 @@ class _CommitRowState extends State<_CommitRow> {
                   if (c.body.trim().isNotEmpty)
                     WidgetSpan(
                       alignment: PlaceholderAlignment.middle,
-                      child: GestureDetector(
+                      child: TapDetector(
                         onTap: () => setState(() => _body = !_body),
                         child: Container(
                           margin: EdgeInsets.only(left: S.s6),

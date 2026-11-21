@@ -10,6 +10,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'shell_models.dart';
 import 'shell_nav.dart';
+import '../tap_detector.dart';
 
 /// Top-level workspace tab chip that appears when dragging a tab.
 class TabDragFeedback extends StatelessWidget {
@@ -123,7 +124,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
           cursor: SystemMouseCursors.click,
           onEnter: (_) => setState(() => _hover = true),
           onExit: (_) => setState(() => _hover = false),
-          child: GestureDetector(
+          child: TapDetector(
             onTap: widget.onTap,
             child: Tactile(
               radius: BorderRadius.circular(R.of(6)),
@@ -152,7 +153,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
           cursor: SystemMouseCursors.click,
           onEnter: (_) => setState(() => _hover = true),
           onExit: (_) => setState(() => _hover = false),
-          child: GestureDetector(
+          child: TapDetector(
             onTap: widget.onTap,
             child: AnimatedContainer(
               key: widget.chipKey,
@@ -216,7 +217,7 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
               if (closable)
                 Opacity(
                   opacity: showClose ? 1 : 0,
-                  child: GestureDetector(
+                  child: TapDetector(
                     onTap: showClose ? widget.onClose : null,
                     behavior: HitTestBehavior.opaque,
                     child: SizedBox(
@@ -461,7 +462,7 @@ class _MoreButtonState extends State<_MoreButton> {
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
+      child: TapDetector(
         onTap: widget.onTap,
         child: Container(
           height: 28,
@@ -664,7 +665,7 @@ class _OverflowRowState extends State<_OverflowRow> {
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
+      child: TapDetector(
         onTap: widget.onTap,
         child: Container(
           height: 30,
@@ -702,7 +703,7 @@ class _OverflowRowState extends State<_OverflowRow> {
                     BoxDecoration(color: AppColors.run, shape: BoxShape.circle),
               ),
             if (widget.canClose && _hover)
-              GestureDetector(
+              TapDetector(
                 onTap: widget.onClose,
                 behavior: HitTestBehavior.opaque,
                 child: Padding(

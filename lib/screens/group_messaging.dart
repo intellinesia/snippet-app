@@ -39,6 +39,7 @@ import 'agent_questions_card.dart' show questionAnswerSystemLine;
 import 'agent_thread_cards.dart' show agentThreadEventCard;
 import 'tasks/tasks_panel.dart' show openTasksPage, openTaskCountFor;
 import '../chat_scene.dart' show SceneBackdrop;
+import '../tap_detector.dart';
 
 /// An `@token` in a group message: the boundary keeps `mail@fable` from
 /// counting as a mention.
@@ -643,7 +644,7 @@ class _AgentPickRow extends StatelessWidget {
                   button: true,
                   selected: lead,
                   label: lead ? '$name is lead' : 'Make $name lead',
-                  child: GestureDetector(
+                  child: TapDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: onLead,
                     child: Padding(

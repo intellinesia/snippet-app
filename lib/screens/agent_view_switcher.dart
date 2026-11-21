@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../platform.dart';
 import '../theme.dart';
+import '../tap_detector.dart';
 
 enum AgentView { thread, inbox, board }
 
@@ -67,7 +68,7 @@ class AgentViewSwitcher extends StatelessWidget {
                 button: true,
                 selected: v == value,
                 label: _labels[v],
-                child: GestureDetector(
+                child: TapDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: v == value ? null : () => onChanged(v),
                   child: Center(

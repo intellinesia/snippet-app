@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 /// Desktop "/" command popover: pure parse/filter logic, a controller driven
 /// by the composer input, and the popover widget. Phone never mounts it.
@@ -501,7 +502,7 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MouseRegion(
         onEnter: (_) => onHover(),
-        child: GestureDetector(
+        child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: Container(

@@ -12,6 +12,7 @@ import '../widgets.dart';
 import '../chat/chat_card.dart';
 import '../chat/signal_row.dart';
 import '../mochi.dart';
+import '../tap_detector.dart';
 import 'mission_control/mission_control_state.dart'
     show
         QuietWakeRun,
@@ -125,7 +126,7 @@ class _CardMarkdownBodyState extends State<CardMarkdownBody> {
           ),
         ),
         if (long)
-          GestureDetector(
+          TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => setState(() => _open = !_open),
             child: Padding(
@@ -293,7 +294,7 @@ class _PreviewBodyState extends State<_PreviewBody> {
           ),
         ),
         if (long)
-          GestureDetector(
+          TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => setState(() => _open = !_open),
             child: Padding(
@@ -506,7 +507,7 @@ class _PlanChecklistState extends State<PlanChecklist> {
             ),
           ),
         if (steps.length > cap)
-          GestureDetector(
+          TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => setState(() => _open = !_open),
             child: Padding(
@@ -1040,7 +1041,7 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
     if (earlier.isNotEmpty) {
       children.add(Padding(
         padding: EdgeInsets.only(left: indent),
-        child: GestureDetector(
+        child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => setState(() => _earlier = !_earlier),
           child: Row(children: [
@@ -1137,7 +1138,7 @@ class _LaneMessageCardState extends State<LaneMessageCard> {
       ));
     }
 
-    return GestureDetector(
+    return TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => setState(() => _open = !_open),
       child: Padding(
@@ -1340,7 +1341,7 @@ class _AmbientTurnCardState extends State<AmbientTurnCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            GestureDetector(
+            TapDetector(
               behavior: HitTestBehavior.opaque,
               onTap: _hasDetail ? () => setState(() => _open = !_open) : null,
               child: Container(

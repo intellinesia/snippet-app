@@ -10,6 +10,7 @@ import 'task_common.dart';
 import '../../pull_refresh.dart';
 import '../../motion.dart';
 import '../../mochi.dart';
+import '../../tap_detector.dart';
 
 /// Tasks grouped by status, in board order, narrowed by a search and a status
 /// filter. The phone tab, the desktop sidebar and the standalone screen all
@@ -541,7 +542,7 @@ class PhoneTaskRow extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          GestureDetector(
+          TapDetector(
             key: ValueKey('check-${task.id}'),
             behavior: HitTestBehavior.opaque,
             onTap: onComplete,

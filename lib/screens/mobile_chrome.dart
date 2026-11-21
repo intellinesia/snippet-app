@@ -11,6 +11,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'mobile_voice_page.dart';
 import 'tasks/tasks_panel.dart';
+import '../tap_detector.dart';
 
 BoxDecoration _floating(double radius) => BoxDecoration(
       color: AppColors.surface1,
@@ -51,7 +52,7 @@ class RoundBtn extends StatelessWidget {
         child: Semantics(
           button: true,
           label: tooltip,
-          child: GestureDetector(
+          child: TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onTap == null
                 ? null
@@ -157,7 +158,7 @@ class ListeningPill extends StatelessWidget {
     return Semantics(
       button: true,
       label: 'Voice',
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {
           HapticFeedback.selectionClick();
@@ -272,7 +273,7 @@ class MobileMissionBar extends StatelessWidget {
                 button: onActions != null,
                 label: 'Mission Control',
                 hint: 'Session actions',
-                child: GestureDetector(
+                child: TapDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: onActions,
                   child: Glass(
@@ -436,7 +437,7 @@ class MobileBackBar extends StatelessWidget {
                     child: Semantics(
                       button: onTitleTap != null,
                       onTapHint: onTitleTapHint,
-                      child: GestureDetector(
+                      child: TapDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: onTitleTap,
                         child: Container(
@@ -490,7 +491,7 @@ class MobileStackedTitleBar extends StatelessWidget {
               kind: PressKind.card,
               radius: 20,
               enabled: onTap != null,
-              child: GestureDetector(
+              child: TapDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onTap,
                 child: Container(
@@ -592,7 +593,7 @@ class AccentFab extends StatelessWidget {
         child: Semantics(
           button: true,
           label: tooltip,
-          child: GestureDetector(
+          child: TapDetector(
             onTap: () {
               HapticFeedback.lightImpact();
               onTap();

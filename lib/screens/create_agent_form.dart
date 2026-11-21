@@ -5,6 +5,7 @@ import '../api.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 /// Describe an agent in prose; the runtime researches and builds it.
 ///
@@ -166,7 +167,7 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
               button: true,
               selected: sel,
               label: 'Character $id',
-              child: GestureDetector(
+              child: TapDetector(
                 key: ValueKey('character-$id'),
                 behavior: HitTestBehavior.opaque,
                 onTap: _busy ? null : () => setState(() => _character = id),
@@ -266,7 +267,7 @@ class _CreateAgentFormState extends State<CreateAgentForm> {
               Pressable(
                 kind: PressKind.button,
                 radius: 16,
-                child: GestureDetector(
+                child: TapDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: _busy ? null : () => _start(text),
                   child: Container(

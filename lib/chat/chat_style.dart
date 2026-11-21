@@ -8,6 +8,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'agent_cluster.dart';
+import '../tap_detector.dart';
 
 /// Provides the active peer agent colour to descendant [ChatBubble]s when
 /// `chat.sent` is `"agent"`.
@@ -374,7 +375,7 @@ class ChatSystemLine extends StatelessWidget {
               WidgetSpan(
                 alignment: PlaceholderAlignment.baseline,
                 baseline: TextBaseline.alphabetic,
-                child: GestureDetector(
+                child: TapDetector(
                   onTap: action!.$2,
                   child: Text(action!.$1,
                       style: style.copyWith(color: ChatColors.action)),
@@ -414,7 +415,7 @@ class ChatGlassButton extends StatelessWidget {
         label: tooltip,
         child: Pressable(
           kind: PressKind.button,
-          child: GestureDetector(
+          child: TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
             child: Stack(clipBehavior: Clip.none, children: [
@@ -537,7 +538,7 @@ class ChatHeader extends StatelessWidget {
         label: 'Back',
         child: Pressable(
           kind: PressKind.button,
-          child: GestureDetector(
+          child: TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onBack,
             child: Glass(
@@ -571,7 +572,7 @@ class ChatHeader extends StatelessWidget {
       button: onTitleTap != null,
       label: title,
       hint: titleHint,
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTitleTap,
         child: Column(mainAxisSize: MainAxisSize.min, children: [

@@ -29,6 +29,7 @@ import 'screens/session.dart' show SessionScreen;
 import 'panel.dart' show presentScreen;
 import 'screens/mobile_chrome.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'tap_detector.dart';
 
 export 'components.dart';
 export 'dialog_widgets.dart';
@@ -95,7 +96,7 @@ class Pills<T> extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             for (final (val, label) in items)
-              GestureDetector(
+              TapDetector(
                 onTap: onSelect == null
                     ? null
                     : () {
@@ -131,7 +132,7 @@ class Pills<T> extends StatelessWidget {
           for (final (val, label) in items)
             Pressable(
               enabled: onSelect != null,
-              child: GestureDetector(
+              child: TapDetector(
                 onTap: onSelect == null
                     ? null
                     : () {
@@ -1389,7 +1390,7 @@ class _DesktopIconBtnState extends State<_DesktopIconBtn> {
         enabled: enabled,
         child: Pressable(
           enabled: enabled,
-          child: GestureDetector(
+          child: TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: widget.onTap,
             onTapDown: enabled ? (_) => setState(() => _down = true) : null,
@@ -2380,7 +2381,7 @@ class AppSwitch extends StatelessWidget {
     const inset = 3.0;
     return Semantics(
       toggled: on,
-      child: GestureDetector(
+      child: TapDetector(
         onTap: () {
           HapticFeedback.selectionClick();
           onChanged(!on);

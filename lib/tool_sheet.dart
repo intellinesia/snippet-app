@@ -8,6 +8,7 @@ import 'theme.dart';
 import 'tool_activity.dart';
 import 'tool_views.dart';
 import 'widgets.dart';
+import 'tap_detector.dart';
 
 /// One batch of consecutive tool calls, as the sheet shows it.
 class ToolBatch {
@@ -624,7 +625,7 @@ class _StepBody extends StatelessWidget {
     final lines = output.split('\n');
     final shown = lines.length > 6 ? lines.sublist(lines.length - 6) : lines;
     Widget link(String label, VoidCallback onTap, {bool muted = false}) =>
-        GestureDetector(
+        TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: Padding(

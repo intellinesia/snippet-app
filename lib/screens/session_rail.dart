@@ -20,6 +20,7 @@ import '../panel.dart' show presentScreen, PanelStyle;
 import '../shell_panel.dart' show ShellPanelPurpose;
 import '../chat/mc_panel_sections.dart' show mcNeeds, McNeedsYou;
 import 'agent_records.dart' show AgentInboxView, AgentBoardView;
+import '../tap_detector.dart';
 
 part 'session_rail_pages.dart';
 
@@ -1987,7 +1988,7 @@ class _RailCardState extends State<_RailCard> {
             widget.onTap == null ? MouseCursor.defer : SystemMouseCursors.click,
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
-        child: GestureDetector(
+        child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           child: AnimatedContainer(

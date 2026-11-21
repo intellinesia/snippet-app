@@ -6,6 +6,7 @@ import 'motion.dart';
 import 'theme.dart';
 import 'transcript.dart';
 import 'widgets.dart';
+import 'tap_detector.dart';
 
 /// The run's plan in the transcript: where it is, a segment per step and
 /// what comes next. Tap to see every step. Only the latest update is drawn.
@@ -50,7 +51,7 @@ class _PlanProgressCardState extends State<PlanProgressCard> {
     }
     final r = Grouped.radiusEnd;
     const ri = Radius.circular(Grouped.radiusInner);
-    final head = GestureDetector(
+    final head = TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => setState(() => _open = !_open),
       child: Container(
@@ -179,7 +180,7 @@ extension on _PlanProgressCardState {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            GestureDetector(
+            TapDetector(
               behavior: HitTestBehavior.opaque,
               onTap: toggle,
               child: Padding(

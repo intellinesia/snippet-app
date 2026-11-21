@@ -21,6 +21,7 @@ import '../widgets.dart';
 import 'artifact_grid.dart';
 import 'file_viewer.dart';
 import 'mobile_chrome.dart';
+import '../tap_detector.dart';
 
 const _textExts = {
   'txt',
@@ -374,7 +375,7 @@ class _ArtifactRowState extends State<ArtifactRow> {
         }
         return GroupedCard(segments: [
           _header(context),
-          GestureDetector(
+          TapDetector(
             onTap: () => _open(context),
             child: SizedBox(height: 150, width: double.infinity, child: body),
           ),
@@ -1118,7 +1119,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
     final multi = (_artifact?.versions.length ?? 0) > 1;
     final style = sans(13, color: AppColors.fg3);
     return Builder(
-      builder: (anchor) => GestureDetector(
+      builder: (anchor) => TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: multi ? () => _pickVersion(anchor) : null,
         child: Padding(
@@ -1146,7 +1147,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           for (final (src, label) in [(false, 'Preview'), (true, 'Source')])
-            GestureDetector(
+            TapDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => setState(() => _source = src),
               child: Container(
@@ -1890,7 +1891,7 @@ class _SheetHeader extends StatelessWidget {
                       alignment: Alignment.centerRight,
                       child: Semantics(
                         button: true,
-                        child: GestureDetector(
+                        child: TapDetector(
                           key: const ValueKey('deliverables-done'),
                           behavior: HitTestBehavior.opaque,
                           onTap: onDone,

@@ -4,6 +4,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'composer_pill.dart';
+import '../tap_detector.dart';
 
 /// One held message as the queue shows it.
 class ComposerQueueEntry {
@@ -52,7 +53,7 @@ class ComposerQueueList extends StatelessWidget {
             {bool strong = false}) =>
         Semantics(
           button: true,
-          child: GestureDetector(
+          child: TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
             child: Padding(

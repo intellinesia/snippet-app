@@ -8,6 +8,7 @@ import '../../../models.dart';
 import '../../../theme.dart';
 import '../../../widgets.dart';
 import 'ambient_stage.dart' show AmbientHeardLine;
+import '../../../tap_detector.dart';
 
 /// Desktop body of the ambient stage: header, live caption, recent heard rows.
 class AmbientDesktopPanel extends StatelessWidget {
@@ -154,7 +155,7 @@ class _CallButton extends StatelessWidget {
     return Semantics(
       button: true,
       label: label,
-      child: GestureDetector(
+      child: TapDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Column(mainAxisSize: MainAxisSize.min, children: [

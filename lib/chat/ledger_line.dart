@@ -13,6 +13,7 @@ import '../theme.dart';
 import '../tool_activity.dart';
 import '../transcript.dart';
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 enum LedgerKind { search, read, web, edit, command, other }
 
@@ -261,7 +262,7 @@ class _LedgerLineState extends State<LedgerLine> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              GestureDetector(
+              TapDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: widget.onTap,
                 child: Padding(
@@ -284,7 +285,7 @@ class _LedgerLineState extends State<LedgerLine> {
                 ),
               ),
               if (took != null)
-                GestureDetector(
+                TapDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: widget.onTap,
                   child: Padding(
@@ -390,7 +391,7 @@ class _PhraseTargetState extends State<_PhraseTarget> {
           cursor: SystemMouseCursors.click,
           onEnter: (_) => _set(true),
           onExit: (_) => _set(false),
-          child: GestureDetector(
+          child: TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: widget.onTap,
             child: Text.rich(TextSpan(children: [

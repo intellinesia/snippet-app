@@ -21,6 +21,7 @@ import '../../../theme.dart';
 import '../../../widgets.dart';
 import '../../mobile_voice_page.dart';
 import 'ambient_desktop_panel.dart';
+import '../../../tap_detector.dart';
 
 final ValueNotifier<AmbientStateEvent?> _emptyAmbientState = ValueNotifier(null);
 
@@ -244,7 +245,7 @@ class _AmbientHeaderOrbState extends State<AmbientHeaderOrb> {
     return Semantics(
       button: true,
       label: 'Ambient listening',
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => kMobile
             ? openMobileVoicePage(context, client: widget.client)
@@ -444,7 +445,7 @@ class _AmbientStageState extends State<AmbientStage>
     final orbWidget = Semantics(
       button: true,
       label: _live ? 'Stop listening' : 'Start listening',
-      child: GestureDetector(
+      child: TapDetector(
         onTap: _canToggle ? _toggle : null,
         onLongPress: _canToggle ? _toggle : null,
         child: _Orb(

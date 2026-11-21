@@ -4,6 +4,7 @@ import 'components.dart';
 import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart' show AppIcon, PressKind, Pressable;
+import 'tap_detector.dart';
 
 class TranscriptCard extends StatefulWidget {
   const TranscriptCard({
@@ -63,7 +64,7 @@ class _TranscriptCardState extends State<TranscriptCard> {
                 maxLines: _open ? null : widget.maxLines,
                 overflow: _open ? null : TextOverflow.ellipsis),
             if (long)
-              GestureDetector(
+              TapDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => setState(() => _open = !_open),
                 child: Padding(

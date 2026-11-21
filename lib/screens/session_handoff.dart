@@ -6,6 +6,7 @@ import '../mochi.dart';
 import '../morph_sheet.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 // Re-exported so the session part files reach them through this one import.
 export '../morph_sheet.dart' show globalRectOf, lastChipOrigin;
@@ -275,7 +276,7 @@ class _SessionHandOffPanelState extends State<SessionHandOffPanel> {
       button: true,
       selected: selected,
       label: a.displayName,
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _busy ? null : () => setState(() => _selected = a.id),
         child: Container(

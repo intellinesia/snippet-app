@@ -9,6 +9,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'file_viewer.dart';
 import '../settings_form.dart' show Grouped;
+import '../tap_detector.dart';
 
 /// A file the agent handed over with `present_file`: a card on a phone and a
 /// compact line on desktop, opening the file, with a download button.
@@ -472,7 +473,7 @@ class _PresentedFilesState extends State<PresentedFiles> {
               child: Text('Shared ${files.length} files',
                   style: TS.meta(AppColors.fg3)),
             ),
-            GestureDetector(
+            TapDetector(
               behavior: HitTestBehavior.opaque,
               onTap: _downloadAll,
               child: Padding(
@@ -497,7 +498,7 @@ class _PresentedFilesState extends State<PresentedFiles> {
           ),
         ),
         if (hidden > 0 || (_all && files.length > _shown))
-          GestureDetector(
+          TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => setState(() => _all = !_all),
             child: Padding(

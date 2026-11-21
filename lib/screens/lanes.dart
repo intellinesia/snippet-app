@@ -17,6 +17,7 @@ import '../settings_form.dart';
 import '../transcript.dart'
     show LaneControlButton, LaneWho, laneAgentName, laneElapsed;
 import 'session.dart';
+import '../tap_detector.dart';
 
 /// A focused view of delegated work. The session owns the live state; this
 /// screen polls the getter so progress continues updating while it is open.
@@ -491,7 +492,7 @@ class _RetryPillState extends State<_RetryPill> {
         opacity: _busy ? 0.5 : 1,
         child: Semantics(
           button: true,
-          child: GestureDetector(
+          child: TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: _retry,
             child: Container(

@@ -13,6 +13,7 @@ import '../widgets.dart';
 import '../settings_form.dart';
 import 'git.dart';
 import 'file_viewer.dart';
+import '../tap_detector.dart';
 export 'file_viewer.dart';
 
 /// Standalone file browser — navigate folders and view file contents on a
@@ -352,7 +353,7 @@ class _FileExplorerState extends State<FileExplorer> {
                             : SingleChildScrollView(
                                 scrollDirection: Axis.horizontal,
                                 child: Row(children: [
-                                  GestureDetector(
+                                  TapDetector(
                                     onTap: listing?.parent == null
                                         ? null
                                         : () => _go('/', forward: false),
@@ -368,7 +369,7 @@ class _FileExplorerState extends State<FileExplorer> {
                                         child: AppIcon('chevron-right',
                                             size: 11, color: AppColors.fg4),
                                       ),
-                                    GestureDetector(
+                                    TapDetector(
                                       onTap: i == segs.length - 1
                                           ? null
                                           : () => _go(
@@ -652,7 +653,7 @@ class _FileExplorerState extends State<FileExplorer> {
                 padding: EdgeInsets.symmetric(horizontal: S.of(3)),
                 child: AppIcon('chevron-right', size: 11, color: AppColors.fg4),
               ),
-            GestureDetector(
+            TapDetector(
               behavior: HitTestBehavior.opaque,
               onTap: i == crumbs.length - 1
                   ? null

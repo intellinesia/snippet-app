@@ -12,6 +12,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'session_list_row.dart';
 import 'shell_nav.dart' show sessionBusy;
+import '../tap_detector.dart';
 
 /// The agent's character colour, for the approval card and the stage.
 Color heroAgentColor(String agentId) {
@@ -319,7 +320,7 @@ class _PhoneHeroState extends State<PhoneHero> {
     Widget sleeper(CrewEntry e, double size) => Semantics(
           button: e.lead != null,
           label: '${e.agent.displayName} is asleep',
-          child: GestureDetector(
+          child: TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: e.lead == null ? null : () => widget.onOpenSession(e.lead!),
             child: _avatar(e.agent.id, size, AgentCharacterState.sleeping,
@@ -387,7 +388,7 @@ class _PhoneHeroState extends State<PhoneHero> {
               : asleep
                   ? '$name is asleep'
                   : name,
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: e.lead == null ? null : () => widget.onOpenSession(e.lead!),
         // The slot is narrower than the art so neighbours tuck in close; the

@@ -40,6 +40,7 @@ import 'agent_panel_body.dart';
 import '../settings_form.dart'
     show Grouped, SettingsGroup, SettingsHero, SettingsRow, SettingsSwitch;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../tap_detector.dart';
 
 /// Lets rows inside a docked [AgentInfoPanel] push a nested page instead of
 /// opening a popover or sheet. Absent everywhere else, so the same rows keep
@@ -1745,7 +1746,7 @@ class _EditPill extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Glass(

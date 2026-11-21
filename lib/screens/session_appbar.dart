@@ -1566,7 +1566,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
                     ? (_connError ?? 'Disconnected')
                     : '${_connError ?? 'Disconnected'} · ${_outbox.length} message${_outbox.length == 1 ? '' : 's'} will send on reconnect',
                 style: sans(12, height: 1.3, color: AppColors.fg1))),
-        GestureDetector(
+        TapDetector(
           onTap: _retryNow,
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Text('Retry now',
@@ -1923,7 +1923,7 @@ class TermTabChip extends StatelessWidget {
             Text(title,
                 style: sans(13, color: on ? AppColors.fg1 : AppColors.fg3)),
             if (on)
-              GestureDetector(
+              TapDetector(
                 onTap: onClose,
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
@@ -1972,7 +1972,7 @@ class _DockTabState extends State<_DockTab> {
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
         onSecondaryTap: widget.onRename,
@@ -2002,7 +2002,7 @@ class _DockTabState extends State<_DockTab> {
                 const SizedBox(width: 6),
                 Text(widget.title, style: sans(12, color: fg)),
                 const SizedBox(width: 6),
-                GestureDetector(
+                TapDetector(
                   onTap: widget.onClose,
                   behavior: HitTestBehavior.opaque,
                   child: SizedBox(

@@ -13,6 +13,7 @@ import 'motion.dart' show WorkingDots;
 import 'models.dart';
 import 'theme.dart';
 import 'widgets.dart';
+import 'tap_detector.dart';
 
 /// The provider logo for an agent's inference profile, or nothing when the
 /// profile is unset or unknown.
@@ -327,7 +328,7 @@ class _CrewStackState extends State<CrewStack> {
         child: MouseRegion(
           onEnter: (_) => _show(),
           onExit: (_) => _later(),
-          child: GestureDetector(
+          child: TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => _portal.isShowing ? _portal.hide() : _portal.show(),
             child: Padding(

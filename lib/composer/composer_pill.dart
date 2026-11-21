@@ -7,6 +7,7 @@ import '../gesture_physics.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 /// Round 7 composer tokens, local so the theme file stays with its owner.
 abstract final class C7 {
@@ -84,7 +85,7 @@ class _ComposerMorphButtonState extends State<ComposerMorphButton>
       button: true,
       enabled: on,
       label: _label,
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: on
             ? () {

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../media_views.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 class ComposerAttachmentBar extends StatelessWidget {
   const ComposerAttachmentBar({super.key, required this.tiles});
@@ -139,7 +140,7 @@ class ComposerAttachmentTile extends StatelessWidget {
         child: Semantics(
           button: onOpen != null,
           label: uploading ? 'Voice note, uploading' : 'Voice note',
-          child: GestureDetector(
+          child: TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: uploading ? null : onOpen,
             child: Container(
@@ -220,7 +221,7 @@ class ComposerAttachmentTile extends StatelessWidget {
           child: Semantics(
             button: true,
             label: 'Remove $name',
-            child: GestureDetector(
+            child: TapDetector(
               onTap: onRemove,
               child: Container(
                 width: 22,

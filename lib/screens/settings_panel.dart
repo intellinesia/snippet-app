@@ -38,6 +38,7 @@ import '../desktop_pick.dart';
 import '../desktop_layout.dart';
 import 'memory_screen.dart';
 import 'wakes_screen.dart';
+import '../tap_detector.dart';
 
 /// Rows for the machine popover/sheet: live dot (re-pinged on open), label,
 /// host, trailing overflow. Pops itself before invoking any callback.
@@ -2940,7 +2941,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                     accent,
                     fg2,
                   ];
-                  return GestureDetector(
+                  return TapDetector(
                     onTap: () => unawaited(_runThemeUpdate(
                       context,
                       () => tm.applyTheme(item.id),
@@ -3173,7 +3174,7 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                 itemBuilder: (context, i) {
                   final font = fonts[i];
                   final selected = font.family == active.family;
-                  return GestureDetector(
+                  return TapDetector(
                     onTap: () => unawaited(_runThemeUpdate(
                       context,
                       () => widget.mono
@@ -3288,7 +3289,7 @@ class _AccentSwatchStrip extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            GestureDetector(
+            TapDetector(
               onTap: () => unawaited(_runThemeUpdate(
                 context,
                 () => tm.setAccentName(null),
@@ -3315,7 +3316,7 @@ class _AccentSwatchStrip extends StatelessWidget {
               ),
             ),
             for (final a in allAccents)
-              GestureDetector(
+              TapDetector(
                 onTap: () => unawaited(_runThemeUpdate(
                   context,
                   () => tm.setAccentName(a.name),

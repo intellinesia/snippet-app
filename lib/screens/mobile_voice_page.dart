@@ -17,6 +17,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'mobile_chrome.dart';
 import '../chat_scene.dart' show SceneBackdrop;
+import '../tap_detector.dart';
 
 final ValueNotifier<AmbientStateEvent?> _emptyVoiceState = ValueNotifier(null);
 
@@ -544,7 +545,7 @@ class _VoiceCircleBtn extends StatelessWidget {
         child: Semantics(
           button: true,
           label: tooltip,
-          child: GestureDetector(
+          child: TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () {
               HapticFeedback.selectionClick();

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 /// The asking agent's colour for a card's primary button and selections.
 class ChatCardAccent extends InheritedWidget {
@@ -232,7 +233,7 @@ class ChatCardActions extends StatelessWidget {
           if (link != null)
             Semantics(
               button: true,
-              child: GestureDetector(
+              child: TapDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onLink,
                 child: Padding(
@@ -264,7 +265,7 @@ extension on ChatCardActions {
             constraints: const BoxConstraints(maxWidth: 260),
             child: Semantics(
               button: true,
-              child: GestureDetector(
+              child: TapDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onLink,
                 child: Padding(
@@ -326,7 +327,7 @@ class _ChatCardPill extends StatelessWidget {
         kind: PressKind.card,
         radius: h / 2,
         enabled: enabled,
-        child: GestureDetector(
+        child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: enabled ? b.onTap : null,
           child: AnimatedOpacity(

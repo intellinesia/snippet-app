@@ -17,6 +17,7 @@ import 'screens/file_viewer.dart';
 import 'theme.dart';
 import 'tool_sheet.dart';
 import 'widgets.dart';
+import 'tap_detector.dart';
 
 /// The daemon a subtree talks to, so media deep in the transcript (tool
 /// panels, message attachments) can load files without threading a client
@@ -218,7 +219,7 @@ class ImageThumb extends StatelessWidget {
       image: true,
       label: baseName(path),
       button: true,
-      child: GestureDetector(
+      child: TapDetector(
         onTap: () => openMedia(context, client, path, gallery: gallery),
         child: Container(
           width: width,

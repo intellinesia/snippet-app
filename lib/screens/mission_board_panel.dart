@@ -14,6 +14,7 @@ import '../swr.dart';
 
 import 'goals/goal_widgets.dart';
 import 'shell_models.dart' show RightTab;
+import '../tap_detector.dart';
 
 class MissionBoardPanel extends StatefulWidget {
   const MissionBoardPanel({
@@ -289,7 +290,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
           child: Row(children: [
             for (final f in _BoardFilter.values)
               Expanded(
-                child: GestureDetector(
+                child: TapDetector(
                   key: ValueKey('board-filter-${f.name}'),
                   behavior: HitTestBehavior.opaque,
                   onTap: () => setState(() => _filter = f),
@@ -344,7 +345,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                   style: sans(13, color: on ? AppColors.fg1 : AppColors.fg3)),
               if (onClose != null) ...[
                 SizedBox(width: S.of(5)),
-                GestureDetector(
+                TapDetector(
                   onTap: onClose,
                   behavior: HitTestBehavior.opaque,
                   child: Padding(

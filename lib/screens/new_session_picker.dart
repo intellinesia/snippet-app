@@ -14,6 +14,7 @@ import 'mission_control/mission_control_state.dart' show isDedicatedMcSession;
 import 'mobile_chrome.dart';
 import '../chat_scene.dart' show SceneBackdrop;
 import '../chat/signal_row.dart' show agentDisplayName;
+import '../tap_detector.dart';
 
 /// New-session composer on phones, with folder browsing tucked into a sheet.
 class NewSessionPicker extends StatefulWidget {
@@ -657,7 +658,7 @@ class _NewSessionPickerState extends State<NewSessionPicker> {
             ),
           ),
           SizedBox(width: S.s4),
-          GestureDetector(
+          TapDetector(
             onTap: () => setState(() => _attachments.removeAt(index)),
             child: SizedBox(
               width: 20,

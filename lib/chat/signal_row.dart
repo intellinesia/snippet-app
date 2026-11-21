@@ -10,6 +10,7 @@ import '../envelope.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 enum SignalTone { neutral, ok, run, danger, accent }
 
@@ -139,7 +140,7 @@ class SignalRow extends StatelessWidget {
         ],
         if (action != null) ...[
           SizedBox(width: S.s8),
-          GestureDetector(
+          TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onAction,
             child: SizedBox(
@@ -170,7 +171,7 @@ class SignalRow extends StatelessWidget {
       ),
     );
     if (onTap == null) return padded;
-    return GestureDetector(
+    return TapDetector(
         behavior: HitTestBehavior.opaque, onTap: onTap, child: padded);
   }
 }

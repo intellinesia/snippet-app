@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../morph_sheet.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 /// "Fork this conversation" sheet. Resolves true for "From this message",
 /// false for "Full history", null when dismissed. [origin] is the tapped
@@ -45,7 +46,7 @@ class _SessionForkPanelState extends State<SessionForkPanel> {
       inMutuallyExclusiveGroup: true,
       checked: on,
       label: title,
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => setState(() => _fromHere = value),
         child: Container(

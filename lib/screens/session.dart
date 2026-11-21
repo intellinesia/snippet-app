@@ -96,6 +96,7 @@ import 'session_panels.dart';
 import 'session_coordination_cards.dart';
 import 'session_handoff.dart';
 import 'mission_control/widgets/autonomy_panel.dart';
+import '../tap_detector.dart';
 import 'mission_control/mission_control_state.dart'
     show
         isDedicatedMcSession,

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../mochi.dart';
 import '../platform.dart';
 import '../theme.dart';
+import '../tap_detector.dart';
 
 /// Desktop chat header: orb, title, status pill and a quiet agent line, with
 /// the session actions at the right while the panel is hidden or folded.
@@ -52,7 +53,7 @@ class SessionChatHeader extends StatelessWidget {
             flex: 100,
             child: onTitleTap == null
                 ? name
-                : GestureDetector(
+                : TapDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: onTitleTap,
                     child: name),

@@ -6,6 +6,7 @@ import '../mochi.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 /// Opens the avatar and colour picker for an agent; the two are stored
 /// separately, and each previews the other's current choice.
@@ -158,7 +159,7 @@ class AgentAppearancePicker extends StatelessWidget {
       message: 'Character $id',
       waitDuration: const Duration(milliseconds: 400),
       child: Builder(
-        builder: (context) => GestureDetector(
+        builder: (context) => TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => _pickCharacter(context, id),
           child: Container(

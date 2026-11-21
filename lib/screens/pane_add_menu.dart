@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 /// One row of the pane "+" menu.
 class PaneAddEntry {
@@ -111,7 +112,7 @@ class _StripSquareButtonState extends State<StripSquareButton> {
           cursor: SystemMouseCursors.click,
           onEnter: (_) => setState(() => _hover = true),
           onExit: (_) => setState(() => _hover = false),
-          child: GestureDetector(
+          child: TapDetector(
             onTap: widget.onTap,
             child: Container(
               width: 26,

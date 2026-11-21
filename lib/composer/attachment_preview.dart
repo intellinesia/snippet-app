@@ -14,6 +14,7 @@ import '../media_views.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 /// What the preview needs to know about one composer attachment.
 class PreviewAttachment {
@@ -209,7 +210,7 @@ class _PhoneSheetState extends State<_PhoneSheet> {
                   onRemove: widget.onRemove,
                   onInsert: widget.onInsert,
                   bottomInset: keyboard > 0 ? 0 : media.padding.bottom,
-                  wrapHeader: (header) => GestureDetector(
+                  wrapHeader: (header) => TapDetector(
                     behavior: HitTestBehavior.translucent,
                     onVerticalDragUpdate: (d) =>
                         setState(() => _drag = (_drag ?? base) - d.delta.dy),

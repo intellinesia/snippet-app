@@ -6,6 +6,7 @@ import 'theme.dart';
 import 'tool_activity.dart';
 import 'widgets.dart';
 import 'platform.dart';
+import 'tap_detector.dart';
 
 // The daemon can evolve independently of the client. Keep malformed or newer
 // result items visible only as far as they can be safely rendered; one bad item
@@ -672,7 +673,7 @@ class _WebResult extends StatelessWidget {
     final host = _host(url);
     final meta = [if (host.isNotEmpty) host, if (date.isNotEmpty) date];
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      GestureDetector(
+      TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: url.isEmpty ? null : () => openMarkdownLink(url, context),
         child: Text(title.isEmpty ? (host.isEmpty ? url : host) : title,

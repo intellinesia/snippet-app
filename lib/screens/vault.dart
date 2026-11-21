@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../settings_form.dart';
 import 'shell_nav.dart';
+import '../tap_detector.dart';
 
 /// Secret vault — names only ever reach this screen (and the agent); values go
 /// straight to the daemon on save and are injected/redacted server-side.
@@ -397,7 +398,7 @@ class VaultScreenState extends State<VaultScreen> {
               Semantics(
                 button: true,
                 label: 'Remove $name',
-                child: GestureDetector(
+                child: TapDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => _remove(name),
                   child: Padding(
@@ -423,7 +424,7 @@ class VaultScreenState extends State<VaultScreen> {
         trailing: Semantics(
           button: true,
           label: 'Remove $name',
-          child: GestureDetector(
+          child: TapDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => _remove(name),
             child: Padding(

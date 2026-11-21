@@ -7,6 +7,7 @@ import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import '../file_icons.dart';
+import '../tap_detector.dart';
 
 /// Desktop session-header chips: Files and the branch. Each opens an anchored
 /// popover; the full workspace lives in the shell's own pane.
@@ -396,7 +397,7 @@ class _RowState extends State<_Row> {
         cursor: widget.onTap == null
             ? SystemMouseCursors.basic
             : SystemMouseCursors.click,
-        child: GestureDetector(
+        child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           child: Container(

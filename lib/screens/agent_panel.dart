@@ -14,6 +14,7 @@ import 'agent_records.dart';
 import 'agent_wake_panel.dart';
 import 'memory_screen.dart';
 import 'shell_models.dart' show RightTab;
+import '../tap_detector.dart';
 
 /// The agent actions that open as right-panel tabs. `desk` opens a session tab
 /// and `delete` a confirm.
@@ -295,7 +296,7 @@ class AgentSidePanel extends StatelessWidget {
                   SizedBox(width: S.of(5)),
                   Tooltip(
                     message: 'Close tab',
-                    child: GestureDetector(
+                    child: TapDetector(
                       onTap: onClose,
                       behavior: HitTestBehavior.opaque,
                       child: Padding(
@@ -657,7 +658,7 @@ class PanelSegments extends StatelessWidget {
           for (var i = 0; i < labels.length; i++)
             Expanded(
               flex: 30 + labels[i].length * 10,
-              child: GestureDetector(
+              child: TapDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => onSelect(i),
                 child: Container(

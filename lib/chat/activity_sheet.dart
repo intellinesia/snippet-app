@@ -19,6 +19,7 @@ import '../transcript.dart'
     show RunSpinner, TerminalBlock, isLookupStep, isSearchStep;
 import '../widgets.dart';
 import 'activity_dock.dart';
+import '../tap_detector.dart';
 
 Future<void> showActivitySheet(
   BuildContext context, {
@@ -456,7 +457,7 @@ class _StepRow extends StatelessWidget {
         meta = Text(d, style: sans(13.5, color: AppColors.fg3, tabular: true));
     }
     final err = failed ? _errorLines(step) : const <String>[];
-    return GestureDetector(
+    return TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Padding(
@@ -553,7 +554,7 @@ class _GroupRow extends StatelessWidget {
         if (searches > 0) '$searches ${searches == 1 ? 'search' : 'searches'}',
       ].join(', ');
     }
-    return GestureDetector(
+    return TapDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Padding(
@@ -775,7 +776,7 @@ class _RoundButton extends StatelessWidget {
   final double size;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(
@@ -798,7 +799,7 @@ class _NavButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: enabled ? onTap : null,
         child: Opacity(
@@ -824,7 +825,7 @@ class _WideButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Container(

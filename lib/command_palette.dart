@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'platform.dart';
 import 'theme.dart';
 import 'widgets.dart';
+import 'tap_detector.dart';
 
 enum PaletteKind {
   recent('Recent'),
@@ -518,7 +519,7 @@ class _PaletteState extends State<_Palette> {
   }
 
   Widget _desktopSearch(bool busy) {
-    Widget chip(String prefix, String label) => GestureDetector(
+    Widget chip(String prefix, String label) => TapDetector(
           onTap: () {
             _ctrl.value = TextEditingValue(
               text: '$prefix ',
@@ -603,7 +604,7 @@ class _PaletteState extends State<_Palette> {
       onHover: (_) {
         if (_selected != i) setState(() => _selected = i);
       },
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => _run(item),
         child: Container(

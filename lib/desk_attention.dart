@@ -9,6 +9,7 @@ import 'notification_text.dart';
 import 'session_quick_send.dart';
 import 'theme.dart';
 import 'widgets.dart';
+import 'tap_detector.dart';
 
 /// A session asking the user to approve something or answer a question.
 bool deskAsk(SessionInfo s) {
@@ -289,7 +290,7 @@ class _TextButtonLiteState extends State<TextButtonLite> {
         cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
-        child: GestureDetector(
+        child: TapDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           child: Padding(

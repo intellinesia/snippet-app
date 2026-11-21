@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../mochi.dart';
 import '../theme.dart';
 import '../widgets.dart' show AppIcon;
+import '../tap_detector.dart';
 
 /// One cast member on the stage.
 class StageMember {
@@ -132,7 +133,7 @@ class StageHeader extends StatelessWidget {
     if (onTap == null) return chip;
     return Semantics(
       button: true,
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         // The pill can be short; the touch target stays 44 on phones.
@@ -200,7 +201,7 @@ class StagePill extends StatelessWidget {
     if (onTap == null) return pill;
     return Semantics(
       button: true,
-      child: GestureDetector(
+      child: TapDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         // Pad the hit area to a touch target without growing the pill.

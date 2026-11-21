@@ -5,6 +5,7 @@ import '../models.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../tap_detector.dart';
 
 /// Design-language primitives for the shell sidebar.
 ///
@@ -226,7 +227,7 @@ class ShellSectionHeader extends StatelessWidget {
             Expanded(child: leading!)
           else
           Expanded(
-            child: GestureDetector(
+            child: TapDetector(
               onTap: onToggle,
               child: Text(label,
                   maxLines: 1,

@@ -5,6 +5,7 @@ import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart' show AppIcon;
 import 'shell_models.dart' show MobileHome;
+import '../tap_detector.dart';
 
 /// Desktop sidebar: sessions first (agents in the rail) or agents first.
 final sidebarAgentsFirst = ValueNotifier<bool>(false);
@@ -90,7 +91,7 @@ class SidebarModeSwitch extends StatelessWidget {
           button: true,
           selected: on,
           label: tip,
-          child: GestureDetector(
+          child: TapDetector(
             key: key,
             behavior: HitTestBehavior.opaque,
             onTap: () => setSidebarAgentsFirst(agents),
