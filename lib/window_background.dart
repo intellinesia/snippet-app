@@ -110,6 +110,25 @@ class WindowBackground extends StatelessWidget {
         ),
       ),
       child,
+      // A transparent NSWindow gets no system edge, so draw the hairline.
+      if (kMacOS)
+        Positioned.fill(
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(_macWindowRadius),
+                border: Border.all(color: AppColors.panelOutline, width: 1),
+              ),
+            ),
+          ),
+        ),
     ]);
   }
 }
+
+/// macOS 26 rounds windows at 16pt; earlier releases at 10pt.
+final double _macWindowRadius = () {
+  final m = RegExp(r'(\d+)\.').firstMatch(Platform.operatingSystemVersion);
+  final major = int.tryParse(m?.group(1) ?? '') ?? 0;
+  return major >= 26 ? 16.0 : 10.0;
+}();
