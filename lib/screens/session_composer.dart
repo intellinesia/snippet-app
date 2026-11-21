@@ -1167,18 +1167,17 @@ extension _SessionScreenComposerExt on _SessionScreenState {
         heightFactor: 1,
         child: ConstrainedBox(
           constraints: BoxConstraints(
-              maxWidth: kMobile ? double.infinity : kDesktopComposerWidth),
+              // Gutter sits outside the column so it lines up with transcript rows.
+              maxWidth: kMobile
+                  ? double.infinity
+                  : kDesktopComposerWidth + 2 * S.s20),
           child: LiveCaptionAnchor(
             // Inset from the pane on EVERY layout. Embedded used to be 0, which is
             // why the composer stuck to the sides of the shell.
             padding: EdgeInsets.fromLTRB(
-                kMobile
-                    ? M.gutter
-                    : (widget.embedded ? kComposerGutter : S.s20),
+                kMobile ? M.gutter : S.s20,
                 S.s8,
-                kMobile
-                    ? M.gutter
-                    : (widget.embedded ? kComposerGutter : S.s20),
+                kMobile ? M.gutter : S.s20,
                 kMobile
                     ? S.of(10) + (keyboard > 0 ? S.s8 : mq.padding.bottom)
                     : 18),
