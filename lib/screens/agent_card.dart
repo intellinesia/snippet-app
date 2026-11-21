@@ -687,11 +687,15 @@ class _AgentRowShellState extends State<AgentRowShell> {
                 // 28 px slot, the session avatar's width, so agent names and
                 // session titles start at one x.
                 SizedBox(
-                  width: widget.tint != null ? 34 : 28,
-                  height: widget.tint != null ? 34 : 22,
+                  width: 28,
+                  height: 22,
                   child: Stack(clipBehavior: Clip.none, children: [
                     if (widget.tint != null && !widget.wideAvatar)
-                      Positioned.fill(
+                      Positioned(
+                          left: 3,
+                          top: 0,
+                          width: 22,
+                          height: 22,
                           child: _LitTile(widget.tint!, widget.avatar))
                     else if (widget.wideAvatar)
                       Positioned(
@@ -731,7 +735,7 @@ class _AgentRowShellState extends State<AgentRowShell> {
                       ),
                   ]),
                 ),
-                SizedBox(width: widget.tint != null ? 12 : 10),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Row(children: [
                     Flexible(
@@ -739,7 +743,7 @@ class _AgentRowShellState extends State<AgentRowShell> {
                           maxLines: 1,
                           softWrap: false,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(widget.tint != null ? 14 : 13,
+                          style: sans(13,
                               weight: FontWeight.w500,
                               color: widget.needs
                                   ? AppColors.fg1
@@ -1053,7 +1057,7 @@ class _LitTile extends StatelessWidget {
         .toColor();
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(6),
         gradient: RadialGradient(
           center: const Alignment(-0.36, -0.44),
           radius: 1.0,
@@ -1062,9 +1066,9 @@ class _LitTile extends StatelessWidget {
         ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(6),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(2, 4, 2, 0),
+          padding: const EdgeInsets.fromLTRB(1, 2, 1, 0),
           child: FittedBox(child: avatar),
         ),
       ),
