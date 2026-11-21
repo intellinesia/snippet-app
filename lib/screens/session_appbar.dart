@@ -1400,7 +1400,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     );
   }
 
-  Widget _sessionRail(HarnessState? s, {bool floating = false}) {
+  Widget _sessionRail(HarnessState? s,
+      {bool floating = false, double? column}) {
     final mc = _isMissionControl;
     final open = widget.onOpenRightPanel;
     final goalOn = s?.goal?.ongoing ?? false;
@@ -1415,6 +1416,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       state: s,
       isMissionControl: mc,
       floating: floating,
+      columnWidth: column,
       agentId: _me?.displayAgentId,
       profileLabel: profile.isEmpty ? 'Default model' : profile,
       resumeMode: _resumeMode,

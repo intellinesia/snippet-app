@@ -2190,7 +2190,8 @@ class _SessionScreenState extends State<SessionScreen>
                                 }),
                               ),
                             ),
-                            if (_railVisible(column.maxWidth)) _sessionRail(s),
+                            if (_railVisible(column.maxWidth))
+                              _sessionRail(s, column: column.maxWidth),
                           ],
                         )))),
           ),

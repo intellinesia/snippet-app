@@ -30,9 +30,35 @@ double get kSessionRailEdgeInset => S.of(10) + S.s2;
 /// Chat must keep at least this much room beside the rail.
 const double kSessionRailMinChat = 520;
 
+/// Narrowest docked panel, gutters included.
+const double kSessionRailMinOuter = 300;
+
 /// Narrowest session column that still shows the rail.
-const double kSessionRailMinColumn =
-    kSessionRailMinChat + kSessionRailWidth + 24;
+const double kSessionRailMinColumn = kSessionRailMinChat + kSessionRailMinOuter;
+
+const String kSessionRailFractionPref = 'session_rail_fraction';
+const double kSessionRailDefaultFraction = 0.4;
+
+/// The docked panel's share of the session column, so the chat and panel
+/// both scale when the sidebar or window resizes.
+final ValueNotifier<double> sessionRailFraction =
+    ValueNotifier<double>(kSessionRailDefaultFraction);
+
+/// Docked panel width (gutters included) for a session column; the panel
+/// and the strip above both use this so their dividers meet.
+double sessionRailOuterWidth(double column) {
+  final max = column - kSessionRailMinChat;
+  final w = column * sessionRailFraction.value;
+  return (max < kSessionRailMinOuter
+          ? kSessionRailMinOuter
+          : w.clamp(kSessionRailMinOuter, max))
+      .floorToDouble();
+}
+
+Future<void> saveSessionRailFraction() async {
+  final p = await SharedPreferences.getInstance();
+  await p.setDouble(kSessionRailFractionPref, sessionRailFraction.value);
+}
 
 final ValueNotifier<bool> sessionRailCollapsed = ValueNotifier<bool>(false);
 
@@ -44,7 +70,8 @@ final ValueNotifier<bool> sessionRailFloating = ValueNotifier<bool>(false);
 final ValueNotifier<bool> sessionGoalEditRequest = ValueNotifier<bool>(false);
 
 /// Asks the open panel to show a page ('usage'); cleared once taken.
-final ValueNotifier<String?> sessionRailPageRequest = ValueNotifier<String?>(null);
+final ValueNotifier<String?> sessionRailPageRequest =
+    ValueNotifier<String?>(null);
 bool _railPrefLoaded = false;
 
 Future<void> loadSessionRailPref() async {
@@ -52,6 +79,8 @@ Future<void> loadSessionRailPref() async {
   _railPrefLoaded = true;
   final p = await SharedPreferences.getInstance();
   sessionRailCollapsed.value = p.getBool(kSessionRailCollapsedPref) ?? false;
+  sessionRailFraction.value =
+      p.getDouble(kSessionRailFractionPref) ?? kSessionRailDefaultFraction;
 }
 
 Future<void> setSessionRailCollapsed(bool v) async {
@@ -77,6 +106,7 @@ class SessionRail extends StatefulWidget {
     required this.onGoal,
     required this.onCycleResume,
     this.floating = false,
+    this.columnWidth,
     this.agentId,
     this.github,
     this.onChanges,
@@ -121,6 +151,9 @@ class SessionRail extends StatefulWidget {
 
   /// Shown as a floating card (narrow window) instead of docked beside the chat.
   final bool floating;
+
+  /// The session column's width, which sizes the docked panel.
+  final double? columnWidth;
 
   /// Whose mascot heads the quiet Overview.
   final String? agentId;
@@ -224,6 +257,8 @@ class _DeleteInPlaceState extends State<_DeleteInPlace> {
 }
 
 class _SessionRailState extends State<SessionRail> {
+  bool _resizing = false;
+
   GitStatus? _git;
   WakeSchedule? _wake;
   bool _wakeKnown = false;
@@ -419,13 +454,18 @@ class _SessionRailState extends State<SessionRail> {
   @override
   Widget build(BuildContext context) {
     if (widget.floating) return _card(640);
-    return ValueListenableBuilder<bool>(
-      valueListenable: sessionRailCollapsed,
-      builder: (_, collapsed, __) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([sessionRailCollapsed, sessionRailFraction]),
+      builder: (_, __) {
+        final collapsed = sessionRailCollapsed.value;
         // Hidden: the chat header carries the actions and the show toggle.
         // The panel's width eases out to nothing while it fades and slides.
+        final column = widget.columnWidth;
+        final outer =
+            kMobile || column == null ? null : sessionRailOuterWidth(column);
         final open = LayoutBuilder(
           builder: (_, box) => Container(
+            width: outer,
             // Meets the divider in the pane row's panel strip above.
             decoration: kMobile
                 ? null
@@ -436,13 +476,39 @@ class _SessionRailState extends State<SessionRail> {
                 : EdgeInsets.fromLTRB(S.s12, S.s4, S.s12, S.s8),
             child: Align(
               alignment: Alignment.topCenter,
-              child: _card(box.maxHeight - 10 - S.s12),
+              child: _card(box.maxHeight - 10 - S.s12,
+                  width: outer == null ? null : outer - 2 * S.s12),
             ),
           ),
         );
+        final body = outer == null
+            ? open
+            : Stack(children: [
+                open,
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 8,
+                  child: _RailResizeHandle(
+                    onDrag: (dx) {
+                      final w = (outer - dx).clamp(
+                          kSessionRailMinOuter, column! - kSessionRailMinChat);
+                      sessionRailFraction.value = w / column;
+                    },
+                    onDragging: (v) => setState(() => _resizing = v),
+                    onReset: () {
+                      sessionRailFraction.value = kSessionRailDefaultFraction;
+                      saveSessionRailFraction();
+                    },
+                  ),
+                ),
+              ]);
         return ClipRect(
           child: AnimatedSize(
-            duration: const Duration(milliseconds: 240),
+            // Instant while dragging so the panel tracks the pointer.
+            duration:
+                _resizing ? Duration.zero : const Duration(milliseconds: 240),
             curve: Curves.easeOutCubic,
             alignment: Alignment.centerLeft,
             child: AnimatedSlide(
@@ -454,7 +520,7 @@ class _SessionRailState extends State<SessionRail> {
                 opacity: collapsed ? 0 : 1,
                 child: collapsed
                     ? const SizedBox(width: 0, height: double.infinity)
-                    : open,
+                    : body,
               ),
             ),
           ),
@@ -463,14 +529,14 @@ class _SessionRailState extends State<SessionRail> {
     );
   }
 
-  Widget _card(double maxHeight) {
+  Widget _card(double maxHeight, {double? width}) {
     // Docked on desktop the rail is flat on the inset panel; only the floating
     // overlay keeps a card.
     final flat = !kMobile && !widget.floating;
     _bodyH = maxHeight;
     return Container(
-      // Phones keep the old width; the desktop panel is wider.
-      width: kMobile ? 288 : kSessionRailWidth,
+      // Phones keep the old width; docked desktop follows the column.
+      width: kMobile ? 288 : (width ?? kSessionRailWidth),
       decoration: flat
           ? null
           : BoxDecoration(
@@ -1986,6 +2052,54 @@ class _RailRow extends StatelessWidget {
             AppIcon('chevron-right', size: 12, color: AppColors.fg4),
           ],
         ]),
+      ),
+    );
+  }
+}
+
+/// Drag strip on the docked panel's divider; double-click restores 40%.
+class _RailResizeHandle extends StatefulWidget {
+  const _RailResizeHandle(
+      {required this.onDrag, required this.onDragging, required this.onReset});
+  final ValueChanged<double> onDrag;
+  final ValueChanged<bool> onDragging;
+  final VoidCallback onReset;
+
+  @override
+  State<_RailResizeHandle> createState() => _RailResizeHandleState();
+}
+
+class _RailResizeHandleState extends State<_RailResizeHandle> {
+  bool _hover = false;
+  bool _drag = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeColumn,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onDoubleTap: widget.onReset,
+        onHorizontalDragStart: (_) {
+          setState(() => _drag = true);
+          widget.onDragging(true);
+        },
+        onHorizontalDragUpdate: (d) => widget.onDrag(d.delta.dx),
+        onHorizontalDragEnd: (_) {
+          setState(() => _drag = false);
+          widget.onDragging(false);
+          saveSessionRailFraction();
+        },
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            width: 2,
+            color: _hover || _drag ? AppColors.border2 : Colors.transparent,
+          ),
+        ),
       ),
     );
   }

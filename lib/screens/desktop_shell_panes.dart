@@ -592,8 +592,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
   Widget Function(double)? _sessionStripTools() {
     if (_chatTab == null) return null;
     return (width) => ListenableBuilder(
-          listenable:
-              Listenable.merge([sessionRailCollapsed, sessionRailFloating]),
+          listenable: Listenable.merge(
+              [sessionRailCollapsed, sessionRailFloating, sessionRailFraction]),
           builder: (_, __) {
             final docked = width >= kSessionRailMinColumn;
             final on = docked
@@ -617,7 +617,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               ]);
             }
             return Container(
-              width: kSessionRailWidth + 2 * S.s12,
+              width: sessionRailOuterWidth(width),
               // Full strip height so the divider meets the panel's below.
               height: double.infinity,
               decoration: BoxDecoration(
