@@ -593,6 +593,22 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
   InferenceProfile? get _current =>
       _profiles.where((p) => p.name == _profile).firstOrNull;
 
+  // Lifts the hero away while the session opens so the handoff reads as one step.
+  Widget _leaving(Widget child) {
+    final d = reduceMotion(context) ? Duration.zero : Motion.base;
+    return AnimatedSlide(
+      offset: _starting ? const Offset(0, -0.08) : Offset.zero,
+      duration: d,
+      curve: Motion.exit,
+      child: AnimatedOpacity(
+        opacity: _starting ? 0 : 1,
+        duration: Motion.base,
+        curve: Motion.exit,
+        child: child,
+      ),
+    );
+  }
+
   Widget _hero() {
     final canSend = !_starting && _input.text.trim().isNotEmpty;
     final current = _current;
@@ -609,11 +625,11 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Appear(
+                    _leaving(const Appear(
                         offset: 12,
-                        child: Center(child: DottedMochi(width: 300))),
+                        child: Center(child: DottedMochi(width: 300)))),
                     SizedBox(height: S.of(10)),
-                    Appear(
+                    _leaving(Appear(
                       index: 2,
                       child: Text('What are we making?',
                           textAlign: TextAlign.center,
@@ -621,7 +637,7 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                               weight: W.label,
                               spacing: -0.5,
                               color: AppColors.fg1)),
-                    ),
+                    )),
                     SizedBox(height: S.s24),
                     Container(
                       padding: EdgeInsets.fromLTRB(
