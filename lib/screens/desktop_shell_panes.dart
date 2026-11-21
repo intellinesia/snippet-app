@@ -16,8 +16,13 @@ extension _DesktopShellPanesExt on _DesktopShellState {
               open: _openShellPanel,
               client: t.client,
               sessionId: t.sessionId,
-              child: _originTabBody(t,
-                  primary: primary, visible: visible ?? primary),
+              // Hosted screens are Scaffolds; let the card colour show through.
+              child: Theme(
+                data: Theme.of(context)
+                    .copyWith(scaffoldBackgroundColor: Colors.transparent),
+                child: _originTabBody(t,
+                    primary: primary, visible: visible ?? primary),
+              ),
             );
 
   Widget _originTabBody(_ShellTab t,
