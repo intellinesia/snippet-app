@@ -7,6 +7,7 @@ import '../models.dart';
 import '../settings_form.dart';
 import '../tool_activity.dart';
 import 'file_changes.dart' show sessionChangeSteps;
+import 'desk_memory.dart' show DeskMemoryView;
 import 'file_tree_sidebar_panel.dart' show FileTreeSidebarPanel;
 import 'git_diff_sidebar_panel.dart' show GitDiffSidebarPanel;
 import 'lanes.dart' show openLaneView;

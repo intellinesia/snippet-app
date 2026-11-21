@@ -299,6 +299,9 @@ extension _RailPages on _SessionRailState {
             onTap: () => _go('jobs')),
         gap(),
       ],
+      _overviewRow('book-marked', 'Memory', 'What this session remembers',
+          onTap: () => _go('memory')),
+      gap(),
       if (w.onLanes != null)
         _overviewRow(
             'git-branch',
@@ -516,6 +519,17 @@ extension _RailPages on _SessionRailState {
                   warn: r.usedPercent >= 70),
             ]),
           const SizedBox(height: 6),
+        ];
+      case 'memory':
+        return [
+          _subHeader('Memory'),
+          SizedBox(
+            height: (_bodyH - 52).clamp(240.0, 4000.0),
+            child: DeskMemoryView(
+                client: widget.client,
+                sessionId: widget.sessionId,
+                workspace: s?.workspace),
+          ),
         ];
       case 'changes':
       case 'files':

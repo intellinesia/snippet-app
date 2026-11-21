@@ -74,6 +74,7 @@ import 'session_rail.dart'
         sessionRailOuterWidth,
         sessionRailCollapsed,
         sessionRailFloating,
+        sessionRailPageRequest,
         setSessionRailCollapsed;
 import 'shell_card_tab_strip.dart';
 import 'shell_main_pane.dart';

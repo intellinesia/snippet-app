@@ -675,7 +675,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                   builder: (ctx) => StripSquareButton(
                       icon: 'plus',
                       tooltip: 'Add to this pane',
-                      onTap: () => _showPaneAddMenu(ctx)),
+                      onTap: () => _showPanelAddMenu(ctx)),
                 ),
                 const Spacer(),
                 toggle,
@@ -683,6 +683,43 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             );
           },
         );
+  }
+
+  /// The session panel's "+": only views that open inside the panel.
+  void _showPanelAddMenu(BuildContext ctx) {
+    final t = _chatTab;
+    if (t == null) return;
+    final s = _macSessionStatuses[t.key]?.state;
+    final cps = s?.checkpoints.length ?? 0;
+    final lanes = s?.lanes.where((l) => l.running).length ?? 0;
+    String? count(int n) => n > 0 ? '$n' : null;
+    void page(String p) => sessionRailPageRequest.value = p;
+    showPaneAddMenu(
+      ctx,
+      title: t.title,
+      views: [
+        PaneAddEntry(
+            icon: 'folder',
+            label: 'Files and changes',
+            onTap: () => page('changes')),
+        PaneAddEntry(
+            icon: 'activity', label: 'Activity', onTap: () => page('jobs')),
+        PaneAddEntry(
+            icon: 'history',
+            label: 'Checkpoints',
+            meta: count(cps),
+            onTap: () => page('checkpoints')),
+        PaneAddEntry(
+            icon: 'book-marked',
+            label: 'Memory',
+            onTap: () => page('memory')),
+        PaneAddEntry(
+            icon: 'git-branch',
+            label: 'Lanes',
+            meta: lanes > 0 ? '$lanes running' : null,
+            onTap: () => page('lanes')),
+      ],
+    );
   }
 
   void _showPaneAddMenu(BuildContext ctx) {

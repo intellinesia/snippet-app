@@ -64,7 +64,7 @@ Future<void> showPaneAddMenu(
   BuildContext anchor, {
   required String title,
   required List<PaneAddEntry> views,
-  required List<PaneAddEntry> terminals,
+  List<PaneAddEntry> terminals = const [],
 }) async {
   final fn = await showAppMenu<VoidCallback>(
     anchor,
@@ -78,9 +78,11 @@ Future<void> showPaneAddMenu(
     items: [
       _label(title.trim().isEmpty ? 'Session' : title.trim(), height: 30),
       for (final e in views) _row(e),
-      const PopupMenuDivider(height: 9),
-      _label('Terminals'),
-      for (final e in terminals) _row(e),
+      if (terminals.isNotEmpty) ...[
+        const PopupMenuDivider(height: 9),
+        _label('Terminals'),
+        for (final e in terminals) _row(e),
+      ],
     ],
   );
   fn?.call();
