@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../mochi.dart';
 import '../theme.dart';
@@ -130,5 +131,37 @@ class SoftLane extends StatelessWidget {
         ),
       ]);
     });
+  }
+}
+
+/// Desktop: the time under your last message, a tick once delivered and an
+/// accent double tick once read; the detail sits in the tooltip.
+class SentMeta extends StatelessWidget {
+  const SentMeta(
+      {super.key, required this.time, this.delivered = false, this.read});
+
+  final String time;
+  final bool delivered;
+
+  /// "Read 9:01 am" or "Read by Snippet"; null while unread.
+  final String? read;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = read;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(time, style: sans(11, color: AppColors.fg4)),
+        if (r != null || delivered) ...[
+          const SizedBox(width: 4),
+          Tooltip(
+            message: r ?? 'Delivered',
+            child: Icon(r != null ? LucideIcons.checkCheck : LucideIcons.check,
+                size: 13, color: r != null ? AppColors.accent : AppColors.fg4),
+          ),
+        ],
+      ]),
+    );
   }
 }

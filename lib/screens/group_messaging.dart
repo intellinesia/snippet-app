@@ -1971,11 +1971,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                     ),
                   ))),
           if (mineAt != null)
-            Padding(
-              padding: EdgeInsets.only(top: S.s4),
-              child: Text(_dayTimeStamp(mineAt).$2,
-                  style: sans(11, color: AppColors.fg4)),
-            ),
+            SentMeta(time: _dayTimeStamp(mineAt).$2, read: readLine),
           if (!kMobile) _deskReactions(e, reactions, mine: mine),
           if (choices.isNotEmpty)
             LayoutBuilder(
@@ -2004,7 +2000,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                 );
               },
             ),
-          if (readLine != null)
+          if (readLine != null && kMobile)
             ChatSystemLine(readLine, align: Alignment.centerRight),
         ],
       ),

@@ -1648,11 +1648,17 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                     mine: mine,
                   ),
                   if (mine && tail && at != null)
-                    Padding(
-                      padding: EdgeInsets.only(top: S.s4),
-                      child: Text(_clockLabel(at),
-                          style: sans(11, color: AppColors.fg4)),
-                    ),
+                    Builder(builder: (_) {
+                      final d = showDelivery ? _deliveries[e.eventId] : null;
+                      final readAt = d?.readAt;
+                      return SentMeta(
+                        time: _clockLabel(at),
+                        delivered: d?.deliveredAt != null,
+                        read: readAt == null
+                            ? null
+                            : 'Read ${_clockLabel(readAt.toLocal())}',
+                      );
+                    }),
                 ],
               ));
         }
@@ -1740,7 +1746,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                 );
               },
             ),
-          if (delivery != null)
+          // Desktop folds this into the tick beside the time.
+          if (delivery != null && kMobile)
             ChatSystemLine(delivery, align: Alignment.centerRight),
         ],
       ),
