@@ -252,11 +252,11 @@ class _LedgerLineState extends State<LedgerLine> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          constraints: const BoxConstraints(minHeight: 40),
-          padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
+          constraints: const BoxConstraints(minHeight: 32),
+          padding: const EdgeInsets.fromLTRB(9, 5, 4, 5),
           decoration: BoxDecoration(
             color: AppColors.surface2,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -265,13 +265,13 @@ class _LedgerLineState extends State<LedgerLine> {
                 behavior: HitTestBehavior.opaque,
                 onTap: widget.onTap,
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 10),
+                  padding: const EdgeInsets.only(right: 8),
                   child: agent != null && !bad
                       ? AgentMochi(agent,
-                          size: 20, state: AgentCharacterState.done)
+                          size: 16, state: AgentCharacterState.done)
                       : bad
-                          ? AppIcon('x', size: 14, color: AppColors.danger)
-                          : AppIcon('check', size: 14, color: AppColors.ok),
+                          ? AppIcon('x', size: 13, color: AppColors.danger)
+                          : AppIcon('check', size: 13, color: AppColors.ok),
                 ),
               ),
               Expanded(
@@ -288,21 +288,21 @@ class _LedgerLineState extends State<LedgerLine> {
                   behavior: HitTestBehavior.opaque,
                   onTap: widget.onTap,
                   child: Padding(
-                    padding: const EdgeInsets.only(left: 12),
+                    padding: const EdgeInsets.only(left: 10),
                     child: Text(formatWorkDuration(took),
-                        style: mono(12, color: AppColors.fg4)),
+                        style: mono(11.5, color: AppColors.fg4)),
                   ),
                 ),
               HoverSurface(
                 radius: 6,
                 onTap: widget.onTap,
                 child: Padding(
-                  padding: const EdgeInsets.all(5),
+                  padding: const EdgeInsets.all(4),
                   child: AnimatedRotation(
                     turns: widget.open ? 0.25 : 0,
                     duration: const Duration(milliseconds: 160),
                     child: AppIcon('chevron-right',
-                        size: 14, color: AppColors.fg4),
+                        size: 13, color: AppColors.fg4),
                   ),
                 ),
               ),
@@ -887,15 +887,15 @@ class _LedgerStripState extends State<LedgerStrip> {
   Widget _btn(String icon, String label, String key, VoidCallback? onTap,
           {bool filled = false}) =>
       HoverSurface(
-        radius: 8,
+        radius: 6,
         onTap: onTap,
         child: Container(
-          height: 28,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          height: 24,
+          padding: const EdgeInsets.symmetric(horizontal: 7),
           decoration: filled
               ? BoxDecoration(
                   color: AppColors.surface3,
-                  borderRadius: BorderRadius.circular(8))
+                  borderRadius: BorderRadius.circular(6))
               : null,
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             AppIcon(icon, size: 13, color: AppColors.fg2),
@@ -986,21 +986,21 @@ class _LedgerStripState extends State<LedgerStrip> {
     final peekOpen = _portal.isShowing || _pinned;
 
     final strip = Container(
-      height: 40,
-      padding: const EdgeInsets.only(left: 10, right: 6),
+      height: 32,
+      padding: const EdgeInsets.only(left: 9, right: 3),
       decoration: BoxDecoration(
         color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(children: [
         SizedBox(
-          width: 18,
-          height: 18,
+          width: 16,
+          height: 16,
           child: agent == null
-              ? Center(child: RunSpinner(size: 12, color: AppColors.accent))
-              : AgentMochi(agent, size: 18, state: AgentCharacterState.working),
+              ? Center(child: RunSpinner(size: 11, color: AppColors.accent))
+              : AgentMochi(agent, size: 16, state: AgentCharacterState.working),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Text(label,
             maxLines: 1,
             softWrap: false,
@@ -1052,14 +1052,14 @@ class _LedgerStripState extends State<LedgerStrip> {
       children: [
         if (fail != null) ...[
           Container(
-            height: 40,
-            padding: const EdgeInsets.only(left: 10, right: 4),
+            height: 32,
+            padding: const EdgeInsets.only(left: 9, right: 3),
             decoration: BoxDecoration(
               color: AppColors.danger.withValues(alpha: 0.13),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Row(children: [
-              AppIcon('alert-circle', size: 16, color: AppColors.danger),
+              AppIcon('alert-circle', size: 14, color: AppColors.danger),
               const SizedBox(width: 10),
               Text(_failLabel(fail),
                   style: sans(13, weight: W.label, color: AppColors.danger)),
