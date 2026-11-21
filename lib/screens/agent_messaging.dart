@@ -1440,8 +1440,13 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       ? Align(
           key: const Key('agentTypingRow'),
           alignment: Alignment.centerLeft,
-          child: ChatRunHead(
-              agentId: widget.agentId, name: widget.agentName, working: true),
+          child: SoftLane(
+            agentId: widget.agentId,
+            child: SoftBubble(
+                child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: const WorkingBars())),
+          ),
         )
       : ChatBubbleRow(
         key: const Key('agentTypingRow'),
@@ -1580,16 +1585,29 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
             children: [
               if (quotedLine != null)
                 Padding(
-                  padding: EdgeInsets.only(left: S.s4, bottom: S.s2),
+                  padding: EdgeInsets.only(
+                      left: kMobile ? S.s4 : kSoftIndent, bottom: S.s2),
                   child: quotedLine,
                 ),
-              _withTapback(cappedCard, chips, mine: false),
+              _withTapback(
+                  kMobile
+                      ? cappedCard
+                      : SoftLane(
+                          agentId: widget.agentId,
+                          name: widget.agentName,
+                          time: at == null ? null : _clockLabel(at),
+                          first: head,
+                          last: tail,
+                          share: 1,
+                          child: cappedCard),
+                  chips,
+                  mine: false),
             ],
           );
         }
         if (!kMobile) {
-          // Desktop reads like a session: the agent as plain text, the user in
-          // an 8 px card with the time under it.
+          // Desktop soft bubbles: grey for the agent beside its character,
+          // accent-tinted for the user with the time under the run.
           final body = _bubbleBody(e, mine: mine);
           return Align(
               alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
@@ -1600,7 +1618,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                 children: [
                   if (quotedLine != null)
                     Padding(
-                        padding: EdgeInsets.only(bottom: S.s2),
+                        padding: EdgeInsets.only(
+                            bottom: S.s2, left: mine ? 0 : kSoftIndent),
                         child: quotedLine),
                   _withTapback(
                     KeyedSubtree(
@@ -1610,15 +1629,20 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                               constraints: BoxConstraints(
                                   maxWidth:
                                       MediaQuery.sizeOf(context).width * 0.5),
-                              child: ChatBubble(
+                              child: SoftBubble(
                                   mine: true,
-                                  flat: true,
-                                  color: AppColors.surface2,
+                                  first: head,
+                                  last: tail,
                                   child: body),
                             )
-                          : Padding(
-                              padding: EdgeInsets.symmetric(vertical: S.s2),
-                              child: body),
+                          : SoftLane(
+                              agentId: widget.agentId,
+                              name: widget.agentName,
+                              time: at == null ? null : _clockLabel(at),
+                              first: head,
+                              last: tail,
+                              child: SoftBubble(
+                                  first: head, last: tail, child: body)),
                     ),
                     chips,
                     mine: mine,
@@ -1678,15 +1702,6 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                   : 'from a work session',
               align: Alignment.centerLeft,
             ),
-          if (head && !mine)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ChatRunHead(
-                agentId: widget.agentId,
-                name: widget.agentName,
-                time: at == null ? null : _clockLabel(at),
-              ),
-            ),
           kMobile && _sendInIds.contains(flightId)
               // Faint while pending; solid once the server has it.
               ? Opacity(
@@ -1708,7 +1723,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                     child: Padding(
                       padding: EdgeInsets.only(
                         top: S.s6,
-                        left: mine ? 0 : (card != null ? 0 : S.of(5)),
+                        left: mine
+                            ? 0
+                            : !kMobile
+                                ? kSoftIndent
+                                : (card != null ? 0 : S.of(5)),
                         right: mine ? (card != null ? 0 : S.of(5)) : 0,
                       ),
                       child: ChatChoices(

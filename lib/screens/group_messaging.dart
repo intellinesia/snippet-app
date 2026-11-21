@@ -1642,11 +1642,12 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
               alignment: Alignment.centerLeft,
               child: id == null
                   ? const WorkingBars()
-                  : ChatRunHead(
+                  : SoftLane(
                       agentId: id,
-                      name: _agentName(id),
-                      lead: id == _group.lead,
-                      working: true),
+                      child: SoftBubble(
+                          child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 3),
+                              child: const WorkingBars()))),
             ),
           ));
         }
@@ -1798,23 +1799,12 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   // Desktop runs sit flush under their head, as in the agent chat.
   Widget _indented({required bool mine, required Widget child}) => child;
 
-  /// Desktop: who spoke, at the top of their run.
-  Widget _runHeader(CoordinationEvent e) {
-    final at = _eventTime(e);
-    return ChatRunHead(
-      agentId: e.actorId,
-      name: _agentName(e.actorId),
-      time: at == null ? null : _dayTimeStamp(at).$2,
-      lead: e.actorId == _group.lead,
-    );
-  }
-
   /// Desktop: reactions as chips under the message, plus a quiet add chip.
   Widget _deskReactions(CoordinationEvent e, List<ReactionGroup> reactions,
       {required bool mine}) {
     if (reactions.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: EdgeInsets.only(top: S.s6),
+      padding: EdgeInsets.only(top: S.s6, left: mine ? 0 : kSoftIndent),
       child: Align(
         alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
         child: Wrap(spacing: S.s4, runSpacing: S.s4, children: [
@@ -1899,7 +1889,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       mine: mine,
       markdown: (text) => groupMarkdownWithMentions(text, _mentionIds),
     );
-    // Desktop matches the agent chat: plain agent text, your words in a flat card.
+    // Desktop soft bubbles, as in the agent chat.
     Widget buildContent() =>
         card ??
         (kMobile
@@ -1908,14 +1898,24 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                 ? ConstrainedBox(
                     constraints: BoxConstraints(
                         maxWidth: MediaQuery.sizeOf(context).width * 0.5),
-                    child: ChatBubble(
+                    child: SoftBubble(
                         mine: true,
-                        flat: true,
-                        color: AppColors.surface2,
+                        first: run.first,
+                        last: run.last,
                         child: body),
                   )
-                : Padding(
-                    padding: EdgeInsets.symmetric(vertical: S.s2), child: body));
+                : SoftBubble(first: run.first, last: run.last, child: body));
+    final at = _eventTime(e);
+    Widget lane(Widget child) => SoftLane(
+          agentId: e.actorId,
+          name: _agentName(e.actorId),
+          time: at == null ? null : _dayTimeStamp(at).$2,
+          lead: e.actorId == _group.lead,
+          first: run.first,
+          last: run.last,
+          share: card != null ? 1 : 0.82,
+          child: child,
+        );
     final mineAt = !kMobile && mine && run.last ? _eventTime(e) : null;
     return Padding(
       padding: EdgeInsets.only(top: topGap),
@@ -1925,9 +1925,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
             mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           if (stamp != null) ChatSystemLine(stamp.$2, bold: stamp.$1),
-          if (!mine && run.first && !kMobile)
-            _runHeader(e)
-          else if (!mine && run.first)
+          if (!mine && run.first && kMobile)
             Row(mainAxisSize: MainAxisSize.min, children: [
               Flexible(
                 child: ChatSenderName(
@@ -1946,6 +1944,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                     onReact: (name) => unawaited(_sendReaction(e, name)),
                     focusBuilder: (_) => buildContent(),
                     builder: (_, __, bubbleKey) => _rowFor(
+                      lane: lane,
                       card: card,
                       mine: mine,
                       avatar: kMobile && !mine && run.last
@@ -1991,7 +1990,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                         ? 0
                         : kMobile
                             ? ChatBubbleRow.avatarSize + S.s6 + S.of(5)
-                            : 0,
+                            : kSoftIndent,
                     right: mine ? S.of(5) : 0,
                   ),
                   child: ConstrainedBox(
@@ -2014,6 +2013,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
 
   // Cards share the bubbles' lane: same avatar column, same width cap.
   Widget _rowFor({
+    required Widget Function(Widget) lane,
     required Widget? card,
     required bool mine,
     required Widget? avatar,
@@ -2024,9 +2024,9 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       !kMobile && !mine
           ? Align(
               alignment: Alignment.centerLeft,
-              child: card != null
+              child: lane(card != null
                   ? SizedBox(width: double.infinity, child: child)
-                  : child)
+                  : child))
           : ChatBubbleRow(
               mine: mine,
               avatar: avatar,
@@ -2038,7 +2038,7 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       ? child
       : Center(
           child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
+              constraints: const BoxConstraints(maxWidth: 960),
               child: SizedBox(width: double.infinity, child: child)));
 
   Widget _deskComposerCard() => ListenableBuilder(
