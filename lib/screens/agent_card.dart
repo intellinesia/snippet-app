@@ -16,7 +16,6 @@ import '../desktop_look.dart' show Tactile;
 import '../motion.dart' show WorkingBars;
 import '../mochi.dart';
 import '../settings_form.dart' show Grouped;
-import 'agent_reach_panel.dart';
 import 'agent_wake_panel.dart';
 import 'agent_appearance.dart';
 import 'agent_profile_panel.dart';
@@ -294,52 +293,29 @@ class _AgentCardState extends State<AgentCard> {
           ]));
       return;
     }
+    // Desktop keeps the quick actions here; settings live in the side panel.
+    final items = [
+      if (!widget.agent.isMissionControl)
+        appMenuItem(
+            value: 'pin',
+            icon: pinned ? 'pin-off' : 'pin',
+            label: pinned ? 'Unpin' : 'Pin'),
+      if (!widget.agent.isMissionControl)
+        appMenuItem(value: 'nickname', icon: 'edit', label: _nicknameLabel),
+      if (widget.onDelete != null)
+        appMenuItem(
+            value: 'delete', icon: 'trash', label: 'Delete agent', danger: true),
+    ];
+    if (items.isEmpty) return;
     final picked = await showAppMenu<String>(
       context,
       point: point,
       anchor: point == null ? context : null,
-      items: [
-        if (!widget.agent.isMissionControl)
-          appMenuItem(
-              value: 'pin',
-              icon: pinned ? 'pin-off' : 'pin',
-              label: pinned ? 'Unpin' : 'Pin'),
-        if (!widget.agent.isMissionControl)
-          appMenuItem(value: 'nickname', icon: 'edit', label: _nicknameLabel),
-        appMenuItem(value: 'appearance', icon: 'sparkles', label: 'Appearance'),
-        if (!widget.agent.isMissionControl)
-          appMenuItem(
-              value: 'model', icon: 'cpu', label: 'Change inference profile'),
-        if (!widget.agent.isMissionControl)
-          appMenuItem(
-              value: 'wakes',
-              icon: 'calendar-clock',
-              label: 'Wakes and reporting'),
-        appMenuItem(value: 'reach', icon: 'bell', label: 'How it reaches you'),
-        if (widget.onDelete != null)
-          appMenuItem(
-              value: 'delete',
-              icon: 'trash',
-              label: 'Delete agent',
-              danger: true),
-      ],
+      items: items,
     );
     if (picked == 'pin') _togglePin();
     if (picked == 'delete') widget.onDelete?.call();
     if (picked == 'nickname' && mounted) _editNickname(point: point);
-    if (picked == 'wakes' && mounted) _openWakes(name, point);
-    if (picked == 'reach' && mounted) {
-      showAgentReachSettings(context,
-          client: widget.client,
-          agentId: widget.agent.id,
-          name: name,
-          point: point);
-    }
-    if (picked == 'model' && mounted) _pickProfile(name, point: point);
-    if (picked == 'appearance' && mounted) {
-      showAgentAppearance(context, widget.client, widget.agent.id, name,
-          point: point);
-    }
   }
 
   List<TaskItem> _tasks = const [];

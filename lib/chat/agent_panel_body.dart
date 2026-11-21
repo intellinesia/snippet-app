@@ -227,8 +227,6 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
         anchor: anchor,
         minWidth: 180,
         items: [
-          if (widget.onDesk != null && !_mc)
-            appMenuItem(value: 'desk', icon: 'monitor', label: 'Desk session'),
           if (widget.onNickname != null)
             appMenuItem(value: 'nickname', icon: 'edit', label: 'Nickname'),
           if (widget.onDelete != null)
@@ -717,6 +715,9 @@ class _SectionState extends State<_Section> {
     final open = _isOpen;
     final head = InkWell(
       onTap: _toggle,
+      hoverColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      splashColor: Colors.transparent,
       borderRadius: BorderRadius.circular(R.sm),
       child: SizedBox(
         height: 24,
