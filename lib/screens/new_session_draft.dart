@@ -6,6 +6,8 @@ import '../desktop_pick.dart';
 import '../mochi.dart';
 import '../platform.dart';
 import '../models.dart';
+import '../dotted_mochi.dart';
+import '../motion.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -600,23 +602,27 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
           constraints: BoxConstraints(minHeight: box.maxHeight),
           child: Center(
             child: Padding(
-              padding: EdgeInsets.fromLTRB(S.s32, 120, S.s32, S.s32),
+              padding: EdgeInsets.fromLTRB(S.s32, S.s24, S.s32, 70),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 680),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(children: [
-                      AgentMochi(_agentId, size: 28),
-                      SizedBox(width: S.s12),
-                      Text('What are we making?',
-                          style: sans(22,
+                    const Appear(
+                        offset: 12,
+                        child: Center(child: DottedMochi(width: 300))),
+                    SizedBox(height: S.of(10)),
+                    Appear(
+                      index: 2,
+                      child: Text('What are we making?',
+                          textAlign: TextAlign.center,
+                          style: sans(26,
                               weight: W.label,
-                              spacing: -0.2,
+                              spacing: -0.5,
                               color: AppColors.fg1)),
-                    ]),
-                    SizedBox(height: S.of(18)),
+                    ),
+                    SizedBox(height: S.s24),
                     Container(
                       padding: EdgeInsets.fromLTRB(
                           S.of(16), S.of(14), S.of(10), S.s8),
