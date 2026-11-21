@@ -1306,9 +1306,11 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     );
   }
 
+  // Mission Control's panel is the agent panel; it has no session rail.
   bool _railVisible(double columnWidth) =>
       !kMobile &&
       !widget.readOnly &&
+      !_isMissionControl &&
       _inboxAgentId(widget.sessionId) == null &&
       columnWidth >= kSessionRailMinColumn;
 
@@ -1364,6 +1366,7 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   /// button and closes on a click away.
   Widget _floatingRail(HarnessState? s, BoxConstraints column) {
     if (_railVisible(column.maxWidth) ||
+        _isMissionControl ||
         widget.readOnly ||
         _inboxAgentId(widget.sessionId) != null) {
       return const SizedBox.shrink();
@@ -1679,36 +1682,17 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     return ListenableBuilder(
       listenable: Listenable.merge([sessionRailCollapsed, sessionRailFloating]),
       builder: (_, __) {
-        final collapsed = sessionRailCollapsed.value;
-        final floating = sessionRailFloating.value;
-        final hasPanel =
-            !widget.readOnly && _inboxAgentId(widget.sessionId) == null;
-        final docked = rail && !collapsed;
-        // Session tabs toggle the panel from the pane row; Mission Control keeps this.
-        final Widget? toggle = !hasPanel || !_isMissionControl
-            ? null
-            : IconBtn('sidebar',
-                size: 30,
-                iconSize: 15,
-                active: docked || (!rail && floating),
-                tooltip: docked || (!rail && floating)
-                    ? 'Hide session panel'
-                    : 'Show session panel', onTap: () {
-                if (rail) {
-                  setSessionRailCollapsed(!collapsed);
-                } else {
-                  sessionRailFloating.value = !floating;
-                }
-              });
-        final showActions = !docked && !(!rail && floating);
+        final docked = rail && !sessionRailCollapsed.value;
+        final floating =
+            !rail && !_isMissionControl && sessionRailFloating.value;
         return _deskHeaderBarWith(s, running,
-            actions: showActions, toggle: toggle);
+            actions: !docked && !floating);
       },
     );
   }
 
   Widget _deskHeaderBarWith(HarnessState? s, bool running,
-      {required bool actions, Widget? toggle}) {
+      {required bool actions}) {
     final mc = _isMissionControl;
     final status = s?.pendingQuestion != null
         ? 'needs_you'
@@ -1730,7 +1714,6 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       ],
       // Sessions keep their tools in the pane row and the "/" menu.
       if (actions && mc) _mcHeaderActions(s),
-      if (toggle != null) toggle,
     ]);
   }
 

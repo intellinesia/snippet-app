@@ -468,6 +468,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         contextWindow: mcState?.contextWindow ?? 0,
         onCompact: mc ? () => _dispatchSessionAction('compact') : null,
         onAutonomy: mc ? () => _dispatchSessionAction('autonomy') : null,
+        sessionId: mc ? tab.sessionId : null,
+        onModel: mc ? () => _dispatchSessionAction('model') : null,
         client: tab.client,
         agent: agent,
         onHide: _togglePanel,

@@ -246,8 +246,13 @@ class AgentSidePanel extends StatelessWidget {
     this.onCompact,
     this.onAutonomy,
     this.onScheduled,
+    this.sessionId,
+    this.onModel,
   });
 
+  /// Mission Control's session, for its model and cold-resume rows.
+  final String? sessionId;
+  final VoidCallback? onModel;
   final int contextUsed;
   final int contextWindow;
   final VoidCallback? onCompact;
@@ -350,6 +355,8 @@ class AgentSidePanel extends StatelessWidget {
                   onCompact: onCompact,
                   onAutonomy: onAutonomy,
                   onScheduled: onScheduled,
+                  sessionId: sessionId,
+                  onModel: onModel,
                 ),
         ),
       ],

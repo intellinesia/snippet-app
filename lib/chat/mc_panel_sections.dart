@@ -207,9 +207,7 @@ class _NeedRow extends StatelessWidget {
       color: flat ? Colors.transparent : AppColors.surface2,
       child: InkWell(
         onTap: () => n.open(context),
-        hoverColor: flat
-            ? AppColors.fg1.withValues(alpha: 0.03)
-            : AppColors.surface3,
+        hoverColor: flat ? Colors.transparent : AppColors.surface3,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(children: [

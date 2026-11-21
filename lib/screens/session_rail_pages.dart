@@ -255,7 +255,11 @@ extension _RailPages on _SessionRailState {
     final w = widget;
     final lanes = [...?s?.lanes];
     final running = lanes.where((l) => l.running).length;
-    final files = fileChanges(sessionChangeSteps(s?.events ?? const []));
+    // The worktree is what the Changes view lists; session edits are a fallback.
+    final git = _git;
+    final changed = git != null && git.ok
+        ? git.files.length
+        : fileChanges(sessionChangeSteps(s?.events ?? const [])).length;
     final jobs = _procs.where((p) => p['running'] == true).length;
     final ws = (s?.workspace ?? '').trim();
     Widget gap() => const SizedBox(height: 6);
@@ -264,9 +268,9 @@ extension _RailPages on _SessionRailState {
         _overviewRow(
             'file-diff',
             'Diffs',
-            files.isEmpty
+            changed == 0
                 ? 'No changes yet'
-                : '${files.length} file${files.length == 1 ? '' : 's'} changed',
+                : '$changed file${changed == 1 ? '' : 's'} changed',
             onTap: w.onChanges),
         gap(),
       ],

@@ -307,8 +307,12 @@ class AgentInfoPanel extends StatefulWidget {
     this.onCompact,
     this.onAutonomy,
     this.onScheduled,
+    this.sessionId,
+    this.onModel,
   });
 
+  final String? sessionId;
+  final VoidCallback? onModel;
   final DaemonClient client;
   final String agentId;
   final String name;
@@ -778,6 +782,8 @@ class _AgentInfoPanelState extends State<AgentInfoPanel> {
           'Avatar and colour across the app', () => _openAppearance(ctx)),
     ];
     return AgentPanelBody(
+      sessionId: widget.sessionId,
+      onModel: widget.onModel,
       client: widget.client,
       agentId: widget.agentId,
       name: widget.name,

@@ -43,8 +43,13 @@ class AgentPanelBody extends StatefulWidget {
     this.onNickname,
     this.onDelete,
     this.onHeroLongPress,
+    this.sessionId,
+    this.onModel,
   });
 
+  /// Mission Control's session, for its model and cold-resume rows.
+  final String? sessionId;
+  final VoidCallback? onModel;
   final DaemonClient client;
   final String agentId;
   final String name;
@@ -316,7 +321,7 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
       row.add(Expanded(
         child: InkWell(
           onTap: c.$3,
-          hoverColor: AppColors.fg1.withValues(alpha: 0.04),
+          hoverColor: Colors.transparent,
           child: SizedBox(
             height: 54,
             child: Column(
@@ -521,6 +526,70 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
     ]);
   }
 
+  String? _resumeOverride;
+
+  String? get _resumeMode {
+    if (_resumeOverride != null) return _resumeOverride;
+    final id = widget.sessionId;
+    if (id == null) return null;
+    for (final s in _sessions) {
+      if (s.id == id) return s.resumeMode;
+    }
+    return null;
+  }
+
+  Future<void> _pickResume(BuildContext anchor) async {
+    final id = widget.sessionId;
+    if (id == null) return;
+    final pick = await showAppMenu<String>(anchor,
+        anchor: anchor,
+        minWidth: 180,
+        items: [
+          appMenuItem(value: 'ask', icon: 'help-circle', label: 'Ask'),
+          appMenuItem(value: 'lean', icon: 'zap', label: 'Lean'),
+          appMenuItem(value: 'full', icon: 'book', label: 'Full'),
+        ]);
+    if (pick == null || !mounted) return;
+    final before = _resumeOverride;
+    setState(() => _resumeOverride = pick);
+    try {
+      await widget.client.setResumeMode(id, pick);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _resumeOverride = before);
+      toast(context, "Couldn't change cold resume: $e", danger: true);
+    }
+  }
+
+  Widget? _mcSession() {
+    if (widget.onModel == null && widget.sessionId == null) return null;
+    final profile = (widget.agent?.profile ?? '').trim();
+    final mode = _resumeMode;
+    return _Section('Session', children: [
+      if (widget.onModel != null)
+        _Row(
+            icon: 'cpu',
+            title: 'Model',
+            value: profile.isEmpty ? 'Default' : profile,
+            chevron: true,
+            onTap: widget.onModel),
+      if (widget.sessionId != null)
+        Builder(
+          builder: (bc) => _Row(
+              icon: 'repeat',
+              title: 'Cold resume',
+              value: switch (mode) {
+                'lean' => 'Lean',
+                'full' => 'Full',
+                null => null,
+                _ => 'Ask',
+              },
+              chevron: true,
+              onTap: () => _pickResume(bc)),
+        ),
+    ]);
+  }
+
   Widget _buildMc() {
     final needs = mcNeeds(widget.client, _tasks, _sessions);
     return Column(
@@ -538,6 +607,7 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
         McNeedsYou(needs: needs, carded: true),
         _mcNow(),
         _mcGoTo(),
+        if (_mcSession() case final s?) s,
         _Section('Settings', initiallyOpen: false, children: [
           for (final s in widget.settings)
             _Row(
@@ -741,7 +811,7 @@ class _Row extends StatelessWidget {
       type: MaterialType.transparency,
       child: InkWell(
         onTap: onTap,
-        hoverColor: AppColors.fg1.withValues(alpha: 0.025),
+        hoverColor: Colors.transparent,
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: hasSub ? 52 : 46),
           child: Padding(
