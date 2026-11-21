@@ -715,7 +715,6 @@ class _SessionScreenState extends State<SessionScreen>
   DockRun? _dockRun;
   final ValueNotifier<ToolBatch> _dockBatch =
       ValueNotifier<ToolBatch>(const ToolBatch([]));
-
   /// Desktop Activity panel feed: finished tool runs and the run in flight.
   final ValueNotifier<List<ActivityRun>> _activityRuns =
       ValueNotifier<List<ActivityRun>>(const []);
@@ -1673,579 +1672,559 @@ class _SessionScreenState extends State<SessionScreen>
           startedAt: s?.turnStartedAt,
           onStop: running ? () => _send({'kind': 'interrupt'}) : null,
           child: _chatBackdrop(SafeArea(
-            bottom: false,
-            child: Stack(children: [
-              Positioned.fill(
-                child: LayoutBuilder(
-                    builder: (context, column) => ValueListenableBuilder<bool>(
-                        valueListenable: sessionRailCollapsed,
-                        builder: (context, railHidden, _) => _withTermDock(Row(
-                              // With the panel open, chat and panel sit together as one
-                              // centred pair instead of the panel hugging the window edge.
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                _chatPane(
-                                  _railVisible(column.maxWidth) && !railHidden,
-                                  _passThrough(
-                                    // The bottom chrome is NON-FLEX, so Flutter lays it out at its
-                                    // natural height BEFORE the transcript's Expanded claims what
-                                    // is left. A question or approval card carrying a long
-                                    // agent-authored body could therefore exceed the pane outright
-                                    // and push its own actions off the bottom edge — which is why a
-                                    // big question was impossible to answer. Measuring the pane
-                                    // here is what lets the cards be capped and scroll instead.
-                                    LayoutBuilder(builder: (context, pane) {
-                                      final barsCap = pane.maxHeight * 0.6;
-                                      final bottomBars = <Widget>[
-                                        // The question/approval bars are PINNED here (not inside the scroll
-                                        // list) so a "needs input" request is always visible — buried at the
-                                        // bottom of a scrolled-up transcript it read as "the agent is stuck".
-                                        if (!widget.readOnly &&
-                                            waiting &&
-                                            _pendingApproval(events))
-                                          _centerWide(ConstrainedBox(
-                                            constraints: BoxConstraints(
-                                                maxHeight: barsCap),
-                                            child: Padding(
-                                              padding: EdgeInsets.fromLTRB(
-                                                  kMobile
-                                                      ? M.gutter
-                                                      : (widget.embedded
-                                                          ? 0
-                                                          : S.s20),
-                                                  S.s6,
-                                                  kMobile
-                                                      ? M.gutter
-                                                      : (widget.embedded
-                                                          ? 0
-                                                          : S.s20),
-                                                  0),
-                                              child: ChatCardAccent(
-                                                color: agentTintFor(
-                                                    _me?.displayAgentId ??
-                                                        'snippet'),
-                                                child: ApprovalBar(
-                                                    events: events,
-                                                    onSend: _sendDecision,
-                                                    agentId:
-                                                        _me?.displayAgentId,
-                                                    agentName: _meAgentName,
-                                                    stepLabel: _me?.plan !=
-                                                                null &&
-                                                            _me!.plan!.total > 0
-                                                        ? sessionStepLabel(
-                                                            _me!.plan!)
-                                                        : null,
-                                                    showApproveAll:
-                                                        _pendingApprovalTotal(
-                                                                events) >
-                                                            1),
-                                              ),
-                                            ),
-                                          )),
-                                        if (!widget.readOnly &&
-                                            waiting &&
-                                            s?.pendingQuestion != null)
-                                          _centerWide(ConstrainedBox(
-                                            constraints: BoxConstraints(
-                                                maxHeight: barsCap),
-                                            child: Padding(
-                                              padding: EdgeInsets.fromLTRB(
-                                                  kMobile
-                                                      ? M.gutter
-                                                      : (widget.embedded
-                                                          ? 0
-                                                          : S.s20),
-                                                  S.s6,
-                                                  kMobile
-                                                      ? M.gutter
-                                                      : (widget.embedded
-                                                          ? 0
-                                                          : S.s20),
-                                                  0),
-                                              // Keyed by the question set, so a new one
-                                              // starts fresh (selection, step, review).
-                                              child: ChatCardAccent(
-                                                color: agentTintFor(
-                                                    _me?.displayAgentId ??
-                                                        'snippet'),
-                                                child: QuestionBar(
-                                                    key: ValueKey(jsonEncode(
-                                                        s!.pendingQuestion!)),
-                                                    question:
-                                                        s.pendingQuestion!,
-                                                    agentName: _meAgentName,
-                                                    onSend: _sendDecision),
-                                              ),
-                                            ),
-                                          )),
-                                        if (!widget.readOnly && _settled)
-                                          _centerWide(_settledNotice(),
-                                              extra: 2 * S.s20),
-                                        if (!widget.readOnly &&
-                                            !(waiting &&
-                                                s?.pendingQuestion != null))
-                                          _centerWide(
-                                              _inputBar(running,
-                                                  top: !kMobile
-                                                      ? (_connError != null
-                                                          ? _deskConnectionNotice()
-                                                          : null)
-                                                      : _showsCold(running)
-                                                          ? ColdTab(
-                                                              mode: _resumeMode,
-                                                              resumeTokens:
-                                                                  (_cold!['resume_tokens']
-                                                                          as num?)
-                                                                      ?.toInt(),
-                                                              onPick:
-                                                                  _onColdPick)
-                                                          : null),
-                                              extra: 2 * S.s20),
-                                      ];
-                                      return Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.stretch,
-                                          children: [
-                                            if (widget.readOnly)
-                                              _readOnlyHeader(status),
-                                            if (widget.readOnly &&
-                                                widget.banner != null)
-                                              _centerWide(widget.banner!),
-                                            // Mission Control's mobile top bar has no status line.
-                                            // Desktop shows it above the composer instead.
-                                            if (_connError != null &&
-                                                (kMobile
-                                                    ? widget.mobileTopBar !=
-                                                        null
-                                                    : widget.readOnly))
-                                              _disconnectedBanner(),
-                                            Expanded(
-                                              // The glass header's frost reaches up behind the status bar.
-                                              child: Stack(
-                                                  clipBehavior: Clip.none,
-                                                  children: [
-                                                    s == null
-                                                        ? Center(
-                                                            child:
-                                                                DelayedSpinner(
-                                                                    size: 22))
-                                                        : NotificationListener<
-                                                                ScrollNotification>(
-                                                            onNotification:
-                                                                _onScroll,
-                                                            child: Builder(
-                                                                builder:
-                                                                    (context) {
-                                                              final timeline =
-                                                                  <Widget>[
-                                                                if (items
-                                                                        .isEmpty &&
-                                                                    !running &&
-                                                                    !widget
-                                                                        .readOnly)
-                                                                  Padding(
-                                                                    padding: EdgeInsets.only(
+        bottom: false,
+        child: Stack(children: [
+          Positioned.fill(
+            child: LayoutBuilder(
+                builder: (context, column) => ValueListenableBuilder<bool>(
+                    valueListenable: sessionRailCollapsed,
+                    builder: (context, railHidden, _) => _withTermDock(Row(
+                          // With the panel open, chat and panel sit together as one
+                          // centred pair instead of the panel hugging the window edge.
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _chatPane(
+                              _railVisible(column.maxWidth) && !railHidden,
+                              _passThrough(
+                                // The bottom chrome is NON-FLEX, so Flutter lays it out at its
+                                // natural height BEFORE the transcript's Expanded claims what
+                                // is left. A question or approval card carrying a long
+                                // agent-authored body could therefore exceed the pane outright
+                                // and push its own actions off the bottom edge — which is why a
+                                // big question was impossible to answer. Measuring the pane
+                                // here is what lets the cards be capped and scroll instead.
+                                LayoutBuilder(builder: (context, pane) {
+                                  final barsCap = pane.maxHeight * 0.6;
+                                  final bottomBars = <Widget>[
+                                    // The question/approval bars are PINNED here (not inside the scroll
+                                    // list) so a "needs input" request is always visible — buried at the
+                                    // bottom of a scrolled-up transcript it read as "the agent is stuck".
+                                    if (!widget.readOnly &&
+                                        waiting &&
+                                        _pendingApproval(events))
+                                      _centerWide(ConstrainedBox(
+                                        constraints:
+                                            BoxConstraints(maxHeight: barsCap),
+                                        child: Padding(
+                                          padding: EdgeInsets.fromLTRB(
+                                              kMobile
+                                                  ? M.gutter
+                                                  : (widget.embedded
+                                                      ? 0
+                                                      : S.s20),
+                                              S.s6,
+                                              kMobile
+                                                  ? M.gutter
+                                                  : (widget.embedded
+                                                      ? 0
+                                                      : S.s20),
+                                              0),
+                                          child: ChatCardAccent(
+                                            color: agentTintFor(
+                                                _me?.displayAgentId ??
+                                                    'snippet'),
+                                            child: ApprovalBar(
+                                                events: events,
+                                                onSend: _sendDecision,
+                                                agentId: _me?.displayAgentId,
+                                                agentName: _meAgentName,
+                                                stepLabel: _me?.plan != null &&
+                                                        _me!.plan!.total > 0
+                                                    ? sessionStepLabel(
+                                                        _me!.plan!)
+                                                    : null,
+                                                showApproveAll:
+                                                    _pendingApprovalTotal(
+                                                            events) >
+                                                        1),
+                                          ),
+                                        ),
+                                      )),
+                                    if (!widget.readOnly &&
+                                        waiting &&
+                                        s?.pendingQuestion != null)
+                                      _centerWide(ConstrainedBox(
+                                        constraints:
+                                            BoxConstraints(maxHeight: barsCap),
+                                        child: Padding(
+                                          padding: EdgeInsets.fromLTRB(
+                                              kMobile
+                                                  ? M.gutter
+                                                  : (widget.embedded
+                                                      ? 0
+                                                      : S.s20),
+                                              S.s6,
+                                              kMobile
+                                                  ? M.gutter
+                                                  : (widget.embedded
+                                                      ? 0
+                                                      : S.s20),
+                                              0),
+                                          // Keyed by the question set, so a new one
+                                          // starts fresh (selection, step, review).
+                                          child: ChatCardAccent(
+                                            color: agentTintFor(
+                                                _me?.displayAgentId ??
+                                                    'snippet'),
+                                            child: QuestionBar(
+                                                key: ValueKey(jsonEncode(
+                                                    s!.pendingQuestion!)),
+                                                question: s.pendingQuestion!,
+                                                agentName: _meAgentName,
+                                                onSend: _sendDecision),
+                                          ),
+                                        ),
+                                      )),
+                                    if (!widget.readOnly && _settled)
+                                      _centerWide(_settledNotice(),
+                                          extra: 2 * S.s20),
+                                    if (!widget.readOnly &&
+                                        !(waiting &&
+                                            s?.pendingQuestion != null))
+                                      _centerWide(
+                                          _inputBar(running,
+                                              top: !kMobile
+                                                  ? (_connError != null
+                                                      ? _deskConnectionNotice()
+                                                      : null)
+                                                  : _showsCold(running)
+                                                  ? ColdTab(
+                                                      mode: _resumeMode,
+                                                      resumeTokens:
+                                                          (_cold!['resume_tokens']
+                                                                  as num?)
+                                                              ?.toInt(),
+                                                      onPick: _onColdPick)
+                                                  : null),
+                                          extra: 2 * S.s20),
+                                  ];
+                                  return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        if (widget.readOnly)
+                                          _readOnlyHeader(status),
+                                        if (widget.readOnly &&
+                                            widget.banner != null)
+                                          _centerWide(widget.banner!),
+                                        // Mission Control's mobile top bar has no status line.
+                                        // Desktop shows it above the composer instead.
+                                        if (_connError != null &&
+                                            (kMobile
+                                                ? widget.mobileTopBar != null
+                                                : widget.readOnly))
+                                          _disconnectedBanner(),
+                                        Expanded(
+                                          // The glass header's frost reaches up behind the status bar.
+                                          child: Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                s == null
+                                                    ? Center(
+                                                        child: DelayedSpinner(
+                                                            size: 22))
+                                                    : NotificationListener<
+                                                            ScrollNotification>(
+                                                        onNotification:
+                                                            _onScroll,
+                                                        child: Builder(
+                                                            builder: (context) {
+                                                          final timeline =
+                                                              <Widget>[
+                                                            if (items.isEmpty &&
+                                                                !running &&
+                                                                !widget
+                                                                    .readOnly)
+                                                              Padding(
+                                                                padding: EdgeInsets
+                                                                    .only(
                                                                         top: S.of(
                                                                             48),
                                                                         bottom:
                                                                             S.s24),
-                                                                    child: Column(
-                                                                        children: [
-                                                                          AgentMochi(
-                                                                              _me?.displayAgentId ?? 'snippet',
-                                                                              size: kMobile ? 96 : 120),
-                                                                          SizedBox(
-                                                                              height: S.of(14)),
-                                                                          Text(
-                                                                              'What are we making?',
-                                                                              style: sans(kMobile ? 22 : 26, spacing: -0.4, color: AppColors.fg1)),
-                                                                        ]),
-                                                                  ),
-                                                                // Desktop: Mission Control's identity tops its history, like an agent thread.
-                                                                if (_isMissionControl &&
-                                                                    !kMobile &&
-                                                                    _transcriptStart ==
-                                                                        0 &&
-                                                                    items
-                                                                        .isNotEmpty)
-                                                                  const AgentTranscriptHead(
-                                                                      key: ValueKey(
-                                                                          'mc-head'),
-                                                                      agentId:
-                                                                          'mission-control',
-                                                                      name:
-                                                                          'Mission Control',
-                                                                      purpose:
-                                                                          'Coordinates your agents and sessions'),
-                                                                if (_transcriptStart >
-                                                                        0 &&
-                                                                    items
-                                                                        .isNotEmpty)
-                                                                  Padding(
-                                                                    key: const ValueKey(
-                                                                        'load-earlier'),
-                                                                    padding: EdgeInsets.only(
+                                                                child: Column(
+                                                                    children: [
+                                                                      AgentMochi(
+                                                                          _me?.displayAgentId ??
+                                                                              'snippet',
+                                                                          size: kMobile
+                                                                              ? 96
+                                                                              : 120),
+                                                                      SizedBox(
+                                                                          height:
+                                                                              S.of(14)),
+                                                                      Text(
+                                                                          'What are we making?',
+                                                                          style: sans(
+                                                                              kMobile ? 22 : 26,
+                                                                              spacing: -0.4,
+                                                                              color: AppColors.fg1)),
+                                                                    ]),
+                                                              ),
+                                                            // Desktop: Mission Control's identity tops its history, like an agent thread.
+                                                            if (_isMissionControl &&
+                                                                !kMobile &&
+                                                                _transcriptStart ==
+                                                                    0 &&
+                                                                items
+                                                                    .isNotEmpty)
+                                                              const AgentTranscriptHead(
+                                                                  key: ValueKey(
+                                                                      'mc-head'),
+                                                                  agentId:
+                                                                      'mission-control',
+                                                                  name:
+                                                                      'Mission Control',
+                                                                  purpose:
+                                                                      'Coordinates your agents and sessions'),
+                                                            if (_transcriptStart >
+                                                                    0 &&
+                                                                items
+                                                                    .isNotEmpty)
+                                                              Padding(
+                                                                key: const ValueKey(
+                                                                    'load-earlier'),
+                                                                padding: EdgeInsets
+                                                                    .only(
                                                                         bottom:
                                                                             S.s12),
-                                                                    child:
-                                                                        Center(
-                                                                      child: _loadingOlderTranscript
-                                                                          ? const SizedBox(
-                                                                              height: 28,
-                                                                              child: Center(child: Spinner(size: 14)))
-                                                                          : TextAction('Show earlier messages', icon: 'history', onTap: _loadOlderTranscript),
-                                                                    ),
-                                                                  ),
-                                                                ...items,
-                                                                // Optimistic bubbles for messages sent but not yet echoed.
-                                                                for (var pi = 0;
-                                                                    pi <
-                                                                        _pending
-                                                                            .length;
-                                                                    pi++)
-                                                                  Opacity(
-                                                                      key: ValueKey(
-                                                                          'pending-$pi-${_pending[pi].hashCode}'),
-                                                                      opacity:
-                                                                          0.5,
-                                                                      child: Padding(
-                                                                          padding:
-                                                                              EdgeInsets.only(bottom: S.s12),
-                                                                          child: _pendingBubble(_pending[pi]))),
-                                                                _LiveStreamRow(
-                                                                  key: const ValueKey(
-                                                                      'live-stream-row'),
-                                                                  frame:
-                                                                      _liveFrame,
-                                                                  agentId: _me
-                                                                          ?.displayAgentId ??
-                                                                      'snippet',
-                                                                  running:
-                                                                      running,
-                                                                  dockActive: kMobile
-                                                                      ? _dockRun !=
-                                                                          null
-                                                                      : _stripLive,
-                                                                  compacting: s
-                                                                      .compacting,
-                                                                  startedAt: s
-                                                                      .turnStartedAt,
-                                                                  hasVisibleAction:
-                                                                      _turnHasVisibleAction(
-                                                                          events),
-                                                                  steps:
-                                                                      _turnToolCalls(
-                                                                          events),
-                                                                  compactionDetail:
-                                                                      _latestCompactionDetail(
-                                                                          events),
+                                                                child: Center(
+                                                                  child: _loadingOlderTranscript
+                                                                      ? const SizedBox(
+                                                                          height:
+                                                                              28,
+                                                                          child: Center(
+                                                                              child: Spinner(
+                                                                                  size:
+                                                                                      14)))
+                                                                      : TextAction(
+                                                                          'Show earlier messages',
+                                                                          icon:
+                                                                              'history',
+                                                                          onTap:
+                                                                              _loadOlderTranscript),
                                                                 ),
-                                                              ];
-                                                              Key rowKey(
-                                                                      int i) =>
-                                                                  timeline[i]
-                                                                      .key ??
-                                                                  ValueKey(
-                                                                      'timeline-$i');
-                                                              // A new row lands at index 0 of the reversed list and shifts
-                                                              // the rest; matching by key keeps them mounted.
-                                                              final rowIndex =
-                                                                  <Key, int>{
-                                                                for (var i = 0;
-                                                                    i <
-                                                                        timeline
-                                                                            .length;
-                                                                    i++)
-                                                                  rowKey(
-                                                                      i): timeline
-                                                                          .length -
-                                                                      1 -
-                                                                      i,
-                                                              };
-                                                              if (!_rowsSeeded &&
-                                                                  timeline.length >
-                                                                      1) {
-                                                                _rowsSeeded =
-                                                                    true;
-                                                                for (var i = 0;
-                                                                    i <
-                                                                        timeline
-                                                                            .length;
-                                                                    i++) {
-                                                                  _shownRows.add(
-                                                                      rowKey(
-                                                                          i));
-                                                                }
-                                                              }
-                                                              final anchorIndex =
-                                                                  !kMobile &&
-                                                                          _turnSpace
-                                                                      ? _turnAnchorIndex(
-                                                                          timeline)
-                                                                      : -1;
-                                                              final list =
-                                                                  ScrollConfiguration(
-                                                                behavior: ScrollConfiguration.of(
-                                                                        context)
-                                                                    .copyWith(
-                                                                        scrollbars:
-                                                                            false),
-                                                                child:
-                                                                    _transcriptList(
-                                                                  anchorActive:
-                                                                      !kMobile &&
-                                                                          _turnSpace,
-                                                                  padding: EdgeInsets.fromLTRB(
-                                                                      kMobile
-                                                                          ? M
-                                                                              .gutter
-                                                                          : S
-                                                                              .s20,
-                                                                      _glassHeader
-                                                                          ? GlassTopFrame.inset +
+                                                              ),
+                                                            ...items,
+                                                            // Optimistic bubbles for messages sent but not yet echoed.
+                                                            for (var pi = 0;
+                                                                pi <
+                                                                    _pending
+                                                                        .length;
+                                                                pi++)
+                                                              Opacity(
+                                                                  key: ValueKey(
+                                                                      'pending-$pi-${_pending[pi].hashCode}'),
+                                                                  opacity: 0.5,
+                                                                  child: Padding(
+                                                                      padding: EdgeInsets.only(
+                                                                          bottom: S
+                                                                              .s12),
+                                                                      child: _pendingBubble(
+                                                                          _pending[
+                                                                              pi]))),
+                                                            _LiveStreamRow(
+                                                              key: const ValueKey(
+                                                                  'live-stream-row'),
+                                                              frame: _liveFrame,
+                                                              agentId:
+                                                                  _me?.displayAgentId ??
+                                                                      'snippet',
+                                                              running: running,
+                                                              dockActive: kMobile
+                                                                  ? _dockRun !=
+                                                                      null
+                                                                  : _stripLive,
+                                                              compacting:
+                                                                  s.compacting,
+                                                              startedAt: s
+                                                                  .turnStartedAt,
+                                                              hasVisibleAction:
+                                                                  _turnHasVisibleAction(
+                                                                      events),
+                                                              steps:
+                                                                  _turnToolCalls(
+                                                                      events),
+                                                              compactionDetail:
+                                                                  _latestCompactionDetail(
+                                                                      events),
+                                                            ),
+                                                          ];
+                                                          Key rowKey(int i) =>
+                                                              timeline[i].key ??
+                                                              ValueKey(
+                                                                  'timeline-$i');
+                                                          // A new row lands at index 0 of the reversed list and shifts
+                                                          // the rest; matching by key keeps them mounted.
+                                                          final rowIndex =
+                                                              <Key, int>{
+                                                            for (var i = 0;
+                                                                i <
+                                                                    timeline
+                                                                        .length;
+                                                                i++)
+                                                              rowKey(
+                                                                  i): timeline
+                                                                      .length -
+                                                                  1 -
+                                                                  i,
+                                                          };
+                                                          if (!_rowsSeeded &&
+                                                              timeline.length >
+                                                                  1) {
+                                                            _rowsSeeded = true;
+                                                            for (var i = 0;
+                                                                i <
+                                                                    timeline
+                                                                        .length;
+                                                                i++) {
+                                                              _shownRows.add(
+                                                                  rowKey(i));
+                                                            }
+                                                          }
+                                                          final anchorIndex = !kMobile && _turnSpace ? _turnAnchorIndex(timeline) : -1;
+                                                          final list =
+                                                              ScrollConfiguration(
+                                                            behavior: ScrollConfiguration
+                                                                    .of(context)
+                                                                .copyWith(
+                                                                    scrollbars:
+                                                                        false),
+                                                            child: _transcriptList(
+ anchorActive: !kMobile && _turnSpace,
+ padding: EdgeInsets.fromLTRB(
+                                                                  kMobile
+                                                                      ? M.gutter
+                                                                      : S.s20,
+                                                                  _glassHeader
+                                                                      ? GlassTopFrame
+                                                                              .inset +
+                                                                          S.s12
+                                                                      : (_deskHeader
+                                                                          ? _deskHeaderHeight +
                                                                               S
-                                                                                  .s12
-                                                                          : (_deskHeader
-                                                                              ? _deskHeaderHeight +
-                                                                                  S
-                                                                                      .s8
-                                                                              : S
-                                                                                  .s16),
-                                                                      kMobile
-                                                                          ? M
-                                                                              .gutter
+                                                                                  .s8
                                                                           : S
-                                                                              .s20,
-                                                                      _glassHeader
-                                                                          ? _composerH +
-                                                                              S.s12
-                                                                          : S.s24),
-                                                                  itemCount:
-                                                                      timeline
-                                                                          .length,
-                                                                  findChildIndexCallback:
-                                                                      (key) =>
-                                                                          rowIndex[
-                                                                              key],
-                                                                  itemBuilder:
-                                                                      (context,
-                                                                          index) {
-                                                                    final at =
-                                                                        timeline.length -
-                                                                            1 -
-                                                                            index;
-                                                                    final child = index ==
-                                                                            anchorIndex
-                                                                        ? KeyedSubtree(
-                                                                            key:
-                                                                                _turnAnchor,
-                                                                            child: timeline[
-                                                                                at])
-                                                                        : timeline[
-                                                                            at];
-                                                                    final key =
-                                                                        rowKey(
-                                                                            at);
-                                                                    final fresh =
-                                                                        _rowsSeeded &&
-                                                                            _shownRows.add(key);
-                                                                    return KeyedSubtree(
-                                                                      key: key,
+                                                                              .s16),
+                                                                  kMobile
+                                                                      ? M.gutter
+                                                                      : S.s20,
+                                                                  _glassHeader
+                                                                      ? _composerH +
+                                                                          S.s12
+                                                                      : S.s24),
+                                                              itemCount:
+                                                                  timeline
+                                                                      .length,
+                                                              findChildIndexCallback:
+                                                                  (key) =>
+                                                                      rowIndex[
+                                                                          key],
+                                                              itemBuilder:
+                                                                  (context,
+                                                                      index) {
+                                                                final at = timeline
+                                                                        .length -
+                                                                    1 -
+                                                                    index;
+                                                                final child = index == anchorIndex
+ ? KeyedSubtree(key: _turnAnchor, child: timeline[at])
+ : timeline[at];
+                                                                final key =
+                                                                    rowKey(at);
+                                                                final fresh =
+                                                                    _rowsSeeded &&
+                                                                        _shownRows
+                                                                            .add(key);
+                                                                return KeyedSubtree(
+                                                                  key: key,
+                                                                  child:
+                                                                      _centerWide(
+                                                                    Align(
+                                                                      alignment:
+                                                                          Alignment
+                                                                              .centerLeft,
                                                                       child:
-                                                                          _centerWide(
-                                                                        Align(
-                                                                          alignment:
-                                                                              Alignment.centerLeft,
+                                                                          SizedBox(
+                                                                        width: double
+                                                                            .infinity,
+                                                                        child:
+                                                                            RowSizeWatch(
+                                                                          onResize:
+                                                                              _rowResized,
                                                                           child:
-                                                                              SizedBox(
-                                                                            width:
-                                                                                double.infinity,
+                                                                              Appear(
+                                                                            enabled:
+                                                                                fresh,
                                                                             child:
-                                                                                RowSizeWatch(
-                                                                              onResize: _rowResized,
-                                                                              child: Appear(
-                                                                                enabled: fresh,
-                                                                                child: RepaintBoundary(child: child),
-                                                                              ),
-                                                                            ),
+                                                                                RepaintBoundary(child: child),
                                                                           ),
                                                                         ),
                                                                       ),
-                                                                    );
-                                                                  },
-                                                                ),
-                                                              );
-                                                              return _deskHeader
-                                                                  ? TopFadeMask(
-                                                                      clear:
-                                                                          _deskHeaderHeight -
-                                                                              8,
-                                                                      child:
-                                                                          list)
-                                                                  : list;
-                                                            })),
-                                                    if (!_stickToBottom &&
-                                                        s != null)
-                                                      Positioned(
-                                                        right: 16,
-                                                        bottom: 12 +
-                                                            (_glassHeader
-                                                                ? _composerH
-                                                                : 0),
-                                                        child: Material(
-                                                          color: AppColors
-                                                              .surface1,
-                                                          shape:
-                                                              const CircleBorder(),
-                                                          elevation: 0,
-                                                          child: InkWell(
-                                                            customBorder:
-                                                                const CircleBorder(),
-                                                            onTap: () {
-                                                              _stickToBottom =
-                                                                  true;
-                                                              setState(() {});
-                                                              _scheduleBottom(
-                                                                  settle: true,
-                                                                  smooth: true);
-                                                            },
-                                                            child: Padding(
-                                                              padding:
-                                                                  EdgeInsets
-                                                                      .all(
-                                                                          S.s8),
-                                                              child: AppIcon(
-                                                                  'chevron-down',
-                                                                  size: 16,
-                                                                  color:
-                                                                      AppColors
-                                                                          .fg3),
+                                                                    ),
+                                                                  ),
+                                                                );
+                                                              },
                                                             ),
+                                                          );
+                                                          return _deskHeader
+                                                              ? TopFadeMask(
+                                                                  clear:
+                                                                      _deskHeaderHeight -
+                                                                          8,
+                                                                  child: list)
+                                                              : list;
+                                                        })),
+                                                if (!_stickToBottom &&
+                                                    s != null)
+                                                  Positioned(
+                                                    right: 16,
+                                                    bottom: 12 +
+                                                        (_glassHeader
+                                                            ? _composerH
+                                                            : 0),
+                                                    child: Material(
+                                                      color: AppColors.surface1,
+                                                      shape:
+                                                          const CircleBorder(),
+                                                      elevation: 0,
+                                                      child: InkWell(
+                                                        customBorder:
+                                                            const CircleBorder(),
+                                                        onTap: () {
+                                                          _stickToBottom = true;
+                                                          setState(() {});
+                                                          _scheduleBottom(
+                                                              settle: true,
+                                                              smooth: true);
+                                                        },
+                                                        child: Padding(
+                                                          padding:
+                                                              EdgeInsets.all(
+                                                                  S.s8),
+                                                          child: AppIcon(
+                                                              'chevron-down',
+                                                              size: 16,
+                                                              color: AppColors
+                                                                  .fg3),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                if (_glassHeader)
+                                                  Positioned(
+                                                    left: 0,
+                                                    right: 0,
+                                                    bottom: 0,
+                                                    child: _ReportHeight(
+                                                      onHeight: (h) {
+                                                        if (mounted &&
+                                                            h != _composerH) {
+                                                          setState(() =>
+                                                              _composerH = h);
+                                                        }
+                                                      },
+                                                      child: DecoratedBox(
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          gradient:
+                                                              LinearGradient(
+                                                            begin: Alignment
+                                                                .topCenter,
+                                                            end: Alignment
+                                                                .bottomCenter,
+                                                            colors: [
+                                                              AppColors.bg
+                                                                  .withValues(
+                                                                      alpha: 0),
+                                                              AppColors.bg
+                                                                  .withValues(
+                                                                      alpha:
+                                                                          0.85),
+                                                            ],
                                                           ),
                                                         ),
-                                                      ),
-                                                    if (_glassHeader)
-                                                      Positioned(
-                                                        left: 0,
-                                                        right: 0,
-                                                        bottom: 0,
-                                                        child: _ReportHeight(
-                                                          onHeight: (h) {
-                                                            if (mounted &&
-                                                                h !=
-                                                                    _composerH) {
-                                                              setState(() =>
-                                                                  _composerH =
-                                                                      h);
-                                                            }
-                                                          },
-                                                          child: DecoratedBox(
-                                                            decoration:
-                                                                BoxDecoration(
-                                                              gradient:
-                                                                  LinearGradient(
-                                                                begin: Alignment
-                                                                    .topCenter,
-                                                                end: Alignment
-                                                                    .bottomCenter,
-                                                                colors: [
-                                                                  AppColors.bg
-                                                                      .withValues(
-                                                                          alpha:
-                                                                              0),
-                                                                  AppColors.bg
-                                                                      .withValues(
-                                                                          alpha:
-                                                                              0.85),
-                                                                ],
-                                                              ),
-                                                            ),
-                                                            child: Column(
-                                                              mainAxisSize:
-                                                                  MainAxisSize
-                                                                      .min,
-                                                              crossAxisAlignment:
-                                                                  CrossAxisAlignment
-                                                                      .stretch,
-                                                              children:
-                                                                  bottomBars,
-                                                            ),
-                                                          ),
+                                                        child: Column(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .stretch,
+                                                          children: bottomBars,
                                                         ),
                                                       ),
-                                                    if (_glassHeader)
-                                                      Positioned(
-                                                        top: 0,
-                                                        left: 0,
-                                                        right: 0,
-                                                        child: GlassTopFrame(
-                                                          child: widget
-                                                                  .mobileTopBar
-                                                                  ?.call(() =>
-                                                                      _openActionsDrawer(
-                                                                          s)) ??
-                                                              _mobileHeader(s),
-                                                        ),
-                                                      ),
-                                                    if (_deskHeader)
-                                                      Positioned(
-                                                        top: 0,
-                                                        left: 0,
-                                                        right: 0,
-                                                        child: SessionBarPublisher(
-                                                            sessionId: widget
-                                                                .sessionId,
-                                                            child: _deskHeaderBar(
-                                                                s, running,
-                                                                rail: _railVisible(
-                                                                    column
-                                                                        .maxWidth))),
-                                                      ),
-                                                  ]),
-                                            ),
-                                            if (!_glassHeader) ...bottomBars,
-                                          ]);
-                                    }),
-                                  ),
-                                ),
-                                if (_railVisible(column.maxWidth))
-                                  _sessionRail(s),
-                              ],
-                            )))),
-              ),
-              if (_deskHeader)
-                Positioned.fill(
-                  child: LayoutBuilder(
-                      builder: (context, column) => _floatingRail(s, column)),
-                ),
-              Positioned.fill(
-                child: AnimatedSwitcher(
-                  duration: Motion.fast,
-                  reverseDuration: Motion.quick,
-                  switchInCurve: Motion.enter,
-                  switchOutCurve: Motion.exit,
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0.025, 0),
-                        end: Offset.zero,
-                      ).animate(animation),
-                      child: child,
-                    ),
-                  ),
-                  child: kMobile && _termOpen && _terms.isNotEmpty
-                      ? KeyedSubtree(
-                          key: const ValueKey('mobile-terminal'),
-                          child: _mobileTermTab(),
-                        )
-                      : const SizedBox(key: ValueKey('mobile-chat')),
+                                                    ),
+                                                  ),
+                                                if (_glassHeader)
+                                                  Positioned(
+                                                    top: 0,
+                                                    left: 0,
+                                                    right: 0,
+                                                    child: GlassTopFrame(
+                                                      child: widget.mobileTopBar
+                                                              ?.call(() =>
+                                                                  _openActionsDrawer(
+                                                                      s)) ??
+                                                          _mobileHeader(s),
+                                                    ),
+                                                  ),
+                                                if (_deskHeader)
+                                                  Positioned(
+                                                    top: 0,
+                                                    left: 0,
+                                                    right: 0,
+                                                    child: SessionBarPublisher(
+                                                        sessionId:
+                                                            widget.sessionId,
+                                                        child: _deskHeaderBar(
+                                                            s, running,
+                                                            rail: _railVisible(
+                                                                column
+                                                                    .maxWidth))),
+                                                  ),
+                                              ]),
+                                        ),
+                                        if (!_glassHeader) ...bottomBars,
+                                      ]);
+                                }),
+                              ),
+                            ),
+                            if (_railVisible(column.maxWidth)) _sessionRail(s),
+                          ],
+                        )))),
+          ),
+          if (_deskHeader)
+            Positioned.fill(
+              child: LayoutBuilder(
+                  builder: (context, column) => _floatingRail(s, column)),
+            ),
+          Positioned.fill(
+            child: AnimatedSwitcher(
+              duration: Motion.fast,
+              reverseDuration: Motion.quick,
+              switchInCurve: Motion.enter,
+              switchOutCurve: Motion.exit,
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.025, 0),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
                 ),
               ),
-            ]),
-          ))),
+              child: kMobile && _termOpen && _terms.isNotEmpty
+                  ? KeyedSubtree(
+                      key: const ValueKey('mobile-terminal'),
+                      child: _mobileTermTab(),
+                    )
+                  : const SizedBox(key: ValueKey('mobile-chat')),
+            ),
+          ),
+        ]),
+      ))),
     );
     final guardedScaffold = DaemonScope(
       client: widget.client,
