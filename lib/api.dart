@@ -915,6 +915,13 @@ class DaemonClient {
     if (r.statusCode != 200) throw _err('delete', r);
   }
 
+  /// Rename or move [from] to [to]. Never overwrites; throws if [to] exists.
+  Future<void> renamePath(String from, String to) async {
+    final r = await _post(_uri('/fs/rename'),
+        headers: _json, body: jsonEncode({'from': from, 'to': to}));
+    if (r.statusCode != 200) throw _err('rename', r);
+  }
+
   /// Download a file's raw bytes (any type, up to the daemon's cap).
   /// Absolute URL (with the auth token) for streaming or displaying a file —
   /// used by Image.network and the video player. The daemon serves a real

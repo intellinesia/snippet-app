@@ -312,6 +312,33 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
     }
   }
 
+  Future<void> _rename(FsEntry e) async {
+    final name = await promptText(context,
+        title: 'Rename', initial: e.name, saveLabel: 'Rename');
+    final trimmed = name?.trim();
+    if (!mounted || trimmed == null || trimmed.isEmpty || trimmed == e.name) {
+      return;
+    }
+    if (trimmed.contains('/')) {
+      toast(context, 'A name cannot contain /', danger: true);
+      return;
+    }
+    final slash = e.path.lastIndexOf('/');
+    final parent = slash > 0 ? e.path.substring(0, slash) : '';
+    try {
+      await widget.client.renamePath(e.path, '$parent/$trimmed');
+      if (!mounted) return;
+      _expandedFolders.remove(e.path);
+      _childrenByPath.remove(e.path);
+      await refresh();
+      if (mounted) toast(context, 'Renamed to $trimmed');
+    } catch (err) {
+      if (mounted) {
+        toast(context, "Couldn't rename ${e.name}: $err", danger: true);
+      }
+    }
+  }
+
   String _relative(String path) {
     final root = _listing?.path ?? widget.workspacePath;
     return root.isNotEmpty && path.startsWith('$root/')
@@ -341,6 +368,7 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
         ],
         if (e != null) ...[
           const PopupMenuDivider(),
+          appMenuItem(value: 'rename', label: 'Rename', icon: 'edit'),
           appMenuItem(value: 'copy', label: 'Copy path', icon: 'copy'),
           appMenuItem(
               value: 'copyRel', label: 'Copy relative path', icon: 'copy'),
@@ -366,6 +394,8 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
       case 'copyRel':
         await Clipboard.setData(ClipboardData(text: _relative(e!.path)));
         if (mounted) toast(context, 'Copied relative path');
+      case 'rename':
+        await _rename(e!);
       case 'delete':
         await _delete(e!);
     }
