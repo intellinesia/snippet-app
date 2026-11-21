@@ -550,6 +550,7 @@ class _AgentCardState extends State<AgentCard> {
       },
       onSecondaryTapUp: (d) => _actions(d.globalPosition),
       avatar: AgentMochi(agent.id, size: 28),
+      tint: kMobile ? null : agentTintFor(agent.id),
       dot: !agent.available
           ? null
           : needs
@@ -616,9 +617,13 @@ class AgentRowShell extends StatefulWidget {
     this.onLongPress,
     this.onSecondaryTapUp,
     this.wideAvatar = false,
+    this.tint,
   });
 
   final Widget avatar;
+
+  /// The character's colour; when set the avatar sits on a lit tile.
+  final Color? tint;
 
   /// Draws the avatar unplated in a 36x22 box spilling past the 28 px slot,
   /// so a group's side-by-side faces stay full size while names line up.
@@ -682,10 +687,13 @@ class _AgentRowShellState extends State<AgentRowShell> {
                 // 28 px slot, the session avatar's width, so agent names and
                 // session titles start at one x.
                 SizedBox(
-                  width: 28,
-                  height: 22,
+                  width: widget.tint != null ? 34 : 28,
+                  height: widget.tint != null ? 34 : 22,
                   child: Stack(clipBehavior: Clip.none, children: [
-                    if (widget.wideAvatar)
+                    if (widget.tint != null && !widget.wideAvatar)
+                      Positioned.fill(
+                          child: _LitTile(widget.tint!, widget.avatar))
+                    else if (widget.wideAvatar)
                       Positioned(
                         left: -4,
                         top: 0,
@@ -723,7 +731,7 @@ class _AgentRowShellState extends State<AgentRowShell> {
                       ),
                   ]),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: widget.tint != null ? 12 : 10),
                 Expanded(
                   child: Row(children: [
                     Flexible(
@@ -731,7 +739,7 @@ class _AgentRowShellState extends State<AgentRowShell> {
                           maxLines: 1,
                           softWrap: false,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(13,
+                          style: sans(widget.tint != null ? 14 : 13,
                               weight: FontWeight.w500,
                               color: widget.needs
                                   ? AppColors.fg1
@@ -1024,4 +1032,42 @@ class TeamRow extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// Squarish tile in the character's colour, lit from the top left.
+class _LitTile extends StatelessWidget {
+  const _LitTile(this.tint, this.avatar);
+  final Color tint;
+  final Widget avatar;
+
+  @override
+  Widget build(BuildContext context) {
+    final h = HSLColor.fromColor(tint);
+    final light = h
+        .withSaturation(h.saturation.clamp(0.0, 0.70))
+        .withLightness(0.42)
+        .toColor();
+    final deep = h
+        .withSaturation(h.saturation.clamp(0.0, 0.60))
+        .withLightness(0.16)
+        .toColor();
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(9),
+        gradient: RadialGradient(
+          center: const Alignment(-0.36, -0.44),
+          radius: 1.0,
+          colors: [light, deep],
+          stops: const [0, 0.75],
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(9),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(2, 4, 2, 0),
+          child: FittedBox(child: avatar),
+        ),
+      ),
+    );
+  }
 }

@@ -132,6 +132,7 @@ class _MissionControlCardState extends State<MissionControlCard> {
         selected: widget.selected,
         onTap: widget.onOpen,
         avatar: const AgentMochi('mission-control', size: 28),
+        tint: agentTintFor('mission-control'),
         dot: waiting
             ? AppColors.accent
             : working
