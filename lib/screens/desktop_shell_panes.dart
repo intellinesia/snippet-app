@@ -914,8 +914,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     _settingsOpen = true;
     Navigator.of(context)
         .push(PageRouteBuilder<void>(
-          transitionDuration: const Duration(milliseconds: 220),
-          reverseTransitionDuration: const Duration(milliseconds: 160),
+          transitionDuration: Motion.base,
+          reverseTransitionDuration: Motion.close,
           pageBuilder: (ctx, a1, a2) => DesktopSettingsPage(
             client: c,
             instances: _instances,
@@ -931,9 +931,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           ),
           transitionsBuilder: (ctx, anim, a2, child) {
             final t = CurvedAnimation(
-                parent: anim,
-                curve: Curves.easeOutCubic,
-                reverseCurve: Curves.easeInCubic);
+                parent: anim, curve: Motion.enter, reverseCurve: Motion.exit);
             return FadeTransition(
               opacity: t,
               child: SlideTransition(

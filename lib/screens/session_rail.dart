@@ -566,15 +566,16 @@ class _SessionRailState extends State<SessionRail> {
             padding: const EdgeInsets.only(bottom: 6),
             // Pages slide in from the side they lead to; root comes back from the left.
             child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
+              duration: Motion.fast,
+              reverseDuration: Motion.quick,
+              switchInCurve: Motion.enter,
+              switchOutCurve: Motion.exit,
               layoutBuilder: (cur, prev) => Stack(
                   alignment: Alignment.topCenter,
                   children: [...prev, if (cur != null) cur]),
               transitionBuilder: (child, anim) {
                 final isRoot = child.key == const ValueKey('rail-root');
-                final dx = isRoot ? -0.12 : 0.12;
+                final dx = isRoot ? -0.03 : 0.03;
                 return FadeTransition(
                   opacity: anim,
                   child: SlideTransition(
