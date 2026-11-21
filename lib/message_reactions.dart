@@ -452,6 +452,20 @@ Future<void> showMessageContextMenu(
   }
 }
 
+/// The reaction strip on its own, under the control that opened it.
+Future<void> showReactionPicker(BuildContext anchor,
+    {required ValueChanged<String> onReact}) async {
+  final picked = await showAppMenu<String>(anchor,
+      anchor: anchor,
+      below: true,
+      minWidth: 216,
+      maxWidth: 216,
+      items: const [_ReactionStripEntry()]);
+  if (picked != null && picked.startsWith('react:')) {
+    onReact(picked.substring(6));
+  }
+}
+
 class _ReactionStripEntry extends PopupMenuEntry<String> {
   const _ReactionStripEntry();
 

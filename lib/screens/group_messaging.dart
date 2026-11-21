@@ -1812,8 +1812,10 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           for (final r in reactions)
             DeskReactionChip(
                 group: r, onTap: () => unawaited(_sendReaction(e, r.name))),
-          DeskReactionChip.add(
-              onTap: () => unawaited(_sendReaction(e, '\u{1F44D}'))),
+          Builder(
+              builder: (anchor) => DeskReactionChip.add(
+                  onTap: () => showReactionPicker(anchor,
+                      onReact: (name) => unawaited(_sendReaction(e, name))))),
         ]),
       ),
     );
