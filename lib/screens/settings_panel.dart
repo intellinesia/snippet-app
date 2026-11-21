@@ -2372,7 +2372,7 @@ class AppearanceScreen extends StatelessWidget {
       listenable: ThemeManager.instance,
       builder: (context, _) {
         final tm = ThemeManager.instance;
-        final effectiveClient = client ?? tm.client;
+        final effectiveClient = client;
         final base = tm.baseTheme;
         final custom = tm.customAccent;
 
@@ -2800,7 +2800,6 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
   void _loadFromDaemon() {
     final c = widget.client;
     if (c == null) return;
-    unawaited(ThemeManager.instance.syncFromDaemon(client: c));
     unawaited(c.coordinationAgents().then((all) {
       rememberAgentCharacters([for (final a in all) (a.id, a.character)]);
       if (!mounted) return;
@@ -2831,9 +2830,7 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
   }
 
   List<ThemeSummary> _orderedItems(ThemeManager tm) {
-    final source = tm.daemonThemes.isNotEmpty
-        ? tm.daemonThemes
-        : [for (final p in allPresets) ThemeSummary.fromPreset(p)];
+    final source = [for (final p in allPresets) ThemeSummary.fromPreset(p)];
     final builtins = <ThemeSummary>[];
     final yours = <ThemeSummary>[];
     final agents = <ThemeSummary>[];
@@ -2862,25 +2859,6 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
           : a.name.toLowerCase().compareTo(b.name.toLowerCase());
     });
     return [...builtins, ...yours, ...agents];
-  }
-
-  Future<void> _confirmDelete(ThemeSummary item, String activeId) async {
-    final c = widget.client;
-    if (c == null) return;
-    final fallbackNote = item.id == activeId
-        ? ' The active theme will fall back to Pure Black.'
-        : '';
-    final ok = await confirmAction(
-      context,
-      title: 'Delete theme?',
-      body: 'Remove "${item.name}" from this daemon?$fallbackNote',
-      confirmLabel: 'Delete',
-    );
-    if (!ok || !mounted) return;
-    await _runThemeUpdate(
-      context,
-      () => ThemeManager.instance.deleteTheme(item.id, client: c),
-    );
   }
 
   @override
@@ -2965,11 +2943,8 @@ class _ThemeCardCarouselState extends State<_ThemeCardCarousel> {
                   return GestureDetector(
                     onTap: () => unawaited(_runThemeUpdate(
                       context,
-                      () => tm.applyTheme(item.id, client: widget.client),
+                      () => tm.applyTheme(item.id),
                     )),
-                    onLongPress: item.builtin || widget.client == null
-                        ? null
-                        : () => unawaited(_confirmDelete(item, currentId)),
                     behavior: HitTestBehavior.opaque,
                     child: SizedBox(
                       width: 152,
@@ -3202,10 +3177,8 @@ class _FontCardCarouselState extends State<_FontCardCarousel> {
                     onTap: () => unawaited(_runThemeUpdate(
                       context,
                       () => widget.mono
-                          ? tm.setMonoFontFamily(font.family,
-                              client: widget.client)
-                          : tm.setFontFamily(font.family,
-                              client: widget.client),
+                          ? tm.setMonoFontFamily(font.family)
+                          : tm.setFontFamily(font.family),
                     )),
                     behavior: HitTestBehavior.opaque,
                     child: SizedBox(
@@ -3318,7 +3291,7 @@ class _AccentSwatchStrip extends StatelessWidget {
             GestureDetector(
               onTap: () => unawaited(_runThemeUpdate(
                 context,
-                () => tm.setAccentName(null, client: client),
+                () => tm.setAccentName(null),
               )),
               behavior: HitTestBehavior.opaque,
               child: Container(
@@ -3345,7 +3318,7 @@ class _AccentSwatchStrip extends StatelessWidget {
               GestureDetector(
                 onTap: () => unawaited(_runThemeUpdate(
                   context,
-                  () => tm.setAccentName(a.name, client: client),
+                  () => tm.setAccentName(a.name),
                 )),
                 behavior: HitTestBehavior.opaque,
                 child: Tooltip(

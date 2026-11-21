@@ -560,7 +560,6 @@ class _DesktopShellState extends State<DesktopShell>
     _sessionsTicker?.cancel();
     _seenSub?.cancel();
     _stopEventsWatch();
-    ThemeManager.instance.unbindClient(_client);
     _persistTabsDebounce?.cancel();
     _pageController.dispose();
     _stripController.dispose();
@@ -722,7 +721,6 @@ class _DesktopShellState extends State<DesktopShell>
   void _connectEventsWatch() {
     final c = _client;
     MacosNotch.bindClient(c);
-    ThemeManager.instance.bindClient(c);
     _stopEventsWatch();
     if (c == null) return;
     _sessionsRevalidator = Revalidator(

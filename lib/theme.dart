@@ -9,7 +9,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api.dart';
 import 'chat_scene.dart' show ChatScene;
 import 'platform.dart';
-import 'swr.dart';
 export 'theme_models.dart';
 
 // ---------------------------------------------------------------------------
@@ -1173,7 +1172,6 @@ class ThemeManager extends ChangeNotifier {
   static const _legacyIndexKey = 'theme_index';
   static const _prefsKey = 'theme_name';
   static const activeJsonPrefsKey = 'theme_active_json';
-  static const migratedPrefsKey = 'theme_prefs_migrated';
   static const defaultTheme = 'black';
   static const defaultFont = 'Geist';
   static const defaultMonoFont = 'GeistMono';
@@ -1198,16 +1196,7 @@ class ThemeManager extends ChangeNotifier {
     return _signature;
   }
 
-  List<ThemeSummary> _daemonThemes = const [];
-  List<String> _liveGroups = const [];
   String? _activeId;
-  bool _migrated = false;
-  bool _hasCache = false;
-  bool _hasLegacyPrefs = false;
-  Map<String, dynamic>? _customDoc;
-  DaemonClient? _client;
-  Revalidator? _revalidator;
-  Future<void>? _syncInFlight;
 
   static int _indexOr(Iterable<String> names, String name) {
     final i = names.toList().indexOf(name);
@@ -1215,11 +1204,7 @@ class ThemeManager extends ChangeNotifier {
   }
 
   ResolvedTheme get resolved => _resolved;
-  List<ThemeSummary> get daemonThemes => _daemonThemes;
-  List<String> get liveGroups => _liveGroups;
   String get activeId => _activeId ?? _resolved.id;
-  DaemonClient? get client => _client;
-  bool get migrated => _migrated;
 
   int get themeIndex {
     final id = _resolved.id == 'custom'
@@ -1296,36 +1281,15 @@ class ThemeManager extends ChangeNotifier {
 
   @visibleForTesting
   void resetForTest() {
-    _revalidator?.dispose();
-    _revalidator = null;
-    _client = null;
-    _syncInFlight = null;
     _resolved = ResolvedTheme.fromPreset(_black);
-    _daemonThemes = const [];
-    _liveGroups = const [];
     _activeId = null;
-    _migrated = false;
-    _hasCache = false;
-    _hasLegacyPrefs = false;
-    _customDoc = null;
     notifyListeners();
   }
 
   Future<void> init() async {
     final p = await SharedPreferences.getInstance();
-    _migrated = p.getBool(migratedPrefsKey) ?? false;
-    _daemonThemes = const [];
-    _liveGroups = const [];
-    _customDoc = null;
-
     var name = p.getString(_prefsKey);
     final legacy = p.getInt(_legacyIndexKey);
-    _hasLegacyPrefs = name != null ||
-        legacy != null ||
-        p.containsKey(_accentPrefsKey) ||
-        p.containsKey(_fontPrefsKey) ||
-        p.containsKey(_monoFontPrefsKey);
-
     if (name == null && legacy != null) {
       // Saved before Pure Black was prepended; index into the old order.
       final old = allPresets.where((t) => t.name != 'black').toList();
@@ -1364,7 +1328,6 @@ class ThemeManager extends ChangeNotifier {
           if (cached.id != 'white') {
             _resolved = cached;
             _activeId = cached.id;
-            _hasCache = true;
             notifyListeners();
             return;
           }
@@ -1372,7 +1335,6 @@ class ThemeManager extends ChangeNotifier {
       } catch (_) {}
     }
 
-    _hasCache = false;
     _resolved = ResolvedTheme.fromPreset(
       fallbackPreset,
       accentName: accentName,
@@ -1383,122 +1345,11 @@ class ThemeManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  void bindClient(DaemonClient? client) {
-    if (identical(_client, client)) return;
-    _revalidator?.dispose();
-    _revalidator = null;
-    _client = client;
-    _syncInFlight = null;
-    if (client == null) return;
-    _revalidator = Revalidator(
-      client: client,
-      on: (e) => e['kind'] == 'themes_changed',
-      onRevalidate: ({required bool force}) {
-        if (identical(_client, client)) {
-          unawaited(syncFromDaemon(client: client));
-        }
-      },
-    );
-    unawaited(syncFromDaemon(client: client));
-  }
-
-  void unbindClient(DaemonClient? client) {
-    if (client != null && identical(_client, client)) {
-      bindClient(null);
-    }
-  }
-
-  Future<void> syncFromDaemon({DaemonClient? client}) {
-    final c = client ?? _client;
-    if (c == null) return Future.value();
-    final running = _syncInFlight;
-    if (running != null && identical(c, _client)) return running;
-    final pending = _runSync(c);
-    if (identical(c, _client)) _syncInFlight = pending;
-    return pending.whenComplete(() {
-      if (identical(_syncInFlight, pending)) _syncInFlight = null;
-    });
-  }
-
-  Future<void> _runSync(DaemonClient c) async {
-    try {
-      var active = await c.getActiveTheme();
-      if (_client != null && !identical(c, _client)) return;
-
-      if (!_migrated && active.activeSet == false) {
-        final migrated = await _migrateLegacyChoice(c);
-        if (_client != null && !identical(c, _client)) return;
-        if (migrated != null) active = migrated;
-      }
-
-      if (!_migrated) {
-        _migrated = true;
-        try {
-          final p = await SharedPreferences.getInstance();
-          await p.setBool(migratedPrefsKey, true);
-        } catch (_) {}
-      }
-
-      await _applyAndCache(active);
-      await _refreshList(c);
-      if (_resolved.id == 'custom' && _customDoc == null) {
-        try {
-          final detail = await c.getTheme('custom');
-          if (_client == null || identical(c, _client)) {
-            _customDoc = _sanitiseCustomDoc(detail.document);
-          }
-        } catch (_) {}
-      }
-    } catch (_) {}
-  }
-
-  Future<ResolvedTheme?> _migrateLegacyChoice(DaemonClient c) async {
-    final baseId = _resolved.id == 'white' ? defaultTheme : _resolved.id;
-    final accent = _resolved.accentName;
-    final uiFont = _resolved.type.uiFont;
-    final codeFont = _resolved.type.codeFont;
-    final hasOverrides =
-        accent != null || uiFont != defaultFont || codeFont != defaultMonoFont;
-    if (!_hasLegacyPrefs && baseId == defaultTheme && !hasOverrides) {
-      return null;
-    }
-    try {
-      if (!hasOverrides) {
-        final applied = await c.setActiveTheme(baseId);
-        return applied ?? await c.getActiveTheme();
-      }
-      final doc = _buildCustomDocument(
-        baseId: baseId == 'custom' ? defaultTheme : baseId,
-        accentName: accent,
-        updateAccent: accent != null,
-        uiFont: uiFont != defaultFont ? uiFont : null,
-        codeFont: codeFont != defaultMonoFont ? codeFont : null,
-      );
-      final detail = await c.putTheme('custom', doc);
-      final applied = await c.setActiveTheme('custom');
-      _customDoc = doc;
-      return applied ?? detail?.resolved ?? await c.getActiveTheme();
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> _refreshList(DaemonClient c) async {
-    try {
-      final res = await c.listThemes();
-      if (_client != null && !identical(c, _client)) return;
-      _daemonThemes = res.themes;
-      _liveGroups = res.liveGroups;
-      _activeId = res.active;
-      notifyListeners();
-    } catch (_) {}
-  }
-
-  Future<void> _applyAndCache(ResolvedTheme theme) async {
-    final safe = theme.id == 'white' ? ResolvedTheme.fromPreset(_black) : theme;
+  // Local only until the daemon theme store ships; the cache is what init restores.
+  Future<void> _commit(ResolvedTheme next) async {
+    final safe = next.id == 'white' ? ResolvedTheme.fromPreset(_black) : next;
     _resolved = safe;
     _activeId = safe.id;
-    _hasCache = true;
     notifyListeners();
     try {
       final p = await SharedPreferences.getInstance();
@@ -1506,47 +1357,18 @@ class ThemeManager extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> applyTheme(String id, {DaemonClient? client}) async {
-    final targetId = id == 'white' ? defaultTheme : id;
-    final c = client ?? _client;
-    if (c != null) {
-      final applied = await c.setActiveTheme(targetId);
-      final next = applied ?? await c.getActiveTheme();
-      if (targetId != 'custom') _customDoc = null;
-      await _applyAndCache(next);
-      await _refreshList(c);
-      return;
-    }
-    final i = allPresets.indexWhere((p) => p.name == targetId);
-    if (i >= 0) await setIndex(i);
-  }
-
-  Future<void> deleteTheme(String id, {DaemonClient? client}) async {
-    final c = client ?? _client;
-    if (c == null) return;
-    await c.deleteTheme(id);
-    if (id == 'custom') _customDoc = null;
-    await _runSync(c);
-  }
+  Future<void> applyTheme(String id) => setName(id);
 
   Future<void> setIndex(int i) async {
     if (i < 0 || i >= allPresets.length) return;
     final preset = allPresets[i];
-    if (_resolved.id == preset.name && _resolved.accentName == null) return;
-    _resolved = ResolvedTheme.fromPreset(
+    if (_resolved.id == preset.name) return;
+    await _commit(ResolvedTheme.fromPreset(
       preset,
       accentName: _resolved.accentName,
       uiFont: _resolved.type.uiFont,
       codeFont: _resolved.type.codeFont,
-    );
-    _activeId = preset.name;
-    notifyListeners();
-    if (!_migrated && !_hasCache) {
-      try {
-        final p = await SharedPreferences.getInstance();
-        await p.setString(_prefsKey, preset.name);
-      } catch (_) {}
-    }
+    ));
   }
 
   Future<void> setName(String name) async {
@@ -1555,191 +1377,28 @@ class ThemeManager extends ChangeNotifier {
     if (i >= 0) await setIndex(i);
   }
 
-  Future<void> setAccentName(String? name, {DaemonClient? client}) async {
+  Future<void> setAccentName(String? name) async {
     final nextName = (name == null || name.isEmpty)
         ? null
         : (allAccents.any((a) => a.name == name) ? name : null);
-    if (nextName == _resolved.accentName && _resolved.id == 'custom') return;
-    final c = client ?? _client;
-    if (c != null) {
-      await _saveCustom(c, accentName: nextName, updateAccent: true);
-      return;
-    }
     if (nextName == _resolved.accentName) return;
-    _resolved = _resolved.copyWith(accentName: nextName);
-    notifyListeners();
-    if (!_migrated && !_hasCache) {
-      try {
-        final p = await SharedPreferences.getInstance();
-        if (nextName == null) {
-          await p.remove(_accentPrefsKey);
-        } else {
-          await p.setString(_accentPrefsKey, nextName);
-        }
-      } catch (_) {}
-    }
+    await _commit(_resolved.copyWith(accentName: nextName));
   }
 
-  Future<void> setFontFamily(String family, {DaemonClient? client}) async {
+  Future<void> setFontFamily(String family) async {
     if (!allFonts.any((f) => f.family == family)) return;
-    if (family == _resolved.type.uiFont && _resolved.id == 'custom') return;
-    final c = client ?? _client;
-    if (c != null) {
-      await _saveCustom(c, uiFont: family);
-      return;
-    }
     if (family == _resolved.type.uiFont) return;
-    _resolved = _resolved.copyWith(
+    await _commit(_resolved.copyWith(
       type: _resolved.type.copyWith(uiFont: family),
-    );
-    notifyListeners();
-    if (!_migrated && !_hasCache) {
-      try {
-        final p = await SharedPreferences.getInstance();
-        await p.setString(_fontPrefsKey, family);
-      } catch (_) {}
-    }
+    ));
   }
 
-  Future<void> setMonoFontFamily(String family, {DaemonClient? client}) async {
+  Future<void> setMonoFontFamily(String family) async {
     if (!allMonoFonts.any((f) => f.family == family)) return;
-    if (family == _resolved.type.codeFont && _resolved.id == 'custom') return;
-    final c = client ?? _client;
-    if (c != null) {
-      await _saveCustom(c, codeFont: family);
-      return;
-    }
     if (family == _resolved.type.codeFont) return;
-    _resolved = _resolved.copyWith(
+    await _commit(_resolved.copyWith(
       type: _resolved.type.copyWith(codeFont: family),
-    );
-    notifyListeners();
-    if (!_migrated && !_hasCache) {
-      try {
-        final p = await SharedPreferences.getInstance();
-        await p.setString(_monoFontPrefsKey, family);
-      } catch (_) {}
-    }
-  }
-
-  Future<void> _saveCustom(
-    DaemonClient c, {
-    String? accentName,
-    bool updateAccent = false,
-    String? uiFont,
-    String? codeFont,
-  }) async {
-    Map<String, dynamic>? existing;
-    if (_resolved.id == 'custom') {
-      if (_customDoc != null) {
-        existing = _customDoc;
-      } else {
-        try {
-          existing = (await c.getTheme('custom')).document;
-        } catch (_) {}
-      }
-    }
-    final rawBase = existing?['base'] as String? ??
-        (_resolved.id == 'custom' ? _resolved.base : _resolved.id) ??
-        defaultTheme;
-    final baseId = rawBase == 'custom' ? defaultTheme : rawBase;
-    final doc = _buildCustomDocument(
-      existing: existing,
-      baseId: baseId,
-      accentName: accentName,
-      updateAccent: updateAccent,
-      uiFont: uiFont,
-      codeFont: codeFont,
-    );
-    final detail = await c.putTheme('custom', doc);
-    final applied = await c.setActiveTheme('custom');
-    _customDoc = doc;
-    final next = applied ?? detail?.resolved ?? await c.getActiveTheme();
-    await _applyAndCache(next);
-    unawaited(_refreshList(c));
-  }
-
-  static Map<String, dynamic> _sanitiseCustomDoc(Map<String, dynamic> src) {
-    final doc = Map<String, dynamic>.of(src);
-    doc.remove('author');
-    doc.remove('builtin');
-    doc.remove('created_at');
-    doc.remove('updated_at');
-    doc.remove('resolved');
-    return doc;
-  }
-
-  static Map<String, dynamic> _buildCustomDocument({
-    Map<String, dynamic>? existing,
-    required String baseId,
-    String? accentName,
-    bool updateAccent = false,
-    String? uiFont,
-    String? codeFont,
-  }) {
-    final doc =
-        existing != null ? _sanitiseCustomDoc(existing) : <String, dynamic>{};
-    doc['schema'] = 1;
-    doc['id'] = 'custom';
-    doc['name'] =
-        (doc['name'] as String?)?.isNotEmpty == true ? doc['name'] : 'Custom';
-    doc['base'] = baseId;
-
-    if (updateAccent) {
-      final rawColor = doc['color'];
-      final colorMap = rawColor is Map
-          ? Map<String, dynamic>.of(rawColor.cast<String, dynamic>())
-          : <String, dynamic>{};
-      const accentKeys = [
-        'accent',
-        'accentHover',
-        'accentFg',
-        'accentBg',
-        'accentLine',
-        'accentRing',
-        'accentFill',
-        'accentFillHover',
-      ];
-      if (accentName == null || accentName.isEmpty) {
-        doc['accent'] = null;
-        for (final k in accentKeys) {
-          colorMap.remove(k);
-        }
-      } else {
-        final preset =
-            allAccents.where((a) => a.name == accentName).firstOrNull;
-        if (preset != null) {
-          doc['accent'] = preset.name;
-          final a = preset.accent;
-          final hover = _lighten(a, 0.06);
-          colorMap['accent'] = formatThemeColor(a);
-          colorMap['accentHover'] = formatThemeColor(hover);
-          colorMap['accentFg'] = formatThemeColor(preset.accentFg);
-          colorMap['accentBg'] = formatThemeColor(a.withValues(alpha: 0.14));
-          colorMap['accentLine'] = formatThemeColor(a.withValues(alpha: 0.38));
-          colorMap['accentRing'] = formatThemeColor(a.withValues(alpha: 0.45));
-          colorMap['accentFill'] = formatThemeColor(a);
-          colorMap['accentFillHover'] = formatThemeColor(hover);
-        }
-      }
-      if (colorMap.isEmpty) {
-        doc.remove('color');
-      } else {
-        doc['color'] = colorMap;
-      }
-    }
-
-    if (uiFont != null || codeFont != null) {
-      final rawType = doc['type'];
-      final typeMap = rawType is Map
-          ? Map<String, dynamic>.of(rawType.cast<String, dynamic>())
-          : <String, dynamic>{};
-      if (uiFont != null) typeMap['uiFont'] = uiFont;
-      if (codeFont != null) typeMap['codeFont'] = codeFont;
-      doc['type'] = typeMap;
-    }
-
-    return doc;
+    ));
   }
 }
 
