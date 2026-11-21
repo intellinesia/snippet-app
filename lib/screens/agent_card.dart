@@ -561,7 +561,11 @@ class _AgentCardState extends State<AgentCard> {
                   ? AppColors.run
                   : null,
       dotKey: ring && !needs ? const ValueKey('agent-working') : null,
-      working: ring && !needs,
+      working: !needs &&
+          agent.available &&
+          ((presence?.active ?? false) ||
+              (agent.presence?.active ?? false) ||
+              agent.tasksIn({'in_progress'}) > 0),
       name: name,
       pinned: _isPinned,
       time: time,

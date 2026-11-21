@@ -715,11 +715,13 @@ class SessionListRow extends StatelessWidget {
             child: Stack(alignment: Alignment.centerRight, children: [
               Visibility.maintain(
                 visible: !(hover && !selecting),
-                child: Text(timeText,
-                    maxLines: 1,
-                    overflow: TextOverflow.fade,
-                    softWrap: false,
-                    style: sans(12, color: timeColor, tabular: true)),
+                child: working
+                    ? const WorkingBars()
+                    : Text(timeText,
+                        maxLines: 1,
+                        overflow: TextOverflow.fade,
+                        softWrap: false,
+                        style: sans(12, color: timeColor, tabular: true)),
               ),
               if (hover && !selecting)
                 Row(mainAxisSize: MainAxisSize.min, children: [
