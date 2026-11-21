@@ -660,7 +660,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     _thread = Swr<DirectThreadPage>(
       client: widget.client,
       key: 'agent-thread:${widget.agentId}',
-      fetch: () => widget.client.agentThreadPage(peerId: widget.agentId),
+      fetch: () => widget.client.agentThreadAll(peerId: widget.agentId),
       revalidateOn: (e) =>
           Swr.coordinationForThread(e, _openThreadId) ||
           e['kind'] == 'session_decision',

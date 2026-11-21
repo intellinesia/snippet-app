@@ -1903,6 +1903,23 @@ class DaemonClient {
         jsonDecode(r.body) as Map<String, dynamic>);
   }
 
+  /// The whole conversation, paging forward until the newest message.
+  Future<DirectThreadPage> agentThreadAll({required String peerId}) async {
+    const limit = 200;
+    final events = <CoordinationEvent>[];
+    final deliveries = <String, MessageDelivery>{};
+    var after = 0;
+    while (true) {
+      final page = await agentThreadPage(
+          peerId: peerId, afterSequence: after, limit: limit);
+      events.addAll(page.events);
+      deliveries.addAll(page.deliveries);
+      if (page.events.length < limit) break;
+      after = page.events.last.sequence;
+    }
+    return DirectThreadPage(events: events, deliveries: deliveries);
+  }
+
   /// GET /coordination/direct/messages — events only, for older callers.
   Future<List<CoordinationEvent>> agentThread({
     required String peerId,

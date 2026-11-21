@@ -422,7 +422,8 @@ class MacosNotch {
     final peerId = _activePeerAgentId;
     if (client == null || peerId == null) return;
     try {
-      final events = await client.agentThread(peerId: peerId, limit: 60);
+      final all = (await client.agentThreadAll(peerId: peerId)).events;
+      final events = all.length > 60 ? all.sublist(all.length - 60) : all;
       final messages = <Map<String, dynamic>>[];
       for (final e in events) {
         final text = e.body.trim();
