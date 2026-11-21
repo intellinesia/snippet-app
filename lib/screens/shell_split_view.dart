@@ -77,7 +77,8 @@ class ShellSplitView extends StatefulWidget {
   final ShellPane focusedPane;
   final String? Function(ShellTab tab) statusForTab;
   final bool Function(ShellTab tab) canCloseTab;
-  final Widget Function(ShellTab tab, bool primary, bool visible) tabBodyBuilder;
+  final Widget Function(ShellTab tab, bool primary, bool visible)
+      tabBodyBuilder;
   final Widget Function(RightTab readout) readoutBodyBuilder;
   final Widget Function(ShellPane pane) fallbackBuilder;
   final Widget? rightPanel;
@@ -197,8 +198,7 @@ class _ShellSplitViewState extends State<ShellSplitView> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (p == ShellPane.right
-                ? list.isNotEmpty ||
-                    readouts.any((r) => r != _filesTab)
+                ? list.isNotEmpty || readouts.any((r) => r != _filesTab)
                 : list.length + readouts.length > 1 ||
                     (p == ShellPane.left && widget.leftStripTrailing != null))
               PaneStrip(
@@ -236,11 +236,12 @@ class _ShellSplitViewState extends State<ShellSplitView> {
     Theme.of(context);
     final showRight = !widget.hideRight &&
         (_dragActive ||
-        widget.rightPanel != null ||
-        (!widget.rightCollapsed &&
-            (widget.rightTabs.isNotEmpty ||
-                (!widget.panelHostsReadouts &&
-                    widget.readouts.any((r) => r.pane == ShellPane.right)))));
+            widget.rightPanel != null ||
+            (!widget.rightCollapsed &&
+                (widget.rightTabs.isNotEmpty ||
+                    (!widget.panelHostsReadouts &&
+                        widget.readouts
+                            .any((r) => r.pane == ShellPane.right)))));
     final showLeft = !(widget.leftCollapsed && widget.leftTabs.isNotEmpty);
 
     return Expanded(
@@ -275,45 +276,56 @@ class _ShellSplitViewState extends State<ShellSplitView> {
             ]),
           ),
         Expanded(
-          // Window tabs sit on the window; the card below holds the panes.
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            if (widget.mainHeader != null)
-              Padding(
-                  padding: EdgeInsets.only(top: kMobile ? 0 : 8),
-                  child: widget.mainHeader!),
-            Expanded(
-              child: _panel(top: widget.mainHeader == null ? 8 : 0, Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                if (showLeft)
-                  Expanded(
-                    child: _dropOn(
-                      ShellPane.left,
-                      _paneView(ShellPane.left, roundRight: !showRight),
+          // Window tabs sit on the window colour, matching the sidebar.
+          child: ColoredBox(
+              color: kMobile ? Colors.transparent : AppColors.windowBg,
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (widget.mainHeader != null)
+                      Padding(
+                          padding: EdgeInsets.only(top: kMobile ? 0 : 8),
+                          child: widget.mainHeader!),
+                    Expanded(
+                      child: _panel(
+                          top: widget.mainHeader == null ? 8 : 0,
+                          Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (showLeft)
+                                  Expanded(
+                                    child: _dropOn(
+                                      ShellPane.left,
+                                      _paneView(ShellPane.left,
+                                          roundRight: !showRight),
+                                    ),
+                                  )
+                                else
+                                  Expanded(
+                                    child: CollapsedPaneStub(
+                                      pane: ShellPane.left,
+                                      onExpand: () =>
+                                          widget.onExpandPane(ShellPane.left),
+                                    ),
+                                  ),
+                                if (showRight) ...[
+                                  PaneResizeHandle(
+                                    joinBaseline: showLeft,
+                                    onResize: widget.onPaneResize,
+                                  ),
+                                  SizedBox(
+                                    width: widget.paneWidth
+                                        .clamp(kPaneMinWidth, double.infinity),
+                                    child: _dropOn(
+                                      ShellPane.right,
+                                      _paneView(ShellPane.right,
+                                          roundRight: true),
+                                    ),
+                                  ),
+                                ],
+                              ])),
                     ),
-                  )
-                else
-                  Expanded(
-                    child: CollapsedPaneStub(
-                      pane: ShellPane.left,
-                      onExpand: () => widget.onExpandPane(ShellPane.left),
-                    ),
-                  ),
-                if (showRight) ...[
-                  PaneResizeHandle(
-                    joinBaseline: showLeft,
-                    onResize: widget.onPaneResize,
-                  ),
-                  SizedBox(
-                    width:
-                        widget.paneWidth.clamp(kPaneMinWidth, double.infinity),
-                    child: _dropOn(
-                      ShellPane.right,
-                      _paneView(ShellPane.right, roundRight: true),
-                    ),
-                  ),
-                ],
-              ])),
-            ),
-          ]),
+                  ])),
         ),
       ]),
     );

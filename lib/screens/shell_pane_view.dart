@@ -479,7 +479,7 @@ class PaneStrip extends StatelessWidget {
     final count = tabs.length + readouts.length;
     final compact = !kMobile;
     return Container(
-      height: compact ? 44 : 46,
+      height: compact ? 38 : 46,
       color: kMobile ? AppColors.pageCanvas : Colors.transparent,
       child: LayoutBuilder(builder: (context, outer) {
         final list = _chips(count, compact);
