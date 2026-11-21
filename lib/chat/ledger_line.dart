@@ -246,42 +246,68 @@ class _LedgerLineState extends State<LedgerLine> {
       ));
     }
     final shown = _shown < phrases.length ? phrases[_shown] : null;
+    final agent = LedgerLiveScope.of(context)?.agentId;
+    // Finished run: the live strip's card settles into its done state.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: widget.onTap,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 3, right: 8),
-                child: bad
-                    ? AppIcon('x', size: 14, color: AppColors.danger)
-                    : AppIcon('check', size: 14, color: AppColors.ok),
-              ),
-            ),
-            Expanded(
-              child: Text.rich(
-                TextSpan(children: [
-                  ...spans,
-                  if (phrases.isNotEmpty) TextSpan(text: '.', style: base),
-                ]),
-                style: base,
-              ),
-            ),
-            if (took != null)
+        Container(
+          constraints: const BoxConstraints(minHeight: 40),
+          padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: widget.onTap,
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 12, top: 2),
-                  child: Text(formatWorkDuration(took),
-                      style: mono(12, color: AppColors.fg4)),
+                  padding: const EdgeInsets.only(right: 10),
+                  child: agent != null && !bad
+                      ? AgentMochi(agent,
+                          size: 20, state: AgentCharacterState.done)
+                      : bad
+                          ? AppIcon('x', size: 14, color: AppColors.danger)
+                          : AppIcon('check', size: 14, color: AppColors.ok),
                 ),
               ),
-          ],
+              Expanded(
+                child: Text.rich(
+                  TextSpan(children: [
+                    ...spans,
+                    if (phrases.isNotEmpty) TextSpan(text: '.', style: base),
+                  ]),
+                  style: base,
+                ),
+              ),
+              if (took != null)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: widget.onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Text(formatWorkDuration(took),
+                        style: mono(12, color: AppColors.fg4)),
+                  ),
+                ),
+              HoverSurface(
+                radius: 6,
+                onTap: widget.onTap,
+                child: Padding(
+                  padding: const EdgeInsets.all(5),
+                  child: AnimatedRotation(
+                    turns: widget.open ? 0.25 : 0,
+                    duration: const Duration(milliseconds: 160),
+                    child: AppIcon('chevron-right',
+                        size: 14, color: AppColors.fg4),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         SpringExpand(
           open: widget.open,
