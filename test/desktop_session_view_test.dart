@@ -358,7 +358,8 @@ void main() {
         await tester.tap(find.text('Peek'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
-        expect(find.byType(DenseToolRow), findsOneWidget);
+        expect(find.text('Steps so far'), findsOneWidget);
+        expect(find.text('1 command'), findsOneWidget);
       } else {
         // Phone: the finished run is one pill, the live run is the dock.
         expect(find.byType(WorkLine), findsNothing);
