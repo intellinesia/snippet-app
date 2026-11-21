@@ -9,6 +9,7 @@ import '../screens/session_list_row.dart'
     show sessionAttentionState, sessionNeedsYou;
 import '../screens/tasks/task_common.dart' show openTaskDetail;
 import '../shell_panel.dart' show openSessionInTab;
+import '../settings_form.dart' show Grouped;
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -106,16 +107,58 @@ void mcOpenSession(
 
 /// The "Needs you" section: count chip, "Oldest first", one soft row each.
 class McNeedsYou extends StatelessWidget {
-  const McNeedsYou({super.key, required this.needs});
+  const McNeedsYou({super.key, required this.needs, this.carded = false});
   final List<McNeed> needs;
+
+  /// The agent panel's look: a label over one bordered card.
+  final bool carded;
 
   @override
   Widget build(BuildContext context) {
     if (needs.isEmpty) return const SizedBox.shrink();
     final rows = <Widget>[];
     for (final n in needs) {
-      if (rows.isNotEmpty) rows.add(const SizedBox(height: 2));
-      rows.add(_NeedRow(n));
+      if (rows.isNotEmpty) {
+        rows.add(carded
+            ? Container(height: 1, color: Grouped.hairline)
+            : const SizedBox(height: 2));
+      }
+      rows.add(_NeedRow(n, flat: carded));
+    }
+    if (carded) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(14, 20, 14, 0),
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          SizedBox(
+            height: 24,
+            child: Row(children: [
+              const SizedBox(width: 2),
+              Text('Needs you',
+                  style: sans(12.5,
+                      weight: FontWeight.w500, color: AppColors.fg2)),
+              const SizedBox(width: 6),
+              Text('${needs.length}',
+                  style: sans(12.5, color: AppColors.run, tabular: true)),
+              const Spacer(),
+              Text('Oldest first', style: sans(11.5, color: AppColors.fg4)),
+              const SizedBox(width: 2),
+            ]),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.run.withValues(alpha: 0.06),
+              border: Border.all(color: AppColors.run.withValues(alpha: 0.28)),
+              borderRadius: BorderRadius.circular(Grouped.radiusEnd),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: rows),
+          ),
+        ]),
+      );
     }
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
@@ -154,16 +197,19 @@ class McNeedsYou extends StatelessWidget {
 }
 
 class _NeedRow extends StatelessWidget {
-  const _NeedRow(this.n);
+  const _NeedRow(this.n, {this.flat = false});
   final McNeed n;
+  final bool flat;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.surface2,
+      color: flat ? Colors.transparent : AppColors.surface2,
       child: InkWell(
         onTap: () => n.open(context),
-        hoverColor: AppColors.surface3,
+        hoverColor: flat
+            ? AppColors.fg1.withValues(alpha: 0.03)
+            : AppColors.surface3,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(children: [

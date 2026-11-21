@@ -212,6 +212,79 @@ class _WorkingDotsState extends State<WorkingDots> {
   }
 }
 
+/// Four bars pulsing out of phase: the desktop row's "working" mark.
+class WorkingBars extends StatefulWidget {
+  const WorkingBars({super.key, this.color, this.height = 11});
+
+  final Color? color;
+  final double height;
+
+  @override
+  State<WorkingBars> createState() => _WorkingBarsState();
+}
+
+class _WorkingBarsState extends State<WorkingBars> {
+  final _c = AmbientLoop(const Duration(milliseconds: 900));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _c.bind(context);
+    if (reduceMotion(context)) {
+      _c.stop(at: 0.3);
+    } else {
+      _c.start();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.color ?? AppColors.accent;
+    final h = widget.height;
+    return Semantics(
+      label: 'Working',
+      excludeSemantics: true,
+      child: RepaintBoundary(
+        child: SizedBox(
+          height: h,
+          child: AnimatedBuilder(
+            animation: _c,
+            builder: (_, __) => Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                for (var i = 0; i < 4; i++) ...[
+                  if (i > 0) const SizedBox(width: 2),
+                  () {
+                    final phase = (_c.value - i * 0.13) % 1.0;
+                    final wave = phase < 0.5
+                        ? Curves.easeInOut.transform(phase * 2)
+                        : Curves.easeInOut.transform((1 - phase) * 2);
+                    return Container(
+                      width: 2,
+                      height: h * (0.3 + 0.7 * wave),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.6 + 0.4 * wave),
+                        borderRadius: BorderRadius.circular(1),
+                      ),
+                    );
+                  }(),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// A soft highlight sweeping across its child, for text that is "in progress".
 class Shimmer extends StatefulWidget {
   const Shimmer({super.key, required this.child, required this.color});

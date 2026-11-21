@@ -12,6 +12,8 @@ import '../presence.dart';
 import '../composer/composer_pill.dart' show C7;
 import '../theme.dart';
 import '../widgets.dart';
+import '../desktop_look.dart' show Tactile;
+import '../motion.dart' show WorkingBars;
 import '../mochi.dart';
 import '../settings_form.dart' show Grouped;
 import 'agent_reach_panel.dart';
@@ -559,6 +561,7 @@ class _AgentCardState extends State<AgentCard> {
                   ? AppColors.run
                   : null,
       dotKey: ring && !needs ? const ValueKey('agent-working') : null,
+      working: ring && !needs,
       name: name,
       pinned: _isPinned,
       time: time,
@@ -611,6 +614,7 @@ class AgentRowShell extends StatefulWidget {
     this.dotKey,
     this.needs = false,
     this.selected = false,
+    this.working = false,
     this.dim = false,
     this.pinned = false,
     this.trailing,
@@ -642,6 +646,9 @@ class AgentRowShell extends StatefulWidget {
   final Key? dotKey;
   final bool needs;
   final bool selected;
+
+  /// Desktop: equaliser bars take the time slot while work is under way.
+  final bool working;
   final bool dim;
   final bool pinned;
   final Widget? trailing;
@@ -679,118 +686,125 @@ class _AgentRowShellState extends State<AgentRowShell> {
         onSecondaryTapUp: widget.onSecondaryTapUp,
         child: Padding(
           padding: const EdgeInsets.only(bottom: 1),
-          child: AnimatedContainer(
-            duration: still ? Duration.zero : const Duration(milliseconds: 150),
-            curve: const Cubic(0.23, 1, 0.32, 1),
-            padding: EdgeInsets.symmetric(
-                horizontal: 8, vertical: kMobile ? 6 : 5.5),
-            decoration: BoxDecoration(
-                color: fill, borderRadius: BorderRadius.circular(R.of(8))),
-            child: Opacity(
-              opacity: widget.dim ? 0.55 : 1,
-              // One line: avatar, name and last-message time; the avatar dot
-              // and the trailing mark carry the state.
-              child: Row(children: [
-                // Lit tiles: a 20px slot flush with the header, 10px to the
-                // name, as in the reference; plates keep the 28px slot.
-                SizedBox(
-                  width: tiled ? 20 : 28,
-                  height: tiled ? 20 : 22,
-                  child: Stack(clipBehavior: Clip.none, children: [
-                    if (widget.avatarFor != null)
-                      Positioned.fill(child: widget.avatarFor!(ring))
-                    else if (widget.tint != null && !widget.wideAvatar)
-                      Positioned.fill(
-                          child: LitTile(widget.tint!, widget.avatar))
-                    else if (widget.wideAvatar)
-                      Positioned(
-                        left: -4,
-                        top: 0,
-                        width: 36,
-                        height: 22,
-                        child: widget.avatar,
-                      )
-                    else
-                      Positioned(
-                        left: 3,
-                        top: 0,
-                        width: 22,
-                        height: 22,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(R.of(6)),
-                          child: ColoredBox(
-                              color: AppColors.surface2,
-                              child: FittedBox(child: widget.avatar)),
-                        ),
-                      ),
-                    if (widget.dot != null)
-                      Positioned(
-                        right: 1,
-                        bottom: -2,
-                        child: Container(
-                          key: widget.dotKey,
-                          width: 9,
-                          height: 9,
-                          decoration: BoxDecoration(
-                            color: widget.dot,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: ring, width: 2),
+          child: Tactile(
+            radius: BorderRadius.circular(R.of(8)),
+            enabled: widget.selected,
+            child: AnimatedContainer(
+              duration: still ? Duration.zero : const Duration(milliseconds: 150),
+              curve: const Cubic(0.23, 1, 0.32, 1),
+              padding: EdgeInsets.symmetric(
+                  horizontal: 8, vertical: kMobile ? 6 : 5.5),
+              decoration: BoxDecoration(
+                  color: fill, borderRadius: BorderRadius.circular(R.of(8))),
+              child: Opacity(
+                opacity: widget.dim ? 0.55 : 1,
+                // One line: avatar, name and last-message time; the avatar dot
+                // and the trailing mark carry the state.
+                child: Row(children: [
+                  // Lit tiles: a 20px slot flush with the header, 10px to the
+                  // name, as in the reference; plates keep the 28px slot.
+                  SizedBox(
+                    width: tiled ? 20 : 28,
+                    height: tiled ? 20 : 22,
+                    child: Stack(clipBehavior: Clip.none, children: [
+                      if (widget.avatarFor != null)
+                        Positioned.fill(child: widget.avatarFor!(ring))
+                      else if (widget.tint != null && !widget.wideAvatar)
+                        Positioned.fill(
+                            child: LitTile(widget.tint!, widget.avatar))
+                      else if (widget.wideAvatar)
+                        Positioned(
+                          left: -4,
+                          top: 0,
+                          width: 36,
+                          height: 22,
+                          child: widget.avatar,
+                        )
+                      else
+                        Positioned(
+                          left: 3,
+                          top: 0,
+                          width: 22,
+                          height: 22,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(R.of(6)),
+                            child: ColoredBox(
+                                color: AppColors.surface2,
+                                child: FittedBox(child: widget.avatar)),
                           ),
                         ),
+                      if (widget.dot != null)
+                        Positioned(
+                          right: 1,
+                          bottom: -2,
+                          child: Container(
+                            key: widget.dotKey,
+                            width: 9,
+                            height: 9,
+                            decoration: BoxDecoration(
+                              color: widget.dot,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: ring, width: 2),
+                            ),
+                          ),
+                        ),
+                    ]),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Row(children: [
+                      Flexible(
+                        child: Text(widget.name,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
+                            style: kMobile
+                                ? sans(13,
+                                    weight: FontWeight.w500,
+                                    color: widget.needs
+                                        ? AppColors.fg1
+                                        : AppColors.fg2)
+                                : sans(14,
+                                    color: widget.needs ||
+                                            widget.selected ||
+                                            _hover
+                                        ? AppColors.fg1
+                                        : Color.lerp(
+                                            AppColors.fg2, AppColors.fg3, 0.5)!)),
                       ),
-                  ]),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Row(children: [
-                    Flexible(
-                      child: Text(widget.name,
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.ellipsis,
-                          style: kMobile
-                              ? sans(13,
-                                  weight: FontWeight.w500,
-                                  color: widget.needs
-                                      ? AppColors.fg1
-                                      : AppColors.fg2)
-                              : sans(14,
-                                  color: widget.needs ||
-                                          widget.selected ||
-                                          _hover
-                                      ? AppColors.fg1
-                                      : Color.lerp(
-                                          AppColors.fg2, AppColors.fg3, 0.5)!)),
-                    ),
-                    if (widget.pinned) ...[
-                      const SizedBox(width: 6),
-                      AppIcon('pin', size: 11, color: AppColors.fg4),
-                    ],
-                  ]),
-                ),
-                if (widget.trailing != null) ...[
-                  const SizedBox(width: 6),
-                  widget.trailing!,
-                ],
-                // Last at the edge so the times form one column.
-                if (widget.time.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  Text.rich(
-                      TextSpan(children: [
-                        TextSpan(text: widget.time),
-                        if (widget.timeDetail.isNotEmpty)
-                          TextSpan(
-                              text: ' ${widget.timeDetail}',
-                              style: sans(10,
-                                  color: AppColors.fg4.withValues(alpha: 0.7),
-                                  tabular: true)),
-                      ]),
-                      maxLines: 1,
-                      style: kMobile
-                          ? sans(11, color: AppColors.fg4, tabular: true)
-                          : sans(12.5, color: AppColors.fg3, tabular: true)),
-                ],
-              ]),
+                      if (widget.pinned) ...[
+                        const SizedBox(width: 6),
+                        AppIcon('pin', size: 11, color: AppColors.fg4),
+                      ],
+                    ]),
+                  ),
+                  if (widget.trailing != null) ...[
+                    const SizedBox(width: 6),
+                    widget.trailing!,
+                  ],
+                  // Last at the edge so the times form one column.
+                  if (widget.working && !kMobile) ...[
+                    const SizedBox(width: 8),
+                    const WorkingBars(),
+                  ] else if (widget.time.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Text.rich(
+                        TextSpan(children: [
+                          TextSpan(text: widget.time),
+                          if (widget.timeDetail.isNotEmpty)
+                            TextSpan(
+                                text: ' ${widget.timeDetail}',
+                                style: sans(10,
+                                    color: AppColors.fg4.withValues(alpha: 0.7),
+                                    tabular: true)),
+                        ]),
+                        maxLines: 1,
+                        style: kMobile
+                            ? sans(11, color: AppColors.fg4, tabular: true)
+                            : sans(12.5, color: AppColors.fg3, tabular: true)),
+                  ],
+                ]),
+              ),
             ),
           ),
         ),

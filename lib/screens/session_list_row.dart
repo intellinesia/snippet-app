@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../motion.dart' show WorkingBars;
 import '../ambient_loop.dart';
 import '../models.dart';
 import '../notification_text.dart' show approvalOf;
@@ -505,7 +506,7 @@ class SessionListRow extends StatelessWidget {
                   ],
                   if (renameField == null && working) ...[
                     SizedBox(width: S.s8),
-                    const WorkingDots(),
+                    kMobile ? const WorkingDots() : const WorkingBars(),
                   ] else if (renameField == null && timeText.isNotEmpty) ...[
                     SizedBox(width: S.s8),
                     Text(timeText,

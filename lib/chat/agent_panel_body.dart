@@ -7,6 +7,7 @@ import '../api.dart';
 import '../mochi.dart';
 import '../models.dart';
 import '../screens/tasks/task_common.dart' show openTaskDetail;
+import '../settings_form.dart' show Grouped, SettingsSwitch;
 import '../theme.dart';
 import '../wake_models.dart';
 import '../widgets.dart';
@@ -184,7 +185,7 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(4, 2, 0, 0),
           child: Row(children: [
-            AgentMochi(widget.agentId, size: 44),
+            AgentMochi(widget.agentId, size: 40),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -270,22 +271,19 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
       line = noise ? 'Nothing on its desk.' : m;
     }
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: 14),
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 11),
-        decoration: BoxDecoration(
-          color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(R.of(8)),
-        ),
+        decoration: _cardDecoration(),
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
             _Dot(color),
             const SizedBox(width: 6),
-            Text(state, style: sans(11.5, color: color)),
+            Text(state, style: sans(12, color: color)),
             if (since != null) ...[
               const SizedBox(width: 6),
-              Text('· $since', style: sans(11.5, color: color, tabular: true)),
+              Text('· $since', style: sans(12, color: color, tabular: true)),
             ],
           ]),
           const SizedBox(height: 5),
@@ -312,35 +310,43 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
     if (cells.isEmpty) return const SizedBox.shrink();
     final row = <Widget>[];
     for (final c in cells) {
-      if (row.isNotEmpty) row.add(const SizedBox(width: 6));
+      if (row.isNotEmpty) {
+        row.add(Container(width: 1, color: Grouped.hairline));
+      }
       row.add(Expanded(
-        child: Material(
-          color: AppColors.surface2,
-          borderRadius: BorderRadius.circular(R.of(8)),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: c.$3,
-            hoverColor: AppColors.surface3,
-            child: SizedBox(
-              height: 56,
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    AppIcon(c.$1, size: 15, color: AppColors.fg3),
-                    const SizedBox(height: 5),
-                    Text(c.$2,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: sans(11, color: AppColors.fg3)),
-                  ]),
-            ),
+        child: InkWell(
+          onTap: c.$3,
+          hoverColor: AppColors.fg1.withValues(alpha: 0.04),
+          child: SizedBox(
+            height: 54,
+            child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AppIcon(c.$1, size: 15, color: AppColors.fg3),
+                  const SizedBox(height: 4),
+                  Text(c.$2,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(11.5, color: AppColors.fg3)),
+                ]),
           ),
         ),
       ));
     }
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: Row(children: row),
+      padding: const EdgeInsets.only(top: 10),
+      child: Container(
+        decoration: _cardDecoration(),
+        clipBehavior: Clip.antiAlias,
+        child: Material(
+          type: MaterialType.transparency,
+          child: IntrinsicHeight(
+            child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: row),
+          ),
+        ),
+      ),
     );
   }
 
@@ -398,12 +404,8 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
         _Row(
           icon: 'zap',
           title: 'Keep warm',
-          trailing: AppSwitch(
-              on: _warm?.enabled ?? false,
-              width: 34,
-              height: 20,
-              thumb: 14,
-              onChanged: _setWarm),
+          trailing: SettingsSwitch(
+              value: _warm?.enabled ?? false, onChanged: _setWarm),
           onTap: () => _setWarm(!(_warm?.enabled ?? false)),
         ),
     ];
@@ -483,24 +485,16 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
       _Row(
         icon: 'activity',
         title: 'Automated wakes',
-        trailing: AppSwitch(
-            on: on,
-            width: 34,
-            height: 20,
-            thumb: 14,
-            onChanged: (_) => wakes?.onTap()),
+        trailing: SettingsSwitch(
+            value: on, onChanged: (_) => wakes?.onTap()),
         onTap: wakes?.onTap,
       ),
       if (_warmLoaded)
         _Row(
           icon: 'zap',
           title: 'Keep warm',
-          trailing: AppSwitch(
-              on: _warm?.enabled ?? false,
-              width: 34,
-              height: 20,
-              thumb: 14,
-              onChanged: _setWarm),
+          trailing: SettingsSwitch(
+              value: _warm?.enabled ?? false, onChanged: _setWarm),
           onTap: () => _setWarm(!(_warm?.enabled ?? false)),
         ),
     ]);
@@ -534,14 +528,14 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          padding: const EdgeInsets.fromLTRB(14, 16, 14, 0),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             _identity(),
             if (_presence() case final p?) p,
           ]),
         ),
-        McNeedsYou(needs: needs),
+        McNeedsYou(needs: needs, carded: true),
         _mcNow(),
         _mcGoTo(),
         _Section('Settings', initiallyOpen: false, children: [
@@ -554,12 +548,13 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
                 onTap: s.onTap),
         ]),
         if (widget.header != null)
-          Container(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-            decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: AppColors.line))),
-            child: widget.header!,
-          ),
+          _Section('Context', children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: widget.header!,
+            ),
+          ]),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -574,7 +569,7 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          padding: const EdgeInsets.fromLTRB(14, 16, 14, 0),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             _identity(),
@@ -596,10 +591,18 @@ class _AgentPanelBodyState extends State<AgentPanelBody> {
                 chevron: true,
                 onTap: s.onTap),
         ]),
+        const SizedBox(height: 20),
       ],
     );
   }
 }
+
+/// The settings card: faint fill, 1px border, 10px corners.
+BoxDecoration _cardDecoration() => BoxDecoration(
+      color: Grouped.card,
+      border: Border.all(color: Grouped.cardBorder),
+      borderRadius: BorderRadius.circular(Grouped.radiusEnd),
+    );
 
 class _Dot extends StatelessWidget {
   const _Dot(this.color);
@@ -655,33 +658,33 @@ class _SectionState extends State<_Section> {
       child: SizedBox(
         height: 24,
         child: Row(children: [
+          const SizedBox(width: 2),
+          Text(widget.label,
+              style: sans(12.5, weight: FontWeight.w500, color: AppColors.fg2)),
+          if (widget.meta != null) ...[
+            const SizedBox(width: 6),
+            Text(widget.meta!,
+                style: sans(12.5, color: AppColors.fg4, tabular: true)),
+          ],
+          const Spacer(),
           AnimatedRotation(
             turns: open ? 0.25 : 0,
             duration: Motion.fast,
             child: AppIcon('chevron-right', size: 12, color: AppColors.fg4),
           ),
-          const SizedBox(width: 6),
-          Text(widget.label,
-              style: sans(12, weight: W.label, color: AppColors.fg3)),
-          if (widget.meta != null) ...[
-            const SizedBox(width: 8),
-            Text(widget.meta!,
-                style: sans(12, color: AppColors.fg4, tabular: true)),
-          ],
-          const Spacer(),
+          const SizedBox(width: 2),
         ]),
       ),
     );
     final rows = <Widget>[];
     for (final c in widget.children) {
-      if (rows.isNotEmpty) rows.add(const SizedBox(height: 6));
-      rows.add(
-          ClipRRect(borderRadius: BorderRadius.circular(R.of(8)), child: c));
+      if (rows.isNotEmpty) {
+        rows.add(Container(height: 1, color: Grouped.hairline));
+      }
+      rows.add(c);
     }
-    return Container(
-      padding: EdgeInsets.fromLTRB(10, 8, 10, open ? 8 : 8),
-      decoration:
-          BoxDecoration(border: Border(top: BorderSide(color: AppColors.line))),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 20, 14, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -693,8 +696,9 @@ class _SectionState extends State<_Section> {
             child: open && rows.isNotEmpty
                 ? Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(R.of(8)),
+                    child: Container(
+                      decoration: _cardDecoration(),
+                      clipBehavior: Clip.antiAlias,
                       child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: rows),
@@ -734,20 +738,26 @@ class _Row extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasSub = sub != null && sub!.isNotEmpty;
     return Material(
-      color: AppColors.surface2,
+      type: MaterialType.transparency,
       child: InkWell(
         onTap: onTap,
-        hoverColor: AppColors.surface3,
+        hoverColor: AppColors.fg1.withValues(alpha: 0.025),
         child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: hasSub ? 46 : 40),
+          constraints: BoxConstraints(minHeight: hasSub ? 52 : 46),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             child: Row(children: [
-              SizedBox(
-                  width: 20,
-                  child: Center(
-                      child: AppIcon(icon, size: 14, color: AppColors.fg4))),
-              const SizedBox(width: 10),
+              Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.fg1.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(R.of(7)),
+                ),
+                child: AppIcon(icon, size: 15, color: AppColors.fg2),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -756,7 +766,8 @@ class _Row extends StatelessWidget {
                       Text(title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: sans(12.5, color: AppColors.fg1)),
+                          style: sans(13,
+                              weight: FontWeight.w500, color: AppColors.fg1)),
                       if (hasSub)
                         Row(children: [
                           if (dot != null) ...[
@@ -767,7 +778,7 @@ class _Row extends StatelessWidget {
                             child: Text(sub!,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: sans(11.5, color: AppColors.fg3)),
+                                style: sans(12, color: AppColors.fg3)),
                           ),
                         ]),
                     ]),
@@ -776,8 +787,8 @@ class _Row extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(value!,
                     style: valueMono
-                        ? mono(11, color: AppColors.fg3)
-                        : sans(11.5, color: AppColors.fg4, tabular: true)),
+                        ? mono(11.5, color: AppColors.fg3)
+                        : sans(12, color: AppColors.fg3, tabular: true)),
               ],
               if (trailing != null) ...[
                 const SizedBox(width: 8),
@@ -785,7 +796,7 @@ class _Row extends StatelessWidget {
               ],
               if (chevron) ...[
                 const SizedBox(width: 6),
-                AppIcon('chevron-right', size: 12, color: AppColors.fg4),
+                AppIcon('chevron-right', size: 13, color: AppColors.fg4),
               ],
             ]),
           ),
