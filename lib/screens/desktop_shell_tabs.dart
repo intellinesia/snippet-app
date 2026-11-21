@@ -20,6 +20,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
             .where((t) =>
                 !t.isPrs &&
                 !t.isDraft &&
+                !t.isSettings &&
                 !t.isReadout &&
                 !t.isTask &&
                 !t.isWorkspace)
@@ -307,6 +308,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       t.isPrs ||
       t.isDraft ||
       t.isReadout ||
+      t.isSettings ||
       t.isBoard;
 
   bool _canCloseTopTab(_ShellTab t) => !t.isMissionControl;
@@ -848,7 +850,9 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       ].length;
 
   String? _folderForTab(_ShellTab t) {
-    if (t.isMissionControl || t.isBoard || t.isReadout) return null;
+    if (t.isMissionControl || t.isBoard || t.isReadout || t.isSettings) {
+      return null;
+    }
     if (t.isDraft) {
       final f = t.draftFolder?.trim() ?? '';
       return f.isEmpty ? null : lastPathSegment(f, ifEmpty: f);

@@ -86,7 +86,24 @@ class ShellTab {
   RightTab? readout;
   String? readoutOrigin;
 
+  /// Set only for the settings tab: the `SettingsPage` name it shows.
+  String? settingsSection;
+  String settingsIcon = 'settings';
+
   bool get isReadout => readout != null;
+  bool get isSettings => settingsSection != null;
+
+  static ShellTab settings({
+    required DaemonClient client,
+    required String instanceUrl,
+    required String section,
+    required String title,
+    required String icon,
+  }) =>
+      ShellTab.session(
+          client: client, instanceUrl: instanceUrl, sessionId: null, title: title)
+        ..settingsSection = section
+        ..settingsIcon = icon;
 
   static ShellTab readoutTab({
     required DaemonClient client,
@@ -273,6 +290,7 @@ class ShellTab {
   bool get isMissionControl =>
       !isDraft &&
       !isReadout &&
+      !isSettings &&
       !isTask &&
       !isBoard &&
       !isPrs &&
@@ -281,7 +299,9 @@ class ShellTab {
       !isTerminal &&
       !isWorkspace &&
       isMissionControlTab(sessionId: sessionId, title: title);
-  String get key => isReadout
+  String get key => isSettings
+      ? '$instanceUrl|settings'
+      : isReadout
       ? '$instanceUrl|readout|${readout!.key}'
       : isTask
           ? '$instanceUrl|task|$taskId'
@@ -312,7 +332,9 @@ List<String>? tabGroupAgentIds(ShellTab t) {
 
 /// Icon for a tab, by kind. One helper so the four call sites that render a
 /// tab (top bar, desktop strip, split header, tab menu) cannot drift.
-String tabIconKind(ShellTab t) => t.isReadout
+String tabIconKind(ShellTab t) => t.isSettings
+    ? t.settingsIcon
+    : t.isReadout
     ? t.readout!.icon
     : t.isTask
         ? 'task'

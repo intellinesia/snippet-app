@@ -256,6 +256,8 @@ class _DesktopShellState extends State<DesktopShell>
   bool _sidebarGit = false;
   bool _sidebarHidden = false;
   bool _settingsOpen = false;
+  // The tab to return to when the settings tab's back row is used.
+  String? _preSettingsKey;
   double _sidebarWidth = kSidebarWidth;
 
   /// Secondary-pane width, dragged by its handle. Width-driven rather than a

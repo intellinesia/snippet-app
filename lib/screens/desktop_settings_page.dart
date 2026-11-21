@@ -361,3 +361,202 @@ class _NavRow extends StatelessWidget {
     );
   }
 }
+
+String settingsPageLabel(SettingsPage page) {
+  for (final (_, entries) in _groups) {
+    for (final e in entries) {
+      if (e.page == page) return e.label;
+    }
+  }
+  return 'Settings';
+}
+
+String settingsPageIcon(SettingsPage page) {
+  for (final (_, entries) in _groups) {
+    for (final e in entries) {
+      if (e.page == page) return e.icon ?? 'laptop';
+    }
+  }
+  return 'settings';
+}
+
+/// The sidebar while a settings tab is active: back, search and sections.
+class DesktopSettingsNav extends StatefulWidget {
+  const DesktopSettingsNav({
+    super.key,
+    required this.section,
+    required this.onSelect,
+    required this.onBack,
+  });
+
+  final SettingsPage section;
+  final ValueChanged<SettingsPage> onSelect;
+  final VoidCallback onBack;
+
+  @override
+  State<DesktopSettingsNav> createState() => _DesktopSettingsNavState();
+}
+
+class _DesktopSettingsNavState extends State<DesktopSettingsNav> {
+  final _query = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _query.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final q = _query.text.trim().toLowerCase();
+    final groups = [
+      for (final (group, entries) in _groups)
+        (
+          group,
+          [
+            for (final e in entries)
+              if (q.isEmpty ||
+                  e.label.toLowerCase().contains(q) ||
+                  group.toLowerCase().contains(q))
+                e
+          ]
+        )
+    ].where((g) => g.$2.isNotEmpty).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(9, 0, 9, 0),
+          child: HoverSurface(
+            onTap: widget.onBack,
+            radius: R.of(8),
+            hoverColor: AppColors.fg1.withValues(alpha: 0.035),
+            child: SizedBox(
+              height: _navRowHeight,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 7),
+                child: Row(children: [
+                  AppIcon('chevron-left', size: 16, color: AppColors.fg3),
+                  const SizedBox(width: 8),
+                  Text('Settings',
+                      style: sans(13,
+                          weight: FontWeight.w500, color: AppColors.fg1)),
+                ]),
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          child: Container(
+            height: 30,
+            decoration: BoxDecoration(
+              color: AppColors.fg1.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(R.of(8)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Row(children: [
+              AppIcon('search', size: 13, color: AppColors.fg4),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _query,
+                  style: sans(13, color: AppColors.fg1),
+                  decoration: InputDecoration(
+                    isCollapsed: true,
+                    border: InputBorder.none,
+                    hintText: 'Search settings',
+                    hintStyle: sans(13, color: AppColors.fg4),
+                  ),
+                  onSubmitted: (_) {
+                    if (groups.isNotEmpty) widget.onSelect(groups.first.$2.first.page);
+                  },
+                ),
+              ),
+            ]),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(9, 0, 9, 12),
+            children: [
+              for (final (group, entries) in groups) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 14, 12, 4),
+                  child: Text(group, style: sans(12, color: Grouped.label)),
+                ),
+                for (final entry in entries)
+                  _NavRow(
+                    entry: entry,
+                    selected: widget.section == entry.page,
+                    onTap: () => widget.onSelect(entry.page),
+                  ),
+              ],
+              if (groups.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
+                  child: Text('No matching settings',
+                      style: sans(12, color: AppColors.fg4)),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A settings tab's body: one section, centred.
+class DesktopSettingsContent extends StatelessWidget {
+  const DesktopSettingsContent({
+    super.key,
+    required this.client,
+    required this.instances,
+    required this.active,
+    required this.section,
+    required this.onSelect,
+    required this.onRemove,
+    this.onRename,
+    this.onSelectInstance,
+    this.onAdd,
+    required this.onClose,
+  });
+
+  final DaemonClient client;
+  final List<Instance> instances;
+  final Instance? active;
+  final SettingsPage section;
+  final ValueChanged<SettingsPage> onSelect;
+  final void Function(Instance) onRemove;
+  final void Function(Instance, String)? onRename;
+  final void Function(Instance)? onSelectInstance;
+  final void Function(Instance)? onAdd;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) => Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 820),
+          child: SettingsSectionView(
+            client: client,
+            instances: instances,
+            active: active,
+            page: section,
+            onRemove: onRemove,
+            onRename: onRename,
+            onSelect: onSelectInstance,
+            onAdd: onAdd,
+            onSelectPage: onSelect,
+            onClose: onClose,
+            v5Desktop: true,
+          ),
+        ),
+      );
+}
