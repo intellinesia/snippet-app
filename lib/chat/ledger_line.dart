@@ -688,6 +688,146 @@ class _LedgerStripState extends State<LedgerStrip> {
         ),
       );
 
+  /// Steps as rows, each with its own track placed on the run's timeline,
+  /// then a one-line tally. Unstamped steps get equal slots by position.
+  Widget _gantt() {
+    final steps = widget.steps;
+    final n = steps.length;
+    final now = _now;
+    final starts = [for (final s in steps) s.startMs].whereType<int>();
+    final t0 = starts.isEmpty ? null : starts.reduce((a, b) => a < b ? a : b);
+    var t1 = t0 ?? 0;
+    for (final s in steps) {
+      final e = s.running ? now : (s.endMs ?? s.startMs);
+      if (e != null && e > t1) t1 = e;
+    }
+    final span = (t1 - (t0 ?? 0)).clamp(1, 1 << 40).toDouble();
+    (double, double) slot(int i) {
+      final s = steps[i];
+      if (t0 == null || s.startMs == null) return (i / n, 1 / n);
+      final end = s.running ? now : (s.endMs ?? s.startMs!);
+      final l = (s.startMs! - t0) / span;
+      return (
+        l.clamp(0.0, 0.98),
+        ((end - s.startMs!) / span).clamp(0.02, 1.0 - l.clamp(0.0, 0.98))
+      );
+    }
+
+    String took(ToolStep s) {
+      if (s.startMs == null) return '';
+      final ms = (s.running ? now : (s.endMs ?? s.startMs!)) - s.startMs!;
+      return ms < 10000
+          ? '${(ms / 1000).toStringAsFixed(1)}s'
+          : _clock(Duration(milliseconds: ms));
+    }
+
+    final tally = <LedgerKind, int>{};
+    var failed = 0;
+    for (final s in steps) {
+      tally.update(_kindOf(s).$1, (v) => v + 1, ifAbsent: () => 1);
+      if (!s.running && _stepFailed(s)) failed++;
+    }
+    String noun(LedgerKind k, int c) => switch (k) {
+          LedgerKind.read => _plural(c, 'read', 'reads'),
+          LedgerKind.search => _plural(c, 'search', 'searches'),
+          LedgerKind.web => _plural(c, 'web lookup', 'web lookups'),
+          LedgerKind.edit => _plural(c, 'edit', 'edits'),
+          LedgerKind.command => _plural(c, 'command', 'commands'),
+          LedgerKind.other => _plural(c, 'other step', 'other steps'),
+        };
+    final el = _elapsed();
+
+    Widget row(int i) {
+      final s = steps[i];
+      final bad = !s.running && _stepFailed(s);
+      final tint = bad
+          ? AppColors.danger
+          : s.running
+              ? AppColors.accent
+              : AppColors.fg4.withValues(alpha: 0.7);
+      final (verb, obj) = toolSentenceParts(s);
+      final target =
+          obj.isNotEmpty ? obj : (verb.contains(' ') ? '' : stepTarget(s));
+      final (l, w) = slot(i);
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(children: [
+          AppIcon(_iconFor(_kindOf(s).$1),
+              size: 13, color: s.running ? AppColors.accent : AppColors.fg3),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(
+                    text: target.isEmpty ? verb : '$verb  ',
+                    style: sans(12.5,
+                        color: target.isEmpty ? AppColors.fg2 : AppColors.fg3)),
+                if (target.isNotEmpty)
+                  TextSpan(text: target, style: mono(12, color: AppColors.fg1)),
+              ]),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 110,
+            height: 6,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.surface3,
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: FractionallySizedBox(
+                alignment: Alignment(w >= 1 ? -1 : (l / (1 - w)) * 2 - 1, 0),
+                widthFactor: w,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: tint,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 44,
+            child: Text(took(s),
+                textAlign: TextAlign.right,
+                style: mono(11.5,
+                    color: s.running ? AppColors.accent : AppColors.fg4)),
+          ),
+        ]),
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < n; i++) row(i),
+        Container(
+          margin: const EdgeInsets.only(top: 6),
+          padding: const EdgeInsets.only(top: 8),
+          decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: AppColors.line))),
+          child: Row(children: [
+            for (final e in tally.entries) ...[
+              Text('${e.value} ${noun(e.key, e.value)}',
+                  style: sans(12, color: AppColors.fg4)),
+              const SizedBox(width: 12),
+            ],
+            if (failed > 0)
+              Text('$failed failed', style: sans(12, color: AppColors.danger)),
+            const Spacer(),
+            if (el != null)
+              Text(_clock(el), style: mono(11.5, color: AppColors.fg4)),
+          ]),
+        ),
+      ],
+    );
+  }
+
   Widget _peekPanel() => TapRegion(
         groupId: _link,
         onTapOutside: (_) {
@@ -704,13 +844,12 @@ class _LedgerStripState extends State<LedgerStrip> {
           ),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 6, 4),
+              padding: const EdgeInsets.fromLTRB(12, 8, 6, 4),
               child: Row(children: [
-                AppIcon('eye', size: 12, color: AppColors.fg4),
-                const SizedBox(width: 6),
                 Expanded(
                     child: Text('Steps so far',
-                        style: sans(11.5, color: AppColors.fg4))),
+                        style:
+                            sans(12, weight: W.label, color: AppColors.fg2))),
                 HoverSurface(
                   radius: 6,
                   onTap: () {
@@ -732,8 +871,8 @@ class _LedgerStripState extends State<LedgerStrip> {
             Flexible(
               child: SingleChildScrollView(
                 reverse: true,
-                padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
-                child: WorkSteps(rows: widget.rows, header: false),
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                child: _gantt(),
               ),
             ),
           ]),
@@ -896,8 +1035,8 @@ class _LedgerStripState extends State<LedgerStrip> {
         SpringExpand(
           open: _pinned,
           child: Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: WorkSteps(rows: widget.rows, header: false),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            child: _gantt(),
           ),
         ),
       ],
