@@ -446,14 +446,13 @@ void main() {
   });
 
   test('parseBoardMessage extracts sender and preserves a multi-line body', () {
-    const envelope = '[coordination_board_message]\n'
-        'thread_id: system\n'
-        'from_id: human\n'
-        'from_kind: human\n'
-        'rules: board message, not an ordinary chat turn. Reply on this same thread.\n'
-        'body: first line\n'
-        'second line\n'
-        '[/coordination_board_message]';
+    const envelope = '<coordination_board_message thread_id="system" from_id="human" from_kind="human">\n'
+        '<note>board message, not an ordinary chat turn.</note>\n'
+        '<body>\n'
+        'first line\n'
+        'second line &amp; more\n'
+        '</body>\n'
+        '</coordination_board_message>';
 
     final parsed = parseBoardMessage(envelope);
     expect(parsed, isNotNull);
@@ -461,7 +460,7 @@ void main() {
     expect(parsed.fromId, 'human');
     expect(parsed.fromKind, 'human');
     // The body keeps its newlines and never swallows the closing tag.
-    expect(parsed.body, 'first line\nsecond line');
+    expect(parsed.body, 'first line\nsecond line & more');
 
     // Ordinary chat text is not a board message.
     expect(parseBoardMessage('just a normal message'), isNull);
@@ -470,15 +469,12 @@ void main() {
   test('parseBoardMessage ignores a "body:" inside the history digest', () {
     // A prior room message that literally contains "body: " must not be mistaken
     // for the new message: the real field is the final line before the tag.
-    const envelope = '[coordination_board_message]\n'
-        'thread_id: system\n'
-        'from_id: human\n'
-        'from_kind: human\n'
-        'rules: board message, not an ordinary chat turn.\n'
-        'history: last 1 message(s), oldest first\n'
-        '  4 [agent] mission-control: earlier note about body: parsing\n'
-        'body: the real current message\n'
-        '[/coordination_board_message]';
+    const envelope = '<coordination_board_message thread_id="system" from_id="human" from_kind="human">\n'
+        '<history messages="1" order="oldest first">\n'
+        '4 agent:mission-control: earlier note about body: parsing\n'
+        '</history>\n'
+        '<body>the real current message</body>\n'
+        '</coordination_board_message>';
 
     final parsed = parseBoardMessage(envelope);
     expect(parsed, isNotNull);

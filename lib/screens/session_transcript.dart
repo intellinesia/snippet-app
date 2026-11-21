@@ -267,6 +267,12 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           final paired = resultOf[idx];
           if (paired != null) {
             final r = events[paired];
+            final shared = _sharedArtifact(_s(e['tool_name']), r['result']);
+            if (shared != null) {
+              endTools(key);
+              addEvent(key, shared);
+              break;
+            }
             addToolRow(
                 toolRow(abs,
                     tool: _s(e['tool_name']),
@@ -285,7 +291,14 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           if (pairedResults.contains(idx)) break;
           {
             final p = pending;
-            if (p != null) {
+            final shared =
+                _sharedArtifact(_s((p ?? e)['tool_name']), e['result']);
+            if (shared != null) {
+              pending = null;
+              pendingKey = null;
+              endTools(key);
+              addEvent(key, shared);
+            } else if (p != null) {
               final k = pendingKey ?? abs;
               addToolRow(
                   toolRow(k,
@@ -939,6 +952,33 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       }
     }
     return false;
+  }
+
+  Widget? _sharedArtifact(String tool, dynamic result) {
+    if (toolBaseName(tool) != 'share_artifact') return null;
+    dynamic decoded = result;
+    if (result is String) {
+      try {
+        decoded = jsonDecode(result);
+      } catch (_) {
+        return null;
+      }
+    }
+    final artifact = ToolStep(tool: tool, result: decoded).data?['artifact'];
+    if (artifact is! Map || _s(artifact['id']).isEmpty) return null;
+    final session = _s(artifact['session']);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: ArtifactRow(
+        client: widget.client,
+        session: session.isEmpty ? widget.sessionId : session,
+        id: _s(artifact['id']),
+        version: (artifact['version'] as num?)?.toInt() ?? 1,
+        title: _s(artifact['title']),
+        kind: _s(artifact['kind']),
+        caption: '',
+      ),
+    );
   }
 
   // Meta-tools have dedicated event rendering, so their generic tool lines are skipped.

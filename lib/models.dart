@@ -1693,7 +1693,19 @@ class CoordinationEvent {
         idempotencyKey = j['idempotency_key'] as String? ?? '',
         createdAt = j['created_at'] as String? ?? '';
 
-  String get body => payload['body'] is String ? payload['body'] as String : '';
+  String get body {
+    final own = payload['body'] is String ? payload['body'] as String : '';
+    final f = payload['forwarded_from'];
+    final text = f is Map ? (f['text'] as String? ?? '').trim() : '';
+    if (text.isEmpty) return own;
+    final kind = (f as Map)['actor_kind'] as String? ?? '';
+    final from = kind == 'human' ? 'you' : (f['actor_id'] as String? ?? '');
+    final where = f['thread_id'] as String? ?? '';
+    final place = where.startsWith('group:')
+        ? ' in a group'
+        : (where.startsWith('task:') ? ' in a task room' : '');
+    return '*Forwarded from $from$place*\n\n> $text\n\n$own'.trimRight();
+  }
 
   String? get replyTo => switch (payload['reply_to']) {
         final String s when s.isNotEmpty => s,

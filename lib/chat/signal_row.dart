@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../api.dart' show DaemonClient;
+import '../envelope.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -259,37 +260,22 @@ String? formatEventTime(dynamic raw) {
 }
 
 // ---------------------------------------------------------------------------
-// Coordination envelopes: `[tag]` + `key: value` lines + `[/tag]`.
+// Coordination envelopes: XML with attributes and child elements.
 // ---------------------------------------------------------------------------
 
 class CoordinationEnvelope {
-  const CoordinationEnvelope(this.tag, this.fields);
+  const CoordinationEnvelope(this.tag, this.text);
   final String tag;
-  final Map<String, String> fields;
+  final String text;
 
-  String field(String name) => fields[name]?.trim() ?? '';
+  String field(String name) => envelopeField(text, name);
 }
 
 CoordinationEnvelope? parseCoordinationEnvelope(String body) {
   final t = body.trim();
-  final open = RegExp(r'^\[([a-z_]+)\]').firstMatch(t);
-  if (open == null) return null;
-  final tag = open.group(1)!;
-  final close = t.indexOf('[/$tag]');
-  final inner =
-      t.substring(open.end, close > open.end ? close : t.length).trim();
-  final fields = <String, String>{};
-  String? last;
-  for (final line in inner.split('\n')) {
-    final m = RegExp(r'^([a-z_]+):[ \t]*(.*)$').firstMatch(line);
-    if (m != null) {
-      last = m.group(1);
-      fields[last!] = m.group(2)!;
-    } else if (last != null && line.trim().isNotEmpty) {
-      fields[last] = '${fields[last]}\n${line.trim()}';
-    }
-  }
-  return CoordinationEnvelope(tag, fields);
+  final tag = envelopeKind(t);
+  if (tag == null) return null;
+  return CoordinationEnvelope(tag, t);
 }
 
 class EnvelopeSignal {

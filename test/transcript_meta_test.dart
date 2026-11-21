@@ -174,14 +174,12 @@ void main() {
   });
 
   group('envelopes and names', () {
-    const body = '[task_cancelled]\n'
-        'task_id: d3bd\n'
-        'title: Daily LinkedIn sync\n'
-        'reason: Moot: run 3 completed.\n'
-        'note: Stop work on it.\n'
-        '[/task_cancelled]';
+    const body = '<task_cancelled task_id="d3bd" title="Daily LinkedIn sync">\n'
+        '<reason>Moot: run 3 completed.</reason>\n'
+        '<note>Stop work on it.</note>\n'
+        '</task_cancelled>';
 
-    test('parse key value lines between the tags', () {
+    test('parse attributes and children', () {
       final env = parseCoordinationEnvelope(body)!;
       expect(env.tag, 'task_cancelled');
       expect(env.field('title'), 'Daily LinkedIn sync');
@@ -241,7 +239,7 @@ void main() {
         AgentMessageCard(
             agentId: 'mission-control',
             body:
-                '[task_cancelled]\ntitle: Sync\nreason: Moot.\n[/task_cancelled]',
+                '<task_cancelled title="Sync">\n<reason>Moot.</reason>\n</task_cancelled>',
             outbound: false),
       ])));
       expect(find.text('Moss'), findsOneWidget);

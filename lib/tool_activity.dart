@@ -115,7 +115,7 @@ String toolVerb(String tool, {required bool running}) {
     'read_file' => ('Read', 'Reading'),
     'view_file' => ('Read', 'Reading'),
     'monitor' => ('Watched', 'Watching'),
-    'present_file' => ('Shared', 'Sharing'),
+    'present_file' || 'share_artifact' => ('Shared', 'Sharing'),
     'set_session_title' => ('Titled the chat', 'Titling the chat'),
     'ping_user' => ('Pinged you', 'Pinging you'),
     'update_brief' => ('Updated its brief', 'Updating its brief'),
@@ -179,6 +179,16 @@ String toolObject(ToolStep step) {
       name, step.args is Map ? step.args as Map : null, step.data,
       running: isRunning);
   if (coordination != null) return coordination;
+  if (name == 'manage_process' && step.args is Map) {
+    final a = step.args as Map;
+    final id = a['id']?.toString().trim() ?? '';
+    return switch (a['action']) {
+      'kill' => (isRunning ? 'Stopping' : 'Stopped', id),
+      'log' => (isRunning ? 'Reading the log of' : 'Read the log of', id),
+      'wait' => (isRunning ? 'Waiting for' : 'Waited for', id),
+      _ => (isRunning ? 'Listing processes' : 'Listed processes', ''),
+    };
+  }
   if (name == 'monitor' && step.args is Map) {
     final a = step.args as Map;
     final subject = a['label']?.toString().trim() ?? '';

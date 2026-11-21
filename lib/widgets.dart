@@ -176,34 +176,7 @@ final _diffFenceOpenRe = RegExp(r'^([ \t]{0,3})(`{3,})(diff|patch)\s*$');
 final _innerBacktickLineRe = RegExp(r'^[ +\-]?[ \t]*`{3,}');
 
 String unwrapCodedLinks(String md) => _widenDiffFences(
-    quoteForwarded(md).replaceAllMapped(_codedLink, (m) => m.group(1)!));
-
-final _forwardedRe = RegExp(
-    r'\[forwarded from ([^\]\s]+) in ([^\],]+),[^\]]*\]\s*([\s\S]*?)\s*\[/forwarded\]');
-
-/// The daemon's `[forwarded from a:b in thread, ts] … [/forwarded]` envelope as
-/// a named quote, so a forward reads as one rather than as raw markers.
-String quoteForwarded(String md) {
-  if (!md.contains('[forwarded from ')) return md;
-  return md.replaceAllMapped(_forwardedRe, (m) {
-    final from = _forwardName(m.group(1)!);
-    final where = m.group(2)!.trim();
-    final place = where.startsWith('group:')
-        ? ' in a group'
-        : (where.startsWith('task:') ? ' in a task room' : '');
-    final body =
-        m.group(3)!.split('\n').map((l) => l.isEmpty ? '>' : '> $l').join('\n');
-    return '*Forwarded from $from$place*\n\n$body\n\n';
-  });
-}
-
-String _forwardName(String actor) {
-  final i = actor.indexOf(':');
-  final kind = i < 0 ? '' : actor.substring(0, i);
-  final id = i < 0 ? actor : actor.substring(i + 1);
-  if (kind == 'human') return 'you';
-  return id;
-}
+    md.replaceAllMapped(_codedLink, (m) => m.group(1)!));
 
 /// Unified diffs of Markdown files often contain unchanged context lines like
 /// ` ``` ` (1 leading space + 3 backticks), which CommonMark treats as closing

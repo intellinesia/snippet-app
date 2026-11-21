@@ -27,6 +27,7 @@ String toolIcon(String tool) => switch (toolBaseName(tool)) {
       'monitor' => 'eye',
       'present_file' => 'file',
       'manage_process' => 'cpu',
+      'share_artifact' => 'file',
       'delegate_task' => 'users',
       'send_agent_message' => 'message-square',
       'ask_user' => 'help-circle',
@@ -49,6 +50,7 @@ String toolArgSummary(String tool, dynamic args) {
         switch (s('action')) {
           'kill' => 'Stop',
           'log' => 'Read log of',
+          'wait' => 'Wait for',
           _ => 'List processes',
         },
         if (s('action') != 'list' && s('id').isNotEmpty) s('id'),
@@ -66,6 +68,11 @@ String toolArgSummary(String tool, dynamic args) {
     'skill' => s('name'),
     'monitor' => s('path').isNotEmpty ? s('path') : s('action'),
     'present_file' => s('path'),
+    'share_artifact' => s('title').isNotEmpty
+        ? s('title')
+        : s('path').isNotEmpty
+            ? s('path').split('/').last
+            : s('artifact_id'),
     'read_file' => s('path'),
     'view_file' => s('AbsolutePath').contains('/.gemini/antigravity-cli/')
         ? 'saved tool output'

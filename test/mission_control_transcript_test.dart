@@ -4,33 +4,23 @@ import 'package:snippet/screens/mission_control/mission_control_state.dart';
 import 'package:snippet/screens/session_coordination_cards.dart';
 import 'package:snippet/theme.dart';
 
-Map<String, dynamic> _input(String text) =>
-    {'kind': 'user_input', 'text': text};
-Map<String, dynamic> _reply(String text) =>
-    {'kind': 'assistant_text', 'text': text};
-Map<String, dynamic> _wake(String time, {String extra = ''}) => _input(
-    '[automated_wake]\ntime: Thu 05 Nov $time (UTC+05:30)\nlast wake: 1h ago\n$extra');
+Map<String, dynamic> _input(String text) => {'kind': 'user_input', 'text': text};
+Map<String, dynamic> _reply(String text) => {'kind': 'assistant_text', 'text': text};
+Map<String, dynamic> _wake(String time, {String extra = ''}) =>
+    _input('<automated_wake time="Thu 05 Nov $time (UTC+05:30)" last_wake="1h ago">\n<body>\n$extra</body>\n</automated_wake>');
 
 String _report(String status, String summary, {String id = 'task-1'}) =>
-    '[mission_task_report]\ntask_id: $id\ntitle: Quarry post\nstatus: $status\n'
-    'summary: $summary\n[/mission_task_report]\nWorkflow W3 instructions.';
+    '<mission_task_report task_id="$id" title="Quarry post" status="$status">\n'
+    '<summary>\n$summary\n</summary>\n</mission_task_report>';
 
 void main() {
   test('review findings parse to their list, without the ledger repeat', () {
-    final e = parseMissionEnvelope('[review_findings]\n'
-        'task_id: 2d1cba9c-1249\n'
-        'title: Build Dude browser\n'
-        'reviewer: snippet\n'
-        'round: 1\n'
-        'The review sent this task back.\n'
-        'findings:\n'
+    final e = parseMissionEnvelope('<review_findings task_id="2d1cba9c-1249" title="Build Dude browser" reviewer="snippet" round="1">\n'
+        '<findings>\n'
         '  - docs/BUILD_NOTES.md:41: literal path\n'
         '  - app/src/test/: no unit tests\n'
-        '[task_ledger v20]\n'
-        'review findings to fix (round 1):\n'
-        '  - docs/BUILD_NOTES.md:41: literal path\n'
-        '[/task_ledger]\n'
-        '[/review_findings]')!;
+        '</findings>\n'
+        '</review_findings>')!;
     expect(e.review, 'findings');
     expect(e.round, '1');
     expect(e.title, 'Build Dude browser');
@@ -112,8 +102,8 @@ void main() {
   group('report summaries', () {
     test('keep every line and stop before the artifacts block', () {
       final e = parseMissionEnvelope(
-          '[mission_task_report]\ntask_id: t\ntitle: T\nstatus: done\n'
-          'summary: First line.\n\nSecond line.\nartifacts:\n- a.png\n[/mission_task_report]')!;
+          '<mission_task_report task_id="t" title="T" status="done">\n'
+          '<summary>\nFirst line.\n\nSecond line.\n</summary>\n<artifacts>\n- a.png\n</artifacts>\n</mission_task_report>')!;
       expect(e.summary, 'First line.\n\nSecond line.');
     });
 

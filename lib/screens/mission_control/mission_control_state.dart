@@ -2,6 +2,7 @@
 /// daemon write into transcripts.
 library;
 
+import '../../envelope.dart';
 import '../../models.dart';
 
 bool isDedicatedMcSession(String? id) {
@@ -100,51 +101,40 @@ const _envelopeNames = {
 
 /// A one-line label for a queued harness envelope, or null for plain text.
 String? queuedEnvelopeLabel(String text) {
-  final t = text.trimLeft();
-  final tag = RegExp(r'^\[([a-z_]+)\]').firstMatch(t)?.group(1);
+  final tag = envelopeKind(text);
   if (tag == null) return null;
-  String field(String name) =>
-      RegExp('^$name:[ \t]*(.*)\$', multiLine: true)
-          .firstMatch(t)
-          ?.group(1)
-          ?.trim() ??
-      '';
   final kind = _envelopeNames[tag] ?? tag.replaceAll('_', ' ');
-  var from = field('from');
-  if (from.isEmpty) from = field('from_id');
+  var from = envelopeField(text, 'from');
+  if (from.isEmpty) from = envelopeField(text, 'from_id');
   from = from.contains(':') ? from.split(':').last : from;
-  final detail = [field('body'), field('task_title'), field('title')]
-      .firstWhere((s) => s.isNotEmpty, orElse: () => '');
+  final detail = [
+    envelopeField(text, 'body'),
+    envelopeField(text, 'task_title'),
+    envelopeField(text, 'title'),
+    envelopeField(text, 'wake_note'),
+    envelopeField(text, 'note'),
+  ].firstWhere((s) => s.isNotEmpty, orElse: () => '');
   final head = from.isEmpty ? kind : '$kind from $from';
-  return detail.isEmpty ? head : '$head: $detail';
+  return detail.isEmpty ? head : '$head: ${detail.split('\n').first}';
 }
 
 MissionEnvelope? parseMissionEnvelope(String text) {
   final t = text.trim();
-  final isRecurring = t.startsWith('[recurring_run_report]');
-  final isPlan = t.startsWith('[task_plan]');
-  final isReport = isRecurring || isPlan || t.contains('[mission_task_report]');
-  final isTask = t.contains('[mission_control_task]');
-  final review = t.startsWith('[review_findings]')
+  final tag = envelopeKind(t);
+  final isRecurring = tag == 'recurring_run_report';
+  final isPlan = tag == 'task_plan';
+  final isReport = isRecurring || isPlan || tag == 'mission_task_report';
+  final isTask = tag == 'mission_control_task';
+  final review = tag == 'review_findings'
       ? 'findings'
-      : t.startsWith('[review_request]')
-          ? 'request'
-          : '';
+      : tag == 'review_request'
+      ? 'request'
+      : '';
   if (!isReport && !isTask && review.isEmpty) return null;
-  String field(String name) {
-    final match =
-        RegExp(r'^' + name + r':\s*(.*)$', multiLine: true).firstMatch(t);
-    return match?.group(1)?.trim() ?? '';
-  }
+  String field(String name) => envelopeField(t, name);
 
   if (review.isNotEmpty) {
-    // Older findings envelopes repeat the list inside the ledger; stop before it.
-    final start = t.indexOf('\nfindings:\n');
-    final rest = start >= 0 ? t.substring(start + '\nfindings:\n'.length) : '';
-    final end = RegExp(r'^\[(?:task_ledger|/review_findings)', multiLine: true)
-        .firstMatch(rest);
-    final findings = rest
-        .substring(0, end?.start ?? rest.length)
+    final findings = (envelopeChild(t, 'findings') ?? '')
         .split('\n')
         .map((l) => l.trim())
         .where((l) => l.startsWith('- '))
@@ -160,49 +150,29 @@ MissionEnvelope? parseMissionEnvelope(String text) {
     );
   }
 
-  // A task's scope may sit on the lines after `scope:` (the current envelope)
-  // or on the same line (older ones); it runs until the closing instruction.
-  String scope() {
-    final inline = RegExp(r'^scope:[ \t]*(\S.*)$', multiLine: true)
-        .firstMatch(t)
-        ?.group(1)
-        ?.trim();
-    if (inline != null && inline.isNotEmpty) return inline;
-    final start = t.indexOf('\nscope:\n');
-    if (start < 0) return '';
-    final rest = t.substring(start + '\nscope:\n'.length);
-    final end = rest.indexOf('\n\nBegin now.');
-    final close = rest.indexOf('[/mission_control_task]');
-    final cut = end >= 0 ? end : (close >= 0 ? close : rest.length);
-    return rest.substring(0, cut).trim();
-  }
-
   if (isPlan) {
-    final start = t.indexOf('\nplan:\n');
-    final end = t.indexOf('[/task_plan]');
+    final plan = envelopeChild(t, 'plan') ?? '';
     return MissionEnvelope(
       isReport: true,
       isPlan: true,
       taskId: field('task_id'),
       title: field('title'),
       status: 'message',
-      summary: start >= 0 && end > start
-          ? t
-              .substring(start + '\nplan:\n'.length, end)
-              .trim()
-              .split('\n')
-              .where((l) => l.trim().isNotEmpty)
-              .map((l) {
-              final m = RegExp(r'^\[(\w+)\]\s*(.*)$').firstMatch(l.trim());
-              if (m == null) return '- ${l.trim()}';
-              final step = m.group(2) ?? '';
-              return switch (m.group(1)) {
-                'done' => '- ~~$step~~',
-                'in_progress' => '- **$step** · now',
-                _ => '- $step',
-              };
-            }).join('\n')
-          : '',
+      summary: plan
+          .trim()
+          .split('\n')
+          .where((l) => l.trim().isNotEmpty)
+          .map((l) {
+            final m = RegExp(r'^\[(\w+)\]\s*(.*)$').firstMatch(l.trim());
+            if (m == null) return '- ${l.trim()}';
+            final step = m.group(2) ?? '';
+            return switch (m.group(1)) {
+              'done' => '- ~~$step~~',
+              'in_progress' => '- **$step** · now',
+              _ => '- $step',
+            };
+          })
+          .join('\n'),
     );
   }
   return MissionEnvelope(
@@ -211,25 +181,17 @@ MissionEnvelope? parseMissionEnvelope(String text) {
     taskId: field('task_id'),
     title: isRecurring ? field('job') : field('title'),
     status: isReport ? field('status') : 'pending',
-    summary: isReport ? _reportSummary(t) : scope(),
+    summary: isReport
+        ? _readableStall(field('summary'))
+        : (envelopeChild(t, 'scope') ?? field('scope')).trim(),
   );
-}
-
-String _reportSummary(String t) {
-  final start = RegExp(r'^summary:[ \t]*', multiLine: true).firstMatch(t);
-  if (start == null) return '';
-  final rest = t.substring(start.end);
-  final end = RegExp(
-    r'^(?:artifacts:|\[/(?:mission_task_report|recurring_run_report)\])',
-    multiLine: true,
-  ).firstMatch(rest);
-  return _readableStall(rest.substring(0, end?.start ?? rest.length).trim());
 }
 
 /// Stall reports are written for Mission Control; keep what the user can use.
 String _readableStall(String summary) {
-  final head = RegExp(r'^stalled (\d+) min: no progress since \S+; ')
-      .matchAsPrefix(summary);
+  final head = RegExp(
+    r'^stalled (\d+) min: no progress since \S+; ',
+  ).matchAsPrefix(summary);
   if (head == null) return summary;
   final rest = summary
       .substring(head.end)
@@ -238,8 +200,9 @@ String _readableStall(String summary) {
       .replaceAll('waiting_for_input', 'waiting for input');
   final last = RegExp(r';?\s*its last message was:\s*').firstMatch(rest);
   final state = (last == null ? rest : rest.substring(0, last.start)).trim();
-  final lead =
-      state.isEmpty ? '' : ' ${state[0].toUpperCase()}${state.substring(1)}.';
+  final lead = state.isEmpty
+      ? ''
+      : ' ${state[0].toUpperCase()}${state.substring(1)}.';
   final said = last == null ? '' : rest.substring(last.end).trim();
   return 'No progress for ${head.group(1)} min.$lead'
       '${said.isEmpty ? '' : '\n\nIts last message:\n\n$said'}';
@@ -291,8 +254,9 @@ bool _isQuietReply(String reply) {
   return text.isNotEmpty &&
       text.length <= 320 &&
       _quietOpening.hasMatch(text) &&
-      !_needsAttention.hasMatch(text.replaceAll(
-          RegExp(r'nothing needs you', caseSensitive: false), ''));
+      !_needsAttention.hasMatch(
+        text.replaceAll(RegExp(r'nothing needs you', caseSensitive: false), ''),
+      );
 }
 
 /// An `assistant_text` the daemon flagged as "no reply needed". Older daemons
@@ -319,8 +283,9 @@ Map<int, QuietWakeRun> quietWakeRuns(List<Map<String, dynamic>> events) {
 
   while (i < events.length) {
     final e = events[i];
-    final round =
-        isInput(e) ? parseAutonomousRound(e['text'] as String? ?? '') : null;
+    final round = isInput(e)
+        ? parseAutonomousRound(e['text'] as String? ?? '')
+        : null;
     if (round == null || round.due.isNotEmpty) {
       close(i - 1);
       i++;
@@ -433,17 +398,10 @@ String _roundTime(String raw) {
 
 AutonomousRound? parseAutonomousRound(String text) {
   final t = text.trim();
-  if (!t.startsWith('[automated_wake]') &&
-      !t.startsWith('[autonomous_round]')) {
-    return null;
-  }
-  final lines = t.split('\n');
-  String field(String name) {
-    for (final l in lines) {
-      if (l.startsWith('$name:')) return l.substring(name.length + 1).trim();
-    }
-    return '';
-  }
+  final tag = envelopeKind(t);
+  if (tag != 'automated_wake' && tag != 'autonomous_round') return null;
+  final lines = (envelopeChild(t, 'body') ?? t).split('\n');
+  String field(String name) => envelopeField(t, name.replaceAll(' ', '_'));
 
   List<String> section(String heading) {
     final start = lines.indexWhere((l) => l.trim() == '## $heading');
@@ -451,11 +409,7 @@ AutonomousRound? parseAutonomousRound(String text) {
     final items = <String>[];
     for (final l in lines.skip(start + 1)) {
       final line = l.trim();
-      if (line.startsWith('## ') ||
-          line.startsWith('[/automated_wake]') ||
-          line.startsWith('[/autonomous_round]')) {
-        break;
-      }
+      if (line.startsWith('## ') || line.startsWith('</')) break;
       if (line.startsWith('- ')) items.add(line.substring(2));
     }
     return items;
@@ -475,15 +429,18 @@ AutonomousRound? parseAutonomousRound(String text) {
     due: [...section('Wake-ups due now'), ...section('Follow-ups due now')],
     scheduled: [
       ...section('Wake-ups scheduled'),
-      ...section('Follow-ups scheduled')
+      ...section('Follow-ups scheduled'),
     ],
   );
 }
 
 /// A worker paused on a question, forwarded to Mission Control.
 class WorkerQuestion {
-  const WorkerQuestion(
-      {required this.taskId, required this.task, required this.question});
+  const WorkerQuestion({
+    required this.taskId,
+    required this.task,
+    required this.question,
+  });
   final String taskId;
   final String task;
   final String question;
@@ -491,20 +448,12 @@ class WorkerQuestion {
 
 WorkerQuestion? parseWorkerQuestion(String text) {
   final t = text.trim();
-  if (!t.startsWith('[worker_question]')) return null;
-  String field(String name) {
-    final match =
-        RegExp(r'^' + name + r':\s*(.*)$', multiLine: true).firstMatch(t);
-    return match?.group(1)?.trim() ?? '';
-  }
-
-  final start = t.indexOf('\nquestion:\n');
-  final end = t.indexOf('[/worker_question]');
-  final question = start >= 0 && end > start
-      ? t.substring(start + '\nquestion:\n'.length, end).trim()
-      : '';
+  if (envelopeKind(t) != 'worker_question') return null;
   return WorkerQuestion(
-      taskId: field('task_id'), task: field('task'), question: question);
+    taskId: envelopeField(t, 'task_id'),
+    task: envelopeField(t, 'task'),
+    question: envelopeField(t, 'question'),
+  );
 }
 
 /// A human/agent message routed from the coordination board into a session's
@@ -524,27 +473,12 @@ class BoardMessage {
 
 BoardMessage? parseBoardMessage(String text) {
   final t = text.trim();
-  if (!t.contains('[coordination_board_message]')) return null;
-  String field(String name) {
-    final match =
-        RegExp(r'^' + name + r':\s*(.*)$', multiLine: true).firstMatch(t);
-    return match?.group(1)?.trim() ?? '';
-  }
-
-  // The body is the final field before the closing tag. Anchor to the last
-  // line-starting `body: ` so a prior message that happens to contain the text
-  // "body: " in its history digest can't be mistaken for the field.
-  final end = t.lastIndexOf('[/coordination_board_message]');
-  final bodyMarker = t.lastIndexOf('\nbody: ');
-  var body = (bodyMarker >= 0 && end > bodyMarker)
-      ? t.substring(bodyMarker + '\nbody: '.length, end).trim()
-      : '';
-
+  if (envelopeKind(t) != 'coordination_board_message') return null;
   return BoardMessage(
-    threadId: field('thread_id'),
-    fromId: field('from_id'),
-    fromKind: field('from_kind'),
-    body: body,
+    threadId: envelopeField(t, 'thread_id'),
+    fromId: envelopeField(t, 'from_id'),
+    fromKind: envelopeField(t, 'from_kind'),
+    body: (envelopeChild(t, 'body') ?? '').trim(),
   );
 }
 
@@ -585,29 +519,14 @@ class DirectMessage {
 
 DirectMessage? parseDirectMessage(String text) {
   final t = text.trim();
-  if (!t.contains('[direct_message]')) return null;
-  String field(String name) {
-    final match =
-        RegExp(r'^' + name + r':\s*(.*)$', multiLine: true).firstMatch(t);
-    return match?.group(1)?.trim() ?? '';
-  }
-
-  // The body is the final field before the closing tag, and the history digest
-  // above it can itself contain "body: ", so anchor to the LAST occurrence —
-  // the same rule the board message uses.
-  final end = t.lastIndexOf('[/direct_message]');
-  final bodyMarker = t.lastIndexOf('\nbody: ');
-  final body = (bodyMarker >= 0 && end > bodyMarker)
-      ? t.substring(bodyMarker + '\nbody: '.length, end).trim()
-      : '';
-
+  if (envelopeKind(t) != 'direct_message') return null;
   return DirectMessage(
-    threadId: field('thread_id'),
-    fromId: field('from'),
-    fromKind: field('from_kind'),
-    body: body,
-    messageKind: field('kind'),
-    urgent: field('urgency').startsWith('urgent'),
+    threadId: envelopeField(t, 'thread_id'),
+    fromId: envelopeField(t, 'from'),
+    fromKind: envelopeField(t, 'from_kind'),
+    body: (envelopeChild(t, 'body') ?? '').trim(),
+    messageKind: envelopeField(t, 'kind'),
+    urgent: envelopeField(t, 'urgency').startsWith('urgent'),
   );
 }
 
@@ -647,42 +566,27 @@ class GroupMessage {
 
 GroupMessage? parseGroupMessage(String text) {
   final t = text.trim();
-  final tag = t.startsWith('[group_added]')
-      ? 'group_added'
-      : t.startsWith('[group_message]')
-          ? 'group_message'
-          : null;
-  if (tag == null) return null;
-  final end = t.lastIndexOf('[/$tag]');
-  final head = t.substring(0, end > 0 ? end : t.length);
-  final bodyMarker = head.indexOf('\nbody: ');
-  final fields = bodyMarker >= 0 ? head.substring(0, bodyMarker) : head;
-  String field(String name) {
-    final match =
-        RegExp(r'^' + name + r':\s*(.*)$', multiLine: true).firstMatch(fields);
-    return match?.group(1)?.trim() ?? '';
-  }
-
-  List<String> list(String name) => [
-        for (final s in field(name).split(','))
-          if (s.trim().isNotEmpty) s.trim(),
-      ];
-  final from = field('from');
+  final tag = envelopeKind(t);
+  if (tag != 'group_added' && tag != 'group_message') return null;
+  List<String> list(String raw) => [
+    for (final s in raw.split(RegExp(r'[,;]')))
+      if (s.trim().isNotEmpty) s.replaceFirst(RegExp(r'\s*\(.*\)$'), '').trim(),
+  ];
+  final from = envelopeField(t, 'from');
   final split = from.indexOf(':');
-  final lead = field('lead');
+  final lead =
+      envelopeAttr(t, 'lead') ?? envelopeChildAttrs(t, 'lead')['agent'] ?? '';
   return GroupMessage(
-    threadId: field('thread_id'),
-    title: field('title'),
+    threadId: envelopeField(t, 'thread_id'),
+    title: envelopeField(t, 'title'),
     fromKind: split > 0 ? from.substring(0, split) : '',
     fromId: split > 0 ? from.substring(split + 1) : from,
-    body: bodyMarker >= 0
-        ? head.substring(bodyMarker + '\nbody: '.length).trim()
-        : '',
+    body: (envelopeChild(t, 'body') ?? '').trim(),
     added: tag == 'group_added',
-    members: list('members'),
+    members: list(envelopeField(t, 'members')),
     lead: lead == 'none' ? '' : lead,
-    mentions: list('mentions'),
-    replyExpected: field('reply_expected') == 'true',
+    mentions: list(envelopeField(t, 'mentions')),
+    replyExpected: envelopeField(t, 'reply_expected') == 'true',
   );
 }
 
@@ -693,38 +597,20 @@ GroupMessage? parseGroupMessage(String text) {
 /// asking from inside a session rather than in the agent's inbox.
 DirectMessage? parseCoordinationReply(String text) {
   final t = text.trim();
-  final tag = t.contains('[agent_reply]')
-      ? 'agent_reply'
-      : t.contains('[coordination_reply]')
-          ? 'coordination_reply'
-          : null;
-  if (tag == null) return null;
-  String field(String name) {
-    final match =
-        RegExp(r'^' + name + r':\s*(.*)$', multiLine: true).firstMatch(t);
-    return match?.group(1)?.trim() ?? '';
-  }
-
-  final end = t.lastIndexOf('[/$tag]');
-  final bodyMarker = t.lastIndexOf('\nbody: ');
-  final body = (bodyMarker >= 0 && end > bodyMarker)
-      ? t.substring(bodyMarker + '\nbody: '.length, end).trim()
-      : '';
-
-  // The envelope writes `from: <kind>:<id>`, so split it rather than expecting
-  // a separate field.
-  final raw = field('from');
+  final tag = envelopeKind(t);
+  if (tag != 'agent_reply' && tag != 'coordination_reply') return null;
+  final raw = envelopeField(t, 'from');
   final split = raw.indexOf(':');
   return DirectMessage(
-    threadId: field('thread_id'),
+    threadId: envelopeField(t, 'thread_id'),
     fromId: split > 0 ? raw.substring(split + 1) : raw,
     fromKind: split > 0 ? raw.substring(0, split) : 'agent',
-    body: body,
+    body: (envelopeChild(t, 'body') ?? '').trim(),
     isReply: true,
   );
 }
 
-/// A `[watch]` envelope: an agent's own background script reported new lines.
+/// A `<watch>` envelope: an agent's own background script reported new lines.
 class WatchEnvelope {
   final String name;
   final String mode;
@@ -742,47 +628,31 @@ class WatchEnvelope {
 
 WatchEnvelope? parseWatchEnvelope(String text) {
   final t = text.trim();
-  if (!t.startsWith('[watch]')) return null;
-  final first = t.indexOf('\n---\n');
-  if (first < 0) return null;
-  final header = <String, String>{};
-  for (final line in t.substring('[watch]'.length, first).split('\n')) {
-    final i = line.indexOf(':');
-    if (i > 0) {
-      header[line.substring(0, i).trim()] = line.substring(i + 1).trim();
-    }
-  }
-  final rest = t.substring(first + 5);
-  final second = rest.lastIndexOf('\n---\nnote:');
-  final body = second >= 0 ? rest.substring(0, second) : rest;
+  if (envelopeKind(t) != 'watch') return null;
+  final body = envelopeChild(t, 'body');
+  if (body == null) return null;
   return WatchEnvelope(
-    name: header['name'] ?? 'watch',
-    mode: header['mode'] ?? '',
-    event: header['event'] ?? 'change',
-    held: int.tryParse(header['held'] ?? '') ?? 0,
+    name: envelopeAttr(t, 'name') ?? 'watch',
+    mode: envelopeField(t, 'mode'),
+    event: envelopeAttr(t, 'event') ?? 'change',
+    held: int.tryParse(envelopeField(t, 'held')) ?? 0,
     lines: body.split('\n').where((l) => l.trim().isNotEmpty).toList(),
   );
 }
 
-/// A `[wake]` envelope: the note an agent left itself with `schedule_wake`.
+/// A `<wake>` envelope: the note an agent left itself with `schedule_wake`.
 String? parseWakeNote(String text) {
   final t = text.trim();
-  if (!t.startsWith('[wake]')) return null;
-  final parts = t.substring('[wake]'.length).trim().split('\n\n');
-  if (parts.length >= 3) {
-    return parts.sublist(1, parts.length - 1).join('\n\n').trim();
-  }
-  return parts.length == 2 ? parts[1].trim() : '';
+  if (envelopeKind(t) != 'wake') return null;
+  return (envelopeChild(t, 'wake_note') ?? envelopeChild(t, 'note') ?? '')
+      .trim();
 }
 
 /// A message from the agent that delegated a lane, delivered into the lane.
 String? parseParentMessage(String text) {
   final t = text.trim();
-  if (!t.startsWith('[parent_message]')) return null;
-  final end = t.lastIndexOf('[/parent_message]');
-  return t
-      .substring('[parent_message]'.length, end > 0 ? end : t.length)
-      .trim();
+  if (envelopeKind(t) != 'parent_message') return null;
+  return envelopeBody(t);
 }
 
 /// Work Mission Control offers an agent, carried as the body of a direct
@@ -799,22 +669,14 @@ class TaskOffer {
 }
 
 TaskOffer? parseTaskOffer(String text) {
-  final start = text.indexOf('[task_offer]');
-  final end = text.indexOf('[/task_offer]');
-  if (start < 0 || end < start) return null;
-  final t = text.substring(start, end);
-  String field(String name) {
-    final match =
-        RegExp(r'^' + name + r':\s*(.*)$', multiLine: true).firstMatch(t);
-    return match?.group(1)?.trim() ?? '';
-  }
-
-  final marker = t.indexOf('\nbriefing:');
+  final flat = text.contains('<task_offer') ? text : unescapeXml(text);
+  final start = flat.indexOf('<task_offer');
+  if (start < 0) return null;
+  final t = flat.substring(start);
   return TaskOffer(
-    taskId: field('task_id'),
-    title: field('title'),
-    briefing:
-        marker >= 0 ? t.substring(marker + '\nbriefing:'.length).trim() : '',
+    taskId: envelopeField(t, 'task_id'),
+    title: envelopeField(t, 'title'),
+    briefing: (envelopeChild(t, 'briefing') ?? envelopeBody(t)).trim(),
   );
 }
 
@@ -839,19 +701,13 @@ class AssignmentEnvelope {
 
 AssignmentEnvelope? parseAssignmentEnvelope(String text) {
   final t = text.trim();
-  if (!t.contains('[coordination_assignment]')) return null;
-  String field(String name) {
-    final match =
-        RegExp(r'^' + name + r':\s*(.*)$', multiLine: true).firstMatch(t);
-    return match?.group(1)?.trim() ?? '';
-  }
-
+  if (envelopeKind(t) != 'coordination_assignment') return null;
   return AssignmentEnvelope(
-    assignmentId: field('assignment_id'),
-    goalId: field('goal_id'),
-    agentId: field('agent_id'),
-    scope: field('scope'),
-    definitionOfDone: field('definition_of_done'),
+    assignmentId: envelopeField(t, 'assignment_id'),
+    goalId: envelopeField(t, 'goal_id'),
+    agentId: envelopeField(t, 'agent_id'),
+    scope: envelopeField(t, 'scope'),
+    definitionOfDone: envelopeField(t, 'definition_of_done'),
   );
 }
 
@@ -888,20 +744,17 @@ class AmbientTurn {
   final String expects;
 }
 
-String _unescapeXml(String s) => s
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&quot;', '"')
-    .replaceAll('&amp;', '&');
-
 String? voiceClassifierNote(String agentId, String body) {
   if (agentId != 'voice classifier' && agentId != 'ambient mode') return null;
   final text = body.trim();
-  final mode =
-      RegExp(r'^Ambient mode is now (\w+) \((.*)\)\.?$').firstMatch(text);
+  final mode = RegExp(
+    r'^Ambient mode is now (\w+) \((.*)\)\.?$',
+  ).firstMatch(text);
   if (mode != null) {
-    final reason =
-        (mode.group(2) ?? '').replaceFirst(RegExp(r'^mission_control:\s*'), '');
+    final reason = (mode.group(2) ?? '').replaceFirst(
+      RegExp(r'^mission_control:\s*'),
+      '',
+    );
     final label = mode.group(1) == 'active'
         ? 'Voice conversation started'
         : 'Back to passive listening';
@@ -911,24 +764,25 @@ String? voiceClassifierNote(String agentId, String body) {
 }
 
 AmbientTurn? parseAmbientTurn(String text) {
-  final match =
-      RegExp(r'^\s*<ambient_turn([^>]*)>([\s\S]*?)</ambient_turn>\s*$')
-          .firstMatch(text);
+  final match = RegExp(
+    r'^\s*<ambient_turn([^>]*)>([\s\S]*?)</ambient_turn>\s*$',
+  ).firstMatch(text);
   if (match == null) return null;
   final attrs = <String, String>{
     for (final m in RegExp(r'(\w+)="([^"]*)"').allMatches(match.group(1) ?? ''))
-      m.group(1)!: _unescapeXml(m.group(2) ?? ''),
+      m.group(1)!: unescapeXml(m.group(2) ?? ''),
   };
   final raw = match.group(2) ?? '';
   final contextBlock =
       RegExp(r'<context>([\s\S]*?)</context>').firstMatch(raw)?.group(1) ?? '';
   final context = [
-    for (final line in _unescapeXml(contextBlock).split('\n'))
+    for (final line in unescapeXml(contextBlock).split('\n'))
       if (line.trim().isNotEmpty)
         line.replaceFirst(RegExp(r'^\[earlier, not sent\]\s*'), '').trim(),
   ];
-  final body = _unescapeXml(
-      raw.replaceAll(RegExp(r'<(recent_speech|context)>[\s\S]*?</\1>'), ''));
+  final body = unescapeXml(
+    raw.replaceAll(RegExp(r'<(recent_speech|context)>[\s\S]*?</\1>'), ''),
+  );
   return AmbientTurn(
     device: attrs['device'] ?? '',
     at: DateTime.tryParse(attrs['at'] ?? '')?.toLocal(),
@@ -948,9 +802,9 @@ AmbientTurn? parseAmbientTurn(String text) {
 }
 
 List<String> _idList(String? raw) => [
-      for (final s in (raw ?? '').split(','))
-        if (s.trim().isNotEmpty) s.trim()
-    ];
+  for (final s in (raw ?? '').split(','))
+    if (s.trim().isNotEmpty) s.trim(),
+];
 
 String _spokenKey(String s) => s
     .toLowerCase()
@@ -982,22 +836,21 @@ Set<String> supersededAmbientTurns(Iterable<String> texts) {
 bool isAmbientResume(String text) =>
     text.trimLeft().startsWith('<ambient_resume');
 
-/// Daemon-written routing instructions (`[routing] …`) sent to the model when a
+/// Daemon-written routing instructions (`<routing>`) sent to the model when a
 /// profile hits its usage limit or resets. Returns a clean one-line status for
 /// the transcript when no `profile_switched` event already rendered it.
 String? parseRoutingNote(String text) {
   final t = text.trim();
-  if (!t.startsWith('[routing]')) return null;
-  final body = t
-      .substring('[routing]'.length)
-      .trim()
+  if (envelopeKind(t) != 'routing') return null;
+  final body = envelopeBody(t)
       .replaceFirst(
-          RegExp(r'\s*Pick up where the last turn stopped and finish it\.?$'),
-          '')
+        RegExp(r'\s*Pick up where the last turn stopped and finish it\.?$'),
+        '',
+      )
       .trim();
   final switched = RegExp(
-          r'^(.+?) hit its usage limit, so this session now runs on (.+?)\.?$')
-      .firstMatch(body);
+    r'^(.+?) hit its usage limit, so this session now runs on (.+?)\.?$',
+  ).firstMatch(body);
   if (switched != null) {
     return '${switched.group(1)} hit its usage limit. Continuing on ${switched.group(2)}.';
   }
@@ -1009,11 +862,14 @@ String? parseRoutingNote(String text) {
 String userQuestionLead(Map<String, dynamic> e) {
   final raw = e['questions'];
   final list = raw is Map ? raw['questions'] : raw;
-  final text = missionControlQuestionText(
-      {...e, 'questions': list is List ? list : const []});
+  final text = missionControlQuestionText({
+    ...e,
+    'questions': list is List ? list : const [],
+  });
   if (text.isEmpty) return 'Needs your input';
-  final more =
-      list is List && list.length > 1 ? ' (+${list.length - 1} more)' : '';
+  final more = list is List && list.length > 1
+      ? ' (+${list.length - 1} more)'
+      : '';
   return '$text$more';
 }
 
