@@ -451,6 +451,11 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             addEvent(key, AssignmentCard(assignment: assignment));
             break;
           }
+          final notice = parseSystemNotice(text);
+          if (notice != null) {
+            addEvent(key, SystemNoticeLine(notice: notice));
+            break;
+          }
           final userBubble =
               Bubble(mine: true, text: text, client: widget.client);
           _lastUserRowKey = key;

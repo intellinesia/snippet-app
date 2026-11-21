@@ -1,4 +1,5 @@
 import '../chat/ledger_line.dart' show LedgerLiveScope;
+import '../chat/system_notice.dart';
 import '../diagnostics.dart';
 import 'session_header.dart';
 import 'package:snippet/ambient/controller.dart';
