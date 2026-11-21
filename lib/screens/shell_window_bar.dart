@@ -296,6 +296,27 @@ class _MainTabsStripState extends State<MainTabsStrip> {
   static const _minTab = 140.0;
   static const _gap = 2.0;
   final _moreKey = GlobalKey();
+  // Tabs closed but still shrinking out, with the slot they held.
+  final _leaving = <String, (ShellTab, int)>{};
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ready = true);
+  }
+
+  @override
+  void didUpdateWidget(MainTabsStrip old) {
+    super.didUpdateWidget(old);
+    final now = {for (final t in widget.tabs) t.key};
+    final before = old.tabs.where((t) => !t.isMissionControl).toList();
+    for (var i = 0; i < before.length; i++) {
+      final t = before[i];
+      if (!now.contains(t.key)) _leaving[t.key] = (t, i);
+    }
+    _leaving.removeWhere((k, _) => now.contains(k));
+  }
 
   Future<void> _openMore(List<ShellTab> hidden) async {
     final box = _moreKey.currentContext?.findRenderObject() as RenderBox?;
@@ -379,7 +400,14 @@ class _MainTabsStripState extends State<MainTabsStrip> {
           ? _maxTab
           : (avail / visible.length - _gap).clamp(_minTab, _maxTab);
 
-      Widget chip(ShellTab t) => Padding(
+      Widget chip(ShellTab t, {bool leaving = false}) => _TabSlot(
+            key: ValueKey('slot-${t.key}'),
+            animate: _ready,
+            leaving: leaving,
+            onGone: () {
+              if (mounted) setState(() => _leaving.remove(t.key));
+            },
+            child: Padding(
             padding: const EdgeInsets.only(right: _gap),
             child: Center(
               child: TopWorkspaceTabChip(
@@ -398,7 +426,15 @@ class _MainTabsStripState extends State<MainTabsStrip> {
                     t.isMissionControl ? widget.mcAttentionCount : 0,
               ),
             ),
-          );
+          ));
+      final shown = <Widget>[for (final t in visible) chip(t)];
+      if (!overflow) {
+        final gone = _leaving.values.toList()
+          ..sort((a, b) => a.$2.compareTo(b.$2));
+        for (final (t, i) in gone) {
+          shown.insert(i.clamp(0, shown.length), chip(t, leaving: true));
+        }
+      }
 
       // Widths above are estimates; the tabs clip rather than overrun the bar,
       // and + always stays visible.
@@ -411,7 +447,7 @@ class _MainTabsStripState extends State<MainTabsStrip> {
             physics: const NeverScrollableScrollPhysics(),
             child: Row(children: [
               for (final t in mc) chip(t),
-              for (final t in visible) chip(t),
+              ...shown,
               if (overflow)
                 Padding(
                   padding: const EdgeInsets.only(right: _gap),
@@ -443,6 +479,81 @@ class _MainTabsStripState extends State<MainTabsStrip> {
         ),
       ]);
     });
+  }
+}
+
+/// A tab's slot: grows in when opened, shrinks out when closed.
+class _TabSlot extends StatefulWidget {
+  const _TabSlot({
+    super.key,
+    required this.child,
+    required this.animate,
+    required this.leaving,
+    required this.onGone,
+  });
+
+  final Widget child;
+  final bool animate;
+  final bool leaving;
+  final VoidCallback onGone;
+
+  @override
+  State<_TabSlot> createState() => _TabSlotState();
+}
+
+class _TabSlotState extends State<_TabSlot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: Motion.fast, value: widget.animate ? 0 : 1);
+  late final CurvedAnimation _curve = CurvedAnimation(
+      parent: _c, curve: Motion.enter, reverseCurve: Motion.exit);
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.leaving) {
+      _leave();
+    } else if (_c.value < 1) {
+      _c.forward();
+    }
+  }
+
+  @override
+  void didUpdateWidget(_TabSlot old) {
+    super.didUpdateWidget(old);
+    if (widget.leaving && !old.leaving) _leave();
+    if (!widget.leaving && old.leaving) _c.forward();
+  }
+
+  void _leave() {
+    _c.value = _c.value == 0 ? 1 : _c.value;
+    _c.reverseDuration = Motion.quick;
+    _c.reverse().whenComplete(() {
+      if (mounted && widget.leaving) widget.onGone();
+    });
+  }
+
+  @override
+  void dispose() {
+    _curve.dispose();
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final child = widget.leaving ? IgnorePointer(child: widget.child) : widget.child;
+    return AnimatedBuilder(
+      animation: _curve,
+      builder: (_, c) => ClipRect(
+        child: Align(
+          alignment: Alignment.centerLeft,
+          widthFactor: _curve.value,
+          child: Opacity(opacity: _curve.value.clamp(0.0, 1.0), child: c),
+        ),
+      ),
+      child: child,
+    );
   }
 }
 
