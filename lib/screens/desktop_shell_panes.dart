@@ -618,6 +618,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             }
             return Container(
               width: kSessionRailWidth + 2 * S.s12,
+              // Full strip height so the divider meets the panel's below.
+              height: double.infinity,
               decoration: BoxDecoration(
                   border: Border(left: BorderSide(color: AppColors.line))),
               padding: EdgeInsets.only(left: S.s6, right: S.s6),

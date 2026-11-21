@@ -21,7 +21,7 @@ import 'agent_records.dart' show AgentInboxView, AgentBoardView;
 part 'session_rail_pages.dart';
 
 const String kSessionRailCollapsedPref = 'session_rail_collapsed';
-const double kSessionRailWidth = 288;
+const double kSessionRailWidth = 336;
 
 /// Window-bar right padding plus the gap after its last tool, so the panel's
 /// right edge lines up with the toggle button above it.
@@ -469,7 +469,8 @@ class _SessionRailState extends State<SessionRail> {
     final flat = !kMobile && !widget.floating;
     _bodyH = maxHeight;
     return Container(
-      width: kSessionRailWidth,
+      // Phones keep the old width; the desktop panel is wider.
+      width: kMobile ? 288 : kSessionRailWidth,
       decoration: flat
           ? null
           : BoxDecoration(

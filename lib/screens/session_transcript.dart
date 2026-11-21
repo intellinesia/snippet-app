@@ -97,8 +97,10 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
       if (run.isEmpty) return;
       final start = runStartKey ?? fallbackKey;
       final isSessionRunning = _state?.status == 'running';
-      final running =
-          isSessionRunning && run.any((w) => w is DenseToolRow && w.pending);
+      // A call with no result followed by later events was cut off, not live.
+      final running = isSessionRunning &&
+          curIdx >= events.length &&
+          run.any((w) => w is DenseToolRow && w.pending);
       final toolKey = 'transcript-tools-$start';
       final took = transcriptRunDuration(events, runFirst ?? curIdx, curIdx);
       if (kMobile) {

@@ -480,7 +480,13 @@ class PaneStrip extends StatelessWidget {
     final compact = !kMobile;
     return Container(
       height: compact ? 38 : 46,
-      color: kMobile ? AppColors.pageCanvas : Colors.transparent,
+      // Desktop: a hairline under the tabs, as in the reference.
+      decoration: BoxDecoration(
+        color: kMobile ? AppColors.pageCanvas : Colors.transparent,
+        border: kMobile
+            ? null
+            : Border(bottom: BorderSide(color: AppColors.line)),
+      ),
       child: LayoutBuilder(builder: (context, outer) {
         final list = _chips(count, compact);
         final tail = trailing;
