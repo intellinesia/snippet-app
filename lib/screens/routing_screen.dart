@@ -330,11 +330,13 @@ class _RoutingScreenState extends State<RoutingScreen> {
     final chosen = _routes[key] ?? const [];
     return Container(
       margin: EdgeInsets.only(bottom: S.s12),
-      padding: EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s12),
+      padding: kMobile
+          ? EdgeInsets.fromLTRB(S.s12, S.of(10), S.s12, S.s12)
+          : const EdgeInsets.fromLTRB(14, 12, 14, 14),
       decoration: BoxDecoration(
-        color: AppColors.surface1,
-        borderRadius: BorderRadius.circular(kMobile ? R.lg : R.card),
-        border: Border.all(color: AppColors.line),
+        color: kMobile ? AppColors.surface1 : Grouped.card,
+        borderRadius: BorderRadius.circular(kMobile ? R.lg : Grouped.radiusEnd),
+        border: Border.all(color: kMobile ? AppColors.line : Grouped.cardBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -344,7 +346,8 @@ class _RoutingScreenState extends State<RoutingScreen> {
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(title,
-                  style: sans(14, weight: FontWeight.w500, color: AppColors.fg1)),
+                  style: sans(kMobile ? 14 : 13,
+                      weight: FontWeight.w500, color: AppColors.fg1)),
               SizedBox(width: S.s8),
               Expanded(
                 child: Text(about,

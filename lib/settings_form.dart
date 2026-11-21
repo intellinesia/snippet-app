@@ -28,18 +28,18 @@ abstract final class Grouped {
 
   // Geometry.
   static const double gutter = 12;
-  static double get rowMin => _phone ? _ph(64, 56) : 36;
-  static double get rowMinTwoLine => _phone ? _ph(76, 66) : 44;
-  static double get padX => _phone ? 16 : 12;
-  static double get padY => _phone ? _ph(10, 8) : 4;
+  static double get rowMin => _phone ? _ph(64, 56) : 48;
+  static double get rowMinTwoLine => _phone ? _ph(76, 66) : 56;
+  static double get padX => _phone ? 16 : 14;
+  static double get padY => _phone ? _ph(10, 8) : 9;
   static double get icon => _phone ? _ph(22, 20) : 16;
-  static double get iconGap => _phone ? _ph(14, 12) : 10;
+  static double get iconGap => _phone ? _ph(14, 12) : 12;
   static const double chevron = 16;
   static double get radiusEnd => _phone ? _ph(20, 18) : 10;
   static const double radiusInner = 4;
   static const double gap = 2;
-  static double get sectionGap => _phone ? 28 : 20;
-  static const double labelGap = 8;
+  static double get sectionGap => _phone ? 28 : 36;
+  static double get labelGap => _phone ? 8 : 10;
   static const double footGap = 8;
   static const double headerHeight = 56;
   static const double circle = 40;
@@ -80,7 +80,8 @@ abstract final class Grouped {
   static Color get muted => AppColors.fg3;
   static Color get faint => AppColors.fg4;
   static Color get iconColor => AppColors.fg2;
-  static Color get toggleOn => Color.lerp(AppColors.fg1, AppColors.fg2, 0.4)!;
+  static Color get toggleOn =>
+      _phone ? Color.lerp(AppColors.fg1, AppColors.fg2, 0.4)! : AppColors.accent;
   static Color get toggleOff => _over(0.17);
 
   /// Corner radii of tile [index] of [count]: round at the group's ends.
@@ -103,8 +104,14 @@ abstract final class Grouped {
       sans(subSize, height: subLine / subSize, color: color ?? muted);
   static TextStyle valueStyle([Color? color]) =>
       sans(valueSize, color: color ?? muted);
-  static TextStyle labelStyle() =>
-      sans(labelSize, height: 20 / labelSize, color: label);
+  static TextStyle labelStyle() => _phone
+      ? sans(labelSize, height: 20 / labelSize, color: label)
+      : sans(13, weight: FontWeight.w500, height: 20 / 13, color: AppColors.fg1);
+
+  /// Desktop group card: one bordered surface, rows split by hairlines.
+  static Color get card => AppColors.fg1.withValues(alpha: 0.028);
+  static Color get cardBorder => AppColors.fg1.withValues(alpha: 0.075);
+  static Color get hairline => AppColors.fg1.withValues(alpha: 0.06);
   static TextStyle footStyle() =>
       sans(footSize, height: footLine / footSize, color: muted);
   static TextStyle pageTitleStyle() =>
@@ -176,6 +183,21 @@ class SettingsIcon extends StatelessWidget {
     final size = Grouped.icon;
     final c = color ?? Grouped.iconColor;
     final data = iconData ?? _thinIcons[name];
+    if (!kMobile) {
+      // Desktop list rows lead with a small tile, as in the device lists.
+      return Container(
+        width: 28,
+        height: 28,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.fg1.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(R.of(7)),
+        ),
+        child: data != null
+            ? Icon(data, size: 15, color: c)
+            : AppIcon(name!, size: 15, color: c),
+      );
+    }
     return SizedBox(
       width: size + 2,
       height: size + 2,
@@ -196,7 +218,7 @@ class SettingsLeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final box = Grouped.icon + 2;
+    final box = kMobile ? Grouped.icon + 2 : 28.0;
     return SizedBox(
       width: box,
       height: box,
@@ -275,6 +297,32 @@ class GroupedTiles extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final n = children.length;
+    if (!kMobile) {
+      final radius = BorderRadius.circular(Grouped.radiusEnd);
+      return Container(
+        decoration: BoxDecoration(
+          color: color ?? Grouped.card,
+          borderRadius: radius,
+          border: Border.all(color: Grouped.cardBorder),
+        ),
+        child: ClipRRect(
+          borderRadius: radius,
+          child: Material(
+            type: MaterialType.transparency,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < n; i++) ...[
+                  if (i > 0) Container(height: 1, color: Grouped.hairline),
+                  children[i],
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -526,12 +574,56 @@ class SettingsPickerRow<T> extends StatelessWidget {
           icon: icon,
           iconData: iconData,
           sub: hasDetail ? d : null,
-          value: value,
+          trailing: items == null
+              ? null
+              : SettingsDropdownBox(label: value, color: valueColor),
+          value: items == null ? value : null,
           valueColor: valueColor,
-          chevron: true,
+          chevron: items == null,
           onTap: tap,
         );
       });
+}
+
+/// Desktop select: an outlined box with the choice and a down chevron.
+class SettingsDropdownBox extends StatelessWidget {
+  const SettingsDropdownBox(
+      {super.key, required this.label, this.leading, this.color});
+  final String label;
+  final Widget? leading;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 28,
+        constraints: const BoxConstraints(minWidth: 112, maxWidth: 240),
+        padding: const EdgeInsets.fromLTRB(10, 0, 8, 0),
+        decoration: BoxDecoration(
+          color: AppColors.fg1.withValues(alpha: 0.035),
+          borderRadius: BorderRadius.circular(R.of(6)),
+          border: Border.all(color: AppColors.fg1.withValues(alpha: 0.1)),
+        ),
+        child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  if (leading != null) ...[leading!, const SizedBox(width: 7)],
+                  Flexible(
+                    child: Text(label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(12.5, color: color ?? AppColors.fg1)),
+                  ),
+                ]),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 10),
+                child: AppIcon('chevron-down', size: 12, color: AppColors.fg3),
+              ),
+            ]),
+      );
 }
 
 /// Compatibility name for the round 5 icon tile: now a bare icon, no tile.
@@ -715,9 +807,9 @@ class SettingsSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final w = kMobile ? 52.0 : 34.0;
-    final h = kMobile ? 32.0 : 20.0;
-    final knob = kMobile ? 24.0 : 16.0;
+    final w = kMobile ? 52.0 : 30.0;
+    final h = kMobile ? 32.0 : 18.0;
+    final knob = kMobile ? 24.0 : 14.0;
     return Semantics(
       toggled: value,
       child: GestureDetector(
@@ -744,8 +836,8 @@ class SettingsSwitch extends StatelessWidget {
                 shape: BoxShape.circle,
                 // Desktop rows are translucent; the knob must be opaque.
                 color: value
-                    ? (kMobile ? Grouped.row : AppColors.bg)
-                    : AppColors.fg1,
+                    ? (kMobile ? Grouped.row : Colors.white)
+                    : (kMobile ? AppColors.fg1 : AppColors.fg2),
               ),
             ),
           ),
@@ -772,8 +864,31 @@ class SettingsPopup<T> extends StatelessWidget {
   final ValueChanged<T> onSelected;
   final Widget? leading;
 
+  Future<void> _open(BuildContext context, BuildContext anchor) async {
+    final picked = await showAppMenu<T>(context,
+        anchor: anchor,
+        sheetHeightFactor: sheetHeightFactor,
+        items: [
+          for (final (v, l) in items)
+            appMenuItem(value: v, label: l, selected: v == selected),
+        ]);
+    if (picked != null) onSelected(picked);
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!kMobile) {
+      return Builder(
+        builder: (anchor) => MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _open(context, anchor),
+            child: SettingsDropdownBox(label: label, leading: leading),
+          ),
+        ),
+      );
+    }
     return Builder(
       builder: (anchor) => Material(
         color: kMobile ? Colors.transparent : AppColors.surface2,
@@ -843,7 +958,7 @@ class SettingsField extends StatelessWidget {
     return SizedBox(
       width: kMobile ? (width > 210 ? 210 : width) : width,
       child: Tactile(
-        radius: BorderRadius.circular(R.of(7)),
+        radius: BorderRadius.circular(R.of(6)),
         kind: TactileKind.inset,
         child: Container(
         height: kMobile ? 34 : 28,
@@ -853,9 +968,9 @@ class SettingsField extends StatelessWidget {
         decoration: kMobile
             ? null
             : BoxDecoration(
-                color: AppColors.bg,
-                borderRadius: BorderRadius.circular(R.of(7)),
-                border: Border.all(color: AppColors.border),
+                color: AppColors.fg1.withValues(alpha: 0.035),
+                borderRadius: BorderRadius.circular(R.of(6)),
+                border: Border.all(color: AppColors.fg1.withValues(alpha: 0.1)),
               ),
         child: Row(children: [
           Expanded(

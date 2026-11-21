@@ -179,15 +179,20 @@ class SettingsHeader extends StatelessWidget {
               child: Text(title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(kMobile ? 24 : 18,
-                      weight: FontWeight.w600, color: AppColors.fg1)),
+                  style: kMobile
+                      ? sans(24, weight: FontWeight.w600, color: AppColors.fg1)
+                      : sans(22, weight: FontWeight.w500, height: 1.25, color: AppColors.fg1)),
             ),
             for (final a in actions) ...[SizedBox(width: S.s8), a],
           ]),
           if (subtitle != null && subtitle!.isNotEmpty) ...[
             SizedBox(height: S.s4),
-            Text(subtitle!, style: Grouped.subStyle()),
+            Text(subtitle!,
+                style: kMobile
+                    ? Grouped.subStyle()
+                    : sans(13, height: 1.45, color: AppColors.fg3)),
           ],
+          if (!kMobile) SizedBox(height: S.s12),
         ],
       ),
     );
@@ -200,19 +205,16 @@ class SettingsColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Design language v7: one centred column, 680 wide with its padding.
-    // Desktop sits at the top left of the dialog page; centring left wide gutters.
+    // One centred column, 680 wide with its padding, on both platforms.
     return SingleChildScrollView(
       padding: kMobile
           ? const EdgeInsets.fromLTRB(24, 24, 24, 40)
-          : const EdgeInsets.fromLTRB(28, 18, 28, 32),
+          : const EdgeInsets.fromLTRB(32, 44, 32, 56),
       child: Align(
-        alignment: kMobile ? Alignment.topCenter : Alignment.topLeft,
+        alignment: Alignment.topCenter,
         child: ConstrainedBox(
-          // The dialog bounds desktop; only the phone caps the column.
           constraints: BoxConstraints(
-              maxWidth:
-                  kMobile ? Grouped.contentMaxWidth - 48 : double.infinity),
+              maxWidth: Grouped.contentMaxWidth - (kMobile ? 48 : 40)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: children,

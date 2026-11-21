@@ -544,11 +544,12 @@ class DesktopSettingsContent extends StatelessWidget {
   final void Function(Instance)? onAdd;
   final VoidCallback onClose;
 
+  // Pages centre their own 680 column; the wide cap only bounds the rest.
   @override
   Widget build(BuildContext context) => Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 820),
+          constraints: const BoxConstraints(maxWidth: 1040),
           child: SettingsSectionView(
             client: client,
             instances: instances,
