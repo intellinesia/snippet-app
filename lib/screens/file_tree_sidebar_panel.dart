@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../api.dart';
 import '../file_icons.dart';
@@ -204,14 +205,21 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
 
   String get _createDir => _listing?.path ?? widget.workspacePath;
 
-  Future<void> _newFile() async {
+  // Make a new item visible: open the folder it landed in.
+  void _reveal(String dir) {
+    if (dir != _createDir) _expandedFolders.add(dir);
+  }
+
+  Future<void> _newFile([String? into]) async {
+    final dir = into ?? _createDir;
     final name = await promptText(context,
         title: 'New file', hint: 'name, e.g. notes.md', saveLabel: 'Create');
     final trimmed = name?.trim();
     if (trimmed == null || trimmed.isEmpty) return;
     try {
-      await widget.client.writeFile('$_createDir/$trimmed', '');
+      await widget.client.writeFile('$dir/$trimmed', '');
       if (!mounted) return;
+      _reveal(dir);
       await refresh();
       if (mounted) toast(context, 'Created $trimmed');
     } catch (e) {
@@ -219,14 +227,16 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
     }
   }
 
-  Future<void> _newFolder() async {
+  Future<void> _newFolder([String? into]) async {
+    final dir = into ?? _createDir;
     final name = await promptText(context,
         title: 'New folder', hint: 'folder name', saveLabel: 'Create');
     final trimmed = name?.trim();
     if (trimmed == null || trimmed.isEmpty) return;
     try {
-      await widget.client.mkdir('$_createDir/$trimmed');
+      await widget.client.mkdir('$dir/$trimmed');
       if (!mounted) return;
+      _reveal(dir);
       await refresh();
       if (mounted) toast(context, 'Created $trimmed');
     } catch (e) {
@@ -238,7 +248,7 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
   ///
   /// Lands in the directory currently LISTED (`_createDir`), so an upload goes
   /// where you are looking rather than always to the workspace root.
-  Future<void> _uploadFiles() async {
+  Future<void> _uploadFiles([String? into]) async {
     if (_uploading) return;
     List<PickedLocalFile> picked;
     try {
@@ -254,7 +264,7 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
     // Capture the destination ONCE: `_createDir` is derived from the listing,
     // and the listing is refreshed below, so reading it per iteration could send
     // later files somewhere else mid-upload.
-    final dir = _createDir;
+    final dir = into ?? _createDir;
     setState(() => _uploading = true);
     var uploaded = 0;
     try {
@@ -272,10 +282,92 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
     }
     if (!mounted) return;
     if (uploaded > 0) {
+      _reveal(dir);
       await refresh();
       if (mounted) {
         toast(context, 'Uploaded $uploaded file${uploaded == 1 ? '' : 's'}');
       }
+    }
+  }
+
+  Future<void> _delete(FsEntry e) async {
+    final ok = await confirmAction(
+      context,
+      title: 'Delete ${e.name}?',
+      body: e.isDir
+          ? 'Permanently deletes this folder and its contents from the machine.'
+          : 'Permanently deletes this file from the machine.',
+      confirmLabel: 'Delete',
+    );
+    if (!ok || !mounted) return;
+    try {
+      await widget.client.deletePath(e.path);
+      if (!mounted) return;
+      _expandedFolders.remove(e.path);
+      _childrenByPath.remove(e.path);
+      await refresh();
+      if (mounted) toast(context, 'Deleted ${e.name}');
+    } catch (err) {
+      if (mounted) toast(context, "Couldn't delete ${e.name}: $err", danger: true);
+    }
+  }
+
+  String _relative(String path) {
+    final root = _listing?.path ?? widget.workspacePath;
+    return root.isNotEmpty && path.startsWith('$root/')
+        ? path.substring(root.length + 1)
+        : path;
+  }
+
+  /// Right-click menu for a row, or for the empty panel when [e] is null.
+  Future<void> _contextMenu(FsEntry? e, Offset point) async {
+    final dir = e == null ? _createDir : (e.isDir ? e.path : null);
+    final choice = await showAppMenu<String>(
+      context,
+      point: point,
+      minWidth: 200,
+      maxWidth: 240,
+      items: [
+        if (e != null && !e.isDir)
+          appMenuItem(value: 'open', label: 'Open', icon: 'file-text'),
+        if (dir != null) ...[
+          appMenuItem(value: 'file', label: 'New file', icon: 'file-plus'),
+          appMenuItem(value: 'folder', label: 'New folder', icon: 'folder-plus'),
+          appMenuItem(
+              value: 'upload',
+              label: 'Upload files',
+              icon: 'upload',
+              enabled: !_uploading),
+        ],
+        if (e != null) ...[
+          const PopupMenuDivider(),
+          appMenuItem(value: 'copy', label: 'Copy path', icon: 'copy'),
+          appMenuItem(
+              value: 'copyRel', label: 'Copy relative path', icon: 'copy'),
+          const PopupMenuDivider(),
+          appMenuItem(
+              value: 'delete', label: 'Delete', icon: 'trash', danger: true),
+        ],
+      ],
+    );
+    if (!mounted || choice == null) return;
+    switch (choice) {
+      case 'open':
+        widget.onOpenFile(e!.path, e.name);
+      case 'file':
+        await _newFile(dir);
+      case 'folder':
+        await _newFolder(dir);
+      case 'upload':
+        await _uploadFiles(dir);
+      case 'copy':
+        await Clipboard.setData(ClipboardData(text: e!.path));
+        if (mounted) toast(context, 'Copied path');
+      case 'copyRel':
+        await Clipboard.setData(ClipboardData(text: _relative(e!.path)));
+        if (mounted) toast(context, 'Copied relative path');
+      case 'delete':
+        await _delete(e!);
     }
   }
 
@@ -321,7 +413,7 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
         : lastPathSegment(widget.workspacePath, ifEmpty: 'Workspace');
     final entries = _listing?.entries ?? const <FsEntry>[];
 
-    return PullToRefresh(
+    final tree = PullToRefresh(
       onRefresh: refresh,
       child: Container(
         color: kMobile ? AppColors.pageBg : Colors.transparent,
@@ -399,6 +491,12 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
         ),
       ),
     );
+    if (kMobile) return tree;
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onSecondaryTapUp: (d) => _contextMenu(null, d.globalPosition),
+      child: tree,
+    );
   }
 
   List<Widget> _buildRows(
@@ -418,6 +516,7 @@ class _FileTreeSidebarPanelState extends State<FileTreeSidebarPanel> {
         onTap: () => entry.isDir
             ? _toggleFolder(entry)
             : widget.onOpenFile(entry.path, entry.name),
+        onMenu: kMobile ? null : (at) => _contextMenu(entry, at),
       ));
       if (expanded && children.isNotEmpty) {
         rows.addAll(_buildRows(children, depth: depth + 1));
@@ -477,6 +576,7 @@ class _FileTreeRow extends StatelessWidget {
     required this.loading,
     required this.hasError,
     required this.onTap,
+    this.onMenu,
   });
 
   final FsEntry entry;
@@ -485,6 +585,7 @@ class _FileTreeRow extends StatelessWidget {
   final bool loading;
   final bool hasError;
   final VoidCallback onTap;
+  final void Function(Offset at)? onMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -576,6 +677,8 @@ extension on _FileTreeRow {
         borderRadius: BorderRadius.circular(R.sm),
         child: InkWell(
           onTap: onTap,
+          onSecondaryTapUp:
+              onMenu == null ? null : (d) => onMenu!(d.globalPosition),
           borderRadius: BorderRadius.circular(R.sm),
           child: Container(
             height: 26,
