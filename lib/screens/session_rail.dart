@@ -515,9 +515,10 @@ class _SessionRailState extends State<SessionRail> {
               ]);
         return ClipRect(
           child: AnimatedSize(
-            // Instant while dragging so the panel tracks the pointer.
-            duration:
-                _resizing ? Duration.zero : const Duration(milliseconds: 240),
+            // Near-instant while dragging; a zero duration relayouts mid-layout.
+            duration: _resizing
+                ? const Duration(milliseconds: 1)
+                : const Duration(milliseconds: 240),
             curve: Curves.easeOutCubic,
             alignment: Alignment.centerLeft,
             child: AnimatedSlide(

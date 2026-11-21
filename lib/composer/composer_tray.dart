@@ -186,7 +186,7 @@ class _ComposerTrayState extends State<ComposerTray>
                           0.55)),
               child: SingleChildScrollView(
                 child: AnimatedSize(
-                  duration: calm ? Duration.zero : Motion.base,
+                  duration: calm ? const Duration(milliseconds: 1) : Motion.base,
                   curve: Motion.enter,
                   alignment: Alignment.bottomCenter,
                   child: AnimatedSwitcher(

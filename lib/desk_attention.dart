@@ -251,7 +251,7 @@ class _DeskAttentionBarState extends State<DeskAttentionBar> {
           onTap: () => setState(() => _open = !_open),
           child: AnimatedSize(
             duration: MediaQuery.maybeDisableAnimationsOf(context) == true
-                ? Duration.zero
+                ? const Duration(milliseconds: 1)
                 : const Duration(milliseconds: 180),
             curve: const Cubic(0.23, 1, 0.32, 1),
             alignment: Alignment.topCenter,
