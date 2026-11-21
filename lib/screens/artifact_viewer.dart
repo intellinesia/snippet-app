@@ -1398,39 +1398,6 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
         ),
       );
 
-  /// Desktop: the page sits in a bordered frame under an address strip.
-  Widget _framed(ArtifactVersion v, Widget page) => Padding(
-        padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
-        child: Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: AppColors.surface1,
-            borderRadius: BorderRadius.circular(R.of(12)),
-            border: Border.all(color: AppColors.border2),
-          ),
-          child: Column(children: [
-            Container(
-              height: 30,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                  color: AppColors.surface1,
-                  border: Border(bottom: BorderSide(color: AppColors.border))),
-              child: Row(children: [
-                AppIcon('globe', size: 11, color: AppColors.fg4),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(v.entry,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: codeMono(11, color: AppColors.fg4)),
-                ),
-              ]),
-            ),
-            Expanded(child: page),
-          ]),
-        ),
-      );
-
   Widget _preview(ArtifactInfo a, ArtifactVersion v) {
     final uri = widget.client.artifactUri(v.url);
     switch (a.kind) {
@@ -1485,7 +1452,7 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
                   child: const Text('Open in browser')));
         }
         final page = _WebPreview(key: ValueKey(v.url), uri: uri);
-        return kMobile ? page : _framed(v, page);
+        return page;
     }
   }
 
