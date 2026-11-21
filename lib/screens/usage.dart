@@ -9,6 +9,7 @@ import '../swr.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'shell_nav.dart';
+import 'usage_desktop.dart';
 
 String usageProviderTitle(String id) => switch (id.toLowerCase()) {
       'anthropic' => 'Anthropic',
@@ -74,7 +75,9 @@ extension on _Period {
 }
 
 class _UsageScreenState extends State<UsageScreen> {
-  late Swr<UsageSummary> _usage = _watch();
+  // Desktop loads its own series; only the phone layout reads this.
+  late Swr<UsageSummary>? _usageSwr = kMobile ? _watch() : null;
+  Swr<UsageSummary> get _usage => _usageSwr!;
   _Period _period = _Period.all;
 
   Swr<UsageSummary> _watch() => Swr<UsageSummary>(
@@ -91,7 +94,7 @@ class _UsageScreenState extends State<UsageScreen> {
 
   @override
   void dispose() {
-    _usage.dispose();
+    _usageSwr?.dispose();
     super.dispose();
   }
 
@@ -102,16 +105,18 @@ class _UsageScreenState extends State<UsageScreen> {
     setState(() {
       _period = period;
       _usage.dispose();
-      _usage = _watch();
+      _usageSwr = _watch();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
-    final data = _usage.data;
+    final data = kMobile ? _usage.data : null;
     final Widget content;
-    if (data == null && _usage.error == null) {
+    if (!kMobile) {
+      content = UsageDesktopView(client: widget.client);
+    } else if (data == null && _usage.error == null) {
       content = kMobile
           ? Padding(
               padding: EdgeInsets.symmetric(vertical: S.of(48)),
@@ -189,32 +194,7 @@ class _UsageScreenState extends State<UsageScreen> {
         ],
       );
     } else {
-      final column = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: _PeriodTabs(value: _period, onChanged: _setPeriod),
-          ),
-          SizedBox(height: S.s16),
-          AnimatedSwitcher(
-            duration: Motion.quick,
-            child: KeyedSubtree(
-              key: ValueKey(data == null
-                  ? (_usage.error == null ? 'loading' : 'error')
-                  : 'data:${_period.name}'),
-              child: content,
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(S.s4, 0, S.s4, 0),
-            child: Text(
-              'Every model call is recorded against the provider and model that served it. Input includes cached tokens; rate limits come from each provider\'s own reports.',
-              style: sans(13, height: 1.5, color: AppColors.fg4),
-            ),
-          ),
-        ],
-      );
+      final column = content;
       body = widget.embedded
           ? column
           : SingleChildScrollView(
@@ -293,7 +273,7 @@ class _ProviderSection extends StatelessWidget {
             ),
           ),
           if (provider.rateLimits.isNotEmpty)
-            for (final r in provider.rateLimits) _RateRow(rate: r)
+            for (final r in provider.rateLimits) UsageRateRow(rate: r)
           else
             Text(
               switch (provider.rateLimitsSupported) {
@@ -334,9 +314,9 @@ class _ProviderSection extends StatelessWidget {
   }
 }
 
-class _RateRow extends StatelessWidget {
+class UsageRateRow extends StatelessWidget {
   final RateWindow rate;
-  const _RateRow({required this.rate});
+  const UsageRateRow({super.key, required this.rate});
 
   @override
   Widget build(BuildContext context) {
