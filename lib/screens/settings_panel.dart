@@ -3469,7 +3469,7 @@ class _AppearancePreviewCard extends StatelessWidget {
               child: Text.rich(TextSpan(children: [
                 TextSpan(
                     text: '48.6M',
-                    style: sans(26, weight: W.strong, color: AppColors.fg1)),
+                    style: sans(kMobile ? 26 : 18, weight: W.strong, color: AppColors.fg1)),
                 TextSpan(
                     text: ' tokens today',
                     style: sans(14, color: AppColors.fg3)),

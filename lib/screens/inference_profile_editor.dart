@@ -896,7 +896,7 @@ class InferenceProfileEditorState extends State<InferenceProfileEditor> {
             child: Text(title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: sans(22,
+                style: sans(kMobile ? 22 : 18,
                     weight: FontWeight.w500,
                     height: 1.15,
                     spacing: -0.4,

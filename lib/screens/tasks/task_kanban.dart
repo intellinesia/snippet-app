@@ -262,7 +262,7 @@ class _TaskKanbanState extends State<TaskKanban> {
             children: [
               Text('Tasks',
                   style:
-                      sans(20, weight: FontWeight.w600, color: AppColors.fg1)),
+                      sans(kMobile ? 20 : 16, weight: FontWeight.w600, color: AppColors.fg1)),
               SizedBox(width: S.of(10)),
               if (showCounts)
                 Text(today > 0 ? '$sub · $today done today' : sub,

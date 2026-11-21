@@ -434,7 +434,7 @@ class TasksPanelState extends State<TasksPanel> {
                 padding: EdgeInsets.fromLTRB(
                     S.s40, S.s32, S.s40, S.s16),
                 child: Text('New task',
-                    style: sans(20,
+                    style: sans(kMobile ? 20 : 16,
                         weight: W.strong,
                         spacing: -0.2,
                         color: AppColors.fg1)),
@@ -647,7 +647,7 @@ class TasksPanelState extends State<TasksPanel> {
           _shownAt = null;
         }),
         child: Text(label,
-            style: sans(26,
+            style: sans(kMobile ? 26 : 18,
                 weight: on ? W.label : W.body,
                 spacing: -0.3,
                 color: on ? AppColors.fg1 : AppColors.fg3)),

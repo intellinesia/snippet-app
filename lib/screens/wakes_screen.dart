@@ -122,7 +122,7 @@ class _WakesScreenState extends State<WakesScreen> {
                       children: [
                         const SizedBox(height: 16),
                         Text(title,
-                            style: sans(20,
+                            style: sans(kMobile ? 20 : 16,
                                 weight: FontWeight.w600, color: AppColors.fg1)),
                         const SizedBox(height: 4),
                         Text(subtitle, style: sans(12.5, color: AppColors.fg4)),

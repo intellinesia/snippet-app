@@ -267,9 +267,9 @@ class ThemeTypeTokens {
 
   static const Map<String, ThemeTypeStyle> defaultStyles = {
     'pageTitle': ThemeTypeStyle(
-        size: ResponsiveNum(28, 20),
+        size: ResponsiveNum(28, 18),
         weight: 500,
-        height: ResponsiveNum(34 / 28, 26 / 20),
+        height: ResponsiveNum(34 / 28, 24 / 18),
         tracking: ResponsiveNum(-0.56, -0.08)),
     'sectionTitle': ThemeTypeStyle(
         size: ResponsiveNum(20, 16),

@@ -809,7 +809,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             child: Text(t?.title ?? 'Task',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: sans(20,
+                style: sans(kMobile ? 20 : 16,
                     weight: FontWeight.w600,
                     spacing: -0.2,
                     color: AppColors.fg1)),

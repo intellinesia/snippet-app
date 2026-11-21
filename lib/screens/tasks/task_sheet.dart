@@ -260,7 +260,7 @@ class _TaskSheetState extends State<TaskSheet> {
                   key: const ValueKey('task-sheet-title'),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(23,
+                  style: sans(kMobile ? 23 : 18,
                       weight: W.label,
                       height: 30 / 23,
                       spacing: -0.2,

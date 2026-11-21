@@ -393,7 +393,7 @@ class AgentActionsState extends State<AgentActions> {
               Text(widget.agentName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: sans(20, weight: W.title, color: AppColors.fg1)),
+                  style: sans(kMobile ? 20 : 16, weight: W.title, color: AppColors.fg1)),
               if (model != null && model.isNotEmpty)
                 Text(model,
                     maxLines: 1,

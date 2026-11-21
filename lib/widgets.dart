@@ -2337,7 +2337,7 @@ class SnAppBar extends StatelessWidget {
                           : kMobile
                               ? sans(titleSize ?? 18,
                                   spacing: -0.3, color: AppColors.fg1)
-                              : display(titleSize ?? 15)),
+                              : display((titleSize ?? 15).clamp(0, 15).toDouble())),
                 if (subtitle != null)
                   Text(subtitle!,
                       maxLines: 1,

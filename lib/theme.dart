@@ -2069,8 +2069,9 @@ const double kComposerGutter = 16;
 // ---------------------------------------------------------------------------
 
 FontWeight _fontWeightFor(int value) {
-  final idx =
-      ((value / 100).round() - 1).clamp(0, FontWeight.values.length - 1);
+  // Desktop never goes heavier than 500.
+  final idx = ((value / 100).round() - 1)
+      .clamp(0, kMobile ? FontWeight.values.length - 1 : 4);
   return FontWeight.values[idx];
 }
 
@@ -2087,7 +2088,9 @@ class W {
 }
 
 FontWeight weightFor(FontWeight w) {
-  final cap = math.max(FontWeight.w500.value, W.strong.value);
+  final cap = kMobile
+      ? math.max(FontWeight.w500.value, W.strong.value)
+      : FontWeight.w500.value;
   return w.value > cap ? _fontWeightFor(cap) : w;
 }
 

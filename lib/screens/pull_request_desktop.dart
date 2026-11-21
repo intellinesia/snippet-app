@@ -757,13 +757,13 @@ class _DesktopPrDetailState extends State<_DesktopPrDetail> {
                 TextSpan(children: [
                   TextSpan(
                       text: s.title,
-                      style: sans(20,
+                      style: sans(16,
                           weight: FontWeight.w600,
                           height: 1.3,
                           color: AppColors.fg1)),
                   TextSpan(
                       text: '  #${s.number}',
-                      style: sans(19, height: 1.3, color: AppColors.fg4)),
+                      style: sans(16, height: 1.3, color: AppColors.fg4)),
                 ]),
               ),
             ),

@@ -495,12 +495,12 @@ class _RetryPillState extends State<_RetryPill> {
             behavior: HitTestBehavior.opaque,
             onTap: _retry,
             child: Container(
-              height: kMobile ? 44 : 32,
-              padding: EdgeInsets.symmetric(horizontal: kMobile ? 18 : 14),
+              height: kMobile ? 44 : 28,
+              padding: EdgeInsets.symmetric(horizontal: kMobile ? 18 : 12),
               alignment: Alignment.center,
               decoration: BoxDecoration(
                   color: AppColors.accent,
-                  borderRadius: BorderRadius.circular(22)),
+                  borderRadius: BorderRadius.circular(kMobile ? 22 : R.sm)),
               child: Text('Retry',
                   style: sans(kMobile ? 15 : 13,
                       weight: FontWeight.w600, color: AppColors.accentFg)),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../chat/ledger_line.dart';
+import '../platform.dart';
 import '../theme.dart';
 import '../tool_activity.dart';
 import '../tool_sheet.dart';
@@ -75,7 +76,7 @@ class _SessionActivityPanelState extends State<SessionActivityPanel> {
             child: Row(children: [
               Text('Activity',
                   style:
-                      sans(20, weight: FontWeight.w600, color: AppColors.fg1)),
+                      sans(kMobile ? 20 : 16, weight: FontWeight.w600, color: AppColors.fg1)),
               const Spacer(),
               IconBtn('x',
                   size: 28,

@@ -150,7 +150,7 @@ class _ProcessesScreenState extends State<ProcessesScreen> {
               padding: const EdgeInsets.fromLTRB(20, 14, 12, 8),
               child: Row(children: [
                 Text('Processes',
-                    style: sans(20,
+                    style: sans(kMobile ? 20 : 16,
                         weight: FontWeight.w600, color: AppColors.fg1)),
                 const SizedBox(width: 8),
                 if (procs.isNotEmpty)
