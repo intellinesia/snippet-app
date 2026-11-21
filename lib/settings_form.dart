@@ -38,8 +38,8 @@ abstract final class Grouped {
   static double get radiusEnd => _phone ? _ph(20, 18) : 10;
   static const double radiusInner = 4;
   static const double gap = 2;
-  static double get sectionGap => _phone ? 28 : 36;
-  static double get labelGap => _phone ? 8 : 10;
+  static double get sectionGap => _phone ? 28 : 28;
+  static double get labelGap => _phone ? 8 : 8;
   static const double footGap = 8;
   static const double headerHeight = 56;
   static const double circle = 40;
@@ -106,7 +106,7 @@ abstract final class Grouped {
       sans(valueSize, color: color ?? muted);
   static TextStyle labelStyle() => _phone
       ? sans(labelSize, height: 20 / labelSize, color: label)
-      : sans(13, weight: FontWeight.w500, height: 20 / 13, color: AppColors.fg1);
+      : sans(12.5, weight: FontWeight.w500, height: 18 / 12.5, color: AppColors.fg2);
 
   /// Desktop group card: one bordered surface, rows split by hairlines.
   static Color get card => AppColors.fg1.withValues(alpha: 0.028);

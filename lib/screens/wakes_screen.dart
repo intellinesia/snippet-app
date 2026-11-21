@@ -168,16 +168,15 @@ class _WakesScreenState extends State<WakesScreen> {
             body: 'Schedule an agent from its page, under Wakes and reporting.',
           );
           if (!desk) return empty;
-          return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Same inset as SettingsColumn, so it lines up with every page.
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(28, 18, 28, 0),
-                  child: SettingsHeader(title: title, subtitle: subtitle),
-                ),
-                const Expanded(child: empty),
-              ]);
+          return page([
+            const SettingsGroup(header: 'Schedules', children: [
+              SettingsRow(
+                icon: 'calendar-clock',
+                label: 'No wakes yet',
+                sub: 'Schedule an agent from its page, under Wakes and reporting.',
+              ),
+            ]),
+          ]);
         }
         return page([
           if (!warmPage)

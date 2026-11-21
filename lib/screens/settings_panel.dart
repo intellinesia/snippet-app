@@ -1788,7 +1788,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
     final manual = _manual;
     return [
       SettingsGroup(
-        header: 'Machines',
+        header: 'Connected',
         footer:
             'Snippet talks to the daemon on each machine. Run snippet serve on a new one and add its link.',
         children: [
@@ -1803,7 +1803,7 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
         ],
       ),
       SettingsGroup(
-        header: 'Approvals',
+        header: 'Sessions',
         children: [
           SettingsRow(
             icon: 'shield',

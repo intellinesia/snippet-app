@@ -169,7 +169,10 @@ class SettingsHeader extends StatelessWidget {
       );
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 4, 0, 8),
+      // Desktop: on the row-text edge, like the section labels below.
+      padding: kMobile
+          ? const EdgeInsets.fromLTRB(0, 4, 0, 8)
+          : EdgeInsets.fromLTRB(Grouped.padX, 0, 0, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -181,7 +184,7 @@ class SettingsHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: kMobile
                       ? sans(24, weight: FontWeight.w600, color: AppColors.fg1)
-                      : sans(22, weight: FontWeight.w500, height: 1.25, color: AppColors.fg1)),
+                      : sans(16, weight: FontWeight.w500, height: 1.3, color: AppColors.fg1)),
             ),
             for (final a in actions) ...[SizedBox(width: S.s8), a],
           ]),
@@ -190,9 +193,8 @@ class SettingsHeader extends StatelessWidget {
             Text(subtitle!,
                 style: kMobile
                     ? Grouped.subStyle()
-                    : sans(13, height: 1.45, color: AppColors.fg3)),
+                    : sans(12.5, height: 1.45, color: AppColors.fg3)),
           ],
-          if (!kMobile) SizedBox(height: S.s12),
         ],
       ),
     );
@@ -209,7 +211,7 @@ class SettingsColumn extends StatelessWidget {
     return SingleChildScrollView(
       padding: kMobile
           ? const EdgeInsets.fromLTRB(24, 24, 24, 40)
-          : const EdgeInsets.fromLTRB(32, 44, 32, 56),
+          : const EdgeInsets.fromLTRB(32, 28, 32, 48),
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
