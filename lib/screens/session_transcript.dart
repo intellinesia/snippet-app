@@ -85,8 +85,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
         final name = _s(p['tool_name']);
         final k = pendingKey ?? fallbackKey;
         addToolRow(
-            toolRow(k,
-                tool: name, args: p['arguments'], startMs: _eventMs(p)),
+            toolRow(k, tool: name, args: p['arguments'], startMs: _eventMs(p)),
             k);
         pending = null;
         pendingKey = null;
@@ -147,6 +146,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
           return;
         }
       }
+      // As on mobile, the newest run stays live between calls while the turn runs.
+      final live =
+          running || (!kMobile && isSessionRunning && curIdx >= events.length);
       if (!kMobile) {
         final steps = [
           for (final w in run.whereType<DenseToolRow>())
@@ -158,7 +160,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                 endMs: w.endMs),
         ];
         if (steps.isNotEmpty) {
-          if (running) {
+          if (live) {
             activityLive = ToolBatch(steps, running: true);
           } else {
             activityRuns.add(ActivityRun(toolKey, steps, took));
@@ -170,7 +172,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
         key: ValueKey(toolKey),
         child: spaced(CollapsedActivity(
           List.of(run),
-          running: running,
+          running: live,
           took: took,
           open: open,
           onOpenChanged: (nextOpen) {

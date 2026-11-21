@@ -42,7 +42,11 @@ bool _stepFailed(ToolStep s) => s.failed || verifyOutputFailed(s);
 (LedgerKind, String) _kindOf(ToolStep s) {
   final name = toolBaseName(s.tool);
   switch (name) {
-    case 'search_content' || 'grep_search' || 'find_by_name' || 'glob' || 'list_dir':
+    case 'search_content' ||
+          'grep_search' ||
+          'find_by_name' ||
+          'glob' ||
+          'list_dir':
       return (LedgerKind.search, '');
     case 'read_file' || 'view_file' || 'view_image':
       return (LedgerKind.read, '');
@@ -80,7 +84,8 @@ String _phraseText(LedgerKind kind, String tool, List<ToolStep> steps) {
   switch (kind) {
     case LedgerKind.search:
       final paths = {for (final s in steps) _pathArg(s)}..remove(null);
-      if (n == 1 && paths.length == 1) return 'searched ${_base(paths.single!)}';
+      if (n == 1 && paths.length == 1)
+        return 'searched ${_base(paths.single!)}';
       if (n == 1) return 'searched the code';
       return 'searched $n places';
     case LedgerKind.read:
@@ -108,9 +113,8 @@ String _phraseText(LedgerKind kind, String tool, List<ToolStep> steps) {
       final count = paths.isEmpty ? n : paths.length;
       return 'edited $count ${_plural(count, 'file', 'files')}';
     case LedgerKind.command:
-      final tests = steps
-          .where((s) => stepCommand(s)?.kind == CommandKind.test)
-          .length;
+      final tests =
+          steps.where((s) => stepCommand(s)?.kind == CommandKind.test).length;
       if (tests == n) {
         return switch (n) {
           1 => 'ran tests',
@@ -748,7 +752,6 @@ class _LedgerStripState extends State<LedgerStrip> {
         break;
       }
     }
-    live ??= steps.isEmpty ? null : steps.last;
     var failAt = -1;
     for (var i = steps.length - 1; i >= 0; i--) {
       if (!steps[i].running && _stepFailed(steps[i])) {
@@ -757,7 +760,8 @@ class _LedgerStripState extends State<LedgerStrip> {
       }
     }
     final fail = failAt >= 0 && failAt != _dismissedFail ? steps[failAt] : null;
-    final label = live == null ? 'Working' : ledgerLiveLabel(live);
+    // No call in flight: the model is between steps.
+    final label = live == null ? 'Thinking' : ledgerLiveLabel(live);
     final target = live == null ? '' : stepTarget(live);
     final el = _elapsed();
     final agent = scope?.agentId;
@@ -776,8 +780,7 @@ class _LedgerStripState extends State<LedgerStrip> {
           height: 18,
           child: agent == null
               ? Center(child: RunSpinner(size: 12, color: AppColors.accent))
-              : AgentMochi(agent,
-                  size: 18, state: AgentCharacterState.working),
+              : AgentMochi(agent, size: 18, state: AgentCharacterState.working),
         ),
         const SizedBox(width: 10),
         Text(label,
@@ -814,8 +817,8 @@ class _LedgerStripState extends State<LedgerStrip> {
             ),
             child: TapRegion(
               groupId: _link,
-              child: _btn('eye', 'Peek', 'Space', _togglePeek,
-                  filled: peekOpen),
+              child:
+                  _btn('eye', 'Peek', 'Space', _togglePeek, filled: peekOpen),
             ),
           ),
         ),
@@ -859,8 +862,7 @@ class _LedgerStripState extends State<LedgerStrip> {
               if (fail.startMs != null && fail.endMs != null) ...[
                 const SizedBox(width: 10),
                 Text(
-                    _clock(Duration(
-                        milliseconds: fail.endMs! - fail.startMs!)),
+                    _clock(Duration(milliseconds: fail.endMs! - fail.startMs!)),
                     style: mono(12, color: AppColors.fg3)),
               ],
               const SizedBox(width: 6),
