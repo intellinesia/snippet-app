@@ -6,6 +6,8 @@ import 'shell_models.dart';
 import 'shell_nav.dart' show kPaneMinWidth;
 import 'shell_pane_view.dart';
 import 'shell_rail.dart' show kSidebarWidth;
+import 'session_rail.dart'
+    show sessionRailCollapsed, sessionRailFraction;
 
 /// The two-pane desktop body row with drag-and-drop between split panes.
 class ShellSplitView extends StatefulWidget {
@@ -48,6 +50,8 @@ class ShellSplitView extends StatefulWidget {
     required this.onDismissTab,
     required this.onCloseReadout,
     this.onFocusPane,
+    this.hostFor,
+    this.hostInset,
   });
 
   final Widget sidebar;
@@ -93,6 +97,12 @@ class ShellSplitView extends StatefulWidget {
   final void Function(ShellPane pane, ShellTab tab) onDismissTab;
   final ValueChanged<RightTab> onCloseReadout;
   final ValueChanged<ShellPane>? onFocusPane;
+
+  /// Desktop: the session tab kept showing under an inner tab, so its panel stays.
+  final ShellTab? Function(ShellTab tab)? hostFor;
+
+  /// Width of the host's panel at a pane width; the inner tab stops at its edge.
+  final double Function(ShellTab host, double width)? hostInset;
 
   @override
   State<ShellSplitView> createState() => _ShellSplitViewState();
@@ -159,16 +169,41 @@ class _ShellSplitViewState extends State<ShellSplitView> {
     if (list.isEmpty && readouts.isEmpty) {
       content = widget.fallbackBuilder(p);
     } else {
-      content = Stack(children: [
-        for (final t in list)
-          Offstage(
-            offstage: t != shownTab,
-            child: widget.tabBodyBuilder(
-              t,
-              t == shownTab && widget.focusedPane == p,
-              t == shownTab,
+      final host = shownTab == null ? null : widget.hostFor?.call(shownTab);
+      Widget body(ShellTab t) {
+        final hosted = host != null && t == shownTab;
+        final b = Offstage(
+          offstage: t != shownTab && t != host,
+          child: widget.tabBodyBuilder(
+            t,
+            t == shownTab && widget.focusedPane == p,
+            t == shownTab || t == host,
+          ),
+        );
+        // Same tree shape hosted or not, so a tab keeps its state.
+        return ListenableBuilder(
+          key: ValueKey('tab-${t.key}'),
+          listenable:
+              Listenable.merge([sessionRailCollapsed, sessionRailFraction]),
+          builder: (_, __) => LayoutBuilder(
+            builder: (_, box) => Padding(
+              padding: EdgeInsets.only(
+                  right: hosted
+                      ? widget.hostInset?.call(host, box.maxWidth) ?? 0
+                      : 0),
+              child: ColoredBox(
+                  color: hosted ? AppColors.panelBg : Colors.transparent,
+                  child: b),
             ),
           ),
+        );
+      }
+
+      content = Stack(children: [
+        // The host paints first so the inner tab sits over its chat column.
+        if (host != null && list.contains(host)) body(host),
+        for (final t in list)
+          if (t != host) body(t),
         for (final readout in readouts)
           Offstage(
             key: ValueKey(readout.key),

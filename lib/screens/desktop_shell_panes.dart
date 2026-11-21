@@ -386,7 +386,22 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           }
         },
         onCloseReadout: (r) => _closeRightTab(r.key),
+        hostFor: kMobile ? null : _innerTabHost,
+        hostInset: (host, width) => sessionRailCollapsed.value ||
+                _inboxSession(host.sessionId) ||
+                width < kSessionRailMinColumn
+            ? 0
+            : sessionRailOuterWidth(width),
       );
+
+  _ShellTab? _innerTabHost(_ShellTab t) {
+    if (!_isAuxiliary(t) || t.groupSessionKey == null) return null;
+    final root =
+        _tabs.where((x) => x.key == t.groupSessionKey).firstOrNull;
+    return root?.sessionId != null && root!.readout == null ? root : null;
+  }
+
+  static bool _inboxSession(String? id) => id?.startsWith('inbox-') ?? false;
 
   void _moveReadout(_Pane p, _RightTab r) {
     if (r.pane == p) return;
@@ -657,11 +672,10 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       title: t.title,
       views: [
         PaneAddEntry(
-            icon: 'file-diff',
-            label: 'Diffs',
+            icon: 'folder',
+            label: 'Files and changes',
             meta: count(changed),
-            onTap: () => act('file_changes')),
-        PaneAddEntry(icon: 'folder', label: 'Files', onTap: () => act('files')),
+            onTap: () => act('files')),
         PaneAddEntry(
             icon: 'activity', label: 'Activity', onTap: () => act('processes')),
         PaneAddEntry(

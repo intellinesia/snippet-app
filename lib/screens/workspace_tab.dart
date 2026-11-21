@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../api.dart';
 import '../models.dart';
+import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'file_tree_sidebar_panel.dart';
@@ -170,7 +171,7 @@ class _WorkspaceTabState extends State<WorkspaceTab> {
   Widget build(BuildContext context) {
     Theme.of(context);
     return ColoredBox(
-      color: AppColors.pageBg,
+      color: kMobile ? AppColors.pageBg : AppColors.panelBg,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _strip(),
         Container(height: 1, color: AppColors.border),
