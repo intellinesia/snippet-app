@@ -663,8 +663,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     _thread = Swr<DirectThreadPage>(
       client: widget.client,
       key: 'agent-thread:${widget.agentId}',
-      fetch: () =>
-          widget.client.agentThreadPage(peerId: widget.agentId, latest: true),
+      fetch: _fetchLatest,
       revalidateOn: (e) =>
           Swr.coordinationForThread(e, _openThreadId) ||
           e['kind'] == 'session_decision',
@@ -673,6 +672,38 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     _events = _withOlder(_thread.data?.events ?? const []);
     _deliveries = _thread.data?.deliveries ?? const {};
     _loading = _thread.data == null;
+    _scroll.addListener(_maybeLoadOlder);
+  }
+
+  static const _page = 100;
+
+  /// The newest page. Daemons before newest-first paging answer `latest` with
+  /// the oldest page, so walk forward to the tail when that happens.
+  Future<DirectThreadPage> _fetchLatest() async {
+    final c = widget.client;
+    final first = await c.agentThreadPage(
+        peerId: widget.agentId, latest: true, limit: _page);
+    var events = first.events;
+    if (events.length < _page || events.first.sequence > 1) return first;
+    final deliveries = {...first.deliveries};
+    for (var i = 0; i < 50; i++) {
+      final next = await c.agentThreadPage(
+          peerId: widget.agentId,
+          afterSequence: events.last.sequence,
+          limit: _page);
+      if (next.events.isEmpty) break;
+      events = [...events, ...next.events];
+      deliveries.addAll(next.deliveries);
+      if (next.events.length < _page) break;
+    }
+    return DirectThreadPage(events: events, deliveries: deliveries);
+  }
+
+  // Like sessions: nearing the top of the reversed list pages in older messages.
+  void _maybeLoadOlder() {
+    if (!_scroll.hasClients || _loadingOlder || !_hasOlder) return;
+    final p = _scroll.position;
+    if (p.maxScrollExtent - p.pixels < 600) _loadOlder();
   }
 
   @override
@@ -713,10 +744,15 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       final page = await widget.client.agentThreadPage(
           peerId: widget.agentId, beforeSequence: oldest, limit: 150);
       if (!mounted) return;
+      // An older daemon ignores before_sequence; keep only what is older.
+      final older = [
+        for (final e in page.events)
+          if (e.sequence > 0 && e.sequence < oldest) e
+      ];
       setState(() {
-        _older = [...page.events, ..._older];
+        _older = [...older, ..._older];
         _deliveries = {...page.deliveries, ..._deliveries};
-        _events = [...page.events, ..._events];
+        _events = [...older, ..._events];
       });
     } catch (e) {
       if (mounted) toast(context, '$e', danger: true);
