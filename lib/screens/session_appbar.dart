@@ -1496,6 +1496,52 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     );
   }
 
+  /// Desktop: connection state as a quiet strip on top of the composer.
+  Widget _deskConnectionNotice() {
+    final stuck = _connError == _SessionScreenState._unreachable;
+    final q = _outbox.length;
+    final text = [
+      stuck ? _SessionScreenState._unreachable : 'Reconnecting',
+      if (q > 0) '$q message${q == 1 ? '' : 's'} will send on reconnect',
+    ].join(' · ');
+    return Semantics(
+      liveRegion: true,
+      label: text,
+      child: Container(
+        margin: EdgeInsets.only(bottom: S.s8),
+        padding: EdgeInsets.fromLTRB(S.s12, S.s6, S.s6, S.s6),
+        decoration: BoxDecoration(
+          color: stuck ? AppColors.dangerBg : AppColors.surface2,
+          borderRadius: BorderRadius.circular(R.of(10)),
+        ),
+        child: Row(children: [
+          StatusDot(
+              status: stuck ? 'offline' : 'checking',
+              size: 6,
+              color: stuck ? AppColors.danger : AppColors.fg3),
+          SizedBox(width: S.s8),
+          Expanded(
+            child: Text(text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sans(12.5, color: AppColors.fg2)),
+          ),
+          HoverSurface(
+            radius: 6,
+            onTap: _retryNow,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: 3),
+              child: Text('Retry now',
+                  style: sans(12,
+                      weight: W.label,
+                      color: stuck ? AppColors.danger : AppColors.fg2)),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
   Widget _disconnectedBanner() {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: S.s16, vertical: S.of(10)),
