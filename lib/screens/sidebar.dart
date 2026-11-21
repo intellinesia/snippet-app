@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../desktop_look.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -1609,14 +1610,18 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
   }
 
   Widget _searchBox({VoidCallback? onTap, required Widget child}) {
-    final box = Container(
-      height: 30,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: AppColors.fg1.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(R.of(6)),
+    final box = Tactile(
+      radius: BorderRadius.circular(R.of(6)),
+      kind: TactileKind.inset,
+      child: Container(
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: AppColors.fg1.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(R.of(6)),
+        ),
+        child: child,
       ),
-      child: child,
     );
     if (onTap == null) return box;
     return Tooltip(

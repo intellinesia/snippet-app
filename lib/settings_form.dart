@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'platform.dart';
 import 'theme.dart';
+import 'desktop_look.dart';
 import 'widgets.dart';
 
 // ---------------------------------------------------------------------------
@@ -841,7 +842,10 @@ class SettingsField extends StatelessWidget {
         : sans(kMobile ? 15 : 13, color: AppColors.fg1);
     return SizedBox(
       width: kMobile ? (width > 210 ? 210 : width) : width,
-      child: Container(
+      child: Tactile(
+        radius: BorderRadius.circular(R.of(7)),
+        kind: TactileKind.inset,
+        child: Container(
         height: kMobile ? 34 : 28,
         padding: kMobile
             ? EdgeInsets.zero
@@ -876,6 +880,7 @@ class SettingsField extends StatelessWidget {
           ),
           if (suffix != null) ...[SizedBox(width: S.s6), suffix!],
         ]),
+      ),
       ),
     );
   }

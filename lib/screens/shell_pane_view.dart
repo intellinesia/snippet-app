@@ -246,12 +246,16 @@ class ReadoutChip extends StatelessWidget {
       onTap: onTap,
       child: SizedBox(
         width: compact ? null : width,
-        child: AnimatedContainer(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+              horizontal: S.s2, vertical: compact ? S.s6 : S.of(7)),
+          child: Tactile(
+            radius: BorderRadius.circular(compact ? R.of(7) : R.card),
+            enabled: active,
+            child: AnimatedContainer(
           duration: Motion.quick,
           height: compact ? 26 : 32,
           constraints: compact ? BoxConstraints(maxWidth: width) : null,
-          margin: EdgeInsets.symmetric(
-              horizontal: S.s2, vertical: compact ? S.s6 : S.of(7)),
           padding: EdgeInsets.fromLTRB(
               compact ? S.of(9) : S.s12, 0, compact ? S.s6 : S.s8, 0),
           decoration: BoxDecoration(
@@ -291,6 +295,8 @@ class ReadoutChip extends StatelessWidget {
                   ),
                 ],
               ]),
+        ),
+          ),
         ),
       ),
     );
@@ -358,12 +364,16 @@ class PaneTabChip extends StatelessWidget {
       onTap: onTap,
       child: SizedBox(
         width: compact ? null : width,
-        child: AnimatedContainer(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+              horizontal: S.s2, vertical: compact ? S.s6 : S.of(7)),
+          child: Tactile(
+            radius: BorderRadius.circular(compact ? R.of(7) : R.card),
+            enabled: active,
+            child: AnimatedContainer(
           duration: Motion.quick,
           height: compact ? 26 : 32,
           constraints: compact ? BoxConstraints(maxWidth: width) : null,
-          margin: EdgeInsets.symmetric(
-              horizontal: S.s2, vertical: compact ? S.s6 : S.of(7)),
           padding: EdgeInsets.fromLTRB(
               compact ? S.of(9) : S.s12, 0, compact ? S.s6 : S.s8, 0),
           decoration: BoxDecoration(
@@ -407,6 +417,8 @@ class PaneTabChip extends StatelessWidget {
                   ),
                 ],
               ]),
+        ),
+          ),
         ),
       ),
     );

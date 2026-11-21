@@ -1,4 +1,5 @@
 import 'package:flutter/gestures.dart';
+import '../desktop_look.dart';
 import 'package:flutter/material.dart';
 
 import '../chat/agent_cluster.dart';
@@ -124,17 +125,21 @@ class _TopWorkspaceTabChipState extends State<TopWorkspaceTabChip> {
           onExit: (_) => setState(() => _hover = false),
           child: GestureDetector(
             onTap: widget.onTap,
-            child: AnimatedContainer(
-              key: widget.chipKey,
-              duration: Motion.quick,
-              curve: const Cubic(.23, 1, .32, 1),
-              height: 28,
-              width: width,
-              decoration: BoxDecoration(
-                color: bg,
-                borderRadius: BorderRadius.circular(R.of(6)),
+            child: Tactile(
+              radius: BorderRadius.circular(R.of(6)),
+              enabled: widget.isActive,
+              child: AnimatedContainer(
+                key: widget.chipKey,
+                duration: Motion.quick,
+                curve: const Cubic(.23, 1, .32, 1),
+                height: 28,
+                width: width,
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(R.of(6)),
+                ),
+                child: child,
               ),
-              child: child,
             ),
           ),
         );

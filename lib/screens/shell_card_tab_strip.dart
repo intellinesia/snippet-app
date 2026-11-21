@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../chat/agent_cluster.dart';
+import '../desktop_look.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -156,12 +157,16 @@ class CardTabChip extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       onSecondaryTap: onLongPress,
-      child: AnimatedContainer(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: S.of(3), vertical: S.s4),
+        child: Tactile(
+        radius: BorderRadius.circular(R.sm),
+        enabled: isActive,
+        child: AnimatedContainer(
         duration: Motion.press,
         curve: Motion.enter,
         key: chipKey,
         width: 220,
-        margin: EdgeInsets.symmetric(horizontal: S.of(3), vertical: S.s4),
         padding: EdgeInsets.symmetric(horizontal: S.of(10), vertical: S.s4),
         decoration: BoxDecoration(
           color: isActive ? AppColors.tint3 : Colors.transparent,
@@ -220,6 +225,8 @@ class CardTabChip extends StatelessWidget {
             ],
           ],
         ),
+      ),
+      ),
       ),
     );
   }

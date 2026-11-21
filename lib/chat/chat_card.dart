@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../desktop_look.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -57,9 +56,7 @@ class ChatCard extends StatelessWidget {
         child: ConstrainedBox(
           constraints: BoxConstraints(
               maxWidth: maxWidth ?? (kMobile ? 460 : double.infinity)),
-          child: Tactile(
-            radius: BorderRadius.circular(R.of(16)),
-            child: Container(
+          child: Container(
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 // A surface step, not an outline, sets the card apart.
@@ -80,7 +77,6 @@ class ChatCard extends StatelessWidget {
               ),
             ),
           ),
-        ),
       );
 }
 

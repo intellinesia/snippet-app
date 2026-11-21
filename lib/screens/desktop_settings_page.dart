@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../desktop_look.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -454,7 +455,10 @@ class _DesktopSettingsNavState extends State<DesktopSettingsNav> {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-          child: Container(
+          child: Tactile(
+            radius: BorderRadius.circular(R.of(8)),
+            kind: TactileKind.inset,
+            child: Container(
             height: 30,
             decoration: BoxDecoration(
               color: AppColors.fg1.withValues(alpha: 0.05),
@@ -480,6 +484,7 @@ class _DesktopSettingsNavState extends State<DesktopSettingsNav> {
                 ),
               ),
             ]),
+          ),
           ),
         ),
         Expanded(
