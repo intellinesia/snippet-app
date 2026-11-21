@@ -1801,12 +1801,20 @@ class AppColors {
 
   /// The user's chrome opacity; overrides [solidChrome] when set.
   static double? chromeAlpha;
+  // Desktop Pure Black takes the reference's window, card and outline greys.
+  static bool get _deskBlack => !kMobile && currentTheme.name == 'black';
   static Color get windowBg => kMobile
       ? currentTheme.bg
-      : Color.lerp(currentTheme.bg, currentTheme.surface1, 0.45)!
+      : (_deskBlack
+              ? const Color(0xFF09090A)
+              : Color.lerp(currentTheme.bg, currentTheme.surface1, 0.45)!)
           .withValues(alpha: chromeAlpha ?? (solidChrome ? 1 : 0.92));
   /// The inset desktop panel; phones keep the page background.
-  static Color get panelBg => kMobile ? currentTheme.bg : currentTheme.surface1;
+  static Color get panelBg => kMobile
+      ? currentTheme.bg
+      : (_deskBlack ? const Color(0xFF121213) : currentTheme.surface1);
+  static Color get panelOutline =>
+      _deskBlack ? const Color(0xFF252526) : currentTheme.border;
   static Color get sidebarPanel => kMobile
       ? currentTheme.surface1
       : currentTheme.surface1.withValues(alpha: chromeAlpha ?? 0.92);
