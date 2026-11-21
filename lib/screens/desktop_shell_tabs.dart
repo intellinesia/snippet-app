@@ -448,6 +448,19 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     if (root == null || root.sessionId == null) return;
     final existing =
         _tabs.indexWhere((t) => t.isPrs && t.instanceUrl == root.instanceUrl);
+    if (!kMobile) {
+      _openInnerTab(
+          existing >= 0
+              ? _tabs[existing]
+              : _ShellTab.prs(
+                  client: root.client,
+                  instanceUrl: root.instanceUrl,
+                  session: root.sessionId!,
+                  github: status,
+                ),
+          existing);
+      return;
+    }
     _openMainTab(
         existing >= 0
             ? null
@@ -488,7 +501,33 @@ extension _DesktopShellTabsExt on _DesktopShellState {
       _rightTabs.removeWhere((x) => x.key == r.key);
       _activeKey.removeWhere((_, k) => k == r.key);
     });
-    _openMainTab(existing >= 0 ? null : probe, existing);
+    final inner = !kMobile &&
+        root != null &&
+        root.sessionId != null &&
+        !r.isAgent &&
+        r.request?.purpose != ShellPanelPurpose.conversation;
+    if (inner) {
+      _openInnerTab(probe, existing);
+    } else {
+      _openMainTab(existing >= 0 ? null : probe, existing);
+    }
+  }
+
+  /// Desktop: docks a session view beside the session's Chat tab.
+  void _openInnerTab(_ShellTab probe, int existing) {
+    final pane = _focusedPane;
+    final group = _activeGroupKeyFor(pane) ?? _activeTab?.key;
+    if (group == null) return;
+    _setState(() {
+      final t = existing >= 0 ? _tabs[existing] : probe;
+      t
+        ..pane = pane
+        ..groupSessionKey = group;
+      if (existing < 0) _tabs.add(t);
+      _groupRootKey[pane] = group;
+      _dockAux(pane, t.key);
+    });
+    _syncPage();
   }
 
   void _openFileTab(DaemonClient client, String url, String path, String name) {
@@ -605,6 +644,20 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         t.isWorkspace &&
         t.instanceUrl == url &&
         t.workspaceSession == sessionId);
+    if (!kMobile && _activeTab?.sessionId == sessionId) {
+      _openInnerTab(
+          existing >= 0
+              ? _tabs[existing]
+              : _ShellTab.workspace(
+                  client: client,
+                  instanceUrl: url,
+                  session: sessionId,
+                  project: project,
+                  path: path,
+                ),
+          existing);
+      return;
+    }
     _openMainTab(
         existing >= 0
             ? null

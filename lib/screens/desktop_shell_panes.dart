@@ -181,7 +181,10 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       t.isFile ||
       t.isDiff ||
       (kMobile && t.isBoard) ||
-      t.isTask;
+      t.isTask ||
+      // Desktop: session views opened from + live in the session's inner strip.
+      (!kMobile && (t.isReadout || t.isWorkspace || t.isPrs) &&
+          t.groupSessionKey != null);
 
   List<_ShellTab> get _mainTabs => [
         for (final t in _tabs)
@@ -639,12 +642,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         );
   }
 
-  /// Shows the Overview panel, docked or floating, whichever fits.
-  void _showOverview() {
-    if (sessionRailCollapsed.value) setSessionRailCollapsed(false);
-    sessionRailFloating.value = true;
-  }
-
   void _showPaneAddMenu(BuildContext ctx) {
     final t = _chatTab;
     if (t == null) return;
@@ -659,11 +656,6 @@ extension _DesktopShellPanesExt on _DesktopShellState {
       ctx,
       title: t.title,
       views: [
-        PaneAddEntry(
-            icon: 'list',
-            label: 'Overview',
-            checked: !sessionRailCollapsed.value,
-            onTap: _showOverview),
         PaneAddEntry(
             icon: 'file-diff',
             label: 'Diffs',
