@@ -418,25 +418,15 @@ Future<void> showMessageContextMenu(
   _messageMenuOpen = true;
   final String? picked;
   try {
-    picked = await showAppMenu<String>(
-    context,
-    point: point,
-    minWidth: 216,
-    maxWidth: 216,
-    items: [
-      if (onReact != null) ...[
-        const _ReactionStripEntry(),
-        const PopupMenuDivider(height: 9),
-      ],
-      if (onReply != null)
-        appMenuItem(value: 'reply', icon: 'reply', label: 'Reply'),
-      if (selection.trim().isNotEmpty)
-        appMenuItem(
-            value: 'copy-selection', icon: 'copy', label: 'Copy selection'),
-      if (text.trim().isNotEmpty)
-        appMenuItem(value: 'copy', icon: 'copy', label: 'Copy message'),
-    ],
-  );
+    picked = await _showSplitMenu(context,
+        point: point,
+        react: onReact != null,
+        actions: [
+          if (onReply != null) ('reply', 'reply', 'Reply'),
+          if (selection.trim().isNotEmpty)
+            ('copy-selection', 'copy', 'Copy selection'),
+          if (text.trim().isNotEmpty) ('copy', 'copy', 'Copy message'),
+        ]);
   } finally {
     _messageMenuOpen = false;
   }
@@ -447,63 +437,158 @@ Future<void> showMessageContextMenu(
     await Clipboard.setData(
         ClipboardData(text: picked == 'copy' ? text : selection));
     if (context.mounted) toast(context, 'Copied');
+  } else if (picked == 'more') {
+    if (!context.mounted) return;
+    final more = await _showSplitMenu(context, point: point, grid: true);
+    if (more != null && more.startsWith('react:')) {
+      onReact?.call(more.substring(6));
+    }
   } else if (picked.startsWith('react:')) {
     onReact?.call(picked.substring(6));
   }
 }
 
-/// The reaction strip on its own, under the control that opened it.
-Future<void> showReactionPicker(BuildContext anchor,
-    {required ValueChanged<String> onReact}) async {
-  final picked = await showAppMenu<String>(anchor,
-      anchor: anchor,
-      below: true,
-      minWidth: 216,
-      maxWidth: 216,
-      items: const [_ReactionStripEntry()]);
-  if (picked != null && picked.startsWith('react:')) {
-    onReact(picked.substring(6));
-  }
-}
+/// Desktop: a reaction pill floating above a separate card of actions.
+Future<String?> _showSplitMenu(
+  BuildContext context, {
+  Offset? point,
+  BuildContext? anchor,
+  bool react = true,
+  bool grid = false,
+  List<(String, String, String)> actions = const [],
+}) =>
+    showAppMenu<String>(context,
+        point: point,
+        anchor: anchor,
+        below: anchor != null,
+        minWidth: grid ? 236 : 208,
+        maxWidth: grid ? 236 : 208,
+        color: Colors.transparent,
+        shape: const RoundedRectangleBorder(),
+        items: [_SplitMenuEntry(react: react, grid: grid, actions: actions)]);
 
-class _ReactionStripEntry extends PopupMenuEntry<String> {
-  const _ReactionStripEntry();
+class _SplitMenuEntry extends PopupMenuEntry<String> {
+  const _SplitMenuEntry(
+      {required this.react, required this.grid, required this.actions});
+  final bool react;
+  final bool grid;
+  final List<(String, String, String)> actions;
 
   @override
-  double get height => 44;
+  double get height => 120;
 
   @override
   bool represents(String? value) => false;
 
   @override
-  State<_ReactionStripEntry> createState() => _ReactionStripEntryState();
+  State<_SplitMenuEntry> createState() => _SplitMenuEntryState();
 }
 
-class _ReactionStripEntryState extends State<_ReactionStripEntry> {
+class _SplitMenuEntryState extends State<_SplitMenuEntry> {
+  void _pick(String v) => Navigator.of(context).pop(v);
+
+  BoxDecoration _surface(double radius) => BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: AppColors.glassBorder),
+      );
+
+  Widget _emoji(String emoji, {String? tip}) {
+    final b = HoverSurface(
+      radius: 15,
+      hoverColor: AppColors.surface3,
+      onTap: () => _pick('react:$emoji'),
+      child: SizedBox(
+          width: 30,
+          height: 30,
+          child: Center(child: Text(emoji, style: _emojiStyle(15)))),
+    );
+    return Semantics(
+        label: 'React ${tip ?? emoji}',
+        button: true,
+        child: tip == null ? b : Tooltip(message: tip, child: b));
+  }
+
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s4),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            for (final emoji in kMessageReactions)
+  Widget build(BuildContext context) {
+    if (widget.grid) {
+      return Container(
+        padding: const EdgeInsets.all(4),
+        decoration: _surface(12),
+        child: Wrap(children: [
+          for (final (e, label) in kMoreReactions) _emoji(e, tip: label),
+        ]),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.react)
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: _surface(999),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              for (final e in kMessageReactions) _emoji(e),
               Semantics(
-                label: 'React $emoji',
+                label: 'More reactions',
                 button: true,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  hoverColor: AppColors.fg1.withValues(alpha: 0.06),
-                  onTap: () => Navigator.of(context).pop('react:$emoji'),
+                child: HoverSurface(
+                  radius: 15,
+                  hoverColor: AppColors.surface3,
+                  onTap: () => _pick('more'),
                   child: SizedBox(
-                    width: 34,
-                    height: 34,
-                    child: Center(child: Text(emoji, style: _emojiStyle(17))),
-                  ),
+                      width: 30,
+                      height: 30,
+                      child: Center(
+                          child: AppIcon('plus',
+                              size: 14, color: AppColors.fg4))),
                 ),
               ),
-          ],
-        ),
-      );
+            ]),
+          ),
+        if (widget.react && widget.actions.isNotEmpty)
+          const SizedBox(height: 6),
+        if (widget.actions.isNotEmpty)
+          Container(
+            width: 208,
+            padding: const EdgeInsets.all(4),
+            decoration: _surface(12),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              for (final (value, icon, label) in widget.actions)
+                HoverSurface(
+                  radius: 7,
+                  hoverColor: AppColors.surface3,
+                  onTap: () => _pick(value),
+                  child: SizedBox(
+                    height: 30,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Row(children: [
+                        AppIcon(icon, size: 14, color: AppColors.fg3),
+                        const SizedBox(width: 10),
+                        Text(label, style: sans(13, color: AppColors.fg2)),
+                      ]),
+                    ),
+                  ),
+                ),
+            ]),
+          ),
+      ],
+    );
+  }
+}
+
+/// The reaction pill on its own, under the control that opened it.
+Future<void> showReactionPicker(BuildContext anchor,
+    {required ValueChanged<String> onReact}) async {
+  var picked = await _showSplitMenu(anchor, anchor: anchor);
+  if (picked == 'more' && anchor.mounted) {
+    picked = await _showSplitMenu(anchor, anchor: anchor, grid: true);
+  }
+  if (picked != null && picked.startsWith('react:')) {
+    onReact(picked.substring(6));
+  }
 }
 
 class MessageActionsView extends StatelessWidget {
