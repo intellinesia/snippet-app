@@ -1344,6 +1344,15 @@ class AgentPresence {
 
   bool get active => state.isNotEmpty && state != 'idle';
 
+  /// Active and recent: a busy state unchanged for 10 minutes is a missed idle.
+  bool get live {
+    if (!active) return false;
+    final busy = const {'thinking', 'typing', 'working', 'tool'}.contains(state);
+    final at = since;
+    if (!busy || at == null) return true;
+    return DateTime.now().difference(at) < const Duration(minutes: 10);
+  }
+
   static AgentPresence? tryParse(Object? j) {
     if (j is! Map) return null;
     final state = '${j['state'] ?? ''}'.trim();

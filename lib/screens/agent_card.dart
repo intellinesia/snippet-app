@@ -564,7 +564,7 @@ class _AgentCardState extends State<AgentCard> {
       working: !needs &&
           agent.available &&
           ((presence?.active ?? false) ||
-              (agent.presence?.active ?? false) ||
+              (agent.presence?.live ?? false) ||
               agent.tasksIn({'in_progress'}) > 0),
       name: name,
       pinned: _isPinned,

@@ -1186,6 +1186,16 @@ extension _DesktopShellPanesExt on _DesktopShellState {
                   sessionBarTools.of(_activeTab?.sessionId) ??
                   const SizedBox.shrink()),
           if (_activeTab?.readout?.agent != null) _agentBarTools(_activeTab!),
+          if (_activeTab?.readout == null &&
+              _activeAgent?.isMissionControl == true)
+            IconBtn('sidebar',
+                size: 30,
+                iconSize: 15,
+                active: !_panelHidden,
+                tooltip: _panelHidden
+                    ? 'Show Mission Control panel'
+                    : 'Hide Mission Control panel',
+                onTap: _togglePanel),
           if (_groupBarTools(_activeTab) case final w?) w,
         ],
         reserveWindowControls: kMacOS,
