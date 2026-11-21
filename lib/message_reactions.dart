@@ -402,6 +402,8 @@ class MessageSelectionArea extends StatelessWidget {
   }
 }
 
+bool _messageMenuOpen = false;
+
 /// Right-click menu on a desktop message: quick reactions, Reply, Copy.
 Future<void> showMessageContextMenu(
   BuildContext context, {
@@ -411,11 +413,16 @@ Future<void> showMessageContextMenu(
   VoidCallback? onReply,
   ValueChanged<String>? onReact,
 }) async {
-  final picked = await showAppMenu<String>(
+  // One menu at a time: a second right-click while open must not stack another.
+  if (_messageMenuOpen) return;
+  _messageMenuOpen = true;
+  final String? picked;
+  try {
+    picked = await showAppMenu<String>(
     context,
     point: point,
-    minWidth: 236,
-    maxWidth: 260,
+    minWidth: 216,
+    maxWidth: 216,
     items: [
       if (onReact != null) ...[
         const _ReactionStripEntry(),
@@ -430,6 +437,9 @@ Future<void> showMessageContextMenu(
         appMenuItem(value: 'copy', icon: 'copy', label: 'Copy message'),
     ],
   );
+  } finally {
+    _messageMenuOpen = false;
+  }
   if (picked == null) return;
   if (picked == 'reply') {
     onReply?.call();
@@ -446,7 +456,7 @@ class _ReactionStripEntry extends PopupMenuEntry<String> {
   const _ReactionStripEntry();
 
   @override
-  double get height => 40;
+  double get height => 44;
 
   @override
   bool represents(String? value) => false;
@@ -458,7 +468,7 @@ class _ReactionStripEntry extends PopupMenuEntry<String> {
 class _ReactionStripEntryState extends State<_ReactionStripEntry> {
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s2),
+        padding: EdgeInsets.symmetric(horizontal: S.s6, vertical: S.s4),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -467,12 +477,13 @@ class _ReactionStripEntryState extends State<_ReactionStripEntry> {
                 label: 'React $emoji',
                 button: true,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(R.md),
+                  borderRadius: BorderRadius.circular(8),
+                  hoverColor: AppColors.fg1.withValues(alpha: 0.06),
                   onTap: () => Navigator.of(context).pop('react:$emoji'),
                   child: SizedBox(
-                    width: 36,
-                    height: 36,
-                    child: Center(child: Text(emoji, style: _emojiStyle(18))),
+                    width: 34,
+                    height: 34,
+                    child: Center(child: Text(emoji, style: _emojiStyle(17))),
                   ),
                 ),
               ),
