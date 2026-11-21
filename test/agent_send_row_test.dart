@@ -38,6 +38,8 @@ class _Client extends DaemonClient {
     String actorKind = 'human',
     String actorId = 'local',
     int afterSequence = 0,
+    int? beforeSequence,
+    bool latest = false,
     int limit = 100,
   }) async =>
       page;

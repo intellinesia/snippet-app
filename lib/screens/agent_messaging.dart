@@ -613,6 +613,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   final Map<String, GlobalKey> _messageKeys = {};
   CoordinationEvent? _replyTo;
   List<CoordinationEvent> _events = const [];
+  List<CoordinationEvent> _older = const [];
+  bool _loadingOlder = false;
   Map<String, MessageDelivery> _deliveries = const {};
   bool _loading = true;
   final bool _sending = false;
@@ -660,13 +662,14 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     _thread = Swr<DirectThreadPage>(
       client: widget.client,
       key: 'agent-thread:${widget.agentId}',
-      fetch: () => widget.client.agentThreadAll(peerId: widget.agentId),
+      fetch: () =>
+          widget.client.agentThreadPage(peerId: widget.agentId, latest: true),
       revalidateOn: (e) =>
           Swr.coordinationForThread(e, _openThreadId) ||
           e['kind'] == 'session_decision',
       onChange: _sync,
     );
-    _events = _thread.data?.events ?? const [];
+    _events = _withOlder(_thread.data?.events ?? const []);
     _deliveries = _thread.data?.deliveries ?? const {};
     _loading = _thread.data == null;
   }
@@ -683,6 +686,43 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   }
 
   Future<void> _load({bool silent = false}) => _thread.refresh();
+
+  List<CoordinationEvent> _withOlder(List<CoordinationEvent> newest) {
+    if (_older.isEmpty) return newest;
+    final from = newest.isEmpty ? null : newest.first.sequence;
+    return [
+      for (final e in _older)
+        if (from == null || e.sequence < from) e,
+      ...newest,
+    ];
+  }
+
+  bool get _hasOlder {
+    for (final e in _events) {
+      if (e.sequence > 0) return e.sequence > 1;
+    }
+    return false;
+  }
+
+  Future<void> _loadOlder() async {
+    if (_loadingOlder || !_hasOlder) return;
+    final oldest = _events.firstWhere((e) => e.sequence > 0).sequence;
+    setState(() => _loadingOlder = true);
+    try {
+      final page = await widget.client.agentThreadPage(
+          peerId: widget.agentId, beforeSequence: oldest, limit: 150);
+      if (!mounted) return;
+      setState(() {
+        _older = [...page.events, ..._older];
+        _deliveries = {...page.deliveries, ..._deliveries};
+        _events = [...page.events, ..._events];
+      });
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+    } finally {
+      if (mounted) setState(() => _loadingOlder = false);
+    }
+  }
 
   // Sent but not yet in a fetched list; merged back so a refetch can't hide them.
   final List<CoordinationEvent> _unechoed = [];
@@ -721,12 +761,13 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           keys.contains(p.idempotencyKey) ||
           (!isReactionEvent(p) && bodies.contains(p.payload['body'])));
     }
-    final merged = next == null ? null : [...next.events, ..._unechoed];
+    final merged =
+        next == null ? null : [..._withOlder(next.events), ..._unechoed];
     final hadNew = merged != null && merged.length > _events.length;
     final first = _events.isEmpty;
     setState(() {
       if (merged != null) _events = merged;
-      if (next != null) _deliveries = next.deliveries;
+      if (next != null) _deliveries = {..._deliveries, ...next.deliveries};
       _loading = _thread.loading;
       _error =
           next == null && _thread.error != null ? '${_thread.error}' : null;
@@ -1246,7 +1287,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       indicatorTop: topPad + 6,
       child: _messageList(
         padding: EdgeInsets.fromLTRB(S.s16, topPad, S.s16, S.s16),
-        itemCount: n + (_deskHead ? 2 : 1),
+        itemCount: n + 1 + (_hasOlder || _deskHead ? 1 : 0),
         itemBuilder: (_, i) {
           if (i == 0) {
             final slot = _TypingSlot(
@@ -1264,7 +1305,11 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [slot, _wideCap(_waitingLine())]);
           }
-          if (i == n + 1) return _wideCap(_agentHead());
+          if (i == n + 1) {
+            return _hasOlder
+                ? _wideCap(_earlierAction())
+                : _wideCap(_agentHead());
+          }
           debugAgentMessageRowBuilds++;
           final at = n - i;
           final ev = visible[at];
@@ -1273,17 +1318,17 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           final topGap =
               at == 0 ? 0.0 : (first ? ChatColors.groupGap : ChatColors.runGap);
           final row = _wideCap(
-              _messageRow(
-                ev,
-                card: cards[ev],
-                byId: byId,
-                reactions: reactionsByTarget[ev.eventId] ?? const [],
-                tail: last,
-                showStamp: stamps[at],
-                showOrigin: origins[at],
-                showDelivery: at == lastHumanIdx,
-              ),
-            );
+            _messageRow(
+              ev,
+              card: cards[ev],
+              byId: byId,
+              reactions: reactionsByTarget[ev.eventId] ?? const [],
+              tail: last,
+              showStamp: stamps[at],
+              showOrigin: origins[at],
+              showDelivery: at == lastHumanIdx,
+            ),
+          );
           return Padding(
             padding: EdgeInsets.only(top: topGap),
             child: !kMobile && _turnSpace && at == lastHumanIdx
@@ -1698,6 +1743,18 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
           });
     } catch (_) {}
   }
+
+  Widget _earlierAction() => Padding(
+        key: const ValueKey('load-earlier'),
+        padding: EdgeInsets.only(bottom: S.s12),
+        child: Center(
+          child: _loadingOlder
+              ? const SizedBox(
+                  height: 28, child: Center(child: Spinner(size: 14)))
+              : TextAction('Show earlier messages',
+                  icon: 'history', onTap: _loadOlder),
+        ),
+      );
 
   /// Desktop: the agent's identity at the top of its transcript.
   Widget _agentHead() {

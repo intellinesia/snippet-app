@@ -1888,6 +1888,8 @@ class DaemonClient {
     String actorKind = 'human',
     String actorId = 'local',
     int afterSequence = 0,
+    int? beforeSequence,
+    bool latest = false,
     int limit = 100,
   }) async {
     final r = await _get(_uri('/coordination/direct/messages', {
@@ -1896,28 +1898,13 @@ class DaemonClient {
       'peer_kind': peerId == 'local' ? 'human' : 'agent',
       'peer_id': peerId,
       'after_sequence': '$afterSequence',
+      if (beforeSequence != null) 'before_sequence': '$beforeSequence',
+      if (latest) 'latest': 'true',
       'limit': '$limit',
     }));
     if (r.statusCode != 200) throw _err('read agent thread', r);
     return DirectThreadPage.fromJson(
         jsonDecode(r.body) as Map<String, dynamic>);
-  }
-
-  /// The whole conversation, paging forward until the newest message.
-  Future<DirectThreadPage> agentThreadAll({required String peerId}) async {
-    const limit = 200;
-    final events = <CoordinationEvent>[];
-    final deliveries = <String, MessageDelivery>{};
-    var after = 0;
-    while (true) {
-      final page = await agentThreadPage(
-          peerId: peerId, afterSequence: after, limit: limit);
-      events.addAll(page.events);
-      deliveries.addAll(page.deliveries);
-      if (page.events.length < limit) break;
-      after = page.events.last.sequence;
-    }
-    return DirectThreadPage(events: events, deliveries: deliveries);
   }
 
   /// GET /coordination/direct/messages — events only, for older callers.
