@@ -601,6 +601,17 @@ class _DenseToolRowState extends State<DenseToolRow> {
   }
 }
 
+/// The opened body of a tool row without its title, for lists that already name the step.
+Widget? toolRowBody(DenseToolRow r) {
+  final step =
+      ToolStep(tool: r.tool, args: r.args, result: r.result);
+  final command = toolBaseName(r.tool) == 'bash';
+  if (!toolHasDetail(step) && !(command && step.running && step.args is Map)) {
+    return null;
+  }
+  return command ? TerminalBlock(step: step) : _StepDetail(step: step);
+}
+
 final _ansiCodes = RegExp(r'\x1B\[[0-9;]*[A-Za-z]');
 
 /// A command opened: "$ command", its output capped at a few lines with a

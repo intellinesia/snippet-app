@@ -641,9 +641,11 @@ class _LedgerGanttState extends State<LedgerGantt> {
       final target =
           obj.isNotEmpty ? obj : (verb.contains(' ') ? '' : stepTarget(s));
       final (l, w) = slot(i);
-      final detail = widget.rows != null && i < widget.rows!.length
+      final raw = widget.rows != null && i < widget.rows!.length
           ? widget.rows![i]
           : null;
+      // The line already names the step; open straight to its output.
+      final Widget? detail = raw is DenseToolRow ? toolRowBody(raw) : raw;
       final line = Padding(
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
         child: Row(children: [
@@ -707,7 +709,9 @@ class _LedgerGanttState extends State<LedgerGantt> {
             open: _open == i,
             child: Padding(
               padding: const EdgeInsets.only(left: 23, bottom: 4),
-              child: WorkSteps(rows: [detail], header: false),
+              child: raw is DenseToolRow
+                  ? detail
+                  : WorkSteps(rows: [detail], header: false),
             ),
           ),
         ],
