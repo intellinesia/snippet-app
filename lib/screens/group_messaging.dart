@@ -31,7 +31,8 @@ import '../chat/chat_style.dart';
 import '../chat/group_notice.dart';
 import '../chat/stage_bar.dart';
 import '../chat/stage_header.dart';
-import 'agent_card.dart' show AgentRowShell, TeamRow, agentRowAgo, agentRowTime;
+import 'agent_card.dart'
+    show AgentRowShell, LitTile, TeamRow, agentRowAgo, agentRowTime;
 import 'agent_questions_card.dart' show questionAnswerSystemLine;
 import 'agent_thread_cards.dart' show agentThreadEventCard;
 import 'tasks/tasks_panel.dart' show openTasksPage, openTaskCountFor;
@@ -319,6 +320,37 @@ class GroupRow extends StatelessWidget {
                   ]),
                 ),
       wideAvatar: shown.length > 1,
+      // Desktop: two overlapping lit tiles, plus a count past two.
+      avatarFor: kMobile || shown.length < 2
+          ? null
+          : (backdrop) => Stack(clipBehavior: Clip.none, children: [
+                Positioned(
+                    left: 0, top: 1, child: LitTile.agent(shown[0], size: 20)),
+                Positioned(
+                    left: 8,
+                    top: 0,
+                    child: LitTile.agent(shown[1], size: 22, ring: backdrop)),
+                if (agents.length > 2)
+                  Positioned(
+                    right: -4,
+                    bottom: -3,
+                    child: Container(
+                      height: 12,
+                      constraints: const BoxConstraints(minWidth: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface3,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: backdrop, width: 1.5),
+                      ),
+                      child: Text('+${agents.length - 2}',
+                          style: sans(8,
+                              weight: FontWeight.w600, color: AppColors.fg2)),
+                    ),
+                  ),
+              ]),
+      tint: kMobile || shown.length != 1 ? null : agentTintFor(shown.first),
       name: name,
       pinned: pinned,
       preview: sub,
@@ -583,7 +615,9 @@ class _AgentPickRow extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: S.s12, vertical: S.s8),
             child: Row(children: [
-              AgentMochi(agent.id, size: kMobile ? 28 : 22),
+              kMobile
+                  ? AgentMochi(agent.id, size: 28)
+                  : LitTile.agent(agent.id, size: 22),
               SizedBox(width: S.s12),
               Expanded(
                 child: Column(
@@ -786,7 +820,9 @@ class _GroupMembersSheetState extends State<GroupMembersSheet> {
             padding: EdgeInsets.symmetric(vertical: S.s4),
             child: Row(children: [
               if (m.isAgent)
-                AgentMochi(m.id, size: 22)
+                kMobile
+                    ? AgentMochi(m.id, size: 22)
+                    : LitTile.agent(m.id, size: 22)
               else
                 AppIcon('user', size: 18, color: AppColors.fg3),
               SizedBox(width: S.of(10)),
@@ -2136,8 +2172,10 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
                 child: Row(children: [
                   if (c.id == 'everyone')
                     AppIcon('users', size: 16, color: AppColors.fg3)
+                  else if (kMobile)
+                    AgentMochi(c.id, size: 16)
                   else
-                    AgentMochi(c.id, size: 16),
+                    LitTile.agent(c.id, size: 18),
                   SizedBox(width: S.s8),
                   Expanded(
                     child: Text(c.label,

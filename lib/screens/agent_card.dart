@@ -618,7 +618,11 @@ class AgentRowShell extends StatefulWidget {
     this.onSecondaryTapUp,
     this.wideAvatar = false,
     this.tint,
+    this.avatarFor,
   });
+
+  /// Draws the whole 28x22 slot, given the row's backdrop colour for rings.
+  final Widget Function(Color backdrop)? avatarFor;
 
   final Widget avatar;
 
@@ -690,13 +694,15 @@ class _AgentRowShellState extends State<AgentRowShell> {
                   width: 28,
                   height: 22,
                   child: Stack(clipBehavior: Clip.none, children: [
-                    if (widget.tint != null && !widget.wideAvatar)
+                    if (widget.avatarFor != null)
+                      Positioned.fill(child: widget.avatarFor!(ring))
+                    else if (widget.tint != null && !widget.wideAvatar)
                       Positioned(
                           left: 3,
                           top: 0,
                           width: 22,
                           height: 22,
-                          child: _LitTile(widget.tint!, widget.avatar))
+                          child: LitTile(widget.tint!, widget.avatar))
                     else if (widget.wideAvatar)
                       Positioned(
                         left: -4,
@@ -1039,10 +1045,29 @@ class TeamRow extends StatelessWidget {
 }
 
 /// Squarish tile in the character's colour, lit from the top left.
-class _LitTile extends StatelessWidget {
-  const _LitTile(this.tint, this.avatar);
+class LitTile extends StatelessWidget {
+  const LitTile(this.tint, this.avatar, {super.key, this.ring});
   final Color tint;
   final Widget avatar;
+
+  /// Cut-out ring in the backdrop colour, for a tile overlapping another.
+  final Color? ring;
+
+  /// An agent's character on its lit tile; plain plate until colours load.
+  static Widget agent(String id, {double size = 22, Color? ring}) {
+    final tint = agentTintFor(id);
+    final face = AgentMochi(id, size: size);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: tint == null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(size * 0.27),
+              child: ColoredBox(
+                  color: AppColors.surface2, child: FittedBox(child: face)))
+          : LitTile(tint, face, ring: ring),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1058,6 +1083,7 @@ class _LitTile extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(6),
+        border: ring == null ? null : Border.all(color: ring!, width: 2),
         gradient: RadialGradient(
           center: const Alignment(-0.36, -0.44),
           radius: 1.0,
