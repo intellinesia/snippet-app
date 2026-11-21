@@ -339,6 +339,8 @@ class _ShellSplitViewState extends State<ShellSplitView> {
         decoration: BoxDecoration(
           color: AppColors.panelBg,
           borderRadius: BorderRadius.circular(R.of(12)),
+          // Hairline outline lifts the card off the window, as in the reference.
+          border: Border.all(color: AppColors.line, width: 0.5),
         ),
         child: ClipRRect(
             borderRadius: BorderRadius.circular(R.of(12)), child: child),
