@@ -1444,6 +1444,8 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
               : widget.onOpenWorkspace != null
                   ? widget.onOpenWorkspace!()
                   : _performMacAction('file_changes'),
+      onOpenDiff: widget.onOpenDiffTab,
+      onOpenFile: _openWorkspaceFile,
       onFiles: mc
           ? null
           : () => widget.onOpenWorkspace != null

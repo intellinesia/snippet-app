@@ -271,7 +271,7 @@ extension _RailPages on _SessionRailState {
             changed == 0
                 ? 'No changes yet'
                 : '$changed file${changed == 1 ? '' : 's'} changed',
-            onTap: w.onChanges),
+            onTap: () => _go('changes')),
         gap(),
       ],
       if (w.onFiles != null) ...[
@@ -281,7 +281,7 @@ extension _RailPages on _SessionRailState {
             ws.isEmpty
                 ? 'Browse the workspace'
                 : lastPathSegment(ws, ifEmpty: ws),
-            onTap: w.onFiles),
+            onTap: () => _go('files')),
         gap(),
       ],
       if (w.onShell != null) ...[
@@ -296,7 +296,7 @@ extension _RailPages on _SessionRailState {
             jobs > 0
                 ? '$jobs job${jobs == 1 ? '' : 's'} running'
                 : 'No background jobs',
-            onTap: w.onProcesses),
+            onTap: () => _go('jobs')),
         gap(),
       ],
       if (w.onLanes != null)
@@ -308,7 +308,7 @@ extension _RailPages on _SessionRailState {
                 : running > 0
                     ? '$running running · ${lanes.length}'
                     : '${lanes.length} finished',
-            onTap: w.onLanes),
+            onTap: () => _go('lanes')),
     ];
   }
 
@@ -516,6 +516,31 @@ extension _RailPages on _SessionRailState {
                   warn: r.usedPercent >= 70),
             ]),
           const SizedBox(height: 6),
+        ];
+      case 'changes':
+      case 'files':
+        // The list lives in the column; one file still opens wide in the pane.
+        final ws = (s?.workspace ?? '').trim();
+        final h = (_bodyH - 52).clamp(240.0, 4000.0);
+        return [
+          _subHeader(_page == 'changes' ? 'Diffs' : 'Files'),
+          SizedBox(
+            height: h,
+            child: _page == 'changes'
+                ? GitDiffSidebarPanel(
+                    client: widget.client,
+                    workspacePath: ws,
+                    sessionId: widget.sessionId,
+                    onOpenDiff: widget.onOpenDiff,
+                    showHeader: false,
+                  )
+                : FileTreeSidebarPanel(
+                    client: widget.client,
+                    workspacePath: ws,
+                    showHeader: false,
+                    onOpenFile: widget.onOpenFile ?? (_, __) {},
+                  ),
+          ),
         ];
     }
     return const [];

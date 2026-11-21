@@ -7,6 +7,8 @@ import '../models.dart';
 import '../settings_form.dart';
 import '../tool_activity.dart';
 import 'file_changes.dart' show sessionChangeSteps;
+import 'file_tree_sidebar_panel.dart' show FileTreeSidebarPanel;
+import 'git_diff_sidebar_panel.dart' show GitDiffSidebarPanel;
 import 'lanes.dart' show openLaneView;
 import '../mochi.dart' show AgentMochi;
 import '../platform.dart';
@@ -111,6 +113,8 @@ class SessionRail extends StatefulWidget {
     this.github,
     this.onChanges,
     this.onFiles,
+    this.onOpenDiff,
+    this.onOpenFile,
     this.onGit,
     this.onPullRequests,
     this.onLanes,
@@ -164,6 +168,10 @@ class SessionRail extends StatefulWidget {
   final VoidCallback onCycleResume;
   final VoidCallback? onChanges;
   final VoidCallback? onFiles;
+
+  /// Opening one diff or file from the panel's in-column pages.
+  final void Function(GitFile file)? onOpenDiff;
+  final void Function(String path, String name)? onOpenFile;
   final VoidCallback? onGit;
   final VoidCallback? onPullRequests;
   final VoidCallback? onLanes;
