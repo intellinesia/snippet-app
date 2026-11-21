@@ -48,12 +48,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
         {required String tool,
         dynamic args,
         dynamic result,
-        int? resultAt,
-        bool clipped = false,
         int? startMs,
         int? endMs}) {
       final open = _openToolRows.contains(key);
-      if (open && clipped && resultAt != null) _requestFullEvent(resultAt);
       return DenseToolRow(
         key: ValueKey('tool-row-$key'),
         tool: tool,
@@ -64,9 +61,6 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
         open: open,
         onOpenChanged: (next) {
           if (!mounted) return;
-          if (next && clipped && resultAt != null) {
-            _requestFullEvent(resultAt);
-          }
           _setState(() {
             if (next) {
               _openToolRows.add(key);
@@ -282,8 +276,6 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                     tool: _s(e['tool_name']),
                     args: e['arguments'],
                     result: r['result'],
-                    resultAt: _transcriptStart + paired,
-                    clipped: r['result_clipped'] == true,
                     startMs: _eventMs(e),
                     endMs: _eventMs(r)),
                 abs);
@@ -309,8 +301,6 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
                       tool: _s(p['tool_name']),
                       args: p['arguments'],
                       result: e['result'],
-                      resultAt: _transcriptStart + idx,
-                      clipped: e['result_clipped'] == true,
                       startMs: _eventMs(p),
                       endMs: _eventMs(e)),
                   k);
@@ -322,9 +312,7 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
               addToolRow(
                   toolRow(abs,
                       tool: name,
-                      result: e['result'],
-                      resultAt: _transcriptStart + idx,
-                      clipped: e['result_clipped'] == true),
+                      result: e['result']),
                   abs);
             }
           }

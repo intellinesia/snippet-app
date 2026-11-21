@@ -227,7 +227,6 @@ class DaemonClient {
       queryParameters: {
         'session': sessionId,
         'token': token,
-        'compact': '1',
         'stream_delta': '1'
       },
     );

@@ -753,15 +753,6 @@ class _SessionScreenState extends State<SessionScreen>
   StreamSubscription<dynamic>? _agentEventsSub;
   int _transcriptStart = 0;
   bool _loadingOlderTranscript = false;
-  final Set<int> _requestedFullEvents = {};
-
-  void _requestFullEvent(int index) {
-    if (!_requestedFullEvents.add(index)) return;
-    scheduleMicrotask(() {
-      if (_closed || !mounted) return;
-      _send({'kind': 'event', 'index': index});
-    });
-  }
 
   Future<void> _loadOlderTranscript() async {
     if (_state == null || _transcriptStart == 0 || _loadingOlderTranscript) {

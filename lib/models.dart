@@ -941,9 +941,6 @@ class HarnessState {
     );
   }
 
-  HarnessState replaceEvent(int index, Map<String, dynamic> event) =>
-      _withEvents(List<Map<String, dynamic>>.of(events)..[index] = event);
-
   HarnessState prependEvents(List<Map<String, dynamic>> older) =>
       older.isEmpty ? this : _withEvents([...older, ...events]);
 

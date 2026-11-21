@@ -115,21 +115,6 @@ extension _SessionScreenSocketExt on _SessionScreenState {
         _setState(() => _loadingOlderTranscript = false);
         return;
       }
-      if (wire == 'event') {
-        final index = (j['index'] as num?)?.toInt();
-        final event = j['event'];
-        final cur = _state;
-        if (index != null && event is Map && cur != null) {
-          final rel = index - _transcriptStart;
-          if (rel >= 0 && rel < cur.events.length) {
-            _setState(() {
-              _state = cur.replaceEvent(rel, event.cast<String, dynamic>());
-              _transcriptDirty = true;
-            });
-          }
-        }
-        return;
-      }
       if (wire == 'term') {
         _applyTermFrame(j);
         return;
