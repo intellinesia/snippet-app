@@ -6,6 +6,7 @@ import 'shell_models.dart';
 import 'shell_nav.dart' show kPaneMinWidth;
 import 'shell_pane_view.dart';
 import 'shell_rail.dart' show kSidebarWidth;
+import '../motion.dart';
 import 'session_rail.dart'
     show sessionRailCollapsed, sessionRailFraction;
 
@@ -108,7 +109,59 @@ class ShellSplitView extends StatefulWidget {
   State<ShellSplitView> createState() => _ShellSplitViewState();
 }
 
-class _ShellSplitViewState extends State<ShellSplitView> {
+class _ShellSplitViewState extends State<ShellSplitView>
+    with SingleTickerProviderStateMixin {
+  // Reveals the right pane; it stays mounted while sliding shut.
+  late final AnimationController _reveal =
+      AnimationController(vsync: this, duration: Motion.base);
+  late final CurvedAnimation _revealCurve = CurvedAnimation(
+      parent: _reveal, curve: Motion.enter, reverseCurve: Motion.exit);
+  bool _revealInit = false;
+  Widget? _lastRight;
+
+  @override
+  void dispose() {
+    _revealCurve.dispose();
+    _reveal.dispose();
+    super.dispose();
+  }
+
+  Widget _rightReveal(bool show, Widget Function() build) {
+    if (!_revealInit) {
+      _revealInit = true;
+      _reveal.value = show ? 1 : 0;
+    }
+    if (show) {
+      _lastRight = build();
+      if (_reveal.status != AnimationStatus.completed &&
+          _reveal.status != AnimationStatus.forward) {
+        _reveal.duration = Motion.base;
+        _reveal.forward();
+      }
+    } else if (_reveal.value > 0 && _reveal.status != AnimationStatus.reverse) {
+      _reveal.reverseDuration = Motion.close;
+      _reveal.reverse().whenComplete(() {
+        if (mounted && _reveal.value == 0) setState(() => _lastRight = null);
+      });
+    }
+    final child = _lastRight;
+    if (child == null || (!show && _reveal.value == 0)) {
+      return const SizedBox.shrink();
+    }
+    if (reduceMotion(context)) return show ? child : const SizedBox.shrink();
+    return AnimatedBuilder(
+      animation: _revealCurve,
+      builder: (_, c) => ClipRect(
+        child: Align(
+          alignment: Alignment.centerLeft,
+          widthFactor: _revealCurve.value,
+          child: Opacity(opacity: _revealCurve.value.clamp(0.0, 1.0), child: c),
+        ),
+      ),
+      child: child,
+    );
+  }
+
   final _filesTab = RightTab.panel(RightPanel.files);
 
   ShellPane? _dragOverPane;
@@ -174,10 +227,13 @@ class _ShellSplitViewState extends State<ShellSplitView> {
         final hosted = host != null && t == shownTab;
         final b = Offstage(
           offstage: t != shownTab && t != host,
-          child: widget.tabBodyBuilder(
-            t,
-            t == shownTab && widget.focusedPane == p,
-            t == shownTab || t == host,
+          child: TabEnter(
+            active: t == shownTab || t == host,
+            child: widget.tabBodyBuilder(
+              t,
+              t == shownTab && widget.focusedPane == p,
+              t == shownTab || t == host,
+            ),
           ),
         );
         // Same tree shape hosted or not, so a tab keeps its state.
@@ -208,9 +264,12 @@ class _ShellSplitViewState extends State<ShellSplitView> {
           Offstage(
             key: ValueKey(readout.key),
             offstage: readout != shownReadout,
-            child: readout == _filesTab
-                ? widget.rightPanel!
-                : widget.readoutBodyBuilder(readout),
+            child: TabEnter(
+              active: readout == shownReadout,
+              child: readout == _filesTab
+                  ? widget.rightPanel!
+                  : widget.readoutBodyBuilder(readout),
+            ),
           ),
       ]);
     }
@@ -343,21 +402,28 @@ class _ShellSplitViewState extends State<ShellSplitView> {
                                           widget.onExpandPane(ShellPane.left),
                                     ),
                                   ),
-                                if (showRight) ...[
-                                  PaneResizeHandle(
-                                    joinBaseline: showLeft,
-                                    onResize: widget.onPaneResize,
-                                  ),
-                                  SizedBox(
-                                    width: widget.paneWidth
-                                        .clamp(kPaneMinWidth, double.infinity),
-                                    child: _dropOn(
-                                      ShellPane.right,
-                                      _paneView(ShellPane.right,
-                                          roundRight: true),
-                                    ),
-                                  ),
-                                ],
+                                _rightReveal(
+                                    showRight,
+                                    () => Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              PaneResizeHandle(
+                                                joinBaseline: showLeft,
+                                                onResize: widget.onPaneResize,
+                                              ),
+                                              SizedBox(
+                                                width: widget.paneWidth.clamp(
+                                                    kPaneMinWidth,
+                                                    double.infinity),
+                                                child: _dropOn(
+                                                  ShellPane.right,
+                                                  _paneView(ShellPane.right,
+                                                      roundRight: true),
+                                                ),
+                                              ),
+                                            ])),
                               ])),
                     ),
                   ])),

@@ -350,3 +350,71 @@ class _ShimmerState extends State<Shimmer> {
     );
   }
 }
+
+/// Fades a tab in each time it becomes the shown one. The tree shape never
+/// changes, so the tab keeps its state while hidden.
+class TabEnter extends StatefulWidget {
+  const TabEnter({super.key, required this.active, required this.child});
+
+  final bool active;
+  final Widget child;
+
+  /// Set before activating a tab from back (-1) or forward (1) navigation;
+  /// the next entrance slides that way, then it resets.
+  static int direction = 0;
+
+  @override
+  State<TabEnter> createState() => _TabEnterState();
+}
+
+class _TabEnterState extends State<TabEnter>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: Motion.fast, value: 1);
+  late final CurvedAnimation _curve =
+      CurvedAnimation(parent: _c, curve: Motion.enter);
+  int _dir = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.active) _play();
+  }
+
+  @override
+  void didUpdateWidget(TabEnter old) {
+    super.didUpdateWidget(old);
+    if (widget.active && !old.active) _play();
+  }
+
+  void _play() {
+    _dir = TabEnter.direction;
+    TabEnter.direction = 0;
+    _c.duration = Motion.fast;
+    _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _curve.dispose();
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final faded = FadeTransition(opacity: _curve, child: widget.child);
+    if (reduceMotion(context)) return faded;
+    return AnimatedBuilder(
+      animation: _curve,
+      builder: (_, child) {
+        final t = 1 - _curve.value;
+        return Transform.translate(
+          offset: _dir == 0 ? Offset(0, 4 * t) : Offset(-8.0 * _dir * t, 0),
+          child: child,
+        );
+      },
+      child: faded,
+    );
+  }
+}

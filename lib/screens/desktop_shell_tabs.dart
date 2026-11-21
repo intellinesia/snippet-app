@@ -725,6 +725,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     final i = _tabs.indexWhere((t) => t.key == targetKey);
     if (i < 0) return;
     _navigatingHistory = true;
+    TabEnter.direction = -1;
     _tabHistoryPos--;
     _activateTab(i);
   }
@@ -735,6 +736,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     final i = _tabs.indexWhere((t) => t.key == targetKey);
     if (i < 0) return;
     _navigatingHistory = true;
+    TabEnter.direction = 1;
     _tabHistoryPos++;
     _activateTab(i);
   }
