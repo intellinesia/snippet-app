@@ -8,8 +8,9 @@ import '../../theme.dart';
 import '../../widgets.dart';
 import '../shell_nav.dart' show kNavPadH;
 import 'task_common.dart';
+import 'task_rows.dart';
+import 'task_view.dart';
 import '../../pull_refresh.dart';
-import '../../motion.dart';
 import '../../mochi.dart';
 import '../../tap_detector.dart';
 
@@ -33,7 +34,14 @@ class TaskList extends StatelessWidget {
     this.agentNames,
     this.phoneTab = TaskTab.active,
     this.onComplete,
+    this.sort = TaskSort.updated,
+    this.onStatus,
   });
+
+  final TaskSort sort;
+
+  /// Desktop: the status mark opens a quick change from its anchor.
+  final void Function(TaskItem task, BuildContext anchor)? onStatus;
 
   /// Phone: which of the two tabs' statuses to list (a search or filter
   /// looks across all of them).
@@ -86,6 +94,9 @@ class TaskList extends StatelessWidget {
     ('Cancelled', [TaskStatus.cancelled]),
   ];
 
+  /// Rows in display order, for keyboard movement.
+  List<TaskItem> get ordered => flatTasks(groupTasks(_visible, sort));
+
   bool get _wide => query.trim().isNotEmpty || filter.isNotEmpty;
 
   List<TaskItem> get _phoneVisible {
@@ -104,7 +115,9 @@ class TaskList extends StatelessWidget {
         ? _allSections
         : phoneTab == TaskTab.active
             ? _activeSections
-            : const [('Up next', [TaskStatus.todo])];
+            : const [
+                ('Up next', [TaskStatus.todo])
+              ];
     DateTime? newest;
     for (final t in visible) {
       final at = DateTime.tryParse(t.updatedAt);
@@ -156,40 +169,32 @@ class TaskList extends StatelessWidget {
     if (kMobile) return _phoneRows();
     final visible = _visible;
     if (visible.isEmpty) return const [];
-    final ordered = [
-      for (final status in TaskStatus.values)
-        ...visible.where((t) => t.status == status),
-    ];
-    return [
-      Appear(
-        key: const ValueKey('task-card'),
-        since: appearSince,
-        child: Container(
-          decoration: BoxDecoration(
-            color: kMobile ? AppColors.surface2 : AppColors.tint1,
-            borderRadius: BorderRadius.circular(R.of(14)),
-            border: Border.all(color: AppColors.line),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(children: [
-            for (var i = 0; i < ordered.length; i++)
-              TaskRow(
-                  key: ValueKey('t-${ordered[i].id}'),
-                  task: ordered[i],
-                  note: noteForTask(ordered[i], tasks),
-                  folder: sessionFolders?[ordered[i].sessionId],
-                  agentName: agentNames?[ordered[i].createdById],
-                  selected: ordered[i].id == selectedId,
-                  onTap: () => onOpen(ordered[i]),
-                  divider: i < ordered.length - 1),
-          ]),
-        ),
-      ),
-      for (final status in TaskStatus.values)
-        if (visible.any((t) => t.status == status) &&
-            (hasMore?.call(status) ?? false))
-          _loadMore(status),
-    ];
+    final groups = groupTasks(visible, sort);
+    final out = <Widget>[];
+    for (var g = 0; g < groups.length; g++) {
+      final (status, items) = groups[g];
+      out.add(TaskGroupHeader(status, items.length,
+          key: ValueKey('group-${status.name}'), first: g == 0));
+      Widget row(TaskItem t) => DenseTaskRow(
+            key: ValueKey('t-${t.id}'),
+            task: t,
+            selected: t.id == selectedId,
+            workspace: sessionFolders?[t.sessionId],
+            onTap: () => onOpen(t),
+            onStatus:
+                onStatus == null ? null : (anchor) => onStatus!(t, anchor),
+          );
+      if (status == TaskStatus.done && items.length > taskDoneVisible) {
+        out.add(FoldedTasks(
+            key: const ValueKey('done-fold'),
+            visible: [for (final t in items.take(taskDoneVisible)) row(t)],
+            hidden: [for (final t in items.skip(taskDoneVisible)) row(t)]));
+      } else {
+        out.addAll(items.map(row));
+      }
+      if (hasMore?.call(status) ?? false) out.add(_loadMore(status));
+    }
+    return out;
   }
 
   Widget emptyState() => kMobile ? _emptyPhone() : _empty();
@@ -204,7 +209,8 @@ class TaskList extends StatelessWidget {
     if (visible.isEmpty) {
       return PullToRefresh(
         onRefresh: onRefresh,
-        child: ListView(padding: pad, children: [kMobile ? _emptyPhone() : _empty()]),
+        child: ListView(
+            padding: pad, children: [kMobile ? _emptyPhone() : _empty()]),
       );
     }
     return PullToRefresh(
@@ -272,8 +278,41 @@ String? workPlanLine(TaskItem task) {
     return null;
   }
   final done = task.workPlan.where((s) => s.done).length;
-  final now = task.workPlan.where((s) => s.current).map((s) => s.step).firstOrNull;
+  final now =
+      task.workPlan.where((s) => s.current).map((s) => s.step).firstOrNull;
   return 'Plan $done/${task.workPlan.length}${now == null ? '' : ' · now: $now'}';
+}
+
+/// Rows with a "Show N more" fold under them.
+class FoldedTasks extends StatefulWidget {
+  const FoldedTasks({super.key, required this.visible, required this.hidden});
+  final List<Widget> visible;
+  final List<Widget> hidden;
+
+  @override
+  State<FoldedTasks> createState() => _FoldedTasksState();
+}
+
+class _FoldedTasksState extends State<FoldedTasks> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) => Column(children: [
+        ...widget.visible,
+        if (_open) ...widget.hidden,
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() => _open = !_open),
+          child: Container(
+            height: 28,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.only(left: 42),
+            child: Text(
+                _open ? 'Show less' : 'Show ${widget.hidden.length} more',
+                style: sans(12, color: AppColors.fg3)),
+          ),
+        ),
+      ]);
 }
 
 class TaskRow extends StatelessWidget {
@@ -373,8 +412,7 @@ class TaskRow extends StatelessWidget {
                           style: sans(kMobile ? 15 : 13,
                               weight: W.label,
                               height: 1.3,
-                              color:
-                                  finished ? AppColors.fg3 : AppColors.fg1)),
+                              color: finished ? AppColors.fg3 : AppColors.fg1)),
                     ),
                   ]),
                   Text(meta,
@@ -458,8 +496,7 @@ class _TaskLoadMoreState extends State<TaskLoadMore> {
                   height: 32, child: Center(child: Spinner(size: 14)))
               : TextButton(
                   onPressed: _run,
-                  child: Text('Load more',
-                      style: TS.ui(AppColors.accent)),
+                  child: Text('Load more', style: TS.ui(AppColors.accent)),
                 ),
         ),
       );

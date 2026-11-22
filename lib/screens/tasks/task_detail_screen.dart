@@ -18,6 +18,8 @@ import '../mobile_chrome.dart';
 import '../agent_records.dart' show BoardLog;
 import '../session.dart' show SessionScreen;
 import 'task_common.dart' show statusColor, TaskNoteLines, taskAge;
+import 'task_view.dart' show showWorktreeFacts;
+import 'task_rows.dart' show taskHairline;
 import '../../tap_detector.dart';
 
 /// One task: its state, its roster, its links, and its own message room.
@@ -763,7 +765,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                               SliverToBoxAdapter(child: _tabBody(t)),
                               SliverToBoxAdapter(
                                   child: Divider(
-                                      height: 1, color: AppColors.line)),
+                                      height: 1, color: taskHairline)),
                               ..._roomSlivers(),
                               const SliverToBoxAdapter(
                                   child: SizedBox(height: 64)),
@@ -837,7 +839,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         margin: EdgeInsets.only(right: last ? 0 : 18),
         decoration: BoxDecoration(
           border:
-              last ? null : Border(right: BorderSide(color: AppColors.line)),
+              last ? null : Border(right: BorderSide(color: taskHairline)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(k, style: sans(11, color: AppColors.fg4)),
@@ -864,13 +866,17 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           ],
         ]);
 
+  /// The session only when its repo numbers are this task's own (see
+  /// [showWorktreeFacts]); otherwise Branch and Changes stay hidden.
+  SessionInfo? _fs(TaskItem t) => showWorktreeFacts(t, session) ? session : null;
+
   Widget _paneFacts(TaskItem t) {
     final active = roster.where((a) => a.active).toList();
     final holder = active.where((a) => a.hasSessionLease).firstOrNull;
     final reviewers =
         active.where((a) => a.role.toLowerCase().contains('review')).toList();
-    final branch = (session?.branch ?? '').trim();
-    final changes = session?.shownChanges;
+    final branch = (_fs(t)?.branch ?? '').trim();
+    final changes = _fs(t)?.shownChanges;
     final workspace = session?.projectFolder.split('/').last ?? '';
     final age = taskAge(t);
     final paths = {
@@ -918,8 +924,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       alignment: Alignment.centerLeft,
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: AppColors.line),
-          bottom: BorderSide(color: AppColors.line),
+          top: BorderSide(color: taskHairline),
+          bottom: BorderSide(color: taskHairline),
         ),
       ),
       child: SingleChildScrollView(
@@ -957,7 +963,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       if (brief.trim().isEmpty)
         Text('No brief yet.', style: sans(13, color: AppColors.fg4))
       else
-        _Description(markdown: brief),
+        _Description(markdown: brief, clamp: true),
     ]);
   }
 
@@ -1389,7 +1395,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             decoration: BoxDecoration(
               color: primary ? AppColors.accentFill : AppColors.tint2,
               borderRadius: BorderRadius.circular(R.of(8)),
-              border: primary ? null : Border.all(color: AppColors.line),
+              border: primary ? null : Border.all(color: taskHairline),
             ),
             child: Text(label,
                 style: sans(14,
@@ -1409,7 +1415,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         decoration: BoxDecoration(
           color: AppColors.tint1,
           borderRadius: BorderRadius.circular(R.of(14)),
-          border: Border.all(color: AppColors.line),
+          border: Border.all(color: taskHairline),
         ),
         padding: padding ?? EdgeInsets.symmetric(horizontal: S.of(14)),
         child: child,
@@ -1425,7 +1431,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           padding: EdgeInsets.fromLTRB(S.of(14), S.s12, S.of(14), S.s12),
           child: brief.trim().isEmpty
               ? Text('No brief yet.', style: sans(15, color: AppColors.fg4))
-              : _Description(markdown: brief, size: 13),
+              : _Description(markdown: brief, size: 13, clamp: true),
         ),
         if (t.workPlan.isNotEmpty) ...[
           _v5Label('Plan'),
@@ -1434,10 +1440,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             child: _WorkPlan(steps: t.workPlan, header: false),
           ),
         ],
-        _v5Label('Details'),
-        _v5Card(
-            padding: EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.s8),
-            child: Column(children: _detailRows(t))),
+        if (_detailRows(t).isNotEmpty) ...[
+          _v5Label('Details'),
+          _v5Card(
+              padding:
+                  EdgeInsets.symmetric(horizontal: S.of(14), vertical: S.s8),
+              child: Column(children: _detailRows(t))),
+        ],
         _v5AgentsLabel(),
         if (roster.isEmpty)
           _v5Card(
@@ -1533,8 +1542,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         .toList();
     final workspace = session?.projectFolder.split('/').last ?? '';
     final seat = [workspace, taskAge(t)].where((s) => s.isNotEmpty).join(' · ');
-    final branch = session?.branch ?? '';
-    final changes = session?.shownChanges;
+    final branch = _fs(t)?.branch ?? '';
+    final changes = _fs(t)?.shownChanges;
     final files = _changedFiles();
     final changesText = changes != null
         ? '+${changes.added} −${changes.removed}'
@@ -1555,11 +1564,15 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       ('Changes', changesText),
       ('Owned paths', paths.join(', ')),
     ];
+    final shown = [
+      for (final r in rows)
+        if (r.$2.trim().isNotEmpty) r
+    ];
     return [
-      for (var i = 0; i < rows.length; i++)
-        _detailRow(rows[i].$1, rows[i].$2,
-            last: i == rows.length - 1,
-            code: rows[i].$1 == 'Branch' || rows[i].$1 == 'Owned paths'),
+      for (var i = 0; i < shown.length; i++)
+        _detailRow(shown[i].$1, shown[i].$2,
+            last: i == shown.length - 1,
+            code: shown[i].$1 == 'Branch' || shown[i].$1 == 'Owned paths'),
     ];
   }
 
@@ -1771,12 +1784,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               decoration: BoxDecoration(
                 color: AppColors.tint1,
                 borderRadius: BorderRadius.circular(R.card),
-                border: Border.all(color: AppColors.line),
+                border: Border.all(color: taskHairline),
               ),
               child: Column(children: [
                 for (var i = 0; i < roster.length; i++) ...[
                   if (i > 0)
-                    Divider(height: 1, thickness: 1, color: AppColors.line),
+                    Divider(height: 1, thickness: 1, color: taskHairline),
                   InkWell(
                     borderRadius: BorderRadius.vertical(
                       top: i == 0 ? Radius.circular(R.card) : Radius.zero,
@@ -1903,7 +1916,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       : BoxDecoration(
           color: AppColors.tint1,
           borderRadius: BorderRadius.circular(R.lg),
-          border: Border.all(color: AppColors.line),
+          border: Border.all(color: taskHairline),
         );
 
   Widget _keyRow(String key, Widget value, {bool last = false}) => Container(
@@ -1911,7 +1924,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         padding: EdgeInsets.symmetric(vertical: S.s6),
         decoration: BoxDecoration(
           border:
-              last ? null : Border(bottom: BorderSide(color: AppColors.line)),
+              last ? null : Border(bottom: BorderSide(color: taskHairline)),
         ),
         child: Row(
           children: [
@@ -1958,7 +1971,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final reviewers =
         active.where((a) => a.role.toLowerCase().contains('review')).toList();
     final holder = active.where((a) => a.hasSessionLease).firstOrNull;
-    final branch = (session?.branch ?? '').trim();
+    final branch = (_fs(t)?.branch ?? '').trim();
     final age = taskAge(t);
     final c = statusColor(t.status);
     final rows = <(String, Widget)>[
@@ -2062,8 +2075,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final display = members.isEmpty ? roster : members;
     final reviewers =
         display.where((a) => a.role.toLowerCase().contains('review')).toList();
-    final branch = session?.branch ?? '';
-    final changes = session?.shownChanges;
+    final branch = _fs(t)?.branch ?? '';
+    final changes = _fs(t)?.shownChanges;
     final files = _changedFiles();
     final paths = roster
         .where((a) => a.active && a.scope.trim().isNotEmpty)
@@ -2450,7 +2463,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.tint2,
                       borderRadius: BorderRadius.circular(R.card),
-                      border: Border.all(color: AppColors.line),
+                      border: Border.all(color: taskHairline),
                     ),
                     child: _addressed(
                       e,
@@ -2551,7 +2564,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               decoration: BoxDecoration(
                 color: AppColors.tint1,
                 borderRadius: BorderRadius.circular(R.card),
-                border: Border.all(color: AppColors.line),
+                border: Border.all(color: taskHairline),
               ),
               child: Row(children: [
                 Expanded(
@@ -2648,7 +2661,11 @@ class _WorkPlan extends StatelessWidget {
 }
 
 class _Description extends StatefulWidget {
-  const _Description({required this.markdown, this.size});
+  const _Description(
+      {required this.markdown, this.size, this.clamp = false});
+
+  /// Fold to about two lines with a "Show more" (pane and phone).
+  final bool clamp;
 
   final String markdown;
 
@@ -2661,12 +2678,14 @@ class _Description extends StatefulWidget {
 }
 
 class _DescriptionState extends State<_Description> {
-  static const _foldHeight = 260.0;
+  double get _foldHeight => widget.clamp ? 42.0 : 260.0;
   bool _expanded = false;
 
-  bool get _long =>
-      widget.markdown.length > 700 ||
-      '\n'.allMatches(widget.markdown).length > 14;
+  bool get _long => widget.clamp
+      ? widget.markdown.length > 120 ||
+          '\n'.allMatches(widget.markdown).isNotEmpty
+      : widget.markdown.length > 700 ||
+          '\n'.allMatches(widget.markdown).length > 14;
 
   @override
   Widget build(BuildContext context) {

@@ -14,6 +14,9 @@ import 'create_task_form.dart';
 import 'task_common.dart';
 import 'task_detail_screen.dart';
 import 'task_list.dart';
+import 'task_rows.dart';
+import 'task_view.dart';
+import 'package:flutter/services.dart';
 import '../../tap_detector.dart';
 
 /// A pushed Tasks page, optionally limited to the tasks [agentIds] are on.
@@ -123,6 +126,8 @@ class TasksPanelState extends State<TasksPanel> {
   DateTime? _shownAt;
   String _query = '';
   Set<TaskStatus> _filter = {};
+  TaskSort _sort = TaskSort.updated;
+  final FocusNode _keys = FocusNode(debugLabel: 'tasks-keys');
   String? _selectedTaskId;
   bool _creatingTask = false;
   Map<String, String> _sessionFolders = const {};
@@ -203,6 +208,7 @@ class TasksPanelState extends State<TasksPanel> {
   void dispose() {
     _feed.dispose();
     _search.dispose();
+    _keys.dispose();
     super.dispose();
   }
 
@@ -269,6 +275,15 @@ class TasksPanelState extends State<TasksPanel> {
           ),
           SizedBox(width: S.s6),
         ],
+        if (!kMobile)
+          Builder(
+            builder: (anchor) => _FilterChip(
+              label: _sort.label,
+              count: -1,
+              on: false,
+              onTap: () => _sortMenu(anchor),
+            ),
+          ),
       ]),
     );
   }
@@ -302,6 +317,70 @@ class TasksPanelState extends State<TasksPanel> {
           ),
         ]),
       );
+
+  List<TaskItem> _ordered = const [];
+
+  Future<void> _quickStatus(TaskItem task, BuildContext anchor) async {
+    final picked = await showAppMenu<TaskStatus>(context,
+        anchor: anchor,
+        below: true,
+        minWidth: 180,
+        maxWidth: 220,
+        items: [
+          for (final s in taskGroupOrder.take(5))
+            appMenuItem<TaskStatus>(
+                value: s, label: s.label, selected: s == task.status),
+        ]);
+    if (picked == null || picked == task.status || !mounted) return;
+    try {
+      await widget.client.setTaskStatus(task.id, picked);
+      await _feed.refresh();
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+    }
+  }
+
+  Future<void> _sortMenu(BuildContext anchor) async {
+    final picked = await showAppMenu<TaskSort>(context,
+        anchor: anchor,
+        below: true,
+        alignEnd: true,
+        minWidth: 150,
+        maxWidth: 200,
+        items: [
+          for (final s in TaskSort.values)
+            appMenuItem<TaskSort>(
+                value: s, label: s.label, selected: s == _sort),
+        ]);
+    if (picked != null && mounted) setState(() => _sort = picked);
+  }
+
+  /// J/K or arrows move, Enter opens, Esc clears the selection.
+  KeyEventResult _onKey(FocusNode _, KeyEvent e) {
+    if (e is! KeyDownEvent || _ordered.isEmpty) return KeyEventResult.ignored;
+    final k = e.logicalKey;
+    int delta = 0;
+    if (k == LogicalKeyboardKey.keyJ || k == LogicalKeyboardKey.arrowDown) {
+      delta = 1;
+    } else if (k == LogicalKeyboardKey.keyK ||
+        k == LogicalKeyboardKey.arrowUp) {
+      delta = -1;
+    } else if (k == LogicalKeyboardKey.escape && _selectedTaskId != null) {
+      setState(() => _selectedTaskId = null);
+      return KeyEventResult.handled;
+    } else {
+      return KeyEventResult.ignored;
+    }
+    final cur = _ordered.indexWhere((t) => t.id == _selectedTaskId);
+    final next = moveSelection(cur, delta, _ordered.length);
+    if (next >= 0) {
+      setState(() {
+        _selectedTaskId = _ordered[next].id;
+        _creatingTask = false;
+      });
+    }
+    return KeyEventResult.handled;
+  }
 
   static const _wideMin = 900.0;
 
@@ -400,12 +479,15 @@ class TasksPanelState extends State<TasksPanel> {
       tasks: _tasks,
       query: _query,
       filter: _filter,
+      sort: _sort,
+      onStatus: _quickStatus,
       selectedId: _selectedTaskId,
       onOpen: _open,
       onRefresh: _feed.refresh,
       hasMore: _feed.hasMore,
       onLoadMore: _feed.loadMore,
     );
+    _ordered = list.ordered;
     final error = _feed.error;
     Widget? empty;
     var rows = const <Widget>[];
@@ -505,9 +587,14 @@ class TasksPanelState extends State<TasksPanel> {
         ),
       );
     }
-    return ColoredBox(
-      color: kMobile ? AppColors.pageBg : Colors.transparent,
-      child: MasterDetail(masterWidth: 380, master: master, detail: detail),
+    return Focus(
+      focusNode: _keys,
+      autofocus: true,
+      onKeyEvent: _onKey,
+      child: ColoredBox(
+        color: kMobile ? AppColors.pageBg : Colors.transparent,
+        child: MasterDetail(masterWidth: 380, master: master, detail: detail),
+      ),
     );
   }
 
@@ -777,10 +864,11 @@ class _FilterChip extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: kMobile ? S.s12 : S.s8),
         decoration: BoxDecoration(
           color: on
-              ? (kMobile ? AppColors.surface3 : AppColors.tint2)
-              : (kMobile ? AppColors.surface2 : AppColors.tint1),
+              ? (kMobile ? AppColors.surface3 : AppColors.fg1.withValues(alpha: 0.09))
+              : (kMobile ? AppColors.surface2 : Colors.transparent),
           borderRadius: BorderRadius.circular(h / 2),
-          border: Border.all(color: on ? AppColors.accent : AppColors.line),
+          border: Border.all(
+              color: on ? AppColors.fg1.withValues(alpha: 0.14) : taskHairline),
         ),
         alignment: Alignment.center,
         child: Text.rich(TextSpan(children: [
@@ -788,9 +876,10 @@ class _FilterChip extends StatelessWidget {
               text: '$label ',
               style: sans(kMobile ? 13 : 12,
                   color: on ? AppColors.fg1 : AppColors.fg2)),
-          TextSpan(
-              text: '$count',
-              style: sans(kMobile ? 13 : 12, color: AppColors.fg3)),
+          if (count >= 0)
+            TextSpan(
+                text: '$count',
+                style: sans(kMobile ? 13 : 12, color: AppColors.fg3)),
         ])),
       ))),
     );
