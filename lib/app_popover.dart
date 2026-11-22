@@ -45,7 +45,8 @@ class AppPopoverSurface extends StatelessWidget {
       child: Material(
         color: AppColors.surface2,
         shape: RoundedRectangleBorder(
-            borderRadius: radius, side: BorderSide(color: AppColors.panelOutline)),
+            borderRadius: radius,
+            side: BorderSide(color: AppColors.panelOutline)),
         clipBehavior: Clip.antiAlias,
         child: Padding(padding: padding ?? EdgeInsets.all(S.s4), child: child),
       ),
@@ -88,8 +89,7 @@ class AppPopoverRowBody extends StatelessWidget {
         (icon == null
             ? null
             : AppIcon(icon!,
-                size: 16,
-                color: danger ? AppColors.danger : AppColors.fg3));
+                size: 16, color: danger ? AppColors.danger : AppColors.fg3));
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: S.s8),
       child: Row(children: [
@@ -125,8 +125,7 @@ class AppPopoverRowBody extends StatelessWidget {
           SizedBox(width: S.s8),
           Text(trailing!,
               maxLines: 1,
-              style:
-                  sans(12, weight: FontWeight.w400, color: AppColors.fg4)),
+              style: sans(12, weight: FontWeight.w400, color: AppColors.fg4)),
         ],
         if (selected) ...[
           SizedBox(width: S.s8),
@@ -155,6 +154,25 @@ class AppPopoverAnchor {
   final bool alignEnd;
 }
 
+/// Where a popover of [child] size goes in a [size] overlay: under (or above)
+/// the anchor, flipping when the preferred side lacks room, clamped on screen.
+Offset popoverPosition(AppPopoverAnchor anchor, Size size, Size child) {
+  const gap = 6.0, edge = 8.0;
+  final spaceBelow = size.height - anchor.vertical.bottom - gap - edge;
+  final spaceAbove = anchor.vertical.top - gap - edge;
+  final below = anchor.below
+      ? (spaceBelow >= child.height || spaceBelow >= spaceAbove)
+      : !(spaceAbove >= child.height || spaceAbove >= spaceBelow);
+  final y = below
+      ? anchor.vertical.bottom + gap
+      : anchor.vertical.top - gap - child.height;
+  final x = anchor.alignEnd
+      ? anchor.control.right - child.width
+      : anchor.control.left;
+  return Offset(x.clamp(edge, size.width - child.width - edge),
+      y.clamp(edge, size.height - child.height - edge));
+}
+
 class _PopoverLayout extends SingleChildLayoutDelegate {
   const _PopoverLayout(this.anchor, this.minWidth, this.maxWidth);
   final AppPopoverAnchor anchor;
@@ -163,7 +181,8 @@ class _PopoverLayout extends SingleChildLayoutDelegate {
   static const _gap = 6.0;
   static const _edge = 8.0;
 
-  double _spaceBelow(Size s) => s.height - anchor.vertical.bottom - _gap - _edge;
+  double _spaceBelow(Size s) =>
+      s.height - anchor.vertical.bottom - _gap - _edge;
   double _spaceAbove(Size s) => anchor.vertical.top - _gap - _edge;
 
   @override
@@ -181,20 +200,8 @@ class _PopoverLayout extends SingleChildLayoutDelegate {
   }
 
   @override
-  Offset getPositionForChild(Size size, Size child) {
-    final below = anchor.below
-        ? (_spaceBelow(size) >= child.height || _spaceBelow(size) >= _spaceAbove(size))
-        : !(_spaceAbove(size) >= child.height ||
-            _spaceAbove(size) >= _spaceBelow(size));
-    final y = below
-        ? anchor.vertical.bottom + _gap
-        : anchor.vertical.top - _gap - child.height;
-    final x = anchor.alignEnd
-        ? anchor.control.right - child.width
-        : anchor.control.left;
-    return Offset(x.clamp(_edge, size.width - child.width - _edge),
-        y.clamp(_edge, size.height - child.height - _edge));
-  }
+  Offset getPositionForChild(Size size, Size child) =>
+      popoverPosition(anchor, size, child);
 
   @override
   bool shouldRelayout(_PopoverLayout old) =>
@@ -226,7 +233,9 @@ Future<T?> showAppPopoverMenu<T>(
           scale: Tween(begin: 0.97, end: 1.0).animate(curve),
           alignment: anchor.below
               ? (anchor.alignEnd ? Alignment.topRight : Alignment.topLeft)
-              : (anchor.alignEnd ? Alignment.bottomRight : Alignment.bottomLeft),
+              : (anchor.alignEnd
+                  ? Alignment.bottomRight
+                  : Alignment.bottomLeft),
           child: child,
         ),
       );
@@ -256,8 +265,7 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
   final _keys = <int, GlobalKey>{};
   int _active = -1;
 
-  bool get _hasSearch =>
-      widget.items.where(_selectable).length >= _searchFrom;
+  bool get _hasSearch => widget.items.where(_selectable).length >= _searchFrom;
 
   List<PopupMenuEntry<T>> get _shown {
     final q = _search.text.trim().toLowerCase();
@@ -279,7 +287,8 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
   @override
   void initState() {
     super.initState();
-    _search.addListener(() => setState(() => _active = _rows.isEmpty ? -1 : _rows.first));
+    _search.addListener(
+        () => setState(() => _active = _rows.isEmpty ? -1 : _rows.first));
   }
 
   @override
@@ -293,9 +302,8 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
     final rows = _rows;
     if (rows.isEmpty) return;
     final at = rows.indexOf(_active);
-    final next = at < 0
-        ? (delta > 0 ? 0 : rows.length - 1)
-        : (at + delta) % rows.length;
+    final next =
+        at < 0 ? (delta > 0 ? 0 : rows.length - 1) : (at + delta) % rows.length;
     _setActive(rows[next < 0 ? next + rows.length : next]);
   }
 
@@ -421,7 +429,8 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
                   child: TextField(
                     controller: _search,
                     autofocus: true,
-                    style: sans(13, weight: FontWeight.w400, color: AppColors.fg1),
+                    style:
+                        sans(13, weight: FontWeight.w400, color: AppColors.fg1),
                     cursorColor: AppColors.fg1,
                     textAlignVertical: TextAlignVertical.center,
                     decoration: InputDecoration(
@@ -433,7 +442,8 @@ class _PopoverMenuState<T> extends State<_PopoverMenu<T>> {
                           weight: FontWeight.w400, color: AppColors.fg4),
                       prefixIcon: Padding(
                         padding: EdgeInsets.symmetric(horizontal: S.s8),
-                        child: AppIcon('search', size: 14, color: AppColors.fg4),
+                        child:
+                            AppIcon('search', size: 14, color: AppColors.fg4),
                       ),
                       prefixIconConstraints:
                           const BoxConstraints(minWidth: 0, minHeight: 0),

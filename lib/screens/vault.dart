@@ -5,6 +5,7 @@ import '../desktop_layout.dart';
 import '../platform.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../inline_flow.dart';
 import '../settings_form.dart';
 import 'shell_nav.dart';
 import '../tap_detector.dart';
@@ -153,10 +154,14 @@ class VaultScreenState extends State<VaultScreen> {
     }
   }
 
+  String? _removing;
+
   Future<void> _remove(String name) async {
-    // Confirm first. This is the only place in the app where a destructive
-    // action had no guard, and a secret cannot be recovered — the value is
-    // never readable again after save.
+    // Confirm first: the stored value is never readable again after save.
+    if (!kMobile) {
+      setState(() => _removing = name);
+      return;
+    }
     final ok = await confirmAction(
       context,
       title: 'Remove $name?',
@@ -165,6 +170,10 @@ class VaultScreenState extends State<VaultScreen> {
       confirmLabel: 'Remove',
     );
     if (!ok || !mounted) return;
+    await _doRemove(name);
+  }
+
+  Future<void> _doRemove(String name) async {
     final prev = [...?_names];
     setState(() => _names?.remove(name));
     try {
@@ -258,7 +267,8 @@ class VaultScreenState extends State<VaultScreen> {
               ],
             )
           else
-            NavBackRow(title: 'Vault', onBack: widget.onBack!, trailing: const []),
+            NavBackRow(
+                title: 'Vault', onBack: widget.onBack!, trailing: const []),
           Expanded(child: body),
         ],
       );
@@ -290,7 +300,8 @@ class VaultScreenState extends State<VaultScreen> {
         SettingsRow(
           label: "Couldn't load secrets",
           sub: _error,
-          trailing: Btn('Retry', small: true, variant: BtnVariant.surface, onTap: _load),
+          trailing: Btn('Retry',
+              small: true, variant: BtnVariant.surface, onTap: _load),
         ),
       ]);
     } else {
@@ -364,22 +375,22 @@ class VaultScreenState extends State<VaultScreen> {
           label: 'Add secret',
           subtitle: empty ? 'No secrets yet' : null,
           leading: V5IconTile('plus', color: AppColors.accent),
-          labelWidget: Text('Add secret',
-              style: sans(15, color: AppColors.accent)),
+          labelWidget:
+              Text('Add secret', style: sans(15, color: AppColors.accent)),
           chevron: false,
           onTap: _add,
         )
       : SettingsRow(
-        label: 'Add secret',
-        sub: empty ? 'No secrets yet' : null,
-        labelWidget: Row(children: [
-          AppIcon('plus', size: kMobile ? 15 : 13, color: AppColors.accent),
-          SizedBox(width: kMobile ? S.s8 : S.of(7)),
-          Text('Add secret',
-              style: sans(kMobile ? 15 : 13, color: AppColors.accent)),
-        ]),
-        onTap: _add,
-      );
+          label: 'Add secret',
+          sub: empty ? 'No secrets yet' : null,
+          labelWidget: Row(children: [
+            AppIcon('plus', size: kMobile ? 15 : 13, color: AppColors.accent),
+            SizedBox(width: kMobile ? S.s8 : S.of(7)),
+            Text('Add secret',
+                style: sans(kMobile ? 15 : 13, color: AppColors.accent)),
+          ]),
+          onTap: _add,
+        );
 
   // A plain 44px row: a name and one action need no tile or chevron.
   Widget _secretRow(String name) => kMobile
@@ -415,25 +426,41 @@ class VaultScreenState extends State<VaultScreen> {
             ]),
           ),
         )
-      : SettingsRow(
-        label: name,
-        labelWidget: Text(name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: mono(kMobile ? 14 : 13, color: AppColors.fg1)),
-        trailing: Semantics(
-          button: true,
-          label: 'Remove $name',
-          child: TapDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => _remove(name),
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: S.s4),
-              child: Text('Remove', style: sans(12, color: AppColors.danger)),
-            ),
-          ),
-        ),
-      );
+      : _removing == name
+          ? InlineConfirmStrip(
+              title: 'Remove $name?',
+              body:
+                  'The agent can no longer use it. The stored value cannot be recovered.',
+              onCancel: () {
+                if (mounted && _removing == name) {
+                  setState(() => _removing = null);
+                }
+              },
+              onConfirm: () {
+                setState(() => _removing = null);
+                _doRemove(name);
+              },
+            )
+          : SettingsRow(
+              label: name,
+              labelWidget: Text(name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: mono(kMobile ? 14 : 13, color: AppColors.fg1)),
+              trailing: Semantics(
+                button: true,
+                label: 'Remove $name',
+                child: TapDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _remove(name),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: S.s4),
+                    child: Text('Remove',
+                        style: sans(12, color: AppColors.danger)),
+                  ),
+                ),
+              ),
+            );
 }
 
 /// Phone sheet for a new secret; pops with the saved name.

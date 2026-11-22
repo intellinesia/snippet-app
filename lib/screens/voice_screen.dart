@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:record/record.dart';
 import '../api.dart';
 import '../desktop_layout.dart';
 import '../models.dart';
+import '../inline_flow.dart';
 import '../platform.dart';
 import '../inline_key_row.dart';
 import '../settings_form.dart';
@@ -62,19 +64,19 @@ class _VoiceScreenState extends State<VoiceScreen> {
   }
 
   void _resetLive() => _live.value = const EnrolLive(Duration.zero, [
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-  ]);
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+      ]);
 
   Future<void> _teardownRecorder() async {
     _tick?.cancel();
@@ -281,49 +283,75 @@ class _VoiceScreenState extends State<VoiceScreen> {
     }
   }
 
-  Future<void> _removeRule(String id, String label) async {
-    final ok = await confirmAction(
-      context,
-      title: 'Remove rule?',
-      body: 'Mission Control will stop applying "$label".',
-      confirmLabel: 'Remove',
-    );
-    if (!ok || !mounted) return;
-    await _recAct(
-      () => widget.client.setRecording(removeRule: id),
-      done: 'Rule removed',
+  ({
+    String key,
+    String title,
+    String body,
+    String label,
+    Future<void> Function() run
+  })? _armed;
+
+  /// Phone: a confirm sheet. Desktop: arms an in-place strip on the row.
+  Future<void> _ask(String key, String title, String body, String label,
+      Future<void> Function() run) async {
+    if (!kMobile) {
+      setState(() => _armed =
+          (key: key, title: title, body: body, label: label, run: run));
+      return;
+    }
+    final ok = await confirmAction(context,
+        title: title, body: body, confirmLabel: label);
+    if (ok && mounted) await run();
+  }
+
+  Widget _armable(String key, Widget row) {
+    final armed = _armed;
+    if (armed == null || armed.key != key) return row;
+    return InlineConfirmStrip(
+      title: armed.title,
+      body: armed.body,
+      confirmLabel: armed.label,
+      onCancel: () {
+        if (mounted && _armed?.key == key) setState(() => _armed = null);
+      },
+      onConfirm: () {
+        setState(() => _armed = null);
+        armed.run();
+      },
     );
   }
 
-  Future<void> _removeWindow(String id, String label) async {
-    final ok = await confirmAction(
-      context,
-      title: 'Remove window?',
-      body: 'Mission Control will stop applying "$label".',
-      confirmLabel: 'Remove',
-    );
-    if (!ok || !mounted) return;
-    await _recAct(
-      () => widget.client.setRecording(removeWindow: id),
-      done: 'Window removed',
-    );
-  }
+  Future<void> _removeRule(String id, String label) => _ask(
+        'rule:$id',
+        'Remove rule?',
+        'Mission Control will stop applying "$label".',
+        'Remove',
+        () => _recAct(() => widget.client.setRecording(removeRule: id),
+            done: 'Rule removed'),
+      );
 
-  Future<void> _deleteRecording(RecordingEntry e, bool redact) async {
-    final ok = await confirmAction(
-      context,
-      title: redact ? 'Redact recording?' : 'Delete recording?',
-      body: redact
-          ? 'The transcript is kept but its text is removed.'
-          : 'This recording is deleted for good.',
-      confirmLabel: redact ? 'Redact' : 'Delete',
-    );
-    if (!ok || !mounted) return;
-    await _recAct(() async {
-      await widget.client.deleteRecording(e.id, redact ? 'redact' : 'delete');
-      return widget.client.getRecording();
-    }, done: redact ? 'Recording redacted' : 'Recording deleted');
-  }
+  Future<void> _removeWindow(String id, String label) => _ask(
+        'window:$id',
+        'Remove window?',
+        'Mission Control will stop applying "$label".',
+        'Remove',
+        () => _recAct(() => widget.client.setRecording(removeWindow: id),
+            done: 'Window removed'),
+      );
+
+  Future<void> _deleteRecording(RecordingEntry e, bool redact) => _ask(
+        'rec:${e.id}',
+        redact ? 'Redact recording?' : 'Delete recording?',
+        redact
+            ? 'The transcript is kept but its text is removed.'
+            : 'This recording is deleted for good.',
+        redact ? 'Redact' : 'Delete',
+        () => _recAct(() async {
+          await widget.client
+              .deleteRecording(e.id, redact ? 'redact' : 'delete');
+          return widget.client.getRecording();
+        }, done: redact ? 'Recording redacted' : 'Recording deleted'),
+      );
 
   static String _clock(DateTime t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
@@ -373,37 +401,41 @@ class _VoiceScreenState extends State<VoiceScreen> {
     final snoozing = _snoozeLabel(r) != 'Off';
     final ruleRows = <Widget>[
       for (final x in r.rules.where((x) => x.mode != 'ask'))
-        SettingsRow(
-          label: x.label,
-          sub: x.mode == 'auto'
-              ? (x.basis.isEmpty
-                    ? 'Always record'
-                    : 'Always record · "${x.basis}"')
-              : 'Never record',
-          trailing: Btn(
-            'Remove',
-            small: true,
-            variant: BtnVariant.ghost,
-            disabled: _busy,
-            onTap: () => _removeRule(x.id, x.label),
-          ),
-        ),
+        _armable(
+            'rule:${x.id}',
+            SettingsRow(
+              label: x.label,
+              sub: x.mode == 'auto'
+                  ? (x.basis.isEmpty
+                      ? 'Always record'
+                      : 'Always record · "${x.basis}"')
+                  : 'Never record',
+              trailing: Btn(
+                'Remove',
+                small: true,
+                variant: BtnVariant.ghost,
+                disabled: _busy,
+                onTap: () => _removeRule(x.id, x.label),
+              ),
+            )),
       for (final w in r.windows)
-        SettingsRow(
-          label: w.label,
-          sub: w.mode == 'auto'
-              ? (w.basis.isEmpty
-                    ? 'Record · ${_when(w.fromMs)} to ${_when(w.toMs)}'
-                    : 'Record · "${w.basis}"')
-              : 'Never record · ${_when(w.fromMs)} to ${_when(w.toMs)}',
-          trailing: Btn(
-            'Remove',
-            small: true,
-            variant: BtnVariant.ghost,
-            disabled: _busy,
-            onTap: () => _removeWindow(w.id, w.label),
-          ),
-        ),
+        _armable(
+            'window:${w.id}',
+            SettingsRow(
+              label: w.label,
+              sub: w.mode == 'auto'
+                  ? (w.basis.isEmpty
+                      ? 'Record · ${_when(w.fromMs)} to ${_when(w.toMs)}'
+                      : 'Record · "${w.basis}"')
+                  : 'Never record · ${_when(w.fromMs)} to ${_when(w.toMs)}',
+              trailing: Btn(
+                'Remove',
+                small: true,
+                variant: BtnVariant.ghost,
+                disabled: _busy,
+                onTap: () => _removeWindow(w.id, w.label),
+              ),
+            )),
     ];
     return [
       SettingsGroup(
@@ -433,8 +465,7 @@ class _VoiceScreenState extends State<VoiceScreen> {
             value: _retentionLabel(r.retentionDays),
             selected: r.retentionDays,
             items: [
-              for (final d in days.where((d) => d > 0))
-                (d, _retentionLabel(d)),
+              for (final d in days.where((d) => d > 0)) (d, _retentionLabel(d)),
               (0, 'Forever'),
             ],
             onSelected: (d) =>
@@ -462,16 +493,21 @@ class _VoiceScreenState extends State<VoiceScreen> {
             ? const [SettingsRow(label: 'No recordings yet')]
             : [
                 for (final e in r.recordings)
-                  SettingsRow(
-                    label: _when(e.started),
-                    sub: '${e.lines} ${e.lines == 1 ? 'line' : 'lines'}',
-                    trailing: SettingsPopup<String>(
-                      label: 'Manage',
-                      selected: '',
-                      items: const [('delete', 'Delete'), ('redact', 'Redact')],
-                      onSelected: (m) => _deleteRecording(e, m == 'redact'),
-                    ),
-                  ),
+                  _armable(
+                      'rec:${e.id}',
+                      SettingsRow(
+                        label: _when(e.started),
+                        sub: '${e.lines} ${e.lines == 1 ? 'line' : 'lines'}',
+                        trailing: SettingsPopup<String>(
+                          label: 'Manage',
+                          selected: '',
+                          items: const [
+                            ('delete', 'Delete'),
+                            ('redact', 'Redact')
+                          ],
+                          onSelected: (m) => _deleteRecording(e, m == 'redact'),
+                        ),
+                      )),
               ],
       ),
     ];
@@ -529,8 +565,8 @@ class _VoiceScreenState extends State<VoiceScreen> {
     String lengthLabel(int m) => m == 0
         ? 'Until changed'
         : m < 60
-        ? '$m minutes'
-        : '${m ~/ 60} hour${m == 60 ? '' : 's'}';
+            ? '$m minutes'
+            : '${m ~/ 60} hour${m == 60 ? '' : 's'}';
     return SettingsGroup(
       header: 'Attention',
       footer:
@@ -604,6 +640,58 @@ class _VoiceScreenState extends State<VoiceScreen> {
     }
   }
 
+  bool _editingPhrases = false;
+  final TextEditingController _phrases = TextEditingController();
+
+  Widget _phrasesEditor() => CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.escape): () =>
+              setState(() => _editingPhrases = false),
+        },
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.s12),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            TextField(
+              controller: _phrases,
+              autofocus: true,
+              minLines: 3,
+              maxLines: 6,
+              style: sans(13, color: AppColors.fg1),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'One per line, e.g. snippet',
+                hintStyle: sans(13, color: AppColors.fg4),
+                filled: true,
+                fillColor: AppColors.surface1,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(R.md),
+                    borderSide: BorderSide(color: AppColors.lineStrong)),
+              ),
+            ),
+            SizedBox(height: S.s8),
+            Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+              Btn('Cancel',
+                  small: true,
+                  variant: BtnVariant.secondary,
+                  onTap: () => setState(() => _editingPhrases = false)),
+              SizedBox(width: S.s8),
+              Btn('Save', small: true, onTap: () {
+                final text = _phrases.text;
+                setState(() => _editingPhrases = false);
+                _saveAmbient(phrases: [
+                  for (final t in text.split(RegExp(r'[\n,]')))
+                    if (t.trim().isNotEmpty) t.trim(),
+                ]);
+              }),
+            ]),
+          ]),
+        ),
+      );
+
+  String? _pickerOpen;
+  List<PickVoice> _pickerVoices = const [];
+
   Future<void> _editPhrases(AmbientSettings a) async {
     final text = await promptText(
       context,
@@ -635,7 +723,8 @@ class _VoiceScreenState extends State<VoiceScreen> {
       180,
       300,
       a.conversationTimeoutSecs,
-    }.toList()..sort();
+    }.toList()
+      ..sort();
     final hosts = a.deepgramHosts.isEmpty
         ? [(a.deepgramHost, a.deepgramHost)]
         : a.deepgramHosts;
@@ -654,15 +743,16 @@ class _VoiceScreenState extends State<VoiceScreen> {
       String hint,
       Future<void> Function(String) save, {
       bool optional = false,
-    }) => InlineKeyRow(
-      label: label,
-      icon: 'key-round',
-      keySet: set,
-      hint: hint,
-      busy: _busy,
-      optional: optional,
-      onSave: save,
-    );
+    }) =>
+        InlineKeyRow(
+          label: label,
+          icon: 'key-round',
+          keySet: set,
+          hint: hint,
+          busy: _busy,
+          optional: optional,
+          onSave: save,
+        );
     final deepgramKey = key(
       'API key',
       a.deepgramKeySet,
@@ -760,6 +850,13 @@ class _VoiceScreenState extends State<VoiceScreen> {
                         );
                         return;
                       }
+                      if (!kMobile) {
+                        setState(() {
+                          _pickerOpen = 'rime';
+                          _pickerVoices = list;
+                        });
+                        return;
+                      }
                       final v = await showVoicePicker(
                         context,
                         title: 'Rime voice',
@@ -771,6 +868,16 @@ class _VoiceScreenState extends State<VoiceScreen> {
                       }
                     },
             ),
+            if (_pickerOpen == 'rime')
+              InlineVoicePicker(
+                voices: _pickerVoices,
+                selected: a.rimeVoice,
+                onClose: () => setState(() => _pickerOpen = null),
+                onPick: (v) {
+                  setState(() => _pickerOpen = null);
+                  _saveAmbient(rimeVoice: v, done: 'Voice saved');
+                },
+              ),
           ] else if (a.ttsVoices.isNotEmpty)
             SettingsPickerRow<void>(
               label: 'Voice',
@@ -779,24 +886,42 @@ class _VoiceScreenState extends State<VoiceScreen> {
               onTap: _busy
                   ? null
                   : () async {
+                      final all = [
+                        for (final t in a.ttsVoices)
+                          PickVoice(
+                            t.model,
+                            t.name,
+                            sub: '${t.accent} · ${t.gender.toLowerCase()}',
+                            group: t.gender,
+                          ),
+                      ];
+                      if (!kMobile) {
+                        setState(() {
+                          _pickerOpen = 'deepgram';
+                          _pickerVoices = all;
+                        });
+                        return;
+                      }
                       final v = await showVoicePicker(
                         context,
                         title: 'Deepgram voice',
-                        voices: [
-                          for (final t in a.ttsVoices)
-                            PickVoice(
-                              t.model,
-                              t.name,
-                              sub: '${t.accent} · ${t.gender.toLowerCase()}',
-                              group: t.gender,
-                            ),
-                        ],
+                        voices: all,
                         selected: a.ttsVoice,
                       );
                       if (v != null && mounted) {
                         await _saveAmbient(ttsVoice: v, done: 'Voice saved');
                       }
                     },
+            ),
+          if (_pickerOpen == 'deepgram')
+            InlineVoicePicker(
+              voices: _pickerVoices,
+              selected: a.ttsVoice,
+              onClose: () => setState(() => _pickerOpen = null),
+              onPick: (v) {
+                setState(() => _pickerOpen = null);
+                _saveAmbient(ttsVoice: v, done: 'Voice saved');
+              },
             ),
           SettingsPickerRow<int>(
             label: 'Speech speed',
@@ -825,8 +950,14 @@ class _VoiceScreenState extends State<VoiceScreen> {
             label: 'Wake phrases',
             icon: 'message-circle',
             value: a.wakePhrases.isEmpty ? 'None' : a.wakePhrases.join(', '),
-            onTap: () => _editPhrases(a),
+            onTap: () => kMobile
+                ? _editPhrases(a)
+                : setState(() {
+                    _phrases.text = a.wakePhrases.join('\n');
+                    _editingPhrases = !_editingPhrases;
+                  }),
           ),
+          if (_editingPhrases) _phrasesEditor(),
           SettingsPickerRow<int>(
             label: 'Ends after silence',
             icon: 'timer',
@@ -869,16 +1000,15 @@ class _VoiceScreenState extends State<VoiceScreen> {
   }
 
   List<Widget> _groups(VoiceSettings v) {
-    final lengths =
-        <int>{
-            60,
-            120,
-            180,
-            300,
-            600,
-            v.maxSeconds,
-          }.where((s) => s >= v.minSeconds && s <= v.maxSecondsLimit).toList()
-          ..sort();
+    final lengths = <int>{
+      60,
+      120,
+      180,
+      300,
+      600,
+      v.maxSeconds,
+    }.where((s) => s >= v.minSeconds && s <= v.maxSecondsLimit).toList()
+      ..sort();
     return [
       if (_ambient != null) ..._ambientGroups(_ambient!),
       SettingsGroup(

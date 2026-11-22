@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import 'platform.dart';
@@ -70,10 +71,52 @@ Future<String?> showVoicePicker(BuildContext context,
       child: _VoicePicker(voices: voices, selected: selected));
 }
 
-class _VoicePicker extends StatefulWidget {
-  const _VoicePicker({required this.voices, required this.selected});
+/// The voice list expanded in place under its row (desktop Settings).
+class InlineVoicePicker extends StatelessWidget {
+  const InlineVoicePicker(
+      {super.key,
+      required this.voices,
+      required this.selected,
+      required this.onPick,
+      required this.onClose});
   final List<PickVoice> voices;
   final String selected;
+  final ValueChanged<String> onPick;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) => CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.escape): onClose,
+        },
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s12, S.s12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Align(
+                alignment: Alignment.centerRight,
+                child: Btn('Close',
+                    small: true, variant: BtnVariant.ghost, onTap: onClose),
+              ),
+              _VoicePicker(
+                  voices: voices,
+                  selected: selected,
+                  onPick: onPick,
+                  height: 340),
+            ],
+          ),
+        ),
+      );
+}
+
+class _VoicePicker extends StatefulWidget {
+  const _VoicePicker(
+      {required this.voices, required this.selected, this.onPick, this.height});
+  final List<PickVoice> voices;
+  final String selected;
+  final ValueChanged<String>? onPick;
+  final double? height;
 
   @override
   State<_VoicePicker> createState() => _VoicePickerState();
@@ -100,7 +143,7 @@ class _VoicePickerState extends State<_VoicePicker> {
     ];
     final h = MediaQuery.of(context).size.height;
     return SizedBox(
-      height: (h * 0.62).clamp(320.0, 460.0),
+      height: widget.height ?? (h * 0.62).clamp(320.0, 460.0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         TextField(
           onChanged: (v) => setState(() => _q = v),
@@ -150,7 +193,9 @@ class _VoicePickerState extends State<_VoicePicker> {
                     final on = v.id == widget.selected;
                     return InkWell(
                       borderRadius: BorderRadius.circular(R.md),
-                      onTap: () => Navigator.pop(context, v.id),
+                      onTap: () => widget.onPick != null
+                          ? widget.onPick!(v.id)
+                          : Navigator.pop(context, v.id),
                       child: Container(
                         constraints:
                             BoxConstraints(minHeight: kMobile ? 48 : 38),

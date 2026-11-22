@@ -80,8 +80,9 @@ abstract final class Grouped {
   static Color get muted => AppColors.fg3;
   static Color get faint => AppColors.fg4;
   static Color get iconColor => AppColors.fg2;
-  static Color get toggleOn =>
-      _phone ? Color.lerp(AppColors.fg1, AppColors.fg2, 0.4)! : AppColors.accent;
+  static Color get toggleOn => _phone
+      ? Color.lerp(AppColors.fg1, AppColors.fg2, 0.4)!
+      : AppColors.accent;
   static Color get toggleOff => _over(0.17);
 
   /// Corner radii of tile [index] of [count]: round at the group's ends.
@@ -98,15 +99,16 @@ abstract final class Grouped {
     );
   }
 
-  static TextStyle titleStyle([Color? color]) =>
-      sans(titleSize, height: titleLine / titleSize, color: color ?? AppColors.fg1);
+  static TextStyle titleStyle([Color? color]) => sans(titleSize,
+      height: titleLine / titleSize, color: color ?? AppColors.fg1);
   static TextStyle subStyle([Color? color]) =>
       sans(subSize, height: subLine / subSize, color: color ?? muted);
   static TextStyle valueStyle([Color? color]) =>
       sans(valueSize, color: color ?? muted);
   static TextStyle labelStyle() => _phone
       ? sans(labelSize, height: 20 / labelSize, color: label)
-      : sans(12.5, weight: FontWeight.w500, height: 18 / 12.5, color: AppColors.fg2);
+      : sans(12.5,
+          weight: FontWeight.w500, height: 18 / 12.5, color: AppColors.fg2);
 
   /// Desktop group card: one bordered surface, rows split by hairlines.
   static Color get card => AppColors.fg1.withValues(alpha: 0.028);
@@ -218,8 +220,8 @@ class SettingsFootnote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            Grouped.padX, Grouped.footGap, Grouped.padX, 0),
+        padding:
+            EdgeInsets.fromLTRB(Grouped.padX, Grouped.footGap, Grouped.padX, 0),
         child: Text(text, style: Grouped.footStyle()),
       );
 }
@@ -435,9 +437,8 @@ class SettingsRow extends StatelessWidget {
         child: v == null || v.isEmpty
             ? row(null)
             : LayoutBuilder(
-                builder: (context, c) => row(c.maxWidth.isFinite
-                    ? c.maxWidth * 0.45
-                    : null)),
+                builder: (context, c) =>
+                    row(c.maxWidth.isFinite ? c.maxWidth * 0.45 : null)),
       ),
     );
     if (onTap == null && onLongPress == null) return content;
@@ -486,15 +487,23 @@ class SettingsPickerRow<T> extends StatelessWidget {
   final bool enabled;
 
   @override
-  Widget build(BuildContext context) => Builder(builder: (anchor) {
+  Widget build(BuildContext context) => Builder(builder: (rowAnchor) {
+        // Desktop anchors the menu to the dropdown box, not the whole row.
+        final boxKey = GlobalKey();
         VoidCallback? tap;
         if (enabled) {
           final list = items;
           tap = list == null
               ? onTap
               : () async {
+                  final anchor =
+                      (!kMobile ? boxKey.currentContext : null) ?? rowAnchor;
                   final picked = await showAppMenu<T>(context,
                       anchor: anchor,
+                      below: true,
+                      alignEnd: !kMobile,
+                      minWidth: 160,
+                      maxWidth: 300,
                       sheetHeightFactor: sheetHeightFactor,
                       items: [
                         for (final (v, l) in list)
@@ -527,7 +536,8 @@ class SettingsPickerRow<T> extends StatelessWidget {
           sub: hasDetail ? d : null,
           trailing: items == null
               ? null
-              : SettingsDropdownBox(label: value, color: valueColor),
+              : SettingsDropdownBox(
+                  key: boxKey, label: value, color: valueColor),
           value: items == null ? value : null,
           valueColor: valueColor,
           chevron: items == null,
@@ -724,8 +734,8 @@ class SettingsHero extends StatelessWidget {
                   width: size,
                   height: size,
                   clipBehavior: Clip.antiAlias,
-                  decoration:
-                      BoxDecoration(color: Grouped.plate, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                      color: Grouped.plate, shape: BoxShape.circle),
                   child: Center(child: avatar),
                 )
               : avatar,
@@ -818,6 +828,10 @@ class SettingsPopup<T> extends StatelessWidget {
   Future<void> _open(BuildContext context, BuildContext anchor) async {
     final picked = await showAppMenu<T>(context,
         anchor: anchor,
+        below: true,
+        alignEnd: !kMobile,
+        minWidth: 160,
+        maxWidth: 300,
         sheetHeightFactor: sheetHeightFactor,
         items: [
           for (final (v, l) in items)
@@ -858,8 +872,8 @@ class SettingsPopup<T> extends StatelessWidget {
           },
           child: Container(
             height: kMobile ? 32 : 26,
-            padding:
-                EdgeInsets.fromLTRB(kMobile ? S.s4 : S.of(10), 0, kMobile ? 0 : S.s8, 0),
+            padding: EdgeInsets.fromLTRB(
+                kMobile ? S.s4 : S.of(10), 0, kMobile ? 0 : S.s8, 0),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               if (leading != null) ...[leading!, SizedBox(width: S.of(7))],
               Text(label,
@@ -912,41 +926,42 @@ class SettingsField extends StatelessWidget {
         radius: BorderRadius.circular(R.of(6)),
         kind: TactileKind.inset,
         child: Container(
-        height: kMobile ? 34 : 28,
-        padding: kMobile
-            ? EdgeInsets.zero
-            : EdgeInsets.symmetric(horizontal: S.of(9)),
-        decoration: kMobile
-            ? null
-            : BoxDecoration(
-                color: AppColors.fg1.withValues(alpha: 0.035),
-                borderRadius: BorderRadius.circular(R.of(6)),
-                border: Border.all(color: AppColors.fg1.withValues(alpha: 0.1)),
-              ),
-        child: Row(children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              obscureText: obscure,
-              onChanged: onChanged,
-              onSubmitted: onSubmitted,
-              textAlign: kMobile ? TextAlign.right : TextAlign.left,
-              keyboardType: number ? TextInputType.number : null,
-              inputFormatters:
-                  number ? [FilteringTextInputFormatter.digitsOnly] : null,
-              style: style,
-              decoration: InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
-                hintText: hint,
-                hintStyle: style.copyWith(color: AppColors.fg4),
+          height: kMobile ? 34 : 28,
+          padding: kMobile
+              ? EdgeInsets.zero
+              : EdgeInsets.symmetric(horizontal: S.of(9)),
+          decoration: kMobile
+              ? null
+              : BoxDecoration(
+                  color: AppColors.fg1.withValues(alpha: 0.035),
+                  borderRadius: BorderRadius.circular(R.of(6)),
+                  border:
+                      Border.all(color: AppColors.fg1.withValues(alpha: 0.1)),
+                ),
+          child: Row(children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                obscureText: obscure,
+                onChanged: onChanged,
+                onSubmitted: onSubmitted,
+                textAlign: kMobile ? TextAlign.right : TextAlign.left,
+                keyboardType: number ? TextInputType.number : null,
+                inputFormatters:
+                    number ? [FilteringTextInputFormatter.digitsOnly] : null,
+                style: style,
+                decoration: InputDecoration(
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  hintText: hint,
+                  hintStyle: style.copyWith(color: AppColors.fg4),
+                ),
               ),
             ),
-          ),
-          if (suffix != null) ...[SizedBox(width: S.s6), suffix!],
-        ]),
-      ),
+            if (suffix != null) ...[SizedBox(width: S.s6), suffix!],
+          ]),
+        ),
       ),
     );
   }
@@ -976,8 +991,8 @@ class SettingsPill extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: S.s12),
             alignment: Alignment.center,
             child: Text(label,
-                style: sans(13,
-                    color: danger ? AppColors.danger : AppColors.fg2)),
+                style:
+                    sans(13, color: danger ? AppColors.danger : AppColors.fg2)),
           ),
         ),
       );

@@ -352,8 +352,9 @@ Future<T?> showAppMenu<T>(
     );
   }
 
-  final overlay =
-      Overlay.of(context, rootOverlay: true).context.findRenderObject() as RenderBox?;
+  final overlay = Overlay.of(context, rootOverlay: true)
+      .context
+      .findRenderObject() as RenderBox?;
   Rect rectOf(BuildContext c) {
     final box = c.findRenderObject() as RenderBox?;
     if (overlay == null || box == null || !box.attached) {
@@ -374,15 +375,27 @@ Future<T?> showAppMenu<T>(
     control = const Rect.fromLTWH(16, 80, 0, 0);
     vertical = control;
   }
-  final effMin = (point != null && minWidth == 260) ? 200.0 : (minWidth == 260 ? 280.0 : minWidth);
-  final effMax = (point != null && maxWidth == 340) ? 260.0 : (maxWidth == 340 ? 360.0 : maxWidth);
+  var effMin = (point != null && minWidth == 260)
+      ? 200.0
+      : (minWidth == 260 ? 280.0 : minWidth);
+  // A menu is never narrower than the control it drops from.
+  if (point == null && anchor != null && control.width > effMin) {
+    effMin = control.width;
+  }
+  var effMax = (point != null && maxWidth == 340)
+      ? 260.0
+      : (maxWidth == 340 ? 360.0 : maxWidth);
+  if (effMax < effMin) effMax = effMin;
   return showAppPopoverMenu<T>(
     context,
     items: items,
     minWidth: effMin,
     maxWidth: effMax,
     anchor: AppPopoverAnchor(
-        control: control, vertical: vertical, below: below || point != null, alignEnd: alignEnd),
+        control: control,
+        vertical: vertical,
+        below: below || point != null,
+        alignEnd: alignEnd),
   );
 }
 
