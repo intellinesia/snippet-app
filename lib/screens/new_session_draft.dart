@@ -388,6 +388,57 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
       (w.branch ?? '').isNotEmpty ? w.branch! : lastPathSegment(w.path);
 
   // Hero chip: quiet ghost button, as the mockup's `.btn.sm.gh`.
+  /// The latest sessions in the chosen folder, for picking one back up.
+  List<SessionInfo> get _recents {
+    final f = _folder;
+    if (f == null || f.isEmpty) return const [];
+    final matches = _pool
+        .where((s) => s.projectFolder == f || s.folder == f)
+        .toList()
+      ..sort((a, b) => b.lastActive.compareTo(a.lastActive));
+    return matches.take(4).toList();
+  }
+
+  Widget _recentMark(SessionInfo s) {
+    final agent = s.displayAgentId?.trim() ?? '';
+    if (agent.isNotEmpty) return AgentMochi(agent, size: 14);
+    return Container(
+      width: 6,
+      height: 6,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.fg4),
+    );
+  }
+
+  Widget _recentChip(SessionInfo s) {
+    final radius = BorderRadius.circular(R.of(10));
+    return Material(
+      color: AppColors.surface1,
+      shape: RoundedRectangleBorder(
+        borderRadius: radius,
+        side: BorderSide(color: AppColors.line),
+      ),
+      child: InkWell(
+        borderRadius: radius,
+        onTap: () => widget.onOpenSession?.call(s.id),
+        child: Container(
+          height: 30,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            _recentMark(s),
+            const SizedBox(width: 6),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 200),
+              child: Text(s.title.isEmpty ? '(untitled)' : s.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TS.label(AppColors.fg2)),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget _chip(Widget? lead, String label, {VoidCallback? onTap, Key? key}) =>
       Material(
         key: key,
@@ -709,7 +760,26 @@ class _NewSessionDraftState extends State<NewSessionDraft> {
                         ],
                       ),
                     ),
-                    if (widget.footer != null) widget.footer!,
+                    if (widget.footer != null)
+                      widget.footer!
+                    else if (widget.onOpenSession != null &&
+                        _recents.isNotEmpty) ...[
+                      SizedBox(height: S.of(14)),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 6,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(right: 2),
+                            child: Text('Recent',
+                                style: TS.caption(AppColors.fg4)),
+                          ),
+                          for (final s in _recents) _recentChip(s),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

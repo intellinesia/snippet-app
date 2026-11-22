@@ -64,6 +64,8 @@ extension _DesktopShellPanesExt on _DesktopShellState {
         folder: t.draftFolder,
         source: _draftSource(t.draftFolder),
         recentSessions: _sessions,
+        // The tab is a page, not a dialog: the centred hero, no scrim.
+        layout: NewSessionLayout.hero,
         onOpenSession: (id) {
           final s = _sessions?.where((s) => s.id == id).firstOrNull;
           _openSession(id, s?.title ?? '', s?.profile);
