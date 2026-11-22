@@ -1247,6 +1247,10 @@ extension _SessionScreenComposerExt on _SessionScreenState {
       uploading: a.uploading,
       localPath: a.localPath,
       body: body,
+      pastedText: pasted,
+      imageProvider: a.remotePath == null
+          ? null
+          : widget.client.imageProvider(a.remotePath!),
       onOpen: () => _previewAttachment(a),
       onRemove: () => _setState(() => _attachments.remove(a)),
     );

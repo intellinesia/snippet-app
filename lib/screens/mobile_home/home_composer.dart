@@ -111,7 +111,8 @@ class _HomeComposerState extends State<HomeComposer> {
         listen: _attachments,
         recipient: widget.agentName,
         attachments: () =>
-            _attachments.isNotEmpty ? _attachments.buildBar(context) : null,
+            _attachments.isNotEmpty ? _attachments.buildBar(context,
+                onInsertText: (t) => appendToInput(_input, t)) : null,
         attach: Builder(
           builder: (ctx) => ComposerIconButton('plus',
               tooltip: 'New session, agent or group',

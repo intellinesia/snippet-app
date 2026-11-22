@@ -1970,7 +1970,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
       attentionExclude: 'inbox-${widget.agentId}',
       banner: reply,
       attachments: () =>
-          _attachments.isNotEmpty ? _attachments.buildBar(context) : null,
+          _attachments.isNotEmpty ? _attachments.buildBar(context,
+                onInsertText: (t) => appendToInput(_input, t)) : null,
       onAttach: () => unawaited(_attachments.pickFromSheet(context)),
       sending: _sending,
       hasDraft: () => _input.text.trim().isNotEmpty || _attachments.isNotEmpty,

@@ -2085,7 +2085,8 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
           if (_mention != null && _mentionCandidates.isNotEmpty) _mentionList(),
         ],
         attachments: () =>
-            _attachments.isNotEmpty ? _attachments.buildBar(context) : null,
+            _attachments.isNotEmpty ? _attachments.buildBar(context,
+                onInsertText: (t) => appendToInput(_input, t)) : null,
         onAttach: () => unawaited(_attachments.pickFromSheet(context)),
         onRecordMore: () => unawaited(_voice.recordMore(_attachVoiceBytes)),
         deskHint: () => Padding(

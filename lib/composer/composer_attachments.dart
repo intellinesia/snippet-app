@@ -354,3 +354,13 @@ class ComposerAttachmentController extends ChangeNotifier {
     );
   }
 }
+
+/// Appends [text] to [input] on a new line, caret at the end.
+void appendToInput(TextEditingController input, String text) {
+  final current = input.text;
+  final joined = current.trim().isEmpty ? text : '$current\n$text';
+  input.value = TextEditingValue(
+    text: joined,
+    selection: TextSelection.collapsed(offset: joined.length),
+  );
+}
