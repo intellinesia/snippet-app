@@ -1,6 +1,24 @@
 part of 'desktop_shell.dart';
 
+final _panelScopeKeys = Expando<GlobalKey>();
+final _chatRestorePending = Expando<bool>();
+
 extension _DesktopShellTabsExt on _DesktopShellState {
+  /// Marks a context under the shell's panel scope, for reopening chat tabs.
+  GlobalKey get _panelScopeKey => _panelScopeKeys[this] ??= GlobalKey();
+
+  /// What a chat tab saves to come back after a restart; null for other tabs.
+  String? _chatOf(_ShellTab t) {
+    final r = t.readout;
+    if (kMobile || !t.isReadout || r == null) return null;
+    if (r.isAgent) return 'agent:${r.agent!.id}';
+    final req = r.request;
+    if (req != null && req.purpose == ShellPanelPurpose.conversation) {
+      return 'conv:${req.id}';
+    }
+    return null;
+  }
+
   void _scrollStripToActive() {
     final t = _activeTab;
     if (t == null) return;
@@ -14,16 +32,21 @@ extension _DesktopShellTabsExt on _DesktopShellState {
   void _persistTabs() {
     _persistTabsDebounce?.cancel();
     _persistTabsDebounce = Timer(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
+      // Until the saved chat tabs are back, saving would drop them.
+      if (!mounted || _chatRestorePending[this] == true) return;
+      final keep = _tabs
+          .where((t) =>
+              _chatOf(t) != null ||
+              (!t.isPrs &&
+                  !t.isDraft &&
+                  !t.isSettings &&
+                  !t.isReadout &&
+                  !t.isTask &&
+                  !t.isWorkspace))
+          .toList();
+      final active = _activeTab == null ? -1 : keep.indexOf(_activeTab!);
       _store.saveOpenTabs(
-        _tabs
-            .where((t) =>
-                !t.isPrs &&
-                !t.isDraft &&
-                !t.isSettings &&
-                !t.isReadout &&
-                !t.isTask &&
-                !t.isWorkspace)
+        keep
             .map((t) => OpenTabDescriptor(
                   instanceUrl: t.instanceUrl,
                   sessionId: t.sessionId,
@@ -38,9 +61,10 @@ extension _DesktopShellTabsExt on _DesktopShellState {
                   termSessionKey: t.termSessionKey,
                   termId: t.termId,
                   board: t.isBoard,
+                  chat: _chatOf(t),
                 ))
             .toList(),
-        _activeIndex,
+        active < 0 ? 0 : active,
       );
     });
   }
@@ -50,9 +74,19 @@ extension _DesktopShellTabsExt on _DesktopShellState {
     if (!mounted || saved.tabs.isEmpty) return;
     final byUrl = {for (final inst in instances) inst.url: inst};
     final restored = <_ShellTab>[];
+    final chats = <OpenTabDescriptor>[];
+    final activeD = saved.activeIndex >= 0 && saved.activeIndex < saved.tabs.length
+        ? saved.tabs[saved.activeIndex]
+        : null;
+    _ShellTab? activeTab;
     for (final descriptor in saved.tabs) {
       final inst = byUrl[descriptor.instanceUrl];
       if (inst == null) continue;
+      if (descriptor.chat != null) {
+        if (!kMobile) chats.add(descriptor);
+        continue;
+      }
+      final before = restored.length;
       final client = DaemonClient(inst.url, inst.token);
       final pane =
           descriptor.pane == _Pane.right.name ? _Pane.right : _Pane.left;
@@ -104,6 +138,9 @@ extension _DesktopShellTabsExt on _DesktopShellState {
           groupSessionKey: descriptor.groupSessionKey,
         ));
       }
+      if (identical(descriptor, activeD) && restored.length > before) {
+        activeTab = restored.last;
+      }
     }
     if (!mounted) return;
     _setState(() {
@@ -111,7 +148,9 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         _tabs
           ..clear()
           ..addAll(restored);
-        _activeIndex = saved.activeIndex.clamp(0, restored.length - 1);
+        _activeIndex = activeTab != null
+            ? restored.indexOf(activeTab)
+            : saved.activeIndex.clamp(0, restored.length - 1);
         _normalizeActiveIndex();
         final active = _activeIndex >= 0 ? _tabs[_activeIndex] : null;
         _active = active == null ? null : byUrl[active.instanceUrl];
@@ -119,9 +158,53 @@ extension _DesktopShellTabsExt on _DesktopShellState {
             _active == null ? null : DaemonClient(_active!.url, _active!.token);
       }
     });
+    if (chats.isNotEmpty) _chatRestorePending[this] = true;
     _ensurePinnedMissionControl();
     _persistTabs();
     _syncPage();
+    if (chats.isEmpty) return;
+    final isChatActive = activeD?.chat != null;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await _reopenChatTabs(chats);
+      } finally {
+        _chatRestorePending[this] = false;
+      }
+      if (!mounted) return;
+      // Opening a chat focuses it; give focus back to the tab that had it.
+      final want = isChatActive
+          ? _tabs.where((t) => _chatOf(t) == activeD!.chat).lastOrNull
+          : activeTab;
+      if (want != null) _activateTabAt(want);
+      _persistTabs();
+    });
+  }
+
+  /// Reopens saved agent and group chat tabs, in their saved order. A chat
+  /// that is gone, or on another machine, is skipped.
+  Future<void> _reopenChatTabs(List<OpenTabDescriptor> chats) async {
+    final client = _client;
+    final url = _active?.url;
+    if (client == null || url == null) return;
+    List<CoordinationAgent>? agents;
+    for (final d in chats) {
+      if (!mounted) return;
+      if (d.instanceUrl != url) continue;
+      final chat = d.chat!;
+      try {
+        if (chat.startsWith('agent:')) {
+          final id = chat.substring('agent:'.length);
+          agents ??= await client.coordinationAgents();
+          final a = agents.where((a) => a.id == id).firstOrNull;
+          if (a != null && mounted) _openRightAgent(a);
+        } else if (chat.startsWith('conv:')) {
+          final ctx = _panelScopeKey.currentContext;
+          if (ctx == null) return;
+          await reopenConversation(
+              ctx, client, chat.substring('conv:'.length), d.title);
+        }
+      } catch (_) {}
+    }
   }
 
   _ShellTab _mcTabFor(Instance inst) => _ShellTab.session(

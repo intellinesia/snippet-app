@@ -30,3 +30,15 @@ Future<bool> openNotificationConversation(
   }
   return false;
 }
+
+/// Reopens a conversation tab saved by its panel id: `group:<group id>` for a
+/// group, otherwise the agent id of a direct chat.
+Future<bool> reopenConversation(BuildContext context, DaemonClient client,
+    String panelId, String title) async {
+  if (panelId.startsWith('group:')) {
+    return openNotificationConversation(
+        context, client, panelId.substring('group:'.length));
+  }
+  openAgentThread(context, client: client, agentId: panelId, agentName: title);
+  return true;
+}

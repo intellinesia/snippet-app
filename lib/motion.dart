@@ -376,6 +376,9 @@ class _TabEnterState extends State<TabEnter>
       AnimationController(vsync: this, duration: Motion.fast, value: 1);
   late final CurvedAnimation _curve =
       CurvedAnimation(parent: _c, curve: Motion.enter);
+  // Starting from zero blanked the pane for the first, heaviest frame.
+  late final Animation<double> _opacity =
+      Tween<double>(begin: 0.7, end: 1).animate(_curve);
   int _dir = 0;
 
   @override
@@ -406,18 +409,20 @@ class _TabEnterState extends State<TabEnter>
 
   @override
   Widget build(BuildContext context) {
-    final faded = FadeTransition(opacity: _curve, child: widget.child);
-    if (reduceMotion(context)) return faded;
+    // One tree shape either way, so toggling reduced motion keeps tab state.
+    final still = reduceMotion(context);
     return AnimatedBuilder(
       animation: _curve,
       builder: (_, child) {
-        final t = 1 - _curve.value;
+        final t = still ? 0.0 : 1 - _curve.value;
         return Transform.translate(
           offset: _dir == 0 ? Offset(0, 4 * t) : Offset(-8.0 * _dir * t, 0),
           child: child,
         );
       },
-      child: faded,
+      child: FadeTransition(
+          opacity: still ? kAlwaysCompleteAnimation : _opacity,
+          child: widget.child),
     );
   }
 }

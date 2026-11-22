@@ -338,7 +338,9 @@ extension _DesktopShellPanesExt on _DesktopShellState {
           open: _openShellPanel,
           client: _client,
           sessionId: _activeTab?.sessionId,
-          child: Swap(
+          child: KeyedSubtree(
+            key: _panelScopeKey,
+            child: Swap(
             stateKey: _activeTab?.isSettings == true
                 ? 'settings'
                 : _effectiveSection,
@@ -346,7 +348,7 @@ extension _DesktopShellPanesExt on _DesktopShellState {
             child: _activeTab?.isSettings == true
                 ? _settingsSidebar()
                 : _sidebar(topInset: topInset),
-          ),
+          )),
         ),
         sidebarTop: _sidebarTop(),
         mainHeader: _macWindowBar(),
