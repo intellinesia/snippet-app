@@ -132,6 +132,14 @@ class ChatComposer extends StatelessWidget {
             cursorColor: AppColors.accent,
             onSubmitted: (_) => _submit(),
             style: ComposerCard.fieldStyle,
+            // A fixed strut keeps the line box the same for hint and text, so
+            // Geist's ascent never nudges the baseline off the icons' centre.
+            strutStyle: StrutStyle(
+                fontSize: C7.field,
+                height: 22 / C7.field,
+                forceStrutHeight: true,
+                leading: 0),
+            textAlignVertical: TextAlignVertical.center,
             decoration: ComposerCard.decoration(hint,
                 style: ComposerCard.fieldStyle, hintColor: hintColor),
           ),
