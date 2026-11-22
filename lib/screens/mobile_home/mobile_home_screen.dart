@@ -86,7 +86,10 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
       ..addStatusListener(_sheetStatus);
   }
   bool _asleepOpen = false;
-  bool _settledOpen = false;
+  // Null until the user toggles; then Settled starts open only when there
+  // are no live sessions to show instead.
+  bool? _settledUser;
+  bool _settledOpenFor(bool noLive) => _settledUser ?? noLive;
 
   @override
   void didUpdateWidget(MobileHomeScreen old) {
@@ -381,10 +384,10 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
             mainSessions: human.main,
             settledSessions: human.settled,
             asleepOpen: _asleepOpen,
-            settledOpen: _settledOpen || human.main.isEmpty,
+            settledOpen: _settledOpenFor(human.main.isEmpty),
             onToggleAsleep: () => setState(() => _asleepOpen = !_asleepOpen),
-            onToggleSettled: () =>
-                setState(() => _settledOpen = !_settledOpen),
+            onToggleSettled: () => setState(() => _settledUser =
+                !_settledOpenFor(human.main.isEmpty)),
             onOpenAgent: widget.onOpenAgent,
             onOpenManaged: _openManaged,
             onOpenSession: widget.onOpenSession,
@@ -571,10 +574,10 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
                   SessionsGroup(
                     main: main,
                     settled: settled,
-                    // With no live sessions the settled ones are the list.
-                    settledOpen: q.isNotEmpty || _settledOpen || main.isEmpty,
-                    onToggleSettled: () =>
-                        setState(() => _settledOpen = !_settledOpen),
+                    settledOpen:
+                        q.isNotEmpty || _settledOpenFor(main.isEmpty),
+                    onToggleSettled: () => setState(
+                        () => _settledUser = !_settledOpenFor(main.isEmpty)),
                     onOpen: (s) {
                       _closeSearch();
                       widget.onOpenSession(s);
