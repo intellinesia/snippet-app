@@ -429,7 +429,12 @@ class _SheetAgentRow extends StatelessWidget {
                 style: sans(17, weight: FontWeight.w500, color: AppColors.fg1)),
             Row(children: [
               if (row.state == CrewState.working) ...[
-                Spinner(size: 12, color: AppColors.fg3),
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration:
+                      BoxDecoration(color: AppColors.ok, shape: BoxShape.circle),
+                ),
                 SizedBox(width: S.s6),
               ],
               Expanded(

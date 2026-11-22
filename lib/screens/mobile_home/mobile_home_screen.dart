@@ -381,7 +381,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
             mainSessions: human.main,
             settledSessions: human.settled,
             asleepOpen: _asleepOpen,
-            settledOpen: _settledOpen,
+            settledOpen: _settledOpen || human.main.isEmpty,
             onToggleAsleep: () => setState(() => _asleepOpen = !_asleepOpen),
             onToggleSettled: () =>
                 setState(() => _settledOpen = !_settledOpen),
@@ -539,7 +539,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     final empty = agentCount == 0 && sessionCount == 0;
 
     return ColoredBox(
-      color: AppColors.bg.withValues(alpha: 0.92),
+      color: AppColors.bg,
       child: Stack(children: [
         Positioned.fill(
           child: SingleChildScrollView(
@@ -571,7 +571,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
                   SessionsGroup(
                     main: main,
                     settled: settled,
-                    settledOpen: q.isNotEmpty || _settledOpen,
+                    // With no live sessions the settled ones are the list.
+                    settledOpen: q.isNotEmpty || _settledOpen || main.isEmpty,
                     onToggleSettled: () =>
                         setState(() => _settledOpen = !_settledOpen),
                     onOpen: (s) {
