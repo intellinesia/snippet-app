@@ -273,7 +273,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
               : (d) => _releaseSheet(d.primaryVelocity ?? 0),
           child: Padding(
             padding: EdgeInsets.only(
-              top: 76,
+              top: 96,
               bottom: composerClearance + 48,
               left: kHomeMargin,
               right: kHomeMargin,

@@ -128,35 +128,45 @@ class HomeResting extends StatelessWidget {
   Widget _workingView(BuildContext context, SessionInfo? last) {
     final shown = working.take(_maxWorking).toList();
     final more = working.length - shown.length;
-    return ListView(
+    // Centred in the free space, so a short list does not hang from the top.
+    return Center(
       key: const ValueKey('home-working'),
-      physics: const BouncingScrollPhysics(),
-      padding: EdgeInsets.zero,
-      children: [
-        Row(children: [
-          const AgentMochi('mission-control', size: 52),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text('Nothing needs you.',
-                style:
-                    sans(22, weight: FontWeight.w500, color: AppColors.fg1)),
-          ),
-        ]),
-        const HomeLabel('In progress', top: 20),
-        for (final r in shown) _workingBlock(r),
-        if (more > 0)
-          Hit44(
-            label: '$more more working, open Everyone',
-            onTap: onOpenEveryone,
-            width: 160,
-            child: Text('+$more working',
-                style: sans(15, weight: FontWeight.w500, color: AppColors.fg2)),
-          ),
-        if (last != null) ...[
-          const HomeLabel('Last result', top: 16),
-          _lastRow(last),
-        ],
-      ],
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Center(child: AgentMochi('mission-control', size: 52)),
+            const SizedBox(height: 14),
+            Text('All on track.',
+                textAlign: TextAlign.center,
+                style: sans(22, weight: FontWeight.w500, color: AppColors.fg1)),
+            const SizedBox(height: 4),
+            Text('Nothing needs you.',
+                textAlign: TextAlign.center,
+                style: sans(13, color: AppColors.fg3)),
+            const HomeLabel('In progress', top: 28),
+            for (final r in shown) _workingBlock(r),
+            if (more > 0)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Hit44(
+                  label: '$more more working, open Everyone',
+                  onTap: onOpenEveryone,
+                  width: 160,
+                  child: Text('+$more working',
+                      style: sans(15,
+                          weight: FontWeight.w500, color: AppColors.fg2)),
+                ),
+              ),
+            if (last != null) ...[
+              const HomeLabel('Last result', top: 16),
+              _lastRow(last),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -179,8 +189,30 @@ class HomeResting extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 72),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(children: [
-                AgentMochi(r.agent.id, size: 48),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                SizedBox(
+                  width: 52,
+                  height: 52,
+                  child: Stack(clipBehavior: Clip.none, children: [
+                    Positioned(
+                        left: 2,
+                        top: 2,
+                        child: AgentMochi(r.agent.id, size: 48)),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: AppColors.ok,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.bg, width: 2),
+                        ),
+                      ),
+                    ),
+                  ]),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -188,14 +220,7 @@ class HomeResting extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                              color: AppColors.ok, shape: BoxShape.circle),
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
+                        Expanded(
                           child: Text(r.agent.displayName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -203,17 +228,28 @@ class HomeResting extends StatelessWidget {
                                   weight: FontWeight.w600,
                                   color: AppColors.fg1)),
                         ),
+                        if (count > 0)
+                          ManagedPill(
+                            name: r.agent.displayName,
+                            count: count,
+                            tone: pillTone(heroAgentColor(r.agent.id)),
+                            onTap: () => onOpenManaged(r.agent),
+                          ),
                       ]),
-                      const SizedBox(height: 2),
                       Text(task,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: sans(14, color: AppColors.fg2)),
                       if (plan != null && plan.total > 0) ...[
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 8),
                         Row(children: [
-                          _SegBar(done: plan.done, total: plan.total),
-                          const SizedBox(width: 8),
+                          Flexible(
+                              child: ConstrainedBox(
+                                  constraints:
+                                      const BoxConstraints(maxWidth: 150),
+                                  child: _SegBar(
+                                      done: plan.done, total: plan.total))),
+                          const SizedBox(width: 10),
                           Text('${plan.done} of ${plan.total}',
                               style: codeMono(12, color: AppColors.fg3)),
                         ]),
@@ -221,13 +257,6 @@ class HomeResting extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (count > 0)
-                  ManagedPill(
-                    name: r.agent.displayName,
-                    count: count,
-                    tone: pillTone(heroAgentColor(r.agent.id)),
-                    onTap: () => onOpenManaged(r.agent),
-                  ),
               ]),
             ),
           ),
@@ -288,7 +317,7 @@ class _SegBar extends StatelessWidget {
     final n = total.clamp(1, 12);
     final filled = (done * n / total).round().clamp(0, n);
     return SizedBox(
-      width: 150,
+      width: double.infinity,
       height: 4,
       child: Row(children: [
         for (var i = 0; i < n; i++) ...[

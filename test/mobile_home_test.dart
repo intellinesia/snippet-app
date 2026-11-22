@@ -326,6 +326,27 @@ void main() {
       expect(find.byType(EveryoneSheet), findsNothing);
     });
 
+    testWidgets('working state fits a 360 dp phone at large text',
+        (tester) async {
+      await pumpHome(tester, [
+        _s('w1', extra: {
+          'status': 'running',
+          'running': true,
+          'worker_agent_id': 'snippet',
+          'plan': {'done': 1, 'total': 4, 'current': 'Design merged Wakes page (phone + desktop)'},
+        }),
+        _managed('m1', 'snippet', status: 'running'),
+      ], textScale: 1.3);
+      tester.view.physicalSize = const Size(360, 740) * 3;
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('All on track.'), findsOneWidget);
+      expect(find.text('1 of 4'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      final top = tester.getTopLeft(find.text('In progress')).dy;
+      final bar = tester.getBottomLeft(find.byKey(const ValueKey('home-stage-bar'))).dy;
+      expect(top, greaterThan(bar + 24));
+    });
+
     testWidgets('quiet state names Mission Control and never an empty centre',
         (tester) async {
       await pumpHome(tester, [_s('h0')]);
