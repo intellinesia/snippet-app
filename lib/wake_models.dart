@@ -1,5 +1,7 @@
-// Wake schedules, their runs, and prompt-cache keep-warm, as the daemon
-// reports them.
+// Wake schedules, one-offs and watches (one /wakes resource), their runs, and
+// prompt-cache keep-warm, as the daemon reports them.
+
+import 'models.dart' show AgentWatch;
 
 int? _int(dynamic v) => v is num ? v.toInt() : null;
 String? _str(dynamic v) {
@@ -62,6 +64,8 @@ class WakeReport {
 }
 
 class WakeSchedule {
+  /// The wake's id in /wakes/{id}.
+  final String id;
   final String owner;
 
   /// Tells one owner's wakes apart; null is the owner's default wake.
@@ -88,7 +92,8 @@ class WakeSchedule {
   final bool queued;
 
   WakeSchedule.fromJson(Map<String, dynamic> j)
-      : owner = j['owner'] as String? ?? '',
+      : id = _str(j['id']) ?? _str(j['job_id']) ?? '',
+        owner = j['owner'] as String? ?? '',
         name = _str(j['name']),
         ownerKind = j['owner_kind'] as String? ?? 'agent',
         jobId = j['job_id'] as String? ?? '',
@@ -111,6 +116,9 @@ class WakeSchedule {
         lastResult = _str(j['last_result']),
         lastError = _str(j['last_error']),
         queued = j['queued'] as bool? ?? false;
+
+  /// A job made by the user or a session rather than an agent's wake policy.
+  bool get legacy => setBy.isEmpty;
 
   /// The text to put back in the schedule field when editing.
   String get editableSchedule => schedule.isNotEmpty ? schedule : scheduleText;
@@ -148,8 +156,60 @@ class WakeList {
 
   factory WakeList.fromJson(Map<String, dynamic> j) => WakeList([
         for (final w in (j['wakes'] as List?) ?? const [])
-          if (w is Map<String, dynamic>) WakeSchedule.fromJson(w)
+          if (w is Map<String, dynamic> &&
+              (w['kind'] ?? 'every') == 'every' &&
+              (w['set_by'] as String? ?? '').isNotEmpty)
+            WakeSchedule.fromJson(w)
       ], WakeLimits.fromJson(j['limits']));
+}
+
+/// A one-off wake: a pending follow-up. It cannot be edited, only cancelled.
+class OnceWake {
+  final String id;
+  final String owner;
+  final String ownerKind;
+  final String title;
+  final String note;
+  final String sessionId;
+  final int? dueAt;
+
+  OnceWake.fromJson(Map<String, dynamic> j)
+      : id = j['id'] as String? ?? '',
+        owner = j['owner'] as String? ?? '',
+        ownerKind = j['owner_kind'] as String? ?? 'session',
+        title = j['title'] as String? ?? '',
+        note = j['note'] as String? ?? '',
+        sessionId = j['session_id'] as String? ?? '',
+        dueAt = _int(j['next_run_at']);
+}
+
+/// Everything GET /wakes returns: schedules (`every`), one-offs and watches.
+class WakeBook {
+  final List<WakeSchedule> every;
+  final List<OnceWake> once;
+  final List<AgentWatch> watches;
+  final WakeLimits limits;
+  const WakeBook(this.every, this.once, this.watches, this.limits);
+
+  bool get isEmpty => every.isEmpty && once.isEmpty && watches.isEmpty;
+
+  factory WakeBook.fromJson(Map<String, dynamic> j) {
+    final every = <WakeSchedule>[];
+    final once = <OnceWake>[];
+    final watches = <AgentWatch>[];
+    for (final w in (j['wakes'] as List?) ?? const []) {
+      if (w is! Map<String, dynamic>) continue;
+      switch (w['kind']) {
+        case 'once':
+          once.add(OnceWake.fromJson(w));
+        case 'watch':
+          watches.add(AgentWatch.fromJson(w));
+        default:
+          every.add(WakeSchedule.fromJson(w));
+      }
+    }
+    return WakeBook(every, once, watches, WakeLimits.fromJson(j['limits']));
+  }
 }
 
 class WakeRun {

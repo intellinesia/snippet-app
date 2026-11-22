@@ -171,15 +171,17 @@ void main() {
         bodies.add(await utf8.decoder.bind(req).join());
         final p = req.uri.path;
         Object body = {};
-        if (p == '/agents/scout/watches') {
+        if (p == '/wakes') {
           body = {
-            'watches': [_watchJson()]
+            'wakes': [
+              {..._watchJson(), 'kind': 'watch'}
+            ]
           };
-        } else if (p == '/agents/scout/watches/w-1' && req.method == 'POST') {
+        } else if (p == '/wakes/w-1' && req.method == 'PATCH') {
           body = _watchJson(enabled: false, status: 'paused');
-        } else if (p == '/agents/scout/watches/w-1' && req.method == 'DELETE') {
-          body = {'removed': true};
-        } else if (p == '/agents/scout/watches/w-1/events') {
+        } else if (p == '/wakes/w-1' && req.method == 'DELETE') {
+          body = {'deleted': true};
+        } else if (p == '/wakes/w-1/runs') {
           body = {
             'events': [
               {
@@ -189,7 +191,7 @@ void main() {
               }
             ]
           };
-        } else if (p == '/agents/scout/watches/w-1/script') {
+        } else if (p == '/wakes/w-1/script') {
           body = {'script': '#!/usr/bin/env bash\necho ok\n'};
         }
         req.response.statusCode = 200;
@@ -213,14 +215,12 @@ void main() {
       expect(script, contains('echo ok'));
       await client.deleteAgentWatch('scout', 'w-1');
 
-      expect(seen, contains('GET /agents/scout/watches?token=tok'));
-      expect(seen, contains('POST /agents/scout/watches/w-1?token=tok'));
-      expect(
-          seen, contains('GET /agents/scout/watches/w-1/events?token=tok&limit=20'));
-      expect(seen, contains('GET /agents/scout/watches/w-1/script?token=tok'));
-      expect(seen, contains('DELETE /agents/scout/watches/w-1?token=tok'));
-      expect(
-          jsonDecode(bodies[seen.indexOf('POST /agents/scout/watches/w-1?token=tok')]),
+      expect(seen, contains('GET /wakes?token=tok&owner=scout&kind=watch'));
+      expect(seen, contains('PATCH /wakes/w-1?token=tok'));
+      expect(seen, contains('GET /wakes/w-1/runs?token=tok&limit=20'));
+      expect(seen, contains('GET /wakes/w-1/script?token=tok'));
+      expect(seen, contains('DELETE /wakes/w-1?token=tok'));
+      expect(jsonDecode(bodies[seen.indexOf('PATCH /wakes/w-1?token=tok')]),
           {'enabled': false});
     });
   });

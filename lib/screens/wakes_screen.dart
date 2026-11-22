@@ -45,7 +45,7 @@ class WakesScreen extends StatefulWidget {
 }
 
 class _WakesScreenState extends State<WakesScreen> {
-  late Future<(WakeList, KeepWarmList?, List<CoordinationAgent>)> _future;
+  late Future<(WakeBook, KeepWarmList?, List<CoordinationAgent>)> _future;
 
   @override
   void initState() {
@@ -54,24 +54,30 @@ class _WakesScreenState extends State<WakesScreen> {
   }
 
   Map<String, String> _sessionTitles = const {};
+  List<CoordinationAgent>? _agents;
 
-  Future<(WakeList, KeepWarmList?, List<CoordinationAgent>)> _load() async {
+  Future<(WakeBook, KeepWarmList?, List<CoordinationAgent>)> _load() async {
     final c = widget.client;
-    final wakes = await c.wakes();
+    final wakes = await c.wakeBook();
     final warm = await c
         .keepWarm()
         .then<KeepWarmList?>((v) => v)
         .catchError((_) => null);
     final agents =
         await c.coordinationAgents().catchError((_) => <CoordinationAgent>[]);
-    if (warm?.entries.any((e) => e.enabled && e.ownerKind == 'session') ??
-        false) {
+    final needTitles =
+        (warm?.entries.any((e) => e.enabled && e.ownerKind == 'session') ??
+                false) ||
+            wakes.every.any((w) => w.ownerKind == 'session') ||
+            wakes.once.any((w) => w.ownerKind == 'session');
+    if (needTitles) {
       final sessions = await c.sessions().catchError((_) => <SessionInfo>[]);
       _sessionTitles = {
         for (final s in sessions)
           if (s.title.trim().isNotEmpty) s.id: s.title.trim()
       };
     }
+    _agents = agents;
     return (wakes, warm, agents);
   }
 
@@ -83,6 +89,9 @@ class _WakesScreenState extends State<WakesScreen> {
   }
 
   String _name(String owner, List<CoordinationAgent> agents) {
+    if (owner == 'mission-control') return 'Mission Control';
+    final title = _sessionTitles[owner];
+    if (title != null) return title;
     for (final a in agents) {
       if (a.id == owner) {
         return a.displayName.trim().isEmpty ? a.id : a.displayName.trim();
@@ -136,13 +145,20 @@ class _WakesScreenState extends State<WakesScreen> {
           ])
         : desk
             ? SettingsColumn(children: [
-                SettingsHeader(title: title, subtitle: subtitle),
+                SettingsHeader(title: title, subtitle: subtitle, actions: [
+                  if (!warmPage && _agents != null)
+                    Builder(
+                        builder: (ctx) => Btn('New wake',
+                            small: true,
+                            variant: BtnVariant.secondary,
+                            onTap: () => _newWake(ctx, _agents!))),
+                ]),
                 SizedBox(height: S.s8),
                 ...children,
               ])
             : PageBody(children: children);
     final body =
-        FutureBuilder<(WakeList, KeepWarmList?, List<CoordinationAgent>)>(
+        FutureBuilder<(WakeBook, KeepWarmList?, List<CoordinationAgent>)>(
       future: _future,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
@@ -156,52 +172,75 @@ class _WakesScreenState extends State<WakesScreen> {
             ),
           ]);
         }
-        final (wakes, warm, agents) = snap.data!;
+        final (book, warm, agents) = snap.data!;
         final warmOn = [
           for (final e in warm?.entries ?? const <KeepWarmEntry>[])
             if (e.enabled) e
         ];
-        if (!warmPage && wakes.wakes.isEmpty) {
+        final warmGroup = SettingsGroup(
+          header: 'Keep warm',
+          footer: warm != null && warm.calls7d > 0 && warmOn.isNotEmpty
+              ? '${warm.calls7d} warm calls in the last 7 days, ${tokensLabel(warm.cacheReadTokens7d)} tokens read from cache.'
+              : null,
+          children: [
+            if (warmOn.isEmpty)
+              const SettingsRow(
+                key: Key('keep-warm-empty'),
+                label: 'No session is kept warm',
+                sub:
+                    'A warm session keeps its prompt cache while idle, so the next turn is cheaper.',
+              )
+            else
+              for (final e in warmOn) _warmRow(context, e, agents),
+          ],
+        );
+        if (warmPage) return page([warmGroup]);
+        if (book.isEmpty) {
           // One empty state that fills the pane; a scrolling column cannot centre it.
-          const empty = EmptyState(
+          final empty = EmptyState(
             icon: 'calendar-clock',
-            title: 'No wakes yet',
-            body: 'Schedule an agent from its page, under Wakes and reporting.',
+            title: 'Nothing wakes on its own yet',
+            body:
+                'Add a schedule, a one-off reminder or a watch and agents act without being asked.',
+            action: Btn('New wake', onTap: () => _newWake(context, agents)),
           );
           if (!desk) return empty;
           return page([
-            const SettingsGroup(header: 'Schedules', children: [
+            SettingsGroup(header: 'Schedules', children: [
               SettingsRow(
                 icon: 'calendar-clock',
-                label: 'No wakes yet',
-                sub: 'Schedule an agent from its page, under Wakes and reporting.',
+                label: 'Nothing wakes on its own yet',
+                sub: 'Add a schedule, a one-off reminder or a watch.',
+                onTap: () => _newWake(context, agents),
               ),
             ]),
+            warmGroup,
           ]);
         }
         return page([
-          if (!warmPage)
-            SettingsGroup(header: 'Schedules', children: [
-              for (final w in wakes.wakes) _wakeRow(context, w, agents),
+          SettingsGroup(header: 'Schedules', children: [
+            for (final w in book.every) _wakeRow(context, w, agents),
+            if (book.every.isEmpty)
+              const SettingsRow(
+                  label: 'No schedules',
+                  sub: 'Agents and sessions on a timetable appear here.'),
+            if (kMobile)
+              Builder(
+                  builder: (ctx) => SettingsRow(
+                      key: const Key('wake-new'),
+                      icon: 'plus',
+                      label: 'New wake',
+                      onTap: () => _newWake(ctx, agents))),
+          ]),
+          if (book.once.isNotEmpty)
+            SettingsGroup(header: 'Once', children: [
+              for (final w in book.once) _onceRow(context, w, agents),
             ]),
-          if (warmPage)
-            SettingsGroup(
-              header: 'Keep warm',
-              footer: warm != null && warm.calls7d > 0 && warmOn.isNotEmpty
-                  ? '${warm.calls7d} warm calls in the last 7 days, ${tokensLabel(warm.cacheReadTokens7d)} tokens read from cache.'
-                  : null,
-              children: [
-                if (warmOn.isEmpty)
-                  const SettingsRow(
-                    key: Key('keep-warm-empty'),
-                    label: 'No session is kept warm',
-                    sub:
-                        'A warm session keeps its prompt cache while idle, so the next turn is cheaper.',
-                  )
-                else
-                  for (final e in warmOn) _warmRow(context, e, agents),
-              ],
-            ),
+          if (book.watches.isNotEmpty)
+            SettingsGroup(header: 'Watches', children: [
+              for (final w in book.watches) _watchRow(context, w, agents),
+            ]),
+          warmGroup,
         ]);
       },
     );
@@ -238,6 +277,26 @@ class _WakesScreenState extends State<WakesScreen> {
     return '$day $hm';
   }
 
+  Widget _ownerLeading(String owner, String kind, bool on, String icon) {
+    if (kind != 'agent') {
+      return Opacity(opacity: on ? 1 : 0.5, child: V5IconTile(icon));
+    }
+    // Every agent has a face, so the hashed default stands in for unset ones.
+    final character = agentCharacterFor(owner) ?? defaultAgentCharacter(owner);
+    return Opacity(
+        opacity: on ? 1 : 0.5,
+        child: AgentCharacter(character, size: kMobile ? 24 : 20));
+  }
+
+  Future<void> _setEnabled(String id, bool on, {bool watch = false}) async {
+    try {
+      await widget.client.patchWake(id, {'enabled': on});
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+    }
+    if (mounted) _refresh();
+  }
+
   Widget _wakeRow(
       BuildContext context, WakeSchedule w, List<CoordinationAgent> agents) {
     final name = _name(w.owner, agents);
@@ -249,34 +308,104 @@ class _WakesScreenState extends State<WakesScreen> {
                 ? 'overdue'
                 : 'next ${_wakeAt(w.nextRunAt)}';
     final sub = [
-      if (w.name != null)
+      if (w.name != null || w.legacy)
         name
       else
         w.scheduleText.isEmpty ? w.schedule : w.scheduleText,
+      if (w.legacy && w.scheduleText.isNotEmpty) w.scheduleText,
       if (next.isNotEmpty) next,
     ].join(' · ');
-    // Every agent has a face, so the hashed default stands in for unset ones.
-    final character =
-        agentCharacterFor(w.owner) ?? defaultAgentCharacter(w.owner);
+    final label = w.name ?? (w.legacy && w.title.isNotEmpty ? w.title : name);
     return Builder(
       builder: (ctx) => SettingsRow(
-        key: ValueKey('wake-${w.owner}'),
-        label: w.name ?? name,
+        key: ValueKey('wake-${w.id.isEmpty ? w.owner : w.id}'),
+        label: label,
         sub: w.lastError != null ? '$sub · ${w.lastError}' : sub,
-        leading: Opacity(
-            opacity: w.enabled ? 1 : 0.5,
-            child: AgentCharacter(character, size: kMobile ? 24 : 20)),
-        trailing: w.lastStatus == null
+        leading: _ownerLeading(w.owner, w.ownerKind, w.enabled, 'repeat'),
+        trailing: w.id.isEmpty
             ? null
-            : Container(
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(
-                    color: wakeStatusColor(w.lastStatus),
-                    shape: BoxShape.circle)),
+            : AppSwitch(
+                on: w.enabled, onChanged: (on) => _setEnabled(w.id, on)),
         onTap: () => _open(ctx, w.owner, name, agents),
       ),
     );
+  }
+
+  Widget _onceRow(
+      BuildContext context, OnceWake w, List<CoordinationAgent> agents) {
+    final name = _name(w.owner, agents);
+    final due = w.dueAt == null ? '' : 'due ${_wakeAt(w.dueAt!)}';
+    return SettingsRow(
+      key: ValueKey('once-${w.id}'),
+      label: w.title.isEmpty ? 'One-off wake' : w.title,
+      sub: [name, if (due.isNotEmpty) due].join(' · '),
+      leading: _ownerLeading(w.owner, w.ownerKind, true, 'clock'),
+      trailing: TapDetector(
+        key: ValueKey('once-cancel-${w.id}'),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _cancelOnce(w),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: kMobile ? 44 : 32),
+          child: Center(
+              widthFactor: 1, child: Text('Cancel', style: TS.meta())),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _cancelOnce(OnceWake w) async {
+    try {
+      await widget.client.deleteWake(w.id);
+    } catch (e) {
+      if (mounted) toast(context, '$e', danger: true);
+    }
+    if (mounted) _refresh();
+  }
+
+  Widget _watchRow(
+      BuildContext context, AgentWatch w, List<CoordinationAgent> agents) {
+    final name = _name(w.owner, agents);
+    final sub = [
+      name,
+      w.modeLabel,
+      if (!w.enabled) 'paused' else '${w.firesLastDay} fires today',
+    ].join(' · ');
+    return Builder(
+      builder: (ctx) => SettingsRow(
+        key: ValueKey('watch-${w.id}'),
+        label: w.name,
+        sub: w.lastError != null ? '$sub · ${w.lastError}' : sub,
+        leading: _ownerLeading(w.owner, 'agent', w.enabled, 'eye'),
+        trailing: AppSwitch(
+            on: w.enabled,
+            onChanged: (on) => _setEnabled(w.id, on, watch: true)),
+        onTap: () => _open(ctx, w.owner, name, agents),
+      ),
+    );
+  }
+
+  /// A new wake starts from its owner: an agent, Mission Control or a session
+  /// is picked, then the owner's wake panel takes the schedule.
+  Future<void> _newWake(
+      BuildContext ctx, List<CoordinationAgent> agents) async {
+    final picked = await showAppMenu<String>(ctx,
+        anchor: ctx,
+        point: kMobile ? null : lastPointerDown,
+        items: [
+          appMenuHeading<String>('Wake who?'),
+          appMenuItem(
+              value: 'mission-control',
+              label: 'Mission Control',
+              icon: 'sparkles'),
+          for (final a in agents)
+            appMenuItem(
+                value: a.id,
+                label: a.displayName.trim().isEmpty ? a.id : a.displayName,
+                icon: 'agent'),
+        ]);
+    if (!mounted || picked == null) return;
+    // ignore: use_build_context_synchronously
+    _open(ctx, picked, _name(picked, agents), agents);
   }
 
   Widget _warmRow(

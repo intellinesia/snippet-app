@@ -53,6 +53,9 @@ Future<void> _loadBundledFonts() async {
     'Geist': 'Geist',
     'Literata': 'Literata',
   };
+  final myna = FontLoader('MynaIcons')
+    ..addFont(File('assets/fonts/MynaIcons.ttf').readAsBytes().then(ByteData.sublistView));
+  await myna.load();
   for (final entry in families.entries) {
     final loader = FontLoader(entry.key);
     for (final weight in const [400, 500, 600, 700]) {

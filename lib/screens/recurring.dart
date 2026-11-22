@@ -347,7 +347,6 @@ class RecurringScreenState extends State<RecurringScreen>
         prompt: p,
         planPath: planPath.isEmpty ? null : planPath,
         schedule: sched,
-        goal: true,
       );
       _refresh();
     } catch (e) {
@@ -464,7 +463,6 @@ class RecurringScreenState extends State<RecurringScreen>
         prompt: p,
         planPath: planPath.isEmpty ? null : planPath,
         schedule: sched,
-        goal: true,
       );
       _refresh();
     } catch (e) {

@@ -1901,7 +1901,7 @@ class RecurringJob {
       : id = j['id'] as String? ?? '',
         title = j['title'] as String? ?? '',
         sessionId = j['session_id'] as String? ?? '',
-        prompt = j['prompt'] as String? ?? '',
+        prompt = j['prompt'] as String? ?? j['brief'] as String? ?? '',
         planPath = (j['plan_path'] as String?)?.trim().isEmpty == true
             ? null
             : j['plan_path'] as String?,

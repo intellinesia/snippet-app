@@ -25,19 +25,23 @@ void main() {
         final p = req.uri.path;
         Object body = {};
         var status = 200;
-        if (p == '/wakes') {
+        if (p == '/wakes' && req.method == 'POST') {
+          body = wakeJson();
+        } else if (p == '/wakes') {
           body = {
-            'wakes': [wakeJson()],
+            'wakes': [
+              wakeJson(),
+              {'id': 'o-1', 'kind': 'once', 'owner': 'scout', 'title': 'Ping'},
+              {'id': 'w-1', 'kind': 'watch', 'owner': 'scout', 'name': 'ci'},
+            ],
             'limits': {}
           };
-        } else if (p == '/wake-runs') {
+        } else if (p == '/wakes/runs') {
           body = {
             'runs': [
               {'id': 1, 'status': 'ok', 'fired_at': 5}
             ]
           };
-        } else if (p == '/wakes/ghost') {
-          status = 404;
         } else if (p.startsWith('/wakes/')) {
           body = wakeJson();
         } else if (p == '/keep-warm') {
@@ -61,19 +65,29 @@ void main() {
 
     tearDown(() => server.close(force: true));
 
-    test('wake calls use the documented routes and bodies', () async {
+    test('wake calls use the single /wakes resource', () async {
       expect((await client.wakes()).wakes.single.owner, 'scout');
+      final book = await client.wakeBook();
+      expect(book.every, hasLength(1));
+      expect(book.once.single.title, 'Ping');
+      expect(book.watches.single.name, 'ci');
       expect(await client.wake('ghost'), isNull);
       await client.setWake('scout', {'schedule': 'daily 09:00'});
+      await client.setWake('newcomer', {'schedule': 'daily 09:00'});
+      await client.patchWake('wake-scout', {'enabled': false});
+      await client.deleteWake('o-1');
       await client.clearWake('scout');
       final runs = await client.wakeRuns(owner: 'scout', limit: 5);
       expect(runs.single.status, 'ok');
-      expect(seen, contains('GET /wakes?token=tok'));
-      expect(seen, contains('PUT /wakes/scout?token=tok'));
-      expect(seen, contains('DELETE /wakes/scout?token=tok'));
-      expect(seen, contains('GET /wake-runs?token=tok&owner=scout&limit=5'));
-      expect(jsonDecode(bodies[seen.indexOf('PUT /wakes/scout?token=tok')]),
-          {'schedule': 'daily 09:00'});
+      expect(seen, contains('GET /wakes?token=tok&kind=every'));
+      expect(seen, contains('GET /wakes/runs?token=tok&owner=scout&limit=5'));
+      expect(seen, contains('PATCH /wakes/wake-scout?token=tok'));
+      expect(seen, contains('POST /wakes?token=tok'));
+      expect(seen, contains('DELETE /wakes/o-1?token=tok'));
+      expect(seen, contains('DELETE /wakes/wake-scout?token=tok'));
+      expect(seen.where((r) => r.contains('/recurring') || r.contains('/wake-runs') || r.contains('/watches')), isEmpty);
+      final post = bodies[seen.indexOf('POST /wakes?token=tok')];
+      expect(jsonDecode(post), {'owner': 'newcomer', 'schedule': 'daily 09:00'});
     });
 
     test('keep-warm and context calls', () async {

@@ -132,6 +132,13 @@ class FakeWakeClient extends DaemonClient {
       name == null ? wakeState : named[name];
 
   @override
+  Future<WakeBook> wakeBook({String? owner, String? kind}) async => WakeBook(
+      [if (wakeState != null) wakeState!, ...named.values],
+      const [],
+      watchList,
+      const WakeLimits());
+
+  @override
   Future<WakeList> wakes() async => WakeList(
       [if (wakeState != null) wakeState!, ...named.values], const WakeLimits());
 

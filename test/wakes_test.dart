@@ -201,10 +201,11 @@ void main() {
       );
       await _pump(tester, WakesScreen(client: c, embedded: true),
           scroll: false);
-      expect(find.text('Revenue Scout'), findsOneWidget);
-      expect(find.byKey(const ValueKey('wake-scout')), findsOneWidget);
-      // Keep warm is its own page now.
-      expect(find.byKey(const ValueKey('warm-scout')), findsNothing);
+      // The schedule row and the keep-warm row both name the agent.
+      expect(find.text('Revenue Scout'), findsNWidgets(2));
+      expect(find.byKey(const ValueKey('wake-wake-scout')), findsOneWidget);
+      // Keep warm is the last group on the page.
+      expect(find.byKey(const ValueKey('warm-scout')), findsOneWidget);
       expect(find.textContaining('Session was busy'), findsOneWidget);
     });
 
@@ -239,7 +240,7 @@ void main() {
       expect(find.text('Paused for quiet hours'), findsOneWidget);
       expect(find.textContaining('snippet-mobile-8f8d'), findsNothing);
       expect(find.text('0 warms'), findsNothing);
-      expect(find.text('No wakes yet'), findsNothing);
+      expect(find.text('Nothing wakes on its own yet'), findsNothing);
 
       await tester.tap(find.text('Wave 2 merge'));
       await tester.pumpAndSettle();
@@ -254,7 +255,7 @@ void main() {
       final c = FakeWakeClient();
       await _pump(tester, WakesScreen(client: c, embedded: true),
           scroll: false);
-      expect(find.text('No wakes yet'), findsOneWidget);
+      expect(find.text('Nothing wakes on its own yet'), findsOneWidget);
     });
   });
 

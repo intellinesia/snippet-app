@@ -121,6 +121,12 @@ class DaemonClient {
           Duration timeout = _timeout}) =>
       _http.put(uri, headers: headers, body: body).timeout(timeout);
 
+  Future<http.Response> _patch(Uri uri,
+          {Map<String, String>? headers,
+          Object? body,
+          Duration timeout = _timeout}) =>
+      _http.patch(uri, headers: headers, body: body).timeout(timeout);
+
   Future<http.Response> _delete(Uri uri,
           {Map<String, String>? headers,
           Object? body,
@@ -1597,42 +1603,77 @@ class DaemonClient {
   String _ownerPath(String prefix, String owner) =>
       '$prefix/${owner.split('/').map(Uri.encodeComponent).join('/')}';
 
-  /// GET /wakes — every wake schedule with the daemon's limits.
+  /// GET /wakes — every wake (schedules, one-offs, watches) and the limits.
+  Future<WakeBook> wakeBook({String? owner, String? kind}) async {
+    final r = await _get(_uri('/wakes', {
+      if (owner != null && owner.isNotEmpty) 'owner': owner,
+      if (kind != null) 'kind': kind,
+    }));
+    if (r.statusCode != 200) throw _err('list wakes', r);
+    return WakeBook.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  /// The agents' wake policies with the daemon's limits.
   Future<WakeList> wakes() async {
-    final r = await _get(_uri('/wakes'));
+    final r = await _get(_uri('/wakes', {'kind': 'every'}));
     if (r.statusCode != 200) throw _err('list wakes', r);
     return WakeList.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
-  /// GET /wakes/{owner}[?name=] — null when the owner has no such wake.
-  Future<WakeSchedule?> wake(String owner, {String? name}) async {
-    final r = await _get(_uri(
-        _ownerPath('/wakes', owner), name == null ? null : {'name': name}));
-    if (r.statusCode == 404) return null;
-    if (r.statusCode != 200) throw _err('read wake', r);
-    return WakeSchedule.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  Future<WakeSchedule?> _findWake(String owner, String? name) async {
+    final book = await wakeBook(owner: owner, kind: 'every');
+    for (final w in book.every) {
+      if (w.owner == owner && w.name == name) return w;
+    }
+    return null;
   }
 
-  /// PUT /wakes/{owner}. Only the keys in [body] change; see [wakeBody].
+  /// The owner's wake called [name] (null for its default wake), or null.
+  Future<WakeSchedule?> wake(String owner, {String? name}) =>
+      _findWake(owner, name);
+
+  /// Creates the owner's wake, or changes the keys in [body] on the one it has
+  /// (POST /wakes, or PATCH /wakes/{id}); see [wakeBody].
   Future<WakeSchedule> setWake(String owner, Map<String, dynamic> body) async {
-    final r = await _put(_uri(_ownerPath('/wakes', owner)),
-        headers: _json, body: jsonEncode(body));
+    final existing = await _findWake(owner, body['name'] as String?);
+    final http.Response r;
+    if (existing == null) {
+      r = await _post(_uri('/wakes'),
+          headers: _json, body: jsonEncode({'owner': owner, ...body}));
+    } else {
+      r = await _patch(_uri('/wakes/${Uri.encodeComponent(existing.id)}'),
+          headers: _json, body: jsonEncode(body));
+    }
+    _recurringCache = null;
     if (r.statusCode != 200) throw _err('save wake', r);
     return WakeSchedule.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
-  /// DELETE /wakes/{owner}[?name=].
-  Future<void> clearWake(String owner, {String? name}) async {
-    final r = await _delete(_uri(
-        _ownerPath('/wakes', owner), name == null ? null : {'name': name}));
-    if (r.statusCode != 200 && r.statusCode != 404) {
-      throw _err('clear wake', r);
-    }
+  /// PATCH /wakes/{id}: pause, resume or edit a schedule; a watch takes only
+  /// `enabled`.
+  Future<void> patchWake(String id, Map<String, dynamic> body) async {
+    final r = await _patch(_uri('/wakes/${Uri.encodeComponent(id)}'),
+        headers: _json, body: jsonEncode(body));
+    _recurringCache = null;
+    if (r.statusCode != 200) throw _err('update wake', r);
   }
 
-  /// GET /wake-runs — recent wake runs, newest first.
+  /// DELETE /wakes/{id}: removes a schedule or watch, cancels a one-off.
+  Future<void> deleteWake(String id) async {
+    final r = await _delete(_uri('/wakes/${Uri.encodeComponent(id)}'));
+    _recurringCache = null;
+    if (r.statusCode != 200 && r.statusCode != 404) throw _err('delete wake', r);
+  }
+
+  /// Deletes the owner's wake called [name] (null for its default wake).
+  Future<void> clearWake(String owner, {String? name}) async {
+    final w = await _findWake(owner, name);
+    if (w != null) await deleteWake(w.id);
+  }
+
+  /// GET /wakes/runs — recent wake runs, newest first.
   Future<List<WakeRun>> wakeRuns({String? owner, int limit = 10}) async {
-    final r = await _get(_uri('/wake-runs', {
+    final r = await _get(_uri('/wakes/runs', {
       if (owner != null && owner.isNotEmpty) 'owner': owner,
       'limit': '$limit',
     }));
@@ -1673,46 +1714,28 @@ class DaemonClient {
     return KeepWarmEntry.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
-  /// GET /agents/{id}/watches.
-  Future<List<AgentWatch>> agentWatches(String agentId) async {
-    final r =
-        await _get(_uri('/agents/${Uri.encodeComponent(agentId)}/watches'));
-    if (r.statusCode == 404) return const [];
-    if (r.statusCode != 200) throw _err('list agent watches', r);
-    final body = jsonDecode(r.body) as Map<String, dynamic>;
-    return [
-      for (final e in (body['watches'] as List?) ?? const [])
-        if (e is Map<String, dynamic>) AgentWatch.fromJson(e)
-    ];
-  }
+  /// The agent's watches: GET /wakes?kind=watch&owner=.
+  Future<List<AgentWatch>> agentWatches(String agentId) async =>
+      (await wakeBook(owner: agentId, kind: 'watch')).watches;
 
-  /// POST /agents/{id}/watches/{watch_id} — pause or resume a watch.
+  /// Pauses or resumes a watch (PATCH /wakes/{id}).
   Future<AgentWatch> setAgentWatchEnabled(
       String agentId, String watchId, bool enabled) async {
-    final r = await _post(
-        _uri(
-            '/agents/${Uri.encodeComponent(agentId)}/watches/${Uri.encodeComponent(watchId)}'),
-        headers: _json,
-        body: jsonEncode({'enabled': enabled}));
+    final r = await _patch(_uri('/wakes/${Uri.encodeComponent(watchId)}'),
+        headers: _json, body: jsonEncode({'enabled': enabled}));
     if (r.statusCode != 200) throw _err('update agent watch', r);
     return AgentWatch.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
-  /// DELETE /agents/{id}/watches/{watch_id}.
-  Future<void> deleteAgentWatch(String agentId, String watchId) async {
-    final r = await _delete(_uri(
-        '/agents/${Uri.encodeComponent(agentId)}/watches/${Uri.encodeComponent(watchId)}'));
-    if (r.statusCode != 200 && r.statusCode != 404) {
-      throw _err('delete agent watch', r);
-    }
-  }
+  /// DELETE /wakes/{id}.
+  Future<void> deleteAgentWatch(String agentId, String watchId) =>
+      deleteWake(watchId);
 
-  /// GET /agents/{id}/watches/{watch_id}/events.
+  /// GET /wakes/{id}/runs: a watch's recent events.
   Future<List<AgentWatchEvent>> agentWatchEvents(String agentId, String watchId,
       {int limit = 20}) async {
     final r = await _get(_uri(
-        '/agents/${Uri.encodeComponent(agentId)}/watches/${Uri.encodeComponent(watchId)}/events',
-        {'limit': '$limit'}));
+        '/wakes/${Uri.encodeComponent(watchId)}/runs', {'limit': '$limit'}));
     if (r.statusCode != 200) throw _err('list agent watch events', r);
     final body = jsonDecode(r.body) as Map<String, dynamic>;
     return [
@@ -1721,10 +1744,10 @@ class DaemonClient {
     ];
   }
 
-  /// GET /agents/{id}/watches/{watch_id}/script.
+  /// GET /wakes/{id}/script.
   Future<String> agentWatchScript(String agentId, String watchId) async {
-    final r = await _get(_uri(
-        '/agents/${Uri.encodeComponent(agentId)}/watches/${Uri.encodeComponent(watchId)}/script'));
+    final r =
+        await _get(_uri('/wakes/${Uri.encodeComponent(watchId)}/script'));
     if (r.statusCode != 200) throw _err('read agent watch script', r);
     final body = jsonDecode(r.body) as Map<String, dynamic>;
     return body['script'] as String? ?? '';
@@ -2355,18 +2378,19 @@ class DaemonClient {
     if (r.statusCode != 204) throw _err('transfer task lease', r);
   }
 
-  // ---- Recurring jobs ----
+  // ---- Recurring jobs (schedules on /wakes) ----
 
-  /// GET /recurring — list scheduled pokes for Mission Control and sessions.
+  /// GET /wakes?kind=every — the schedules, as the Scheduled lists use them.
   Future<List<RecurringJob>> recurringJobs() async {
     if (_recurringCache != null) return [..._recurringCache!];
     if (_recurringInFlight != null) return _recurringInFlight!;
     final pending = () async {
-      final r = await _get(_uri('/recurring'));
+      final r = await _get(_uri('/wakes', {'kind': 'every'}));
       if (r.statusCode != 200) throw _err('list recurring jobs', r);
-      final list = (jsonDecode(r.body) as List)
-          .map((e) => RecurringJob.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final list = [
+        for (final e in (jsonDecode(r.body) as Map)['wakes'] as List)
+          if (e is Map<String, dynamic>) RecurringJob.fromJson(e)
+      ];
       _recurringCache = list;
       return [...list];
     }();
@@ -2378,34 +2402,32 @@ class DaemonClient {
     }
   }
 
-  /// POST /recurring — schedule a poke. [schedule] is `every 5m|1h|1d` or `daily HH:MM`.
+  /// POST /wakes — schedule a poke for [sessionId] (a session or Mission
+  /// Control). [schedule] is `every 5m|1h|1d` or `daily HH:MM`.
   Future<RecurringJob> createRecurring({
     required String title,
     required String sessionId,
     String prompt = '',
     String? planPath,
     required String schedule,
-    bool goal = true,
   }) async {
     final body = <String, dynamic>{
+      'owner': sessionId,
       'title': title,
-      'session_id': sessionId,
-      'prompt': prompt,
+      'brief': prompt,
       'schedule': schedule,
-      'delivery': goal ? 'goal' : 'message',
     };
     if (planPath != null) body['plan_path'] = planPath;
-    final r =
-        await _post(_uri('/recurring'), headers: _json, body: jsonEncode(body));
+    final r = await _post(_uri('/wakes'), headers: _json, body: jsonEncode(body));
+    _recurringCache = null;
     if (r.statusCode != 200) throw _err('create recurring job', r);
     return RecurringJob.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
-  /// PUT /recurring/{id} — update title/prompt/plan/schedule/enabled (pause = enabled:false).
+  /// PATCH /wakes/{id} — update title/brief/plan/schedule/enabled (pause = enabled:false).
   Future<RecurringJob> updateRecurring(
     String id, {
     String? title,
-    String? sessionId,
     String? prompt,
     String? planPath,
     String? schedule,
@@ -2413,20 +2435,21 @@ class DaemonClient {
   }) async {
     final body = <String, dynamic>{};
     if (title != null) body['title'] = title;
-    if (sessionId != null) body['session_id'] = sessionId;
-    if (prompt != null) body['prompt'] = prompt;
+    if (prompt != null) body['brief'] = prompt;
     if (planPath != null) body['plan_path'] = planPath;
     if (schedule != null) body['schedule'] = schedule;
     if (enabled != null) body['enabled'] = enabled;
-    final r = await _put(_uri('/recurring/$id'),
+    final r = await _patch(_uri('/wakes/${Uri.encodeComponent(id)}'),
         headers: _json, body: jsonEncode(body));
+    _recurringCache = null;
     if (r.statusCode != 200) throw _err('update recurring job', r);
     return RecurringJob.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
-  /// DELETE /recurring/{id}.
+  /// DELETE /wakes/{id}.
   Future<void> deleteRecurring(String id) async {
-    final r = await _delete(_uri('/recurring/$id'));
+    final r = await _delete(_uri('/wakes/${Uri.encodeComponent(id)}'));
+    _recurringCache = null;
     if (r.statusCode != 200) throw _err('delete recurring job', r);
   }
 

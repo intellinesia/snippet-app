@@ -111,18 +111,6 @@ const List<(String, List<_NavEntry>)> _groups = [
         iconData: null,
       ),
       (
-        page: SettingsPage.keepWarm,
-        label: 'Keep warm',
-        icon: 'zap',
-        iconData: null,
-      ),
-      (
-        page: SettingsPage.scheduled,
-        label: 'Scheduled',
-        icon: 'calendar-clock',
-        iconData: null,
-      ),
-      (
         page: SettingsPage.vault,
         label: 'Vault',
         icon: 'lock',
