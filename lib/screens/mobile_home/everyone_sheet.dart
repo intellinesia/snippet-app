@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
+import '../../chat/agent_cluster.dart';
 import '../../crew_status.dart' show CrewState;
 import '../../glass.dart';
 import '../../mochi.dart';
@@ -16,6 +17,8 @@ import '../phone_hero.dart' show heroAgentColor;
 import '../session_list_row.dart' show projectLabel, sessionCameBack;
 import '../shell_nav.dart' show sessionBusy;
 import 'agents_group.dart' show ManagedPill;
+import 'groups_group.dart'
+    show GroupUnreadBadge, groupRelativeAge, groupRowLine;
 import 'home_data.dart';
 import 'home_style.dart';
 
@@ -36,7 +39,7 @@ bool sheetSettlesOpen(
 
 /// Pull-up "Everyone" sheet for Round 6 "One thing": dimmed home behind, glass
 /// surface starting at 132 pt, composer staying above it. Organised by state:
-/// Working, Your sessions, Asleep fold, Settled fold.
+/// Working, Asleep fold, Groups, Your sessions, Settled fold.
 class EveryoneSheet extends StatelessWidget {
   const EveryoneSheet({
     super.key,
@@ -55,6 +58,11 @@ class EveryoneSheet extends StatelessWidget {
     required this.progress,
     required this.onDrag,
     required this.onRelease,
+    this.groups = const [],
+    this.agentName,
+    this.mutedGroupIds = const {},
+    this.onOpenGroup,
+    this.onGroupActions,
     this.onSessionActions,
     this.onRefresh,
   });
@@ -65,6 +73,9 @@ class EveryoneSheet extends StatelessWidget {
     List<AgentRow> asleep
   }) rows;
   final Map<String, List<SessionInfo>> managed;
+  final List<GroupSummary> groups;
+  final String Function(String id)? agentName;
+  final Set<String> mutedGroupIds;
   final List<SessionInfo> mainSessions;
   final List<SessionInfo> settledSessions;
   final bool asleepOpen;
@@ -73,6 +84,8 @@ class EveryoneSheet extends StatelessWidget {
   final VoidCallback onToggleSettled;
   final void Function(CoordinationAgent a) onOpenAgent;
   final void Function(CoordinationAgent a) onOpenManaged;
+  final void Function(GroupSummary g)? onOpenGroup;
+  final void Function(GroupSummary g)? onGroupActions;
   final void Function(SessionInfo s) onOpenSession;
   final void Function(SessionInfo s)? onSessionActions;
   final VoidCallback onClose;
@@ -106,8 +119,10 @@ class EveryoneSheet extends StatelessWidget {
 
     final empty = active.isEmpty &&
         asleep.isEmpty &&
+        groups.isEmpty &&
         mainSessions.isEmpty &&
         settledSessions.isEmpty;
+    String resolveName(String id) => agentName?.call(id) ?? id;
 
     final asleepBlock = <Widget>[
       if (asleep.isNotEmpty) ...[
@@ -195,10 +210,30 @@ class EveryoneSheet extends StatelessWidget {
             SizedBox(height: S.of(14)),
           ],
           ...asleepBlock,
-          // A clear break between the agents and whatever session group follows.
+          // A clear break between the agents and whatever follows.
           if (asleep.isNotEmpty &&
-              (mainSessions.isNotEmpty || settledSessions.isNotEmpty))
+              (groups.isNotEmpty ||
+                  mainSessions.isNotEmpty ||
+                  settledSessions.isNotEmpty))
             const SizedBox(height: 24),
+          if (groups.isNotEmpty) ...[
+            _SectionHeader('Groups', count: groups.length),
+            for (var i = 0; i < groups.length; i++) ...[
+              if (i > 0) _hairline(inset: kHomeMargin + 54),
+              _SheetGroupRow(
+                key: ValueKey('group-row-${groups[i].id}'),
+                group: groups[i],
+                nameOf: resolveName,
+                muted: mutedGroupIds.contains(groups[i].id),
+                onOpen: () => onOpenGroup?.call(groups[i]),
+                onLongPress: onGroupActions == null
+                    ? null
+                    : () => onGroupActions!(groups[i]),
+              ),
+            ],
+            if (mainSessions.isNotEmpty || settledSessions.isNotEmpty)
+              const SizedBox(height: 24),
+          ],
           if (mainSessions.isNotEmpty) ...[
             _SectionHeader('Your sessions', count: mainSessions.length),
             for (var i = 0; i < mainSessions.length; i++) ...[
@@ -516,6 +551,126 @@ class _SheetAgentRow extends StatelessWidget {
               ),
               SizedBox(width: S.of(14)),
             ]),
+    );
+  }
+}
+
+class _SheetGroupRow extends StatelessWidget {
+  const _SheetGroupRow({
+    super.key,
+    required this.group,
+    required this.nameOf,
+    required this.onOpen,
+    this.onLongPress,
+    this.muted = false,
+  });
+
+  final GroupSummary group;
+  final String Function(String id) nameOf;
+  final VoidCallback onOpen;
+  final VoidCallback? onLongPress;
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = group.title.trim().isEmpty ? 'Group' : group.title.trim();
+    final line = groupRowLine(group, nameOf);
+    final age = groupRelativeAge(group);
+    final unread = group.unread;
+    final agents = group.agentIds;
+    final subColor = (line.live || unread > 0) ? AppColors.fg2 : AppColors.fg3;
+
+    return Semantics(
+      button: true,
+      label:
+          '$title, ${plainPreview(line.text)}${unread > 0 ? ', $unread unread' : ''}',
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: onOpen,
+          onLongPress: onLongPress,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 64),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: kHomeMargin, vertical: 8),
+              child: Row(children: [
+                SizedBox.square(
+                  dimension: 40,
+                  child: agents.isEmpty
+                      ? Center(
+                          child: AppIcon('users',
+                              size: 22, color: AppColors.fg3))
+                      : AgentCluster(ids: agents, size: 40),
+                ),
+                SizedBox(width: S.of(14)),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Flexible(
+                          child: Text(title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: sans(17,
+                                  weight: unread > 0
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                  color: AppColors.fg1)),
+                        ),
+                        if (muted) ...[
+                          SizedBox(width: S.s6),
+                          AppIcon('bell-off', size: 13, color: AppColors.fg3),
+                        ],
+                      ]),
+                      Row(children: [
+                        if (line.live) ...[
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                                color: AppColors.ok, shape: BoxShape.circle),
+                          ),
+                          SizedBox(width: S.s6),
+                        ],
+                        Expanded(
+                          child: Text.rich(
+                            markdownPreviewSpan(
+                                line.text, sans(13, color: subColor)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ]),
+                    ],
+                  ),
+                ),
+                if (age.isNotEmpty || unread > 0) ...[
+                  SizedBox(width: S.s8),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (age.isNotEmpty)
+                        Text(age,
+                            maxLines: 1,
+                            style: mono(12,
+                                color: unread > 0
+                                    ? AppColors.fg2
+                                    : AppColors.fg3)),
+                      if (unread > 0) ...[
+                        if (age.isNotEmpty) const SizedBox(height: 4),
+                        GroupUnreadBadge(id: group.id, count: unread),
+                      ],
+                    ],
+                  ),
+                ],
+              ]),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

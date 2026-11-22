@@ -154,3 +154,50 @@ class AgentRow {
 bool asleepOpenFor(bool? user) => user ?? true;
 bool settledOpenFor(bool? user, {bool searching = false}) =>
     searching || (user ?? false);
+
+/// When a group last had activity (newest event, else creation time).
+DateTime? groupActivityAt(GroupSummary g) =>
+    DateTime.tryParse(g.lastEventAt ?? '') ?? DateTime.tryParse(g.createdAt);
+
+/// Groups ordered most recent activity first, title ascending as tiebreak.
+List<GroupSummary> sortedGroups(Iterable<GroupSummary> groups) {
+  final out = groups.toList();
+  out.sort((a, b) {
+    final at = groupActivityAt(a);
+    final bt = groupActivityAt(b);
+    if (at != bt) {
+      if (at == null) return 1;
+      if (bt == null) return -1;
+      return bt.compareTo(at);
+    }
+    return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+  });
+  return out;
+}
+
+/// True when a group matches a search query on title, preview or member names/ids.
+bool groupMatchesQuery(
+  GroupSummary g,
+  String query, {
+  Map<String, String> agentNames = const {},
+}) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return true;
+  if (g.title.toLowerCase().contains(q)) return true;
+  if ((g.preview ?? '').toLowerCase().contains(q)) return true;
+  for (final m in g.members) {
+    if (m.id.toLowerCase().contains(q)) return true;
+    final name = agentNames[m.id];
+    if (name != null && name.toLowerCase().contains(q)) return true;
+  }
+  return false;
+}
+
+/// Fallback subtitle when a group has neither live activity nor a preview.
+String groupMemberSummary(GroupSummary g, String Function(String id) nameOf) {
+  final n = g.members.length;
+  return [
+    '$n ${n == 1 ? 'member' : 'members'}',
+    if (g.lead != null) 'lead ${nameOf(g.lead!)}',
+  ].join(' · ');
+}

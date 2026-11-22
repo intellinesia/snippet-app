@@ -6,14 +6,18 @@ import 'package:flutter/physics.dart';
 
 import '../../api.dart';
 import '../../glass.dart';
+import '../../group_mute.dart';
 import '../../models.dart';
 import '../../motion_routes.dart';
+import '../../swr.dart';
 import '../../tap_detector.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
+import '../group_messaging.dart' show confirmDeleteGroup, openGroupThread;
 import '../mobile_chrome.dart' show RoundBtn;
 import 'agents_group.dart';
 import 'everyone_sheet.dart';
+import 'groups_group.dart';
 import 'home_composer.dart';
 import 'home_data.dart';
 import 'home_resting.dart';
@@ -78,13 +82,33 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
   bool _sheetShown = false;
   LocalHistoryEntry? _backEntry;
   late final AnimationController _sheet;
+  late Swr<List<GroupSummary>> _groups;
+
+  Swr<List<GroupSummary>> _watchGroups(DaemonClient client) =>
+      Swr<List<GroupSummary>>(
+        client: client,
+        key: 'groups',
+        fetch: client.groups,
+        revalidateOn: Swr.coordination,
+        onChange: () {
+          if (mounted) setState(() {});
+        },
+      );
+
+  void _onMutedChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void initState() {
     super.initState();
     _sheet = AnimationController.unbounded(vsync: this, value: 0)
       ..addStatusListener(_sheetStatus);
+    _groups = _watchGroups(widget.client);
+    mutedGroups.addListener(_onMutedChanged);
+    loadMutedGroups().catchError((_) => const <String>{});
   }
+
   // Null until the user toggles; each open of the sheet starts from the
   // defaults again (Asleep shown, Settled collapsed).
   bool? _asleepUser;
@@ -96,16 +120,74 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     if (!identical(old.sessions, widget.sessions)) {
       _live.value = widget.sessions;
     }
+    if (!identical(old.client, widget.client)) {
+      _groups.dispose();
+      _groups = _watchGroups(widget.client);
+    }
   }
 
   @override
   void dispose() {
     _backEntry = null;
+    mutedGroups.removeListener(_onMutedChanged);
+    _groups.dispose();
     _sheet.dispose();
     _search.dispose();
     _searchFocus.dispose();
     _live.dispose();
     super.dispose();
+  }
+
+  void _refreshAll() {
+    _groups.refresh();
+    widget.onRefresh?.call();
+  }
+
+  Future<void> _openGroup(GroupSummary g) async {
+    await openGroupThread(context, client: widget.client, group: g);
+    if (mounted) _groups.refresh();
+  }
+
+  Future<void> _groupActions(GroupSummary g) async {
+    final name = g.title.trim().isEmpty ? 'Group' : g.title.trim();
+    try {
+      await loadMutedGroups();
+    } catch (_) {}
+    if (!mounted) return;
+    final muted = mutedGroups.value.contains(g.id);
+    await showAppSheet<void>(
+      context,
+      title: name,
+      subtitle: 'Group',
+      child: SheetActions([
+        SheetAction(
+          muted ? 'bell' : 'bell-off',
+          muted ? 'Unmute notifications' : 'Mute notifications',
+          () async {
+            Navigator.pop(context);
+            await setGroupMuted(g.id, !muted);
+            if (mounted) {
+              toast(context, muted ? 'Unmuted $name' : 'Muted $name');
+            }
+          },
+          detail: muted
+              ? 'Notify again when mentioned in this group'
+              : 'Silence @mention notifications on this device',
+        ),
+        SheetAction(
+          'trash',
+          'Delete group',
+          () async {
+            Navigator.pop(context);
+            if (await confirmDeleteGroup(context, widget.client, g)) {
+              _groups.refresh();
+            }
+          },
+          danger: true,
+          detail: 'Remove this group chat and its messages',
+        ),
+      ]),
+    );
   }
 
   String get _q => _search.text.trim().toLowerCase();
@@ -191,6 +273,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     if (_everyoneOpen) return;
     _asleepUser = null;
     _settledUser = null;
+    _groups.revalidate();
     _settleSheet(open: true);
   }
 
@@ -249,8 +332,15 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     final sessions = widget.sessions;
     final asks = needsYouItems(sessions);
     final names = {for (final a in widget.agents) a.id: a.displayName};
+    String agentName(String id) {
+      final n = names[id]?.trim();
+      return (n != null && n.isNotEmpty) ? n : id;
+    }
+
     final rows = agentRows(widget.agents, sessions,
         presence: widget.client.presence);
+    final groups = sortedGroups(_groups.data ?? const <GroupSummary>[]);
+    final muted = mutedGroups.value;
     final managed = managedByAgent(sessions);
     final human = humanSessions(sessions);
     final working = rows.working.length;
@@ -383,6 +473,9 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
             key: const ValueKey('everyone-sheet'),
             rows: rows,
             managed: managed,
+            groups: groups,
+            agentName: agentName,
+            mutedGroupIds: muted,
             mainSessions: human.main,
             settledSessions: human.settled,
             asleepOpen: asleepOpenFor(_asleepUser),
@@ -393,10 +486,12 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
                 setState(() => _settledUser = !settledOpenFor(_settledUser)),
             onOpenAgent: widget.onOpenAgent,
             onOpenManaged: _openManaged,
+            onOpenGroup: _openGroup,
+            onGroupActions: _groupActions,
             onOpenSession: widget.onOpenSession,
             onSessionActions: widget.onSessionActions,
             onClose: _closeEveryone,
-            onRefresh: widget.onRefresh,
+            onRefresh: widget.onRefresh == null ? null : _refreshAll,
             progress: _sheet,
             onDrag: _dragSheet,
             onRelease: _releaseSheet,
@@ -406,7 +501,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
       // 6. Search overlay (pinned frosted pill bar + live filtered results).
       if (_searching)
         Positioned.fill(
-          child: _searchOverlay(rows, managed, human, bottom),
+          child: _searchOverlay(
+              rows, managed, groups, names, agentName, muted, human, bottom),
         ),
 
       // 7. Shared composer (always on top, including over the Everyone sheet).
@@ -547,6 +643,10 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     ({List<AgentRow> working, List<AgentRow> needs, List<AgentRow> asleep})
         rows,
     Map<String, List<SessionInfo>> managed,
+    List<GroupSummary> groups,
+    Map<String, String> names,
+    String Function(String id) agentName,
+    Set<String> muted,
     ({List<SessionInfo> main, List<SessionInfo> settled}) human,
     double bottom,
   ) {
@@ -560,10 +660,14 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     );
     final agentCount =
         shown.working.length + shown.needs.length + shown.asleep.length;
+    final shownGroups = [
+      for (final g in groups)
+        if (groupMatchesQuery(g, q, agentNames: names)) g,
+    ];
     final main = human.main.where(_matches).toList();
     final settled = human.settled.where(_matches).toList();
     final sessionCount = main.length + settled.length;
-    final empty = agentCount == 0 && sessionCount == 0;
+    final empty = agentCount == 0 && shownGroups.isEmpty && sessionCount == 0;
 
     return ColoredBox(
       color: AppColors.bg,
@@ -592,9 +696,24 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
                     },
                   ),
                 ],
+                if (shownGroups.isNotEmpty) ...[
+                  HomeLabel('Groups',
+                      count: shownGroups.length, top: agentCount > 0 ? 18 : 0),
+                  GroupsGroup(
+                    groups: shownGroups,
+                    nameOf: agentName,
+                    mutedIds: muted,
+                    onOpen: (g) {
+                      _closeSearch();
+                      _openGroup(g);
+                    },
+                    onLongPress: _groupActions,
+                  ),
+                ],
                 if (sessionCount > 0) ...[
                   HomeLabel('Your sessions',
-                      count: sessionCount, top: agentCount > 0 ? 18 : 0),
+                      count: sessionCount,
+                      top: (agentCount > 0 || shownGroups.isNotEmpty) ? 18 : 0),
                   SessionsGroup(
                     main: main,
                     settled: settled,
@@ -617,7 +736,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
                       title: q.isEmpty ? 'No sessions yet' : 'Nothing matches',
                       body: q.isEmpty
                           ? 'Start one with the plus and it shows up here.'
-                          : 'Try a title, project, branch or agent name.',
+                          : 'Try a title, project, branch, group or agent name.',
                     ),
                   ),
               ],
@@ -665,7 +784,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
                       decoration: InputDecoration(
                         isCollapsed: true,
                         border: InputBorder.none,
-                        hintText: 'Search agents and sessions',
+                        hintText: 'Search agents, groups and sessions',
                         hintStyle: sans(16, color: AppColors.fg4),
                       ),
                     ),

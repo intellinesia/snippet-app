@@ -152,18 +152,18 @@ String? groupActivityStatus(
 }
 
 /// Open a group thread, the same way openAgentThread opens a direct one.
-void openGroupThread(
+Future<void> openGroupThread(
   BuildContext context, {
   required DaemonClient client,
   required GroupSummary group,
-}) {
+}) async {
   if (kMobile) {
     Widget page(BuildContext _) => GroupThreadScreen(
           client: client,
           group: group,
           onClose: () => Navigator.pop(context),
         );
-    Navigator.of(context).push<void>(AppPageRoute<void>(builder: page));
+    await Navigator.of(context).push<void>(AppPageRoute<void>(builder: page));
     return;
   }
   presentScreen(
@@ -221,7 +221,10 @@ Future<GroupSummary?> createAndOpenGroup(
   final group = await showCreateGroupSheet(context,
       client: client, anchorContext: anchorContext);
   if (group == null || !context.mounted) return null;
-  openGroupThread(context, client: client, group: group);
+  final entry = client.swr.entry<List<GroupSummary>>('groups');
+  entry.revalidate(client.groups, force: true);
+  await openGroupThread(context, client: client, group: group);
+  entry.revalidate(client.groups, force: true);
   return group;
 }
 

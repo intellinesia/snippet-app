@@ -20,12 +20,46 @@ import 'package:snippet/swr.dart';
 import 'package:snippet/theme.dart';
 
 class _Client extends DaemonClient {
-  _Client() : super('http://127.0.0.1:1', 'test');
+  _Client({this.mockGroups = const []}) : super('http://127.0.0.1:1', 'test');
+  final List<GroupSummary> mockGroups;
   final _events = DeviceEventHub.local();
 
   @override
   DeviceEventHub get deviceEvents => _events;
+
+  @override
+  Future<List<GroupSummary>> groups() async => mockGroups;
 }
+
+GroupSummary _group(
+  String id,
+  String title, {
+  List<String> agentIds = const ['snippet', 'mobile'],
+  String? lastEventAt,
+  String? createdAt,
+  int unread = 0,
+  String? previewBody,
+  String previewFrom = 'snippet',
+  List<String> replying = const [],
+}) =>
+    GroupSummary.fromJson({
+      'id': id,
+      'title': title,
+      'members': [
+        {'kind': 'human', 'id': 'human'},
+        for (final a in agentIds) {'kind': 'agent', 'id': a},
+      ],
+      if (lastEventAt != null) 'last_event_at': lastEventAt,
+      'created_at': createdAt ?? '2026-11-22T10:00:00Z',
+      'unread': unread,
+      if (previewBody != null)
+        'last_message': {
+          'from_kind': previewFrom == 'human' ? 'human' : 'agent',
+          'from_id': previewFrom,
+          'body': previewBody,
+        },
+      'replying': replying,
+    });
 
 final _now = DateTime.now();
 int _ago(int minutes) =>
@@ -188,6 +222,40 @@ void main() {
         expect(inkContrast(c), greaterThanOrEqualTo(4.3), reason: '$c');
       }
     });
+
+    test('sortedGroups orders most recent activity first and breaks ties by title',
+        () {
+      final groups = sortedGroups([
+        _group('b', 'Bravo',
+            lastEventAt: '2026-11-22T12:00:00Z',
+            createdAt: '2026-11-22T08:00:00Z'),
+        _group('a', 'alpha',
+            lastEventAt: '2026-11-22T12:00:00Z',
+            createdAt: '2026-11-22T08:00:00Z'),
+        _group('c', 'Newest',
+            lastEventAt: '2026-11-22T14:00:00Z',
+            createdAt: '2026-11-22T09:00:00Z'),
+        _group('d', 'Created only', createdAt: '2026-11-22T13:00:00Z'),
+      ]);
+      expect([for (final g in groups) g.id], ['c', 'd', 'a', 'b']);
+    });
+
+    test('groupMatchesQuery matches title, preview, and member names or ids',
+        () {
+      final gc = _group(
+        'g1',
+        'scrapper bois',
+        agentIds: const ['crawler', 'rust'],
+        previewBody: 'Proxy rotation landed',
+      );
+      const names = {'crawler': 'Scraper Bot', 'rust': 'Rust PR Reviewer'};
+      expect(groupMatchesQuery(gc, '', agentNames: names), isTrue);
+      expect(groupMatchesQuery(gc, 'SCRAPPER', agentNames: names), isTrue);
+      expect(groupMatchesQuery(gc, 'proxy rotation', agentNames: names), isTrue);
+      expect(groupMatchesQuery(gc, 'crawler', agentNames: names), isTrue);
+      expect(groupMatchesQuery(gc, 'PR Reviewer', agentNames: names), isTrue);
+      expect(groupMatchesQuery(gc, 'unrelated', agentNames: names), isFalse);
+    });
   });
 
   group('One thing screen', () {
@@ -198,6 +266,7 @@ void main() {
       WidgetTester tester,
       List<SessionInfo> sessions, {
       List<CoordinationAgent>? agents,
+      List<GroupSummary> groups = const [],
       double textScale = 1,
     }) async {
       tester.view.devicePixelRatio = 3;
@@ -212,7 +281,7 @@ void main() {
         ),
         home: Scaffold(
           body: MobileHomeScreen(
-            client: _Client(),
+            client: _Client(mockGroups: groups),
             sessions: sessions,
             agents: agents ??
                 [
@@ -549,6 +618,95 @@ void main() {
     testWidgets('tone pills keep cream characters warm', (tester) async {
       expect(pillTone(const Color(0xFFD9D4C8)), const Color(0xFFD9C9A0));
       expect(pillTone(const Color(0xFF1FB6B6)), const Color(0xFF1FB6B6));
+    });
+
+    testWidgets('Everyone sheet is non-empty when only groups exist',
+        (tester) async {
+      await pumpHome(
+        tester,
+        const [],
+        agents: const [],
+        groups: [
+          _group(
+            'gc-1',
+            'scrapper bois',
+            agentIds: const ['snippet', 'rust'],
+            lastEventAt: _now.subtract(const Duration(minutes: 4)).toIso8601String(),
+            unread: 3,
+            previewBody: 'Found 42 fresh leads',
+          ),
+        ],
+      );
+      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(find.text('No sessions yet'), findsNothing);
+      expect(find.text('Groups'), findsOneWidget);
+      expect(find.text('scrapper bois'), findsOneWidget);
+      expect(find.byKey(const ValueKey('group-unread-gc-1')), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+    });
+
+    testWidgets(
+        'Everyone sheet places Groups between Agents and Settled, and search matches groups',
+        (tester) async {
+      final groups = [
+        _group(
+          'gc-1',
+          'scrapper bois',
+          agentIds: const ['snippet', 'rust'],
+          lastEventAt:
+              _now.subtract(const Duration(minutes: 2)).toIso8601String(),
+          unread: 2,
+          previewBody: 'Batch crawl finished',
+        ),
+        _group(
+          'gc-2',
+          'release crew',
+          agentIds: const ['mobile', 'rust'],
+          lastEventAt:
+              _now.subtract(const Duration(minutes: 9)).toIso8601String(),
+          replying: const ['mobile'],
+        ),
+      ];
+      await pumpHome(
+        tester,
+        [
+          _s('old1', extra: {
+            'settled': true,
+            'settled_at': _ago(180),
+          }),
+        ],
+        groups: groups,
+      );
+      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(find.text('Groups'), findsOneWidget);
+      expect(find.text('scrapper bois'), findsOneWidget);
+      expect(find.text('release crew'), findsOneWidget);
+      expect(find.textContaining('Mobile Design is replying', findRichText: true),
+          findsOneWidget);
+
+      final asleepY =
+          tester.getTopLeft(find.byKey(const ValueKey('asleep-fold'))).dy;
+      final groupsY = tester.getTopLeft(find.text('Groups')).dy;
+      final settledY =
+          tester.getTopLeft(find.byKey(const ValueKey('settled-fold'))).dy;
+      expect(groupsY, greaterThan(asleepY));
+      expect(settledY, greaterThan(groupsY));
+
+      // Search finds groups by title and by member name.
+      await tester.tap(find.byKey(const ValueKey('everyone-sheet-handle')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.tap(find.byTooltip('Search'));
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.enterText(find.byType(TextField).first, 'scrapper');
+      await tester.pump();
+      expect(find.text('Groups'), findsOneWidget);
+      expect(find.text('scrapper bois'), findsOneWidget);
+      expect(find.text('release crew'), findsNothing);
     });
   });
 }

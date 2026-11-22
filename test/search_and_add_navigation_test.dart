@@ -145,16 +145,17 @@ void main() {
       // Search reaches past the resting screen to every matching chat.
       await tester.tap(find.byTooltip('Search'));
       await tester.pumpAndSettle();
-      await tester.enterText(_field('Search agents and sessions'), 'Title 13');
+      await tester.enterText(
+          _field('Search agents, groups and sessions'), 'Title 13');
       await tester.pumpAndSettle();
       expect(find.text('Session Title 13'), findsOneWidget);
 
       // Search for nonexistent chat
       await tester.enterText(
-          _field('Search agents and sessions'), 'Session Title 99');
+          _field('Search agents, groups and sessions'), 'Session Title 99');
       await tester.pumpAndSettle();
       expect(find.text('Nothing matches'), findsOneWidget);
-      await tester.enterText(_field('Search agents and sessions'), '');
+      await tester.enterText(_field('Search agents, groups and sessions'), '');
       await tester.pumpAndSettle();
 
       // Older sessions still show inside Search/Everyone without a Recent header.
