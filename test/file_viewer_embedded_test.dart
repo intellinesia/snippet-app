@@ -29,6 +29,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byTooltip('Edit'), findsNothing);
     expect(find.byTooltip('Download'), findsOneWidget);
+    expect(find.byTooltip('Open with'), findsNothing);
     expect(find.text('/w/notes.md'), findsNothing);
     await tester.tap(find.text('Source'));
     await tester.pump(const Duration(milliseconds: 300));
@@ -47,6 +48,26 @@ void main() {
             embedded: true)));
     await tester.pumpAndSettle();
     expect(find.byTooltip('Edit'), findsNothing);
+    expect(find.byTooltip('Open with'), findsNothing);
     debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('desktop file viewer header keeps Download and omits Open with',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      await tester.pumpWidget(MaterialApp(
+          home: FileViewer(
+              client: _FakeClient(),
+              path: '/w/notes.md',
+              name: 'notes.md',
+              embedded: true,
+              header: true)));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Download'), findsOneWidget);
+      expect(find.byTooltip('Open with'), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 }

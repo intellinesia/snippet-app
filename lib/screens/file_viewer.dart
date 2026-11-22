@@ -360,21 +360,6 @@ class _FileViewerState extends State<FileViewer> {
     } catch (_) {}
   }
 
-  /// Fetches the file to a temp path and hands it to the OS default app.
-  Future<void> _openWith() async {
-    try {
-      final dir = await getTemporaryDirectory();
-      final file = File(
-          '${dir.path}/snippet-open-${DateTime.now().microsecondsSinceEpoch}-${widget.name}');
-      await widget.client.downloadToFile(widget.path, file);
-      if (!await openLocalFile(file.path) && mounted) {
-        toast(context, 'No app could open ${widget.name}', danger: true);
-      }
-    } catch (e) {
-      if (mounted) toast(context, '$e', danger: true);
-    }
-  }
-
   void _edit() {
     if (_isMarkdown && !_source) setState(() => _source = true);
     WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
@@ -403,8 +388,6 @@ class _FileViewerState extends State<FileViewer> {
         if (text && _inline) _HeaderButton('Edit', icon: 'edit', onTap: _edit),
         IconBtn('download',
             tooltip: 'Download', onTap: _downloading ? null : _download),
-        if (!_isMedia || f != null)
-          IconBtn('external-link', tooltip: 'Open with', onTap: _openWith),
       ],
     );
   }
