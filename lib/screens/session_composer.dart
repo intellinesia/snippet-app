@@ -108,10 +108,9 @@ extension _SessionScreenComposerExt on _SessionScreenState {
     if (!running) widget.onMacStatus?.call(_state, true);
     _input.clear();
     _armAckWatchdog(); // recover if this send silently dies on a dead socket
-    // Sending is an explicit action — re-pin and jump to the bottom.
+    // Sending is an explicit action — re-pin and smoothly scroll to the bottom.
     _stickToBottom = true;
-    if (!kMobile && !(running && !steer)) _turnSpace = true;
-    _scheduleBottom();
+    _scheduleBottom(smooth: true);
   }
 
   /// A cold session in 'ask' mode needs a resume choice before its next turn;

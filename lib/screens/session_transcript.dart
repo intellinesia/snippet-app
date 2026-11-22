@@ -444,6 +444,9 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
             addEvent(key, SystemNoticeLine(notice: notice));
             break;
           }
+          if (_skipNextUserEnter.remove(_normEchoText(text))) {
+            _shownRows.add(ValueKey(key));
+          }
           final userBubble =
               Bubble(mine: true, text: text, client: widget.client);
           _lastUserRowKey = key;

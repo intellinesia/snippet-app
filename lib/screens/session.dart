@@ -22,6 +22,7 @@ import '../chat/send_flight.dart';
 import '../chat/shared_artifact_line.dart';
 import '../chat/activity_sheet.dart';
 import '../chat/anchored_scroll.dart';
+import '../chat/message_enter.dart';
 import '../chat/send_turn_space.dart';
 import '../chat/chat_card.dart';
 import '../chat/stage_bar.dart';
@@ -331,6 +332,9 @@ class _SessionScreenState extends State<SessionScreen>
   // Phone composer tray behind the "+" (session actions, hand off, fork).
   final _tray = ComposerTrayController();
   bool _rowsSeeded = false;
+  // Normalized user texts recently retired from _pending so the echoed row
+  // replaces the pending bubble without playing MessageEnter a second time.
+  final List<String> _skipNextUserEnter = [];
 
   void _setState(VoidCallback fn) {
     if (mounted) setState(fn);
@@ -475,6 +479,8 @@ class _SessionScreenState extends State<SessionScreen>
 
   void _trackPending(String msg, String nonce) {
     SendFlight.arm(_inputFieldKey);
+    // Sending into a brand-new empty chat should still animate the first row.
+    _rowsSeeded = true;
     _pending.add(msg);
     _pendingNonce.add(nonce);
     _pendingEchoBaseline
@@ -554,8 +560,9 @@ class _SessionScreenState extends State<SessionScreen>
 
     var i = 0;
     while (i < _pending.length) {
-      if (echoed.contains(_normEchoText(_pending[i])) ||
-          attachmentEchoed(_pending[i])) {
+      final norm = _normEchoText(_pending[i]);
+      if (echoed.contains(norm) || attachmentEchoed(_pending[i])) {
+        _skipNextUserEnter.add(norm);
         _removePendingAt(i);
       } else {
         i++;
@@ -569,6 +576,7 @@ class _SessionScreenState extends State<SessionScreen>
       final base =
           _pendingEchoBaseline.isNotEmpty ? _pendingEchoBaseline.first : -1;
       if (nextEchoes <= base) break;
+      _skipNextUserEnter.add(_normEchoText(_pending.first));
       _popPendingFront();
     }
   }
@@ -1389,11 +1397,12 @@ class _SessionScreenState extends State<SessionScreen>
   // Whether to keep pinning to the latest message. Only the USER's own scrolling
   // flips this (see the NotificationListener) — content growth never does, so a
   // streaming reply keeps reaching the true bottom instead of falling behind.
-  bool _stickToBottom = true;
+  final ChatBottomTracker _bottom = ChatBottomTracker();
+  bool get _stickToBottom => _bottom.stickToBottom;
+  set _stickToBottom(bool v) => _bottom.stickToBottom = v;
 
-  // Desktop turn space: a send lets the sent message sit at the top of the
-  // transcript with the reply streaming into the room below.
-  bool _turnSpace = false;
+  // Desktop turn space: kept inactive so sending animates smoothly instead of jumping.
+  final bool _turnSpace = false;
   final GlobalKey _turnAnchor = GlobalKey();
   String? _lastUserRowKey;
 
@@ -1447,54 +1456,22 @@ class _SessionScreenState extends State<SessionScreen>
     );
   }
 
-  // In a reversed list, offset 0 is the latest message.
-  bool _atBottom() {
-    if (!_scroll.hasClients) return true;
-    return _scroll.position.pixels <= 80;
-  }
-
-  // Update the stick flag from a user-driven scroll (drag or settle).
-  bool _userScrolling = false;
-
   bool _onScroll(ScrollNotification n) {
-    final was = _stickToBottom;
-    if (n is ScrollStartNotification && n.dragDetails != null) {
-      _userScrolling = true;
-    } else if (n is ScrollUpdateNotification && n.dragDetails != null) {
-      _userScrolling = true;
-      final delta = n.scrollDelta ?? 0;
-      _stickToBottom = delta > 0 ? false : _atBottom();
-    } else if (n is ScrollEndNotification) {
-      _userScrolling = false;
-      _stickToBottom = _atBottom();
-    }
-    // User scrolling only updates pinning; history pages are not fetched from
-    // scroll notifications because changing the list extent during a gesture
-    // causes the viewport and thumb to jump.
-    // Repaint only on the pinned/unpinned EDGE — it toggles the floating
+    // Repaint only on the pinned/unpinned edge — it toggles the floating
     // "jump to latest" button over the transcript.
-    if (was != _stickToBottom && mounted) setState(() {});
+    if (_bottom.handleScroll(n, _scroll) && mounted) setState(() {});
     return false;
   }
 
   void _scheduleBottom({bool settle = false, bool smooth = false}) {
-    if (!_scroll.hasClients || _userScrolling) return;
-    if (smooth) {
-      _scroll.animateTo(0, duration: Motion.base, curve: Motion.enter);
-    } else if (_scroll.offset != 0) {
-      _scroll.jumpTo(0);
-    }
+    if (!mounted) return;
+    _bottom.scrollToBottom(_scroll, context, animated: smooth);
   }
 
   // Keeps a resized row in place. Applied inside the same layout pass, so the
   // list never paints one shifted frame (the flicker on expand).
-  void _rowResized(double delta, double? bottomInViewport) {
-    if (_stickToBottom || _userScrolling || delta == 0 || !_scroll.hasClients) {
-      return;
-    }
-    if (bottomInViewport != null && bottomInViewport <= 0) return;
-    _scroll.correctBy(delta);
-  }
+  void _rowResized(double delta, double? bottomInViewport) =>
+      _bottom.rowResized(_scroll, delta, bottomInViewport);
 
   // Send now, or queue for the reconnect flush — never silently drop.
   // For user messages (tracked in _pending), do NOT also add to _outbox:
@@ -1999,9 +1976,9 @@ class _SessionScreenState extends State<SessionScreen>
                                                                           onResize:
                                                                               _rowResized,
                                                                           child:
-                                                                              Appear(
-                                                                            enabled:
-                                                                                fresh,
+                                                                              MessageEnter(
+                                                                            animate:
+                                                                                fresh && _stickToBottom,
                                                                             child:
                                                                                 RepaintBoundary(child: child),
                                                                           ),

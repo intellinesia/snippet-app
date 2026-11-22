@@ -24,6 +24,8 @@ import '../drafts.dart';
 import '../session_quick_send.dart';
 import '../composer/voice_note.dart';
 import '../message_reactions.dart';
+import '../chat/anchored_scroll.dart';
+import '../chat/message_enter.dart';
 import '../chat/send_flight.dart';
 import '../chat/send_turn_space.dart';
 import '../mochi.dart';
@@ -613,9 +615,12 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
 
   final _input = TextEditingController();
   final _inputFocus = FocusNode();
-  final _scroll = ScrollController();
-  // Desktop turn space: set by a send, see send_turn_space.dart.
-  bool _turnSpace = false;
+  final _scroll = AnchoredScrollController();
+  final ChatBottomTracker _bottom = ChatBottomTracker();
+  final Set<String> _shownIds = {};
+  bool _rowsSeeded = false;
+  // Desktop turn space: kept inactive so sending animates smoothly instead of jumping.
+  final bool _turnSpace = false;
   final GlobalKey _turnAnchor = GlobalKey();
   final Map<String, GlobalKey> _messageKeys = {};
   CoordinationEvent? _replyTo;
@@ -767,6 +772,9 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         for (final e in page.events)
           if (e.sequence > 0 && e.sequence < oldest) e
       ];
+      for (final e in older) {
+        _shownIds.add(_rowIdFor(e));
+      }
       setState(() {
         _older = [...older, ..._older];
         _deliveries = {...page.deliveries, ..._deliveries};
@@ -829,9 +837,23 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     });
     if (hadNew) {
       unawaitedMarkRead();
-      if (!first) _jumpToBottom();
+      if (!first && _bottom.stickToBottom) _jumpToBottom();
     }
   }
+
+  String _rowIdFor(CoordinationEvent e) =>
+      _flightAlias[e.eventId] ??
+      (e.idempotencyKey.isNotEmpty && _sendInIds.contains(e.idempotencyKey)
+          ? e.idempotencyKey
+          : (e.eventId.isNotEmpty ? e.eventId : 'seq-${e.sequence}'));
+
+  bool _onScroll(ScrollNotification n) {
+    _bottom.handleScroll(n, _scroll);
+    return false;
+  }
+
+  void _rowResized(double delta, double? bottomInViewport) =>
+      _bottom.rowResized(_scroll, delta, bottomInViewport);
 
   void unawaitedMarkRead() {
     widget.client
@@ -842,17 +864,8 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   // The transcript is reversed, so the newest message is offset 0.
   void _jumpToBottom({bool animated = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scroll.hasClients) {
-        if (animated) {
-          _scroll.animateTo(
-            0,
-            duration: Motion.fast,
-            curve: Motion.enter,
-          );
-        } else {
-          _scroll.jumpTo(0);
-        }
-      }
+      if (!mounted) return;
+      _bottom.scrollToBottom(_scroll, context, animated: animated);
     });
   }
 
@@ -899,12 +912,13 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     unawaited(_voice.discard());
     _unechoed.add(pending);
     _sendInIds.add(key);
-    if (!kMobile) _turnSpace = true;
+    _rowsSeeded = true;
+    _bottom.stickToBottom = true;
     setState(() {
       _replyTo = null;
       _events = [..._events, pending];
     });
-    _jumpToBottom();
+    _jumpToBottom(animated: true);
     try {
       final sent = await widget.client.sendAgentMessage(
         toAgentId: widget.agentId,
@@ -1351,61 +1365,88 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
     final lastHumanIdx = d.lastHumanIdx;
     final reactionsByTarget = d.reactions;
     final n = visible.length;
+    if (!_rowsSeeded) {
+      _rowsSeeded = true;
+      for (final e in visible) {
+        _shownIds.add(_rowIdFor(e));
+      }
+    }
+    final rowIndex = <Key, int>{
+      for (var at = 0; at < n; at++) ValueKey(_rowIdFor(visible[at])): n - at,
+    };
     return PullToRefresh(
       onRefresh: () => _load(silent: true),
       reverse: true,
       indicatorTop: topPad + 6,
-      child: _messageList(
-        padding: EdgeInsets.fromLTRB(S.s16, topPad, S.s16, S.s16),
-        itemCount: n + 1 + (_hasOlder || _deskHead ? 1 : 0),
-        itemBuilder: (_, i) {
-          if (i == 0) {
-            final slot = _TypingSlot(
-              store: widget.client.presence,
-              agentId: widget.agentId,
-              enabled: _awaitingReply,
-              child: Padding(
-                padding: EdgeInsets.only(top: ChatColors.groupGap),
-                child: _wideCap(_typingRow()),
+      child: NotificationListener<ScrollNotification>(
+        onNotification: _onScroll,
+        child: _messageList(
+          padding: EdgeInsets.fromLTRB(S.s16, topPad, S.s16, S.s16),
+          itemCount: n + 1 + (_hasOlder || _deskHead ? 1 : 0),
+          findChildIndexCallback: (key) => rowIndex[key],
+          itemBuilder: (_, i) {
+            if (i == 0) {
+              final slot = _TypingSlot(
+                store: widget.client.presence,
+                agentId: widget.agentId,
+                enabled: _awaitingReply,
+                child: Padding(
+                  padding: EdgeInsets.only(top: ChatColors.groupGap),
+                  child: _wideCap(_typingRow()),
+                ),
+              );
+              if (!_deskHead) return slot;
+              return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [slot, _wideCap(_waitingLine())]);
+            }
+            if (i == n + 1) {
+              if (_hasOlder) return _wideCap(_earlierAction());
+              return _showHead
+                  ? _wideCap(_agentHead())
+                  : const SizedBox.shrink();
+            }
+            debugAgentMessageRowBuilds++;
+            final at = n - i;
+            final ev = visible[at];
+            final rowId = _rowIdFor(ev);
+            final fresh = _rowsSeeded && _shownIds.add(rowId);
+            final first = splitBefore[at];
+            final last = at == n - 1 || splitBefore[at + 1];
+            final topGap = at == 0
+                ? 0.0
+                : (first ? ChatColors.groupGap : ChatColors.runGap);
+            final row = _wideCap(
+              _messageRow(
+                ev,
+                card: cards[ev],
+                byId: byId,
+                reactions: reactionsByTarget[ev.eventId] ?? const [],
+                tail: last,
+                showStamp: stamps[at],
+                showOrigin: origins[at],
+                showDelivery: at == lastHumanIdx,
+                head: !kMobile && first,
               ),
             );
-            if (!_deskHead) return slot;
-            return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [slot, _wideCap(_waitingLine())]);
-          }
-          if (i == n + 1) {
-            if (_hasOlder) return _wideCap(_earlierAction());
-            return _showHead ? _wideCap(_agentHead()) : const SizedBox.shrink();
-          }
-          debugAgentMessageRowBuilds++;
-          final at = n - i;
-          final ev = visible[at];
-          final first = splitBefore[at];
-          final last = at == n - 1 || splitBefore[at + 1];
-          final topGap =
-              at == 0 ? 0.0 : (first ? ChatColors.groupGap : ChatColors.runGap);
-          final row = _wideCap(
-            _messageRow(
-              ev,
-              card: cards[ev],
-              byId: byId,
-              reactions: reactionsByTarget[ev.eventId] ?? const [],
-              tail: last,
-              showStamp: stamps[at],
-              showOrigin: origins[at],
-              showDelivery: at == lastHumanIdx,
-              head: !kMobile && first,
-            ),
-          );
-          return Padding(
-            padding: EdgeInsets.only(top: topGap),
-            child: !kMobile && _turnSpace && at == lastHumanIdx
-                ? KeyedSubtree(key: _turnAnchor, child: row)
-                : row,
-          );
-        },
+            return KeyedSubtree(
+              key: ValueKey(rowId),
+              child: RowSizeWatch(
+                onResize: _rowResized,
+                child: MessageEnter(
+                  animate: fresh && _bottom.stickToBottom,
+                  child: Padding(
+                    padding: EdgeInsets.only(top: topGap),
+                    child: !kMobile && _turnSpace && at == lastHumanIdx
+                        ? KeyedSubtree(key: _turnAnchor, child: row)
+                        : row,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -1413,6 +1454,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   Widget _messageList({
     required EdgeInsets padding,
     required int itemCount,
+    required int? Function(Key) findChildIndexCallback,
     required IndexedWidgetBuilder itemBuilder,
   }) {
     if (kMobile || !_turnSpace) {
@@ -1423,6 +1465,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: padding,
         itemCount: itemCount,
+        findChildIndexCallback: findChildIndexCallback,
         itemBuilder: itemBuilder,
       );
     }

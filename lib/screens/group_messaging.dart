@@ -17,6 +17,8 @@ import '../markdown_preview.dart';
 import '../chat/message_body.dart';
 import '../message_reactions.dart';
 import '../models.dart';
+import '../chat/anchored_scroll.dart';
+import '../chat/message_enter.dart';
 import '../chat/send_flight.dart';
 import '../mochi.dart';
 import '../motion.dart';
@@ -954,7 +956,10 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
   late final Swr<List<CoordinationEvent>> _thread;
   final _input = TextEditingController();
   final _inputFocus = FocusNode();
-  final _scroll = ScrollController();
+  final _scroll = AnchoredScrollController();
+  final ChatBottomTracker _bottom = ChatBottomTracker();
+  final Set<String> _shownIds = {};
+  bool _rowsSeeded = false;
   List<CoordinationEvent> _events = const [];
   bool _loading = true;
   bool _sending = false;
@@ -1128,22 +1133,26 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       _error =
           next == null && _thread.error != null ? '${_thread.error}' : null;
     });
-    if (hadNew) _jumpToBottom(animated: !first);
+    if (hadNew && !first && _bottom.stickToBottom) {
+      _jumpToBottom(animated: true);
+    }
   }
 
-  void _jumpToBottom({bool animated = false}) {
+  String _rowIdFor(CoordinationEvent e) =>
+      e.eventId.isNotEmpty ? e.eventId : 'seq-${e.sequence}';
+
+  bool _onScroll(ScrollNotification n) {
+    _bottom.handleScroll(n, _scroll);
+    return false;
+  }
+
+  void _rowResized(double delta, double? bottomInViewport) =>
+      _bottom.rowResized(_scroll, delta, bottomInViewport);
+
+  void _jumpToBottom({bool animated = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scroll.hasClients) {
-        if (animated) {
-          _scroll.animateTo(
-            0,
-            duration: Motion.fast,
-            curve: Motion.enter,
-          );
-        } else {
-          _scroll.jumpTo(0);
-        }
-      }
+      if (!mounted) return;
+      _bottom.scrollToBottom(_scroll, context, animated: animated);
     });
   }
 
@@ -1185,9 +1194,11 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       _attachments.clear();
       await _voice.discard();
       if (!mounted) return;
+      _rowsSeeded = true;
+      _bottom.stickToBottom = true;
       setState(() => _mention = null);
       _thread.refresh();
-      _jumpToBottom();
+      _jumpToBottom(animated: true);
     } catch (e) {
       if (mounted) toast(context, '$e', danger: true);
     } finally {
@@ -1630,69 +1641,96 @@ class _GroupThreadScreenState extends State<GroupThreadScreen> {
       }
     }
     final typing = _typingStatus() != null || _group.replying.isNotEmpty;
+    if (!_rowsSeeded) {
+      _rowsSeeded = true;
+      for (final e in visible) {
+        _shownIds.add(_rowIdFor(e));
+      }
+    }
+    final offset = typing ? 1 : 0;
+    final rowIndex = <Key, int>{
+      for (var i = 0; i < visible.length; i++)
+        ValueKey(_rowIdFor(visible[i])): visible.length - 1 - i + offset,
+    };
     // Reversed so the thread opens at its newest post with no jump.
-    return ListView.builder(
-      controller: _scroll,
-      reverse: true,
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(S.s16, topPad, S.s16, S.s16),
-      itemCount: visible.length + (typing ? 1 : 0),
-      itemBuilder: (_, raw) {
-        if (typing && raw == 0 && !kMobile) {
-          final id = _typingAgentId();
-          return _wideCap(Padding(
-            padding: EdgeInsets.only(top: ChatColors.groupGap),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: id == null
-                  ? const WorkingBars()
-                  : SoftLane(
-                      agentId: id,
-                      child: SoftBubble(
-                          child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 3),
-                              child: const WorkingBars()))),
+    return NotificationListener<ScrollNotification>(
+      onNotification: _onScroll,
+      child: ListView.builder(
+        controller: _scroll,
+        reverse: true,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(S.s16, topPad, S.s16, S.s16),
+        itemCount: visible.length + offset,
+        findChildIndexCallback: (key) => rowIndex[key],
+        itemBuilder: (_, raw) {
+          if (typing && raw == 0 && !kMobile) {
+            final id = _typingAgentId();
+            return _wideCap(Padding(
+              padding: EdgeInsets.only(top: ChatColors.groupGap),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: id == null
+                    ? const WorkingBars()
+                    : SoftLane(
+                        agentId: id,
+                        child: SoftBubble(
+                            child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 3),
+                                child: const WorkingBars()))),
+              ),
+            ));
+          }
+          if (typing && raw == 0) {
+            return _wideCap(Padding(
+              padding: EdgeInsets.only(
+                  top: ChatColors.groupGap,
+                  left: ChatBubbleRow.avatarSize + S.s6),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: GroupTypingBubble(
+                    dots: WorkingDots(color: ChatColors.meta, size: 6)),
+              ),
+            ));
+          }
+          final index = typing ? raw - 1 : raw;
+          final i = visible.length - 1 - index;
+          final e = visible[i];
+          final rowId = _rowIdFor(e);
+          final fresh = _rowsSeeded && _shownIds.add(rowId);
+          final run = runs[i];
+          final at = _eventTime(e);
+          final prevAt = i > 0 ? _eventTime(visible[i - 1]) : null;
+          final showStamp = at != null &&
+              (prevAt == null ||
+                  !_sameDay(prevAt, at) ||
+                  (run.first &&
+                      at.difference(prevAt).abs() >=
+                          const Duration(minutes: 15)));
+          final stamp = showStamp ? _dayTimeStamp(at) : null;
+          final readLine = i == lastHumanIndex ? _readByLine(e) : null;
+          return KeyedSubtree(
+            key: ValueKey(rowId),
+            child: RowSizeWatch(
+              onResize: _rowResized,
+              child: MessageEnter(
+                animate: fresh && _bottom.stickToBottom,
+                child: _wideCap(
+                  _item(
+                    e,
+                    card: cards[e],
+                    index: i,
+                    run: run,
+                    stamp: stamp,
+                    readLine: readLine,
+                    reactions: reactionsByTarget[e.eventId] ?? const [],
+                  ),
+                ),
+              ),
             ),
-          ));
-        }
-        if (typing && raw == 0) {
-          return _wideCap(Padding(
-            padding: EdgeInsets.only(
-                top: ChatColors.groupGap,
-                left: ChatBubbleRow.avatarSize + S.s6),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: GroupTypingBubble(
-                  dots: WorkingDots(color: ChatColors.meta, size: 6)),
-            ),
-          ));
-        }
-        final index = typing ? raw - 1 : raw;
-        final i = visible.length - 1 - index;
-        final e = visible[i];
-        final run = runs[i];
-        final at = _eventTime(e);
-        final prevAt = i > 0 ? _eventTime(visible[i - 1]) : null;
-        final showStamp = at != null &&
-            (prevAt == null ||
-                !_sameDay(prevAt, at) ||
-                (run.first &&
-                    at.difference(prevAt).abs() >=
-                        const Duration(minutes: 15)));
-        final stamp = showStamp ? _dayTimeStamp(at) : null;
-        final readLine = i == lastHumanIndex ? _readByLine(e) : null;
-        return _wideCap(
-          _item(
-            e,
-            card: cards[e],
-            index: i,
-            run: run,
-            stamp: stamp,
-            readLine: readLine,
-            reactions: reactionsByTarget[e.eventId] ?? const [],
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
