@@ -17,6 +17,7 @@ SessionInfo _s({String? origin}) => SessionInfo.fromJson(
     {'id': 's', 'folder': '/tmp/wt', if (origin != null) 'origin_folder': origin});
 
 void main() {
+  filterTests();
   test('groups follow board order and drop empty groups', () {
     final g = groupTasks([
       _t('a', 'done'),
@@ -56,5 +57,20 @@ void main() {
     expect(moveSelection(3, 1, 4), 3);
     expect(moveSelection(0, -1, 4), 0);
     expect(moveSelection(1, 1, 0), -1);
+  });
+}
+
+void filterTests() {
+  test('filter narrows by status, agent and workspace together', () {
+    final a = TaskItem.fromJson({'id': 'a', 'status': 'todo', 'created_by_id': 'snippet'});
+    final b = TaskItem.fromJson({'id': 'b', 'status': 'done', 'created_by_id': 'snippet'});
+    final c = TaskItem.fromJson({'id': 'c', 'status': 'todo', 'created_by_id': 'mc'});
+    String ws(TaskItem t) => t.id == 'a' ? 'mobile' : 'site';
+    expect(const TaskFilter().isEmpty, isTrue);
+    const f = TaskFilter(statuses: {TaskStatus.todo}, agent: 'snippet');
+    expect([for (final t in [a, b, c]) if (f.matches(t, ws)) t.id], ['a']);
+    const g = TaskFilter(workspace: 'site');
+    expect([for (final t in [a, b, c]) if (g.matches(t, ws)) t.id], ['b', 'c']);
+    expect(openTaskCount([a, b, c]), 2);
   });
 }

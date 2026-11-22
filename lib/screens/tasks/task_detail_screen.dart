@@ -19,7 +19,7 @@ import '../agent_records.dart' show BoardLog;
 import '../session.dart' show SessionScreen;
 import 'task_common.dart' show statusColor, TaskNoteLines, taskAge;
 import 'task_view.dart' show showWorktreeFacts;
-import 'task_rows.dart' show taskHairline;
+import 'task_rows.dart' show taskHairline, TaskStatusIcon;
 import '../../tap_detector.dart';
 
 /// One task: its state, its roster, its links, and its own message room.
@@ -764,8 +764,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             CustomScrollView(slivers: [
                               SliverToBoxAdapter(child: _tabBody(t)),
                               SliverToBoxAdapter(
-                                  child: Divider(
-                                      height: 1, color: taskHairline)),
+                                  child:
+                                      Divider(height: 1, color: taskHairline)),
                               ..._roomSlivers(),
                               const SliverToBoxAdapter(
                                   child: SizedBox(height: 64)),
@@ -838,8 +838,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         padding: const EdgeInsets.fromLTRB(0, 9, 18, 9),
         margin: EdgeInsets.only(right: last ? 0 : 18),
         decoration: BoxDecoration(
-          border:
-              last ? null : Border(right: BorderSide(color: taskHairline)),
+          border: last ? null : Border(right: BorderSide(color: taskHairline)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(k, style: sans(11, color: AppColors.fg4)),
@@ -868,7 +867,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   /// The session only when its repo numbers are this task's own (see
   /// [showWorktreeFacts]); otherwise Branch and Changes stay hidden.
-  SessionInfo? _fs(TaskItem t) => showWorktreeFacts(t, session) ? session : null;
+  SessionInfo? _fs(TaskItem t) =>
+      showWorktreeFacts(t, session) ? session : null;
 
   Widget _paneFacts(TaskItem t) {
     final active = roster.where((a) => a.active).toList();
@@ -1190,6 +1190,58 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     }
     final report = _latestReport();
     final stands = _standsCard(t);
+    return LayoutBuilder(builder: (context, box) {
+      if (box.maxWidth < 760) return _narrowPaneBody(t, report, stands);
+      return _widePaneBody(t, report, stands);
+    });
+  }
+
+  /// A 470pt split pane: one scrolling column, the room pinned underneath.
+  Widget _narrowPaneBody(TaskItem t, BoardEntry? report, Widget? stands) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(children: [
+          _paneFacts(t),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(top: 16, bottom: 12),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _paneBrief(t),
+                    if (stands != null) ...[
+                      const SizedBox(height: 14),
+                      stands,
+                    ],
+                    if (report != null) ...[
+                      const SizedBox(height: 10),
+                      _reportCard(report),
+                    ],
+                    if (t.workPlan.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      _WorkPlan(steps: t.workPlan),
+                    ],
+                    if (t.status == TaskStatus.inReview) ...[
+                      const SizedBox(height: 14),
+                      _paneVerdict(),
+                    ],
+                    const SizedBox(height: 18),
+                    _paneAgents(),
+                    const SizedBox(height: 12),
+                    _paneRelated(),
+                    if (turns.isNotEmpty) _turnsSection(),
+                    const SizedBox(height: 14),
+                    _paneChanged(),
+                    if (log.isNotEmpty) _logSection(),
+                  ]),
+            ),
+          ),
+          SizedBox(height: 250, child: _paneRoom()),
+          const SizedBox(height: 12),
+        ]),
+      );
+
+  Widget _widePaneBody(TaskItem t, BoardEntry? report, Widget? stands) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28),
       child: Column(children: [
@@ -1301,7 +1353,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             SliverToBoxAdapter(child: _mobileV5Head(t)),
             SliverToBoxAdapter(child: _mobileV5Groups(t)),
             ..._roomSlivers(),
-            SliverToBoxAdapter(child: SizedBox(height: S.s24)),
+            SliverToBoxAdapter(child: SizedBox(height: S.s40)),
           ]),
         ),
         _addresseeBar(),
@@ -1319,16 +1371,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 weight: W.strong, height: 22 / 17, color: AppColors.fg1)),
         SizedBox(height: S.s6),
         Row(children: [
-          _v5Pill(
-            '${t.status.label}${age.isEmpty ? '' : ' · $age'}',
-            lit: inReview,
-          ),
+          TaskStatusIcon(t.status, size: 16),
           SizedBox(width: S.s8),
           Flexible(
-            child: Text(_shortTaskId(t.id),
+            child: Text(
+                [
+                  t.status.label,
+                  if (t.createdById.isNotEmpty) _name(t.createdById),
+                  if (age.isNotEmpty) age,
+                ].join(' · '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: mono(12, color: AppColors.fg3)),
+                style:
+                    sans(14, color: inReview ? AppColors.run : AppColors.fg3)),
           ),
         ]),
         if (t.goalTitle != null) ...[
@@ -1356,32 +1411,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     );
   }
 
-  /// 'T-244' for short task ids, the first eight characters otherwise, as the list shows.
-  static String _shortTaskId(String id) {
-    final m = RegExp(r'^t-?(\d+)$', caseSensitive: false).firstMatch(id);
-    if (m != null) return 'T-${m.group(1)}';
-    return (id.length > 8 ? id.substring(0, 8) : id).toUpperCase();
-  }
-
   static String _name(String id) =>
       id.isEmpty ? id : id[0].toUpperCase() + id.substring(1);
-
-  Widget _v5Pill(String text, {bool lit = false, bool code = false}) =>
-      Container(
-        height: 22,
-        padding: EdgeInsets.symmetric(horizontal: S.s8),
-        decoration: BoxDecoration(
-          color: lit ? AppColors.runBg : AppColors.tint2,
-          borderRadius: BorderRadius.circular(R.of(11)),
-        ),
-        alignment: Alignment.center,
-        child: Text(text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: code
-                ? mono(11, color: AppColors.fg3)
-                : sans(12, color: lit ? AppColors.run : AppColors.fg2)),
-      );
 
   Widget _v5Action(String label, {bool primary = false, VoidCallback? onTap}) =>
       TapDetector(
@@ -1460,6 +1491,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               child: Column(children: [
             for (final a in roster) _v5AgentRow(a),
           ])),
+        SizedBox(height: S.s8),
         _v5Label('Log'),
         _v5Card(
           padding: EdgeInsets.fromLTRB(S.of(14), S.s8, S.of(14), S.s8),
@@ -1923,8 +1955,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         constraints: const BoxConstraints(minHeight: 40),
         padding: EdgeInsets.symmetric(vertical: S.s6),
         decoration: BoxDecoration(
-          border:
-              last ? null : Border(bottom: BorderSide(color: taskHairline)),
+          border: last ? null : Border(bottom: BorderSide(color: taskHairline)),
         ),
         child: Row(
           children: [
@@ -2661,8 +2692,7 @@ class _WorkPlan extends StatelessWidget {
 }
 
 class _Description extends StatefulWidget {
-  const _Description(
-      {required this.markdown, this.size, this.clamp = false});
+  const _Description({required this.markdown, this.size, this.clamp = false});
 
   /// Fold to about two lines with a "Show more" (pane and phone).
   final bool clamp;

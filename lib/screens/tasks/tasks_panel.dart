@@ -259,10 +259,7 @@ class TasksPanelState extends State<TasksPanel> {
       if (count(const {TaskStatus.cancelled}) > 0)
         ('Cancelled', const {TaskStatus.cancelled}),
     ];
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: EdgeInsets.fromLTRB(0, S.s4, 0, S.s8),
-      child: Row(children: [
+    final kids = <Widget>[
         for (final (label, set) in chips) ...[
           _FilterChip(
             label: label,
@@ -273,7 +270,7 @@ class TasksPanelState extends State<TasksPanel> {
               _shownAt = null;
             }),
           ),
-          SizedBox(width: S.s6),
+          if (kMobile) SizedBox(width: S.s6),
         ],
         if (!kMobile)
           Builder(
@@ -284,7 +281,18 @@ class TasksPanelState extends State<TasksPanel> {
               onTap: () => _sortMenu(anchor),
             ),
           ),
-      ]),
+    ];
+    // Desktop chips wrap onto a second line rather than clipping at the edge.
+    if (!kMobile) {
+      return Padding(
+        padding: EdgeInsets.fromLTRB(0, S.s4, 0, S.s8),
+        child: Wrap(spacing: S.s6, runSpacing: S.s4, children: kids),
+      );
+    }
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: EdgeInsets.fromLTRB(0, S.s4, 0, S.s8),
+      child: Row(children: kids),
     );
   }
 

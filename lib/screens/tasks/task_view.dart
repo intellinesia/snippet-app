@@ -76,3 +76,34 @@ int moveSelection(int current, int delta, int length) {
   if (current < 0) return delta >= 0 ? 0 : length - 1;
   return (current + delta).clamp(0, length - 1);
 }
+
+/// What the desktop filter bar narrows the list by; empty means no narrowing.
+class TaskFilter {
+  const TaskFilter({this.statuses = const {}, this.agent, this.workspace});
+  final Set<TaskStatus> statuses;
+  final String? agent;
+  final String? workspace;
+
+  bool get isEmpty => statuses.isEmpty && agent == null && workspace == null;
+
+  TaskFilter copyWith(
+          {Set<TaskStatus>? statuses,
+          String? agent,
+          String? workspace,
+          bool clearAgent = false,
+          bool clearWorkspace = false}) =>
+      TaskFilter(
+        statuses: statuses ?? this.statuses,
+        agent: clearAgent ? null : (agent ?? this.agent),
+        workspace: clearWorkspace ? null : (workspace ?? this.workspace),
+      );
+
+  bool matches(TaskItem t, String Function(TaskItem) workspaceOf) =>
+      (statuses.isEmpty || statuses.contains(t.status)) &&
+      (agent == null || t.createdById == agent) &&
+      (workspace == null || workspaceOf(t) == workspace);
+}
+
+/// Tasks that are not finished, for the header's "N open".
+int openTaskCount(Iterable<TaskItem> tasks) =>
+    tasks.where((t) => !t.status.isTerminal).length;
