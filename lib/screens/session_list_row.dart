@@ -830,6 +830,15 @@ class SessionListRow extends StatelessWidget {
       onLongPress?.call();
     }
 
+    // Desktop checkbox column: ticked or empty, so every row reads as pickable.
+    Widget withSelectBox(Widget child) => selecting
+        ? Row(children: [
+            _SelectBox(checked: checked),
+            const SizedBox(width: 10),
+            Expanded(child: child),
+          ])
+        : child;
+
     final row = kMobile
         ? Stack(clipBehavior: Clip.none, children: [
             // Tint bleeds into the gutter so selection adds no inset.
@@ -900,7 +909,8 @@ class SessionListRow extends StatelessWidget {
                           horizontal: 8, vertical: 4),
                       child: Align(
                           alignment: Alignment.centerLeft,
-                          child: !compact ? content : compactContent(hover)),
+                          child: withSelectBox(
+                              !compact ? content : compactContent(hover))),
                     ),
                   ),
                 ));
@@ -1092,4 +1102,27 @@ class WorkspaceChip extends StatelessWidget {
       ),
     ]);
   }
+}
+
+class _SelectBox extends StatelessWidget {
+  const _SelectBox({required this.checked});
+
+  final bool checked;
+
+  @override
+  Widget build(BuildContext context) => AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        width: 16,
+        height: 16,
+        decoration: BoxDecoration(
+          color: checked ? AppColors.accentFill : Colors.transparent,
+          borderRadius: BorderRadius.circular(R.of(4)),
+          border: Border.all(
+              color: checked ? AppColors.accentFill : AppColors.fg4,
+              width: 1.5),
+        ),
+        child: checked
+            ? Center(child: AppIcon('check', size: 11, color: AppColors.accentFg))
+            : null,
+      );
 }

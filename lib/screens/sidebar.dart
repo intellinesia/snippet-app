@@ -1757,26 +1757,63 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
         onTap: _toggleSelectAllVisible);
   }
 
+  /// Desktop: count and Select all on one line, Cancel and Delete below at
+  /// equal width, so the destructive action has room and never crowds the count.
   Widget _selectionBar({required bool mobile}) {
     final n = _selected.length;
-    return Row(children: [
-      IconBtn('x',
-          size: mobile ? M.minTarget : 28,
-          iconSize: mobile ? 18 : 15,
-          tooltip: 'Cancel',
-          onTap: _exitSelect),
-      SizedBox(width: S.s4),
-      Text(n == 0 ? 'Select chats' : '$n selected',
-          style: mobile ? TS.sectionTitle() : TS.label(AppColors.fg1)),
-      const Spacer(),
-      _selectAllToggle(),
-      SizedBox(width: S.s4),
-      Btn(n == 0 ? 'Delete' : 'Delete $n',
-          small: true,
-          icon: 'trash',
-          variant: BtnVariant.danger,
-          disabled: n == 0,
-          onTap: _confirmDeleteSelected),
+    if (mobile) {
+      return Row(children: [
+        IconBtn('x',
+            size: M.minTarget,
+            iconSize: 18,
+            tooltip: 'Cancel',
+            onTap: _exitSelect),
+        SizedBox(width: S.s4),
+        Text(n == 0 ? 'Select chats' : '$n selected', style: TS.sectionTitle()),
+        const Spacer(),
+        _selectAllToggle(),
+        SizedBox(width: S.s4),
+        Btn(n == 0 ? 'Delete' : 'Delete $n',
+            small: true,
+            icon: 'trash',
+            variant: BtnVariant.danger,
+            disabled: n == 0,
+            onTap: _confirmDeleteSelected),
+      ]);
+    }
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Padding(
+        padding: EdgeInsets.symmetric(horizontal: S.s4),
+        child: Row(children: [
+          Expanded(
+            child: Text(n == 0 ? 'Select chats' : '$n selected',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TS.label(AppColors.fg1)),
+          ),
+          _selectAllToggle(),
+        ]),
+      ),
+      SizedBox(height: S.s8),
+      Row(children: [
+        Expanded(
+          child: Btn('Cancel',
+              small: true,
+              full: true,
+              variant: BtnVariant.secondary,
+              onTap: _exitSelect),
+        ),
+        SizedBox(width: S.s8),
+        Expanded(
+          child: Btn(n == 0 ? 'Delete' : 'Delete $n',
+              small: true,
+              full: true,
+              icon: 'trash',
+              variant: BtnVariant.danger,
+              disabled: n == 0,
+              onTap: _confirmDeleteSelected),
+        ),
+      ]),
     ]);
   }
 
