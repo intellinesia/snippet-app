@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'platform.dart';
 import 'glass.dart';
 import 'morph_sheet.dart' show showSpringSheet;
+import 'app_popover.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -135,136 +136,6 @@ class _AppFieldState extends State<AppField> {
   }
 }
 
-/// The desktop dialog every modal shares: one surface, border, radius, title
-/// and inset, so confirms, prompts and pickers read as one family. Phones use
-/// bottom sheets instead (see [showAppSheet]).
-class _DialogFrame extends StatelessWidget {
-  const _DialogFrame({
-    required this.title,
-    required this.child,
-    this.subtitle,
-    this.headerActions = const [],
-    this.icon,
-    this.iconColor,
-    this.onClose,
-    this.maxWidth = 460,
-    this.maxHeight,
-  });
-
-  final String title;
-  final String? subtitle;
-  final List<Widget> headerActions;
-  final Widget child;
-  final String? icon;
-  final Color? iconColor;
-  final VoidCallback? onClose;
-  final double maxWidth;
-  final double? maxHeight;
-
-  @override
-  Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(R.card);
-    final hasHeader =
-        title.isNotEmpty || (subtitle != null && subtitle!.isNotEmpty);
-    final glass = !kMobile && Glass.effectiveEnabled;
-    final surface = glass
-        ? AppColors.surface1.withValues(alpha: 0.94)
-        : AppColors.surface1;
-
-    Widget card = Material(
-      type: MaterialType.transparency,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (hasHeader || headerActions.isNotEmpty || onClose != null) ...[
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                  S.s20, S.of(14), onClose == null ? S.s20 : S.s12, S.s12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[
-                    AppIcon(icon!,
-                        size: 16, color: iconColor ?? AppColors.fg2),
-                    SizedBox(width: S.s8),
-                  ],
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (title.isNotEmpty)
-                          Text(title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: sans(kMobile ? 15 : 14.5,
-                                  weight: W.strong, color: AppColors.fg1)),
-                        if (subtitle != null && subtitle!.isNotEmpty) ...[
-                          SizedBox(height: S.s2),
-                          Text(subtitle!,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: sans(12, color: AppColors.fg3)),
-                        ],
-                      ],
-                    ),
-                  ),
-                  for (final action in headerActions) ...[
-                    SizedBox(width: S.s6),
-                    action,
-                  ],
-                  if (onClose != null) ...[
-                    SizedBox(width: S.s4),
-                    IconBtn('x',
-                        size: 28,
-                        iconSize: 14,
-                        tooltip: 'Close',
-                        onTap: onClose),
-                  ],
-                ],
-              ),
-            ),
-            if (hasHeader)
-              Divider(height: 1, thickness: 1, color: AppColors.line),
-          ],
-          Flexible(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                  S.s20, hasHeader ? S.of(14) : S.s16, S.s20, S.s16),
-              child: child,
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (glass) {
-      card = BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24), child: card);
-    }
-
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      insetPadding: EdgeInsets.symmetric(horizontal: S.s40, vertical: S.s24),
-      child: Container(
-        constraints: BoxConstraints(
-            maxWidth: maxWidth, maxHeight: maxHeight ?? double.infinity),
-        decoration: BoxDecoration(
-          color: surface,
-          borderRadius: radius,
-          border: Border.all(
-              color: glass ? AppColors.glassBorder : AppColors.border),
-          boxShadow: overlayShadow,
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: card,
-      ),
-    );
-  }
-}
-
 /// Cancel and confirm, laid out for the platform: right-aligned and compact on
 /// desktop, two full-width buttons within thumb reach on phones.
 class _DialogActions extends StatelessWidget {
@@ -336,17 +207,23 @@ Future<bool> confirmAction(
     result = await showAppSheet<bool>(context,
         title: title, child: Builder(builder: content));
   } else {
-    result = await showDialog<bool>(
-      context: context,
-      barrierColor: AppColors.modalScrim,
-      builder: (ctx) => ModalGlass(
-          child: _DialogFrame(
-        title: title,
-        icon: danger ? 'alert-triangle' : null,
-        iconColor: AppColors.danger,
-        child: content(ctx),
-      )),
-    );
+    result = await showPointPopover<bool>(context,
+        point: lastPointerDown,
+        width: 320,
+        maxHeight: 220,
+        child: Padding(
+          padding: EdgeInsets.all(S.s12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(title,
+                  style: sans(13, weight: FontWeight.w500, color: AppColors.fg1)),
+              SizedBox(height: S.s4),
+              Builder(builder: content),
+            ],
+          ),
+        ));
   }
   return result == true;
 }
@@ -363,7 +240,7 @@ Future<String?> promptText(BuildContext context,
     bool anchored = false,
     Offset? point}) {
   final at = point ?? (anchored ? null : lastPointerDown);
-  if (!kMobile && (anchored || at != null)) {
+  if (!kMobile) {
     return _showInlinePrompt(context,
         title: title,
         initial: initial,
@@ -379,14 +256,6 @@ Future<String?> promptText(BuildContext context,
       saveLabel: saveLabel,
       minLines: minLines,
       maxLines: maxLines);
-  if (!kMobile) {
-    return showDialog<String>(
-      context: context,
-      barrierColor: AppColors.modalScrim,
-      builder: (_) => ModalGlass(
-          child: _DialogFrame(title: title, maxWidth: 380, child: field)),
-    );
-  }
   return showAppSheet<String>(context, title: title, child: field);
 }
 
@@ -474,17 +343,7 @@ Future<T?> showPointPopover<T>(BuildContext context,
         width: w,
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: availH),
-          child: Material(
-            color: AppColors.surface2,
-            elevation: 10,
-            shadowColor: Colors.black.withValues(alpha: 0.5),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(R.lg),
-              side: BorderSide(color: AppColors.border2),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: child,
-          ),
+          child: AppPopoverSurface(padding: EdgeInsets.zero, child: child),
         ),
       ),
     ]),
@@ -658,23 +517,40 @@ Future<T?> showAppSheet<T>(BuildContext context,
     double maxWidth = 460,
     double maxHeight = 600}) {
   if (!kMobile) {
-    return showDialog<T>(
-      context: context,
-      barrierColor: AppColors.modalScrim,
-      builder: (ctx) => ModalGlass(
-          child: _DialogFrame(
-        title: title,
-        subtitle: subtitle,
-        headerActions: headerActions,
-        maxWidth: maxWidth,
+    return showPointPopover<T>(context,
+        point: lastPointerDown,
+        width: maxWidth.clamp(320, 420).toDouble(),
         maxHeight: maxHeight,
-        onClose: () => Navigator.pop(ctx),
-        child: SingleChildScrollView(
-          padding: EdgeInsets.only(bottom: S.s4),
-          child: child,
-        ),
-      )),
-    );
+        child: Builder(
+          builder: (ctx) => SingleChildScrollView(
+            padding: EdgeInsets.all(S.s12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(children: [
+                  Expanded(
+                    child: Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: sans(13,
+                            weight: FontWeight.w500, color: AppColors.fg1)),
+                  ),
+                  ...headerActions,
+                ]),
+                if (subtitle != null && subtitle.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.only(top: S.s2),
+                    child: Text(subtitle,
+                        style: sans(12,
+                            weight: FontWeight.w400, color: AppColors.fg3)),
+                  ),
+                SizedBox(height: S.s12),
+                child,
+              ],
+            ),
+          ),
+        ));
   }
   return showSpringSheet<T>(
     context,
@@ -869,26 +745,23 @@ Future<T?> showSidePopover<T>(
               Offset.zero;
           return CustomSingleChildLayout(
             delegate: _SidePopoverLayout(anchor.shift(-origin), width),
-            child: Material(
+            child: KeyedSubtree(
               key: popoverKey,
-              color: AppColors.overlay,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(R.lg),
-                  side: BorderSide(color: AppColors.line)),
-              clipBehavior: Clip.antiAlias,
-              elevation: 4,
-              shadowColor: Colors.black.withValues(alpha: 0.4),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(S.s16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(title,
-                        style: sans(13, weight: W.label, color: AppColors.fg1)),
-                    SizedBox(height: S.s12),
-                    child,
-                  ],
+              child: AppPopoverSurface(
+                padding: EdgeInsets.zero,
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(S.s16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(title,
+                          style:
+                              sans(13, weight: FontWeight.w500, color: AppColors.fg1)),
+                      SizedBox(height: S.s12),
+                      child,
+                    ],
+                  ),
                 ),
               ),
             ),

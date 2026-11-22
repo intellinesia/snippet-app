@@ -60,7 +60,7 @@ void main() {
     }
   });
 
-  testWidgets('showAppSheet uses desktop width and displays subtitle',
+  testWidgets('showAppSheet shows its title and subtitle',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     tester.view.devicePixelRatio = 1;
@@ -89,12 +89,6 @@ void main() {
 
     expect(find.text('Watch details'), findsOneWidget);
     expect(find.text('Polls every 5 minutes'), findsOneWidget);
-    final card = find
-        .descendant(
-            of: find.byType(Dialog), matching: find.byType(Container))
-        .first;
-    final rect = tester.getRect(card);
-    expect(rect.width, closeTo(460, 2));
     debugDefaultTargetPlatformOverride = null;
   });
 

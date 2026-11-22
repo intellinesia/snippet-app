@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
+import 'app_popover.dart';
 import 'platform.dart';
 import 'glass.dart';
 import 'theme.dart';
@@ -41,31 +42,19 @@ PopupMenuItem<T> appMenuItem<T>({
           disabled: !enabled),
     );
   }
-  final color = !enabled
-      ? AppColors.fg4
-      : danger
-          ? AppColors.danger
-          : AppColors.fg1;
-  return PopupMenuItem<T>(
+  return AppMenuItem<T>(
     value: value,
     enabled: enabled,
     height: height,
-    padding: EdgeInsets.symmetric(horizontal: S.of(10)),
-    child: Row(children: [
-      if (icon != null) ...[
-        AppIcon(icon, size: 14, color: danger ? AppColors.danger : AppColors.fg3),
-        SizedBox(width: S.of(9)),
-      ],
-      Expanded(
-        child: Text(label,
-            maxLines: 1, overflow: TextOverflow.ellipsis, style: TS.ui(color)),
-      ),
-      if (detail != null) Text(detail, style: TS.meta()),
-      if (selected) ...[
-        SizedBox(width: S.s8),
-        AppIcon('check', size: 14, color: AppColors.accent),
-      ],
-    ]),
+    padding: EdgeInsets.zero,
+    searchText: '$label ${detail ?? ''}',
+    child: AppPopoverRowBody(
+        label: label,
+        icon: icon,
+        trailing: detail,
+        danger: danger,
+        selected: selected,
+        disabled: !enabled),
   );
 }
 
@@ -101,55 +90,21 @@ PopupMenuItem<T> appMenuRow<T>({
           disabled: !enabled),
     );
   }
-  return PopupMenuItem<T>(
+  return AppMenuItem<T>(
     value: value,
     enabled: enabled,
-    height: height ?? (description != null ? 44 : 34),
-    padding: EdgeInsets.symmetric(horizontal: S.s2),
-    child: Container(
-      padding: EdgeInsets.symmetric(horizontal: S.s8, vertical: S.of(5)),
-      decoration: BoxDecoration(
-        color: selected ? AppColors.surface2 : Colors.transparent,
-        borderRadius: BorderRadius.circular(R.sm),
-      ),
-      child: Row(children: [
-        leading ??
-            AppIcon(icon,
-                size: 15, color: selected ? AppColors.accent : AppColors.fg3),
-        SizedBox(width: S.of(10)),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TS.ui(AppColors.fg1)),
-              if (description != null) ...[
-                SizedBox(height: S.of(1)),
-                Text(description,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TS.caption()),
-              ],
-            ],
-          ),
-        ),
-        if (trailingWidget != null) ...[
-          SizedBox(width: S.s8),
-          trailingWidget,
-        ],
-        if (trailing != null) ...[
-          SizedBox(width: S.s8),
-          Text(trailing, style: TS.caption()),
-        ],
-        if (selected) ...[
-          SizedBox(width: S.s8),
-          AppIcon('check', size: 14, color: AppColors.accent),
-        ],
-      ]),
-    ),
+    height: height ?? (description != null ? 40 : 30),
+    padding: EdgeInsets.zero,
+    searchText: '$label ${description ?? ''}',
+    child: AppPopoverRowBody(
+        label: label,
+        icon: leading == null ? icon : null,
+        leading: leading,
+        detail: description,
+        trailing: trailing,
+        trailingWidget: trailingWidget,
+        selected: selected,
+        disabled: !enabled),
   );
 }
 
@@ -159,10 +114,8 @@ PopupMenuItem<T> appMenuHeading<T>(String label) => PopupMenuItem<T>(
       enabled: false,
       height: 34,
       // Desktop inset matches the item content edge (10px item padding).
-      padding: kMobile
-          ? EdgeInsets.zero
-          : EdgeInsets.fromLTRB(S.of(10), S.s8, S.of(10), S.s2),
-      child: _MenuHeading(label),
+      padding: EdgeInsets.zero,
+      child: kMobile ? _MenuHeading(label) : AppMenuHeading(label),
     );
 
 class _MenuHeading extends StatelessWidget {
@@ -366,8 +319,6 @@ Future<T?> showAppMenu<T>(
   /// Overrides the outlined default, for menus drawn as a bare stepped surface.
   ShapeBorder? shape,
 }) {
-  final bg = color ?? AppColors.surface1;
-
   if (kMobile) {
     return showModalBottomSheet<T>(
       sheetAnimationStyle: sheetMotion,
@@ -401,62 +352,37 @@ Future<T?> showAppMenu<T>(
     );
   }
 
-  final overlay = Overlay.of(context).context.findRenderObject() as RenderBox?;
-  RelativeRect position;
-  if (overlay == null) {
-    position = const RelativeRect.fromLTRB(16, 80, 16, 80);
-  } else if (point != null) {
-    position = RelativeRect.fromRect(
-      Rect.fromCircle(center: point, radius: 0),
-      Offset.zero & overlay.size,
-    );
-  } else if (anchor != null) {
-    final box = anchor.findRenderObject() as RenderBox?;
-    if (box == null) {
-      position = const RelativeRect.fromLTRB(16, 80, 16, 80);
-    } else {
-      final origin = box.localToGlobal(Offset.zero, ancestor: overlay);
-      final vertBox = verticalAnchor?.findRenderObject() as RenderBox?;
-      final vertOrigin = vertBox != null
-          ? vertBox.localToGlobal(Offset.zero, ancestor: overlay)
-          : origin;
-      final topY = below
-          ? (vertOrigin.dy + (vertBox?.size.height ?? box.size.height) + 6)
-          : (vertOrigin.dy - 6);
-      final alignRight = origin.dx + box.size.width;
-      final left = alignEnd
-          ? (alignRight - minWidth)
-              .clamp(12.0, overlay.size.width - minWidth - 12)
-          : origin.dx.clamp(12.0, overlay.size.width - minWidth - 12);
-
-      position = RelativeRect.fromLTRB(
-        alignEnd ? overlay.size.width : left,
-        topY,
-        alignEnd ? (overlay.size.width - alignRight) : overlay.size.width,
-        below ? overlay.size.height : 0,
-      );
+  final overlay =
+      Overlay.of(context, rootOverlay: true).context.findRenderObject() as RenderBox?;
+  Rect rectOf(BuildContext c) {
+    final box = c.findRenderObject() as RenderBox?;
+    if (overlay == null || box == null || !box.attached) {
+      return const Rect.fromLTWH(16, 80, 0, 0);
     }
-  } else {
-    position = const RelativeRect.fromLTRB(16, 80, 16, 80);
+    return box.localToGlobal(Offset.zero, ancestor: overlay) & box.size;
   }
 
-  final effMin = (point != null && minWidth == 260) ? 156.0 : minWidth;
-  final effMax = (point != null && maxWidth == 340) ? 220.0 : maxWidth;
-  return showMenu<T>(
-    context: context,
-    position: position,
-    color: bg,
-    elevation: 0,
-    surfaceTintColor: Colors.transparent,
-    shape: shape ?? appMenuShape,
-    menuPadding: EdgeInsets.symmetric(vertical: S.s4),
-    constraints: BoxConstraints(minWidth: effMin, maxWidth: effMax),
-    popUpAnimationStyle: AnimationStyle(
-        duration: Motion.fast,
-        reverseDuration: Motion.quick,
-        curve: Motion.enter,
-        reverseCurve: Motion.exit),
+  final Rect control;
+  Rect vertical;
+  if (point != null) {
+    control = Rect.fromLTWH(point.dx, point.dy, 0, 0);
+    vertical = control;
+  } else if (anchor != null) {
+    control = rectOf(anchor);
+    vertical = verticalAnchor != null ? rectOf(verticalAnchor) : control;
+  } else {
+    control = const Rect.fromLTWH(16, 80, 0, 0);
+    vertical = control;
+  }
+  final effMin = (point != null && minWidth == 260) ? 200.0 : (minWidth == 260 ? 280.0 : minWidth);
+  final effMax = (point != null && maxWidth == 340) ? 260.0 : (maxWidth == 340 ? 360.0 : maxWidth);
+  return showAppPopoverMenu<T>(
+    context,
     items: items,
+    minWidth: effMin,
+    maxWidth: effMax,
+    anchor: AppPopoverAnchor(
+        control: control, vertical: vertical, below: below || point != null, alignEnd: alignEnd),
   );
 }
 

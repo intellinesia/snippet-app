@@ -1767,11 +1767,11 @@ class SettingsSectionViewState extends State<SettingsSectionView> {
   }
 
   Future<void> _openConnectDialog() async {
-    final inst = await showDialog<Instance>(
-      context: context,
-      barrierColor: AppColors.modalScrim,
-      builder: (_) => const _ConnectMachineDialog(),
-    );
+    final inst = await showPointPopover<Instance>(context,
+        point: lastPointerDown,
+        width: 440,
+        maxHeight: 520,
+        child: const _ConnectMachineDialog());
     if (inst == null || !mounted) return;
     await _saveInstances((items) => items
       ..removeWhere((e) => e.url == inst.url || e.token == inst.token)
@@ -3524,17 +3524,11 @@ class _ConnectMachineDialogState extends State<_ConnectMachineDialog> {
         const SingleActivator(LogicalKeyboardKey.escape): () =>
             Navigator.pop(context),
       },
-      child: Center(
-        child: Material(
-          type: MaterialType.transparency,
+      child: Material(
+        type: MaterialType.transparency,
+        child: SingleChildScrollView(
           child: Container(
-            width: 440,
             padding: EdgeInsets.all(S.s16),
-            decoration: BoxDecoration(
-              color: AppColors.surface1,
-              borderRadius: BorderRadius.circular(R.lg),
-              border: Border.all(color: AppColors.border2),
-            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
