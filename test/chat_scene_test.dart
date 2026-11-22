@@ -6,7 +6,7 @@ import 'package:snippet_render/snippet_render.dart';
 void main() {
   if (!shaderSurfaceSupported) return;
   test('every built-in scene compiles', () {
-    for (final scene in ChatScene.presets.keys) {
+    for (final scene in [...ChatScene.presets.keys, 'aurora-legacy']) {
       expect(checkShader(sceneSource(scene), ShaderLang.wgsl), isNull,
           reason: scene);
     }

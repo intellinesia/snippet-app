@@ -202,7 +202,7 @@ fn main_image(p: vec2<f32>) -> vec4<f32> {
   return vec4<f32>(c, 1.0);
 }
 ''',
-    _ => '''$head
+    'aurora-legacy' => '''$head
 fn main_image(p: vec2<f32>) -> vec4<f32> {
   let uv = p / u.resolution.y;
   let t = u.time * 0.035 * SPEED;
@@ -214,7 +214,124 @@ fn main_image(p: vec2<f32>) -> vec4<f32> {
   return vec4<f32>(c, 1.0);
 }
 ''',
+    _ => '$head$_auroraSilk\n',
   };
+}
+
+// The Silk aurora: five twisting ribbons, self-veiled and dithered.
+const _auroraSilk = r'''
+// Shared by the variants. Uses BG, ACCENT, OK, SPEED, INTENSITY and noise()
+// from the head that sceneSource() already prepends.
+const TAU = 6.2831853;
+// Loop period in seconds at SPEED 1. Every time term is a whole harmonic of it.
+const LOOP = 12.0;
+
+fn pcg(v: u32) -> u32 {
+  let s = v * 747796405u + 2891336453u;
+  let w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u;
+  return (w >> 22u) ^ w;
+}
+
+// Triangular dither of one 8-bit step, fixed in screen space so it never shimmers.
+fn dither(c: vec3<f32>, p: vec2<f32>) -> vec3<f32> {
+  let q = vec2<u32>(max(p, vec2<f32>(0.0)));
+  let a = pcg(q.x + pcg(q.y));
+  let b = pcg(a ^ 0x9e3779b9u);
+  let n = (f32(a >> 8u) + f32(b >> 8u)) / 16777216.0 - 1.0;
+  return c + vec3<f32>(n / 255.0);
+}
+
+fn fbm3(q: vec2<f32>) -> f32 {
+  var p = q;
+  var a = 0.5;
+  var s = 0.0;
+  for (var i = 0; i < 3; i++) {
+    s += a * noise(p);
+    p = p * 2.03 + vec2<f32>(1.7, 9.2);
+    a *= 0.5;
+  }
+  return s / 0.875;
+}
+
+fn orbit(ph: f32, r: f32) -> vec2<f32> {
+  return vec2<f32>(cos(ph), sin(ph)) * r;
+}
+
+// Rotates hue about the grey axis.
+fn hue(c: vec3<f32>, a: f32) -> vec3<f32> {
+  let k = vec3<f32>(0.57735);
+  let ca = cos(a);
+  return max(c * ca + cross(k, c) * sin(a) + k * dot(k, c) * (1.0 - ca), vec3<f32>(0.0));
+}
+
+// The theme accent when it has colour, else the status green (Pure Black's accent is white).
+fn primary() -> vec3<f32> {
+  let mx = max(ACCENT.r, max(ACCENT.g, ACCENT.b));
+  let mn = min(ACCENT.r, min(ACCENT.g, ACCENT.b));
+  let sat = (mx - mn) / max(mx, 0.001);
+  return mix(OK, ACCENT, smoothstep(0.15, 0.45, sat));
+}
+
+fn phase() -> f32 {
+  return fract(u.time * SPEED / LOOP) * TAU;
+}
+
+// Built-in veil: full strength behind the header, dim behind prose, near black at the composer.
+fn veil(y: f32) -> f32 {
+  return mix(0.10, 1.0, smoothstep(0.25, 0.9, y));
+}
+
+// Soft knee on luma: untouched below KNEE, eased towards CEIL above, so no theme can wash out prose.
+const KNEE = 0.2;
+const CEIL = 0.3;
+fn limit(c: vec3<f32>) -> vec3<f32> {
+  let l = dot(c, vec3<f32>(0.2126, 0.7152, 0.0722));
+  let k = KNEE + (CEIL - KNEE) * (1.0 - exp(-max(l - KNEE, 0.0) / (CEIL - KNEE)));
+  return c * select(1.0, k / max(l, 0.0001), l > KNEE);
+}
+
+// Variant C, Silk: five fine twisting ribbons with a thin core and a soft halo.
+fn main_image(p: vec2<f32>) -> vec4<f32> {
+  let uv = p / u.resolution.y;
+  let asp = u.resolution.x / u.resolution.y;
+  let x = uv.x / asp;
+  let ph = phase();
+  let c0 = hue(primary(), 0.12 + 0.2 * sin(ph));
+  let c1 = hue(c0, 1.6);
+  var acc = vec3<f32>(0.0);
+  for (var l = 0; l < 5; l++) {
+    let i = f32(l);
+    let n = noise(vec2<f32>(x * 1.8, i * 4.0) + orbit(ph + i * 1.3, 0.35));
+    let y0 = 0.84 - i * 0.045 - 0.3 * x
+      + 0.07 * sin(2.6 * x + ph + i * 0.7)
+      + 0.022 * sin(5.1 * x - 2.0 * ph + i * 1.9)
+      + 0.06 * (n - 0.5);
+    let d = uv.y - y0;
+    let tw = cos(4.2 * x + ph + i * 1.3);
+    let wd = 0.005 + 0.02 * abs(tw);
+    let face = exp(-d * d / (wd * wd)) * mix(1.0, 0.35, abs(tw));
+    let halo = 0.01 / (abs(d) + 0.04);
+    let col = mix(c0, c1, clamp(x + 0.3 * sin(ph + i), 0.0, 1.0));
+    acc += col * (face * 0.55 + halo * 0.12) * (1.0 - 0.12 * i);
+  }
+  let glow = (vec3<f32>(1.0) - exp(-acc * 1.4 * INTENSITY)) * 0.5;
+  let c = BG + limit(glow * veil(uv.y));
+  return vec4<f32>(dither(c, p), 1.0);
+}
+''';
+
+final _silkValid = <String, bool>{};
+
+/// The source to draw for [scene], and whether the shader veils itself.
+/// Silk falls back to the previous aurora when it fails validation.
+({String source, bool selfVeiled}) sceneToDraw(String scene) {
+  final source = sceneSource(scene);
+  if (scene != 'aurora') return (source: source, selfVeiled: false);
+  final ok = _silkValid[source] ??=
+      checkShader(source, ShaderLang.wgsl) == null;
+  return ok
+      ? (source: source, selfVeiled: true)
+      : (source: sceneSource('aurora-legacy'), selfVeiled: false);
 }
 
 /// Fills its box with the chosen scene and a veil that keeps text readable.
@@ -234,35 +351,38 @@ class ChatSceneLayer extends StatelessWidget {
           return const SizedBox.shrink();
         }
         final bg = AppColors.bg;
+        final draw = sceneToDraw(scene.scene);
         AmbientClock.onTick ??= _kickScene;
         return IgnorePointer(
           child: RepaintBoundary(
             child: Stack(fit: StackFit.expand, children: [
               kMobile
                   ? ShaderView(
-                      source: sceneSource(scene.scene),
+                      source: draw.source,
                       // Aurora is soft, so a third of the pixels look the same.
                       scale: scene.scene == 'aurora' ? 1 / 3 : .5,
                       onError: scene.reportError,
                     )
                   : ShaderSurface(
-                      source: sceneSource(scene.scene),
+                      source: draw.source,
                       onError: scene.reportError,
                     ),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      bg.withValues(alpha: 0.15),
-                      bg.withValues(alpha: 0.45),
-                      bg.withValues(alpha: 0.85),
-                    ],
-                    stops: const [0, 0.6, 1],
+              // A veil over Silk's dither would bring the bands back.
+              if (!draw.selfVeiled)
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        bg.withValues(alpha: 0.15),
+                        bg.withValues(alpha: 0.45),
+                        bg.withValues(alpha: 0.85),
+                      ],
+                      stops: const [0, 0.6, 1],
+                    ),
                   ),
                 ),
-              ),
             ]),
           ),
         );
