@@ -449,6 +449,16 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
     }
   }
 
+  double _mobileHeaderTopPad(HarnessState? s) {
+    if (widget.mobileTopBar != null) return GlassTopFrame.inset + S.s12;
+    if (_isMissionControl) return StageBar.phoneHeight + S.s8;
+    if (_connError == null && _me != null) {
+      final hasLanes = lanePillLabel(s?.lanes ?? const <LaneInfo>[]) != null;
+      return StageBar.phoneHeight + (hasLanes ? S.s32 : S.s8);
+    }
+    return GlassTopFrame.inset + S.s12;
+  }
+
   Widget _mobileHeader(HarnessState? s) {
     final offline = _connError != null;
     final stuck = _connError == _SessionScreenState._unreachable;

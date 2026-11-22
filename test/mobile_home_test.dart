@@ -6,8 +6,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart' hide testWidgets;
 import 'package:flutter_test/flutter_test.dart' as flutter_test show testWidgets;
+import 'package:progressive_background_blur/progressive_background_blur.dart';
 import 'package:snippet/agent_character.dart';
 import 'package:snippet/api.dart';
+import 'package:snippet/glass.dart';
 import 'package:snippet/ink.dart';
 import 'package:snippet/mochi.dart';
 import 'package:snippet/models.dart';
@@ -377,6 +379,15 @@ void main() {
     testWidgets('tone pills keep cream characters warm', (tester) async {
       expect(pillTone(const Color(0xFFD9D4C8)), const Color(0xFFD9C9A0));
       expect(pillTone(const Color(0xFF1FB6B6)), const Color(0xFF1FB6B6));
+    });
+
+    testWidgets('header frost stops above body labels', (tester) async {
+      await pumpHome(tester, [_s('h0')]);
+      final frame = tester.getRect(find.byType(GlassTopFrame));
+      final blur = tester.getRect(find.byType(ProgressiveBlur));
+      final agents = tester.getRect(find.text('Agents'));
+      expect(blur.bottom, lessThanOrEqualTo(frame.bottom + 0.5));
+      expect(blur.bottom, lessThan(agents.top));
     });
   });
 }

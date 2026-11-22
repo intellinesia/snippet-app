@@ -1944,9 +1944,8 @@ class _SessionScreenState extends State<SessionScreen>
                                                                       ? M.gutter
                                                                       : S.s20,
                                                                   _glassHeader
-                                                                      ? GlassTopFrame
-                                                                              .inset +
-                                                                          S.s12
+                                                                      ? _mobileHeaderTopPad(
+                                                                          s)
                                                                       : (_deskHeader
                                                                           ? _deskHeaderHeight +
                                                                               S

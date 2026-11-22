@@ -99,15 +99,12 @@ class GlassTopFrame extends StatelessWidget {
   /// Room the transcript leaves at its top so the newest-first scroll can
   /// still reach the oldest row from under the header.
   static const double inset = 52;
-  static const double fade = 14;
+  static const double fade = 12;
 
   static final ValueNotifier<int> _settled = ValueNotifier(0);
 
   /// Call when a page that may hold a header stops moving.
   static void reflow() => _settled.value++;
-
-  /// How far the blurred area runs below the header strip, in logical pixels.
-  static const double _extra = 36;
 
   @override
   Widget build(BuildContext context) {
@@ -119,17 +116,16 @@ class GlassTopFrame extends StatelessWidget {
         top: -up,
         left: 0,
         right: 0,
-        bottom: -_extra,
+        bottom: 0,
         child: IgnorePointer(
           child: Stack(children: [
             if (on)
-              // One variable-radius blur (two shader passes) whose strength
-              // falls smoothly to zero at the bottom: no bands, no edge. Stacked
-              // BackdropFilters crashed the raster thread; a mask over one draws
-              // nothing. Sigma is in physical pixels and saturates near 42.
+              // One variable-radius blur (two shader passes) kept to the
+              // status-bar and header zone, ramping smoothly to zero across
+              // the lower edge so body text below the header stays crisp.
               Positioned.fill(
                 child: _SettledBlur(
-                    sigma: 16 * MediaQuery.devicePixelRatioOf(context)),
+                    sigma: 14 * MediaQuery.devicePixelRatioOf(context)),
               ),
             Positioned.fill(
               child: DecoratedBox(
@@ -137,15 +133,13 @@ class GlassTopFrame extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    // Eased fade: solid at the status bar, gone at the lower edge.
-                    // A plain gradient is free to paint; stacked backdrop blurs
-                    // crashed the raster thread on a Pixel when a page slid in.
-                    stops: const [0, 0.3, 0.55, 0.78, 1],
+                    // Eased fade: tinted at the status bar, gone at the lower edge.
+                    stops: const [0, 0.45, 0.74, 0.9, 1],
                     colors: [
-                      bg.withValues(alpha: on ? 0.34 : 0.98),
-                      bg.withValues(alpha: on ? 0.26 : 0.94),
+                      bg.withValues(alpha: on ? 0.4 : 0.98),
+                      bg.withValues(alpha: on ? 0.3 : 0.94),
                       bg.withValues(alpha: on ? 0.16 : 0.8),
-                      bg.withValues(alpha: on ? 0.05 : 0.4),
+                      bg.withValues(alpha: on ? 0.04 : 0.35),
                       bg.withValues(alpha: 0),
                     ],
                   ),
@@ -211,7 +205,11 @@ class _SettledBlurState extends State<_SettledBlur> {
 
   @override
   Widget build(BuildContext context) => ProgressiveBlur(
-      key: ValueKey(_gen), sigmaStart: widget.sigma, sigmaEnd: 0);
+      key: ValueKey(_gen),
+      begin: const Alignment(0, 0.45),
+      end: Alignment.bottomCenter,
+      sigmaStart: widget.sigma,
+      sigmaEnd: 0);
 }
 
 /// Marks content already sitting on frost, so nested [Glass] skips its blur.
