@@ -285,6 +285,10 @@ class SessionInfo {
   /// Additive: older daemons omit it and rows fall back to [displayAgentId].
   final String? ownerAgentId;
 
+  /// 'agent' when an agent drives this session, else 'human'.
+  final String managedBy;
+  bool get agentManaged => managedBy == 'agent';
+
   /// The turn finished while the user was away and they have not opened the
   /// session since — the "Came back" list section. Computed by the daemon.
   final bool cameBack;
@@ -377,6 +381,7 @@ class SessionInfo {
         agentId = j['agent_id'] as String?,
         workerAgentId = j['worker_agent_id'] as String?,
         ownerAgentId = j['owner_agent_id'] as String?,
+        managedBy = j['managed_by'] == 'agent' ? 'agent' : 'human',
         cameBack = j['came_back'] == true,
         finishedAt = (j['finished_at'] as num?)?.toInt(),
         userSeenAt = (j['user_seen_at'] as num?)?.toInt(),
@@ -425,6 +430,7 @@ class SessionInfo {
         agentId: agentId,
         workerAgentId: workerAgentId,
         ownerAgentId: ownerAgentId,
+        managedBy: managedBy,
         cameBack: seenAt == null ? cameBack : false,
         finishedAt: finishedAt,
         userSeenAt: seenAt ?? userSeenAt,
@@ -469,6 +475,7 @@ class SessionInfo {
     this.agentId,
     this.workerAgentId,
     this.ownerAgentId,
+    this.managedBy = 'human',
     this.cameBack = false,
     this.finishedAt,
     this.userSeenAt,

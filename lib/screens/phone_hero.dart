@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../ambient_loop.dart';
 import '../crew_status.dart';
+import '../ink.dart';
 import '../mochi.dart';
 import '../models.dart';
 import '../notification_text.dart';
@@ -20,9 +21,6 @@ Color heroAgentColor(String agentId) {
   final spec = id == null ? null : CharacterRoster.current?.character(id);
   return spec?.color ?? AppColors.accent;
 }
-
-Color _inkOn(Color c) =>
-    c.computeLuminance() > 0.45 ? const Color(0xFF14141A) : Colors.white;
 
 String _titleCase(String id) =>
     id.isEmpty ? id : '${id[0].toUpperCase()}${id.substring(1)}';
@@ -554,14 +552,14 @@ class _PhoneHeroState extends State<PhoneHero> {
                           label: 'Approve',
                           icon: 'check',
                           color: colour,
-                          ink: _inkOn(colour),
+                          ink: inkOn(colour),
                           onTap: busy ? null : () => decide(true))),
                 ])
               else
                 _HeroButton(
                     label: 'Answer',
                     color: colour,
-                    ink: _inkOn(colour),
+                    ink: inkOn(colour),
                     onTap: () => widget.onOpenSession(s)),
             ],
           ),
@@ -951,7 +949,7 @@ class _HeroMini extends StatelessWidget {
             child: Text(label,
                 style: sans(12,
                     weight: W.label,
-                    color: color == null ? AppColors.fg1 : _inkOn(color!))),
+                    color: color == null ? AppColors.fg1 : inkOn(color!))),
           ),
         ),
       );
