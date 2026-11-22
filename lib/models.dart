@@ -1277,8 +1277,7 @@ class LeadOverview {
         recentSessions = ((j['recent_sessions'] as List?) ?? const [])
             .map((e) => ManagedSession.fromJson(e as Map<String, dynamic>))
             .toList(),
-        leadSessionId =
-            (j['lead_session_id'] ?? j['mc_session_id']) as String?;
+        leadSessionId = j['lead_session_id'] as String?;
 }
 
 /// A notification marker attached to a task (e.g. "dispatch failed 3 times",
