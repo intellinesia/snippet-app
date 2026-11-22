@@ -48,4 +48,24 @@ void main() {
     expect(events[0]['tool_name'], 'read');
     expect(events[1]['tool_name'], 'bash');
   });
+
+  test('internal names from newer daemons keep their name, args still lower', () {
+    final events = <Map<String, dynamic>>[
+      {
+        'kind': 'tool_call',
+        'tool_name': 'monitor',
+        'surface_tool': 'process',
+        'arguments': {'action': 'watch', 'path': 'a'},
+      },
+      {
+        'kind': 'tool_call',
+        'tool_name': 'monitor',
+        'surface_tool': 'process',
+        'arguments': {'action': 'add', 'path': 'a'},
+      },
+    ];
+    lowerToolEvents(events);
+    expect(events[0]['arguments'], {'path': 'a', 'action': 'add'});
+    expect(events[1]['arguments'], {'action': 'add', 'path': 'a'});
+  });
 }

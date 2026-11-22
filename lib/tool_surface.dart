@@ -134,7 +134,18 @@ List<Map<String, dynamic>> lowerToolEvents(List<Map<String, dynamic>> events,
   for (var i = 0; i < events.length; i++) {
     final e = events[i];
     final name = e['tool_name'];
-    if (name is! String || !_isSurface(name)) continue;
+    if (name is! String) continue;
+    // Newer daemons name the internal tool and keep the visible one aside.
+    final visible = e['surface_tool'];
+    if (!_isSurface(name)) {
+      if (e['kind'] == 'tool_call' && visible is String) {
+        final lowered = lowerToolCall(visible, e['arguments']);
+        if (lowered != null && lowered.$1 == name) {
+          events[i] = {...e, 'arguments': lowered.$2};
+        }
+      }
+      continue;
+    }
     if (e['kind'] == 'tool_call') {
       final lowered = lowerToolCall(name, e['arguments']);
       if (lowered == null) continue;
