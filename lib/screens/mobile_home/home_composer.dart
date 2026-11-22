@@ -7,6 +7,7 @@ import '../../composer/chat_composer.dart';
 import '../../composer/composer_attachments.dart';
 import '../../composer/composer_card.dart' show ComposerIconButton;
 import '../../composer/voice_note.dart';
+import '../../drafts.dart';
 import '../../mochi.dart';
 import '../../tap_detector.dart';
 import '../../theme.dart';
@@ -78,9 +79,22 @@ class _HomeComposerState extends State<HomeComposer> {
   }
 
   void _onFocus() {
-    final open = widget.onOpenChat;
-    if (!widget.openOnFocus || open == null || !_focus.hasFocus) return;
+    if (!widget.openOnFocus || !_focus.hasFocus) return;
     _focus.unfocus();
+    _openChat();
+  }
+
+  /// Hands any typed text to the thread's composer as its draft.
+  void _openChat() {
+    final open = widget.onOpenChat;
+    if (open == null) return;
+    final text = _input.text;
+    if (widget.agentId == 'mission-control' && text.trim().isNotEmpty) {
+      Drafts.instance.save(
+          Drafts.keyFor(widget.client.baseUrl, 'mission-control'),
+          Draft(text: text));
+      _input.clear();
+    }
     open();
   }
 
@@ -143,7 +157,7 @@ class _HomeComposerState extends State<HomeComposer> {
             behavior: HitTestBehavior.opaque,
             onTap: () {
               tapHaptic();
-              open();
+              _openChat();
             },
             child: SizedBox(
               width: 44,

@@ -50,7 +50,7 @@ class AppPageRoute<T> extends PageRoute<T> {
   @override
   final bool maintainState;
 
-  static const Duration _phoneForward = Duration(milliseconds: 340);
+  static const Duration _phoneForward = Duration(milliseconds: 320);
   static const Duration _phoneReverse = Duration(milliseconds: 260);
   static const Duration _reducedDuration = Duration(milliseconds: 150);
 
@@ -309,10 +309,10 @@ class _AppOutgoingTransition extends StatefulWidget {
 class _AppOutgoingTransitionState extends State<_AppOutgoingTransition> {
   static final Animatable<Offset> _parallaxTween = Tween<Offset>(
     begin: Offset.zero,
-    end: const Offset(-0.25, 0.0),
+    end: const Offset(-0.30, 0.0),
   );
   static final Animatable<double> _scrimTween =
-      Tween<double>(begin: 0.0, end: 0.24);
+      Tween<double>(begin: 0.0, end: 0.55);
 
   CurvedAnimation? _curve;
   late Animation<Offset> _position;
@@ -376,7 +376,7 @@ class _AppOutgoingTransitionState extends State<_AppOutgoingTransition> {
       );
 }
 
-const double _kBackEdgeWidth = 20.0;
+const double _kBackEdgeWidth = 24.0;
 const double _kBackSlop = 8.0;
 const double _kBackAxisRatio = 1.2;
 const double _kProjectSeconds = 0.2;

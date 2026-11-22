@@ -63,6 +63,12 @@ class _OneThingAskState extends State<OneThingAsk> {
   final Set<String> _leaving = {}, _gone = {};
   String? _busy;
   int _index = 0;
+  double _dx = 0;
+  bool _dragging = false;
+  bool _ignoreDrag = false;
+
+  /// The left 24 pt belong to the back gesture.
+  static const double _backEdge = 24;
 
   List<AskItem> get _visible =>
       [for (final i in widget.items) if (!_gone.contains(i.id)) i];
@@ -73,6 +79,30 @@ class _OneThingAskState extends State<OneThingAsk> {
     final live = {for (final i in widget.items) i.id};
     _gone.removeWhere((id) => !live.contains(id));
     _leaving.removeWhere((id) => !live.contains(id));
+  }
+
+  void _dragStart(DragStartDetails d) {
+    _ignoreDrag = d.globalPosition.dx < _backEdge;
+    if (!_ignoreDrag) setState(() => _dragging = true);
+  }
+
+  void _dragUpdate(DragUpdateDetails d) {
+    if (_ignoreDrag) return;
+    setState(() => _dx += d.delta.dx);
+  }
+
+  /// Past 96 pt or 600 pt/s the next ask comes in, else it springs back. A
+  /// swipe never approves or denies.
+  void _dragEnd(DragEndDetails d) {
+    if (_ignoreDrag) return;
+    final v = d.primaryVelocity ?? 0;
+    final commit = _dx.abs() > 96 || v.abs() > 600;
+    final dir = (_dx.abs() > 96 ? _dx : v) < 0 ? 1 : -1;
+    setState(() {
+      _dragging = false;
+      _dx = 0;
+    });
+    if (commit) _advance(dir);
   }
 
   void _advance(int delta) {
@@ -132,7 +162,7 @@ class _OneThingAskState extends State<OneThingAsk> {
     final busy = _busy == item.id;
     final reduce = reduceMotion(context);
     final dur = reduce ? const Duration(milliseconds: 120) : Motion.base;
-    final headlineStyle = serif(30, height: 39 / 30, color: _kAskWhite);
+    final headlineStyle = sans(30, weight: FontWeight.w500, height: 39 / 30, color: _kAskWhite);
 
     final body = AnimatedOpacity(
       duration: dur,
@@ -142,14 +172,22 @@ class _OneThingAskState extends State<OneThingAsk> {
         scale: leaving && !reduce ? 0.97 : 1,
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
-          onHorizontalDragEnd: n > 1
-              ? (d) {
-                  final v = d.primaryVelocity ?? 0;
-                  if (v < -180) _advance(1);
-                  if (v > 180) _advance(-1);
-                }
+          onHorizontalDragStart: n > 1 ? _dragStart : null,
+          onHorizontalDragUpdate: n > 1 ? _dragUpdate : null,
+          onHorizontalDragEnd: n > 1 ? _dragEnd : null,
+          onHorizontalDragCancel: n > 1
+              ? () => setState(() {
+                    _dragging = false;
+                    _dx = 0;
+                  })
               : null,
-          child: Semantics(
+          child: AnimatedContainer(
+            duration: _dragging || reduce
+                ? Duration.zero
+                : const Duration(milliseconds: 260),
+            curve: Curves.easeOutBack,
+            transform: Matrix4.translationValues(_dx, 0, 0),
+            child: Semantics(
             container: true,
             label:
                 'Needs you, $n item${n == 1 ? '' : 's'}, item ${i + 1}',
@@ -205,7 +243,13 @@ class _OneThingAskState extends State<OneThingAsk> {
                   ),
                 ),
                 SizedBox(height: S.of(24)),
-                _actions(item, canDecide, busy),
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 90),
+                  opacity: _dx.abs() > 12 ? 0 : 1,
+                  child: IgnorePointer(
+                      ignoring: _dx.abs() > 12,
+                      child: _actions(item, canDecide, busy)),
+                ),
                 if (n > 1) ...[
                   SizedBox(height: S.of(18)),
                   _MoreButton(
@@ -214,6 +258,7 @@ class _OneThingAskState extends State<OneThingAsk> {
                   ),
                 ],
               ],
+            ),
             ),
           ),
         ),
