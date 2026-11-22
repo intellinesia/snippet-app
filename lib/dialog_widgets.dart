@@ -447,10 +447,19 @@ Future<T?> showPointPopover<T>(BuildContext context,
   final w = width.clamp(200.0, screen.width - 16);
   final left = (at.dx - w / 2 + (point != null ? w / 2 - 24 : 0))
       .clamp(8.0, screen.width - w - 8);
-  final top = (at.dy + 10)
-      .clamp(8.0, (screen.height - maxHeight - 8).clamp(8.0, screen.height));
+  final below = (screen.height - at.dy - 18).clamp(0.0, screen.height);
+  final above = (at.dy - 18).clamp(0.0, screen.height);
+  final placeAbove = below < maxHeight && above > below;
+  final availH = (placeAbove ? above : below).clamp(80.0, maxHeight);
+  final top = placeAbove
+      ? null
+      : (at.dy + 10).clamp(8.0, (screen.height - availH - 8).clamp(8.0, screen.height));
+  final bottom = placeAbove
+      ? (screen.height - at.dy + 10)
+          .clamp(8.0, (screen.height - availH - 8).clamp(8.0, screen.height))
+      : null;
   final origin = Alignment(
-      (((at.dx - left) / w) * 2 - 1).clamp(-1.0, 1.0), top < at.dy ? 1 : -1);
+      (((at.dx - left) / w) * 2 - 1).clamp(-1.0, 1.0), placeAbove ? 1 : -1);
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: true,
@@ -461,17 +470,21 @@ Future<T?> showPointPopover<T>(BuildContext context,
       Positioned(
         left: left,
         top: top,
+        bottom: bottom,
         width: w,
-        child: Material(
-          color: AppColors.surface2,
-          elevation: 10,
-          shadowColor: Colors.black.withValues(alpha: 0.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(R.lg),
-            side: BorderSide(color: AppColors.border2),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: availH),
+          child: Material(
+            color: AppColors.surface2,
+            elevation: 10,
+            shadowColor: Colors.black.withValues(alpha: 0.5),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(R.lg),
+              side: BorderSide(color: AppColors.border2),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: child,
           ),
-          clipBehavior: Clip.antiAlias,
-          child: child,
         ),
       ),
     ]),

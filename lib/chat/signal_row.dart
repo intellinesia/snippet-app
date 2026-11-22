@@ -349,7 +349,7 @@ bool _looksCodeOrError(String title, String body) {
 }
 
 Future<void> showSignalDetails(BuildContext context,
-    {required String title, required String body}) {
+    {required String title, required String body, Offset? point}) {
   final isCode = _looksCodeOrError(title, body);
   final textStyle = isCode
       ? codeMono(kMobile ? 13 : 12.5, height: 1.55, color: AppColors.fg2)
@@ -360,27 +360,63 @@ Future<void> showSignalDetails(BuildContext context,
     toast(ctx, 'Copied');
   }
 
+  if (!kMobile) {
+    return showPointPopover<void>(
+      context,
+      point: point ?? lastPointerDown,
+      width: 460,
+      maxHeight: 380,
+      child: Builder(
+        builder: (ctx) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(S.s12, S.s8, S.s6, S.s8),
+              child: Row(children: [
+                Expanded(
+                  child: Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: sans(13, weight: W.label, color: AppColors.fg1)),
+                ),
+                if (body.trim().isNotEmpty)
+                  IconBtn('clipboard',
+                      size: 26,
+                      iconSize: 13,
+                      tooltip: 'Copy',
+                      onTap: () => copy(ctx)),
+                IconBtn('x',
+                    size: 26,
+                    iconSize: 13,
+                    tooltip: 'Close',
+                    onTap: () => Navigator.of(ctx).pop()),
+              ]),
+            ),
+            Divider(height: 1, thickness: 1, color: AppColors.line),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(S.s12),
+                child: SelectableText(body, style: textStyle),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   return showAppSheet<void>(
     context,
     title: title,
     maxWidth: 640,
     maxHeight: 580,
-    headerActions: [
-      if (body.trim().isNotEmpty)
-        Builder(
-          builder: (ctx) => IconBtn('clipboard',
-              size: 28,
-              iconSize: 14,
-              tooltip: 'Copy',
-              onTap: () => copy(ctx)),
-        ),
-    ],
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
         SelectableText(body, style: textStyle),
-        if (kMobile && body.trim().isNotEmpty) ...[
+        if (body.trim().isNotEmpty) ...[
           SizedBox(height: S.s16),
           Align(
             alignment: Alignment.centerRight,

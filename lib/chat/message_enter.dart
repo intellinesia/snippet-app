@@ -70,17 +70,22 @@ class _MessageEnterState extends State<MessageEnter>
     // Keep the tree shape constant for the widget's lifetime so stateful
     // children (popovers, expanded cards, images) never remount on completion.
     if (curve == null || size == null || fade == null) return widget.child;
+    // SizeTransition uses Align internally, which loosens tight width; re-tighten
+    // inside so right-aligned user bubbles and short rows never centre themselves.
     return SizeTransition(
       sizeFactor: size,
-      alignment: Alignment.topCenter,
-      child: FadeTransition(
-        opacity: fade,
-        child: AnimatedBuilder(
-          animation: curve,
-          child: widget.child,
-          builder: (_, child) => Transform.translate(
-            offset: Offset(0, widget.offset * (1 - curve.value)),
-            child: child,
+      alignment: Alignment.topLeft,
+      child: SizedBox(
+        width: double.infinity,
+        child: FadeTransition(
+          opacity: fade,
+          child: AnimatedBuilder(
+            animation: curve,
+            child: widget.child,
+            builder: (_, child) => Transform.translate(
+              offset: Offset(0, widget.offset * (1 - curve.value)),
+              child: child,
+            ),
           ),
         ),
       ),

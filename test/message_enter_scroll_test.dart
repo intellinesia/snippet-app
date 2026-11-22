@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snippet/chat/anchored_scroll.dart';
 import 'package:snippet/chat/message_enter.dart';
+import 'package:snippet/theme.dart';
+import 'package:snippet/widgets.dart';
 
 void main() {
   testWidgets('MessageEnter expands smoothly over 180ms and settles cleanly',
@@ -110,5 +112,54 @@ void main() {
     expect(scroll.offset, lessThan(180));
     await tester.pump(const Duration(milliseconds: 200));
     expect(scroll.offset, closeTo(0, 0.5));
+  });
+
+  testWidgets(
+      'animated MessageEnter keeps right-aligned user Bubble flush right instead of centering',
+      (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(900, 600);
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(MaterialApp(
+      theme: buildAppTheme(),
+      home: Scaffold(
+        body: Center(
+          child: SizedBox(
+            width: 720,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: const [
+                MessageEnter(
+                  animate: false,
+                  child: Bubble(mine: true, text: 'pls redeploy'),
+                ),
+                MessageEnter(
+                  animate: true,
+                  child: Bubble(
+                    mine: true,
+                    text: 'let me know when done',
+                    selectable: false,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    // Check during mid-animation and after completion: both bubbles share the exact right edge.
+    await tester.pump(const Duration(milliseconds: 80));
+    final staticRight = tester.getRect(find.text('pls redeploy')).right;
+    final enteringRight =
+        tester.getRect(find.text('let me know when done')).right;
+    expect(enteringRight, closeTo(staticRight, 2.0));
+
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(
+      tester.getRect(find.text('let me know when done')).right,
+      closeTo(staticRight, 2.0),
+    );
   });
 }

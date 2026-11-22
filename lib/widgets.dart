@@ -1856,9 +1856,11 @@ class Bubble extends StatelessWidget {
               .clamp(24.0, 140.0);
       return Padding(
         padding: EdgeInsets.only(left: inset, top: S.s4, bottom: S.s4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
             if (media != null)
               for (final m in media) ...[
                 m,
@@ -1910,6 +1912,7 @@ class Bubble extends StatelessWidget {
             ],
             ...pastedCards,
           ],
+          ),
         ),
       );
     });
