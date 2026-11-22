@@ -182,7 +182,7 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     }
     final v = velocity / _sheetHeight;
     _sheet.animateWith(SpringSimulation(
-        const SpringDescription(mass: 1, stiffness: 380, damping: 34),
+        const SpringDescription(mass: 1, stiffness: 320, damping: 32),
         _sheet.value,
         target,
         v));
@@ -211,7 +211,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
   void _releaseSheet(double vy) {
     // vy is px/s downward; progress velocity is the opposite.
     final up = -vy;
-    final open = up.abs() >= 700 ? up > 0 : _sheet.value > 0.5;
+    final open = sheetSettlesOpen(
+        progress: _sheet.value, up: up, wasOpen: _everyoneOpen);
     _settleSheet(open: open, velocity: up);
   }
 
@@ -495,8 +496,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
             onVerticalDragEnd: (d) => _releaseSheet(d.primaryVelocity ?? 0),
             onVerticalDragCancel: () => _releaseSheet(0),
             child: SizedBox(
-              width: 128,
-              height: 44,
+              width: double.infinity,
+              height: 64,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

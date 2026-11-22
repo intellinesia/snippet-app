@@ -95,6 +95,17 @@ void main() {
       expect(_managed('b', 'snippet').agentManaged, isTrue);
     });
 
+    test('sheet settles on a quarter of the travel or a gentle fling', () {
+      bool go(double p, double up, bool open) =>
+          sheetSettlesOpen(progress: p, up: up, wasOpen: open);
+      expect(go(0.3, 0, false), isTrue);
+      expect(go(0.2, 0, false), isFalse);
+      expect(go(0.1, 400, false), isTrue);
+      expect(go(0.7, 0, true), isFalse);
+      expect(go(0.8, 0, true), isTrue);
+      expect(go(0.9, -400, true), isFalse);
+    });
+
     test('agent rows run latest activity first, name breaks ties', () {
       final rows = agentRows(
         [_agent('a', 'Alpha'), _agent('b', 'Bravo'), _agent('c', 'Charlie')],
@@ -456,7 +467,10 @@ void main() {
       };
       for (final e in boxes.entries) {
         expect(e.value.width, greaterThanOrEqualTo(44), reason: e.key);
-        expect(e.value.height, inInclusiveRange(44, 52), reason: e.key);
+        // The Everyone handle is a deliberately taller 64 pt pull zone.
+        expect(e.value.height,
+            inInclusiveRange(44, e.key == 'everyone' ? 64 : 52),
+            reason: e.key);
       }
       final keys = boxes.keys.toList();
       for (var i = 0; i < keys.length; i++) {

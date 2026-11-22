@@ -21,6 +21,21 @@ import 'home_style.dart';
 
 const double kHomeMargin = 20;
 
+/// Fling speed (px/s) that decides the sheet on its own; was 700.
+const double kSheetFlingVelocity = 300;
+
+/// How the sheet settles on release. [up] is the finger's upward speed in
+/// px/s, [progress] 0 closed to 1 open, [wasOpen] where the drag began.
+/// A fling decides by direction; otherwise it takes a quarter of the travel
+/// to flip it (it used to take half).
+bool sheetSettlesOpen(
+    {required double progress,
+    required double up,
+    required bool wasOpen}) {
+  if (up.abs() >= kSheetFlingVelocity) return up > 0;
+  return wasOpen ? progress > 0.75 : progress > 0.25;
+}
+
 /// Pull-up "Everyone" sheet for Round 6 "One thing": dimmed home behind, glass
 /// surface starting at 132 pt, composer staying above it. Organised by state:
 /// Working, Your sessions, Asleep fold, Settled fold.
@@ -99,10 +114,19 @@ class EveryoneSheet extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(kHomeMargin, 4, kHomeMargin, 18),
-            child: Text('Everyone',
-                style: sans(22, weight: FontWeight.w600, color: AppColors.fg1)),
+          // Dragging the title closes the sheet too, like the handle.
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onVerticalDragUpdate: (d) => onDrag(d.delta.dy),
+            onVerticalDragEnd: (d) => onRelease(d.primaryVelocity ?? 0),
+            onVerticalDragCancel: () => onRelease(0),
+            child: Padding(
+              padding:
+                  const EdgeInsets.fromLTRB(kHomeMargin, 4, kHomeMargin, 18),
+              child: Text('Everyone',
+                  style:
+                      sans(22, weight: FontWeight.w600, color: AppColors.fg1)),
+            ),
           ),
           if (active.isNotEmpty) ...[
             _SectionHeader('Working', count: active.length),
@@ -250,10 +274,10 @@ class EveryoneSheet extends StatelessWidget {
                 onVerticalDragEnd: (d) => onRelease(d.primaryVelocity ?? 0),
                 onVerticalDragCancel: () => onRelease(0),
                 child: SizedBox(
-                  width: 128,
-                  height: 44,
+                  width: double.infinity,
+                  height: 56,
                   child: Align(
-                    alignment: const Alignment(0, -0.35),
+                    alignment: const Alignment(0, -0.2),
                     child: Container(
                       width: 36,
                       height: 5,
