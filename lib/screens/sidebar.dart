@@ -409,7 +409,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
           // scroll-padding hack is needed. It still reads as floating (inset,
           // rounded, raised).
           Expanded(
-            child: Stack(children: [
+            child: Stack(clipBehavior: Clip.none, children: [
               _buildMobileHomeStack(hasClient),
               if (_showMobileBottomBar)
                 Positioned(
@@ -486,6 +486,7 @@ class SidebarState extends State<Sidebar> with SingleTickerProviderStateMixin {
       builder: (context, _) {
         final curved = Motion.enter.transform(_homeAnim.value);
         return Stack(
+          clipBehavior: Clip.none,
           fit: StackFit.expand,
           children: [
             for (final h in ordered)

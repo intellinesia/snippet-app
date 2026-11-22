@@ -284,7 +284,7 @@ class SceneBackdrop extends StatelessWidget {
     final nested =
         context.getInheritedWidgetOfExactType<_SceneScope>() != null;
     return _SceneScope(
-      child: Stack(fit: StackFit.expand, children: [
+      child: Stack(clipBehavior: Clip.none, fit: StackFit.expand, children: [
         if (!nested) const Positioned.fill(child: ChatSceneLayer()),
         child,
       ]),
@@ -312,7 +312,7 @@ class ScenePageFill extends StatelessWidget {
         return ColoredBox(
           color: bg,
           child: _SceneScope(
-            child: Stack(fit: StackFit.expand, children: [
+            child: Stack(clipBehavior: Clip.none, fit: StackFit.expand, children: [
               const Positioned.fill(child: ChatSceneLayer()),
               child,
             ]),

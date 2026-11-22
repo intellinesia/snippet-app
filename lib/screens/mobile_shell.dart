@@ -287,8 +287,12 @@ class _MobileShellState extends State<MobileShell>
                     child: TickerMode(
                       enabled: chatsVisible || _v.value < 1.0,
                       child: SceneBackdrop(
-                        child: SafeArea(
-                          child: sidebar,
+                        // Pages opened over home float their header frost up here.
+                        child: StatusInset(
+                          top: MediaQuery.paddingOf(context).top,
+                          child: SafeArea(
+                            child: sidebar,
+                          ),
                         ),
                       ),
                     ),

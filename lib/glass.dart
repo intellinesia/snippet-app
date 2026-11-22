@@ -78,6 +78,13 @@ class StatusInset extends InheritedWidget {
   static double of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<StatusInset>()?.top ?? 0;
 
+  /// For a page: its own top padding, or the inset its host passes down
+  /// when the page sits under the host's SafeArea.
+  static double page(BuildContext context) {
+    final pad = MediaQuery.paddingOf(context).top;
+    return pad > 0 ? pad : of(context);
+  }
+
   @override
   bool updateShouldNotify(StatusInset oldWidget) => top != oldWidget.top;
 }

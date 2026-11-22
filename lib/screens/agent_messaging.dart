@@ -1044,7 +1044,7 @@ class _AgentThreadScreenState extends State<AgentThreadScreen> {
   Widget _chrome(Widget body, bool hideChrome) => kMobile
       ? SceneBackdrop(
           child: StatusInset(
-              top: hideChrome ? 0 : MediaQuery.paddingOf(context).top,
+              top: hideChrome ? 0 : StatusInset.page(context),
               child: body),
         )
       : body;

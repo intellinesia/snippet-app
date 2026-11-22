@@ -120,7 +120,7 @@ class _PhonePageStackState extends State<PhonePageStack>
         animation: _v,
         builder: (context, _) {
           final p = _v.value.clamp(0.0, 1.0);
-          return Stack(fit: StackFit.expand, children: [
+          return Stack(clipBehavior: Clip.none, fit: StackFit.expand, children: [
             Offstage(
               offstage: shown != null && p >= 1.0,
               child: TickerMode(

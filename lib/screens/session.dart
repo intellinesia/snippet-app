@@ -29,6 +29,7 @@ import '../chat/activity_sheet.dart';
 import '../chat/anchored_scroll.dart';
 import '../chat/send_turn_space.dart';
 import '../chat/chat_card.dart';
+import '../chat/stage_bar.dart';
 import '../chat/stage_header.dart';
 import '../chat/signal_row.dart';
 import 'session_list_row.dart' show sessionStepLabel;

@@ -519,35 +519,27 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
   Widget _mcStageHeader(HarnessState? s, bool stuck) {
     final n = _mcInFlight ?? 0;
     final working = s?.status == 'running';
-    return Stack(alignment: Alignment.topCenter, children: [
-      Padding(
-        padding: EdgeInsets.only(top: S.s8),
-        child: StageHeader(
-          members: [
-            StageMember('mission-control',
-                state: working
-                    ? AgentCharacterState.working
-                    : AgentCharacterState.idle),
-          ],
-          title: 'Mission Control',
-          subtitle: n > 0
-              ? 'Coordinator · $n ${n == 1 ? 'task' : 'tasks'} in flight'
-              : 'Coordinator',
-          onTap: stuck ? _retryNow : () => _openActionsDrawer(s),
-        ),
+    return StageBar(
+      framed: false,
+      members: [
+        StageMember('mission-control',
+            state: working
+                ? AgentCharacterState.working
+                : AgentCharacterState.idle),
+      ],
+      title: 'Mission Control',
+      subtitle: n > 0
+          ? 'Coordinator · $n ${n == 1 ? 'task' : 'tasks'} in flight'
+          : 'Coordinator',
+      onTap: stuck ? _retryNow : () => _openActionsDrawer(s),
+      trailing: RoundBtn(
+        icon: 'phone',
+        tooltip: 'Start voice',
+        size: 40,
+        iconSize: 18,
+        onTap: () => startMobileVoice(context, widget.client),
       ),
-      Positioned(
-        right: M.gutter,
-        top: S.s8,
-        child: RoundBtn(
-          icon: 'phone',
-          tooltip: 'Start voice',
-          size: 40,
-          iconSize: 18,
-          onTap: () => startMobileVoice(context, widget.client),
-        ),
-      ),
-    ]);
+    );
   }
 
   /// The phone header: the session's agent on stage, title chip over its feet.
@@ -574,56 +566,37 @@ extension _SessionScreenAppBarExt on _SessionScreenState {
       if (state.isNotEmpty) state,
     ].join(' · ');
     final lanesPill = lanePillLabel(s?.lanes ?? const <LaneInfo>[]);
-    return SizedBox(
-      child: Stack(alignment: Alignment.topCenter, children: [
-        Padding(
-          padding: EdgeInsets.only(top: S.s8),
-          child: StageHeader(
-            members: [
-              StageMember(
-                agentId,
-                state: needsYou
-                    ? AgentCharacterState.needs
-                    : working
-                        ? AgentCharacterState.working
-                        : AgentCharacterState.idle,
-                badge: needsYou ? '?' : null,
-              ),
-            ],
-            title: _title.isEmpty ? 'Session' : _title,
-            subtitle: subtitle,
-            onTap: () => _openActionsDrawer(s),
-            below: lanesPill != null
-                ? StagePill(
-                    label: lanesPill,
-                    leading: const RunSpinner(),
-                    onTap: _showLanes,
-                  )
-                : null,
-          ),
+    return StageBar(
+      framed: false,
+      members: [
+        StageMember(
+          agentId,
+          state: needsYou
+              ? AgentCharacterState.needs
+              : working
+                  ? AgentCharacterState.working
+                  : AgentCharacterState.idle,
+          badge: needsYou ? '?' : null,
         ),
-        Positioned(
-          left: M.gutter,
-          top: S.s8,
-          child: RoundBtn(
-              icon: 'chevron-left',
-              tooltip: 'Back',
-              size: 40,
-              iconSize: 20,
-              onTap: back),
-        ),
-        Positioned(
-          right: M.gutter,
-          top: S.s8,
-          child: RoundBtn(
-            icon: 'terminal',
-            tooltip: 'Shell',
-            size: 40,
-            iconSize: 18,
-            onTap: _openTerm,
-          ),
-        ),
-      ]),
+      ],
+      title: _title.isEmpty ? 'Session' : _title,
+      subtitle: subtitle,
+      onTap: () => _openActionsDrawer(s),
+      below: lanesPill != null
+          ? StagePill(
+              label: lanesPill,
+              leading: const RunSpinner(),
+              onTap: _showLanes,
+            )
+          : null,
+      onBack: back,
+      trailing: RoundBtn(
+        icon: 'terminal',
+        tooltip: 'Shell',
+        size: 40,
+        iconSize: 18,
+        onTap: _openTerm,
+      ),
     );
   }
 
