@@ -306,7 +306,8 @@ class _FoldedTasksState extends State<FoldedTasks> {
           child: Container(
             height: 28,
             alignment: Alignment.centerLeft,
-            padding: const EdgeInsets.only(left: 18),
+            // The title column: row inset + mark column + gap + id column.
+            padding: const EdgeInsets.only(left: kTaskRowInset + 22 + 4 + kTaskIdWidth),
             child: Text(
                 _open ? 'Show less' : 'Show ${widget.hidden.length} more',
                 style: sans(12, color: AppColors.fg3)),

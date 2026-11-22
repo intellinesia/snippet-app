@@ -95,6 +95,12 @@ class _StatusPainter extends CustomPainter {
       old.status != status || old.color != color;
 }
 
+/// Left inset of a row's content from the list edge: 6 margin plus 8 padding.
+const double kTaskRowInset = 14;
+
+/// Id column width, shared so the fold text can align to the title.
+const double kTaskIdWidth = 46;
+
 /// A status group's heading: mark, label, count.
 class TaskGroupHeader extends StatelessWidget {
   const TaskGroupHeader(this.status, this.count,
@@ -105,10 +111,12 @@ class TaskGroupHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(14, first ? 8 : 18, 14, 6),
+        // Same 22pt mark column and left edge as DenseTaskRow, so the heading
+        // mark and the row marks share one centre line.
+        padding: EdgeInsets.fromLTRB(kTaskRowInset, first ? 8 : 18, 14, 6),
         child: Row(children: [
-          TaskStatusIcon(status),
-          const SizedBox(width: 8),
+          SizedBox(width: 22, child: Center(child: TaskStatusIcon(status))),
+          const SizedBox(width: 4),
           Text(status.label,
               style: sans(12.5, weight: W.label, color: AppColors.fg2)),
           const SizedBox(width: 8),
@@ -188,7 +196,7 @@ class _DenseTaskRowState extends State<DenseTaskRow> {
             ),
             const SizedBox(width: 4),
             SizedBox(
-                width: 46,
+                width: kTaskIdWidth,
                 child: Text(id, style: mono(11.5, color: AppColors.fg4))),
             Expanded(
               child: Text(t.title,
