@@ -817,43 +817,14 @@ extension _DesktopShellPanesExt on _DesktopShellState {
     ]);
   }
 
-  /// Live work in the window bar: the bars and one short line.
-  Widget _barWorking(String text) => Padding(
-        padding: EdgeInsets.only(right: S.s8),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const WorkingBars(),
-          SizedBox(width: S.s6),
-          Text(text, style: sans(12, color: AppColors.fg3)),
-        ]),
-      );
-
-  /// Group tabs: who is working and the panel toggle, in the window bar.
+  /// Group tabs: the panel toggle in the window bar. Working shows in the
+  /// transcript and the sidebar, as for agents.
   Widget? _groupBarTools(_ShellTab? t) {
     final r = t?.readout?.request;
     if (r == null || !r.id.startsWith('group:') || r.sidePanel == null) {
       return null;
     }
-    final ids = r.iconAgentIds ?? const <String>[];
-    final client = t!.client;
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      ListenableBuilder(
-        listenable: client.presence,
-        builder: (_, __) {
-          final busy = ids.where((id) {
-            final p = client.presence.presenceForAgentId(id);
-            return p != null && p.state != 'waiting';
-          }).firstOrNull;
-          if (busy == null) return const SizedBox.shrink();
-          final a = client
-              .cachedCoordinationAgents()
-              ?.where((x) => x.id == busy)
-              .firstOrNull;
-          final name = (a?.displayName.trim().isNotEmpty ?? false)
-              ? a!.displayName.trim()
-              : busy;
-          return _barWorking('$name is working');
-        },
-      ),
       IconBtn('sidebar',
           size: 30,
           iconSize: 15,

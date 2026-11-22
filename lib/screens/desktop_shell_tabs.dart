@@ -79,11 +79,16 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         ? saved.tabs[saved.activeIndex]
         : null;
     _ShellTab? activeTab;
+    // Saved order: a restored tab, or the chat key of a tab reopened later.
+    final order = <Object>[];
     for (final descriptor in saved.tabs) {
       final inst = byUrl[descriptor.instanceUrl];
       if (inst == null) continue;
       if (descriptor.chat != null) {
-        if (!kMobile) chats.add(descriptor);
+        if (!kMobile) {
+          chats.add(descriptor);
+          order.add(descriptor.chat!);
+        }
         continue;
       }
       final before = restored.length;
@@ -138,6 +143,7 @@ extension _DesktopShellTabsExt on _DesktopShellState {
           groupSessionKey: descriptor.groupSessionKey,
         ));
       }
+      if (restored.length > before) order.add(restored.last);
       if (identical(descriptor, activeD) && restored.length > before) {
         activeTab = restored.last;
       }
@@ -171,12 +177,38 @@ extension _DesktopShellTabsExt on _DesktopShellState {
         _chatRestorePending[this] = false;
       }
       if (!mounted) return;
+      _restoreTabOrder(order);
       // Opening a chat focuses it; give focus back to the tab that had it.
       final want = isChatActive
           ? _tabs.where((t) => _chatOf(t) == activeD!.chat).lastOrNull
           : activeTab;
       if (want != null) _activateTabAt(want);
       _persistTabs();
+    });
+  }
+
+  /// Chats reopen at the end of the strip; put every saved tab back in its
+  /// saved slot, leaving tabs opened since then where they are.
+  void _restoreTabOrder(List<Object> order) {
+    final wanted = <_ShellTab>{
+      for (final o in order)
+        if (o is _ShellTab)
+          o
+        else if (_tabs.where((t) => _chatOf(t) == o).firstOrNull
+            case final t?)
+          t,
+    }.where(_tabs.contains).toList();
+    final slots = [
+      for (var i = 0; i < _tabs.length; i++)
+        if (wanted.contains(_tabs[i])) i
+    ];
+    if (slots.length != wanted.length) return;
+    final active = _activeTab;
+    _setState(() {
+      for (var k = 0; k < slots.length; k++) {
+        _tabs[slots[k]] = wanted[k];
+      }
+      if (active != null) _activeIndex = _tabs.indexOf(active);
     });
   }
 
