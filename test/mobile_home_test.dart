@@ -323,6 +323,26 @@ void main() {
       expect(find.text('Deny'), findsNothing);
     });
 
+    test('settled sessions go flat only when none are live', () {
+      expect(settledOnly(live: 0, settled: 3), isTrue);
+      expect(settledOnly(live: 1, settled: 3), isFalse);
+      expect(settledOnly(live: 0, settled: 0), isFalse);
+    });
+
+    testWidgets('flat settled list keeps the Asleep agents above it',
+        (tester) async {
+      await pumpHome(tester, [
+        for (var i = 0; i < 6; i++) _s('old$i', extra: {'settled': true}),
+      ]);
+      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.text('Settled'), findsNothing);
+      final fold = tester.getTopLeft(find.byKey(const ValueKey('asleep-fold'))).dy;
+      final row = tester.getTopLeft(find.byKey(const ValueKey('session-row-old0'))).dy;
+      expect(fold, lessThan(row));
+    });
+
     testWidgets('Back closes the Everyone sheet before anything else',
         (tester) async {
       await pumpHome(tester, base);

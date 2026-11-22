@@ -103,75 +103,17 @@ class EveryoneSheet extends StatelessWidget {
     final glass = Glass.effectiveEnabled;
     final radius = const BorderRadius.vertical(top: Radius.circular(30));
 
+    // Settled-only is a long flat list; agents stay above it, not buried below.
+    final flatSettled = settledOnly(
+        live: mainSessions.length, settled: settledSessions.length);
+
     final empty = active.isEmpty &&
         asleep.isEmpty &&
         mainSessions.isEmpty &&
         settledSessions.isEmpty;
 
-    final listContent = SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.only(bottom: 168 + bottom),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Dragging the title closes the sheet too, like the handle.
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onVerticalDragUpdate: (d) => onDrag(d.delta.dy),
-            onVerticalDragEnd: (d) => onRelease(d.primaryVelocity ?? 0),
-            onVerticalDragCancel: () => onRelease(0),
-            child: Padding(
-              padding:
-                  const EdgeInsets.fromLTRB(kHomeMargin, 4, kHomeMargin, 18),
-              child: Text('Everyone',
-                  style:
-                      sans(22, weight: FontWeight.w600, color: AppColors.fg1)),
-            ),
-          ),
-          if (active.isNotEmpty) ...[
-            _SectionHeader('Working', count: active.length),
-            for (var i = 0; i < active.length; i++) ...[
-              if (i > 0) _hairline(inset: kHomeMargin + 54),
-              _SheetAgentRow(
-                key: ValueKey('agent-row-${active[i].agent.id}'),
-                row: active[i],
-                managedCount: managed[active[i].agent.id]?.length ?? 0,
-                onOpen: () => onOpenAgent(active[i].agent),
-                onManaged: () => onOpenManaged(active[i].agent),
-              ),
-            ],
-            SizedBox(height: S.of(14)),
-          ],
-          if (settledOnly(
-              live: mainSessions.length, settled: settledSessions.length)) ...[
-            for (var i = 0; i < settledSessions.length; i++) ...[
-              if (i > 0) _hairline(inset: kHomeMargin + 44),
-              _SheetSessionRow(
-                key: ValueKey('session-row-${settledSessions[i].id}'),
-                session: settledSessions[i],
-                onOpen: () => onOpenSession(settledSessions[i]),
-                onLongPress: onSessionActions == null
-                    ? null
-                    : () => onSessionActions!(settledSessions[i]),
-              ),
-            ],
-            SizedBox(height: S.of(10)),
-          ] else if (mainSessions.isNotEmpty) ...[
-            _SectionHeader('Your sessions', count: mainSessions.length),
-            for (var i = 0; i < mainSessions.length; i++) ...[
-              if (i > 0) _hairline(inset: kHomeMargin + 44),
-              _SheetSessionRow(
-                key: ValueKey('session-row-${mainSessions[i].id}'),
-                session: mainSessions[i],
-                onOpen: () => onOpenSession(mainSessions[i]),
-                onLongPress: onSessionActions == null
-                    ? null
-                    : () => onSessionActions!(mainSessions[i]),
-              ),
-            ],
-            SizedBox(height: S.of(10)),
-          ],
-          if (asleep.isNotEmpty) ...[
+    final asleepBlock = <Widget>[
+      if (asleep.isNotEmpty) ...[
             _hairline(),
             _SheetFoldRow(
               key: const ValueKey('asleep-fold'),
@@ -219,10 +161,75 @@ class EveryoneSheet extends StatelessWidget {
                     )
                   : const SizedBox(width: double.infinity),
             ),
+          
+      ],
+    ];
+
+    final listContent = SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.only(bottom: 168 + bottom),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Dragging the title closes the sheet too, like the handle.
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onVerticalDragUpdate: (d) => onDrag(d.delta.dy),
+            onVerticalDragEnd: (d) => onRelease(d.primaryVelocity ?? 0),
+            onVerticalDragCancel: () => onRelease(0),
+            child: Padding(
+              padding:
+                  const EdgeInsets.fromLTRB(kHomeMargin, 4, kHomeMargin, 18),
+              child: Text('Everyone',
+                  style:
+                      sans(22, weight: FontWeight.w600, color: AppColors.fg1)),
+            ),
+          ),
+          if (active.isNotEmpty) ...[
+            _SectionHeader('Working', count: active.length),
+            for (var i = 0; i < active.length; i++) ...[
+              if (i > 0) _hairline(inset: kHomeMargin + 54),
+              _SheetAgentRow(
+                key: ValueKey('agent-row-${active[i].agent.id}'),
+                row: active[i],
+                managedCount: managed[active[i].agent.id]?.length ?? 0,
+                onOpen: () => onOpenAgent(active[i].agent),
+                onManaged: () => onOpenManaged(active[i].agent),
+              ),
+            ],
+            SizedBox(height: S.of(14)),
           ],
-          if (settledSessions.isNotEmpty &&
-              !settledOnly(
-                  live: mainSessions.length, settled: settledSessions.length)) ...[
+          if (flatSettled) ...[
+            ...asleepBlock,
+            for (var i = 0; i < settledSessions.length; i++) ...[
+              if (i > 0) _hairline(inset: kHomeMargin + 44),
+              _SheetSessionRow(
+                key: ValueKey('session-row-${settledSessions[i].id}'),
+                session: settledSessions[i],
+                onOpen: () => onOpenSession(settledSessions[i]),
+                onLongPress: onSessionActions == null
+                    ? null
+                    : () => onSessionActions!(settledSessions[i]),
+              ),
+            ],
+            SizedBox(height: S.of(10)),
+          ] else if (mainSessions.isNotEmpty) ...[
+            _SectionHeader('Your sessions', count: mainSessions.length),
+            for (var i = 0; i < mainSessions.length; i++) ...[
+              if (i > 0) _hairline(inset: kHomeMargin + 44),
+              _SheetSessionRow(
+                key: ValueKey('session-row-${mainSessions[i].id}'),
+                session: mainSessions[i],
+                onOpen: () => onOpenSession(mainSessions[i]),
+                onLongPress: onSessionActions == null
+                    ? null
+                    : () => onSessionActions!(mainSessions[i]),
+              ),
+            ],
+            SizedBox(height: S.of(10)),
+          ],
+          if (!flatSettled) ...asleepBlock,
+          if (settledSessions.isNotEmpty && !flatSettled) ...[
             _hairline(),
             _SheetFoldRow(
               key: const ValueKey('settled-fold'),
