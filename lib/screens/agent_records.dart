@@ -1084,7 +1084,7 @@ class _RecordListState<T> extends State<_RecordList<T>> {
           width: 18,
           height: 18,
           child:
-              CircularProgressIndicator(strokeWidth: 2, color: AppColors.fg3),
+              Spinner(size: 18),
         ),
       );
     }
@@ -1119,8 +1119,7 @@ class _RecordListState<T> extends State<_RecordList<T>> {
                 child: SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: AppColors.fg3),
+                  child: Spinner(size: 16),
                 ),
               ),
             );

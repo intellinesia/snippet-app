@@ -349,7 +349,7 @@ class _AgentProfilePanelState extends State<AgentProfilePanel> {
             child: SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2))),
+                child: Spinner(size: 18))),
       );
     }
     final running = widget.agent.deskProfile;

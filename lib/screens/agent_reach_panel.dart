@@ -147,7 +147,7 @@ class _AgentReachPanelState extends State<AgentReachPanel> {
               : const SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2)),
+                  child: Spinner(size: 18)),
         ),
       );
     }

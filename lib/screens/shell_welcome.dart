@@ -632,8 +632,7 @@ class _StageRow extends StatelessWidget {
       _StageState.active => SizedBox(
           width: 14,
           height: 14,
-          child: CircularProgressIndicator(
-              strokeWidth: 2, color: AppColors.accent)),
+          child: Spinner(size: 14, color: AppColors.accent)),
       _StageState.pending => Container(
           width: 8,
           height: 8,

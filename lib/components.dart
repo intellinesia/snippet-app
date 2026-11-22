@@ -8,7 +8,7 @@ import 'theme.dart';
 import 'screens/action_list.dart' show ActionGroup, ActionRow;
 import 'settings_form.dart' show GroupedTiles;
 import 'widgets.dart'
-    show AppIcon, PressKind, Pressable, StatusDot;
+    show AppIcon, Btn, BtnVariant, PressKind, Pressable, StatusDot;
 
 enum Tone { neutral, accent, ok, run, danger }
 
@@ -696,6 +696,125 @@ class PageLoader extends StatelessWidget {
       );
 }
 
+/// A soft highlight that drifts across whatever [child] paints; still under
+/// reduced motion.
+class LoadingSweep extends StatefulWidget {
+  const LoadingSweep({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<LoadingSweep> createState() => _LoadingSweepState();
+}
+
+class _LoadingSweepState extends State<LoadingSweep>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1600));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (reduceMotion(context)) {
+      _c.stop();
+    } else if (!_c.isAnimating) {
+      _c.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (reduceMotion(context)) return widget.child;
+    final glow = AppColors.fg1.withValues(alpha: 0.05);
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _c,
+        child: widget.child,
+        builder: (_, child) {
+          final x = -2.0 + 4.0 * Curves.easeInOut.transform(_c.value);
+          return ShaderMask(
+            blendMode: BlendMode.srcATop,
+            shaderCallback: (rect) => LinearGradient(
+              begin: Alignment(x - 1, 0),
+              end: Alignment(x + 1, 0),
+              colors: [glow.withValues(alpha: 0), glow, glow.withValues(alpha: 0)],
+            ).createShader(rect),
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// The placeholder for content still loading: a quiet tinted block the size
+/// of what it stands in for, so nothing jumps when the content lands.
+class LoadingBlock extends StatelessWidget {
+  const LoadingBlock(
+      {super.key, this.width, this.height, this.radius = 0, this.color});
+
+  final double? width;
+
+  /// Used when the parent leaves the height open; otherwise it fills.
+  final double? height;
+  final double radius;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        label: 'Loading',
+        child: LayoutBuilder(
+          builder: (context, c) => LoadingSweep(
+            child: Container(
+              width: width ?? (c.hasBoundedWidth ? c.maxWidth : null),
+              height: height ?? (c.hasBoundedHeight ? c.maxHeight : 160),
+              decoration: BoxDecoration(
+                color: color ?? AppColors.tint1,
+                borderRadius: BorderRadius.circular(radius),
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+/// A one-line failure with a retry, centred in whatever space it is given.
+class LoadFailed extends StatelessWidget {
+  const LoadFailed({super.key, this.message = 'Couldn’t load', this.onRetry});
+
+  final String message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Padding(
+          padding: EdgeInsets.all(S.s8),
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: S.s8,
+            runSpacing: S.s4,
+            children: [
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                AppIcon('alert-circle', size: 14, color: AppColors.fg4),
+                SizedBox(width: S.s6),
+                Text(message, style: sans(12, color: AppColors.fg3)),
+              ]),
+              if (onRetry != null)
+                Btn('Retry',
+                    small: true, variant: BtnVariant.surface, onTap: onRetry),
+            ],
+          ),
+        ),
+      );
+}
+
 class Skeleton extends StatelessWidget {
   const Skeleton(
       {super.key,
@@ -734,7 +853,8 @@ class ListSkeleton extends StatelessWidget {
             color: SurfaceScope.groupOf(context),
             borderRadius: BorderRadius.circular(R.md),
             clipBehavior: Clip.antiAlias,
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
+            child: LoadingSweep(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
               for (var i = 0; i < rows; i++) ...[
                 if (i > 0)
                   Divider(height: 1, thickness: 1, color: AppColors.line),
@@ -777,6 +897,7 @@ class ListSkeleton extends StatelessWidget {
                 ),
               ],
             ]),
+            ),
           ),
         ]),
       );

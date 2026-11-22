@@ -723,7 +723,7 @@ class _AgentWakePanelState extends State<AgentWakePanel> {
             child: SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2))),
+                child: Spinner(size: 18))),
       );
     }
     return FlatGroupScope(
@@ -1351,7 +1351,7 @@ class _AgentWatchDetailState extends State<_AgentWatchDetail> {
                 child: SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2))),
+                    child: Spinner(size: 18))),
           )
         else ...[
           if (_eventsError != null)

@@ -771,10 +771,11 @@ class _ArtifactTile extends StatelessWidget {
     if (v == null) return tile;
     final uri = client.artifactUri(v.url).toString();
     if (a.kind == 'image') {
-      return Image.network(uri,
-          fit: BoxFit.cover,
+      return ArtifactImage(
+          client: client,
+          url: v.url,
           alignment: Alignment.topCenter,
-          errorBuilder: (_, __, ___) => tile);
+          fallback: tile);
     }
     if (a.kind == 'svg') {
       return Padding(

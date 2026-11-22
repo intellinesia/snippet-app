@@ -461,7 +461,7 @@ class _ReplyField extends StatelessWidget {
           child: busy
               ? Padding(
                   padding: EdgeInsets.all(S.of(11)),
-                  child: CircularProgressIndicator(strokeWidth: 1.6))
+                  child: Spinner(size: 14))
               : IconButton(
                   tooltip: 'Send',
                   padding: EdgeInsets.zero,

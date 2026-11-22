@@ -68,6 +68,8 @@ class SharedArtifactLine extends StatefulWidget {
 class _SharedArtifactLineState extends State<SharedArtifactLine> {
   String _entry = '';
   String _url = '';
+  bool _lookedUp = false;
+  bool _lookupFailed = false;
 
   @override
   void initState() {
@@ -82,12 +84,35 @@ class _SharedArtifactLineState extends State<SharedArtifactLine> {
       final all = await widget.client.artifacts(widget.session);
       final a = all.where((a) => a.id == widget.id).firstOrNull;
       final v = a?.version(widget.version);
-      if (v == null || !mounted) return;
+      if (!mounted) return;
+      if (v == null) {
+        setState(() {
+          _lookedUp = true;
+          _lookupFailed = false;
+        });
+        return;
+      }
       setState(() {
         _entry = v.source.isNotEmpty ? v.source : v.entry;
         if (_url.isEmpty) _url = v.url;
+        _lookupFailed = false;
       });
-    } catch (_) {}
+    } catch (_) {
+      if (mounted && _url.isEmpty) {
+        setState(() {
+          _lookedUp = true;
+          _lookupFailed = true;
+        });
+      }
+    }
+  }
+
+  void _retryLookUp() {
+    setState(() {
+      _lookedUp = false;
+      _lookupFailed = false;
+    });
+    _lookUp();
   }
 
   String get _name => _extOf(widget.title).isNotEmpty ? widget.title : _entry;
@@ -193,13 +218,13 @@ class _SharedArtifactLineState extends State<SharedArtifactLine> {
 
   Widget _thumb() {
     final Widget child = _url.isEmpty
-        ? const ArtifactSkeleton(fill: true)
-        : Image.network(
-            widget.client.artifactUri(_url).toString(),
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Center(
-                child: AppIcon('image', size: 20, color: AppColors.fg4)),
-          );
+        ? (_lookupFailed
+            ? LoadFailed(message: 'Couldn’t load', onRetry: _retryLookUp)
+            : _lookedUp
+                ? Center(
+                    child: AppIcon('image', size: 20, color: AppColors.fg4))
+                : const LoadingBlock())
+        : ArtifactImage(client: widget.client, url: _url);
     return TapDetector(
       onTap: _open,
       child: ClipRRect(

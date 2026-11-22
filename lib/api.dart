@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
@@ -929,7 +930,18 @@ class DaemonClient {
       _uri('/fs/download', {'path': path}).toString();
 
   /// The image at [path] on this daemon, for thumbnails and the image viewer.
-  ImageProvider imageProvider(String path) => NetworkImage(fileUrl(path));
+  ImageProvider imageProvider(String path) =>
+      TimedNetworkImage(fileUrl(path), _imageBytes);
+
+  /// The image behind a signed artifact link.
+  ImageProvider artifactImage(String signedPath) =>
+      TimedNetworkImage(artifactUri(signedPath).toString(), _imageBytes);
+
+  Future<Uint8List> _imageBytes(Uri uri) async {
+    final r = await _get(uri, timeout: const Duration(seconds: 20));
+    if (r.statusCode != 200) throw Exception(_err('load image', r));
+    return r.bodyBytes;
+  }
 
   /// Stream a file to [output] without buffering the whole response in memory.
   /// [onProgress] receives bytes received and the optional content length.
@@ -2587,4 +2599,36 @@ class AgentNowBoardRow {
         at: j['at'] as String? ?? '',
         summary: j['summary'] as String? ?? '',
       );
+}
+
+/// A network image fetched through the client, so a stalled download times
+/// out into an error instead of loading forever.
+class TimedNetworkImage extends ImageProvider<TimedNetworkImage> {
+  const TimedNetworkImage(this.url, this._fetch);
+
+  final String url;
+  final Future<Uint8List> Function(Uri uri) _fetch;
+
+  @override
+  Future<TimedNetworkImage> obtainKey(ImageConfiguration configuration) =>
+      SynchronousFuture(this);
+
+  @override
+  ImageStreamCompleter loadImage(
+          TimedNetworkImage key, ImageDecoderCallback decode) =>
+      MultiFrameImageStreamCompleter(
+          codec: _load(decode), scale: 1, debugLabel: url);
+
+  Future<ui.Codec> _load(ImageDecoderCallback decode) async {
+    final bytes = await _fetch(Uri.parse(url));
+    if (bytes.isEmpty) throw Exception('Empty image');
+    return decode(await ui.ImmutableBuffer.fromUint8List(bytes));
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is TimedNetworkImage && other.url == url;
+
+  @override
+  int get hashCode => url.hashCode;
 }

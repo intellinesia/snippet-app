@@ -211,10 +211,7 @@ class ImageThumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final placeholder = ColoredBox(
-      color: AppColors.surface2,
-      child: Center(child: AppIcon('image', size: 18, color: AppColors.fg4)),
-    );
+    final placeholder = LoadingBlock(color: AppColors.surface2);
     return Semantics(
       image: true,
       label: baseName(path),
@@ -1053,10 +1050,10 @@ class _ImageViewerState extends State<_ImageViewer>
               widget.client.imageProvider(widget.paths[i]),
             ),
             fit: BoxFit.contain,
-            loadingBuilder: (_, child, progress) => progress == null
+            // The client fetch reports no progress, so wait on the first frame.
+            frameBuilder: (_, child, frame, sync) => sync || frame != null
                 ? child
-                : const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2)),
+                : const Center(child: Spinner(size: 20, color: Colors.white70)),
             errorBuilder: (_, __, ___) => Text("Can't load this image",
                 style: sans(13, color: Colors.white70)),
           ),

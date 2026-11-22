@@ -494,17 +494,20 @@ class _FileViewerState extends State<FileViewer> {
                     padding: EdgeInsets.all(S.s16),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(R.md),
-                      child: Image.network(
-                        widget.client.fileUrl(widget.path),
-                        cacheWidth: (MediaQuery.sizeOf(context).width *
-                                MediaQuery.devicePixelRatioOf(context))
-                            .round()
-                            .clamp(720, 2048),
+                      child: Image(
+                        image: ResizeImage.resizeIfNeeded(
+                            (MediaQuery.sizeOf(context).width *
+                                    MediaQuery.devicePixelRatioOf(context))
+                                .round()
+                                .clamp(720, 2048),
+                            null,
+                            widget.client.imageProvider(widget.path)),
                         filterQuality: FilterQuality.low,
                         fit: BoxFit.contain,
-                        loadingBuilder: (ctx, child, prog) => prog == null
-                            ? child
-                            : Center(child: DelayedSpinner(size: 22)),
+                        frameBuilder: (ctx, child, frame, sync) =>
+                            sync || frame != null
+                                ? child
+                                : Center(child: DelayedSpinner(size: 22)),
                         errorBuilder: (ctx, e, st) => EmptyState(
                             icon: 'alert-triangle',
                             title: "Can't load image",

@@ -302,7 +302,7 @@ class _ArtifactRowState extends State<ArtifactRow> {
     final v = a?.version(widget.version) ?? a?.latest;
     if (v == null) return null;
     if (widget.kind == 'image') {
-      return _ArtifactPreview(uri: widget.client.artifactUri(v.url).toString());
+      return _ArtifactPreview(uri: v.url);
     }
     final text = await widget.client.artifactText(v.url);
     return _ArtifactPreview(
@@ -355,24 +355,7 @@ class _ArtifactRowState extends State<ArtifactRow> {
         if (d == null) {
           body = const ArtifactSkeleton(fill: true);
         } else {
-          body = Image.network(
-            d.uri!,
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-            errorBuilder: (_, __, ___) =>
-                Center(child: AppIcon('image', size: 24, color: AppColors.fg4)),
-            frameBuilder: (context, child, frame, sync) {
-              if (sync) return child;
-              return AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: frame == null
-                    ? const ArtifactSkeleton(
-                        key: ValueKey('loading'), fill: true)
-                    : KeyedSubtree(key: const ValueKey('loaded'), child: child),
-              );
-            },
-          );
+          body = ArtifactImage(client: widget.client, url: d.uri!);
         }
         return GroupedCard(segments: [
           _header(context),
@@ -433,7 +416,7 @@ class _ArtifactInlineState extends State<ArtifactInline>
   @override
   bool get wantKeepAlive => true;
 
-  late final Future<ArtifactVersion?> _version = _load();
+  late Future<ArtifactVersion?> _version = _load();
   Future<String>? _text;
 
   Future<ArtifactVersion?> _load() async {
@@ -445,7 +428,9 @@ class _ArtifactInlineState extends State<ArtifactInline>
   Future<String> _textOf(ArtifactVersion v) =>
       _text ??= widget.client.artifactText(v.url);
 
-  Widget _loading() => const ArtifactSkeleton();
+  Widget _loading() => widget.kind == 'image'
+      ? LoadingBlock(height: 280, radius: R.card)
+      : const ArtifactSkeleton();
 
   Widget _note(String text) => Padding(
         padding: EdgeInsets.symmetric(vertical: S.s8),
@@ -456,7 +441,13 @@ class _ArtifactInlineState extends State<ArtifactInline>
       FutureBuilder<String>(
         future: _textOf(v),
         builder: (context, snap) {
-          if (snap.hasError) return _note('${snap.error}');
+          if (snap.hasError) {
+            return SizedBox(
+              height: 72,
+              child: LoadFailed(
+                  onRetry: () => setState(() => _text = null)),
+            );
+          }
           if (!snap.hasData) return _loading();
           return render(snap.data!);
         },
@@ -496,21 +487,14 @@ class _ArtifactInlineState extends State<ArtifactInline>
                   ),
                 ));
       case 'image':
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(R.card),
-          child: Image.network(
-            uri.toString(),
-            fit: BoxFit.contain,
-            frameBuilder: (context, child, frame, sync) {
-              if (sync) return child;
-              return AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: frame == null
-                    ? const ArtifactSkeleton(key: ValueKey('loading'))
-                    : KeyedSubtree(key: const ValueKey('loaded'), child: child),
-              );
-            },
-          ),
+        // A fixed slot, so the card keeps its height while the image loads.
+        return SizedBox(
+          height: 280,
+          child: ArtifactImage(
+              client: widget.client,
+              url: v.url,
+              fit: BoxFit.contain,
+              radius: R.card),
         );
       default:
         return _InlineWebPage(key: ValueKey(uri.toString()), uri: uri);
@@ -530,7 +514,14 @@ class _ArtifactInlineState extends State<ArtifactInline>
             child: FutureBuilder<ArtifactVersion?>(
               future: _version,
               builder: (context, snap) {
-                if (snap.hasError) return _note('${snap.error}');
+                if (snap.hasError) {
+                  return SizedBox(
+                    height: 72,
+                    child: LoadFailed(
+                      onRetry: () => setState(() => _version = _load()),
+                    ),
+                  );
+                }
                 if (snap.connectionState != ConnectionState.done) {
                   return _loading();
                 }
@@ -624,70 +615,102 @@ String snippetPageTheme(bool dark, String bg) {
 ''';
 }
 
-class ArtifactSkeleton extends StatefulWidget {
+/// Stand-in while an artifact loads: one quiet block, no fake text lines.
+class ArtifactSkeleton extends StatelessWidget {
   const ArtifactSkeleton({super.key, this.fill = false});
 
+  /// Fill the slot it sits in; otherwise a card-sized block.
   final bool fill;
 
   @override
-  State<ArtifactSkeleton> createState() => _ArtifactSkeletonState();
+  Widget build(BuildContext context) => fill
+      ? const LoadingBlock()
+      : LoadingBlock(height: 160, radius: R.card);
 }
 
-class _ArtifactSkeletonState extends State<ArtifactSkeleton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1100));
+/// An artifact image that loads with a timeout, decodes at display size and
+/// offers a retry when it fails.
+class ArtifactImage extends StatefulWidget {
+  const ArtifactImage({
+    super.key,
+    required this.client,
+    required this.url,
+    this.fit = BoxFit.cover,
+    this.alignment = Alignment.center,
+    this.radius = 0,
+    this.fullSize = false,
+    this.fallback,
+  });
+
+  final DaemonClient client;
+
+  /// The signed artifact path.
+  final String url;
+  final BoxFit fit;
+  final Alignment alignment;
+  final double radius;
+
+  /// Decode at full resolution and show a spinner, for the zoomable viewer.
+  final bool fullSize;
+
+  /// Shown instead of the retry line when loading fails.
+  final Widget? fallback;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (reduceMotion(context)) {
-      _pulse.value = 1;
-    } else if (!_pulse.isAnimating) {
-      _pulse.repeat(reverse: true);
-    }
+  State<ArtifactImage> createState() => _ArtifactImageState();
+}
+
+class _ArtifactImageState extends State<ArtifactImage> {
+  int _attempt = 0;
+
+  void _retry(ImageProvider p) {
+    p.evict();
+    setState(() => _attempt++);
   }
 
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
+  Widget _placeholder() => widget.fullSize
+      ? const Center(child: Spinner(size: 20))
+      : LoadingBlock(radius: widget.radius);
 
   @override
   Widget build(BuildContext context) {
-    final block = AppColors.tint2;
-    final body = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: widget.fill ? MainAxisSize.max : MainAxisSize.min,
-      children: [
-        Skeleton(width: 140, height: 14, radius: 6, color: block),
-        SizedBox(height: S.of(14)),
-        Skeleton(height: 10, radius: 5, color: block),
-        SizedBox(height: S.s8),
-        FractionallySizedBox(
-            widthFactor: 0.8,
-            child: Skeleton(height: 10, radius: 5, color: block)),
-        SizedBox(height: S.s16),
-        if (widget.fill)
-          Expanded(
-              child: Skeleton(
-                  height: double.infinity, radius: 12, color: AppColors.tint1))
-        else
-          Skeleton(height: 96, radius: 12, color: AppColors.tint1),
-      ],
-    );
-    return Semantics(
-      label: 'Loading',
-      child: FadeTransition(
-        opacity: Tween(begin: 0.55, end: 1.0)
-            .animate(CurvedAnimation(parent: _pulse, curve: Curves.easeInOut)),
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: S.s8),
-          child: ClipRect(child: body),
+    final source = widget.client.artifactImage(widget.url);
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final fast = reduceMotion(context) ? Duration.zero : Motion.fast;
+    return LayoutBuilder(builder: (context, c) {
+      final w = c.hasBoundedWidth ? (c.maxWidth * dpr).round() : null;
+      final image = widget.fullSize
+          ? source
+          : ResizeImage.resizeIfNeeded(w, null, source);
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(widget.radius),
+        child: Image(
+          key: ValueKey(_attempt),
+          image: image,
+          fit: widget.fit,
+          alignment: widget.alignment,
+          width: !widget.fullSize && c.hasBoundedWidth ? double.infinity : null,
+          height:
+              !widget.fullSize && c.hasBoundedHeight ? double.infinity : null,
+          gaplessPlayback: true,
+          frameBuilder: (context, child, frame, sync) {
+            if (sync) return child;
+            return AnimatedSwitcher(
+              duration: fast,
+              child: frame == null
+                  ? KeyedSubtree(
+                      key: const ValueKey('loading'), child: _placeholder())
+                  : KeyedSubtree(key: const ValueKey('loaded'), child: child),
+            );
+          },
+          errorBuilder: (_, __, ___) =>
+              widget.fallback ??
+              LoadFailed(
+                  message: 'Couldn’t load image',
+                  onRetry: () => _retry(image)),
         ),
-      ),
-    );
+      );
+    });
   }
 }
 
@@ -1431,7 +1454,12 @@ class _ArtifactViewerState extends State<ArtifactViewer> {
       case 'image':
         return InteractiveViewer(
           maxScale: 6,
-          child: Center(child: Image.network(uri.toString())),
+          child: Center(
+              child: ArtifactImage(
+                  client: widget.client,
+                  url: v.url,
+                  fit: BoxFit.contain,
+                  fullSize: true)),
         );
       case 'csv':
         return _textBody(v, (text) => _CsvTable(text: text));
