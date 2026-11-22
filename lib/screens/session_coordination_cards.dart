@@ -11,6 +11,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../chat/chat_card.dart';
 import '../chat/signal_row.dart';
+import '../chat/system_notice.dart';
 import '../mochi.dart';
 import '../tap_detector.dart';
 import 'mission_control/mission_control_state.dart'
@@ -564,20 +565,22 @@ class DirectMessageCard extends StatelessWidget {
         footer: 'Starts once claimed; the agent can also ask or decline',
       );
     }
+    final notice = parseSystemNotice(message.body);
     final typed = message.messageKind.replaceAll('_', ' ');
     final label =
         typed.isEmpty ? '' : '${typed[0].toUpperCase()}${typed.substring(1)}';
     return _ThreadCard(
       agentId: _agentOf(message.fromId),
-      icon: message.isReply ? 'corner-down-right' : 'message',
+      icon: notice?.icon ?? (message.isReply ? 'corner-down-right' : 'message'),
       tone: message.urgent ? Tone.danger : Tone.accent,
       kind: who == 'you'
           ? 'Your message'
           : (message.isReply ? 'Reply from $who' : 'From $who'),
+      title: notice?.summary,
       status: message.urgent
           ? (label.isEmpty ? 'Urgent' : '$label, urgent')
           : (label.isNotEmpty ? label : null),
-      body: message.body,
+      body: notice != null ? notice.detail : message.body,
     );
   }
 }
