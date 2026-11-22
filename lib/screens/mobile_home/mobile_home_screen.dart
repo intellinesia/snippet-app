@@ -85,11 +85,10 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     _sheet = AnimationController.unbounded(vsync: this, value: 0)
       ..addStatusListener(_sheetStatus);
   }
-  bool _asleepOpen = false;
-  // Null until the user toggles; then Settled starts open only when there
-  // are no live sessions to show instead.
+  // Null until the user toggles; each open of the sheet starts from the
+  // defaults again (Asleep shown, Settled collapsed).
+  bool? _asleepUser;
   bool? _settledUser;
-  bool _settledOpenFor(bool noLive) => _settledUser ?? noLive;
 
   @override
   void didUpdateWidget(MobileHomeScreen old) {
@@ -190,6 +189,8 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
 
   void _openEveryone() {
     if (_everyoneOpen) return;
+    _asleepUser = null;
+    _settledUser = null;
     _settleSheet(open: true);
   }
 
@@ -384,11 +385,12 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
             managed: managed,
             mainSessions: human.main,
             settledSessions: human.settled,
-            asleepOpen: _asleepOpen,
-            settledOpen: _settledOpenFor(human.main.isEmpty),
-            onToggleAsleep: () => setState(() => _asleepOpen = !_asleepOpen),
-            onToggleSettled: () => setState(() => _settledUser =
-                !_settledOpenFor(human.main.isEmpty)),
+            asleepOpen: asleepOpenFor(_asleepUser),
+            settledOpen: settledOpenFor(_settledUser),
+            onToggleAsleep: () =>
+                setState(() => _asleepUser = !asleepOpenFor(_asleepUser)),
+            onToggleSettled: () =>
+                setState(() => _settledUser = !settledOpenFor(_settledUser)),
             onOpenAgent: widget.onOpenAgent,
             onOpenManaged: _openManaged,
             onOpenSession: widget.onOpenSession,
@@ -562,7 +564,6 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
     final settled = human.settled.where(_matches).toList();
     final sessionCount = main.length + settled.length;
     final empty = agentCount == 0 && sessionCount == 0;
-    final flatSettled = settledOnly(live: main.length, settled: settled.length);
 
     return ColoredBox(
       color: AppColors.bg,
@@ -592,18 +593,15 @@ class _MobileHomeScreenState extends State<MobileHomeScreen>
                   ),
                 ],
                 if (sessionCount > 0) ...[
-                  if (!flatSettled)
-                    HomeLabel('Your sessions',
-                        count: sessionCount, top: agentCount > 0 ? 18 : 0)
-                  else if (agentCount > 0)
-                    const SizedBox(height: 18),
+                  HomeLabel('Your sessions',
+                      count: sessionCount, top: agentCount > 0 ? 18 : 0),
                   SessionsGroup(
                     main: main,
                     settled: settled,
-                    flat: flatSettled,
-                    settledOpen: q.isNotEmpty || _settledOpenFor(main.isEmpty),
-                    onToggleSettled: () => setState(
-                        () => _settledUser = !_settledOpenFor(main.isEmpty)),
+                    settledOpen:
+                        settledOpenFor(_settledUser, searching: q.isNotEmpty),
+                    onToggleSettled: () => setState(() =>
+                        _settledUser = !settledOpenFor(_settledUser)),
                     onOpen: (s) {
                       _closeSearch();
                       widget.onOpenSession(s);

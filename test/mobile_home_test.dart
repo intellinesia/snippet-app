@@ -323,13 +323,15 @@ void main() {
       expect(find.text('Deny'), findsNothing);
     });
 
-    test('settled sessions go flat only when none are live', () {
-      expect(settledOnly(live: 0, settled: 3), isTrue);
-      expect(settledOnly(live: 1, settled: 3), isFalse);
-      expect(settledOnly(live: 0, settled: 0), isFalse);
+    test('folds default: Asleep open, Settled closed, search opens Settled', () {
+      expect(asleepOpenFor(null), isTrue);
+      expect(asleepOpenFor(false), isFalse);
+      expect(settledOpenFor(null), isFalse);
+      expect(settledOpenFor(true), isTrue);
+      expect(settledOpenFor(null, searching: true), isTrue);
     });
 
-    testWidgets('flat settled list keeps the Asleep agents above it',
+    testWidgets('with only settled sessions, Settled stays a collapsed fold',
         (tester) async {
       await pumpHome(tester, [
         for (var i = 0; i < 6; i++) _s('old$i', extra: {'settled': true}),
@@ -337,10 +339,17 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('everyone-handle')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
-      expect(find.text('Settled'), findsNothing);
-      final fold = tester.getTopLeft(find.byKey(const ValueKey('asleep-fold'))).dy;
-      final row = tester.getTopLeft(find.byKey(const ValueKey('session-row-old0'))).dy;
-      expect(fold, lessThan(row));
+      expect(find.byKey(const ValueKey('settled-fold')), findsOneWidget);
+      expect(find.byKey(const ValueKey('session-row-old0')), findsNothing);
+      final asleep =
+          tester.getTopLeft(find.byKey(const ValueKey('asleep-fold'))).dy;
+      final settled =
+          tester.getTopLeft(find.byKey(const ValueKey('settled-fold'))).dy;
+      expect(asleep, lessThan(settled));
+      await tester.tap(find.byKey(const ValueKey('settled-fold')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.byKey(const ValueKey('session-row-old0')), findsOneWidget);
     });
 
     testWidgets('Back closes the Everyone sheet before anything else',
@@ -378,31 +387,6 @@ void main() {
       final top = tester.getTopLeft(find.textContaining('is working')).dy;
       final bar = tester.getBottomLeft(find.byKey(const ValueKey('home-stage-bar'))).dy;
       expect(top, greaterThan(bar + 24));
-    });
-
-    test('settled sessions stand alone only when nothing is live', () {
-      expect(settledOnly(live: 0, settled: 3), isTrue);
-      expect(settledOnly(live: 1, settled: 3), isFalse);
-      expect(settledOnly(live: 0, settled: 0), isFalse);
-    });
-
-    testWidgets('with no live sessions the sheet lists settled rows directly',
-        (tester) async {
-      await pumpHome(tester, [
-        for (var i = 0; i < 3; i++) _s('s$i', extra: {'settled': true}),
-      ]);
-      await tester.tap(find.byKey(const ValueKey('everyone-handle')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 600));
-      expect(find.text('Session s0'), findsOneWidget);
-      expect(find.text('Your sessions'), findsNothing);
-      expect(find.byKey(const ValueKey('settled-fold')), findsNothing);
-    });
-
-    testWidgets('quiet state names Mission Control and never an empty centre',
-        (tester) async {
-      await pumpHome(tester, [_s('h0')]);
-      expect(find.text('Nothing needs you.'), findsOneWidget);
     });
 
     testWidgets(

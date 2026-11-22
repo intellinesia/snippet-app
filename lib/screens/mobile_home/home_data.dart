@@ -149,7 +149,8 @@ class AgentRow {
   return (working: working, needs: needs, asleep: asleep);
 }
 
-/// With no live sessions the settled ones are the whole list: no "Your
-/// sessions" heading and no nested Settled fold.
-bool settledOnly({required int live, required int settled}) =>
-    live == 0 && settled > 0;
+/// Default folds on each open: Asleep agents show, Settled sessions stay
+/// collapsed. A tap overrides; a search opens Settled so matches are visible.
+bool asleepOpenFor(bool? user) => user ?? true;
+bool settledOpenFor(bool? user, {bool searching = false}) =>
+    searching || (user ?? false);

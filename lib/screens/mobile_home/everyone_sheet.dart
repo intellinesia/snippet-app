@@ -29,9 +29,7 @@ const double kSheetFlingVelocity = 300;
 /// A fling decides by direction; otherwise it takes a quarter of the travel
 /// to flip it (it used to take half).
 bool sheetSettlesOpen(
-    {required double progress,
-    required double up,
-    required bool wasOpen}) {
+    {required double progress, required double up, required bool wasOpen}) {
   if (up.abs() >= kSheetFlingVelocity) return up > 0;
   return wasOpen ? progress > 0.75 : progress > 0.25;
 }
@@ -61,8 +59,11 @@ class EveryoneSheet extends StatelessWidget {
     this.onRefresh,
   });
 
-  final ({List<AgentRow> working, List<AgentRow> needs, List<AgentRow> asleep})
-      rows;
+  final ({
+    List<AgentRow> working,
+    List<AgentRow> needs,
+    List<AgentRow> asleep
+  }) rows;
   final Map<String, List<SessionInfo>> managed;
   final List<SessionInfo> mainSessions;
   final List<SessionInfo> settledSessions;
@@ -103,10 +104,6 @@ class EveryoneSheet extends StatelessWidget {
     final glass = Glass.effectiveEnabled;
     final radius = const BorderRadius.vertical(top: Radius.circular(30));
 
-    // Settled-only is a long flat list; agents stay above it, not buried below.
-    final flatSettled = settledOnly(
-        live: mainSessions.length, settled: settledSessions.length);
-
     final empty = active.isEmpty &&
         asleep.isEmpty &&
         mainSessions.isEmpty &&
@@ -114,54 +111,52 @@ class EveryoneSheet extends StatelessWidget {
 
     final asleepBlock = <Widget>[
       if (asleep.isNotEmpty) ...[
-            _hairline(),
-            _SheetFoldRow(
-              key: const ValueKey('asleep-fold'),
-              label: 'Asleep',
-              count: asleep.length,
-              open: asleepOpen,
-              onTap: onToggleAsleep,
-              lead: SizedBox(
-                width: 28.0 + (asleep.take(4).length - 1) * 20,
-                height: 28,
-                child: Stack(children: [
-                  for (var i = 0; i < asleep.take(4).length; i++)
-                    Positioned(
-                      left: i * 20.0,
-                      child: Opacity(
-                        opacity: 0.55,
-                        child: AgentMochi(asleep[i].agent.id,
-                            size: 28, state: AgentCharacterState.sleeping),
+        _hairline(),
+        _SheetFoldRow(
+          key: const ValueKey('asleep-fold'),
+          label: 'Asleep',
+          count: asleep.length,
+          open: asleepOpen,
+          onTap: onToggleAsleep,
+          lead: SizedBox(
+            width: 28.0 + (asleep.take(4).length - 1) * 20,
+            height: 28,
+            child: Stack(children: [
+              for (var i = 0; i < asleep.take(4).length; i++)
+                Positioned(
+                  left: i * 20.0,
+                  child: Opacity(
+                    opacity: 0.55,
+                    child: AgentMochi(asleep[i].agent.id,
+                        size: 28, state: AgentCharacterState.sleeping),
+                  ),
+                ),
+            ]),
+          ),
+        ),
+        AnimatedSize(
+          duration: reduce ? const Duration(milliseconds: 1) : Motion.base,
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: asleepOpen
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < asleep.length; i++) ...[
+                      _hairline(inset: kHomeMargin + 54),
+                      _SheetAgentRow(
+                        key: ValueKey('agent-row-${asleep[i].agent.id}'),
+                        row: asleep[i],
+                        dimmed: true,
+                        managedCount: managed[asleep[i].agent.id]?.length ?? 0,
+                        onOpen: () => onOpenAgent(asleep[i].agent),
+                        onManaged: () => onOpenManaged(asleep[i].agent),
                       ),
-                    ),
-                ]),
-              ),
-            ),
-            AnimatedSize(
-              duration: reduce ? const Duration(milliseconds: 1) : Motion.base,
-              curve: Curves.easeOutCubic,
-              alignment: Alignment.topCenter,
-              child: asleepOpen
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (var i = 0; i < asleep.length; i++) ...[
-                          _hairline(inset: kHomeMargin + 54),
-                          _SheetAgentRow(
-                            key: ValueKey('agent-row-${asleep[i].agent.id}'),
-                            row: asleep[i],
-                            dimmed: true,
-                            managedCount:
-                                managed[asleep[i].agent.id]?.length ?? 0,
-                            onOpen: () => onOpenAgent(asleep[i].agent),
-                            onManaged: () => onOpenManaged(asleep[i].agent),
-                          ),
-                        ],
-                      ],
-                    )
-                  : const SizedBox(width: double.infinity),
-            ),
-          
+                    ],
+                  ],
+                )
+              : const SizedBox(width: double.infinity),
+        ),
       ],
     ];
 
@@ -199,21 +194,12 @@ class EveryoneSheet extends StatelessWidget {
             ],
             SizedBox(height: S.of(14)),
           ],
-          if (flatSettled) ...[
-            ...asleepBlock,
-            for (var i = 0; i < settledSessions.length; i++) ...[
-              if (i > 0) _hairline(inset: kHomeMargin + 44),
-              _SheetSessionRow(
-                key: ValueKey('session-row-${settledSessions[i].id}'),
-                session: settledSessions[i],
-                onOpen: () => onOpenSession(settledSessions[i]),
-                onLongPress: onSessionActions == null
-                    ? null
-                    : () => onSessionActions!(settledSessions[i]),
-              ),
-            ],
-            SizedBox(height: S.of(10)),
-          ] else if (mainSessions.isNotEmpty) ...[
+          ...asleepBlock,
+          // A clear break between the agents and whatever session group follows.
+          if (asleep.isNotEmpty &&
+              (mainSessions.isNotEmpty || settledSessions.isNotEmpty))
+            const SizedBox(height: 24),
+          if (mainSessions.isNotEmpty) ...[
             _SectionHeader('Your sessions', count: mainSessions.length),
             for (var i = 0; i < mainSessions.length; i++) ...[
               if (i > 0) _hairline(inset: kHomeMargin + 44),
@@ -228,8 +214,7 @@ class EveryoneSheet extends StatelessWidget {
             ],
             SizedBox(height: S.of(10)),
           ],
-          if (!flatSettled) ...asleepBlock,
-          if (settledSessions.isNotEmpty && !flatSettled) ...[
+          if (settledSessions.isNotEmpty) ...[
             _hairline(),
             _SheetFoldRow(
               key: const ValueKey('settled-fold'),
@@ -265,8 +250,8 @@ class EveryoneSheet extends StatelessWidget {
           ],
           if (empty)
             Padding(
-              padding: EdgeInsets.fromLTRB(
-                  kHomeMargin, S.s32, kHomeMargin, S.s24),
+              padding:
+                  EdgeInsets.fromLTRB(kHomeMargin, S.s32, kHomeMargin, S.s24),
               child: EmptyState(
                 icon: 'chat',
                 title: 'No sessions yet',
@@ -479,8 +464,8 @@ class _SheetAgentRow extends StatelessWidget {
                 Container(
                   width: 7,
                   height: 7,
-                  decoration:
-                      BoxDecoration(color: AppColors.ok, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                      color: AppColors.ok, shape: BoxShape.circle),
                 ),
                 SizedBox(width: S.s6),
               ],
@@ -504,7 +489,8 @@ class _SheetAgentRow extends StatelessWidget {
           onTap: onOpen,
           child: Padding(
             padding: EdgeInsets.only(
-                left: kHomeMargin, right: managedCount > 0 ? S.s8 : kHomeMargin),
+                left: kHomeMargin,
+                right: managedCount > 0 ? S.s8 : kHomeMargin),
             child: managedCount > 0
                 ? body
                 : Row(children: [
@@ -551,13 +537,11 @@ class _SheetSessionRow extends StatelessWidget {
     final s = session;
     final title = s.title.trim().isEmpty ? 'Untitled session' : s.title.trim();
     final branch = (s.branch ?? '').trim();
-    final meta = branch.isEmpty
-        ? projectLabel(s)
-        : '${projectLabel(s)} · $branch';
+    final meta =
+        branch.isEmpty ? projectLabel(s) : '${projectLabel(s)} · $branch';
     final done = sessionCameBack(s) && !s.settled;
-    final charState = sessionBusy(s)
-        ? AgentCharacterState.working
-        : AgentCharacterState.idle;
+    final charState =
+        sessionBusy(s) ? AgentCharacterState.working : AgentCharacterState.idle;
     final left = s.settled ? settledDaysLeft(s) : null;
     final age = left != null ? '${left}d left' : homeAge(s.lastActive);
     return Semantics(
