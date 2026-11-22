@@ -266,9 +266,10 @@ class DeskComposerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget card(bool focused) => Container(
           padding: const EdgeInsets.fromLTRB(12, 11, 6, 6),
-          // Typing flips Flutter into keyboard mode, so a focus ring here
-          // would show whenever you write; focus stays a faint hairline.
-          decoration: _cardDecoration(hairline: false),
+          // The same hairline as the panel above; a focus ring would show
+          // whenever you type, so focus adds nothing.
+          decoration: _cardDecoration(hairline: false).copyWith(
+              border: Border.all(color: AppColors.panelOutline, width: 0.5)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -300,7 +301,7 @@ class DeskComposerCard extends StatelessWidget {
             ],
           ),
         );
-    // One flat card, no tray or outline around it.
+    // One flat card with a hairline, no tray around it.
     Widget body(bool focused) => Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
