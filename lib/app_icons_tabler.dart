@@ -47,6 +47,8 @@ const tablerIcons = <String, IconData>{
   'crown': TablerIcons.crown,
   'cube': TablerIcons.cube,
   'download': TablerIcons.download,
+  'package': TablerIcons.package,
+  'link': TablerIcons.link,
   'ear': TablerIcons.ear,
   'edit': TablerIcons.edit,
   'ellipsis': TablerIcons.dots,

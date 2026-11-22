@@ -961,20 +961,19 @@ extension _SessionScreenTranscriptExt on _SessionScreenState {
         return null;
       }
     }
-    final artifact = ToolStep(tool: tool, result: decoded).data?['artifact'];
+    final data = ToolStep(tool: tool, result: decoded).data;
+    final artifact = data?['artifact'];
     if (artifact is! Map || _s(artifact['id']).isEmpty) return null;
     final session = _s(artifact['session']);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: ArtifactRow(
-        client: widget.client,
-        session: session.isEmpty ? widget.sessionId : session,
-        id: _s(artifact['id']),
-        version: (artifact['version'] as num?)?.toInt() ?? 1,
-        title: _s(artifact['title']),
-        kind: _s(artifact['kind']),
-        caption: '',
-      ),
+    return SharedArtifactLine(
+      client: widget.client,
+      session: session.isEmpty ? widget.sessionId : session,
+      id: _s(artifact['id']),
+      version: (artifact['version'] as num?)?.toInt() ?? 1,
+      title: _s(artifact['title']),
+      kind: _s(artifact['kind']),
+      url: _s(artifact['url']),
+      to: _s(data?['to']),
     );
   }
 

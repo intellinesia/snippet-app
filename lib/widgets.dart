@@ -2561,6 +2561,8 @@ const _lucide = <String, IconData>{
   'folder-x': LucideIcons.folderX300,
   'upload': LucideIcons.upload300,
   'download': LucideIcons.download300,
+  'package': LucideIcons.package300,
+  'link': LucideIcons.link300,
   'share': LucideIcons.share300,
   'file': LucideIcons.file300,
   'git-branch': LucideIcons.gitBranch300,
